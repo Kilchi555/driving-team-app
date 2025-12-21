@@ -405,73 +405,8 @@
           </div>
         </div>
 
-        <!-- Policy auswählen -->
+        <!-- Bestätigung mit Policy-Berechnung (Step 2) -->
         <div v-if="cancellationStep === 2" class="mb-6">
-          <div v-if="appointmentDataForPolicy" class="space-y-4">
-            <!-- Termin-Info Header -->
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="font-medium text-gray-900">{{ translateEventTypeCode(props.eventData?.event_type_code) }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
-                  <p class="text-sm text-gray-600">
-                    {{ formatDateWithTime(props.eventData?.start) }} • 
-                    {{ props.eventData?.duration_minutes || 45 }} Min • 
-                    {{ formatCurrency(appointmentDataForPolicy?.price_rappen || 0) }}
-                  </p>
-                </div>
-                <div class="text-right">
-                  <div class="text-sm text-gray-500">Zeit bis Termin</div>
-                  <div class="font-medium text-gray-900">
-                    {{ timeUntilAppointment?.hours || 0 }}h
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Policy Selection -->
-            <CancellationPolicySelector
-              v-model="selectedCancellationPolicyId"
-              :appointment-data="appointmentDataForPolicy"
-              :cancellation-type="cancellationType"
-              :applies-to="appliesToValue"
-              @policy-changed="onPolicyChanged"
-            />
-
-            <!-- Quick Summary -->
-            <div v-if="cancellationPolicyResult" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="font-medium text-blue-900">Absage-Berechnung</div>
-                    <div class="text-sm text-blue-700">
-                      {{ cancellationPolicyResult.calculation.chargePercentage }}% verrechnen
-                    </div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div v-if="cancellationPolicyResult.calculation.chargePercentage > 0" class="text-lg font-bold text-red-600">
-                    {{ formatCurrency(cancellationPolicyResult.chargeAmountRappen) }}
-                  </div>
-                  <div v-else class="text-lg font-bold text-green-600">
-                    Kostenlos
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="text-center text-gray-500 py-8">
-            <div class="text-4xl mb-2">⚠️</div>
-            <p>Keine Termindaten verfügbar</p>
-          </div>
-        </div>
-
-        <!-- Bestätigung (Step 3) -->
-        <div v-if="cancellationStep === 3" class="mb-6">
           <div v-if="cancellationPolicyResult" class="space-y-4">
             <!-- Termin-Info Header -->
             <div class="bg-gray-50 rounded-lg p-4">
@@ -553,23 +488,13 @@
             ← Zurück
           </button>
           <button
-            v-if="cancellationStep === 3"
-            @click="goBackInCancellationFlow"
-            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            ← Zurück
-          </button>
-          <button
             v-if="cancellationStep === 2"
             @click="confirmCancellationWithReason"
             :disabled="isLoading"
             class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? 'Lösche...' : 'Termin absagen' }}
-          </button>
-          <button
-            v-if="cancellationStep === 3"
-            @click="confirmCancellationWithReason"
+          </button>"
             :disabled="isLoading"
             class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -688,7 +613,6 @@ import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDuratio
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
-import CancellationPolicySelector from '~/components/CancellationPolicySelector.vue'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -787,11 +711,8 @@ const cancellationStep = ref(0) // 0 = Typ auswählen, 1 = Grund auswählen, 2 =
 const cancellationType = ref<'student' | 'staff' | undefined>(undefined)
 const cancellationInvoiceData = ref<any>(null)
 const pendingCancellationReason = ref<any>(null) // Speichert den ausgewählten Grund für die Bezahlnachfrage
-const selectedCancellationPolicyId = ref<string>('')
 const cancellationPolicyResult = ref<any>(null)
-const appliesToValue = ref<'appointments' | 'courses' | undefined>('appointments')
 const timeUntilAppointment = ref({ hours: 0, days: 0, isOverdue: false, description: '' })
-const isResetingPolicy = ref(false) // ✅ NEU: Flag to prevent onPolicyChanged from being called during reset
 const appointmentNumber = ref(1)
 const availableDurations = ref([45] as number[])
 const customerInviteSelectorRef = ref()
@@ -3933,9 +3854,6 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     // Add credit hours information if available
     if (cancellationPolicyResult.value?.shouldCreditHours) {
       updateData.cancellation_credit_hours = true
-      if (selectedCancellationPolicyId.value) {
-        updateData.cancellation_policy_applied = selectedCancellationPolicyId.value
-      }
     }
 
     const { data, error } = await supabase
@@ -4149,7 +4067,6 @@ const proceedWithCancellation = async (selectedReason: any) => {
     selectedCancellationReasonId.value = null
     cancellationStep.value = 0
     cancellationType.value = undefined
-    selectedCancellationPolicyId.value = ''
     cancellationPolicyResult.value = null
   }
 }
@@ -4159,7 +4076,6 @@ const cancelCancellationReason = () => {
   selectedCancellationReasonId.value = null
   cancellationStep.value = 0
   cancellationType.value = undefined
-  selectedCancellationPolicyId.value = ''
   cancellationPolicyResult.value = null
   logger.debug('🚫 Cancellation reason selection cancelled by user')
 }
@@ -4244,12 +4160,12 @@ const goToPolicySelection = async () => {
         : `Stornogebühr für Termin (${chargePercentageToUse}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
     logger.debug('✅ Policy result set with force charge percentage:', cancellationPolicyResult.value)
-    // ✅ IMPORTANT: Skip policy selection modal and go directly to confirmation!
-    cancellationStep.value = 3
+    // ✅ Go directly to confirmation (Step 2 - no more separate policy selection)
+    cancellationStep.value = 2
     return
   }
   
-  // Otherwise, show policy selection modal (step 2)
+  // Otherwise, load policies normally and go to confirmation (Step 2)
   cancellationStep.value = 2
   
   // Otherwise, load policies normally
@@ -4270,62 +4186,20 @@ const goToPolicySelection = async () => {
 }
 
 const goBackInCancellationFlow = async () => {
-  if (cancellationStep.value === 3) {
-    // Going back from confirmation
-    // Check if this is a staff cancellation with force_charge (no policy selection was shown)
-    const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
-    const forceChargePercentage = (selectedReason as any)?.force_charge_percentage
-    const hasForceCharge = forceChargePercentage !== null && forceChargePercentage !== undefined
-    const isStaffReason = (selectedReason as any)?.cancellation_type === 'staff'
-    
-    if (hasForceCharge || isStaffReason) {
-      // Skip policy selection step (step 2) and go directly to reason selection (step 1)
-      cancellationStep.value = 1
-      cancellationPolicyResult.value = null
-    } else {
-      // Normal flow: go back to policy selection
-      cancellationStep.value = 2
-    }
-  } else if (cancellationStep.value === 2) {
-    // Go back from policy selection to reason selection
-    cancellationPolicyResult.value = null
+  logger.debug('⬅️ Going back in cancellation flow from step:', cancellationStep.value)
+  
+  if (cancellationStep.value === 2) {
+    // Go back from confirmation (Step 2) to reason selection (Step 1)
     cancellationStep.value = 1
+    cancellationPolicyResult.value = null
   } else if (cancellationStep.value === 1) {
-    // Go back from reason selection to type selection
+    // Go back from reason selection (Step 1) to type selection (Step 0)
     cancellationStep.value = 0
     selectedCancellationReasonId.value = null
     cancellationPolicyResult.value = null
   }
-  logger.debug('⬅️ Going back in cancellation flow, step:', cancellationStep.value)
-}
-
-const onPolicyChanged = (result: any) => {
-  // ✅ Skip if we're in the middle of resetting the policy
-  if (isResetingPolicy.value) {
-    logger.debug('⏭️ Skipping onPolicyChanged during policy reset')
-    return
-  }
   
-  logger.debug('📋 Policy changed:', result)
-  cancellationPolicyResult.value = result
-  
-  // Update time until appointment for display
-  if (result && props.eventData?.start) {
-    const appointmentDate = new Date(props.eventData.start)
-    const currentDate = new Date()
-    const diffMs = appointmentDate.getTime() - currentDate.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffHours / 24)
-    
-    timeUntilAppointment.value = {
-      hours: diffHours,
-      days: diffDays,
-      isOverdue: diffMs < 0,
-      description: diffMs < 0 ? 'Termin bereits vorbei' : 
-                  diffDays > 0 ? `${diffDays} Tag${diffDays > 1 ? 'e' : ''}` :
-                  diffHours > 0 ? `${diffHours} Stunde${diffHours > 1 ? 'n' : ''}` : 'Weniger als 1 Stunde'
-    }
-  }
+  logger.debug('⬅️ New step:', cancellationStep.value)
 }
 
 // Computed: Gefilterte Absage-Gründe basierend auf Typ
