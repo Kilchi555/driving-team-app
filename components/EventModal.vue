@@ -433,6 +433,7 @@
             <CancellationPolicySelector
               v-model="selectedCancellationPolicyId"
               :appointment-data="appointmentDataForPolicy"
+              :cancellation-type="cancellationType"
               @policy-changed="onPolicyChanged"
             />
 

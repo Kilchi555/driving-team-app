@@ -500,8 +500,36 @@ export const useCancellationPolicies = () => {
   const calculateCancellationCharges = (
     policy: PolicyWithRules,
     appointmentDate: Date,
-    cancellationDate: Date = new Date()
+    cancellationDate: Date = new Date(),
+    cancellationType?: 'staff' | 'student'
   ): CancellationCalculation => {
+    // ✅ NEW: Handle appointments in the past
+    // If appointment is in the past, apply fixed rules:
+    // - Staff cancellation (reason): 0% charge (free)
+    // - Student/Client cancellation (reason): 100% charge
+    const isPast = appointmentDate <= cancellationDate
+    
+    if (isPast) {
+      logger.debug('⏰ Appointment is in the past - applying past appointment rules:', {
+        appointmentDate: appointmentDate.toISOString(),
+        cancellationDate: cancellationDate.toISOString(),
+        cancellationType
+      })
+      
+      const chargePercentageForPast = cancellationType === 'staff' ? 0 : 100
+      const lastRule = policy.rules[policy.rules.length - 1]
+      
+      return {
+        applicableRule: lastRule || null,
+        chargePercentage: chargePercentageForPast,
+        creditHours: cancellationType === 'staff',
+        hoursBeforeAppointment: 0,
+        description: cancellationType === 'staff' 
+          ? 'Kostenlose Stornierung durch Fahrlehrer (Termin in der Vergangenheit)' 
+          : 'Volle Gebühr - Termin liegt in der Vergangenheit'
+      }
+    }
+    
     // Check if any rule has exclude_sundays enabled
     const hasExcludeSundays = policy.rules.some(rule => rule.exclude_sundays === true)
     

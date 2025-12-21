@@ -30,6 +30,7 @@ import {
 interface Props {
   appointmentData: AppointmentData
   modelValue?: string // Selected policy ID
+  cancellationType?: 'staff' | 'student' // Type of cancellation for past appointment handling
 }
 
 interface Emits {
@@ -83,11 +84,12 @@ const calculateCharges = () => {
     // Calculate time until appointment
     timeUntilAppointment.value = getTimeUntilAppointment(appointmentDate, currentDate)
     
-    // Calculate cancellation charges
+    // Calculate cancellation charges with cancellation type
     const result = calculateCancellationCharges(
       selectedPolicy.value,
       props.appointmentData,
-      currentDate
+      currentDate,
+      props.cancellationType
     )
     
     cancellationResult.value = result
