@@ -2702,6 +2702,30 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
     
     if (softDeleteError) throw softDeleteError
     
+    // Send deletion notification (SMS/Email) to customer
+    try {
+      const { data: appointmentWithUser } = await supabase
+        .from('appointments')
+        .select('id, user_id, tenant_id')
+        .eq('id', appointment.id)
+        .single()
+      
+      if (appointmentWithUser?.user_id && appointmentWithUser?.tenant_id) {
+        await $fetch('/api/reminders/send-deletion-notification', {
+          method: 'POST',
+          body: {
+            appointmentId: appointment.id,
+            userId: appointmentWithUser.user_id,
+            tenantId: appointmentWithUser.tenant_id,
+            type: 'customer'
+          }
+        })
+      }
+    } catch (smsError) {
+      console.warn('⚠️ Could not send deletion notification SMS/Email:', smsError)
+      // Don't throw - the appointment is already deleted
+    }
+    
     // Aktualisiere den lokalen Termin-Status
     const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointment.id)
     if (appointmentIndex !== -1) {
