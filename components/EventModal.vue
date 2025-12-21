@@ -3674,7 +3674,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     if (isLessonType) {
       // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
       // Do NOT hardcode 100% - the policy decides based on time until appointment
-      chargePercentage = cancellationPolicyResult.value?.calculation.chargePercentage || 100
+      // ✅ CRITICAL FIX: Use ?? instead of || to allow 0 as valid value
+      chargePercentage = cancellationPolicyResult.value?.calculation.chargePercentage ?? 100
       
       logger.debug('💳 Using cancellation policy for charge determination:', {
         policyChargePercentage: cancellationPolicyResult.value?.calculation.chargePercentage,
