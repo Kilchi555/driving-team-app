@@ -72,7 +72,12 @@ export default defineEventHandler(async (event) => {
         senderName: tenantName
       })
     } catch (smsError: any) {
-      console.error('❌ SMS sending failed:', smsError)
+      logger.error('OnboardingSMS', '❌ SMS sending failed:', {
+        error: smsError.message,
+        errorCode: smsError.code,
+        phone: formattedPhone,
+        senderName: tenantName
+      })
       // Don't throw - student was created, SMS can be resent manually
       return {
         success: false,
