@@ -130,7 +130,10 @@ export default defineEventHandler(async (event) => {
         error: policyError?.message,
         policy: cancellationPolicy,
       })
-      throw new Error(errorMsg)
+      throw createError({
+        statusCode: 500,
+        message: errorMsg
+      })
     }
 
     // Find the threshold for free cancellation (rule with charge_percentage = 0)
@@ -139,7 +142,10 @@ export default defineEventHandler(async (event) => {
     if (!freeRule) {
       const errorMsg = 'Keine kostenloses Stornierungsregel in der Policy konfiguriert. Bitte kontaktieren Sie den Administrator.'
       logger.error('❌ No free cancellation rule found in policy:', cancellationPolicy.id)
-      throw new Error(errorMsg)
+      throw createError({
+        statusCode: 500,
+        message: errorMsg
+      })
     }
     
     const hoursBeforeCancellationFree = freeRule.hours_before_appointment
