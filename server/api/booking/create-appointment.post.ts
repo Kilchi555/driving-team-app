@@ -148,22 +148,19 @@ export default defineEventHandler(async (event) => {
     if (eventType?.default_fee_rappen && eventType.default_fee_rappen > 0) {
       // ✅ WICHTIG: Prüfe ob Admin Fee bereits berechnet wurde
       // Admin Fee wird NICHT erneut berechnet wenn:
-      // 1. Es existiert bereits ein Payment mit admin_fee_rappen > 0 (pending, completed, oder auch refunded)
-      // 2. Das bedeutet die Admin Fee wurde dem Kunden bereits verrechnet
-      // 3. Egal ob der Termin später storniert wird - die Fee sollte nicht doppelt verrechnet werden
+      // 1. Es existiert ein Payment mit admin_fee_rappen > 0 UND
+      // 2. Der Payment Status ist NICHT 'refunded'
+      // 
+      // Admin Fee WIRD erneut berechnet wenn:
+      // - Payment wurde refunded (Termin kostenlos storniert > 24h)
+      // - oder kein Payment mit Admin Fee existiert
       
       const { data: adminFeePayments } = await supabase
         .from('payments')
         .select(`
           id,
           payment_status,
-          admin_fee_rappen,
-          appointments!inner (
-            id,
-            status,
-            deleted_at,
-            cancellation_charge_percentage
-          )
+          admin_fee_rappen
         `)
         .eq('user_id', user_id)
         .eq('tenant_id', tenant_id)
@@ -173,15 +170,24 @@ export default defineEventHandler(async (event) => {
       let hasValidAdminFeePayment = false
       
       if (adminFeePayments && adminFeePayments.length > 0) {
-        // ✅ CRITICAL FIX: Wenn ES IRGENDEIN Payment mit admin_fee_rappen > 0 gibt,
-        // dann wurde die Admin Fee bereits berechnet und sollte NICHT erneut verrechnet werden
-        // Das gilt auch für pending/completed/refunded Payments
-        logger.debug('⚠️ Admin fee already charged in previous payment - do NOT charge again', {
-          paymentCount: adminFeePayments.length,
-          paymentIds: adminFeePayments.map((p: any) => p.id),
-          adminFees: adminFeePayments.map((p: any) => p.admin_fee_rappen)
-        })
-        hasValidAdminFeePayment = true
+        // Prüfe ob es ein NICHT-REFUNDED Payment mit Admin Fee gibt
+        for (const payment of adminFeePayments) {
+          if (payment.payment_status !== 'refunded') {
+            // ✅ Payment mit Admin Fee existiert und wurde NICHT refunded
+            logger.debug('ℹ️ Admin fee already charged in non-refunded payment', {
+              paymentId: payment.id,
+              paymentStatus: payment.payment_status,
+              adminFee: payment.admin_fee_rappen
+            })
+            hasValidAdminFeePayment = true
+            break
+          }
+        }
+        
+        // Wenn alle Admin Fee Payments refunded sind, kann neu berechnet werden
+        if (!hasValidAdminFeePayment) {
+          logger.debug('✅ Previous admin fee was refunded - can charge admin fee again')
+        }
       }
       
       if (hasValidAdminFeePayment) {
