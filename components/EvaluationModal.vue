@@ -196,6 +196,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 
