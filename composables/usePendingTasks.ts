@@ -599,25 +599,15 @@ const saveCriteriaEvaluations = async (
 
     logger.debug('Attempting to save notes:', notesToInsert);
 
-    // Step 1: Delete all old evaluation notes for this appointment first
-    // This ensures we don't have duplicates or old evaluations
-    const { error: deleteError } = await supabase
+    // ✅ Step 1: Upsert the evaluation notes (update if exists, insert if not)
+    // This preserves old evaluations while updating new/modified ones
+    const { error: upsertError } = await supabase
       .from('notes')
-      .delete()
-      .eq('appointment_id', appointmentId)
-      .not('evaluation_criteria_id', 'is', null);
+      .upsert(notesToInsert, { 
+        onConflict: 'appointment_id,evaluation_criteria_id' // Compound unique key
+      });
     
-    if (deleteError) {
-      console.warn('⚠️ Warning deleting old notes:', deleteError);
-      // Don't throw - continue with insert anyway
-    }
-
-    // Step 2: Insert the new evaluation notes
-    const { error: insertError } = await supabase
-      .from('notes')
-      .insert(notesToInsert);
-    
-    if (insertError) throw insertError;
+    if (upsertError) throw upsertError;
 
     // Nach erfolgreichem Speichern: Aktualisiere die Pendenzen
     // Ein Termin ist NICHT mehr pending, wenn er mindestens eine Kriterien-Bewertung hat.

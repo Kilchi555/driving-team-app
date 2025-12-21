@@ -663,9 +663,8 @@ const saveEvaluation = async () => {
   
   try {
     // Erstelle ein Array von CriteriaEvaluationData-Objekten
-    // WICHTIG: Speichere NUR die neu bewerteten Kriterien, nicht die historischen!
+    // WICHTIG: Speichere ALLE ausgewählten Kriterien (alte und neue), nicht nur die neu bewerteten!
     const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value
-      .filter(criteriaId => newlyRatedCriteria.value.includes(criteriaId)) // Only save newly rated criteria
       .map(criteriaId => {
         return {
           criteria_id: criteriaId,
@@ -674,7 +673,7 @@ const saveEvaluation = async () => {
         }
       })
     
-    logger.debug(`🔥 Saving only ${evaluationsToSave.length} newly rated criteria (filtered from ${selectedCriteriaOrder.value.length} total)`)
+    logger.debug(`🔥 Saving all ${evaluationsToSave.length} selected criteria`)
 
     logger.debug('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
       appointmentId: props.appointment.id,
