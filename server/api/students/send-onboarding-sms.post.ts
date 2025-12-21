@@ -10,7 +10,10 @@ export default defineEventHandler(async (event) => {
   try {
     const { phone, firstName, token } = await readBody(event)
 
+    logger.debug('📱 Onboarding SMS request received:', { phone, firstName, token: token?.substring(0, 10) + '...' })
+
     if (!phone || !firstName || !token) {
+      logger.error('OnboardingSMS', 'Missing required fields:', { phone: !!phone, firstName: !!firstName, token: !!token })
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields: phone, firstName, token'
