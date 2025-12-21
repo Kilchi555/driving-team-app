@@ -134,13 +134,12 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Notiz (optional)
-                </label>
                 <textarea
                   v-model="criteriaNotes[criteriaId]"
-                  :placeholder="`Notiz zu ${getCriteriaById(criteriaId)?.name}...`"
-                  class="w-full h-10 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  :placeholder="`Notiz optional...`"
+                  class="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none overflow-y-auto"
+                  style="height: 4.5rem; max-height: 10rem;"
+                  rows="2"
                 ></textarea>
               </div>
             </div>
