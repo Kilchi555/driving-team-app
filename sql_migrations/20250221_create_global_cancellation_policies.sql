@@ -33,14 +33,12 @@ INSERT INTO public.cancellation_rules (
   policy_id,
   hours_before_appointment,
   charge_percentage,
-  refund_percentage,
   created_at
 )
 SELECT 
   cp.id,
   24,
   0,
-  100,
   NOW()
 FROM public.cancellation_policies cp
 WHERE cp.tenant_id IS NULL
@@ -56,14 +54,12 @@ INSERT INTO public.cancellation_rules (
   policy_id,
   hours_before_appointment,
   charge_percentage,
-  refund_percentage,
   created_at
 )
 SELECT 
   cp.id,
   0,
   100,
-  0,
   NOW()
 FROM public.cancellation_policies cp
 WHERE cp.tenant_id IS NULL
