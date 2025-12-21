@@ -1,69 +1,41 @@
 // composables/useSmsService.ts
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export const useSmsService = () => {
   const supabase = getSupabase();
 
-  const sendSms = async (phoneNumber: string, message: string) => {
+  const sendSms = async (phoneNumber: string, message: string, senderName?: string) => {
     try {
-      logger.debug('📱 SMS Service called:', { phoneNumber, message })
+      logger.debug('📱 SMS Service called:', { phoneNumber, message, senderName })
       
-      // Always use cloud Supabase Edge Function (project uses cloud database)
-      logger.debug('🌐 Using cloud Supabase Edge Function')
+      // Use local API endpoint instead of Supabase Edge Function
+      logger.debug('🚀 Using local /api/sms/send endpoint')
       
-      const { data, error } = await supabase.functions.invoke('send-twilio-sms', {
+      const { data, error } = await $fetch('/api/sms/send', {
+        method: 'POST',
         body: {
-          to: phoneNumber,
-          message: message
-        },
-        method: 'POST'
-      });
+          phone: phoneNumber,
+          message: message,
+          senderName: senderName
+        }
+      }) as any;
 
-      if (error) {
-        console.error('❌ Cloud function error:', error);
-        return { success: false, error: error.message };
+      if (error || !data?.success) {
+        console.error('❌ SMS API error:', error);
+        return { success: false, error: error?.message || 'SMS sending failed' };
       }
 
-      logger.debug('✅ Cloud SMS sent successfully:', data);
-      return { success: true, data };
+      logger.debug('✅ SMS sent successfully via local API:', data);
+      return { success: true, data: data.smsData };
 
     } catch (err: any) {
       console.error('❌ Unexpected SMS error:', err);
-      
-      // ✅ FALLBACK: Simuliere erfolgreiche SMS und speichere in Datenbank
-      logger.debug('🔄 SMS Fallback: Simulating successful SMS for testing')
-      
-      try {
-        // Speichere SMS-Log direkt in der Datenbank
-        const { error: dbError } = await supabase
-          .from('sms_logs')
-          .insert({
-            to_phone: phoneNumber,
-            message: message,
-            twilio_sid: 'test_' + Date.now(),
-            status: 'simulated',
-            sent_at: new Date().toISOString()
-          });
-        
-        if (dbError) {
-          console.error('❌ Database error:', dbError);
-        } else {
-          logger.debug('✅ SMS log saved to database');
-        }
-      } catch (dbErr) {
-        console.error('❌ Database fallback error:', dbErr);
-      }
+      logger.error('SMSService', 'SMS sending failed:', { error: err.message });
       
       return { 
-        success: true, 
-        data: { 
-          sid: 'test_' + Date.now(),
-          status: 'simulated',
-          to: phoneNumber,
-          from: '+1234567890',
-          body: message,
-          date_created: new Date().toISOString()
-        }
+        success: false, 
+        error: err.message || 'SMS sending failed'
       };
     }
   };
