@@ -104,10 +104,9 @@ export const useCancellationPolicies = () => {
           .select('*')
           .eq('policy_id', policy.id)
         
-        // Filter by tenant_id if policy has tenant_id (not a template)
-        if (policy.tenant_id) {
-          rulesQuery = rulesQuery.eq('tenant_id', policy.tenant_id)
-        }
+        // ✅ IMPORTANT: Don't filter by tenant_id for rules
+        // Rules always belong to their policy via policy_id
+        // The tenant_id on rules is just metadata
         
         const { data: rulesData, error: rulesError } = await rulesQuery
           .order('hours_before_appointment', { ascending: false })
@@ -191,10 +190,9 @@ export const useCancellationPolicies = () => {
           .select('*')
           .eq('policy_id', policy.id)
         
-        // Filter by tenant_id if policy has tenant_id (not a template)
-        if (policy.tenant_id) {
-          rulesQuery = rulesQuery.eq('tenant_id', policy.tenant_id)
-        }
+        // ✅ IMPORTANT: Don't filter by tenant_id for rules
+        // Rules always belong to their policy via policy_id
+        // The tenant_id on rules is just metadata
         
         const { data: rulesData, error: rulesError } = await rulesQuery
           .order('hours_before_appointment', { ascending: false })

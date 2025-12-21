@@ -117,8 +117,7 @@ ORDER BY cp.created_at DESC;
 SELECT 
   'All Policies Summary' as info,
   COUNT(DISTINCT cp.id) as total_policies,
-  COUNT(DISTINCT cr.id) as total_rules,
-  STRING_AGG(DISTINCT 'Global: ' || cp.name || ' (' || COUNT(cr.id) OVER (PARTITION BY cp.id) || ' rules)', '; ') as summary
+  COUNT(DISTINCT cr.id) as total_rules
 FROM public.cancellation_policies cp
 LEFT JOIN public.cancellation_rules cr ON cp.id = cr.policy_id
 WHERE cp.applies_to = 'appointments';
