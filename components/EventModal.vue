@@ -3808,50 +3808,58 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       chargePercentage
     })
     
-    if (isLessonType && withCosts) {
-      logger.debug('💳 Appointment will be charged cancellation fee - keeping all payment data')
-      logger.debug('   - lesson_price_rappen: KEPT (for cancellation fee)')
-      logger.debug('   - products_price_rappen: KEPT (for cancellation fee)')
-      logger.debug('   - product_sales: KEPT (for accounting)')
-      chargePercentage = 100 // Full charge
-    } else if (isLessonType && !withCosts) {
-      logger.debug('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
-      chargePercentage = 0 // No charge
+    if (isLessonType) {
+      // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
+      // Do NOT hardcode 100% - the policy decides based on time until appointment
+      chargePercentage = cancellationPolicyResult.value?.chargePercentage || 100
       
-      // ✅ NEW: Call handle-cancellation endpoint to process refunds
-      logger.debug('📡 Calling handle-cancellation endpoint for refund processing...')
-      try {
-        const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
-          method: 'POST',
-          body: {
-            appointmentId: props.eventData.id,
-            deletionReason,
-            lessonPriceRappen,
-            adminFeeRappen,
-            shouldCreditHours: true,
-            chargePercentage: 0,
-            originalLessonPrice: lessonPriceRappen,
-            originalAdminFee: adminFeeRappen
-          }
-        })
+      logger.debug('💳 Using cancellation policy for charge determination:', {
+        policyChargePercentage: cancellationPolicyResult.value?.chargePercentage,
+        withCosts,
+        finalChargePercentage: chargePercentage
+      })
+      
+      if (chargePercentage === 0) {
+        logger.debug('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
         
-        logger.debug('✅ Cancellation refund processed:', cancellationResult)
-        // @ts-ignore - cancellationResult is of type unknown
-        if (cancellationResult.action === 'refund_processed' || cancellationResult.action === 'credit_created_no_payment') {
-          // @ts-ignore
-          logger.debug(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
+        // ✅ NEW: Call handle-cancellation endpoint to process refunds
+        logger.debug('📡 Calling handle-cancellation endpoint for refund processing...')
+        try {
+          const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+            method: 'POST',
+            body: {
+              appointmentId: props.eventData.id,
+              deletionReason,
+              lessonPriceRappen,
+              adminFeeRappen,
+              shouldCreditHours: true,
+              chargePercentage: 0,
+              originalLessonPrice: lessonPriceRappen,
+              originalAdminFee: adminFeeRappen
+            }
+          })
+          
+          logger.debug('✅ Cancellation refund processed:', cancellationResult)
+          // @ts-ignore - cancellationResult is of type unknown
+          if (cancellationResult.action === 'refund_processed' || cancellationResult.action === 'credit_created_no_payment') {
+            // @ts-ignore
+            logger.debug(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
+          }
+        } catch (error: any) {
+          console.error('❌ Error calling handle-cancellation endpoint:', {
+            message: error.message,
+            statusCode: error.statusCode,
+            statusMessage: error.statusMessage,
+            data: error.data,
+            fullError: error
+          })
         }
-      } catch (error: any) {
-        console.error('❌ Error calling handle-cancellation endpoint:', {
-          message: error.message,
-          statusCode: error.statusCode,
-          statusMessage: error.statusMessage,
-          data: error.data,
-          fullError: error
-        })
+      } else if (chargePercentage > 0) {
+        logger.debug('💳 Appointment will be charged cancellation fee - keeping all payment data')
+        logger.debug('   - lesson_price_rappen: KEPT (for cancellation fee)')
+        logger.debug('   - products_price_rappen: KEPT (for cancellation fee)')
+        logger.debug('   - product_sales: KEPT (for accounting)')
       }
-      
-      // ✅ 1.0: Prüfe ob Payment autorisiert ist und storniere bei Absage >24h vor Termin
       const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
       const now = new Date()
       const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
