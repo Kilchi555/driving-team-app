@@ -130,6 +130,12 @@ export const useCancellationPolicies = () => {
       }
 
       policiesWithRules.value = policiesWithRulesData
+      
+      logger.debug('📋 Policies loaded:', {
+        totalPolicies: policiesWithRulesData.length,
+        defaultPolicy: defaultPolicy.value?.name || 'NOT SET',
+        defaultPolicyRules: defaultPolicy.value?.rules?.length || 0
+      })
     } catch (err) {
       console.error('Error fetching cancellation policies:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation policies'

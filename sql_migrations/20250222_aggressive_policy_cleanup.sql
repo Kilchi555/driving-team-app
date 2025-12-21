@@ -31,8 +31,7 @@ VALUES (
   'appointments',
   NOW(),
   NOW()
-)
-RETURNING id INTO STRICT @policy_id;
+);
 
 -- Step 4: Add the first rule: 0% charge if >= 24h before (more_than)
 INSERT INTO public.cancellation_rules (
