@@ -181,7 +181,7 @@
         
         <div v-if="!isValid && selectedCriteriaOrder.length > 0" class="mt-2 text-xs text-red-600">
           <p v-if="missingRequiredRatings.length > 0">
-            • Folgende Bewertungspunkte müssen noch bewertet werden: {{ missingRequiredRatings.join(', ') }}
+            <strong>Muss noch bewertet werden:</strong> {{ missingRequiredRatings.join(', ') }}
           </p>
         </div>
       </div>
