@@ -138,7 +138,7 @@
                   v-model="criteriaNotes[criteriaId]"
                   :placeholder="`Notiz optional...`"
                   class="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none overflow-y-auto"
-                  style="height: 4.5rem; max-height: 10rem;"
+                  style="height: 2.5rem; max-height: 10rem;"
                   rows="1"
                 ></textarea>
               </div>
