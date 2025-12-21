@@ -1559,10 +1559,24 @@ const togglePaymentSelection = (paymentId: string) => {
 
 // Toggle all payments
 const toggleAllPayments = () => {
-  // Nur auswählbar: offene Zahlungen (nicht bezahlt und nicht storniert)
-  const selectablePayments = filteredPayments.value.filter(p => 
-    p.payment_status !== 'completed' && !p.deleted_at
-  )
+  // Nur auswählbar: offene Zahlungen (nicht bezahlt und nicht gelöscht)
+  // Für abgesagte Termine: nur wenn Gebühr verrechnet wird (chargePercentage > 0)
+  const selectablePayments = filteredPayments.value.filter(p => {
+    // Skip deleted payments
+    if (p.deleted_at) return false
+    
+    // Skip already completed payments
+    if (p.payment_status === 'completed') return false
+    
+    // For cancelled appointments: only if there's a charge to collect
+    if (p.appointments?.status === 'cancelled') {
+      const chargePercentage = p.appointments.cancellation_charge_percentage ?? 100
+      return chargePercentage > 0
+    }
+    
+    // For non-cancelled appointments: always selectable if pending
+    return true
+  })
   
   if (selectedPayments.value.length === selectablePayments.length) {
     selectedPayments.value = []
@@ -1668,13 +1682,24 @@ const totalSelectedAmount = computed(() => {
 
 // Handle click on payment card
 const handlePaymentCardClick = (payment: any) => {
-  // If cancelled, toggle expansion to show/hide details
+  // If cancelled, allow selection if there's a charge to collect
   if (payment.appointments?.status === 'cancelled') {
     logger.debug('📋 Toggling cancelled payment details:', payment.id)
+    // Toggle expansion to show/hide details
     if (expandedCancelledPayments.value.has(payment.id)) {
       expandedCancelledPayments.value.delete(payment.id)
     } else {
       expandedCancelledPayments.value.add(payment.id)
+    }
+    
+    // ✅ NEW: Also allow selection if there's a charge (chargePercentage > 0)
+    const chargePercentage = payment.appointments.cancellation_charge_percentage ?? 100
+    if (chargePercentage > 0 && payment.payment_status === 'pending') {
+      logger.debug('💳 Cancelled payment with charge can be selected - toggling selection', {
+        chargePercentage,
+        paymentStatus: payment.payment_status
+      })
+      togglePaymentSelection(payment.id)
     }
   }
   // If completed, ignore click
