@@ -89,11 +89,11 @@
             </div>
           </div>
 
-          <div class="space-y-3">
+          <div class="space-y-2">
             <div
               v-for="(criteriaId, index) in sortedCriteriaOrder"
               :key="criteriaId"
-              class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+              class="bg-gray-50 rounded-lg p-3 border border-gray-200"
             >
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
