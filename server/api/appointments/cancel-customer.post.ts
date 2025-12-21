@@ -111,14 +111,16 @@ export default defineEventHandler(async (event) => {
     }
 
     // 3. Get tenant's cancellation policy to determine free cancellation threshold
+    // First try to get tenant-specific policy, then fall back to global policy (tenant_id = NULL)
     const { data: cancellationPolicy, error: policyError } = await supabaseAdmin
       .from('cancellation_policies')
       .select(`
         *,
         rules:cancellation_rules(*)
       `)
-      .eq('tenant_id', userProfile.tenant_id)
+      .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
       .eq('is_active', true)
+      .order('tenant_id', { ascending: false }) // Tenant-specific policies come first (non-NULL before NULL)
       .order('is_default', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -135,6 +137,9 @@ export default defineEventHandler(async (event) => {
         message: errorMsg
       })
     }
+    
+    const policyScope = cancellationPolicy.tenant_id ? 'tenant-specific' : 'global'
+    logger.debug(`✅ Using ${policyScope} cancellation policy:`, cancellationPolicy.name)
 
     // Find the threshold for free cancellation (rule with charge_percentage = 0)
     const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
