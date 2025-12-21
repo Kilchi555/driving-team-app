@@ -309,7 +309,14 @@ export const useStudents = () => {
           const { sendSms } = useSmsService()
           const message = `Hallo ${data.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
           
-          const smsResult = await sendSms(cleanPhone, message)
+          // Get tenant SMS sender name
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('twilio_from_sender')
+            .eq('id', tenantId)
+            .single()
+          
+          const smsResult = await sendSms(cleanPhone, message, tenant?.twilio_from_sender)
           
           if (smsResult.success) {
             logger.debug('✅ Onboarding SMS sent to:', cleanPhone, 'SID:', smsResult.data?.sid)
