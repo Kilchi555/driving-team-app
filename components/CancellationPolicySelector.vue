@@ -31,6 +31,7 @@ interface Props {
   appointmentData: AppointmentData
   modelValue?: string // Selected policy ID
   cancellationType?: 'staff' | 'student' // Type of cancellation for past appointment handling
+  appliesTo?: 'appointments' | 'courses' // Filter policies by applies_to field
 }
 
 interface Emits {
@@ -103,7 +104,7 @@ const calculateCharges = () => {
 
 // Load data on mount
 onMounted(async () => {
-  await fetchPolicies()
+  await fetchPolicies(props.appliesTo)
   calculateCharges()
 })
 
