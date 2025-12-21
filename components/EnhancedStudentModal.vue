@@ -1624,6 +1624,13 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
         continue
       }
       
+      logger.debug(`📊 Payment data loaded:`, {
+        paymentId,
+        total_amount_rappen: paymentData.total_amount_rappen,
+        admin_fee_rappen: paymentData.admin_fee_rappen,
+        appointments: paymentData.appointments
+      })
+      
       // ✅ NEW: For cancelled appointments, calculate actual charge to collect
       let amountToMarkAsPaid = paymentData.total_amount_rappen
       
