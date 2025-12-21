@@ -1684,13 +1684,14 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     }
     
     // Reload payments and lessons to reflect changes
+    const processedCount = selectedPayments.value.length
     await loadPayments()
     await loadLessons()
     
     // Clear selection after processing
     selectedPayments.value = []
     
-    logger.debug(`✅ Successfully processed ${selectedPayments.value.length} payments as ${method}`)
+    logger.debug(`✅ Successfully processed ${processedCount} payments as ${method}`)
   } catch (error) {
     console.error('❌ Error processing bulk payment:', error)
   } finally {
