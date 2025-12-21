@@ -1051,7 +1051,26 @@ const resendOnboardingSms = async () => {
     const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
     const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
     
-    const result = await sendSms(pendingStudent.value.phone, message)
+    // Get current user's tenant for SMS sender name
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', authUser?.id)
+      .single()
+    
+    let senderName = undefined
+    if (userProfile?.tenant_id) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('twilio_from_sender')
+        .eq('id', userProfile.tenant_id)
+        .single()
+      
+      senderName = tenant?.twilio_from_sender
+    }
+    
+    const result = await sendSms(pendingStudent.value.phone, message, senderName)
     
     if (result.success) {
       uiStore.addNotification({
