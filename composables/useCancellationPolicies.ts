@@ -70,7 +70,8 @@ export const useCancellationPolicies = () => {
 
       // Build query
       // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
-      // Tenant-specific policies take precedence, global policies act as fallback
+      // For now, load ALL active policies with the correct applies_to
+      // Then filter in code if needed
       let query = supabase
         .from('cancellation_policies')
         .select('*')
@@ -80,10 +81,6 @@ export const useCancellationPolicies = () => {
       if (appliesTo) {
         query = query.eq('applies_to', appliesTo)
       }
-      
-      // Load both tenant-specific and global policies
-      // Correct .or() syntax for Supabase PostgREST
-      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
       
       // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
       query = query.order('tenant_id', { ascending: false })
@@ -99,7 +96,13 @@ export const useCancellationPolicies = () => {
 
       logger.debug('✅ Raw policies data loaded:', { count: policiesData?.length || 0, policies: policiesData })
 
-      policies.value = policiesData || []
+      // Filter to get both tenant-specific AND global policies
+      // Tenant-specific policies take precedence over global
+      const filteredPolicies = (policiesData || []).filter(p => 
+        p.tenant_id === null || p.tenant_id === tenantId
+      )
+      
+      policies.value = filteredPolicies
 
       // Fetch rules for each policy
       const policiesWithRulesData: PolicyWithRules[] = []
