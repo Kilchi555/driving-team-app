@@ -434,6 +434,7 @@
               v-model="selectedCancellationPolicyId"
               :appointment-data="appointmentDataForPolicy"
               :cancellation-type="cancellationType"
+              :applies-to="appliesToValue"
               @policy-changed="onPolicyChanged"
             />
 
@@ -641,65 +642,10 @@
       </div>
     </div>
 
-    <!-- Refund Options Modal für bereits bezahlte Termine -->
-    <div v-if="showRefundOptionsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-        <div class="flex items-center mb-4">
-          <div class="text-2xl mr-3">💰</div>
-          <h3 class="text-lg font-semibold text-gray-900">Rückerstattungs-Optionen</h3>
-        </div>
-        
-        <div class="mb-4 space-y-3">
-          <div class="p-3 bg-green-50 border border-green-200 rounded-md">
-            <p class="text-sm text-green-800">
-              <strong>Termin:</strong> {{ props.eventData?.title || 'Unbekannt' }}
-            </p>
-            <p class="text-sm text-green-800">
-              <strong>Datum:</strong> {{ formatDate(props.eventData?.start || props.eventData?.start_time) }}
-            </p>
-            <p class="text-sm text-green-800">
-              <strong>Status:</strong> Bereits bezahlt
-            </p>
-          </div>
-          
-          <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p class="text-sm text-blue-800">
-              <strong>Wichtiger Hinweis:</strong> Da der Termin bereits bezahlt wurde, müssen Sie entscheiden, 
-              wie mit der Zahlung verfahren werden soll.
-            </p>
-          </div>
-        </div>
 
-        <div class="space-y-3">
-          <button
-            @click="handleRefundFull"
-            class="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            💰 Vollständige Rückerstattung
-          </button>
-          
-          <button
-            @click="handleRefundPartial"
-            class="w-full px-4 py-3 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
-          >
-            💸 Teilweise Rückerstattung (Stornogebühr einbehalten)
-          </button>
-          
-          <button
-            @click="handleNoRefund"
-            class="w-full px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            🚫 Keine Rückerstattung (Termin als verfallen markieren)
-          </button>
-        </div>
-        
-        <button
-          @click="showRefundOptionsModal = false"
-          class="mt-4 w-full text-gray-500 hover:text-gray-700 text-sm"
-        >
-          Abbrechen
-        </button>
-      </div>
+    <!-- Refund Options Modal für bereits bezahlte Termine - DEPRECATED: Using cancellation policies instead -->
+    <div v-if="false" class="hidden">
+      <!-- This UI is no longer used -->
     </div>
   </div>
 </template>
@@ -839,11 +785,12 @@ const showRefundOptionsModal = ref(false)
 const showCancellationReasonModal = ref(false)
 const selectedCancellationReasonId = ref<string | null>(null)
 const cancellationStep = ref(0) // 0 = Typ auswählen, 1 = Grund auswählen, 2 = Policy auswählen
-const cancellationType = ref<'student' | 'staff' | null>(null)
+const cancellationType = ref<'student' | 'staff' | undefined>(undefined)
 const cancellationInvoiceData = ref<any>(null)
 const pendingCancellationReason = ref<any>(null) // Speichert den ausgewählten Grund für die Bezahlnachfrage
 const selectedCancellationPolicyId = ref<string>('')
 const cancellationPolicyResult = ref<any>(null)
+const appliesToValue = ref<'appointments' | 'courses' | undefined>('appointments')
 const timeUntilAppointment = ref({ hours: 0, days: 0, isOverdue: false, description: '' })
 const isResetingPolicy = ref(false) // ✅ NEU: Flag to prevent onPolicyChanged from being called during reset
 const appointmentNumber = ref(1)
@@ -3512,7 +3459,7 @@ const handleDelete = async () => {
   // ✅ FÜR LEKTIONEN: Erst Absage-Gründe erfragen
   logger.debug('🗑️ Lesson/Exam/Theory - show cancellation reason modal first')
   cancellationStep.value = 0 // Starte mit Schritt 1 (Wer hat abgesagt?)
-  cancellationType.value = null // Benutzer muss wählen
+  cancellationType.value = undefined // Benutzer muss wählen
   await fetchCancellationReasons()
   showCancellationReasonModal.value = true
 }
@@ -4202,7 +4149,7 @@ const proceedWithCancellation = async (selectedReason: any) => {
     isLoading.value = false
     selectedCancellationReasonId.value = null
     cancellationStep.value = 0
-    cancellationType.value = null
+    cancellationType.value = undefined
     selectedCancellationPolicyId.value = ''
     cancellationPolicyResult.value = null
   }
@@ -4212,7 +4159,7 @@ const cancelCancellationReason = () => {
   showCancellationReasonModal.value = false
   selectedCancellationReasonId.value = null
   cancellationStep.value = 0
-  cancellationType.value = null
+  cancellationType.value = undefined
   selectedCancellationPolicyId.value = ''
   cancellationPolicyResult.value = null
   logger.debug('🚫 Cancellation reason selection cancelled by user')
@@ -4228,7 +4175,7 @@ const selectCancellationType = (type: 'student' | 'staff') => {
 
 const goBackToCancellationType = () => {
   cancellationStep.value = 0
-  cancellationType.value = null
+  cancellationType.value = undefined
   selectedCancellationReasonId.value = null
   logger.debug('⬅️ Going back to cancellation type selection')
 }
