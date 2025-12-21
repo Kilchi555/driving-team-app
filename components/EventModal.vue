@@ -3704,7 +3704,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`,
+            senderName: tenantName.value
           }
         })
         logger.debug('✅ SMS sent successfully:', result)
@@ -4050,7 +4051,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`,
+            senderName: tenantName.value
           }
         })
         logger.debug('✅ SMS sent successfully:', result)
