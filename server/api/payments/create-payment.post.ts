@@ -65,6 +65,64 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Payment created successfully:', payment.id)
 
+    // ✅ NEW: Load any pending unpaid charges from cancelled appointments
+    // and add them to the current payment total
+    let totalAmountWithPendingCharges = payment.total_amount_rappen || 0
+    
+    try {
+      logger.debug('🔍 Checking for pending cancellation charges for user:', paymentData.user_id)
+      
+      // Find all pending payments for this user that are from cancelled appointments
+      const { data: pendingCharges, error: pendingError } = await supabase
+        .from('payments')
+        .select('id, total_amount_rappen, appointments!inner(id, status)')
+        .eq('user_id', paymentData.user_id)
+        .eq('payment_status', 'pending')
+        .eq('appointments.status', 'cancelled')
+        .not('payment_id', 'is', null) // Exclude payments linked to other payments
+      
+      if (!pendingError && pendingCharges && pendingCharges.length > 0) {
+        let totalPendingCharges = 0
+        const pendingPaymentIds: string[] = []
+        
+        for (const pendingPayment of pendingCharges) {
+          totalPendingCharges += pendingPayment.total_amount_rappen || 0
+          pendingPaymentIds.push(pendingPayment.id)
+        }
+        
+        logger.debug('✅ Found pending cancellation charges to add:', {
+          count: pendingCharges.length,
+          totalRappen: totalPendingCharges,
+          paymentIds: pendingPaymentIds
+        })
+        
+        // Add pending charges to current payment
+        totalAmountWithPendingCharges += totalPendingCharges
+        
+        // Update current payment total
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update({
+            total_amount_rappen: totalAmountWithPendingCharges,
+            notes: `${payment.notes || ''}${payment.notes ? ' | ' : ''}Includes pending cancellation charges (${totalPendingCharges / 100} CHF)`
+          })
+          .eq('id', payment.id)
+        
+        if (!updateError) {
+          logger.debug('✅ Updated current payment with pending charges:', {
+            originalAmount: payment.total_amount_rappen,
+            totalAmount: totalAmountWithPendingCharges,
+            added: totalPendingCharges
+          })
+        } else {
+          logger.warn('⚠️ Could not update payment with pending charges:', updateError.message)
+        }
+      }
+    } catch (err: any) {
+      logger.warn('⚠️ Error checking for pending cancellation charges:', err.message)
+      // Continue anyway - pending charges can be handled manually
+    }
+
     // ✅ If no company_billing_address_id AND payment_method is invoice, create a pending task (Pendenz)
     const hasBillingAddress = !!cleanPaymentData.company_billing_address_id
     const isInvoicePayment = paymentData.payment_method === 'invoice'
