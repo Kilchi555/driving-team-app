@@ -181,12 +181,10 @@
             <div
               v-for="student in filteredStudents"
               :key="student.id"
-              @click="student.auth_user_id ? selectStudent(student) : showPendingActions(student)"
+              @click="selectStudent(student)"
               :class="[
                 'bg-white rounded-lg shadow-sm border p-3 transition-all',
-                student.auth_user_id 
-                  ? 'cursor-pointer hover:shadow-md active:scale-98 hover:border-green-300' 
-                  : 'cursor-pointer hover:shadow-md hover:border-orange-300 opacity-75'
+                'cursor-pointer hover:shadow-md active:scale-98 hover:border-green-300'
               ]"
             >
 
@@ -239,20 +237,13 @@
                     {{ !student.auth_user_id ? 'Pending' : student.is_active ? 'Aktiv' : 'Inaktiv' }}
                   </span>
                   
-                  <!-- Quick Action Button -->
+                  <!-- Quick Action Button (für alle) -->
                   <button 
-                    v-if="student.auth_user_id"
                     @click.stop="quickAction(student)"
                     class="text-xs text-green-600 hover:text-green-800 font-medium py-1 px-2 rounded hover:bg-green-50 transition-colors"
                   >
                     Details →
                   </button>
-                  <span 
-                    v-else
-                    class="text-xs text-gray-400 font-medium py-1 px-2"
-                  >
-                    Warte auf Aktivierung
-                  </span>
                 </div>
               </div>
             </div>
@@ -271,6 +262,7 @@
     @create-appointment="handleCreateAppointment"
     @evaluate-lesson="handleEvaluateLesson"
     @student-updated="handleStudentUpdated"
+    @open-reminder-modal="handleOpenReminderModal"
   />
 
   <!-- Add Student Modal -->
@@ -379,6 +371,8 @@ const showOnlyNoUpcoming = ref(false)
 const showPendingModal = ref(false)
 const pendingStudent = ref<any>(null)
 const isResendingSms = ref(false)
+const showReminderModal = ref(false)
+const currentReminderAppointment = ref<any>(null)
 
 // Computed
 const filteredStudents = computed(() => {
@@ -1121,6 +1115,11 @@ const copyOnboardingLink = async () => {
       message: 'Link konnte nicht kopiert werden. Siehe Konsole für Details.'
     })
   }
+}
+
+const handleOpenReminderModal = (student: any) => {
+  pendingStudent.value = student
+  showPendingModal.value = true
 }
 </script>
 
