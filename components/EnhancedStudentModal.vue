@@ -593,7 +593,7 @@
                 <div class="p-4">
                   <!-- Main Content -->
                   <div class="flex-1 min-w-0">
-                    <!-- Amount + Category + Status Row -->
+                    <!-- Amount + Status Row -->
                     <div class="flex items-center justify-between gap-3 mb-2">
                       <div class="flex items-center gap-2">
                         <span :class="[
@@ -603,13 +603,6 @@
                           {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
                         </span>
                         <span class="text-xs font-semibold text-gray-500">CHF</span>
-                        
-                        <span v-if="payment.appointments?.type" :class="[
-                          'px-2.5 py-0.5 text-xs font-bold rounded-full ml-2',
-                          payment.appointments?.status === 'cancelled' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800'
-                        ]">
-                          {{ payment.appointments.type }}
-                        </span>
                       </div>
                       
                       <!-- Status Badges on Right -->
@@ -657,6 +650,9 @@
                     <!-- Service Description (on new line) -->
                     <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
                       {{ payment.appointments.event_types?.name || payment.appointments.event_type_code || 'Termin' }}
+                      <span v-if="payment.appointments?.type" class="font-normal">
+                        Kat. {{ payment.appointments.type }}
+                      </span>
                       <span v-if="payment.appointments.staff" class="font-normal text-gray-600">
                         mit {{ payment.appointments.staff.first_name }}
                       </span>
