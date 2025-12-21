@@ -608,6 +608,7 @@ import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDuratio
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
+import { calculateCancellationCharges } from '~/utils/policyCalculations'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -4177,6 +4178,29 @@ const goToPolicySelection = async () => {
   if (props.eventData?.id) {
     const price = await loadAppointmentPrice(props.eventData.id)
     appointmentPrice.value = price
+  }
+  
+  // ✅ NEW: Calculate the policy charges based on the loaded policy
+  if (defaultPolicy.value && props.eventData) {
+    const appointmentData = {
+      id: props.eventData.id,
+      start_time: props.eventData.start,
+      duration_minutes: props.eventData.duration_minutes || 45,
+      price_rappen: appointmentPrice.value,
+      user_id: props.eventData.user_id,
+      staff_id: props.eventData.staff_id
+    }
+    
+    const result = calculateCancellationCharges(
+      defaultPolicy.value,
+      appointmentData,
+      new Date() // Current time
+    )
+    
+    logger.debug('✅ Policy calculation result:', result)
+    cancellationPolicyResult.value = result
+  } else {
+    logger.warn('⚠️ No default policy or event data available for calculation')
   }
 }
 
