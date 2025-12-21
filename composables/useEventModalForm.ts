@@ -961,29 +961,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('💾 Saving appointment data:', appointmentData)
       
-      let result
-      if (mode === 'edit' && eventId) {
-        // Update
-        const { data, error: updateError } = await supabase
-          .from('appointments')
-          .update(appointmentData)
-          .eq('id', eventId)
-          .select()
-          .single()
-        
-        if (updateError) throw updateError
-        result = data
-      } else {
-        // Create
-        const { data, error: insertError } = await supabase
-          .from('appointments')
-          .insert(appointmentData)
-          .select()
-          .single()
-        
-        if (insertError) throw insertError
-        result = data
-      }
+      // Use API endpoint with admin privileges to bypass RLS foreign key issues
+      const response = await $fetch('/api/appointments/save', {
+        method: 'POST',
+        body: {
+          mode,
+          eventId,
+          appointmentData
+        }
+      })
+      
+      const result = response?.data
       
       logger.debug('✅ Appointment saved:', result.id)
       
