@@ -82,8 +82,8 @@ export const useCancellationPolicies = () => {
       }
       
       // Load both tenant-specific and global policies
-      // Use .or() correctly for Supabase PostgREST
-      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`, { referencedTable: 'cancellation_policies' })
+      // Correct .or() syntax for Supabase PostgREST
+      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
       
       // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
       query = query.order('tenant_id', { ascending: false })
