@@ -1606,10 +1606,16 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     
     // Update payment_method for all selected payments
     for (const paymentId of selectedPayments.value) {
-      // Get the payment to find the associated appointment
+      // Get the full payment to check if cancelled
       const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
-        .select('appointment_id')
+        .select(`
+          id,
+          appointment_id,
+          total_amount_rappen,
+          admin_fee_rappen,
+          appointments(id, status, cancellation_charge_percentage)
+        `)
         .eq('id', paymentId)
         .single()
       
@@ -1618,13 +1624,32 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
         continue
       }
       
+      // ✅ NEW: For cancelled appointments, calculate actual charge to collect
+      let amountToMarkAsPaid = paymentData.total_amount_rappen
+      
+      if (paymentData.appointments?.status === 'cancelled') {
+        const chargePercentage = paymentData.appointments.cancellation_charge_percentage ?? 100
+        const appointmentCost = (paymentData.total_amount_rappen || 0) - (paymentData.admin_fee_rappen || 0)
+        const chargeAmount = Math.round(appointmentCost * chargePercentage / 100)
+        amountToMarkAsPaid = chargeAmount
+        
+        logger.debug(`💰 Cancelled payment - calculating charge:`, {
+          chargePercentage,
+          originalAmount: paymentData.total_amount_rappen,
+          chargeAmount,
+          appointmentCost
+        })
+      }
+      
       // Update payment
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({ 
           payment_method: method === 'cash' ? 'cash' : 'wallee',
           payment_status: method === 'cash' ? 'completed' : 'pending',
-          paid_at: method === 'cash' ? new Date().toISOString() : null
+          paid_at: method === 'cash' ? new Date().toISOString() : null,
+          // ✅ NEW: Set total_amount_rappen to actual charge for cancelled appointments
+          total_amount_rappen: amountToMarkAsPaid
         })
         .eq('id', paymentId)
       
