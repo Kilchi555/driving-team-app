@@ -75,12 +75,15 @@ export const useCancellationPolicies = () => {
         .from('cancellation_policies')
         .select('*')
         .eq('is_active', true)
-        .or(`tenant_id.eq.${tenantId},tenant_id.is.null`) // Load tenant-specific OR global policies
       
       // Filter by applies_to if specified
       if (appliesTo) {
         query = query.eq('applies_to', appliesTo)
       }
+      
+      // Load both tenant-specific and global policies
+      // Use .or() correctly for Supabase PostgREST
+      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`, { referencedTable: 'cancellation_policies' })
       
       // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
       query = query.order('tenant_id', { ascending: false })
@@ -89,9 +92,12 @@ export const useCancellationPolicies = () => {
         .order('created_at', { ascending: false })
 
       if (policiesError) {
+        logger.debug('❌ Error fetching policies:', policiesError)
         console.error('Error fetching policies:', policiesError)
         throw policiesError
       }
+
+      logger.debug('✅ Raw policies data loaded:', { count: policiesData?.length || 0, policies: policiesData })
 
       policies.value = policiesData || []
 
