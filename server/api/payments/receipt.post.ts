@@ -249,13 +249,12 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
         .eq('user_id', userId)
         .maybeSingle()
       
-      // Get recent credit transactions (last 10)
+      // Get recent credit transactions (all transactions)
       const { data: transactionsData } = await supabase
         .from('credit_transactions')
         .select('transaction_type, amount_rappen, description, created_at, payment_id')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10)
       
       const currentBalance = (creditData?.balance_rappen || 0) / 100
       const creditUsed = (payment.credit_used_rappen || 0) / 100
@@ -450,6 +449,7 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
 
 function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: TenantAssets, translateFn: any) {
   const customer = contexts[0].customer
+  const creditInfo = contexts[0].creditInfo // Use credit info from first context
   const sorted = [...contexts].sort((a, b) => {
     const tsA = a.appointmentTimestamp ?? new Date(a.payment.paid_at || a.payment.created_at).getTime()
     const tsB = b.appointmentTimestamp ?? new Date(b.payment.paid_at || b.payment.created_at).getTime()
@@ -472,9 +472,13 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
       acc.products += ctx.amounts.productsTotal
       acc.discount += ctx.amounts.discount
       acc.total += ctx.amounts.total
+      // Sum up all credit used across all payments
+      if (ctx.creditInfo?.creditUsed) {
+        acc.creditUsed += ctx.creditInfo.creditUsed
+      }
       return acc
     },
-    { lesson: 0, adminFee: 0, products: 0, discount: 0, total: 0 }
+    { lesson: 0, adminFee: 0, products: 0, discount: 0, total: 0, creditUsed: 0 }
   )
 
   const lessonsTable = sorted
@@ -492,6 +496,9 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
       }
       if (ctx.amounts.discount > 0) {
         meta.push(`${translateFn('receipt.discount')}: - CHF ${ctx.amounts.discount.toFixed(2)}`)
+      }
+      if (ctx.creditInfo?.creditUsed && ctx.creditInfo.creditUsed > 0) {
+        meta.push(`${translateFn('receipt.creditUsed')}: - CHF ${ctx.creditInfo.creditUsed.toFixed(2)}`)
       }
 
       const lessonsDetails = [
@@ -558,11 +565,45 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         ${summary.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalAdminFees')}</div><div class="value">CHF ${summary.adminFee.toFixed(2)}</div></div>` : ''}
         ${summary.products > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalProducts')}</div><div class="value">CHF ${summary.products.toFixed(2)}</div></div>` : ''}
         ${summary.discount > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalDiscounts')}</div><div class="value">- CHF ${summary.discount.toFixed(2)}</div></div>` : ''}
+        ${summary.creditUsed > 0 ? `<div class="row" style="color:#059669;"><div class="label">${translateFn('receipt.totalCreditUsed')}</div><div class="value">- CHF ${summary.creditUsed.toFixed(2)}</div></div>` : ''}
         <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
           <div class="label">${translateFn('receipt.totalAmount')}</div>
           <div class="amount">CHF ${summary.total.toFixed(2)}</div>
         </div>
       </div>
+      
+      ${creditInfo ? `
+        <div class="section">
+          <div class="section-title">${translateFn('receipt.creditBalance')}</div>
+          <div class="row">
+            <div class="label">${translateFn('receipt.currentBalance')}</div>
+            <div class="value" style="color:#059669; font-size:16px; font-weight:700;">CHF ${creditInfo.currentBalance.toFixed(2)}</div>
+          </div>
+          ${creditInfo.recentTransactions.length > 0 ? `
+            <div style="margin-top:16px;">
+              <div class="label" style="margin-bottom:8px;">${translateFn('receipt.recentTransactions')}</div>
+              <table style="width:100%; font-size:12px; border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:1px solid #e5e7eb;">
+                    <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.transactionType')}</th>
+                    <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.date')}</th>
+                    <th style="text-align:right; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.amount')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${creditInfo.recentTransactions.map(tx => `
+                    <tr style="border-bottom:1px solid #f3f4f6;">
+                      <td style="padding:6px 8px;">${tx.type}</td>
+                      <td style="padding:6px 8px; color:#6b7280;">${tx.date}</td>
+                      <td style="padding:6px 8px; text-align:right; ${tx.type === 'Verwendet' ? 'color:#dc2626;' : 'color:#059669;'}">${tx.type === 'Verwendet' ? '-' : '+'} CHF ${tx.amount.toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
       
       <div class="section">
         <div class="muted">${translateFn('receipt.footer', { email: tenant?.contact_email || 'den Support' })}</div>
@@ -697,6 +738,7 @@ export default defineEventHandler(async (event) => {
         'receipt.totalAdminFees': 'Total Administrationsgebühren',
         'receipt.totalProducts': 'Total Produkte',
         'receipt.totalDiscounts': 'Total Rabatte',
+        'receipt.totalCreditUsed': 'Total Verwendetes Guthaben',
         'receipt.generatedOn': 'Erstellt am',
         'receipt.table.header.service': 'Leistung',
         'receipt.table.header.datetime': 'Datum & Zeit',
@@ -704,7 +746,7 @@ export default defineEventHandler(async (event) => {
         'receipt.table.header.amount': 'Betrag',
         'receipt.creditBalance': 'Guthaben',
         'receipt.currentBalance': 'Aktueller Guthabenstand',
-        'receipt.recentTransactions': 'Letzte Guthaben-Transaktionen',
+        'receipt.recentTransactions': 'Guthaben-Transaktionen',
         'receipt.transactionType': 'Typ',
         'receipt.amount': 'Betrag',
         'eventType.lesson': 'Fahrlektion',
