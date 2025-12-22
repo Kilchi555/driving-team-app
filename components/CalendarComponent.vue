@@ -1457,7 +1457,7 @@ const handleEventDrop = async (dropInfo: any) => {
       // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
       // Stattdessen: Kalender neu laden um frische Daten zu bekommen
       logger.debug('🔄 Invalidating cache and reloading appointments...')
-      invalidateCache()
+      invalidateCache('appointment-moved')
       isUpdating.value = true
       await loadAppointments()
       isUpdating.value = false
@@ -1700,8 +1700,9 @@ showConfirmDialog({
         logger.debug('📅 Initial load, skipping datesSet reload')
         return
       }
-      logger.debug('📅 Week changed, reloading events (auto-sync every 5min)')
-      invalidateCache()
+      logger.debug('📅 Week changed, loading events for new viewport')
+      // ✅ Don't invalidate cache here - let loadAppointments handle it
+      // This is where viewport caching should shine!
       refreshCalendar()
     },
   // Klick auf leeren Zeitslot
