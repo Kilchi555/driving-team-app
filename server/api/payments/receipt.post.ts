@@ -62,6 +62,16 @@ interface PaymentContext {
   appointmentTitle: string
   appointmentTimestamp: number | null
   amounts: AmountBreakdown
+  creditInfo?: {
+    currentBalance: number
+    creditUsed: number
+    recentTransactions: Array<{
+      type: string
+      amount: number
+      date: string
+      description: string
+    }>
+  }
 }
 
 interface TenantAssets {
@@ -227,6 +237,49 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   const discountAmount = (payment.discount_amount_rappen || 0) / 100
   const productsTotal = products.reduce((sum, p) => sum + p.totalCHF, 0)
   const total = lesson + adminFee + productsTotal - discountAmount
+  
+  // Load credit information
+  let creditInfo = undefined
+  if (userId) {
+    try {
+      // Get current balance
+      const { data: creditData } = await supabase
+        .from('student_credits')
+        .select('balance_rappen')
+        .eq('user_id', userId)
+        .maybeSingle()
+      
+      // Get recent credit transactions (last 10)
+      const { data: transactionsData } = await supabase
+        .from('credit_transactions')
+        .select('transaction_type, amount_rappen, description, created_at, payment_id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      
+      const currentBalance = (creditData?.balance_rappen || 0) / 100
+      const creditUsed = (payment.credit_used_rappen || 0) / 100
+      
+      const recentTransactions = (transactionsData || []).map((tx: any) => ({
+        type: tx.transaction_type === 'deduction' ? 'Verwendet' : 
+              tx.transaction_type === 'refund' ? 'Rückvergütet' : 
+              tx.transaction_type === 'purchase' ? 'Gekauft' : 
+              tx.transaction_type === 'voucher' ? 'Gutschein eingelöst' : 
+              'Gutschrift',
+        amount: Math.abs(tx.amount_rappen || 0) / 100,
+        date: new Date(tx.created_at).toLocaleDateString('de-CH'),
+        description: tx.description || '-'
+      }))
+      
+      creditInfo = {
+        currentBalance,
+        creditUsed,
+        recentTransactions
+      }
+    } catch (creditErr) {
+      console.warn('⚠️ Could not load credit info:', creditErr)
+    }
+  }
 
   const appointmentDateObj = appointment?.start_time ? new Date(appointment.start_time) : null
   const appointmentDate = appointmentDateObj ? appointmentDateObj.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' }) : ''
@@ -277,7 +330,8 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       productsTotal,
       discount: discountAmount,
       total
-    }
+    },
+    creditInfo
   }
 }
 
@@ -314,7 +368,7 @@ function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: s
 }
 
 function renderSingleReceipt(context: PaymentContext, tenant: any, assets: TenantAssets, translateFn: any) {
-  const { products, customer, paymentDate, appointmentInfo, amounts } = context
+  const { products, customer, paymentDate, appointmentInfo, amounts, creditInfo } = context
 
   return `
     <div class="doc" style="page-break-after: always;">
@@ -342,11 +396,50 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
             <div class="value">- CHF ${amounts.discount.toFixed(2)}</div>
           </div>
         ` : ''}
+        ${creditInfo && creditInfo.creditUsed > 0 ? `
+          <div class="row" style="color:#059669;">
+            <div class="label">${translateFn('receipt.creditUsed')}</div>
+            <div class="value">- CHF ${creditInfo.creditUsed.toFixed(2)}</div>
+          </div>
+        ` : ''}
         <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
           <div class="label">${translateFn('receipt.totalAmount')}</div>
           <div class="amount">CHF ${amounts.total.toFixed(2)}</div>
         </div>
       </div>
+      
+      ${creditInfo ? `
+        <div class="section">
+          <div class="section-title">${translateFn('receipt.creditBalance')}</div>
+          <div class="row">
+            <div class="label">${translateFn('receipt.currentBalance')}</div>
+            <div class="value" style="color:#059669; font-size:16px; font-weight:700;">CHF ${creditInfo.currentBalance.toFixed(2)}</div>
+          </div>
+          ${creditInfo.recentTransactions.length > 0 ? `
+            <div style="margin-top:16px;">
+              <div class="label" style="margin-bottom:8px;">${translateFn('receipt.recentTransactions')}</div>
+              <table style="width:100%; font-size:12px; border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:1px solid #e5e7eb;">
+                    <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.transactionType')}</th>
+                    <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.date')}</th>
+                    <th style="text-align:right; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.amount')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${creditInfo.recentTransactions.map(tx => `
+                    <tr style="border-bottom:1px solid #f3f4f6;">
+                      <td style="padding:6px 8px;">${tx.type}</td>
+                      <td style="padding:6px 8px; color:#6b7280;">${tx.date}</td>
+                      <td style="padding:6px 8px; text-align:right; ${tx.type === 'Verwendet' ? 'color:#dc2626;' : 'color:#059669;'}">${tx.type === 'Verwendet' ? '-' : '+'} CHF ${tx.amount.toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
       
       <div class="section">
         <div class="muted">${translateFn('receipt.footer', { email: tenant?.contact_email || 'den Support' })}</div>
@@ -586,6 +679,7 @@ export default defineEventHandler(async (event) => {
         'receipt.baseAmount': 'Basisbetrag',
         'receipt.adminFee': 'Administrationsgebühr',
         'receipt.discount': 'Rabatt',
+        'receipt.creditUsed': 'Verwendetes Guthaben',
         'receipt.totalAmount': 'Gesamtbetrag',
         'receipt.minutes': 'Minuten',
         'receipt.products': 'Produkte',
@@ -608,6 +702,11 @@ export default defineEventHandler(async (event) => {
         'receipt.table.header.datetime': 'Datum & Zeit',
         'receipt.table.header.duration': 'Dauer',
         'receipt.table.header.amount': 'Betrag',
+        'receipt.creditBalance': 'Guthaben',
+        'receipt.currentBalance': 'Aktueller Guthabenstand',
+        'receipt.recentTransactions': 'Letzte Guthaben-Transaktionen',
+        'receipt.transactionType': 'Typ',
+        'receipt.amount': 'Betrag',
         'eventType.lesson': 'Fahrlektion',
         'status.pending': 'Ausstehend',
         'status.authorized': 'Reserviert',
