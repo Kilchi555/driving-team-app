@@ -608,6 +608,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
+import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -3097,14 +3098,22 @@ const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => 
 // ✅ Simple Toast Functions for user feedback
 const showSuccess = (title: string, message: string = '') => {
   logger.info('Success', title, message)
-  // For now, use alert as fallback. Can be replaced with Toast component later
-  alert(`✅ ${title}\n${message}`)
+  const uiStore = useUIStore()
+  uiStore.addNotification({
+    type: 'success',
+    title,
+    message
+  })
 }
 
 const showError = (title: string, message: string = '') => {
   logger.error('Error', title, message)
-  // For now, use alert as fallback. Can be replaced with Toast component later
-  alert(`❌ ${title}\n${message}`)
+  const uiStore = useUIStore()
+  uiStore.addNotification({
+    type: 'error',
+    title,
+    message
+  })
 }
 
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
