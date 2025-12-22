@@ -1121,20 +1121,48 @@ const handleSaveAppointment = async () => {
       try {
         logger.debug('💳 Automatically using credit for new appointment...')
         
-        // Berechne den gesamten Preis für den Termin (Lektion + Admin Fee + andere Gebühren)
+        // ✅ CRITICAL FIX: Calculate TOTAL amount including ALL components
         const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
         
-        // ✅ CRITICAL FIX: Include ALL payment components, not just lesson price!
-        let totalPrice = lessonPrice
-        
-        // Add admin fee if it exists
-        if (savedAppointment.admin_fee_rappen) {
-          totalPrice += savedAppointment.admin_fee_rappen
-          logger.debug('💳 Added admin fee to credit calculation:', {
-            adminFee: (savedAppointment.admin_fee_rappen / 100).toFixed(2),
-            totalPrice: (totalPrice / 100).toFixed(2)
+        // Add all product prices
+        let productsPrice = 0
+        if (selectedProducts.value && selectedProducts.value.length > 0) {
+          productsPrice = selectedProducts.value.reduce((sum: number, p: any) => {
+            return sum + ((p.product?.price || 0) * 100 * p.quantity)
+          }, 0)
+          logger.debug('💳 Added products to credit calculation:', {
+            productsPrice: (productsPrice / 100).toFixed(2),
+            productCount: selectedProducts.value.length
           })
         }
+        
+        // Add admin fee if it exists
+        let adminFee = savedAppointment.admin_fee_rappen || 0
+        if (adminFee > 0) {
+          logger.debug('💳 Added admin fee to credit calculation:', {
+            adminFee: (adminFee / 100).toFixed(2)
+          })
+        }
+        
+        // Subtract all discounts (from formData)
+        let discountTotal = (formData.value.discount || 0) * 100 // Convert CHF to Rappen
+        if (discountTotal > 0) {
+          logger.debug('💳 Subtracting discount from credit calculation:', {
+            discountTotal: (discountTotal / 100).toFixed(2),
+            discountReason: formData.value.discount_reason
+          })
+        }
+        
+        // Calculate total price
+        const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee - discountTotal)
+        
+        logger.debug('💳 Total price for credit calculation:', {
+          lessonPrice: (lessonPrice / 100).toFixed(2),
+          productsPrice: (productsPrice / 100).toFixed(2),
+          adminFee: (adminFee / 100).toFixed(2),
+          discountTotal: (discountTotal / 100).toFixed(2),
+          totalPrice: (totalPrice / 100).toFixed(2)
+        })
         
         const creditData = {
           user_id: selectedStudent.value.id,
