@@ -1121,12 +1121,24 @@ const handleSaveAppointment = async () => {
       try {
         logger.debug('💳 Automatically using credit for new appointment...')
         
-        // Berechne den Preis für die Lektion
+        // Berechne den gesamten Preis für den Termin (Lektion + Admin Fee + andere Gebühren)
         const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
+        
+        // ✅ CRITICAL FIX: Include ALL payment components, not just lesson price!
+        let totalPrice = lessonPrice
+        
+        // Add admin fee if it exists
+        if (savedAppointment.admin_fee_rappen) {
+          totalPrice += savedAppointment.admin_fee_rappen
+          logger.debug('💳 Added admin fee to credit calculation:', {
+            adminFee: (savedAppointment.admin_fee_rappen / 100).toFixed(2),
+            totalPrice: (totalPrice / 100).toFixed(2)
+          })
+        }
         
         const creditData = {
           user_id: selectedStudent.value.id,
-          amount_rappen: Math.min(studentCredit.value.balance_rappen, lessonPrice),
+          amount_rappen: Math.min(studentCredit.value.balance_rappen, totalPrice),
           appointment_id: savedAppointment.id,
           notes: `Automatische Guthaben-Verwendung für Lektion: ${formData.value.title || 'Fahrstunde'}`
         }
