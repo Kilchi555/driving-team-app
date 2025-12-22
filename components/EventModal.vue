@@ -989,93 +989,137 @@ const handleSaveAppointment = async () => {
             reduction: durationReduction
           })
           
-          // Load existing payment to calculate credit amount
+          // Load existing payment to adjust price
           const { data: payment } = await supabase
             .from('payments')
-            .select('id, lesson_price_rappen, notes')
+            .select('*')
             .eq('appointment_id', props.eventData.id)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
           
+          // ✅ Always adjust payment amount (for both completed and pending)
           if (payment && payment.lesson_price_rappen > 0) {
             // Calculate price per minute
             const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
             const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
+            const newLessonPriceRappen = payment.lesson_price_rappen - creditAmountRappen
             
-            logger.debug('💰 Credit calculation:', {
+            logger.debug('💰 Price adjustment calculation:', {
+              paymentStatus: payment.payment_status,
               pricePerMinute: (pricePerMinute / 100).toFixed(4),
               creditAmountRappen,
-              creditAmountCHF: (creditAmountRappen / 100).toFixed(2)
+              creditAmountCHF: (creditAmountRappen / 100).toFixed(2),
+              oldLessonPrice: payment.lesson_price_rappen,
+              newLessonPrice: newLessonPriceRappen
             })
             
-            // ✅ Update payment with credit note
-            const creditNote = `Gutschrift CHF ${(creditAmountRappen / 100).toFixed(2)} aufgrund Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min`
+            // Calculate new total
+            const newTotalRappen = newLessonPriceRappen + 
+              (payment.admin_fee_rappen || 0) + 
+              (payment.products_price_rappen || 0) - 
+              (payment.discount_amount_rappen || 0)
+            
+            // ✅ Update payment amount (always)
+            const priceNote = `Preis angepasst aufgrund Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min (-CHF ${(creditAmountRappen / 100).toFixed(2)})`
             const existingNotes = payment.notes || ''
-            const updatedNotes = existingNotes ? `${existingNotes}\n${creditNote}` : creditNote
+            const updatedNotes = existingNotes ? `${existingNotes}\n${priceNote}` : priceNote
             
             const { error: paymentUpdateError } = await supabase
               .from('payments')
               .update({ 
+                lesson_price_rappen: newLessonPriceRappen,
+                total_amount_rappen: newTotalRappen,
                 notes: updatedNotes,
                 updated_at: new Date().toISOString()
               })
               .eq('id', payment.id)
             
             if (paymentUpdateError) {
-              logger.error('Payment', 'Failed to update payment notes:', paymentUpdateError)
+              logger.error('Payment', 'Failed to update payment:', paymentUpdateError)
             } else {
-              logger.debug('✅ Payment notes updated with credit info')
+              logger.debug('✅ Payment updated with new price:', {
+                oldTotal: payment.total_amount_rappen,
+                newTotal: newTotalRappen,
+                adjustment: creditAmountRappen
+              })
             }
             
-            // Add credit to student's balance (WITHOUT tenant_id filter for RLS)
-            const { data: studentCredit } = await supabase
-              .from('student_credits')
-              .select('id, balance_rappen')
-              .eq('user_id', originalAppointment.user_id)
-              .maybeSingle()
-            
-            if (studentCredit) {
-              const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
-              const { error: updateError } = await supabase
+            // ✅ Only credit student balance if payment was already completed
+            if (payment.payment_status === 'completed') {
+              // Add credit to student's balance (WITHOUT tenant_id filter for RLS)
+              const { data: studentCredit } = await supabase
                 .from('student_credits')
-                .update({ balance_rappen: newBalance })
-                .eq('id', studentCredit.id)
+                .select('id, balance_rappen')
+                .eq('user_id', originalAppointment.user_id)
+                .maybeSingle()
               
-              if (updateError) {
-                logger.error('StudentCredit', 'Failed to update balance:', updateError)
+              if (studentCredit) {
+                const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
+                const { error: updateError } = await supabase
+                  .from('student_credits')
+                  .update({ balance_rappen: newBalance })
+                  .eq('id', studentCredit.id)
+                
+                if (updateError) {
+                  logger.error('StudentCredit', 'Failed to update balance:', updateError)
+                } else {
+                  logger.debug('✅ Student credit updated:', {
+                    studentId: originalAppointment.user_id,
+                    oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
+                    newBalance: (newBalance / 100).toFixed(2)
+                  })
+                }
               } else {
-                logger.debug('✅ Student credit updated:', {
-                  studentId: originalAppointment.user_id,
-                  oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
-                  newBalance: (newBalance / 100).toFixed(2)
-                })
+                // Create new credit record
+                const { error: createError } = await supabase
+                  .from('student_credits')
+                  .insert({
+                    user_id: originalAppointment.user_id,
+                    tenant_id: originalAppointment.tenant_id,
+                    balance_rappen: creditAmountRappen
+                  })
+                
+                if (createError) {
+                  logger.error('StudentCredit', 'Failed to create credit:', createError)
+                } else {
+                  logger.debug('✅ New student credit created:', {
+                    studentId: originalAppointment.user_id,
+                    balance: (creditAmountRappen / 100).toFixed(2)
+                  })
+                }
               }
-            } else {
-              // Create new credit record
-              const { error: createError } = await supabase
-                .from('student_credits')
+              
+              // ✅ Create credit transaction for documentation (only for completed payments)
+              const { error: transactionError } = await supabase
+                .from('credit_transactions')
                 .insert({
                   user_id: originalAppointment.user_id,
                   tenant_id: originalAppointment.tenant_id,
-                  balance_rappen: creditAmountRappen
+                  transaction_type: 'refund',
+                  amount_rappen: creditAmountRappen,
+                  description: `Rückerstattung wegen Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min`,
+                  payment_id: payment.id,
+                  refund_source_payment_id: payment.id,
+                  created_at: new Date().toISOString()
                 })
               
-              if (createError) {
-                logger.error('StudentCredit', 'Failed to create credit:', createError)
+              if (transactionError) {
+                logger.error('CreditTransaction', 'Failed to create transaction:', transactionError)
               } else {
-                logger.debug('✅ New student credit created:', {
-                  studentId: originalAppointment.user_id,
-                  balance: (creditAmountRappen / 100).toFixed(2)
-                })
+                logger.debug('✅ Credit transaction created for duration reduction')
               }
+              
+              showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
+            } else {
+              // For pending payments, just notify about price adjustment (no credit transaction)
+              logger.debug('ℹ️ Payment is pending - price adjusted but no credit given')
+              showSuccess('Preis angepasst', `Payment-Betrag wurde um CHF ${(creditAmountRappen / 100).toFixed(2)} reduziert.`)
             }
-            
-            showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
           }
         }
       } catch (creditError: any) {
-        logger.error('EventModal', 'Error processing duration reduction credit:', creditError)
+        logger.error('EventModal', 'Error processing duration reduction:', creditError)
         // Don't block appointment save if credit fails
       }
     }
