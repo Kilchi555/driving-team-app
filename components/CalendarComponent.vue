@@ -1881,9 +1881,9 @@ const refreshCalendar = async () => {
     // 1. Aktuelle View-Position speichern
     const currentDate = calendar.value?.getApi()?.getDate()
     
-    // 2. Daten neu laden mit forceReload = true (Cache umgehen)
+    // 2. Daten neu laden - WITHOUT forceReload, let cache work!
     await Promise.all([
-      loadAppointments(true),
+      loadAppointments(false), // ← Allow cache to work!
     ])
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
