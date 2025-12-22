@@ -92,6 +92,10 @@ export const useCustomerPayments = () => {
             payment_method_id,
             automatic_payment_processed,
             automatic_payment_processed_at,
+            credit_used_rappen,
+            credit_transaction_id,
+            wallee_transaction_id,
+            refunded_at,
             appointments (
               id,
               start_time,

@@ -193,15 +193,18 @@
               
               <!-- Payment Amount -->
               <div class="text-left sm:ml-6">
-                <div class="flex items-center justify-between sm:justify-end space-x-4">
-                  <div class="text-xl sm:text-2xl font-bold text-gray-900">
-                    CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
-                  </div>
-                  <div class="text-xs sm:text-sm text-gray-500">
-                    {{ getPaymentMethodLabel(payment.payment_method) }}
+                <div class="flex flex-col space-between space-y-1">
+                  <div class="flex justify-between space-x-2">
+                    <div class="text-xl sm:text-2xl font-bold text-gray-900">
+                      CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
+                    </div>
+                    <div class="text-xs sm:text-sm text-gray-500">
+                      {{ getPaymentMethodLabel(payment.payment_method) }}
+                    </div>
                   </div>
                 </div>
               </div>
+          
             </div>
             
             <!-- Payment Details -->
@@ -242,6 +245,12 @@
                 <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2">
                   <span class="text-green-600 font-medium">Verwendetes Guthaben</span>
                   <span class="font-medium text-green-600">- CHF {{ (payment.credit_used_rappen / 100).toFixed(2) }}</span>
+                </div>
+                
+                <!-- ✅ NEW: Show total calculation with credit -->
+                <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2 font-medium">
+                  <span class="text-gray-900">Noch zu zahlen</span>
+                  <span class="text-gray-900">CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -467,18 +476,6 @@ const loadAllData = async () => {
 
     // ✅ Verwende das neue useCustomerPayments Composable
     await loadCustomerPayments()
-    
-    // Debug: Log all payments with paid_at field
-    logger.debug('📋 All customer payments after loading:')
-    customerPayments.value.forEach((p, idx) => {
-      logger.debug(`Payment ${idx + 1}:`, {
-        id: p.id,
-        payment_status: p.payment_status,
-        paid_at: p.paid_at,
-        created_at: p.created_at,
-        hasPaymentDate: !!p.paid_at
-      })
-    })
 
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
@@ -582,6 +579,35 @@ const payIndividual = async (payment: any) => {
   isProcessingPayment.value = true
   
   try {
+    // Get current user
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+    
+    // Get user data from users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (userError || !userData) throw new Error('User data not found')
+    
+    // ✅ Check current student credit balance
+    logger.debug('💰 Checking current student credit balance for user:', userData.id)
+    const { data: creditData, error: creditError } = await supabase
+      .from('student_credits')
+      .select('balance_rappen')
+      .eq('user_id', userData.id)
+      .single()
+    
+    if (creditError && creditError.code !== 'PGRST116') {
+      console.warn('⚠️ Could not load student credit:', creditError)
+    }
+    
+    const currentBalance = creditData?.balance_rappen ?? 0
+    logger.debug('💰 Current student balance:', (currentBalance / 100).toFixed(2), 'CHF')
+    
     // If payment is not already wallee, convert it first
     if (payment.payment_method !== 'wallee') {
       logger.debug('🔄 Converting payment to online first:', payment.id)
@@ -609,20 +635,6 @@ const payIndividual = async (payment: any) => {
     // 🚀 Direct Wallee redirect - no intermediate page
     logger.debug('💳 Processing direct Wallee payment for:', payment.id)
     
-    // Get current user
-    const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
-    
-    // Get user data from users table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    if (userError || !userData) throw new Error('User data not found')
-    
     // Create Wallee transaction
     interface WalleeResponse {
       success: boolean
@@ -631,11 +643,93 @@ const payIndividual = async (payment: any) => {
       error?: string
     }
     
+    // ✅ Calculate amount to pay: full amount minus any credit already used minus new available credit
+    const amountAlreadyUsed = payment.credit_used_rappen || 0
+    const remainingAmount = payment.total_amount_rappen - amountAlreadyUsed
+    
+    // Deduct available credit from remaining amount
+    const creditToDeduct = Math.min(currentBalance, remainingAmount)
+    const amountToPay = (remainingAmount - creditToDeduct) / 100
+    const newTotalCredit = amountAlreadyUsed + creditToDeduct
+    
+    logger.debug('💳 Wallee payment calculation:', {
+      total_amount: payment.total_amount_rappen / 100,
+      credit_already_used: (amountAlreadyUsed / 100).toFixed(2),
+      remaining_amount: (remainingAmount / 100).toFixed(2),
+      available_balance: (currentBalance / 100).toFixed(2),
+      credit_to_deduct_now: (creditToDeduct / 100).toFixed(2),
+      total_credit_used: (newTotalCredit / 100).toFixed(2),
+      amount_to_pay: amountToPay.toFixed(2)
+    })
+    
+    // If amount is 0 or less, just mark as completed with full credit
+    if (amountToPay <= 0) {
+      logger.debug('✅ Payment fully covered by credit, marking as completed')
+      logger.debug('💰 Deducting credit - currentBalance:', (currentBalance / 100).toFixed(2), 'creditToDeduct:', (creditToDeduct / 100).toFixed(2))
+      
+      // Update payment to mark as completed with credit
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          payment_status: 'completed',
+          payment_method: 'credit',
+          credit_used_rappen: newTotalCredit,
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+      
+      if (updateError) {
+        throw updateError
+      }
+      
+      logger.debug('✅ Payment updated')
+      
+      // Deduct credit from student_credits
+      if (creditToDeduct > 0) {
+        const newBalance = currentBalance - creditToDeduct
+        logger.debug('💰 Updating student_credits - new balance:', (newBalance / 100).toFixed(2), 'for user:', userData.id)
+        
+        const { error: creditUpdateError } = await supabase
+          .from('student_credits')
+          .update({
+            balance_rappen: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userData.id)
+        
+        if (creditUpdateError) {
+          console.error('❌ Error updating student credit balance:', creditUpdateError)
+          throw creditUpdateError
+        }
+        
+        logger.debug('✅ Student credit updated successfully')
+        
+        // Update local balance
+        studentBalance.value = newBalance
+      }
+      
+      logger.debug('✅ Payment completed with credit')
+      
+      // Reload data to show updated payment and balance
+      await loadAllData()
+      
+      // Show success with toast
+      const uiStore = useUIStore()
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Zahlung erfolgreich',
+        message: `CHF ${(creditToDeduct / 100).toFixed(2)} vom Guthaben verwendet. Neuer Guthabenstand: CHF ${((currentBalance - creditToDeduct) / 100).toFixed(2)}`
+      })
+      
+      return
+    }
+    
     const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
       method: 'POST',
       body: {
         orderId: `payment-${payment.id}-${Date.now()}`,
-        amount: payment.total_amount_rappen / 100,
+        amount: amountToPay,
         currency: 'CHF',
         customerEmail: userData.email,
         customerName: `${userData.first_name} ${userData.last_name}`,
@@ -648,16 +742,19 @@ const payIndividual = async (payment: any) => {
     })
     
     if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
-      // Update payment with Wallee transaction ID
-      logger.debug('💾 Saving Wallee transaction ID to payment:', walleeResponse.transactionId)
+      // Update payment with Wallee transaction ID and credit used
+      // ✅ Guthaben wird SOFORT abgezogen, bei Abbruch/Fehler wird es im Webhook zurückerstattet
+      logger.debug('💾 Saving Wallee transaction ID and credit to payment:', walleeResponse.transactionId)
       
       const { error: updateError } = await supabase
         .from('payments')
         .update({
           wallee_transaction_id: walleeResponse.transactionId.toString(),
+          credit_used_rappen: newTotalCredit,
           metadata: {
             ...payment.metadata,
-            wallee_transaction_id: walleeResponse.transactionId
+            wallee_transaction_id: walleeResponse.transactionId,
+            pending_credit_refund: creditToDeduct // Bei Abbruch/Fehler zurückerstatten
           },
           updated_at: new Date().toISOString()
         })
@@ -667,7 +764,32 @@ const payIndividual = async (payment: any) => {
         console.error('❌ Error updating payment with transaction ID:', updateError)
       }
       
-      logger.debug('✅ Payment updated with transaction ID')
+      // ✅ Deduct credit from student_credits immediately
+      if (creditToDeduct > 0) {
+        const newBalance = currentBalance - creditToDeduct
+        logger.debug('💰 Deducting credit immediately - new balance:', (newBalance / 100).toFixed(2), 'for user:', userData.id)
+        
+        const { error: creditUpdateError } = await supabase
+          .from('student_credits')
+          .update({
+            balance_rappen: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userData.id)
+        
+        if (creditUpdateError) {
+          console.error('❌ Error updating student credit balance:', creditUpdateError)
+          logger.debug('❌ Full error:', JSON.stringify(creditUpdateError, null, 2))
+          throw new Error('Failed to update student credit')
+        }
+        
+        logger.debug('✅ Student credit deducted immediately')
+        // Update local balance
+        studentBalance.value = newBalance
+      }
+      
+      logger.debug('✅ Payment updated with transaction ID and credit deducted')
+      logger.debug('⚠️ If payment fails/is cancelled, credit will be refunded in webhook')
       
       // Redirect directly to Wallee payment page
       window.location.href = walleeResponse.paymentUrl
@@ -781,7 +903,13 @@ const getStatusLabel = (payment: any): string => {
   // Check appointment status first
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (appointment?.status === 'cancelled') {
-    return 'Storniert'
+    // For cancelled appointments, show payment status too
+    const paymentStatusLabel = payment.payment_status === 'completed' 
+      ? 'Bezahlt' 
+      : payment.payment_status === 'refunded'
+      ? 'Rückvergütet'
+      : 'Unbezahlt'
+    return `Storniert • ${paymentStatusLabel}`
   }
   
   // Otherwise use payment status

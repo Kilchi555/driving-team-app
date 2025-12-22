@@ -453,7 +453,83 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.debug(`📋 CHECKPOINT: After payment update - actualPaymentStatus is: "${actualPaymentStatus}"`)
-    logger.debug(`📋 IMPORTANT: Now proceeding to voucher and credit product processing...`)
+    logger.debug(`📋 IMPORTANT: Now proceeding to credit refund/confirmation and voucher processing...`)
+    
+    // ✅ Handle credit refund for failed/cancelled payments
+    if ((actualPaymentStatus === 'failed' || actualPaymentStatus === 'cancelled') && paymentsToUpdate.length > 0) {
+      for (const payment of paymentsToUpdate) {
+        const pendingRefund = payment.metadata?.pending_credit_refund
+        if (pendingRefund && pendingRefund > 0 && payment.user_id) {
+          logger.debug(`💰 Refunding credit for failed/cancelled payment ${payment.id}: ${(pendingRefund / 100).toFixed(2)} CHF`)
+          
+          // Get current balance
+          const { data: creditData, error: creditFetchError } = await supabase
+            .from('student_credits')
+            .select('balance_rappen')
+            .eq('user_id', payment.user_id)
+            .single()
+          
+          if (creditFetchError) {
+            console.error('❌ Error fetching student credit:', creditFetchError)
+            continue
+          }
+          
+          if (creditData) {
+            const newBalance = (creditData.balance_rappen || 0) + pendingRefund
+            logger.debug(`💰 Current balance: ${(creditData.balance_rappen / 100).toFixed(2)}, New balance after refund: ${(newBalance / 100).toFixed(2)}`)
+            
+            // Refund credit
+            const { error: creditUpdateError } = await supabase
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', payment.user_id)
+            
+            if (creditUpdateError) {
+              console.error('❌ Error refunding student credit:', creditUpdateError)
+            } else {
+              logger.debug(`✅ Student credit refunded successfully for user ${payment.user_id}`)
+              
+              // Remove pending_credit_refund from metadata
+              await supabase
+                .from('payments')
+                .update({
+                  metadata: {
+                    ...payment.metadata,
+                    pending_credit_refund: null,
+                    credit_refunded_at: new Date().toISOString()
+                  }
+                })
+                .eq('id', payment.id)
+            }
+          }
+        }
+      }
+    }
+    
+    // ✅ Confirm credit deduction for completed payments (remove pending flag)
+    if (actualPaymentStatus === 'completed' && paymentsToUpdate.length > 0) {
+      for (const payment of paymentsToUpdate) {
+        const pendingRefund = payment.metadata?.pending_credit_refund
+        if (pendingRefund && pendingRefund > 0) {
+          logger.debug(`✅ Confirming credit deduction for completed payment ${payment.id}: ${(pendingRefund / 100).toFixed(2)} CHF`)
+          
+          // Remove pending_credit_refund from metadata (credit is now confirmed)
+          await supabase
+            .from('payments')
+            .update({
+              metadata: {
+                ...payment.metadata,
+                pending_credit_refund: null,
+                credit_confirmed_at: new Date().toISOString()
+              }
+            })
+            .eq('id', payment.id)
+        }
+      }
+    }
     
     // Update appointments ONLY if payments were actually updated AND (completed or authorized)
     // ✅ NUR 'completed' oder 'authorized' = Zahlung wurde tatsächlich verarbeitet
