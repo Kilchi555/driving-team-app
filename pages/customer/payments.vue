@@ -196,7 +196,7 @@
                 <div class="flex flex-col space-between space-y-1">
                   <div class="flex justify-between space-x-2">
                     <div class="text-xl sm:text-2xl font-bold text-gray-900">
-                      CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
+                      CHF {{ formatAmount(payment.total_amount_rappen - (payment.credit_used_rappen || 0)) }}
                     </div>
                     <div class="text-xs sm:text-sm text-gray-500">
                       {{ getPaymentMethodLabel(payment.payment_method) }}
@@ -223,34 +223,34 @@
                 
                 <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Fahrlektion</span>
-                  <span class="font-medium text-gray-600 ml-4">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-gray-600 ml-4">CHF {{ formatAmount(payment.lesson_price_rappen) }}</span>
                 </div>
                 
                 <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Administrationsgebühr</span>
-                  <span class="font-medium text-gray-600">CHF {{ (payment.admin_fee_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.admin_fee_rappen) }}</span>
                 </div>
                 
                 <div v-if="payment.products_price_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">{{ getProductsLabel(payment) }}</span>
-                  <span class="font-medium text-gray-600">CHF {{ (payment.products_price_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.products_price_rappen) }}</span>
                 </div>
                 
                 <div v-if="payment.discount_amount_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Rabatt</span>
-                  <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-green-600">- CHF {{ formatAmount(payment.discount_amount_rappen) }}</span>
                 </div>
                 
                 <!-- ✅ NEW: Show credit used -->
                 <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2">
                   <span class="text-green-600 font-medium">Verwendetes Guthaben</span>
-                  <span class="font-medium text-green-600">- CHF {{ (payment.credit_used_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-green-600">- CHF {{ formatAmount(payment.credit_used_rappen) }}</span>
                 </div>
                 
                 <!-- ✅ NEW: Show total calculation with credit -->
                 <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2 font-medium">
                   <span class="text-gray-900">Noch zu zahlen</span>
-                  <span class="text-gray-900">CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}</span>
+                  <span class="text-gray-900">CHF {{ formatAmount(payment.total_amount_rappen - (payment.credit_used_rappen || 0)) }}</span>
                 </div>
               </div>
             </div>
@@ -347,6 +347,22 @@ const statusFilter = ref('all')
 const methodFilter = ref('all')
 const showDetailsModal = ref(false)
 const showSettings = ref(false)
+
+// ✅ SWISS ROUNDING: Runde auf nächsten Franken (50 Rappen Grenze)
+const formatAmount = (rappen: number): string => {
+  const remainder = rappen % 100
+  let roundedRappen = rappen
+  
+  if (remainder !== 0) {
+    if (remainder < 50) {
+      roundedRappen = rappen - remainder      // Abrunden bei < 50 Rappen
+    } else {
+      roundedRappen = rappen + (100 - remainder) // Aufrunden bei >= 50 Rappen
+    }
+  }
+  
+  return (roundedRappen / 100).toFixed(2)
+}
 const selectedPayment = ref<any>(null)
 const preferredPaymentMethod = ref<string | null>(null)
 const expandedPaymentId = ref<string | null>(null)
