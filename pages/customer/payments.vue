@@ -223,31 +223,31 @@
                 
                 <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Fahrlektion</span>
-                  <span class="font-medium text-gray-600 ml-4">CHF {{ formatAmount(payment.lesson_price_rappen) }}</span>
+                  <span class="font-medium text-gray-600 ml-4">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
                 <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Administrationsgebühr</span>
-                  <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.admin_fee_rappen) }}</span>
+                  <span class="font-medium text-gray-600">CHF {{ (payment.admin_fee_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
                 <div v-if="payment.products_price_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">{{ getProductsLabel(payment) }}</span>
-                  <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.products_price_rappen) }}</span>
+                  <span class="font-medium text-gray-600">CHF {{ (payment.products_price_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
                 <div v-if="payment.discount_amount_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Rabatt</span>
-                  <span class="font-medium text-green-600">- CHF {{ formatAmount(payment.discount_amount_rappen) }}</span>
+                  <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
                 <!-- ✅ NEW: Show credit used -->
                 <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2">
                   <span class="text-green-600 font-medium">Verwendetes Guthaben</span>
-                  <span class="font-medium text-green-600">- CHF {{ formatAmount(payment.credit_used_rappen) }}</span>
+                  <span class="font-medium text-green-600">- CHF {{ (payment.credit_used_rappen / 100).toFixed(2) }}</span>
                 </div>
                 
-                <!-- ✅ NEW: Show total calculation with credit -->
+                <!-- ✅ NEW: Show total calculation with credit (ROUNDED) -->
                 <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2 font-medium">
                   <span class="text-gray-900">Noch zu zahlen</span>
                   <span class="text-gray-900">CHF {{ formatAmount(payment.total_amount_rappen - (payment.credit_used_rappen || 0)) }}</span>
