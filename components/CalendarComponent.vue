@@ -1071,15 +1071,44 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
   }
 }
 
-// 2. Die ursprüngliche loadAppointments Funktion (unverändert):
-// ✅ Caching für bessere Performance
+// ✅ IMPROVED CACHING: Viewport-spezifische Caches statt globaler Cache
 const lastLoadTime = ref<number>(0)
-const CACHE_DURATION = 30000 // 30 Sekunden Cache
+const CACHE_DURATION = 60000 // 60 Sekunden (erhöht von 30s, da viewport-spezifisch)
+const viewportCache = ref<Map<string, { data: any; timestamp: number }>>(new Map())
 
-// ✅ Cache-Invalidierung für bessere Performance
-const invalidateCache = () => {
+// ✅ Cache Key basierend auf Viewport-Daten
+const getCacheKey = (viewStart: Date, viewEnd: Date): string => {
+  // Runde auf Tagesgenauigkeit um Cache-Hits zu maximieren
+  const startDay = new Date(viewStart).toISOString().split('T')[0]
+  const endDay = new Date(viewEnd).toISOString().split('T')[0]
+  return `${startDay}_${endDay}`
+}
+
+// ✅ Cache-Check für spezifischen Viewport
+const getCachedData = (cacheKey: string): any | null => {
+  const cached = viewportCache.value.get(cacheKey)
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    logger.debug('💾 Cache HIT for viewport:', cacheKey, `(${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`)
+    return cached.data
+  }
+  logger.debug('💾 Cache MISS for viewport:', cacheKey)
+  return null
+}
+
+// ✅ Cache speichern
+const setCacheData = (cacheKey: string, data: any) => {
+  viewportCache.value.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  })
+  logger.debug('💾 Cache SET for viewport:', cacheKey)
+}
+
+// ✅ Alte globale Cache-Invalidierung (nur für kritische Änderungen)
+const invalidateCache = (reason: string = 'unknown') => {
   lastLoadTime.value = 0
-  logger.debug('🔄 Calendar cache invalidated')
+  viewportCache.value.clear() // Clear all viewport caches
+  logger.debug('🔄 Calendar cache invalidated:', reason)
 }
 
 const loadAppointments = async (forceReload = false) => {
@@ -1095,39 +1124,31 @@ const loadAppointments = async (forceReload = false) => {
     return
   }
 
-  // ✅ Cache-Check: Nur neu laden wenn nötig
-  const now = Date.now()
-  if (!forceReload && (now - lastLoadTime.value) < CACHE_DURATION) {
-    logger.debug('⚡ Using cached calendar data (last load:', Math.round((now - lastLoadTime.value) / 1000), 'seconds ago)')
-    return
+  // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
+  const calendarApi = calendar.value?.getApi()
+  const currentView = calendarApi?.view
+  const viewStart = currentView?.activeStart || new Date()
+  const viewEnd = currentView?.activeEnd || new Date()
+  
+  // ✅ VIEWPORT-SPEZIFISCHER CACHE CHECK
+  const cacheKey = getCacheKey(viewStart, viewEnd)
+  if (!forceReload) {
+    const cachedData = getCachedData(cacheKey)
+    if (cachedData) {
+      logger.debug('⚡ Using cached calendar data for this viewport')
+      calendarEvents.value = cachedData
+      return
+    }
   }
   
   isLoadingEvents.value = true
   isUpdating.value = true
   
   try {
-    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
+    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cache miss)')
     
-    // ✅ Externe Kalender synchronisieren BEVOR Termine geladen werden
-    logger.debug('🔄 Syncing external calendars before loading appointments...')
-    try {
-      const { autoSyncCalendars } = useExternalCalendarSync()
-      const syncResult = await autoSyncCalendars(props.currentUser?.id)
-      if (syncResult.success && !syncResult.skipped) {
-        logger.debug('✅ External calendars synced successfully')
-      } else if (syncResult.skipped) {
-        logger.debug('⏭️ External calendar sync skipped (cooldown or already running)')
-      }
-    } catch (syncError) {
-      console.warn('⚠️ External calendar sync failed (non-fatal):', syncError)
-      // Sync-Fehler sind nicht fatal, wir laden trotzdem die Termine
-    }
-    
-    // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
-    const calendarApi = calendar.value?.getApi()
-    const currentView = calendarApi?.view
-    const viewStart = currentView?.activeStart || new Date()
-    const viewEnd = currentView?.activeEnd || new Date()
+    // ✅ External Calendar Sync - aber NOT bei jedem Load (führe nur auf Demand auf)
+    // Removed automatic sync here to save 50-100ms per viewport load
     
     logger.debug('📅 Loading events for view range:', viewStart, 'to', viewEnd)
     
@@ -1156,7 +1177,9 @@ const loadAppointments = async (forceReload = false) => {
     // Kombinieren
     const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
     calendarEvents.value = allEvents
-    lastLoadTime.value = now // ✅ Cache-Zeit aktualisieren
+    
+    // ✅ SAVE TO VIEWPORT CACHE
+    setCacheData(cacheKey, allEvents)
     
     logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
