@@ -774,7 +774,7 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   }
 }
 
-const loadRegularAppointments = async () => {
+const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date) => {
   logger.debug('🔥 NEW loadRegularAppointments function is running!')
   isLoadingEvents.value = true
   try {
@@ -823,7 +823,25 @@ const loadRegularAppointments = async () => {
       .is('deleted_at', null) // ✅ Soft Delete Filter
       .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
       .order('start_time')
-      .limit(1000) // ✅ Limit für bessere Performance
+    
+    // ✅ VIEWPORT-BASED LOADING: Nur Termine im sichtbaren Bereich laden
+    if (viewStartDate && viewEndDate) {
+      const startISO = viewStartDate.toISOString()
+      const endISO = viewEndDate.toISOString()
+      
+      logger.debug('📅 VIEWPORT LOADING - Date range:', {
+        start: startISO,
+        end: endISO,
+        durationDays: Math.round((viewEndDate.getTime() - viewStartDate.getTime()) / (1000 * 60 * 60 * 24))
+      })
+      
+      query = query
+        .gte('start_time', startISO)
+        .lt('start_time', endISO) // Appointments die im Viewport starten
+    } else {
+      logger.debug('⚠️ No viewport dates provided, using fallback limit(1000)')
+      query = query.limit(1000) // Fallback wenn kein Viewport
+    }
     
     // ✅ Admin vs Staff Logic: Admins sehen alle Termine, Staff nur eigene
     const userRole = props.currentUser?.role || composableCurrentUser.value?.role
@@ -848,9 +866,9 @@ const loadRegularAppointments = async () => {
       staff_id: actualUserId,
       tenant_id: userData.tenant_id,
       deleted_at: 'null',
-      order: 'start_time'
+      order: 'start_time',
+      viewportDates: viewStartDate && viewEndDate ? 'YES' : 'NO'
     })
-    logger.debug('🔍 Full query:', query)
     if (error) {
       console.error('❌ Supabase query error:', error)
     }
@@ -862,7 +880,7 @@ const loadRegularAppointments = async () => {
         title: appointments[0].title,
         type: appointments[0].type,
         event_type_code: appointments[0].event_type_code,
-        appointment_type: appointments[0].event_type_code || 'lesson', // Verwende event_type_code als appointment_type
+        appointment_type: appointments[0].event_type_code || 'lesson',
         start_time: appointments[0].start_time,
         duration_minutes: appointments[0].duration_minutes
       })
@@ -871,7 +889,8 @@ const loadRegularAppointments = async () => {
       logger.debug('🔍 Debug info:', {
         actualUserId,
         tenant_id: userData.tenant_id,
-        userRole: props.currentUser?.role || composableCurrentUser.value?.role
+        userRole: userRole,
+        viewportProvided: viewStartDate && viewEndDate ? 'YES' : 'NO'
       })
     }
     
@@ -1112,12 +1131,19 @@ const loadAppointments = async (forceReload = false) => {
     
     logger.debug('📅 Loading events for view range:', viewStart, 'to', viewEnd)
     
+    // ✅ VIEWPORT-BASED: Pass date range to appointments loader
+    logger.debug('⏱️ Performance: Starting parallel loads with viewport dates')
+    const startTime = performance.now()
+    
     // Parallel laden (mit aktuellen View-Daten)
     const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
-      loadRegularAppointments(),
+      loadRegularAppointments(viewStart, viewEnd), // ← Pass viewport dates
       loadExternalBusyTimes(),
       loadNonWorkingHoursBlocks(props.currentUser?.id || '', viewStart, viewEnd),
     ])
+    
+    const loadDuration = (performance.now() - startTime).toFixed(0)
+    logger.debug(`⏱️ Performance: All loads completed in ${loadDuration}ms`)
     
     // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
     if (!calendar.value) {
