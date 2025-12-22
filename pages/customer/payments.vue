@@ -61,7 +61,7 @@
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
-            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
+            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ formatAmount(studentBalance) }}</p>
             <!-- ✅ DISABLED FOR PRODUCTION: Redeem Voucher Button (enable on preview branch) -->
             <!-- <button
               @click="showRedeemVoucherModal = true"
