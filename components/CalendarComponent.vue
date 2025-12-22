@@ -1873,9 +1873,9 @@ const refreshCalendar = async () => {
       return
     }
     
-    // 0. Cache invalidieren
-    invalidateCache()
-    logger.debug('🔄 Cache invalidated for refresh')
+    // ✅ Don't invalidate cache here - let loadAppointments(true) force reload instead
+    // Cache will be invalidated only for critical user actions, not on every refresh
+    // invalidateCache() removed - this was preventing cache from working
     
     // 1. Aktuelle View-Position speichern
     const currentDate = calendar.value?.getApi()?.getDate()
