@@ -26,6 +26,7 @@ interface CalculatedPrice {
   category_code: string
   duration_minutes: number
   appointment_number: number
+  original_duration_minutes?: number // ✅ NEU: Original-Duration für Edit-Mode
 }
 
 interface DynamicPricing {
@@ -647,22 +648,31 @@ const roundToNearestFranken = (rappen: number): number => {
     if (isEditMode && appointmentId) {
       logger.debug(`📝 Edit-Mode: Loading existing price from payment for appointment ${appointmentId}`)
       
-      // Lade bestehenden Preis aus der payments Tabelle
+      // Lade bestehenden Preis aus der payments Tabelle UND Original-Duration vom Appointment
       const { data: existingPayment } = await supabase
         .from('payments')
         .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen')
         .eq('appointment_id', appointmentId)
         .maybeSingle()
       
-      if (existingPayment && existingPayment.lesson_price_rappen > 0) {
+      const { data: appointment } = await supabase
+        .from('appointments')
+        .select('duration_minutes')
+        .eq('id', appointmentId)
+        .single()
+      
+      if (existingPayment && existingPayment.lesson_price_rappen > 0 && appointment) {
         const lessonPrice = existingPayment.lesson_price_rappen || 0
         const adminFee = existingPayment.admin_fee_rappen || 0
         const total = existingPayment.total_amount_rappen || (lessonPrice + adminFee)
+        const originalDuration = appointment.duration_minutes
         
         logger.debug('✅ Edit-Mode: Using existing payment price:', {
           lessonPrice: lessonPrice / 100,
           adminFee: adminFee / 100,
-          total: total / 100
+          total: total / 100,
+          originalDuration,
+          currentDuration: durationMinutes
         })
         
         // Appointment count ermitteln für die Anzeige
@@ -680,7 +690,8 @@ const roundToNearestFranken = (rappen: number): number => {
           total_chf: (total / 100).toFixed(2),
           category_code: categoryCode,
           duration_minutes: durationMinutes,
-          appointment_number: appointmentNumber
+          appointment_number: appointmentNumber,
+          original_duration_minutes: originalDuration // ✅ NEU: Original-Duration zurückgeben
         }
       } else {
         logger.debug('⚠️ Edit-Mode: No existing payment found, will calculate new price')

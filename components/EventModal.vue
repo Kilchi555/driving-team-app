@@ -1893,7 +1893,18 @@ const calculatePriceForCurrentData = async () => {
       logger.debug('✅ Online price calculated:', priceResult)
       
       // Update dynamic pricing
-      const calculatedPricePerMinute = priceResult.base_price_rappen / durationValue / 100
+      // ✅ In Edit-Mode: Berechne pricePerMinute basierend auf ORIGINAL-Duration, nicht aktueller Duration
+      const durationForPricePerMinute = priceResult.original_duration_minutes || durationValue
+      const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
+      
+      logger.debug('💰 Price per minute calculation:', {
+        base_price_rappen: priceResult.base_price_rappen,
+        original_duration: priceResult.original_duration_minutes,
+        current_duration: durationValue,
+        using_duration: durationForPricePerMinute,
+        pricePerMinute: calculatedPricePerMinute
+      })
+      
       dynamicPricing.value = {
         pricePerMinute: calculatedPricePerMinute,
         adminFeeChf: parseFloat(priceResult.admin_fee_chf),
@@ -3199,9 +3210,21 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
               .then(priceResult => {
                 logger.debug('✅ Online price calculated:', priceResult.total_chf)
                 
+                // ✅ In Edit-Mode: Berechne pricePerMinute basierend auf ORIGINAL-Duration
+                const durationForPricePerMinute = priceResult.original_duration_minutes || newDurationMinutes
+                const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
+                
+                logger.debug('💰 Price per minute calculation (calculateEndTime):', {
+                  base_price_rappen: priceResult.base_price_rappen,
+                  original_duration: priceResult.original_duration_minutes,
+                  current_duration: newDurationMinutes,
+                  using_duration: durationForPricePerMinute,
+                  pricePerMinute: calculatedPricePerMinute
+                })
+                
                 // Update dynamic pricing mit online Daten
                 dynamicPricing.value = {
-                  pricePerMinute: priceResult.base_price_rappen / newDurationMinutes / 100,
+                  pricePerMinute: calculatedPricePerMinute,
                   adminFeeChf: parseFloat(priceResult.admin_fee_chf),
                   adminFeeRappen: priceResult.admin_fee_rappen || 0, // ✅ NEU: Admin-Fee in Rappen
                   adminFeeAppliesFrom: 2, // ✅ Standard: Admin-Fee ab 2. Termin
