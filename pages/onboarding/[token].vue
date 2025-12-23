@@ -270,11 +270,33 @@
 
               <!-- Category Selection -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-3">
-                  Führerausweis-Kategorien *
-                </label>
+                <div class="flex items-center justify-between mb-3">
+                  <label class="block text-sm font-medium text-gray-700">
+                    Führerausweis-Kategorien *
+                  </label>
+                  <!-- Back Button for easy navigation -->
+                  <button
+                    type="button"
+                    @click="step--"
+                    class="text-xs text-gray-600 hover:text-gray-900 font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                    title="Zurück zum Passwort"
+                  >
+                    ← Zurück
+                  </button>
+                </div>
+
+                <!-- Error Message (inline, not modal) -->
+                <div v-if="categoryError" class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p class="text-red-700 text-sm font-medium">{{ categoryError }}</p>
+                </div>
+
                 <div class="space-y-3">
-                  <div v-for="cat in categories" :key="cat.code || cat.id" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div 
+                    v-for="cat in categories" 
+                    :key="cat.code || cat.id" 
+                    class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-colors cursor-pointer"
+                    @click="toggleCategory(cat.code || cat.id)"
+                  >
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center space-x-3">
                         <span class="text-lg font-bold text-gray-800">{{ cat.code || cat.id }}</span>
@@ -287,10 +309,19 @@
                         :value="cat.code || cat.id"
                         type="checkbox"
                         class="sr-only peer"
+                        @change="clearCategoryError"
                       />
                       <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                     </label>
                   </div>
+                </div>
+
+                <!-- Selected Categories Summary -->
+                <div v-if="form.categories.length > 0" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p class="text-sm font-medium text-green-900">
+                    ✅ {{ form.categories.length }} Kategorie{{ form.categories.length !== 1 ? 'n' : '' }} ausgewählt: 
+                    <span class="font-bold">{{ form.categories.join(', ') }}</span>
+                  </p>
                 </div>
               </div>
 
@@ -599,6 +630,7 @@ const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
+const categoryError = ref('')
 
 const tenantName = ref('Deiner Fahrschule')
 const userData = ref<any>(null)
@@ -876,9 +908,10 @@ const handleNextStep = async () => {
   } else if (step.value === 1) {
     // Step 2 validation: Check that at least one category is selected
     if (form.categories.length === 0) {
-      showErrorMessage('Bitte wähle mindestens eine Kategorie aus')
+      categoryError.value = 'Bitte wähle mindestens eine Kategorie aus'
       return
     }
+    categoryError.value = ''
     step.value++
   } else if (step.value === 2) {
     // Step 3 validation: Check that all categories have uploaded documents
@@ -894,6 +927,22 @@ const handleNextStep = async () => {
     // Final step - submit
     await completeOnboarding()
   }
+}
+
+// Helper function: Toggle category selection
+const toggleCategory = (categoryCode: string) => {
+  const index = form.categories.indexOf(categoryCode)
+  if (index > -1) {
+    form.categories.splice(index, 1)
+  } else {
+    form.categories.push(categoryCode)
+  }
+  clearCategoryError()
+}
+
+// Helper function: Clear category error when user makes a selection
+const clearCategoryError = () => {
+  categoryError.value = ''
 }
 
 // Complete onboarding
