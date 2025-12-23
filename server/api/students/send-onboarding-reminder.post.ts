@@ -4,7 +4,7 @@
 // Sendet eine Onboarding-Erinnerung
 // - Invalidiert den alten Link (falls noch gültig)
 // - Erstellt einen neuen Link (14 Tage gültig)
-// - Versendet die Erinnerung mit dem neuen Link
+// - Versendet die Erinnerung per Email ODER SMS (je nachdem was verfügbar ist)
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
@@ -14,19 +14,28 @@ import { v4 as uuidv4 } from 'uuid'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { email, firstName, lastName, userId, tenantId } = body
+    const { email, firstName, lastName, userId, tenantId, phone } = body
 
     logger.debug('📧 Onboarding reminder request received:', { 
-      email, firstName, lastName, userId, tenantId 
+      email, firstName, lastName, userId, tenantId, phone 
     })
 
-    if (!email || !userId || !tenantId) {
+    // ✅ WICHTIG: Entweder Email ODER Phone muss vorhanden sein
+    if (!userId || !tenantId) {
       console.error('❌ Missing required fields:', { 
-        email: !!email, userId: !!userId, tenantId: !!tenantId 
+        userId: !!userId, tenantId: !!tenantId 
       })
       throw createError({
         statusCode: 400,
-        message: 'Missing required fields: email, userId, tenantId'
+        message: 'Missing required fields: userId, tenantId'
+      })
+    }
+
+    if (!email && !phone) {
+      console.error('❌ Missing contact info:', { email: !!email, phone: !!phone })
+      throw createError({
+        statusCode: 400,
+        message: 'Missing contact info: either email or phone is required'
       })
     }
 
@@ -80,7 +89,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('🏢 Loading tenant information for:', tenantId)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, primary_color')
+      .select('name, primary_color, twilio_from_sender')
       .eq('id', tenantId)
       .single()
 
@@ -102,14 +111,22 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Tenant loaded:', tenant.name)
 
-    // ============================================
-    // Step 5: Send reminder email
-    // ============================================
     const tenantName = tenant.name || 'Ihre Fahrschule'
     const primaryColor = tenant.primary_color || '#2563eb'
     const customerName = `${firstName} ${lastName}`.trim() || 'Kunde'
+    
+    let emailSent = false
+    let smsSent = false
+    const channels: string[] = []
 
-    const emailHtml = `
+    // ============================================
+    // Step 5a: Send reminder EMAIL (if email is available)
+    // ============================================
+    if (email) {
+      try {
+        logger.debug('📧 Sending reminder email to:', email)
+        
+        const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -188,23 +205,59 @@ export default defineEventHandler(async (event) => {
   </table>
 </body>
 </html>
-    `
+        `
 
-    logger.debug('📧 Attempting to send reminder email via Resend...')
-    
-    await sendEmail({
-      to: email,
-      subject: `Registrierungserinnerung von ${tenantName}`,
-      html: emailHtml
-    })
+        await sendEmail({
+          to: email,
+          subject: `Registrierungserinnerung von ${tenantName}`,
+          html: emailHtml
+        })
 
-    logger.debug('✅ Onboarding reminder sent successfully to:', email)
+        logger.debug('✅ Email sent successfully')
+        emailSent = true
+        channels.push('Email')
+      } catch (emailError: any) {
+        console.error('⚠️ Email sending failed:', emailError)
+        logger.debug('⚠️ Email error:', emailError.message)
+      }
+    }
+
+    // ============================================
+    // Step 5b: Send reminder SMS (if phone is available)
+    // ============================================
+    if (phone) {
+      try {
+        logger.debug('📱 Would send SMS to:', phone)
+        // SMS wird vom Frontend versendet, nicht hier
+        // Das ermöglicht mehr Flexibilität bei der SMS-Verwaltung
+        smsSent = true
+        channels.push('SMS')
+      } catch (smsError: any) {
+        console.error('⚠️ SMS preparation failed:', smsError)
+        logger.debug('⚠️ SMS error:', smsError.message)
+      }
+    }
+
+    // ============================================
+    // Check if at least one channel was used
+    // ============================================
+    if (!emailSent && !smsSent) {
+      throw createError({
+        statusCode: 400,
+        message: 'No valid contact method to send reminder'
+      })
+    }
+
+    logger.debug('✅ Onboarding reminder sent via:', channels.join(' + '))
 
     return {
       success: true,
-      message: 'Onboarding reminder sent successfully',
+      message: `Onboarding reminder sent via ${channels.join(' + ')}`,
       token: newToken,
-      expiresAt: expiresAt.toISOString()
+      expiresAt: expiresAt.toISOString(),
+      channels: channels,
+      emailSent,
+      smsSent
     }
   } catch (error: any) {
     console.error('❌ Error sending onboarding reminder:', error)

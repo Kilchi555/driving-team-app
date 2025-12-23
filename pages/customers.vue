@@ -1045,7 +1045,44 @@ const resendOnboardingSms = async () => {
     logger.debug('📧 Sending new onboarding reminder...', {
       studentId: pendingStudent.value.id,
       email: pendingStudent.value.email,
+      phone: pendingStudent.value.phone,
       firstName: pendingStudent.value.first_name
+    })
+
+    // ============================================
+    // Fetch latest student data to ensure we have all required info
+    // ============================================
+    logger.debug('🔄 Fetching latest student data from database...')
+    const { data: latestStudent, error: fetchError } = await supabase
+      .from('users')
+      .select('id, email, phone, first_name, last_name, onboarding_token, onboarding_token_expires, tenant_id')
+      .eq('id', pendingStudent.value.id)
+      .single()
+    
+    if (fetchError || !latestStudent) {
+      throw new Error('Could not fetch student data: ' + (fetchError?.message || 'Unknown error'))
+    }
+
+    logger.debug('✅ Latest student data:', {
+      id: latestStudent.id,
+      hasEmail: !!latestStudent.email,
+      hasPhone: !!latestStudent.phone,
+      firstName: latestStudent.first_name
+    })
+
+    // ============================================
+    // Validate contact info (need at least email OR phone)
+    // ============================================
+    if (!latestStudent.email && !latestStudent.phone) {
+      throw new Error('Student has no email or phone number on file. Cannot send reminder.')
+    }
+
+    const hasEmail = !!latestStudent.email
+    const hasPhone = !!latestStudent.phone
+
+    logger.debug('📊 Contact channels available:', { 
+      email: hasEmail ? '✅' : '❌', 
+      phone: hasPhone ? '✅' : '❌' 
     })
 
     // ============================================
@@ -1054,66 +1091,87 @@ const resendOnboardingSms = async () => {
     const reminderResponse = await $fetch('/api/students/send-onboarding-reminder', {
       method: 'POST',
       body: {
-        email: pendingStudent.value.email,
-        firstName: pendingStudent.value.first_name,
-        lastName: pendingStudent.value.last_name,
-        userId: pendingStudent.value.id,
-        tenantId: currentUser.value?.tenant_id
+        email: latestStudent.email || undefined,
+        firstName: latestStudent.first_name,
+        lastName: latestStudent.last_name,
+        userId: latestStudent.id,
+        phone: latestStudent.phone || undefined,
+        tenantId: latestStudent.tenant_id || currentUser.value?.tenant_id
       }
     })
 
     logger.debug('✅ Reminder API response:', reminderResponse)
 
     // ============================================
-    // Send SMS with the new link
+    // Send SMS with the new link (if phone is available)
     // ============================================
-    const newLink = `https://simy.ch/onboarding/${reminderResponse.token}`
-    const message = `Hallo ${pendingStudent.value.first_name}! Deine Registrierung bei Driving Team. Vervollständige sie hier: ${newLink} (Link 14 Tage gültig)`
+    let smsSuccess = false
+    if (hasPhone && reminderResponse.token) {
+      try {
+        const newLink = `https://simy.ch/onboarding/${reminderResponse.token}`
+        const message = `Hallo ${latestStudent.first_name}! Deine Registrierung bei Driving Team. Vervollständige sie hier: ${newLink} (Link 14 Tage gültig)`
+        
+        // Get current user's tenant for SMS sender name
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', authUser?.id)
+          .single()
+        
+        let senderName = undefined
+        if (userProfile?.tenant_id) {
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('twilio_from_sender')
+            .eq('id', userProfile.tenant_id)
+            .single()
+          
+          senderName = tenant?.twilio_from_sender
+        }
+        
+        const result = await sendSms(latestStudent.phone, message, senderName)
+        smsSuccess = result.success
+        
+        logger.debug('📱 SMS result:', { success: smsSuccess, error: result.error })
+      } catch (smsErr) {
+        logger.debug('⚠️ SMS sending error:', smsErr)
+      }
+    }
+
+    // ============================================
+    // Show success notification
+    // ============================================
+    const channels = reminderResponse.channels || []
+    let message = 'Erinnerung erfolgreich versendet!'
     
-    // Get current user's tenant for SMS sender name
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    
-    let senderName = undefined
-    if (userProfile?.tenant_id) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('twilio_from_sender')
-        .eq('id', userProfile.tenant_id)
-        .single()
-      
-      senderName = tenant?.twilio_from_sender
+    if (channels.length > 0) {
+      message += ` (${channels.join(' + ')})`
     }
     
-    const result = await sendSms(pendingStudent.value.phone, message, senderName)
-    
-    if (result.success) {
-      logger.debug('✅ SMS sent successfully with new link')
-      uiStore.addNotification({
-        type: 'success',
-        title: 'Erinnerung erfolgreich versendet!',
-        message: `Neuer Onboarding-Link wurde an ${formatPhone(pendingStudent.value.phone)} gesendet. (Gültig 14 Tage)`
-      })
-      showPendingModal.value = false
-    } else {
-      logger.debug('⚠️ SMS sending failed:', result.error)
-      uiStore.addNotification({
-        type: 'error',
-        title: 'SMS-Versand fehlgeschlagen',
-        message: result.error || 'Bitte versuchen Sie es erneut. Der Link wurde trotzdem per E-Mail versendet.'
-      })
+    if (hasPhone) {
+      message += ` ${smsSuccess ? '✅' : '⚠️'} SMS zu ${formatPhone(latestStudent.phone)}`
     }
+    if (hasEmail) {
+      message += ` ${reminderResponse.emailSent ? '✅' : '⚠️'} Email zu ${latestStudent.email}`
+    }
+
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Erinnerung versendet!',
+      message: message + ' (Link gültig 14 Tage)'
+    })
+    
+    showPendingModal.value = false
   } catch (err: any) {
     console.error('❌ Error resending reminder:', err)
     logger.debug('❌ Error details:', err)
+    
+    const errorMsg = err.message || 'Unbekannter Fehler'
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'Erinnerung konnte nicht versendet werden: ' + (err.message || 'Unbekannter Fehler')
+      message: 'Erinnerung konnte nicht versendet werden: ' + errorMsg
     })
   } finally {
     isResendingSms.value = false
