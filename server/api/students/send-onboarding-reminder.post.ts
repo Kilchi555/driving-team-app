@@ -1,33 +1,82 @@
 // ============================================
-// API: Send Onboarding Email
+// API: Send Onboarding Reminder
 // ============================================
-// Sendet eine Onboarding-E-Mail mit Link zur Registrierung
+// Sendet eine Onboarding-Erinnerung
+// - Invalidiert den alten Link (falls noch gültig)
+// - Erstellt einen neuen Link (14 Tage gültig)
+// - Versendet die Erinnerung mit dem neuen Link
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { email, firstName, lastName, onboardingLink, tenantId } = body
+    const { email, firstName, lastName, userId, tenantId } = body
 
-    logger.debug('📧 Onboarding email request received:', { email, firstName, lastName, tenantId })
+    logger.debug('📧 Onboarding reminder request received:', { 
+      email, firstName, lastName, userId, tenantId 
+    })
 
-    if (!email || !onboardingLink || !tenantId) {
-      console.error('❌ Missing required fields:', { email: !!email, onboardingLink: !!onboardingLink, tenantId: !!tenantId })
+    if (!email || !userId || !tenantId) {
+      console.error('❌ Missing required fields:', { 
+        email: !!email, userId: !!userId, tenantId: !!tenantId 
+      })
       throw createError({
         statusCode: 400,
-        message: 'Missing required fields: email, onboardingLink, tenantId'
+        message: 'Missing required fields: email, userId, tenantId'
       })
     }
 
-    logger.debug('✅ All required fields present')
-    logger.debug('🔗 Onboarding link:', onboardingLink)
-
     const supabase = getSupabaseAdmin()
 
-    // Get tenant information
+    // ============================================
+    // Step 1: Generate new token (14 Tage gültig)
+    // ============================================
+    logger.debug('🔄 Step 1: Generating new onboarding token')
+    
+    const newToken = uuidv4()
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 14) // 14 Tage
+    
+    logger.debug('✅ New token generated:', newToken)
+
+    // ============================================
+    // Step 2: Update user with new token (invalidates old link)
+    // ============================================
+    logger.debug('🔄 Step 2: Updating user with new token')
+    
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        onboarding_token: newToken,
+        onboarding_token_expires: expiresAt.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .eq('onboarding_status', 'pending')
+    
+    if (updateError) {
+      console.error('❌ Failed to update user with new token:', updateError)
+      throw createError({
+        statusCode: 500,
+        message: `Failed to update user: ${updateError.message}`
+      })
+    }
+
+    logger.debug('✅ User updated with new token')
+
+    // ============================================
+    // Step 3: Generate onboarding link
+    // ============================================
+    const onboardingLink = `https://simy.ch/onboarding/${newToken}`
+    logger.debug('🔗 Generated onboarding link:', onboardingLink)
+
+    // ============================================
+    // Step 4: Get tenant information
+    // ============================================
     logger.debug('🏢 Loading tenant information for:', tenantId)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
@@ -53,18 +102,20 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Tenant loaded:', tenant.name)
 
+    // ============================================
+    // Step 5: Send reminder email
+    // ============================================
     const tenantName = tenant.name || 'Ihre Fahrschule'
     const primaryColor = tenant.primary_color || '#2563eb'
     const customerName = `${firstName} ${lastName}`.trim() || 'Kunde'
 
-    // Generate email HTML
     const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Willkommen bei ${tenantName}</title>
+  <title>Registrierungserinnerung von ${tenantName}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -76,7 +127,7 @@ export default defineEventHandler(async (event) => {
           <tr>
             <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
-                Willkommen bei ${tenantName}!
+                Registrierungserinnerung
               </h1>
             </td>
           </tr>
@@ -89,7 +140,7 @@ export default defineEventHandler(async (event) => {
               </p>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Schön, dass du dich für uns entschieden hast! Um deine Registrierung abzuschließen, klicke bitte auf den folgenden Button:
+                wir erinnern dich daran, dass deine Registrierung bei ${tenantName} noch ausstehend ist. Um dein Konto zu aktivieren und auf deine Buchungen zuzugreifen, klicke bitte auf den folgenden Button:
               </p>
 
               <!-- CTA Button -->
@@ -98,7 +149,7 @@ export default defineEventHandler(async (event) => {
                   <td align="center">
                     <a href="${onboardingLink}" 
                        style="display: inline-block; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: bold;">
-                      Registrierung abschließen
+                      Jetzt registrieren
                     </a>
                   </td>
                 </tr>
@@ -110,7 +161,11 @@ export default defineEventHandler(async (event) => {
               </p>
 
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                ⏰ Dieser Link ist 14 Tage gültig.
+                ⏰ <strong>Dieser Link ist 14 Tage gültig.</strong>
+              </p>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                Falls du Probleme hast oder Fragen zur Registrierung hast, kontaktiere bitte den Support von ${tenantName}.
               </p>
             </td>
           </tr>
@@ -135,37 +190,28 @@ export default defineEventHandler(async (event) => {
 </html>
     `
 
-    // Send email
-    logger.debug('📧 Attempting to send email via Resend...')
-    logger.debug('📧 Email config:', {
-      to: email,
-      subject: `Willkommen bei ${tenantName} - Registrierung abschließen`,
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
-    })
+    logger.debug('📧 Attempting to send reminder email via Resend...')
     
     await sendEmail({
       to: email,
-      subject: `Willkommen bei ${tenantName} - Registrierung abschließen`,
+      subject: `Registrierungserinnerung von ${tenantName}`,
       html: emailHtml
     })
 
-    logger.debug('✅ Onboarding email sent successfully to:', email)
+    logger.debug('✅ Onboarding reminder sent successfully to:', email)
 
     return {
       success: true,
-      message: 'Onboarding email sent successfully'
+      message: 'Onboarding reminder sent successfully',
+      token: newToken,
+      expiresAt: expiresAt.toISOString()
     }
   } catch (error: any) {
-    console.error('❌ Error sending onboarding email:', error)
+    console.error('❌ Error sending onboarding reminder:', error)
     console.error('❌ Error stack:', error.stack)
-    console.error('❌ Error details:', {
-      message: error.message,
-      code: error.code,
-      statusCode: error.statusCode
-    })
     throw createError({
       statusCode: error.statusCode || 500,
-      message: `Failed to send onboarding email: ${error.message}`
+      message: `Failed to send onboarding reminder: ${error.message}`
     })
   }
 })

@@ -1042,8 +1042,33 @@ const resendOnboardingSms = async () => {
   isResendingSms.value = true
   
   try {
-    const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
-    const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    logger.debug('📧 Sending new onboarding reminder...', {
+      studentId: pendingStudent.value.id,
+      email: pendingStudent.value.email,
+      firstName: pendingStudent.value.first_name
+    })
+
+    // ============================================
+    // Call new API to create new link + send reminder
+    // ============================================
+    const reminderResponse = await $fetch('/api/students/send-onboarding-reminder', {
+      method: 'POST',
+      body: {
+        email: pendingStudent.value.email,
+        firstName: pendingStudent.value.first_name,
+        lastName: pendingStudent.value.last_name,
+        userId: pendingStudent.value.id,
+        tenantId: currentUser.value?.tenant_id
+      }
+    })
+
+    logger.debug('✅ Reminder API response:', reminderResponse)
+
+    // ============================================
+    // Send SMS with the new link
+    // ============================================
+    const newLink = `https://simy.ch/onboarding/${reminderResponse.token}`
+    const message = `Hallo ${pendingStudent.value.first_name}! Deine Registrierung bei Driving Team. Vervollständige sie hier: ${newLink} (Link 14 Tage gültig)`
     
     // Get current user's tenant for SMS sender name
     const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -1067,25 +1092,28 @@ const resendOnboardingSms = async () => {
     const result = await sendSms(pendingStudent.value.phone, message, senderName)
     
     if (result.success) {
+      logger.debug('✅ SMS sent successfully with new link')
       uiStore.addNotification({
         type: 'success',
-        title: 'SMS erfolgreich gesendet!',
-        message: `Onboarding-Link wurde an ${formatPhone(pendingStudent.value.phone)} gesendet.`
+        title: 'Erinnerung erfolgreich versendet!',
+        message: `Neuer Onboarding-Link wurde an ${formatPhone(pendingStudent.value.phone)} gesendet. (Gültig 14 Tage)`
       })
       showPendingModal.value = false
     } else {
+      logger.debug('⚠️ SMS sending failed:', result.error)
       uiStore.addNotification({
         type: 'error',
         title: 'SMS-Versand fehlgeschlagen',
-        message: result.error || 'Bitte versuchen Sie es erneut oder kopieren Sie den Link manuell.'
+        message: result.error || 'Bitte versuchen Sie es erneut. Der Link wurde trotzdem per E-Mail versendet.'
       })
     }
   } catch (err: any) {
-    console.error('Error resending SMS:', err)
+    console.error('❌ Error resending reminder:', err)
+    logger.debug('❌ Error details:', err)
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'SMS konnte nicht gesendet werden.'
+      message: 'Erinnerung konnte nicht versendet werden: ' + (err.message || 'Unbekannter Fehler')
     })
   } finally {
     isResendingSms.value = false
@@ -1096,7 +1124,18 @@ const copyOnboardingLink = async () => {
   if (!pendingStudent.value) return
   
   try {
-    const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
+    // Fetch latest onboarding token from database
+    const { data: latestUser, error: fetchError } = await supabase
+      .from('users')
+      .select('onboarding_token')
+      .eq('id', pendingStudent.value.id)
+      .single()
+    
+    if (fetchError || !latestUser?.onboarding_token) {
+      throw new Error('Konnte aktuellen Onboarding-Link nicht laden')
+    }
+
+    const onboardingLink = `https://simy.ch/onboarding/${latestUser.onboarding_token}`
     
     await navigator.clipboard.writeText(onboardingLink)
     
@@ -1106,7 +1145,7 @@ const copyOnboardingLink = async () => {
       message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
     })
     
-    logger.debug('🔗 Onboarding-Link:', onboardingLink)
+    logger.debug('🔗 Onboarding-Link copied:', onboardingLink)
   } catch (err) {
     console.error('Error copying link:', err)
     uiStore.addNotification({
