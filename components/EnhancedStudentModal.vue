@@ -792,6 +792,28 @@
         
         <!-- Details Tab -->
         <div v-if="activeTab === 'details'" class="space-y-6 p-2">
+          <!-- Pending Student Actions - MOVED TO TOP -->
+          <div v-if="!selectedStudent.auth_user_id" class="bg-orange-50 rounded-lg border border-orange-200 p-6">
+            <h4 class="text-lg font-semibold text-orange-900 mb-4 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M6.343 3.665c.886-.887 2.318-.887 3.03 0l9.718 9.718c.887.887.887 2.326 0 3.213l-9.718 9.718c-.712.712-2.144.712-3.03 0L3.313 15.9c-.887-.887-.887-2.326 0-3.213L6.343 3.665z"></path>
+              </svg>
+              Onboarding Status: Ausstehend
+            </h4>
+            <p class="text-sm text-orange-800 mb-4">
+              Dieser Schüler hat sein Konto noch nicht aktiviert. Hier können Sie Erinnerungen versenden:
+            </p>
+            <button
+              @click="openReminderModal"
+              class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+              Erinnerung versenden
+            </button>
+          </div>
+
           <!-- Persönliche Informationen -->
           <div class="bg-white rounded-lg border p-6">
             <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -940,28 +962,6 @@
               {{ selectedStudent.invoice_address }}
             </div>
             <div v-else class="text-sm text-gray-500 italic">Keine Rechnungsadresse vorhanden</div>
-          </div>
-
-          <!-- Pending Student Actions -->
-          <div v-if="!selectedStudent.auth_user_id" class="bg-orange-50 rounded-lg border border-orange-200 p-6">
-            <h4 class="text-lg font-semibold text-orange-900 mb-4 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M6.343 3.665c.886-.887 2.318-.887 3.03 0l9.718 9.718c.887.887.887 2.326 0 3.213l-9.718 9.718c-.712.712-2.144.712-3.03 0L3.313 15.9c-.887-.887-.887-2.326 0-3.213L6.343 3.665z"></path>
-              </svg>
-              Onboarding Status: Ausstehend
-            </h4>
-            <p class="text-sm text-orange-800 mb-4">
-              Dieser Schüler hat sein Konto noch nicht aktiviert. Hier können Sie Erinnerungen versenden:
-            </p>
-            <button
-              @click="openReminderModal"
-              class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
-              Erinnerung versenden
-            </button>
           </div>
 
           <!-- Firmen-Rechnungsadressen -->
