@@ -220,6 +220,8 @@ export default defineEventHandler(async (event) => {
         console.error('⚠️ Email sending failed:', emailError)
         logger.debug('⚠️ Email error:', emailError.message)
       }
+    } else {
+      logger.debug('⏭️ Skipping email (no email address provided)')
     }
 
     // ============================================
