@@ -704,6 +704,11 @@
                       <span class="font-semibold text-gray-900 text-xs">Total</span>
                       <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}</span>
                     </div>
+                    <!-- Credit Used (NEW) -->
+                    <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center">
+                      <span class="text-gray-600 text-xs">Verwendetes Guthaben</span>
+                      <span class="text-green-600 font-medium text-xs">-CHF {{ formatPrice(appointment.payment.credit_used_rappen) }}</span>
+                    </div>
                     <!-- Payment Method -->
                     <div v-if="getPaymentMethod(appointment)" class="flex items-center justify-between text-xs">
                       <span class="text-gray-600">Zahlungsmethode:</span>
@@ -1462,6 +1467,29 @@ const loadPendingConfirmations = async () => {
       logger.debug('✅ No pending confirmations found')
       return
     }
+
+    // ✅ Load payment data for each appointment (including credit_used_rappen)
+    const appointmentIds = confirmationsData.map(apt => apt.id)
+    let paymentsMap = new Map()
+    if (appointmentIds.length > 0) {
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('id, appointment_id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_method, payment_status, credit_used_rappen')
+        .in('appointment_id', appointmentIds)
+      
+      if (!paymentsError && paymentsData) {
+        paymentsData.forEach(payment => {
+          paymentsMap.set(payment.appointment_id, payment)
+        })
+      }
+    }
+
+    // ✅ Merge payment data into appointments
+    confirmationsData.forEach(apt => {
+      if (paymentsMap.has(apt.id)) {
+        (apt as any).payment = paymentsMap.get(apt.id)
+      }
+    })
 
     // ✅ Lade Kategorien separat basierend auf type (z.B. "B")
     const categoryCodes = [...new Set(confirmationsData.map(apt => apt.type).filter(Boolean))]
