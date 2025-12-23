@@ -820,9 +820,10 @@ const loadStudents = async (loadAppointments = true) => {
       
       // ✅ Filter to only students assigned to current user (single or multiple staff)
       studentsToProcess = studentsToProcess.filter((s: any) => {
-        // Check if current user is in assigned_staff_ids array
-        const assignedIds = s.assigned_staff_ids || []
-        return assignedIds.includes(currentUser.value.id)
+        // Check both assigned_staff_id (single) and assigned_staff_ids (array)
+        const isSingleAssigned = s.assigned_staff_id === currentUser.value.id
+        const isArrayAssigned = (s.assigned_staff_ids || []).includes(currentUser.value.id)
+        return isSingleAssigned || isArrayAssigned
       })
       logger.debug(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
     } else {
