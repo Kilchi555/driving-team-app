@@ -1515,62 +1515,13 @@ const loadPendingConfirmations = async () => {
       }
     })
 
-    // ✅ DANACH: Lade Payments für diese Appointments separat
-    const appointmentIds = confirmationsData.map(apt => apt.id)
-    let paymentsData = null
-    
-    // Nur Query ausführen wenn Appointment IDs vorhanden
-    if (appointmentIds.length > 0) {
-      const { data, error: paymentsError } = await supabase
-        .from('payments')
-        .select('id, appointment_id, total_amount_rappen, payment_method, payment_status, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen')
-        .in('appointment_id', appointmentIds)
-      
-      if (paymentsError) {
-        console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
-      } else {
-        paymentsData = data
-      }
-    }
-
-    // Erstelle Map für schnellen Zugriff
-    const paymentsMap = new Map()
-    if (paymentsData) {
-      paymentsData.forEach(payment => {
-        if (!paymentsMap.has(payment.appointment_id)) {
-          paymentsMap.set(payment.appointment_id, [])
-        }
-        paymentsMap.get(payment.appointment_id).push(payment)
-      })
-    }
-
-    // ✅ Lade payment_items für alle payments
-    const paymentItemsMap = new Map()
-    if (paymentsData && paymentsData.length > 0) {
-      const paymentIds = paymentsData.map(p => p.id)
-      const { data: itemsData } = await supabase
-        .from('payment_items')
-        .select('*')
-        .in('payment_id', paymentIds)
-        .order('created_at', { ascending: true })
-      
-      if (itemsData) {
-        itemsData.forEach(item => {
-          if (!paymentItemsMap.has(item.payment_id)) {
-            paymentItemsMap.set(item.payment_id, [])
-          }
-          paymentItemsMap.get(item.payment_id).push(item)
-        })
-      }
-    }
-
-    // Load tenant payment settings for automatic payment hours (from payment_settings JSON)
-    if (userData.value?.tenant_id) {
+    // ✅ Load tenant payment settings for automatic payment hours
+    if (userDataFromDb?.tenant_id) {
       try {
         const { data: paymentSettings } = await supabase
           .from('tenant_settings')
           .select('setting_value')
-          .eq('tenant_id', userData.value.tenant_id)
+          .eq('tenant_id', userDataFromDb.tenant_id)
           .eq('category', 'payment')
           .eq('setting_key', 'payment_settings')
           .maybeSingle()
@@ -1580,33 +1531,40 @@ const loadPendingConfirmations = async () => {
             ? JSON.parse(paymentSettings.setting_value) 
             : paymentSettings.setting_value
           automaticPaymentHoursBefore.value = Number(settings?.automatic_payment_hours_before) || 24
-          // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
           const authHours = Number(settings?.automatic_authorization_hours_before) || 120
           automaticAuthorizationHoursBefore.value = Math.min(authHours, 120)
         }
       } catch (e) {
-        console.warn('⚠️ Konnte Payment Settings nicht laden für Stunden:', e)
+        console.warn('⚠️ Konnte Payment Settings nicht laden:', e)
       }
     }
 
-    // Calculate total amount for each appointment (from payment)
-    pendingConfirmations.value = confirmationsData.map(apt => {
-      const payments = paymentsMap.get(apt.id) || []
-      const payment = payments.length > 0 ? payments[0] : null
-      const items = payment ? paymentItemsMap.get(payment.id) || [] : []
+    // ✅ Load payment_items für alle payments
+    const paymentItemsMap = new Map()
+    const appointmentIdsForPaymentItems = confirmationsData.map(apt => apt.id)
+    if (appointmentIdsForPaymentItems.length > 0) {
+      const { data: itemsData } = await supabase
+        .from('payment_items')
+        .select('*')
+        .in('appointment_id', appointmentIdsForPaymentItems)
+        .order('created_at', { ascending: true })
       
-      return {
-        ...apt,
-        total_amount_rappen: payment?.total_amount_rappen || 0,
-        payments: payments, // Include for compatibility
-        payment_items: items, // ✅ Neu: Payment items hinzufügen
-        // ✅ Direkte Payment-Felder für Fallback
-        lesson_price_rappen: payment?.lesson_price_rappen || 0,
-        admin_fee_rappen: payment?.admin_fee_rappen || 0,
-        products_price_rappen: payment?.products_price_rappen || 0,
-        discount_amount_rappen: payment?.discount_amount_rappen || 0
+      if (itemsData) {
+        itemsData.forEach(item => {
+          if (!paymentItemsMap.has(item.appointment_id)) {
+            paymentItemsMap.set(item.appointment_id, [])
+          }
+          paymentItemsMap.get(item.appointment_id).push(item)
+        })
       }
-    })
+    }
+
+    // ✅ Set pending confirmations with all data
+    pendingConfirmations.value = confirmationsData.map(apt => ({
+      ...apt,
+      payment_items: paymentItemsMap.get(apt.id) || [],
+      // Payment data already merged above
+    }))
 
     logger.debug('✅ Loaded pending confirmations:', pendingConfirmations.value.length)
   } catch (err: any) {
