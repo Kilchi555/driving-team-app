@@ -102,7 +102,7 @@
                   type="password"
                   required
                   minlength="12"
-                  autocomplete="off"
+                  autocomplete="new-password"
                   name="new-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
@@ -122,7 +122,7 @@
                   v-model="form.confirmPassword"
                   type="password"
                   required
-                  autocomplete="off"
+                  autocomplete="new-password"
                   name="confirm-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
@@ -178,6 +178,7 @@
                 <input
                   v-model="form.email"
                   type="email"
+                  autocomplete="username email"
                   required
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="max.mustermann@example.com"
