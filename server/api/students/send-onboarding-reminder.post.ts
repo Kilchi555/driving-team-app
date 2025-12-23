@@ -42,6 +42,8 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Request validation passed')
+    
+    logger.debug('🔄 About to initialize Supabase admin...')
     const supabase = getSupabaseAdmin()
     logger.debug('✅ Supabase admin initialized')
 
@@ -51,27 +53,37 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔄 Step 1: Generating new onboarding token')
     
     const newToken = uuidv4()
+    logger.debug('✅ UUID generated:', newToken)
+    
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 14) // 14 Tage
     
-    logger.debug('✅ New token generated:', newToken)
+    logger.debug('✅ New token generated, expires at:', expiresAt.toISOString())
 
     // ============================================
     // Step 2: Update user with new token (invalidates old link)
     // ============================================
     logger.debug('🔄 Step 2: Updating user with new token')
+    logger.debug('🔍 Update params:', { userId, onboarding_status: 'pending' })
+    
+    const updateData = {
+      onboarding_token: newToken,
+      onboarding_token_expires: expiresAt.toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    logger.debug('📝 Update data:', updateData)
     
     const { error: updateError } = await supabase
       .from('users')
-      .update({
-        onboarding_token: newToken,
-        onboarding_token_expires: expiresAt.toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', userId)
       .eq('onboarding_status', 'pending')
     
+    logger.debug('🔄 Update query executed')
+    
     if (updateError) {
+      logger.debug('❌ Update error detected:', updateError)
       console.error('❌ Failed to update user with new token:', updateError)
       throw createError({
         statusCode: 500,
