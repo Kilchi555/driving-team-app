@@ -76,7 +76,10 @@ export default defineEventHandler(async (event) => {
     
     const { error: updateError } = await supabase
       .from('users')
-      .update(updateData)
+      .update({
+        onboarding_token: newToken,
+        onboarding_token_expires: expiresAt.toISOString()
+      })
       .eq('id', userId)
       .eq('onboarding_status', 'pending')
     
