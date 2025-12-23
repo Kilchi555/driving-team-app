@@ -12,7 +12,7 @@ export const useSmsService = () => {
       // Use local API endpoint instead of Supabase Edge Function
       logger.debug('🚀 Using local /api/sms/send endpoint')
       
-      const { data, error } = await $fetch('/api/sms/send', {
+      const response = await $fetch('/api/sms/send', {
         method: 'POST',
         body: {
           phone: phoneNumber,
@@ -21,17 +21,25 @@ export const useSmsService = () => {
         }
       }) as any;
 
-      if (error || !data?.success) {
-        console.error('❌ SMS API error:', error);
-        return { success: false, error: error?.message || 'SMS sending failed' };
+      logger.debug('📱 API Response:', response)
+
+      // Check if the response indicates success
+      if (!response?.success) {
+        const errorMsg = response?.message || response?.statusMessage || 'SMS sending failed';
+        logger.debug('❌ SMS API returned error:', errorMsg);
+        return { success: false, error: errorMsg };
       }
 
-      logger.debug('✅ SMS sent successfully via local API:', data);
-      return { success: true, data: data.smsData };
+      logger.debug('✅ SMS sent successfully via local API:', response);
+      return { success: true, data: response.smsData };
 
     } catch (err: any) {
       console.error('❌ Unexpected SMS error:', err);
-      logger.error('SMSService', 'SMS sending failed:', { error: err.message });
+      logger.debug('❌ SMS Service error details:', {
+        message: err.message,
+        status: err.status,
+        data: err.data
+      });
       
       return { 
         success: false, 
