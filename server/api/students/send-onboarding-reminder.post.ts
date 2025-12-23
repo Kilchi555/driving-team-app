@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event) => {
   try {
+    logger.debug('📧 Onboarding reminder API called')
+    
     const body = await readBody(event)
     const { email, firstName, lastName, userId, tenantId, phone } = body
 
@@ -39,7 +41,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    logger.debug('✅ Request validation passed')
     const supabase = getSupabaseAdmin()
+    logger.debug('✅ Supabase admin initialized')
 
     // ============================================
     // Step 1: Generate new token (14 Tage gültig)
@@ -263,7 +267,16 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     console.error('❌ Error sending onboarding reminder:', error)
+    console.error('❌ Error message:', error.message)
     console.error('❌ Error stack:', error.stack)
+    console.error('❌ Full error object:', JSON.stringify(error, null, 2))
+    
+    logger.debug('❌ Error in onboarding reminder API:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    })
+    
     throw createError({
       statusCode: error.statusCode || 500,
       message: `Failed to send onboarding reminder: ${error.message}`
