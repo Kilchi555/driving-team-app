@@ -702,7 +702,7 @@
                     <!-- Total -->
                     <div class="flex justify-between items-center">
                       <span class="font-semibold text-gray-900 text-xs">Total</span>
-                      <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}</span>
+                      <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice((appointment.payment?.total_amount_rappen || appointment.total_amount_rappen) || 0) }}</span>
                     </div>
                     <!-- Credit Used (NEW) -->
                     <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center">
@@ -1657,6 +1657,11 @@ const hasPaymentDetails = (appointment: any) => {
 
 // Helper: Get payment field value
 const getPaymentField = (appointment: any, fieldName: string) => {
+  // Try payment object first (primary source)
+  if (appointment.payment && appointment.payment[fieldName]) {
+    return appointment.payment[fieldName]
+  }
+  // Fallback to appointment object (legacy)
   return appointment[fieldName] || 0
 }
 
