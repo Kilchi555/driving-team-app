@@ -66,10 +66,6 @@
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0">
                 <h3 class="font-semibold truncate">{{ criterion.name }}</h3>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <span v-if="hasText(criterion)" class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">📄 Text</span>
-                  <span v-if="hasImages(criterion)" class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">🖼️ Bilder</span>
-                </div>
               </div>
               <div class="shrink-0 inline-flex items-center gap-1 text-sm text-emerald-700 group-hover:text-emerald-900">
                 Ansehen
