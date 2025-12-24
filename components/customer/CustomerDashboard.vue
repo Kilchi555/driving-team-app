@@ -1413,7 +1413,6 @@ const loadAllData = async () => {
 // ✅ Load pending confirmation appointments
 const loadPendingConfirmations = async () => {
   if (!currentUser.value?.id) {
-    logger.debug('⚠️ No current user ID for loadPendingConfirmations')
     return
   }
 
@@ -1426,7 +1425,9 @@ const loadPendingConfirmations = async () => {
       .eq('auth_user_id', currentUser.value.id)
       .single()
     
-    if (userError || !userDataFromDb) return
+    if (userError || !userDataFromDb) {
+      return
+    }
     
     // Store user data for ProfileModal
     userData.value = userDataFromDb
@@ -1464,7 +1465,6 @@ const loadPendingConfirmations = async () => {
 
     if (!confirmationsData || confirmationsData.length === 0) {
       pendingConfirmations.value = []
-      logger.debug('✅ No pending confirmations found')
       return
     }
 
@@ -1472,20 +1472,16 @@ const loadPendingConfirmations = async () => {
     const appointmentIds = confirmationsData.map(apt => apt.id)
     let paymentsMap = new Map()
     if (appointmentIds.length > 0) {
-      logger.debug('🔍 Loading payments for', appointmentIds.length, 'pending confirmation appointments')
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select('id, appointment_id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_method, payment_status, credit_used_rappen')
         .in('appointment_id', appointmentIds)
       
       if (paymentsError) {
-        logger.debug('❌ Error loading payments:', paymentsError)
         console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
       } else if (paymentsData) {
-        logger.debug('✅ Payments loaded:', paymentsData.length, 'payments')
         paymentsData.forEach(payment => {
           paymentsMap.set(payment.appointment_id, payment)
-          logger.debug('📌 Payment mapped for appointment:', payment.appointment_id, 'amount:', payment.total_amount_rappen / 100, 'CHF')
         })
       }
     }
@@ -1571,8 +1567,6 @@ const loadPendingConfirmations = async () => {
       payment_items: paymentItemsMap.get(apt.id) || [],
       // Payment data already merged above
     }))
-
-    logger.debug('✅ Loaded pending confirmations:', pendingConfirmations.value.length)
   } catch (err: any) {
     console.error('❌ Error loading pending confirmations:', err)
   }
@@ -1646,7 +1640,18 @@ const hasPaymentDetails = (appointment: any) => {
     return true
   }
   
-  // Methode 2: Direkte Payment-Felder existieren (Fallback)
+  // Methode 2: Payment-Objekt existiert mit Werten
+  if (appointment.payment) {
+    if (appointment.payment.lesson_price_rappen > 0 ||
+        appointment.payment.admin_fee_rappen > 0 ||
+        appointment.payment.products_price_rappen > 0 ||
+        appointment.payment.discount_amount_rappen > 0 ||
+        appointment.payment.total_amount_rappen > 0) {
+      return true
+    }
+  }
+  
+  // Methode 3: Direkte Payment-Felder existieren (alter Fallback)
   if (appointment.lesson_price_rappen > 0 ||
       appointment.admin_fee_rappen > 0 ||
       appointment.products_price_rappen > 0 ||
