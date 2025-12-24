@@ -1477,7 +1477,11 @@ const loadPendingConfirmations = async () => {
         .select('id, appointment_id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_method, payment_status, credit_used_rappen')
         .in('appointment_id', appointmentIds)
       
-      if (!paymentsError && paymentsData) {
+      if (paymentsError) {
+        logger.debug('❌ Error loading payments:', paymentsError)
+        console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
+      } else if (paymentsData) {
+        logger.debug('✅ Payments loaded:', paymentsData.length)
         paymentsData.forEach(payment => {
           paymentsMap.set(payment.appointment_id, payment)
         })
