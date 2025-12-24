@@ -180,23 +180,38 @@ onMounted(async () => {
     
     console.log('🔍 Learning page - Current user ID:', currentUserId)
 
-    // 1) Fahrkategorien des Schülers laden
-    const { data: studentCategories } = await supabase
-      .from('student_categories')
-      .select('category_code')
-      .eq('user_id', currentUserId)
-      .eq('is_active', true)
+    // 1) Fahrkategorien des Schülers sammeln (aus users.category und appointments.type)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('category')
+      .eq('id', currentUserId)
+      .single()
     
-    const studentCategoryCodes = (studentCategories || []).map(sc => sc.category_code)
-    console.log('🚗 Student categories:', studentCategoryCodes)
+    let studentCategoryCodes: string[] = []
+    
+    // Hauptkategorie aus users.category
+    if (userData?.category) {
+      studentCategoryCodes.push(userData.category)
+    }
 
-    // 2) Termine des Schülers laden
+    // 2) Termine des Schülers laden (inkl. type = Kategorie)
     const { data: appointments } = await supabase
       .from('appointments')
-      .select('id')
+      .select('id, type')
       .eq('user_id', currentUserId)
     
     console.log('📅 Appointments loaded:', appointments?.length || 0)
+    
+    // Kategorien aus Appointments sammeln
+    const appointmentCategories = [...new Set(
+      (appointments || [])
+        .map(a => a.type)
+        .filter(Boolean)
+    )]
+    
+    // Kombiniere beide Listen
+    studentCategoryCodes = [...new Set([...studentCategoryCodes, ...appointmentCategories])]
+    console.log('🚗 Student categories (from users + appointments):', studentCategoryCodes)
 
     const aptIds = (appointments || []).map(a => a.id)
     if (aptIds.length === 0) {
