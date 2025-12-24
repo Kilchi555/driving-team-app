@@ -91,10 +91,10 @@
           <button @click="closeDetail" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
         </div>
         <div class="p-5 space-y-6">
-          <div v-if="selectedCriterion.educational_content?.title" class="text-base font-medium">
-            {{ selectedCriterion.educational_content.title }}
+          <div v-if="getContentData(selectedCriterion)?.title" class="text-base font-medium">
+            {{ getContentData(selectedCriterion).title }}
           </div>
-          <div v-for="(sec, idx) in (selectedCriterion.educational_content?.sections || [])" :key="idx" class="space-y-2">
+          <div v-for="(sec, idx) in (getContentData(selectedCriterion)?.sections || [])" :key="idx" class="space-y-2">
             <div v-if="sec.title" class="text-sm font-semibold text-gray-800">{{ sec.title }}</div>
             <div v-if="sec.text" class="text-sm text-gray-800 whitespace-pre-line">{{ sec.text }}</div>
             <div v-if="sec.images && sec.images.length" class="space-y-3">
@@ -131,11 +131,61 @@ const items = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const router = useRouter()
 
-const hasText = (c: any) => !!(c.educational_content?.title || c.educational_content?.sections?.some((s: any) => s.text && s.text.length > 0))
-const hasImages = (c: any) => !!(c.educational_content?.sections?.some((s: any) => s.images && s.images.length > 0))
+// Helper: Parse educational_content if it's a string
+const parseEducationalContent = (c: any) => {
+  if (!c.educational_content) return null
+  
+  // If it's already an object, return it
+  if (typeof c.educational_content === 'object') {
+    return c.educational_content
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof c.educational_content === 'string') {
+    try {
+      return JSON.parse(c.educational_content)
+    } catch (e) {
+      console.warn('Failed to parse educational_content for', c.name, e)
+      return null
+    }
+  }
+  
+  return null
+}
+
+const hasText = (c: any) => {
+  const content = parseEducationalContent(c)
+  if (!content) return false
+  
+  // Check _default or direct structure
+  const data = content._default || content
+  return !!(data.title || data.sections?.some((s: any) => s.text && s.text.length > 0))
+}
+
+const hasImages = (c: any) => {
+  const content = parseEducationalContent(c)
+  if (!content) return false
+  
+  // Check _default or direct structure
+  const data = content._default || content
+  return !!(data.sections?.some((s: any) => s.images && s.images.length > 0))
+}
+
+// Helper: Get the content data (handles _default structure)
+const getContentData = (c: any) => {
+  if (!c?.educational_content) return null
+  
+  // If there's a _default key, use that, otherwise use the content directly
+  return c.educational_content._default || c.educational_content
+}
 
 const openDetail = (c: any) => {
-  selectedCriterion.value = c
+  // Parse educational_content if it's a string
+  const parsedContent = parseEducationalContent(c)
+  selectedCriterion.value = {
+    ...c,
+    educational_content: parsedContent
+  }
 }
 
 const closeDetail = () => {
