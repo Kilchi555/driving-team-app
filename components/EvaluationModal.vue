@@ -658,18 +658,63 @@ const saveEvaluation = async () => {
   error.value = null
   
   try {
-    // Erstelle ein Array von CriteriaEvaluationData-Objekten
-    // WICHTIG: Speichere ALLE ausgewählten Kriterien (alte und neue), nicht nur die neu bewerteten!
+    // Load existing evaluations to detect which ones are new/changed
+    const { data: existingNotes } = await supabase
+      .from('notes')
+      .select('evaluation_criteria_id, criteria_rating, criteria_note')
+      .eq('appointment_id', props.appointment.id)
+      .not('evaluation_criteria_id', 'is', null)
+    
+    // Create a map of existing evaluations for comparison
+    const existingEvalMap: Record<string, any> = {}
+    if (existingNotes) {
+      existingNotes.forEach(note => {
+        existingEvalMap[note.evaluation_criteria_id] = {
+          rating: note.criteria_rating,
+          note: note.criteria_note || ''
+        }
+      })
+    }
+    
+    // Filter to save only new or changed evaluations
     const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value
+      .filter(criteriaId => {
+        const currentRating = criteriaRatings.value[criteriaId]
+        const currentNote = criteriaNotes.value[criteriaId] || ''
+        const existingEval = existingEvalMap[criteriaId]
+        
+        // Save if: no previous eval (new) OR rating/note changed
+        if (!existingEval) {
+          logger.debug(`✨ NEW evaluation for criteria ${criteriaId}: rating=${currentRating}`)
+          return true
+        }
+        
+        const ratingChanged = existingEval.rating !== currentRating
+        const noteChanged = existingEval.note !== currentNote
+        
+        if (ratingChanged || noteChanged) {
+          logger.debug(`🔄 CHANGED evaluation for criteria ${criteriaId}: ${existingEval.rating}→${currentRating}`)
+          return true
+        }
+        
+        logger.debug(`⏭️ UNCHANGED evaluation for criteria ${criteriaId}, skipping save`)
+        return false
+      })
       .map(criteriaId => {
         return {
           criteria_id: criteriaId,
           rating: criteriaRatings.value[criteriaId],
-          note: criteriaNotes.value[criteriaId] || '' // Sicherstellen, dass es ein String ist
+          note: criteriaNotes.value[criteriaId] || ''
         }
       })
     
-    logger.debug(`🔥 Saving all ${evaluationsToSave.length} selected criteria`)
+    logger.debug(`🔥 Saving ${evaluationsToSave.length} changed/new criteria (out of ${selectedCriteriaOrder.value.length} selected)`)
+
+    if (evaluationsToSave.length === 0) {
+      logger.debug('ℹ️ No changes detected, nothing to save')
+      emit('saved', props.appointment.id)
+      return
+    }
 
     logger.debug('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
       appointmentId: props.appointment.id,
@@ -685,8 +730,6 @@ const saveEvaluation = async () => {
     )
 
     logger.debug('✅ EvaluationModal - evaluations saved successfully via composable')
-    
-
     
     // Emit saved event
     emit('saved', props.appointment.id)
