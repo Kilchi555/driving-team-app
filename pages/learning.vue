@@ -189,9 +189,13 @@ onMounted(async () => {
     
     let studentCategoryCodes: string[] = []
     
-    // Hauptkategorie aus users.category
+    // Hauptkategorie aus users.category (kann Array oder String sein)
     if (userData?.category) {
-      studentCategoryCodes.push(userData.category)
+      if (Array.isArray(userData.category)) {
+        studentCategoryCodes.push(...userData.category)
+      } else {
+        studentCategoryCodes.push(userData.category)
+      }
     }
 
     // 2) Termine des Schülers laden (inkl. type = Kategorie)
@@ -209,7 +213,7 @@ onMounted(async () => {
         .filter(Boolean)
     )]
     
-    // Kombiniere beide Listen
+    // Kombiniere beide Listen und dedupliziere
     studentCategoryCodes = [...new Set([...studentCategoryCodes, ...appointmentCategories])]
     console.log('🚗 Student categories (from users + appointments):', studentCategoryCodes)
 
