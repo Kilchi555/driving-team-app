@@ -704,10 +704,15 @@
                       <span class="font-semibold text-gray-900 text-xs">Total</span>
                       <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice((appointment.payment?.total_amount_rappen || appointment.total_amount_rappen) || 0) }}</span>
                     </div>
-                    <!-- Credit Used (NEW) -->
+                    <!-- Credit Used -->
                     <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center">
                       <span class="text-gray-600 text-xs">Verwendetes Guthaben</span>
                       <span class="text-green-600 font-medium text-xs">-CHF {{ formatPrice(appointment.payment.credit_used_rappen) }}</span>
+                    </div>
+                    <!-- Still to Pay (if credit was used) -->
+                    <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center border-t border-gray-200 pt-2">
+                      <span class="font-semibold text-gray-900 text-xs">Noch zu zahlen</span>
+                      <span class="font-bold text-blue-600 text-sm">CHF {{ formatPrice(Math.max(0, (appointment.payment?.total_amount_rappen || 0) - (appointment.payment?.credit_used_rappen || 0))) }}</span>
                     </div>
                     <!-- Payment Method -->
                     <div v-if="getPaymentMethod(appointment)" class="flex items-center justify-between text-xs">
@@ -1970,15 +1975,18 @@ const confirmAppointment = async (appointment: any) => {
       return `${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
     }
     const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
-    const staffName = appointment.staff
-      ? `${appointment.staff.first_name || ''} ${appointment.staff.last_name || ''}`.trim()
-      : appointment.staff_name || ''
+    
+    // ✅ Customer name (not staff name!)
+    const customerName = userDb 
+      ? `${userDb.first_name || ''} ${userDb.last_name || ''}`.trim()
+      : ''
+    
     const merchantReferenceDetails = {
       appointmentId: appointment.id,
       eventTypeCode: appointment.event_type_code || appointment.appointment_type || appointment.type,
       categoryCode: appointment.type,
       categoryName: appointment.category_name,
-      staffName,
+      staffName: customerName, // Using customerName in staffName field for merchant reference
       startTime: appointment.start_time,
       durationMinutes: appointment.duration_minutes
     }

@@ -324,6 +324,7 @@ import CustomerCancellationModal from '~/components/customer/CustomerCancellatio
 import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue' // ✅ NEW: Voucher Modal
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
+import { buildMerchantReference } from '~/utils/merchantReference' // ✅ NEW: Merchant Reference
 
 
 // Components (these would need to be created)
@@ -749,10 +750,31 @@ const payIndividual = async (payment: any) => {
       return
     }
     
+    // ✅ Load appointment data for merchant reference
+    const { data: appointmentData } = await supabase
+      .from('appointments')
+      .select('id, type, event_type_code, start_time, duration_minutes')
+      .eq('id', payment.appointment_id)
+      .single()
+    
+    const customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+    
+    const merchantReferenceDetails = {
+      appointmentId: appointmentData?.id,
+      eventTypeCode: appointmentData?.event_type_code,
+      categoryCode: appointmentData?.type,
+      staffName: customerName, // Customer name in staffName field
+      startTime: appointmentData?.start_time,
+      durationMinutes: appointmentData?.duration_minutes
+    }
+    
+    const orderId = buildMerchantReference(merchantReferenceDetails)
+    logger.debug('📌 Generated merchant reference for payment:', orderId)
+    
     const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
       method: 'POST',
       body: {
-        orderId: `payment-${payment.id}-${Date.now()}`,
+        orderId,
         amount: amountToPay,
         currency: 'CHF',
         customerEmail: userData.email,
@@ -761,7 +783,8 @@ const payIndividual = async (payment: any) => {
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
         failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
         userId: userData.id,
-        tenantId: userData.tenant_id
+        tenantId: userData.tenant_id,
+        merchantReferenceDetails // ✅ Pass through for potential future use
       }
     })
     
