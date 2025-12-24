@@ -2137,13 +2137,42 @@ const loadLessons = async () => {
       }
     }
     
+    // Build a map of previous evaluations to detect changes
+    const previousEvaluationsMap: Record<string, Record<string, any>> = {}
+    
     // Füge Evaluationen und Instructor-Namen zu Appointments hinzu
-    const lessonsWithEvaluations = (appointmentsData || []).map(apt => ({
-      ...apt,
-      notes: evaluationsMap[apt.id] || [],
-      evaluations: (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating),
-      instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
-    }))
+    const lessonsWithEvaluations = (appointmentsData || []).map((apt, index) => {
+      const aptEvaluations = (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating)
+      
+      // Filter to show only new or changed evaluations
+      let displayEvaluations = aptEvaluations
+      
+      // If this is not the first appointment, filter to show only new/changed evaluations
+      if (index > 0) {
+        // Get previous appointment's evaluations
+        const previousApt = appointmentsData[index - 1]
+        const previousEvals = (evaluationsMap[previousApt?.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating) || []
+        const prevEvalsMap: Record<string, any> = {}
+        previousEvals.forEach(e => {
+          prevEvalsMap[e.evaluation_criteria_id] = e
+        })
+        
+        // Show only evaluations that are new or have changed rating
+        displayEvaluations = aptEvaluations.filter(currentEval => {
+          const prevEval = prevEvalsMap[currentEval.evaluation_criteria_id]
+          // Show if: no previous eval (new) OR rating changed
+          return !prevEval || prevEval.criteria_rating !== currentEval.criteria_rating
+        })
+      }
+      
+      return {
+        ...apt,
+        notes: evaluationsMap[apt.id] || [],
+        evaluations: displayEvaluations,
+        allEvaluations: aptEvaluations, // Keep all for reference if needed
+        instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
+      }
+    })
     
     lessons.value = lessonsWithEvaluations
     

@@ -2659,7 +2659,7 @@ defineExpose({
   @delete-event="handleEventDeleted"
   @copy-appointment="handleCopyAppointment"
   @open-student-progress="handleOpenStudentProgress"
-  @refresh-calendar="() => { invalidateCache(); loadAppointments(true); }"
+  @refresh-calendar="refreshCalendar"
   @appointment-saved="refreshCalendar"    
   @appointment-updated="refreshCalendar"   
   @appointment-deleted="refreshCalendar"
