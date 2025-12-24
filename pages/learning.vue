@@ -177,43 +177,102 @@ onMounted(async () => {
     // appointments.user_id referenziert die interne users.id, daher userProfile.id verwenden
     const currentUserId = userProfile.value?.id
     if (!currentUserId) throw new Error('Kein Benutzerprofil gefunden')
+    
+    console.log('🔍 Learning page - Current user ID:', currentUserId)
 
-    // 1) Termine des Schülers laden
+    // 1) Fahrkategorien des Schülers laden
+    const { data: studentCategories } = await supabase
+      .from('student_categories')
+      .select('category_code')
+      .eq('user_id', currentUserId)
+      .eq('is_active', true)
+    
+    const studentCategoryCodes = (studentCategories || []).map(sc => sc.category_code)
+    console.log('🚗 Student categories:', studentCategoryCodes)
+
+    // 2) Termine des Schülers laden
     const { data: appointments } = await supabase
       .from('appointments')
       .select('id')
       .eq('user_id', currentUserId)
+    
+    console.log('📅 Appointments loaded:', appointments?.length || 0)
 
     const aptIds = (appointments || []).map(a => a.id)
     if (aptIds.length === 0) {
+      console.log('⚠️ No appointments found')
       items.value = []
       return
     }
 
-    // 2) Notes/Evaluations zu diesen Terminen laden und dabei Kriterien-IDs sammeln
+    // 3) Notes/Evaluations zu diesen Terminen laden und dabei Kriterien-IDs sammeln
     const { data: notes } = await supabase
       .from('notes')
       .select('evaluation_criteria_id, criteria_rating')
       .in('appointment_id', aptIds)
+    
+    console.log('📝 Notes loaded:', notes?.length || 0)
+    console.log('📝 Sample notes:', notes?.slice(0, 3))
 
     // Kriterium gilt als "bewertet", wenn es mindestens eine Note mit evaluation_criteria_id gibt
     const ratedCriteriaIds = [...new Set((notes || [])
       .filter(n => n.evaluation_criteria_id)
       .map(n => n.evaluation_criteria_id))]
+    
+    console.log('✅ Rated criteria IDs:', ratedCriteriaIds.length, ratedCriteriaIds)
 
     if (ratedCriteriaIds.length === 0) {
+      console.log('⚠️ No rated criteria found')
       items.value = []
       return
     }
 
-    // 3) Kriterien mit Lerninhalt laden
-    const { data: criteria } = await supabase
+    // 4) Kriterien mit Lerninhalt laden (inkl. driving_categories)
+    const { data: criteria, error: criteriaError } = await supabase
       .from('evaluation_criteria')
-      .select('id, name, educational_content')
+      .select('id, name, educational_content, driving_categories')
       .in('id', ratedCriteriaIds)
+    
+    if (criteriaError) {
+      console.error('❌ Error loading criteria:', criteriaError)
+    }
+    
+    console.log('📚 Criteria loaded:', criteria?.length || 0)
+    console.log('📚 All criteria with content:', criteria?.map(c => ({
+      id: c.id,
+      name: c.name,
+      has_educational_content: !!c.educational_content,
+      driving_categories: c.driving_categories,
+      content_keys: c.educational_content ? Object.keys(c.educational_content) : [],
+      content_preview: c.educational_content ? JSON.stringify(c.educational_content).substring(0, 200) : 'null'
+    })))
 
-    items.value = (criteria || []).filter(c => hasText(c) || hasImages(c))
+    // 5) Filter: Nur Kriterien mit Inhalt UND für Kategorien des Schülers
+    const filtered = (criteria || []).filter(c => {
+      // Hat Text oder Bilder?
+      const hasContent = hasText(c) || hasImages(c)
+      if (!hasContent) {
+        console.log('❌ No content:', c.name)
+        return false
+      }
+      
+      // Wenn keine driving_categories gesetzt sind, für alle anzeigen
+      if (!c.driving_categories || c.driving_categories.length === 0) {
+        console.log('✅ No category restriction:', c.name)
+        return true
+      }
+      
+      // Prüfe ob mindestens eine Kategorie des Schülers in den driving_categories ist
+      const matchesCategory = c.driving_categories.some(dc => studentCategoryCodes.includes(dc))
+      console.log(matchesCategory ? '✅' : '❌', 'Category match:', c.name, 'has:', c.driving_categories, 'student:', studentCategoryCodes)
+      return matchesCategory
+    })
+    
+    console.log('✅ Filtered criteria (with text or images AND matching student categories):', filtered.length, 'of', criteria?.length || 0)
+    
+    items.value = filtered
   } catch (e: any) {
+    console.error('❌ Error in learning page:', e)
     error.value = e.message || 'Fehler beim Laden'
   } finally {
     isLoading.value = false
