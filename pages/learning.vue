@@ -65,7 +65,7 @@
                 :style="{ backgroundColor: category.color || '#3B82F6' }"
               ></div>
               <h2 class="text-lg font-semibold text-gray-900">{{ category.name }}</h2>
-              <span class="text-sm text-gray-500">({{ category.items.length }})</span>
+              <span class="text-sm font-medium text-emerald-600">{{ category.percentage }}%</span>
             </div>
             
             <!-- Category Items -->
@@ -143,7 +143,7 @@ const items = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const router = useRouter()
 
-// Group items by evaluation category
+// Group items by evaluation category and calculate progress
 const groupedItems = computed(() => {
   const groups = new Map()
   
@@ -152,11 +152,18 @@ const groupedItems = computed(() => {
     if (!category) return
     
     if (!groups.has(category.id)) {
+      const progress = item.categoryProgress
+      const percentage = progress 
+        ? Math.round((progress.earnedPoints / progress.totalPossiblePoints) * 100)
+        : 0
+      
       groups.set(category.id, {
         id: category.id,
         name: category.name,
         color: category.color,
         display_order: category.display_order,
+        progress: progress,
+        percentage: percentage,
         items: []
       })
     }
@@ -311,30 +318,47 @@ onMounted(async () => {
       return
     }
 
-    // 3) Notes/Evaluations zu diesen Terminen laden und dabei Kriterien-IDs sammeln
+    // 3) Load max evaluation scale rating
+    const { data: scaleData } = await supabase
+      .from('evaluation_scale')
+      .select('rating')
+      .order('rating', { ascending: false })
+      .limit(1)
+    
+    const maxRating = scaleData?.[0]?.rating || 5
+    console.log('⭐ Max rating:', maxRating)
+
+    // 4) Notes/Evaluations zu diesen Terminen laden
     const { data: notes } = await supabase
       .from('notes')
-      .select('evaluation_criteria_id, criteria_rating')
+      .select('evaluation_criteria_id, criteria_rating, appointment_id')
       .in('appointment_id', aptIds)
+      .not('evaluation_criteria_id', 'is', null)
+      .not('criteria_rating', 'is', null)
     
     console.log('📝 Notes loaded:', notes?.length || 0)
-    console.log('📝 Sample notes:', notes?.slice(0, 3))
-
-    // Kriterium gilt als "bewertet", wenn es mindestens eine Note mit evaluation_criteria_id gibt
-    const ratedCriteriaIds = [...new Set((notes || [])
-      .filter(n => n.evaluation_criteria_id)
-      .map(n => n.evaluation_criteria_id))]
     
-    console.log('✅ Rated criteria IDs:', ratedCriteriaIds.length, ratedCriteriaIds)
+    // Create map: criteria_id -> ratings[]
+    const criteriaRatingsMap = new Map()
+    notes?.forEach(note => {
+      if (!criteriaRatingsMap.has(note.evaluation_criteria_id)) {
+        criteriaRatingsMap.set(note.evaluation_criteria_id, [])
+      }
+      criteriaRatingsMap.get(note.evaluation_criteria_id).push(note.criteria_rating)
+    })
+    
+    console.log('📊 Criteria with ratings:', criteriaRatingsMap.size)
 
-    if (ratedCriteriaIds.length === 0) {
-      console.log('⚠️ No rated criteria found')
+    // 5) Get user's tenant_id
+    const tenantId = userData.tenant_id || userProfile.value?.tenant_id
+    if (!tenantId) {
+      console.error('❌ No tenant_id found')
       items.value = []
       return
     }
 
-    // 4) Kriterien mit Lerninhalt laden (inkl. driving_categories und category_id)
-    const { data: criteria, error: criteriaError } = await supabase
+    // 6) Load ALL criteria for student's categories (with educational content)
+    const { data: allCriteria, error: criteriaError } = await supabase
       .from('evaluation_criteria')
       .select(`
         id, 
@@ -343,55 +367,86 @@ onMounted(async () => {
         driving_categories,
         category_id,
         display_order,
-        evaluation_categories!inner(id, name, display_order, color)
+        evaluation_categories!inner(id, name, display_order, color, tenant_id)
       `)
-      .in('id', ratedCriteriaIds)
+      .eq('evaluation_categories.tenant_id', tenantId)
+      .eq('is_active', true)
       .order('display_order')
     
     if (criteriaError) {
       console.error('❌ Error loading criteria:', criteriaError)
     }
     
-    console.log('📚 Criteria loaded:', criteria?.length || 0)
-    console.log('📚 All criteria with content:', criteria?.map(c => ({
-      id: c.id,
-      name: c.name,
-      category: c.evaluation_categories?.name,
-      has_educational_content: !!c.educational_content,
-      driving_categories: c.driving_categories,
-      content_keys: c.educational_content ? Object.keys(c.educational_content) : [],
-      content_preview: c.educational_content ? JSON.stringify(c.educational_content).substring(0, 200) : 'null'
-    })))
+    console.log('📚 All criteria loaded:', allCriteria?.length || 0)
 
-    // 5) Filter: Nur Kriterien mit Inhalt UND für Kategorien des Schülers
-    const filtered = (criteria || []).filter(c => {
-      // Hat Text oder Bilder?
+    // 7) Filter: Only criteria WITH content AND for student's categories
+    const criteriaWithContent = (allCriteria || []).filter(c => {
+      // Has text or images?
       const hasContent = hasText(c) || hasImages(c)
-      if (!hasContent) {
-        console.log('❌ No content:', c.name)
-        return false
-      }
+      if (!hasContent) return false
       
-      // Wenn keine driving_categories gesetzt sind, für alle anzeigen
-      if (!c.driving_categories || c.driving_categories.length === 0) {
-        console.log('✅ No category restriction:', c.name)
-        return true
-      }
+      // If no driving_categories set, show for all
+      if (!c.driving_categories || c.driving_categories.length === 0) return true
       
-      // Prüfe ob mindestens eine Kategorie des Schülers in den driving_categories ist
-      const matchesCategory = c.driving_categories.some(dc => studentCategoryCodes.includes(dc))
-      console.log(matchesCategory ? '✅' : '❌', 'Category match:', c.name, 'has:', c.driving_categories, 'student:', studentCategoryCodes)
-      return matchesCategory
+      // Check if at least one student category is in driving_categories
+      return c.driving_categories.some(dc => studentCategoryCodes.includes(dc))
     })
     
-    console.log('✅ Filtered criteria (with text or images AND matching student categories):', filtered.length, 'of', criteria?.length || 0)
+    console.log('✅ Criteria with content for student categories:', criteriaWithContent.length, 'of', allCriteria?.length || 0)
     
-    // 6) Sortiere nach evaluation_categories.display_order
-    const sorted = filtered.sort((a, b) => {
-      const orderA = a.evaluation_categories?.display_order || 999
-      const orderB = b.evaluation_categories?.display_order || 999
-      return orderA - orderB
+    // 8) Calculate progress per category
+    const categoryProgressMap = new Map()
+    
+    allCriteria?.forEach(criterion => {
+      const categoryId = criterion.evaluation_categories?.id
+      if (!categoryId) return
+      
+      // Check if criterion matches student's driving categories
+      const matchesCategory = !criterion.driving_categories || 
+                             criterion.driving_categories.length === 0 ||
+                             criterion.driving_categories.some(dc => studentCategoryCodes.includes(dc))
+      
+      if (!matchesCategory) return
+      
+      if (!categoryProgressMap.has(categoryId)) {
+        categoryProgressMap.set(categoryId, {
+          categoryName: criterion.evaluation_categories.name,
+          totalCriteria: 0,
+          totalPossiblePoints: 0,
+          earnedPoints: 0
+        })
+      }
+      
+      const progress = categoryProgressMap.get(categoryId)
+      progress.totalCriteria++
+      progress.totalPossiblePoints += maxRating
+      
+      // Add earned points if criterion was rated
+      if (criteriaRatingsMap.has(criterion.id)) {
+        const ratings = criteriaRatingsMap.get(criterion.id)
+        // Use the highest rating for this criterion
+        const highestRating = Math.max(...ratings)
+        progress.earnedPoints += highestRating
+      }
     })
+    
+    console.log('📊 Category progress:', Array.from(categoryProgressMap.entries()).map(([id, p]) => ({
+      category: p.categoryName,
+      progress: `${p.earnedPoints}/${p.totalPossiblePoints} = ${((p.earnedPoints / p.totalPossiblePoints) * 100).toFixed(1)}%`
+    })))
+    
+    // 9) Attach progress to criteria and filter to only show evaluated ones
+    const sorted = criteriaWithContent
+      .filter(c => criteriaRatingsMap.has(c.id)) // Only show if evaluated
+      .map(c => ({
+        ...c,
+        categoryProgress: categoryProgressMap.get(c.evaluation_categories?.id)
+      }))
+      .sort((a, b) => {
+        const orderA = a.evaluation_categories?.display_order || 999
+        const orderB = b.evaluation_categories?.display_order || 999
+        return orderA - orderB
+      })
     
     items.value = sorted
   } catch (e: any) {
