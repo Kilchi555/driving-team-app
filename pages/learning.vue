@@ -69,7 +69,7 @@
             </div>
             
             <!-- Category Items -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-6">
+            <div v-if="category.items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-6">
               <div
                 v-for="criterion in category.items"
                 :key="criterion.id"
@@ -89,6 +89,11 @@
                   </div>
                 </div>
               </div>
+            </div>
+            
+            <!-- Empty state for category -->
+            <div v-else class="ml-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <p class="text-sm text-gray-500">Noch keine Lerninhalte in diesem Bereich</p>
             </div>
           </div>
         </div>
@@ -140,39 +145,23 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const items = ref<any[]>([])
+const allCategoriesWithProgress = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const router = useRouter()
 
-// Group items by evaluation category and calculate progress
+// Group items by evaluation category, showing ALL categories (even with 0 items)
 const groupedItems = computed(() => {
-  const groups = new Map()
-  
-  items.value.forEach(item => {
-    const category = item.evaluation_categories
-    if (!category) return
+  return allCategoriesWithProgress.value.map(category => {
+    // Find items for this category
+    const categoryItems = items.value.filter(item => 
+      item.evaluation_categories?.id === category.id
+    )
     
-    if (!groups.has(category.id)) {
-      const progress = item.categoryProgress
-      const percentage = progress 
-        ? Math.round((progress.earnedPoints / progress.totalPossiblePoints) * 100)
-        : 0
-      
-      groups.set(category.id, {
-        id: category.id,
-        name: category.name,
-        color: category.color,
-        display_order: category.display_order,
-        progress: progress,
-        percentage: percentage,
-        items: []
-      })
+    return {
+      ...category,
+      items: categoryItems
     }
-    
-    groups.get(category.id).items.push(item)
   })
-  
-  // Convert to array and sort by display_order
-  return Array.from(groups.values()).sort((a, b) => a.display_order - b.display_order)
 })
 
 // Helper: Parse educational_content if it's a string
@@ -357,7 +346,17 @@ onMounted(async () => {
       return
     }
 
-    // 6) Load ALL criteria for student's categories (with educational content)
+    // 6) Load ALL evaluation_categories for this tenant
+    const { data: allCategories } = await supabase
+      .from('evaluation_categories')
+      .select('id, name, display_order, color, is_theory')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('display_order')
+    
+    console.log('📂 All categories loaded:', allCategories?.length || 0)
+
+    // 7) Load ALL criteria for student's categories (with educational content)
     const { data: allCriteria, error: criteriaError } = await supabase
       .from('evaluation_criteria')
       .select(`
@@ -379,7 +378,7 @@ onMounted(async () => {
     
     console.log('📚 All criteria loaded:', allCriteria?.length || 0)
 
-    // 7) Filter: Only criteria WITH content AND for student's categories
+    // 8) Filter: Only criteria WITH content AND for student's categories
     const criteriaWithContent = (allCriteria || []).filter(c => {
       // Has text or images?
       const hasContent = hasText(c) || hasImages(c)
@@ -394,8 +393,21 @@ onMounted(async () => {
     
     console.log('✅ Criteria with content for student categories:', criteriaWithContent.length, 'of', allCriteria?.length || 0)
     
-    // 8) Calculate progress per category
+    // 9) Calculate progress per category (for ALL categories, even with 0%)
     const categoryProgressMap = new Map()
+    
+    // Initialize all categories with 0 progress
+    allCategories?.forEach(cat => {
+      categoryProgressMap.set(cat.id, {
+        categoryId: cat.id,
+        categoryName: cat.name,
+        categoryColor: cat.color,
+        categoryDisplayOrder: cat.display_order,
+        totalCriteria: 0,
+        totalPossiblePoints: 0,
+        earnedPoints: 0
+      })
+    })
     
     allCriteria?.forEach(criterion => {
       const categoryId = criterion.evaluation_categories?.id
@@ -408,16 +420,9 @@ onMounted(async () => {
       
       if (!matchesCategory) return
       
-      if (!categoryProgressMap.has(categoryId)) {
-        categoryProgressMap.set(categoryId, {
-          categoryName: criterion.evaluation_categories.name,
-          totalCriteria: 0,
-          totalPossiblePoints: 0,
-          earnedPoints: 0
-        })
-      }
-      
       const progress = categoryProgressMap.get(categoryId)
+      if (!progress) return
+      
       progress.totalCriteria++
       progress.totalPossiblePoints += maxRating
       
@@ -432,21 +437,41 @@ onMounted(async () => {
     
     console.log('📊 Category progress:', Array.from(categoryProgressMap.entries()).map(([id, p]) => ({
       category: p.categoryName,
-      progress: `${p.earnedPoints}/${p.totalPossiblePoints} = ${((p.earnedPoints / p.totalPossiblePoints) * 100).toFixed(1)}%`
+      criteria: p.totalCriteria,
+      progress: p.totalPossiblePoints > 0 
+        ? `${p.earnedPoints}/${p.totalPossiblePoints} = ${((p.earnedPoints / p.totalPossiblePoints) * 100).toFixed(1)}%`
+        : '0%'
     })))
     
-    // 9) Attach progress to criteria and filter to only show evaluated ones
+    // 10) Attach progress and category info to criteria, filter to only show evaluated ones
     const sorted = criteriaWithContent
       .filter(c => criteriaRatingsMap.has(c.id)) // Only show if evaluated
-      .map(c => ({
-        ...c,
-        categoryProgress: categoryProgressMap.get(c.evaluation_categories?.id)
-      }))
+      .map(c => {
+        const categoryId = c.evaluation_categories?.id
+        return {
+          ...c,
+          categoryProgress: categoryProgressMap.get(categoryId)
+        }
+      })
       .sort((a, b) => {
         const orderA = a.evaluation_categories?.display_order || 999
         const orderB = b.evaluation_categories?.display_order || 999
         return orderA - orderB
       })
+    
+    // 11) Store categories with progress (even if empty)
+    allCategoriesWithProgress.value = Array.from(categoryProgressMap.values())
+      .map(progress => ({
+        id: progress.categoryId,
+        name: progress.categoryName,
+        color: progress.categoryColor,
+        display_order: progress.categoryDisplayOrder,
+        progress: progress,
+        percentage: progress.totalPossiblePoints > 0
+          ? Math.round((progress.earnedPoints / progress.totalPossiblePoints) * 100)
+          : 0
+      }))
+      .sort((a, b) => a.display_order - b.display_order)
     
     items.value = sorted
   } catch (e: any) {
