@@ -1472,6 +1472,7 @@ const loadPendingConfirmations = async () => {
     const appointmentIds = confirmationsData.map(apt => apt.id)
     let paymentsMap = new Map()
     if (appointmentIds.length > 0) {
+      logger.debug('🔍 Loading payments for', appointmentIds.length, 'pending confirmation appointments')
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select('id, appointment_id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_method, payment_status, credit_used_rappen')
@@ -1481,9 +1482,10 @@ const loadPendingConfirmations = async () => {
         logger.debug('❌ Error loading payments:', paymentsError)
         console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
       } else if (paymentsData) {
-        logger.debug('✅ Payments loaded:', paymentsData.length)
+        logger.debug('✅ Payments loaded:', paymentsData.length, 'payments')
         paymentsData.forEach(payment => {
           paymentsMap.set(payment.appointment_id, payment)
+          logger.debug('📌 Payment mapped for appointment:', payment.appointment_id, 'amount:', payment.total_amount_rappen / 100, 'CHF')
         })
       }
     }
