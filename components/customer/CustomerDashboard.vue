@@ -2175,7 +2175,8 @@ const loadAppointments = async () => {
         appointment_id,
         evaluation_criteria_id,
         criteria_rating,
-        criteria_note
+        criteria_note,
+        created_at
       `)
       .in('appointment_id', appointmentIds)
       .not('evaluation_criteria_id', 'is', null)
@@ -2222,26 +2223,95 @@ const loadAppointments = async () => {
       }
     }
 
-    const notesByAppointment = (notes || []).reduce((acc: Record<string, any[]>, note: any) => {
-      if (!acc[note.appointment_id]) {
-        acc[note.appointment_id] = []
+    // ✅ Sort notes by created_at DESC to get newest evaluations first
+    const sortedNotes = [...(notes || [])].sort((a, b) => {
+      // Both have created_at in notes table
+      const dateA = new Date(a.created_at || 0).getTime()
+      const dateB = new Date(b.created_at || 0).getTime()
+      return dateB - dateA // Neueste zuerst
+    })
+
+    // ✅ Group notes by appointment and keep only LATEST evaluation per criteria
+    // This ensures we show "new/changed" evaluations by appointment
+    const latestEvaluationsMap: Record<string, Record<string, any>> = {}
+
+    sortedNotes.forEach(note => {
+      const aptId = note.appointment_id
+      const criteriaId = note.evaluation_criteria_id
+
+      if (!latestEvaluationsMap[aptId]) {
+        latestEvaluationsMap[aptId] = {}
       }
+
+      // Only keep the first (newest) evaluation for each criteria per appointment
+      if (!latestEvaluationsMap[aptId][criteriaId]) {
+        latestEvaluationsMap[aptId][criteriaId] = note
+      }
+    })
+
+    // ✅ Now build the evaluations by appointment, filtering to new/changed ones
+    const notesByAppointment: Record<string, any[]> = {}
+    const appointmentIds_sorted = (appointmentsData || []).map(a => a.id)
+
+    appointmentIds_sorted.forEach((aptId, index) => {
+      notesByAppointment[aptId] = []
       
-      const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
-      
-      if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
-        acc[note.appointment_id].push({
-          criteria_id: note.evaluation_criteria_id,
-          criteria_name: criteriaDetails.name || 'Unbekannt',
-          criteria_short_code: null,
-          criteria_rating: note.criteria_rating,
-          criteria_note: note.criteria_note || '',
-          criteria_category_name: criteriaDetails.category_name || null
+      const aptEvaluations = latestEvaluationsMap[aptId]
+      if (!aptEvaluations) return
+
+      // Get evaluations for this appointment
+      const currentEvals = Object.values(aptEvaluations)
+
+      // If not the first appointment, filter to show only new/changed evaluations
+      if (index > 0) {
+        const previousAptId = appointmentIds_sorted[index - 1]
+        const previousEvals = latestEvaluationsMap[previousAptId] || {}
+        const previousEvalsMap: Record<string, any> = {}
+
+        Object.entries(previousEvals).forEach(([criteriaId, eval]) => {
+          previousEvalsMap[criteriaId] = (eval as any).criteria_rating
+        })
+
+        // Filter to show only evaluations that are new or have changed rating
+        const displayEvaluations = currentEvals.filter((currentEval: any) => {
+          const previousRating = previousEvalsMap[currentEval.evaluation_criteria_id]
+          // Show if: no previous eval (new) OR rating changed
+          return previousRating === undefined || previousRating !== currentEval.criteria_rating
+        })
+
+        // Build the final evaluations list with only new/changed ones
+        displayEvaluations.forEach((note: any) => {
+          const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
+          if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
+            notesByAppointment[aptId].push({
+              criteria_id: note.evaluation_criteria_id,
+              criteria_name: criteriaDetails.name || 'Unbekannt',
+              criteria_short_code: null,
+              criteria_rating: note.criteria_rating,
+              criteria_note: note.criteria_note || '',
+              criteria_category_name: criteriaDetails.category_name || null
+            })
+          }
+        })
+      } else {
+        // First appointment: show all evaluations
+        currentEvals.forEach((note: any) => {
+          const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
+          if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
+            notesByAppointment[aptId].push({
+              criteria_id: note.evaluation_criteria_id,
+              criteria_name: criteriaDetails.name || 'Unbekannt',
+              criteria_short_code: null,
+              criteria_rating: note.criteria_rating,
+              criteria_note: note.criteria_note || '',
+              criteria_category_name: criteriaDetails.category_name || null
+            })
+          }
         })
       }
-      
-      return acc
-    }, {} as Record<string, any[]>)
+    })
+
+    logger.debug('✅ Evaluations grouped by appointment with new/changed filter applied')
 
     const lessonsWithEvaluations = (appointmentsData || []).map(appointment => ({
       ...appointment,
