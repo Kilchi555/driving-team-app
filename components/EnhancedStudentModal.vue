@@ -1845,10 +1845,16 @@ const onEvaluationSaved = async () => {
         // Update the lesson with fresh evaluations
         const updatedLesson = lessons.value[aptIndex]
         updatedLesson.notes = notesData
-        updatedLesson.evaluations = notesData.filter(n => n.evaluation_criteria_id && n.criteria_rating)
-        updatedLesson.allEvaluations = updatedLesson.evaluations
         
-        logger.debug('✅ Updated lesson with', updatedLesson.evaluations.length, 'evaluations')
+        // Get all evaluations (with criteria_rating)
+        const allEvaluations = notesData.filter(n => n.evaluation_criteria_id && n.criteria_rating)
+        updatedLesson.allEvaluations = allEvaluations
+        
+        // For display: show all evaluations for this lesson (bypass the "new/changed" filter)
+        // We do this because we just saved them, so they should definitely be shown
+        updatedLesson.evaluations = allEvaluations
+        
+        logger.debug('✅ Updated lesson with', allEvaluations.length, 'evaluations')
       }
     }
   }
