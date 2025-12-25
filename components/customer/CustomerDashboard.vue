@@ -1548,20 +1548,35 @@ const loadPendingConfirmations = async () => {
 
     // ✅ Load payment_items für alle payments
     const paymentItemsMap = new Map()
-    const appointmentIdsForPaymentItems = confirmationsData.map(apt => apt.id)
-    if (appointmentIdsForPaymentItems.length > 0) {
-      const { data: itemsData } = await supabase
+    const paymentIds = confirmationsData
+      .map(apt => (apt.payment && apt.payment.id) || apt.payment_id)
+      .filter(Boolean)
+    
+    if (paymentIds.length > 0) {
+      const { data: itemsData, error: itemsError } = await supabase
         .from('payment_items')
         .select('*')
-        .in('appointment_id', appointmentIdsForPaymentItems)
+        .in('payment_id', paymentIds)
         .order('created_at', { ascending: true })
+      
+      if (itemsError) {
+        console.warn('⚠️ Error loading payment_items:', itemsError)
+      }
       
       if (itemsData) {
         itemsData.forEach(item => {
-          if (!paymentItemsMap.has(item.appointment_id)) {
-            paymentItemsMap.set(item.appointment_id, [])
+          // Find the appointment for this payment_id
+          const appointment = confirmationsData.find(apt => 
+            (apt.payment && apt.payment.id === item.payment_id) || 
+            apt.payment_id === item.payment_id
+          )
+          
+          if (appointment) {
+            if (!paymentItemsMap.has(appointment.id)) {
+              paymentItemsMap.set(appointment.id, [])
+            }
+            paymentItemsMap.get(appointment.id).push(item)
           }
-          paymentItemsMap.get(item.appointment_id).push(item)
         })
       }
     }
