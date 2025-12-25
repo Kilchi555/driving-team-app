@@ -2266,11 +2266,11 @@ const loadAppointments = async () => {
       if (index > 0) {
         const previousAptId = appointmentIds_sorted[index - 1]
         const previousEvals = latestEvaluationsMap[previousAptId] || {}
-        const previousEvalsMap: Record<string, any> = {}
+          const previousEvalsMap: Record<string, any> = {}
 
-        Object.entries(previousEvals).forEach(([criteriaId, eval]) => {
-          previousEvalsMap[criteriaId] = (eval as any).criteria_rating
-        })
+          Object.entries(previousEvals).forEach(([criteriaId, evaluation]) => {
+            previousEvalsMap[criteriaId] = (evaluation as any).criteria_rating
+          })
 
         // Filter to show only evaluations that are new or have changed rating
         const displayEvaluations = currentEvals.filter((currentEval: any) => {
