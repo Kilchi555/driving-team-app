@@ -1372,7 +1372,7 @@ const navigateToShop = async () => {
 }
 
 const navigateToReglement = async (type: string) => {
-  await navigateTo('/customer/reglemente')
+  await navigateTo(`/customer/reglemente/${type}`)
 }
 
 const navigateToMyCourses = async () => {
