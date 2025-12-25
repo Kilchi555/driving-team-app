@@ -2266,17 +2266,25 @@ const loadAppointments = async () => {
       if (index > 0) {
         const previousAptId = appointmentIds_sorted[index - 1]
         const previousEvals = latestEvaluationsMap[previousAptId] || {}
-          const previousEvalsMap: Record<string, any> = {}
+        const previousEvalsMap: Record<string, any> = {}
 
-          Object.entries(previousEvals).forEach(([criteriaId, evaluation]) => {
-            previousEvalsMap[criteriaId] = (evaluation as any).criteria_rating
-          })
+        Object.entries(previousEvals).forEach(([criteriaId, evaluation]) => {
+          previousEvalsMap[criteriaId] = {
+            rating: (evaluation as any).criteria_rating,
+            note: (evaluation as any).criteria_note || ''
+          }
+        })
 
-        // Filter to show only evaluations that are new or have changed rating
+        // Filter to show only evaluations that are new or have changed rating/note
         const displayEvaluations = currentEvals.filter((currentEval: any) => {
-          const previousRating = previousEvalsMap[currentEval.evaluation_criteria_id]
-          // Show if: no previous eval (new) OR rating changed
-          return previousRating === undefined || previousRating !== currentEval.criteria_rating
+          const previousEval = previousEvalsMap[currentEval.evaluation_criteria_id]
+          // Show if: no previous eval (new) OR rating changed OR note changed
+          if (!previousEval) return true // NEW evaluation
+          
+          const ratingChanged = previousEval.rating !== currentEval.criteria_rating
+          const noteChanged = previousEval.note !== (currentEval.criteria_note || '')
+          
+          return ratingChanged || noteChanged // CHANGED evaluation
         })
 
         // Build the final evaluations list with only new/changed ones
