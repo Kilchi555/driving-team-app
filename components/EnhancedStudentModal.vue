@@ -1825,9 +1825,34 @@ const closeEvaluationModal = () => {
 }
 
 const onEvaluationSaved = async () => {
-  logger.debug('✅ Evaluation saved, reloading lessons')
-  // Lade Lektionen neu um die aktualisierten Bewertungen zu sehen
-  await loadLessons()
+  logger.debug('✅ Evaluation saved, updating lesson')
+  
+  if (selectedAppointmentForEvaluation.value && lessons.value) {
+    // Find the updated appointment in the list
+    const aptIndex = lessons.value.findIndex(l => l.id === selectedAppointmentForEvaluation.value.id)
+    
+    if (aptIndex >= 0) {
+      logger.debug('Reloading evaluations for appointment:', selectedAppointmentForEvaluation.value.id)
+      
+      // Reload notes/evaluations for just this appointment
+      const supabase = getSupabase()
+      const { data: notesData } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('appointment_id', selectedAppointmentForEvaluation.value.id)
+      
+      if (notesData) {
+        // Update the lesson with fresh evaluations
+        const updatedLesson = lessons.value[aptIndex]
+        updatedLesson.notes = notesData
+        updatedLesson.evaluations = notesData.filter(n => n.evaluation_criteria_id && n.criteria_rating)
+        updatedLesson.allEvaluations = updatedLesson.evaluations
+        
+        logger.debug('✅ Updated lesson with', updatedLesson.evaluations.length, 'evaluations')
+      }
+    }
+  }
+  
   closeEvaluationModal()
 }
 
