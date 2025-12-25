@@ -37,25 +37,49 @@ export async function loadTenantData(tenantId: string): Promise<TenantData> {
     // Load cancellation policy
     let cancellationHoursBefore = 24 // Default fallback
     try {
-      const { data: cancellationPolicy } = await supabase
+      // First try to load tenant-specific policy, then fall back to global policy
+      let cancellationPolicy = null
+      
+      // Try tenant-specific policy first
+      const { data: tenantPolicy } = await supabase
         .from('cancellation_policies')
-        .select(`
-          *,
-          rules:cancellation_rules(*)
-        `)
+        .select('*')
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('is_default', { ascending: false })
         .limit(1)
         .single()
+      
+      // If no tenant policy, try global policy
+      if (!tenantPolicy) {
+        const { data: globalPolicy } = await supabase
+          .from('cancellation_policies')
+          .select('*')
+          .is('tenant_id', null)
+          .eq('is_active', true)
+          .order('is_default', { ascending: false })
+          .limit(1)
+          .single()
+        cancellationPolicy = globalPolicy
+      } else {
+        cancellationPolicy = tenantPolicy
+      }
 
-      if (cancellationPolicy?.rules && Array.isArray(cancellationPolicy.rules)) {
-        // Find the threshold for free cancellation
-        const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
-        if (freeRule) {
-          cancellationHoursBefore = freeRule.hours_before_appointment
-        } else if (cancellationPolicy.rules.length > 0) {
-          cancellationHoursBefore = Math.max(...cancellationPolicy.rules.map((r: any) => r.hours_before_appointment))
+      // Load rules for the selected policy
+      if (cancellationPolicy) {
+        const { data: rules } = await supabase
+          .from('cancellation_rules')
+          .select('*')
+          .eq('policy_id', cancellationPolicy.id)
+        
+        if (rules && Array.isArray(rules)) {
+          // Find the threshold for free cancellation
+          const freeRule = rules.find((rule: any) => rule.charge_percentage === 0)
+          if (freeRule) {
+            cancellationHoursBefore = freeRule.hours_before_appointment
+          } else if (rules.length > 0) {
+            cancellationHoursBefore = Math.max(...rules.map((r: any) => r.hours_before_appointment))
+          }
         }
       }
     } catch (err) {
