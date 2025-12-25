@@ -1842,17 +1842,23 @@ const onEvaluationSaved = async () => {
         .eq('appointment_id', selectedAppointmentForEvaluation.value.id)
       
       if (notesData) {
-        // Update the lesson with fresh evaluations
-        const updatedLesson = lessons.value[aptIndex]
-        updatedLesson.notes = notesData
-        
         // Get all evaluations (with criteria_rating)
         const allEvaluations = notesData.filter(n => n.evaluation_criteria_id && n.criteria_rating)
-        updatedLesson.allEvaluations = allEvaluations
         
-        // For display: show all evaluations for this lesson (bypass the "new/changed" filter)
-        // We do this because we just saved them, so they should definitely be shown
-        updatedLesson.evaluations = allEvaluations
+        // ✅ CREATE A NEW OBJECT to trigger Vue's reactivity
+        const updatedLesson = {
+          ...lessons.value[aptIndex],
+          notes: notesData,
+          evaluations: allEvaluations,
+          allEvaluations: allEvaluations
+        }
+        
+        // ✅ Replace the entire lessons array to trigger reactivity
+        lessons.value = [
+          ...lessons.value.slice(0, aptIndex),
+          updatedLesson,
+          ...lessons.value.slice(aptIndex + 1)
+        ]
         
         logger.debug('✅ Updated lesson with', allEvaluations.length, 'evaluations')
       }
