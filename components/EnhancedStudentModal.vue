@@ -140,7 +140,8 @@
         </div>
         
         <!-- Progress Tab -->
-        <div v-if="activeTab === 'progress'" class="p-4">
+        <div v-if="activeTab === 'progress'" class="px-2"
+>
           <!-- Sub-Tab Navigation -->
           <div class="flex gap-2 mb-4 border-b border-gray-200">
             <button
@@ -148,9 +149,13 @@
               :class="[
                 'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
                 progressSubTab === 'lektionen'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'text-white'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
               ]"
+              :style="progressSubTab === 'lektionen' ? { 
+                borderBottomColor: primaryColor,
+                color: primaryColor
+              } : {}"
             >
               Lektionen
             </button>
@@ -159,9 +164,13 @@
               :class="[
                 'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
                 progressSubTab === 'prüfungen'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'text-white'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
               ]"
+              :style="progressSubTab === 'prüfungen' ? { 
+                borderBottomColor: primaryColor,
+                color: primaryColor
+              } : {}"
             >
               Prüfungen
             </button>
@@ -193,14 +202,14 @@
             
             <!-- Filter und Sortierung auf separater Zeile -->
             <div 
-              class="flex items-center justify-between gap-4 py-3 px-4 rounded-lg"
+              class="flex items-center justify-between gap-2 py-2 px-4 rounded-lg"
               :style="{ backgroundColor: primaryColor + '20' }"
             >
               <!-- Kategorie Filter -->
               <div class="flex items-center gap-2">
                 <select
                   v-model="selectedCategoryFilter"
-                  class="text-sm border border-gray-300 rounded px-3 py-1 text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-1"
+                  class="h-8 text-xs border border-gray-300 rounded px-2 py-0 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 leading-8"
                   :style="{ 
                     backgroundColor: primaryColor,
                     '--tw-ring-color': primaryColor
@@ -312,7 +321,6 @@
                 
                 <!-- Evaluationen -->
                 <div v-if="lesson.evaluations && lesson.evaluations.length > 0" class="mt-3 pt-3 border-t border-gray-300">
-                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Bewertungen:</h6>
                   <div class="space-y-2">
                     <div 
                       v-for="evaluation in lesson.evaluations" 
