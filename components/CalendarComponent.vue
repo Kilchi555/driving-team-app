@@ -1874,16 +1874,26 @@ const refreshCalendar = async () => {
       return
     }
     
-    // ✅ Don't invalidate cache here - let loadAppointments(true) force reload instead
-    // Cache will be invalidated only for critical user actions, not on every refresh
-    // invalidateCache() removed - this was preventing cache from working
+    // ✅ FIX: Invalidate ONLY the current viewport cache so new appointments show up
+    // This allows cache to work for navigation, but refreshes when appointments are saved
+    const currentDate = calendar.value?.getApi()?.getDate()
+    if (currentDate) {
+      const currentStart = new Date(currentDate)
+      currentStart.setDate(currentStart.getDate() - 7) // Assume week view
+      const currentEnd = new Date(currentDate)
+      currentEnd.setDate(currentEnd.getDate() + 7)
+      
+      const cacheKey = getCacheKey(currentStart, currentEnd)
+      viewportCache.delete(cacheKey)
+      logger.debug('🗑️ Invalidated current viewport cache:', cacheKey)
+    }
     
     // 1. Aktuelle View-Position speichern
-    const currentDate = calendar.value?.getApi()?.getDate()
+    const refreshStart = currentDate
     
-    // 2. Daten neu laden - WITHOUT forceReload, let cache work!
+    // 2. Daten neu laden - WITH cache check for other viewports!
     await Promise.all([
-      loadAppointments(false), // ← Allow cache to work!
+      loadAppointments(false), // ← Cache works, but we just invalidated current viewport!
     ])
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
@@ -1899,7 +1909,7 @@ const refreshCalendar = async () => {
     logger.debug('✅ Calendar data refreshed')
     
     // 5. View-Position wiederherstellen falls nötig
-    if (currentDate && calendar.value?.getApi) {
+    if (refreshStart && calendar.value?.getApi) {
       try {
         const api = calendar.value.getApi()
         
