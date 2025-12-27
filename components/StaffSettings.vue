@@ -991,11 +991,22 @@ const loadExamLocations = async () => {
     availableExamLocations.value = allLocations || [];
 
     // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
+    // ✅ WICHTIG: Mit Tenant-Filter um Locations von anderen Staffs nicht zu sehen
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('id', staffId)
+      .single();
+    
+    if (userError) throw userError;
+    const userTenantId = userProfile?.tenant_id;
+
     const { data: allExamLocations, error: allExamError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
       .eq('is_active', true)
+      .eq('tenant_id', userTenantId) // ✅ TENANT FILTER
       .order('name');
 
     if (allExamError) throw allExamError;
