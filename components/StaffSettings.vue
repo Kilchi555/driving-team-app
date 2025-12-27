@@ -1344,7 +1344,7 @@ const resetLocationForm = () => {
   }
 }
 
-// Toggle Location Assignment (Hinzufügen/Entfernen)
+// Toggle Location Assignment (Hinzufügen/Entfernen) - für Standard Locations
 const toggleLocationAssignment = async (locationId: string) => {
   try {
     const supabase = getSupabase()
@@ -1388,6 +1388,85 @@ const toggleLocationAssignment = async (locationId: string) => {
 
   } catch (err: any) {
     console.error('❌ Error in toggleLocationAssignment:', err)
+    error.value = `Fehler: ${err.message}`
+  }
+}
+
+// Toggle Exam Location Assignment - für Prüfungsstandorte
+// Automatisches Erstellen wenn nicht vorhanden, oder Update von staff_ids
+const toggleExamLocationAssignment = async (sourceLocation: any) => {
+  try {
+    const supabase = getSupabase()
+    const staffId = props.currentUser?.id
+    const tenantId = props.currentUser?.tenant_id
+
+    if (!staffId || !tenantId) {
+      throw new Error('Staff ID oder Tenant ID fehlt')
+    }
+
+    logger.debug(`🔍 Toggling exam location: ${sourceLocation.name} for staff ${staffId} in tenant ${tenantId}`)
+
+    // Step 1: Prüfe ob diese Location bereits im Tenant existiert
+    const { data: existingLocation, error: findError } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('name', sourceLocation.name)
+      .eq('address', sourceLocation.address)
+      .eq('location_type', 'exam')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (findError) throw findError
+
+    if (existingLocation) {
+      // Step 2a: Location existiert bereits → Update staff_ids
+      logger.debug(`📍 Location exists, updating staff_ids`)
+      let currentStaffIds = Array.isArray(existingLocation.staff_ids) ? [...existingLocation.staff_ids] : []
+
+      if (currentStaffIds.includes(staffId)) {
+        // Entfernen
+        currentStaffIds = currentStaffIds.filter(id => id !== staffId)
+        logger.debug(`➖ Removing staff from location`)
+      } else {
+        // Hinzufügen
+        currentStaffIds.push(staffId)
+        logger.debug(`➕ Adding staff to location`)
+      }
+
+      const { error: updateError } = await supabase
+        .from('locations')
+        .update({ staff_ids: currentStaffIds })
+        .eq('id', existingLocation.id)
+
+      if (updateError) throw updateError
+      logger.debug(`✅ Updated staff_ids: ${currentStaffIds.join(', ')}`)
+    } else {
+      // Step 2b: Location existiert nicht → Neuen Eintrag erstellen
+      logger.debug(`📍 Location doesn't exist, creating new one`)
+      const { error: insertError } = await supabase
+        .from('locations')
+        .insert({
+          name: sourceLocation.name,
+          address: sourceLocation.address,
+          city: sourceLocation.city,
+          postal_code: sourceLocation.postal_code,
+          canton: sourceLocation.canton,
+          location_type: 'exam',
+          is_active: true,
+          tenant_id: tenantId,
+          staff_ids: [staffId],
+          google_place_id: sourceLocation.google_place_id || null
+        })
+
+      if (insertError) throw insertError
+      logger.debug(`✅ Created new exam location with staff ${staffId}`)
+    }
+
+    // Reload exam locations
+    await loadExamLocations()
+
+  } catch (err: any) {
+    console.error('❌ Error in toggleExamLocationAssignment:', err)
     error.value = `Fehler: ${err.message}`
   }
 }
