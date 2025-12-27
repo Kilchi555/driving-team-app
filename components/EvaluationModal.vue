@@ -658,22 +658,41 @@ const saveEvaluation = async () => {
   error.value = null
   
   try {
-    // Load existing evaluations to detect which ones are new/changed
-    const { data: existingNotes } = await supabase
-      .from('notes')
-      .select('evaluation_criteria_id, criteria_rating, criteria_note')
-      .eq('appointment_id', props.appointment.id)
-      .not('evaluation_criteria_id', 'is', null)
+    // Load evaluations from the PREVIOUS appointment (not current) to detect what's new/changed
+    // Step 1: Get all appointments for this student in the same category, sorted by date
+    const { data: allAppointments } = await supabase
+      .from('appointments')
+      .select('id, start_time')
+      .eq('user_id', props.appointment.user_id)
+      .eq('type', props.studentCategory)
+      .order('start_time', { ascending: true })
     
-    // Create a map of existing evaluations for comparison
+    // Step 2: Find the current appointment index and get the previous one
+    const currentIndex = allAppointments?.findIndex(a => a.id === props.appointment.id) ?? -1
+    const previousAppointmentId = currentIndex > 0 ? allAppointments?.[currentIndex - 1]?.id : null
+    
+    logger.debug(`📊 Previous appointment ID: ${previousAppointmentId || 'NONE (first appointment)'}`)
+    
+    // Step 3: Load evaluations from previous appointment (if exists)
     const existingEvalMap: Record<string, any> = {}
-    if (existingNotes) {
-      existingNotes.forEach(note => {
-        existingEvalMap[note.evaluation_criteria_id] = {
-          rating: note.criteria_rating,
-          note: note.criteria_note || ''
-        }
-      })
+    if (previousAppointmentId) {
+      const { data: previousNotes } = await supabase
+        .from('notes')
+        .select('evaluation_criteria_id, criteria_rating, criteria_note')
+        .eq('appointment_id', previousAppointmentId)
+        .not('evaluation_criteria_id', 'is', null)
+      
+      if (previousNotes) {
+        previousNotes.forEach(note => {
+          existingEvalMap[note.evaluation_criteria_id] = {
+            rating: note.criteria_rating,
+            note: note.criteria_note || ''
+          }
+        })
+      }
+      logger.debug(`📊 Loaded ${Object.keys(existingEvalMap).length} evaluations from previous appointment`)
+    } else {
+      logger.debug(`📊 No previous appointment - all evaluations are NEW`)
     }
     
     // Filter to save only new or changed evaluations
