@@ -991,7 +991,7 @@ const loadExamLocations = async () => {
     availableExamLocations.value = allLocations || [];
 
     // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
-    // ✅ WICHTIG: Mit Tenant-Filter um Locations von anderen Staffs nicht zu sehen
+    // ✅ WICHTIG: Mit Tenant-Filter UND Staff-Filter
     const { data: userProfile, error: userError } = await supabase
       .from('users')
       .select('tenant_id')
@@ -1001,21 +1001,19 @@ const loadExamLocations = async () => {
     if (userError) throw userError;
     const userTenantId = userProfile?.tenant_id;
 
-    const { data: allExamLocations, error: allExamError } = await supabase
+    const { data: staffExamLocationsData, error: allExamError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
       .eq('is_active', true)
       .eq('tenant_id', userTenantId) // ✅ TENANT FILTER
+      // ✅ STAFF FILTER: Nur Locations wo dieser Staff in staff_ids drin ist
+      .contains('staff_ids', [staffId])
       .order('name');
 
     if (allExamError) throw allExamError;
     
-    // Filter: nur die, wo staffId im staff_ids Array ist
-    staffExamLocations.value = (allExamLocations || []).filter((loc: any) => {
-      const staffIds = loc.staff_ids || []
-      return Array.isArray(staffIds) && staffIds.includes(staffId)
-    });
+    staffExamLocations.value = staffExamLocationsData || [];
 
       logger.debug('✅ Prüfungsstandorte geladen:', {
       verfügbar: availableExamLocations.value.length,

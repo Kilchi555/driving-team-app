@@ -30,25 +30,43 @@ CREATE POLICY "locations_insert_policy" ON locations
     ))
   );
 
--- UPDATE: Staff and admins can update locations in their tenant
+-- UPDATE: Staff and admins can update locations
+-- ✅ IMPORTANT: Staff can ONLY update staff_ids array in their tenant locations
+-- ✅ Staff CANNOT update global locations (tenant_id = NULL)
 CREATE POLICY "locations_update_policy" ON locations
   FOR UPDATE
   USING (
+    -- Admins can update anything
     (auth.uid() IN (
       SELECT users.auth_user_id FROM users 
-      WHERE (users.role IN ('admin', 'tenant_admin', 'staff') 
-             AND users.is_active = true
-             AND users.tenant_id = locations.tenant_id)
-      OR (users.role IN ('admin', 'tenant_admin') AND users.is_active = true)
+      WHERE users.role IN ('admin', 'tenant_admin') 
+      AND users.is_active = true
+    ))
+    OR
+    -- Staff can ONLY update locations in their tenant (not global)
+    (auth.uid() IN (
+      SELECT users.auth_user_id FROM users 
+      WHERE users.role = 'staff' 
+      AND users.is_active = true
+      AND users.tenant_id = locations.tenant_id
+      AND locations.tenant_id IS NOT NULL  -- 🚫 NO global locations
     ))
   )
   WITH CHECK (
+    -- Admins can update anything
     (auth.uid() IN (
       SELECT users.auth_user_id FROM users 
-      WHERE (users.role IN ('admin', 'tenant_admin', 'staff') 
-             AND users.is_active = true
-             AND users.tenant_id = locations.tenant_id)
-      OR (users.role IN ('admin', 'tenant_admin') AND users.is_active = true)
+      WHERE users.role IN ('admin', 'tenant_admin') 
+      AND users.is_active = true
+    ))
+    OR
+    -- Staff can ONLY update locations in their tenant
+    (auth.uid() IN (
+      SELECT users.auth_user_id FROM users 
+      WHERE users.role = 'staff' 
+      AND users.is_active = true
+      AND users.tenant_id = locations.tenant_id
+      AND locations.tenant_id IS NOT NULL  -- 🚫 NO global locations
     ))
   );
 
