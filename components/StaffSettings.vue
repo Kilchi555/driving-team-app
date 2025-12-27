@@ -1007,13 +1007,15 @@ const loadExamLocations = async () => {
       .eq('location_type', 'exam')
       .eq('is_active', true)
       .eq('tenant_id', userTenantId) // ✅ TENANT FILTER
-      // ✅ STAFF FILTER: Nur Locations wo dieser Staff in staff_ids drin ist
-      .contains('staff_ids', [staffId])
       .order('name');
 
     if (allExamError) throw allExamError;
     
-    staffExamLocations.value = staffExamLocationsData || [];
+    // ✅ Filter im Frontend: Nur Locations wo dieser Staff in staff_ids drin ist
+    staffExamLocations.value = (staffExamLocationsData || []).filter(loc => {
+      const staffIds = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
+      return staffIds.includes(staffId)
+    });
 
       logger.debug('✅ Prüfungsstandorte geladen:', {
       verfügbar: availableExamLocations.value.length,
