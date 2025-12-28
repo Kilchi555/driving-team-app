@@ -1891,9 +1891,9 @@ const refreshCalendar = async () => {
     // 1. Aktuelle View-Position speichern
     const refreshStart = currentDate
     
-    // 2. Daten neu laden - WITH cache check for other viewports!
+    // 2. Daten neu laden - FORCE reload to get fresh data!
     await Promise.all([
-      loadAppointments(false), // ← Cache works, but we just invalidated current viewport!
+      loadAppointments(true), // ← Force reload to get new appointments from DB!
     ])
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
