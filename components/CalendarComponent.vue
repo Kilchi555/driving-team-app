@@ -1884,7 +1884,7 @@ const refreshCalendar = async () => {
       currentEnd.setDate(currentEnd.getDate() + 7)
       
       const cacheKey = getCacheKey(currentStart, currentEnd)
-      viewportCache.delete(cacheKey)
+      viewportCache.value.delete(cacheKey) // ✅ Use .value!
       logger.debug('🗑️ Invalidated current viewport cache:', cacheKey)
     }
     
