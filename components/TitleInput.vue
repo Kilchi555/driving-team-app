@@ -272,16 +272,31 @@ watch(() => suggestions.value, updateSuggestion, { immediate: true })
 
 // Helper function to determine if we should auto-update
 const shouldAutoUpdate = (): boolean => {
-  // Auto-update if current title matches a previous suggestion pattern
+  // ✅ WICHTIG: Wenn der Title vom User angepasst wurde, NICHT regenerieren!
+  // Anzeichen für manuelle Anpassung:
+  // 1. Title hat Zusatzinfo wie Uhrzeit (z.B. "14:40")
+  // 2. Title hat extra Details nach dem Namen
+  
   if (props.eventType === 'lesson' && props.selectedStudent) {
     const firstName = props.selectedStudent.first_name
     const lastName = props.selectedStudent.last_name
+    const generatedPattern = `${firstName} ${lastName}` // Pattern: "Max Mustermann"
+    
+    // ✅ Prüfe ob Title ein zusätzliches Element hat (Zeit, extra Text)
+    // Beispiel: "Max Mustermann - 14:40 Baslerstrasse..." hat extra Zeit
+    const hasExtraInfo = props.title.length > generatedPattern.length + 50 // Viel länger als erwartet
     
     // ✅ ERWEITERT: Auch bei generischen Standard-Titeln auto-updaten
     const isGenericTitle = props.title === 'Fahrstunde' || 
                           props.title === 'Lektion' || 
                           props.title === 'Stunde' ||
                           props.title.trim() === ''
+    
+    // ✅ Regeneriere NICHT wenn der Title manuell angepasst wurde (extra info)
+    if (hasExtraInfo) {
+      logger.debug('🛑 Title has manual customization (extra info) - skip auto-update:', props.title)
+      return false
+    }
     
     return props.title.includes(firstName) || 
            props.title.includes(lastName) || 
