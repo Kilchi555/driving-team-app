@@ -1295,13 +1295,29 @@ const editAppointment = (appointment: CalendarAppointment) => {
 }
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
-  logger.debug('💾 Event saved, refreshing calendar...')
+  logger.debug('💾 Event saved, updating calendar...')
+  
+  // ✅ NEU: Aktualisiere nur den Title des Events direkt
+  // Nicht den kompletten Cache invalidieren - das ist zu teuer!
+  if (calendar.value?.getApi && eventData.id) {
+    const calendarApi = calendar.value.getApi()
+    const event = calendarApi.getEventById(eventData.id)
+    
+    if (event) {
+      // ✅ Update nur den Title
+      event.setProp('title', eventData.title)
+      logger.debug('✅ Event title updated directly:', eventData.title)
+    }
+  }
   
   // View-Position speichern
   const currentDate = calendar.value?.getApi()?.getDate()
   
-  // Daten neu laden
-  await loadAppointments()
+  // ✅ Nur im Hintergrund neu laden (nicht blockierend)
+  // Dies aktualisiert andere Felder falls nötig
+  await loadAppointments(true).catch(err => {
+    logger.debug('⚠️ Background reload failed:', err)
+  })
   
   // View-Position wiederherstellen falls nötig
   if (currentDate && calendar.value?.getApi) {
