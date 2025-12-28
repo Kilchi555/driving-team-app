@@ -137,6 +137,7 @@
               :selected-location="selectedLocation"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               :auto-generate="true"
+              :is-loading-from-database="props.mode === 'edit'"
               @title-generated="handleTitleGenerated"
             />
           </div>

@@ -34,6 +34,7 @@ interface Props {
   showSuggestions?: boolean
   showCharacterCount?: boolean
   autoGenerate?: boolean
+  isLoadingFromDatabase?: boolean  // ✅ NEW: Flag to indicate title is from DB
 }
 
 interface Emits {
@@ -272,7 +273,14 @@ watch(() => suggestions.value, updateSuggestion, { immediate: true })
 
 // Helper function to determine if we should auto-update
 const shouldAutoUpdate = (): boolean => {
-  // ✅ WICHTIG: Nur bei GENERISCHEN Titeln auto-updaten
+  // ✅ WICHTIG: Wenn Title aus DB geladen wurde, NICHT regenerieren!
+  // Der User könnte ihn manuell angepasst haben
+  if (props.isLoadingFromDatabase) {
+    logger.debug('🛑 Title is from database - skip auto-update')
+    return false
+  }
+  
+  // ✅ Nur bei GENERISCHEN Titeln auto-updaten
   // Wenn der User einen Title eingegeben hat (nicht nur Name), nicht regenerieren!
   
   if (props.eventType === 'lesson' && props.selectedStudent) {
