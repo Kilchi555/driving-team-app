@@ -1295,35 +1295,38 @@ const editAppointment = (appointment: CalendarAppointment) => {
 }
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
-  logger.debug('💾 Event saved, updating calendar...')
+  logger.debug('💾 Event saved, updating calendar...', eventData)
   
-  // ✅ NEU: Aktualisiere nur den Title des Events direkt (nur bei EDIT)
-  // Bei CREATE müssen wir den neuen Termin nachladen!
-  if (calendar.value?.getApi && eventData.id) {
+  if (calendar.value?.getApi && eventData.id && eventData.title) {
     const calendarApi = calendar.value.getApi()
     const event = calendarApi.getEventById(eventData.id)
     
     if (event) {
-      // ✅ Update nur den Title (nur bei existierenden Events)
+      // ✅ Existierender Event - nur Title updaten
       event.setProp('title', eventData.title)
-      logger.debug('✅ Event title updated directly:', eventData.title)
+      logger.debug('✅ Existing event title updated:', eventData.title)
     } else {
-      // ✅ Neues Event - nicht im Calendar vorhanden, muss vollständig geladen werden
-      logger.debug('ℹ️ New event created, will be loaded by full refresh')
+      // ✅ Neuer Event - zum Calendar hinzufügen mit korrektem Title
+      logger.debug('📍 Adding new event to calendar:', { id: eventData.id, title: eventData.title })
+      calendarApi.addEvent({
+        id: eventData.id,
+        title: eventData.title,
+        start: eventData.start,
+        end: eventData.end,
+        allDay: eventData.allDay || false
+      })
+      logger.debug('✅ New event added with correct title')
     }
   }
   
   // View-Position speichern
   const currentDate = calendar.value?.getApi()?.getDate()
   
-  // ✅ Vollständig neu laden (FORCE!) um neue Termine zu laden
-  // Dies ist notwendig nach CREATE mode um den neuen Termin hinzuzufügen
-  try {
-    await loadAppointments(true) // Force reload!
-    logger.debug('✅ Calendar refreshed after save')
-  } catch (err) {
-    logger.debug('⚠️ Calendar refresh failed:', err)
-  }
+  // ✅ Im Hintergrund neu laden um konsistent zu bleiben
+  // Dies wird nicht blockierend ausgeführt
+  loadAppointments(true).catch(err => {
+    logger.debug('⚠️ Background reload failed:', err)
+  })
   
   // View-Position wiederherstellen falls nötig
   if (currentDate && calendar.value?.getApi) {
