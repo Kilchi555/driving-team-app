@@ -2141,62 +2141,28 @@ const loadAppointments = async () => {
   if (!currentUser.value?.id) return
 
   try {
+    // ✅ Use backend API to fetch appointments with staff data (bypasses RLS)
+    // Get auth token first
     const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
+    const response = await $fetch('/api/customer/get-appointments', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
     
-    if (userError) throw userError
-    if (!userData) throw new Error('User nicht in Datenbank gefunden')
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load appointments from API')
+    }
 
-    logger.debug('🔍 Loading appointments for user:', userData.id)
+    const appointmentsData = response.data
+    logger.debug('🔍 Loading appointments for user:', currentUser.value.id)
 
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        status,
-        location_id,
-        type,
-        event_type_code,
-        user_id,
-        staff_id,
-        staff:users!staff_id (
-          id,
-          first_name,
-          last_name,
-          email,
-          phone
-        ),
-
-        notes (
-          id,
-          staff_rating,
-          staff_note
-        ),
-        exam_results (
-          id,
-          passed,
-          exam_date,
-          examiner_behavior_rating,
-          examiner_behavior_notes
-        )
-      `)
-      .eq('user_id', userData.id)
-      .is('deleted_at', null)  // ✅ NEU: Nur nicht gelöschte Termine anzeigen
-      .order('start_time', { ascending: false })
-
-    if (appointmentsError) throw appointmentsError
     logger.debug('✅ Appointments loaded:', appointmentsData?.length || 0)
 
-    const locationIds = [...new Set(appointmentsData?.map(a => a.location_id).filter(Boolean))]
+    const locationIds = [...new Set(appointmentsData?.map((a: any) => a.location_id).filter(Boolean))]
     logger.debug('🔍 Location IDs found:', locationIds)
     
     let locationsMap: Record<string, { name: string; address?: string; formatted_address?: string }> = {}
@@ -2229,7 +2195,7 @@ const loadAppointments = async () => {
       logger.debug('⚠️ No location IDs found in appointments')
     }
 
-    const appointmentIds = appointmentsData?.map(a => a.id) || []
+    const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
     logger.debug('🔍 Searching evaluations for appointments:', appointmentIds.length)
 
     const { data: notes, error: notesError } = await supabase
@@ -2314,9 +2280,9 @@ const loadAppointments = async () => {
 
     // ✅ Now build the evaluations by appointment, filtering to new/changed ones
     const notesByAppointment: Record<string, any[]> = {}
-    const appointmentIds_sorted = (appointmentsData || []).map(a => a.id)
+    const appointmentIds_sorted = (appointmentsData || []).map((a: any) => a.id)
 
-    appointmentIds_sorted.forEach((aptId, index) => {
+    appointmentIds_sorted.forEach((aptId: any, index: any) => {
       notesByAppointment[aptId] = []
       
       const aptEvaluations = latestEvaluationsMap[aptId]
@@ -2384,7 +2350,7 @@ const loadAppointments = async () => {
 
     logger.debug('✅ Evaluations grouped by appointment with new/changed filter applied')
 
-    const lessonsWithEvaluations = (appointmentsData || []).map(appointment => ({
+    const lessonsWithEvaluations = (appointmentsData || []).map((appointment: any) => ({
       ...appointment,
       location_name: locationsMap[appointment.location_id]?.name || null,
       location_details: locationsMap[appointment.location_id] || null,
@@ -2392,7 +2358,7 @@ const loadAppointments = async () => {
     }))
 
     // Debug: Zeige location_details für die ersten paar Termine
-    logger.debug('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map(lesson => ({
+    logger.debug('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map((lesson: any) => ({
       id: lesson.id,
       location_id: lesson.location_id,
       location_name: lesson.location_name,
