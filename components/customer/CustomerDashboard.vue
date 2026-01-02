@@ -2456,14 +2456,16 @@ const loadInstructors = () => {
   // Group appointments by instructor and count lessons
   const instructorMap = new Map()
   
+  // ✅ DEBUG: Check first appointment structure
+  logger.debug('🔍 DEBUG loadInstructors - First appointment:', appointments.value?.[0])
+  
   // Ensure appointments.value is an array
   if (appointments.value && Array.isArray(appointments.value)) {
-    appointments.value.forEach(appointment => {
-      // ✅ IMPORTANT: Check both `staff_user` (from API) and `staff` (old format)
-      const staffData = appointment.staff_user || appointment.staff
-      if (appointment && staffData) {
-        const instructorId = staffData.id
-        const instructorName = `${staffData.first_name || ''} ${staffData.last_name || ''}`.trim()
+    appointments.value.forEach((appointment, idx) => {
+      logger.debug(`🔍 DEBUG appointment[${idx}]: staff field exists?`, !!appointment.staff)
+      if (appointment && appointment.staff) {
+        const instructorId = appointment.staff.id
+        const instructorName = `${appointment.staff.first_name || ''} ${appointment.staff.last_name || ''}`.trim()
         
         if (instructorMap.has(instructorId)) {
           instructorMap.get(instructorId).lessonCount++
@@ -2471,10 +2473,10 @@ const loadInstructors = () => {
           instructorMap.set(instructorId, {
             id: instructorId,
             name: instructorName,
-            first_name: staffData.first_name,
-            last_name: staffData.last_name,
-            email: staffData.email,
-            phone: staffData.phone,
+            first_name: appointment.staff.first_name,
+            last_name: appointment.staff.last_name,
+            email: appointment.staff.email,
+            phone: appointment.staff.phone,
             lessonCount: 1
           })
         }
