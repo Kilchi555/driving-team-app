@@ -135,6 +135,36 @@
           </NuxtLink>
 
           <NuxtLink
+            to="/tenant-admin/errors"
+            class="flex items-center gap-3 p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+          >
+            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M9 3a9 9 0 1118 0 9 9 0 01-18 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">Error Monitoring</p>
+              <p class="text-sm text-gray-500">Fehler und Probleme überwachen</p>
+            </div>
+          </NuxtLink>
+
+          <NuxtLink
+            to="/tenant-admin/security"
+            class="flex items-center gap-3 p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+          >
+            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">Sicherheit & Rate Limiting</p>
+              <p class="text-sm text-gray-500">Anmeldeversuche und Blockierungen</p>
+            </div>
+          </NuxtLink>
+
+          <NuxtLink
             to="/tenant-admin/settings"
             class="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
@@ -264,7 +294,9 @@
 
 <script setup lang="ts">
 
-definePageMeta({ layout: 'tenant-admin' })
+definePageMeta({ 
+  layout: 'tenant-admin'
+})
 import { ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
@@ -303,16 +335,16 @@ const loadStats = async () => {
     // Load user stats
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, tenant_id, role')
+      .select('id, auth_user_id, tenant_id, role')
 
     logger.debug('🔍 USER LOADING DEBUG:')
     logger.debug('- Users data:', users)
     logger.debug('- Users error:', usersError)
     logger.debug('- Users count:', users?.length || 0)
     
-    // Get current user role separately
+    // Get current user role separately (use auth_user_id for matching)
     const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const currentUserRole = users?.find(u => u.id === currentUser?.id)?.role
+    const currentUserRole = users?.find(u => u.auth_user_id === currentUser?.id)?.role
     logger.debug('- Current user role:', currentUserRole)
 
     if (usersError) {
@@ -361,6 +393,29 @@ const formatTimeAgo = (dateString) => {
   if (diffInHours < 24) return `Vor ${diffInHours} Stunden`
   const diffInDays = Math.floor(diffInHours / 24)
   return `Vor ${diffInDays} Tagen`
+}
+
+const loadRecentActivities = async () => {
+  try {
+    // Get recent rate limit blocks as security activities
+    const { data, error } = await supabase
+      .from('rate_limit_logs')
+      .select('*')
+      .eq('status', 'blocked')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (error) throw error
+    
+    recentActivities.value = (data || []).map(log => ({
+      id: log.id,
+      type: 'security',
+      description: `${log.operation === 'login' ? 'Anmeldeattempt' : 'Operation'} blockiert: ${log.ip_address}${log.email ? ` (${log.email})` : ''}`,
+      created_at: log.created_at
+    }))
+  } catch (error) {
+    console.error('Error loading recent activities:', error)
+  }
 }
 
 onMounted(() => {

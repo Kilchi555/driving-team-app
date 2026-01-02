@@ -5,6 +5,13 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  validateUUID,
+  validateISODate,
+  validateAppointmentTimes,
+  validateDuration,
+  throwValidationError
+} from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -21,13 +28,39 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('🔄 Reserving slot:', { staff_id, start_time })
 
-    // Validierung
-    if (!staff_id || !start_time || !end_time || !tenant_id) {
-      console.error('❌ Missing required fields:', { staff_id, start_time, end_time, tenant_id })
-      throw createError({
-        statusCode: 400,
-        message: 'Missing required fields'
-      })
+    // Validierung mit centralized validators
+    const errors: Record<string, string> = {}
+    
+    if (!staff_id || !validateUUID(staff_id)) {
+      errors.staff_id = 'Ungültige Mitarbeiter-ID'
+    }
+    
+    if (!tenant_id || !validateUUID(tenant_id)) {
+      errors.tenant_id = 'Ungültige Mandanten-ID'
+    }
+    
+    // Validate times
+    // ✅ Allow past appointments - for reservations of past slots
+    const timeValidation = validateAppointmentTimes(start_time, end_time, true)
+    if (!timeValidation.valid) {
+      errors.times = timeValidation.error!
+    }
+    
+    // Validate duration if provided
+    if (duration_minutes !== undefined) {
+      const durationValidation = validateDuration(duration_minutes)
+      if (!durationValidation.valid) {
+        errors.duration_minutes = durationValidation.error!
+      }
+    }
+    
+    // Validate location_id if provided
+    if (location_id && !validateUUID(location_id)) {
+      errors.location_id = 'Ungültiges Standort-ID Format'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      throwValidationError(errors)
     }
 
     const supabase = getSupabaseAdmin()

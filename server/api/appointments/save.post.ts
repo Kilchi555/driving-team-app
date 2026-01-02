@@ -1,5 +1,12 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  validateAppointmentData,
+  validateUUID,
+  sanitizeString,
+  throwIfInvalid,
+  throwValidationError
+} from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -18,6 +25,29 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         message: 'Event ID is required for edit mode'
       })
+    }
+
+    // Validate event ID format
+    if (eventId && !validateUUID(eventId)) {
+      throwValidationError({ eventId: 'Ungültiges Event ID Format' })
+    }
+
+    // Validate appointment data
+    const validation = validateAppointmentData(appointmentData)
+    throwIfInvalid(validation)
+
+    // Sanitize string fields to prevent XSS
+    if (appointmentData.title) {
+      appointmentData.title = sanitizeString(appointmentData.title, 255)
+    }
+    if (appointmentData.description) {
+      appointmentData.description = sanitizeString(appointmentData.description, 1000)
+    }
+    if (appointmentData.custom_location_name) {
+      appointmentData.custom_location_name = sanitizeString(appointmentData.custom_location_name, 255)
+    }
+    if (appointmentData.custom_location_address) {
+      appointmentData.custom_location_address = sanitizeString(appointmentData.custom_location_address, 500)
     }
 
     const supabase = getSupabaseAdmin()

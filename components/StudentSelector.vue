@@ -277,35 +277,15 @@ const shouldAutoLoadComputed = computed(() => {
   return props.autoLoad
 })
 
-// Supabase Types
-interface UserFromDB {
-  id: string
-  first_name: string | null
-  last_name: string | null
-  email: string | null
-  phone: string | null
-  category: string | null
-  assigned_staff_id: string | null
-  preferred_location_id: string | null
-  role: 'client' | 'staff' | 'admin'
-  is_active: boolean
-  onboarding_status: 'pending' | 'completed' | null
-}
-
-interface AppointmentResponse {
-  user_id: string
-  users: UserFromDB | null
-}
-
 // Methods
 
 const loadStudents = async (editStudentId?: string | null) => {
   if (isLoading.value) return
   
   const staffId = props.currentUser?.id
-  if (!staffId && !props.showAllStudents) { // Zeige Fehler nur, wenn staffId erwartet wird und fehlt
+  if (!staffId && !props.showAllStudents) {
     console.error('❌ No staff ID available for staff-specific load or showAllStudents is false.')
-    return // Nur hier zurückkehren, wenn staffId wirklich obligatorisch ist
+    return
   }
 
   // ✅ FIX: Bei Freeslot-Modus editStudentId ignorieren
@@ -401,218 +381,62 @@ const loadStudents = async (editStudentId?: string | null) => {
   }
 }
 
-// ✅ Neue Hilfsfunktion: DB-Laden
+// ✅ Backend API: Load students via API endpoint (bypasses RLS)
 const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRefresh: boolean = false) => {
   try {
-    logger.debug('📚 StudentSelector: Loading students from database...')
+    logger.debug('📚 StudentSelector: Loading students via API...')
     const supabase = getSupabase()
 
-    let studentsToCache: any[] = []
-
-    const staffId = props.currentUser?.id;
-
-    // Staff-spezifische Logik
-    const condition = Boolean(props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId)
-    logger.debug('🔍 Debug loadStudentsFromDB:', {
-      userRole: props.currentUser?.role,
-      showAllStudents: showAllStudentsLocal.value,
-      staffId: staffId,
-      condition: condition
-    })
-    
-    if (condition) {
-      logger.debug('👨‍🏫 Loading students for staff member:', props.currentUser?.id)
-      
-      // Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
-      }
-      
-      // 1. Direkt zugewiesene Schüler laden - FILTERED BY TENANT
-      // ✅ Auch Kunden mit pending onboarding anzeigen (is_active=false aber onboarding_status='pending')
-      logger.debug('🔍 Loading assigned students for staff:', staffId)
-      const { data: assignedStudents, error: assignedError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
-        .eq('role', 'client')
-        .eq('assigned_staff_id', staffId)
-        .eq('tenant_id', tenantId)
-        .or('is_active.eq.true,onboarding_status.eq.pending')
-        .order('first_name')
-
-      if (assignedError) throw assignedError
-      logger.debug('🔍 Assigned students loaded:', assignedStudents?.length || 0)
-
-      // 2. Schüler mit Termin-Historie laden - FILTERED BY TENANT
-      logger.debug('🔍 Loading students with appointment history for staff:', props.currentUser?.id)
-      const { data: appointmentStudents, error: appointmentError } = await supabase
-        .from('appointments')
-        .select(`
-          user_id,
-          users!appointments_user_id_fkey (
-            id, first_name, last_name, email, phone, category, 
-            assigned_staff_id, preferred_location_id, role, is_active, onboarding_status
-          )
-        `)
-        .eq('staff_id', props.currentUser?.id as string)
-        .eq('tenant_id', tenantId)
-        .not('users.id', 'is', null)
-
-      if (appointmentError) throw appointmentError
-      logger.debug('🔍 Appointments with students loaded:', appointmentStudents?.length || 0)
-
-      const typedAppointmentStudents = appointmentStudents as unknown as AppointmentResponse[]
-      
-      // ✅ Auch Kunden mit pending onboarding anzeigen
-      const historyStudents = typedAppointmentStudents
-        .map(apt => apt.users)
-        .filter((user): user is UserFromDB => {
-          return user !== null && 
-                 user.role === 'client' && 
-                 (user.is_active === true || user.onboarding_status === 'pending')
-        })
-
-      // 3. Kombinieren und deduplizieren
-      //    Priorität: Daten aus Termin-Historie (appointments/users) vor zugewiesenen Nutzern (users)
-      const byId: Record<string, UserFromDB> = {}
-
-      // Zuerst: Studenten aus der Termin-Historie (bevorzugt für Kategorie)
-      for (const u of historyStudents) {
-        if (u) byId[u.id] = { ...u }
-      }
-
-      // Danach: Zugewiesene Studenten – nur ergänzen, falls noch nicht vorhanden
-      for (const u of (assignedStudents || [])) {
-        const existing = byId[u.id]
-        if (!existing) {
-          byId[u.id] = { ...u }
-        } else {
-          // Falls Kategorie aus Termin-Daten fehlt, übernehme Kategorie aus users
-          const hasCategory = Boolean(existing.category && String(existing.category).length > 0)
-          if (!hasCategory && u.category) {
-            byId[u.id] = { ...existing, category: u.category }
-          }
-        }
-      }
-
-      const uniqueStudents = Object.values(byId)
-
-      // 4. Falls ein editStudentId angegeben ist, diesen auch laden falls nicht enthalten
-      if (editStudentId && !uniqueStudents.find(s => s.id === editStudentId)) {
-        logger.debug('🔍 Loading specific student for edit mode:', editStudentId)
-        
-        // ✅ FIX: Bei Freeslot-Modus keinen Schüler automatisch auswählen
-        if (props.isFreeslotMode) {
-          logger.debug('🎯 Freeslot mode detected - not auto-selecting editStudentId')
-        } else {
-          const { data: editStudent } = await supabase
-            .from('users')
-            .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
-            .eq('id', editStudentId)
-            .eq('role', 'client')
-            .single()
-
-          if (editStudent) {
-            uniqueStudents.unshift(editStudent)
-          }
-        }
-      }
-
-      studentsToCache = uniqueStudents
-
-      if (!isBackgroundRefresh) {
-        const typedStudents: Student[] = uniqueStudents.map((user: UserFromDB) => ({
-          id: user.id,
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          category: user.category || '',
-          assigned_staff_id: user.assigned_staff_id || '',
-          preferred_location_id: user.preferred_location_id || undefined,
-          is_active: user.is_active,
-          onboarding_status: user.onboarding_status
-        }))
-        
-        availableStudents.value = typedStudents
-        logger.debug('✅ Staff students loaded:', availableStudents.value.length)
-        logger.debug('🔍 Available students:', availableStudents.value)
-      }
-
-    } else {
-      // Admin oder "Alle anzeigen" Modus - FILTERED BY TENANT
-      logger.debug('👑 Loading all active students (Admin mode or show all)')
-      logger.debug('🔍 Reason for admin mode:', {
-        userRole: props.currentUser?.role,
-        showAllStudents: showAllStudentsLocal.value,
-        staffId: staffId
-      })
-      
-      // Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
-      }
-      
-      // ✅ Auch Kunden mit pending onboarding anzeigen
-      let query = supabase
-        .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
-        .eq('role', 'client')
-        .eq('tenant_id', tenantId)
-        .or('is_active.eq.true,onboarding_status.eq.pending')
-        .order('first_name')
-
-      if (props.currentUser?.role === 'staff') {
-        query = query.limit(100)
-      }
-
-      const { data, error: fetchError } = await query
-      if (fetchError) throw fetchError
-      
-      studentsToCache = data || []
-
-      if (!isBackgroundRefresh) {
-        const typedStudents: Student[] = (data || []).map((user: UserFromDB) => ({
-          id: user.id,
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          category: user.category || '',
-          assigned_staff_id: user.assigned_staff_id || '',
-          preferred_location_id: user.preferred_location_id || undefined,
-          is_active: user.is_active,
-          onboarding_status: user.onboarding_status
-        }))
-        
-        availableStudents.value = typedStudents
-        logger.debug('✅ All students loaded:', availableStudents.value.length)
-      }
+    // Get auth session for API call
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
     }
 
-    // ✅ Cache aktualisieren (nur für Staff-spezifische Abfragen)
-    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && studentsToCache.length > 0 && staffId) {
-      cacheStudents(studentsToCache, staffId)
+    // Call backend API to fetch students (bypasses RLS)
+    const params = new URLSearchParams()
+    params.append('showAllStudents', showAllStudentsLocal.value.toString())
+
+    logger.debug('📡 Calling get-students API...')
+    const response = await $fetch(`/api/admin/get-students?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load students from API')
+    }
+
+    const studentsToCache = response.data
+
+    if (!isBackgroundRefresh) {
+      const typedStudents: Student[] = (studentsToCache || []).map((user: any) => ({
+        id: user.id,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        category: user.category || '',
+        assigned_staff_id: user.assigned_staff_id || '',
+        preferred_location_id: user.preferred_location_id || undefined,
+        is_active: user.is_active,
+        onboarding_status: user.onboarding_status
+      }))
+
+      availableStudents.value = typedStudents
+      logger.debug('✅ Students loaded via API:', availableStudents.value.length)
+
+      // Cache for staff-specific loads
+      const staffId = props.currentUser?.id
+      if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && studentsToCache.length > 0 && staffId) {
+        cacheStudents(studentsToCache, staffId)
+      }
     }
 
   } catch (err: any) {
-    console.error('❌ StudentSelector: Error loading from DB:', err)
+    console.error('❌ StudentSelector: Error loading from API:', err)
     if (!isBackgroundRefresh) {
       throw err
     }
@@ -630,14 +454,10 @@ const handleSwitchToOther = () => {
 const handleSearchFocus = () => {
   logger.debug('🔍 Search field focused, autoLoad:', shouldAutoLoadComputed.value)
   
-  // ✅ Lade Studenten auch bei autoLoad=false wenn noch keine geladen sind
-  // ÄNDERE DIESEN BLOCK:
-  // Füge props.currentUser?.id hinzu, um sicherzustellen, dass die ID vorhanden ist
-  if (availableStudents.value.length === 0 && props.currentUser?.id) { // <-- HIER IST DIE WICHTIGE ÄNDERUNG
+  if (availableStudents.value.length === 0 && props.currentUser?.id) {
     logger.debug('📚 Loading students on search focus (no students loaded yet)')
-    loadStudents() // Ruft loadStudents auf, das intern die staffId prüft
+    loadStudents()
   } else if (!props.currentUser?.id) {
-    // Optionaler Log, um zu bestätigen, dass es hier nicht geladen wird, weil die ID fehlt
     logger.debug('🚫 Cannot load on focus yet: No staff ID available.');
   }
 }
@@ -647,8 +467,6 @@ const filterStudents = () => {
   // Wird aber für Kompatibilität beibehalten
 }
 
-
-// In StudentSelector.vue - Zurück zur ursprünglichen selectStudent Funktion:
 const selectStudent = (student: Student, isUserClick = false) => {
   logger.debug('🔍 DEBUG VALUES:', {
     isUserClick: isUserClick,
@@ -671,7 +489,6 @@ const selectStudent = (student: Student, isUserClick = false) => {
 
 const handleStudentClick = (student: Student) => {
   // ✅ FIX: Block ghost clicks that happen immediately when component mounts
-  // This prevents calendar free slot clicks from propagating to student items
   if (!clicksEnabled.value) {
     logger.debug('🚫 Student click blocked - clicks not yet enabled (anti-ghost-click protection)')
     return
@@ -683,9 +500,8 @@ const handleStudentClick = (student: Student) => {
     clicksEnabled: clicksEnabled.value
   })
   
-  // Manuelle Klicks sollten erlaubt sein
   logger.debug('✅ Manual student click allowed - selecting student')
-  selectStudent(student, true) // isUserClick=true bedeutet manueller Klick
+  selectStudent(student, true)
 }
 
 const clearStudent = () => {
@@ -705,7 +521,6 @@ const handleStudentAdded = async (newStudent: any) => {
   logger.debug('✅ New student added:', newStudent)
   showAddStudentModal.value = false
   
-  // Konvertiere den neuen Schüler zum richtigen Format
   const typedStudent: Student = {
     id: newStudent.id,
     first_name: newStudent.first_name || '',
@@ -717,11 +532,9 @@ const handleStudentAdded = async (newStudent: any) => {
     preferred_location_id: newStudent.preferred_location_id || undefined
   }
   
-  // Füge den neuen Schüler zur Liste hinzu (an den Anfang)
   availableStudents.value.unshift(typedStudent)
   logger.debug('✅ Added new student to list:', typedStudent.first_name, typedStudent.last_name)
   
-  // Wähle den neuen Schüler automatisch aus
   selectStudent(typedStudent, true)
   logger.debug('✅ Auto-selected new student')
 }
@@ -729,18 +542,15 @@ const handleStudentAdded = async (newStudent: any) => {
 const selectStudentById = async (userId: string, retryCount = 0) => {
   const maxRetries = 3
   
-  // ✅ DEBUG: Stack trace anzeigen
   logger.debug(`👨‍🎓 StudentSelector: Selecting student by ID: ${userId}, Retry: ${retryCount}`)
   logger.debug('📍 CALL STACK:', new Error().stack)
   
-  // ✅ FIX: Bei Freeslot-Modus Schüler laden aber nicht automatisch auswählen
   if (props.isFreeslotMode) {
     logger.debug('🎯 Freeslot mode detected - loading students but not auto-selecting')
-    // Schüler laden falls noch nicht geladen
     if (availableStudents.value.length === 0) {
       await loadStudents()
     }
-    return null // Keine automatische Auswahl
+    return null
   }
   
   while (isLoading.value) {
@@ -761,7 +571,7 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   const student = availableStudents.value.find(s => s.id === userId)
   
   if (student) {
-    selectStudent(student, false) // Diese Zeile wird jetzt von unserem selectStudent-Fix abgefangen
+    selectStudent(student, false)
     logger.debug('✅ StudentSelector: Student selected by ID:', student.first_name, student.last_name)
     return student
   } else {
@@ -775,7 +585,7 @@ const selectStudentById = async (userId: string, retryCount = 0) => {
   }
 }
 
-watch(() => props.showAllStudents, (newVal) => { // <--- HIER newVal HINZUFÜGEN
+watch(() => props.showAllStudents, (newVal) => {
   showAllStudentsLocal.value = newVal;
   logger.debug('👀 Watcher: showAllStudents changed to:', newVal);
   if (props.currentUser?.id) { 
@@ -786,25 +596,19 @@ watch(() => props.showAllStudents, (newVal) => { // <--- HIER newVal HINZUFÜGEN
   }
 });
 
-// Watchers
 watch(showAllStudentsLocal, async () => {
   logger.debug('🔄 Toggle changed:', showAllStudentsLocal.value)
   await loadStudents()
 })
 
-// StudentSelector.vue
-// ...
-// Füge DIESEN WATCHER HINZU ODER PASSE IHN AN, falls nicht exakt so
 watch(() => props.currentUser?.id, (newId) => {
   logger.debug('👀 Watcher: currentUser.id changed to:', newId, 'autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'showAllStudents:', props.showAllStudents);
   
   if (props.autoLoad && !props.isFreeslotMode && newId) {
     logger.debug('🚀 Triggering loadStudents from watcher (autoLoad & not freeslot & id available)');
-    // ZEILE 601: Sicherstellen, dass 'editStudentId' als Prop existiert
     loadStudents(props.editStudentId); 
   } else if (props.showAllStudents && (newId || !props.autoLoad)) {
       logger.debug('🚀 Triggering loadStudents from watcher (showAllStudents enabled)');
-      // ZEILE 607: Sicherstellen, dass 'editStudentId' als Prop existiert
       loadStudents(props.editStudentId);
   } else if (!newId) {
       logger.debug('Waiting for currentUser ID to become available to trigger loadStudents.');
@@ -813,20 +617,18 @@ watch(() => props.currentUser?.id, (newId) => {
 
 onMounted(() => {
   logger.debug('📚 StudentSelector mounted, autoLoad:', props.autoLoad, 'isFreeslotMode:', props.isFreeslotMode, 'currentUser.id:', props.currentUser?.id, 'showAllStudents:', props.showAllStudents);
-  // Stelle sicher, dass HIER KEIN loadStudents() Aufruf mehr ist!
   if (!props.autoLoad || props.isFreeslotMode || (!props.currentUser?.id && !props.showAllStudents)) {
     logger.debug('🚫 Initial auto-load conditions not met. Waiting for props or user action.');
   }
   
   // ✅ FIX: Enable clicks after a short delay to prevent ghost clicks from calendar
-  // This prevents the free slot click from propagating to the first student item
   setTimeout(() => {
     clicksEnabled.value = true
     logger.debug('✅ StudentSelector: Clicks now enabled (after 300ms delay)')
   }, 300)
 });
 
-watch(() => props.autoLoad, (newVal) => { // <--- HIER newVal HINZUFÜGEN
+watch(() => props.autoLoad, (newVal) => {
   logger.debug('🔄 autoLoad prop changed to:', newVal);
   if (newVal && props.currentUser?.id && !props.isFreeslotMode) {
     logger.debug('🚀 autoLoad enabled and ID available, triggering loadStudents.');
@@ -836,10 +638,8 @@ watch(() => props.autoLoad, (newVal) => { // <--- HIER newVal HINZUFÜGEN
   }
 });
 
-// ✅ FIX: Reset click protection when freeslot mode changes (new modal opened)
 watch(() => props.isFreeslotMode, (newVal) => {
   if (newVal) {
-    // New freeslot mode - reset click protection
     clicksEnabled.value = false
     logger.debug('🔄 Freeslot mode changed - resetting click protection')
     setTimeout(() => {

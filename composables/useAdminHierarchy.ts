@@ -68,8 +68,8 @@ export const useAdminHierarchy = () => {
 
     const current = currentUser.value
 
-    // Master admin can manage anyone
-    if (current.role === 'master_admin') return true
+    // Super admin can manage anyone
+    if (current.role === 'super_admin') return true
 
     // Primary admin can manage sub-admins and regular users in same tenant
     if (current.admin_level === 'primary_admin' && current.tenant_id === targetUser.tenant_id) {
@@ -94,8 +94,8 @@ export const useAdminHierarchy = () => {
 
     const current = currentUser.value
 
-    // Master admin can restore anyone
-    if (current.role === 'master_admin') return true
+    // Super admin can restore anyone
+    if (current.role === 'super_admin') return true
 
     // Primary admin can restore users in same tenant
     if (current.admin_level === 'primary_admin' && current.tenant_id === targetUser.tenant_id) {
@@ -285,8 +285,8 @@ export const useAdminHierarchy = () => {
         `)
         .not('deleted_at', 'is', null)
 
-      // Filter by tenant unless master admin
-      if (currentUser.value.role !== 'master_admin') {
+      // Filter by tenant unless super admin
+      if (currentUser.value.role !== 'super_admin') {
         query = query.eq('tenant_id', currentUser.value.tenant_id)
       }
 
@@ -303,12 +303,12 @@ export const useAdminHierarchy = () => {
   }
 
   // Computed properties
-  const isMasterAdmin = computed(() => currentUser.value?.role === 'master_admin')
+  const isSuperAdmin = computed(() => currentUser.value?.role === 'super_admin')
   const isPrimaryAdmin = computed(() => currentUser.value?.is_primary_admin === true)
   const isSubAdmin = computed(() => currentUser.value?.admin_level === 'sub_admin')
   
   const adminLevel = computed(() => {
-    if (isMasterAdmin.value) return 'Master Admin'
+    if (isSuperAdmin.value) return 'Super Admin'
     if (isPrimaryAdmin.value) return 'Primary Admin'
     if (isSubAdmin.value) return 'Sub Admin'
     return 'Regular User'
@@ -321,7 +321,7 @@ export const useAdminHierarchy = () => {
     error: readonly(error),
 
     // Computed
-    isMasterAdmin,
+    isSuperAdmin,
     isPrimaryAdmin,
     isSubAdmin,
     adminLevel,

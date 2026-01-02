@@ -36,14 +36,27 @@
 
         <!-- Actions -->
         <div class="flex items-center gap-4">
-          <!-- Back to Main Admin -->
-          
-          <!-- User Info -->
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center">
-              <span class="text-sm font-medium">SA</span>
+          <!-- User Info with Dropdown -->
+          <div class="relative group">
+            <button class="flex items-center gap-2 hover:bg-blue-800 px-3 py-2 rounded-lg transition-colors">
+              <div class="w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium">SA</span>
+              </div>
+              <span class="hidden md:block text-sm">Super Admin</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+              </svg>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div class="absolute right-0 mt-0 w-48 bg-white text-gray-900 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <button
+                @click="handleLogout"
+                class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600 rounded-lg"
+              >
+                Abmelden
+              </button>
             </div>
-            <span class="hidden md:block text-sm">Super Admin</span>
           </div>
         </div>
       </div>
@@ -80,9 +93,13 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from '#app'
+import { useRoute, navigateTo } from '#app'
+import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
 
 const route = useRoute()
+const { logout } = useAuthStore()
+const { showSuccess, showError } = useUIStore()
 
 // Dynamic page title based on route
 const currentPageTitle = computed(() => {
@@ -98,6 +115,17 @@ const currentPageTitle = computed(() => {
   
   return 'Tenant Admin'
 })
+
+// Logout function
+const handleLogout = async () => {
+  try {
+    await logout()
+    showSuccess('Erfolgreich abgemeldet')
+    await navigateTo('/login')
+  } catch (error) {
+    showError('Fehler beim Abmelden: ' + (error?.message || 'Unbekannter Fehler'))
+  }
+}
 </script>
 
 <style scoped>

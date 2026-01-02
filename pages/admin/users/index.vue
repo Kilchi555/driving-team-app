@@ -1327,7 +1327,7 @@ const getRoleLabel = (user: User): string => {
   const labels: Record<string, string> = {
     'client': 'Kunde',
     'staff': 'Fahrlehrer',
-    'master_admin': 'Masteradmin'
+    'super_admin': 'Superadmin'
   }
   return labels[user.role] || user.role
 }
@@ -1342,7 +1342,7 @@ const getRoleBadgeClass = (user: User): string => {
   const classes: Record<string, string> = {
     'client': 'bg-blue-100 text-blue-800',
     'staff': 'bg-purple-100 text-purple-800',
-    'master_admin': 'bg-purple-100 text-purple-800 border-2 border-purple-400'
+    'super_admin': 'bg-purple-100 text-purple-800 border-2 border-purple-400'
   }
   return classes[user.role] || 'bg-gray-100 text-gray-800'
 }

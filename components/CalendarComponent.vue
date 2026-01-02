@@ -775,103 +775,48 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
 }
 
 const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date) => {
-  logger.debug('🔥 NEW loadRegularAppointments function is running!')
+  logger.debug('🔥 loadRegularAppointments using backend API!')
   isLoadingEvents.value = true
   try {
-    logger.debug('🔄 Loading appointments from Supabase...')
-    logger.debug('👤 Current user from props:', props.currentUser?.id)
+    logger.debug('🔄 Loading appointments via backend API...')
     
-    // ✅ Fallback: useCurrentUser direkt verwenden falls props falsch sind
-    const { currentUser: composableCurrentUser } = useCurrentUser()
-    let actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
-    
-    logger.debug('👤 Actual user ID to use:', actualUserId)
-    
-    // Get user's tenant_id for filtering
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', actualUserId)
-      .single()
-    
-    if (userError) throw userError
-    if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
-    
-    logger.debug('🏢 User tenant_id:', userData.tenant_id)
+    // Get auth session for API call
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
+    }
 
-    // ✅ Optimierte Abfrage mit weniger JOINs für bessere Performance
-    let query = supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        type,
-        event_type_code,
-        status,
-        duration_minutes,
-        location_id,
-        user_id,
-        staff_id,
-        created_by,
-        description,
-        user:users!appointments_user_id_fkey(first_name, last_name, category, phone, email),
-        staff:users!appointments_staff_id_fkey(first_name, last_name),
-        created_by_user:users!appointments_created_by_fkey(first_name, last_name)
-      `)
-      .is('deleted_at', null) // ✅ Soft Delete Filter
-      .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
-      .order('start_time')
-    
-    // ✅ VIEWPORT-BASED LOADING: Nur Termine im sichtbaren Bereich laden
-    if (viewStartDate && viewEndDate) {
-      const startISO = viewStartDate.toISOString()
-      const endISO = viewEndDate.toISOString()
-      
-      logger.debug('📅 VIEWPORT LOADING - Date range:', {
-        start: startISO,
-        end: endISO,
-        durationDays: Math.round((viewEndDate.getTime() - viewStartDate.getTime()) / (1000 * 60 * 60 * 24))
-      })
-      
-      query = query
-        .gte('start_time', startISO)
-        .lt('start_time', endISO) // Appointments die im Viewport starten
-    } else {
-      logger.debug('⚠️ No viewport dates provided, using fallback limit(1000)')
-      query = query.limit(1000) // Fallback wenn kein Viewport
-    }
-    
-    // ✅ Admin vs Staff Logic: Admins sehen alle Termine, Staff nur eigene
-    const userRole = props.currentUser?.role || composableCurrentUser.value?.role
-    if (userRole === 'admin') {
-      logger.debug('🔥 Admin detected - loading appointments for tenant:', userData.tenant_id)
-      // Admin Staff Filter: Wenn ein spezifischer Staff ausgewählt ist
-      if (props.adminStaffFilter) {
-        logger.debug('🔥 Admin filtering by staff:', props.adminStaffFilter)
-        query = query.eq('staff_id', props.adminStaffFilter)
-      } else {
-        logger.debug('🔥 Admin loading ALL appointments for tenant')
-        // Alle Termine des Tenants (kein zusätzlicher Filter)
-      }
-    } else {
-      logger.debug('🔥 Staff detected - loading own appointments only for tenant:', userData.tenant_id)
-      query = query.eq('staff_id', actualUserId) // Nur eigene Termine
-    }
-    
-    const { data: appointments, error } = await query
-    logger.debug('📊 Raw appointments from DB:', appointments?.length || 0)
-    logger.debug('🔍 Query details:', {
-      staff_id: actualUserId,
-      tenant_id: userData.tenant_id,
-      deleted_at: 'null',
-      order: 'start_time',
-      viewportDates: viewStartDate && viewEndDate ? 'YES' : 'NO'
+    // Build query parameters
+    const params = new URLSearchParams()
+    if (viewStartDate) params.append('viewStart', viewStartDate.toISOString())
+    if (viewEndDate) params.append('viewEnd', viewEndDate.toISOString())
+    if (props.adminStaffFilter) params.append('adminStaffFilter', props.adminStaffFilter)
+
+    logger.debug('📡 Calling API with params:', {
+      viewStart: viewStartDate?.toISOString(),
+      viewEnd: viewEndDate?.toISOString(),
+      adminStaffFilter: props.adminStaffFilter
     })
-    if (error) {
-      console.error('❌ Supabase query error:', error)
+
+    // Call backend API
+    const response = await $fetch(`/api/calendar/get-appointments?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load appointments from API')
     }
+
+    const appointments = response.data
+
+    logger.debug('📊 Raw appointments from API:', appointments?.length || 0)
+    logger.debug('🔍 Query details:', {
+      viewportDates: viewStartDate && viewEndDate ? 'YES' : 'NO',
+      count: appointments.length
+    })
 
     // ✅ DEBUG: Erste Appointment prüfen
     if (appointments && appointments.length > 0) {
@@ -880,39 +825,17 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         title: appointments[0].title,
         type: appointments[0].type,
         event_type_code: appointments[0].event_type_code,
-        appointment_type: appointments[0].event_type_code || 'lesson',
+        user: appointments[0].user,
+        staff: appointments[0].staff,
         start_time: appointments[0].start_time,
         duration_minutes: appointments[0].duration_minutes
       })
     } else {
-      logger.debug('❌ NO APPOINTMENTS FOUND!')
-      logger.debug('🔍 Debug info:', {
-        actualUserId,
-        tenant_id: userData.tenant_id,
-        userRole: userRole,
-        viewportProvided: viewStartDate && viewEndDate ? 'YES' : 'NO'
-      })
+      logger.debug('ℹ️ No appointments found')
     }
     
-    if (error) throw error
-    
-    // Filtern: Admins sehen alle Termine (oder gefilterte), Staff nur eigene
-    const filteredAppointments = (appointments || []).filter((apt) => {
-      if (userRole === 'admin') {
-        if (props.adminStaffFilter) {
-          const isSelectedStaff = apt.staff_id === props.adminStaffFilter
-          logger.debug('🔍 Admin staff filter check:', { aptStaffId: apt.staff_id, selectedStaff: props.adminStaffFilter, isSelectedStaff })
-          return isSelectedStaff // Admin sieht nur Termine des ausgewählten Staff
-        } else {
-          logger.debug('🔍 Admin filter: showing all appointments')
-          return true // Admin sieht alle Termine
-        }
-      } else {
-        const isOwnAppointment = apt.staff_id === actualUserId
-        logger.debug('🔍 Staff filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
-        return isOwnAppointment // Staff nur eigene Termine
-      }
-    })
+    // Use appointments directly (authorization handled by backend)
+    const filteredAppointments = appointments || []
     
     logger.debug('✅ Filtered appointments:', filteredAppointments.length)
     
@@ -942,6 +865,10 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
     const convertedEvents = filteredAppointments.map((apt) => {
       const isTeamInvite = apt.type === 'team_invite'
       
+      // ✅ Handle both array and object formats for user data
+      const userObj = Array.isArray(apt.user) ? apt.user?.[0] : apt.user
+      const studentName = `${userObj?.first_name || ''} ${userObj?.last_name || ''}`.trim() || 'Fahrlektion'
+      
       // ✅ Event-Titel bestimmen
       let eventTitle = ''
       if (apt.type === 'lesson' || !apt.type) {
@@ -951,15 +878,15 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
             (apt as any).location_name || 
             (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
         
-        const studentName = `${apt.user?.[0]?.first_name || ''} ${apt.user?.[0]?.last_name || ''}`.trim() || 'Fahrlektion'
-        
         // ✅ Debug: Location-Daten loggen
         logger.debug('🔍 Location debug for appointment:', apt.id, {
           location_id: apt.location_id,
           location_name: (apt as any).location_name,
           location_address: (apt as any).location_address,
           locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
-          final_locationText: locationText
+          final_locationText: locationText,
+          userObj: userObj,
+          studentName: studentName
         })
         
         // ✅ Titel mit Location kombinieren falls vorhanden
@@ -1037,11 +964,11 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
           client_note: '',
-          category: (apt as any).user?.category || apt.type || 'B',
+          category: userObj?.category || apt.type || 'B',
           instructor: `${(apt as any).staff?.first_name || ''} ${(apt as any).staff?.last_name || ''}`.trim(),
-          student: `${(apt as any).user?.first_name || ''} ${(apt as any).user?.last_name || ''}`.trim(),
-          phone: (apt as any).user?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
-          email: (apt as any).user?.email || '', // ✅ NEU: Email für Email-Benachrichtigungen
+          student: studentName,
+          phone: userObj?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
+          email: userObj?.email || '', // ✅ NEU: Email für Email-Benachrichtigungen
           created_by: `${(apt as any).created_by_user?.first_name || ''} ${(apt as any).created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
           price: 0, // Preis wird nicht mehr in appointments gespeichert
           user_id: apt.user_id,

@@ -5,6 +5,13 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  validateAppointmentData,
+  validateDuration,
+  validateUUID,
+  sanitizeString,
+  throwIfInvalid
+} from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -27,13 +34,23 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('📝 Creating appointment:', body)
 
-    // Validierung
-    if (!user_id || !staff_id || !start_time || !end_time || !type || !tenant_id) {
-      throw createError({
-        statusCode: 400,
-        message: 'Missing required fields'
-      })
-    }
+    // Validierung mit centralized validator
+    const validation = validateAppointmentData({
+      user_id,
+      staff_id,
+      start_time,
+      end_time,
+      duration_minutes,
+      type,
+      event_type_code,
+      status,
+      tenant_id,
+      location_id,
+      custom_location_name,
+      custom_location_address
+    })
+    
+    throwIfInvalid(validation)
 
     const supabase = getSupabaseAdmin()
 
@@ -90,7 +107,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Appointment created:', appointment.id)
 
-    // 1b. Auto-assign staff to customer on first appointment with this staff
+    // 1b. Auto-assign staff to customer on first appointment with this staff (via service role)
     try {
       const { data: userData, error: userFetchError } = await supabase
         .from('users')

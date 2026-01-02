@@ -10,7 +10,11 @@
     "postinstall": "nuxt prepare",
     "clean:local-supabase": "rm -rf supabase/ && rm -f supabase_*.tar.gz && echo '✅ Local Supabase files cleaned'",
     "check:cloud-only": "npm run clean:local-supabase && echo '🎯 Only Cloud Supabase allowed!'",
-    "predev": "npm run clean:local-supabase"
+    "predev": "npm run clean:local-supabase",
+    "test": "node test-validators-simple.js",
+    "test:validators": "node test-validators-simple.js",
+    "test:api": "bash test-api-validation.sh",
+    "test:watch": "npm run test:validators && npm run test:validators"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.17",
@@ -38,8 +42,10 @@
   "devDependencies": {
     "@nuxt/eslint": "^0.5.7",
     "@types/node": "^24.0.12",
+    "@vitest/ui": "^2.0.0",
     "eslint": "^8.57.1",
     "typescript": "^5.8.3",
+    "vitest": "^2.0.0",
     "vue-tsc": "^2.2.12"
   },
   "version": "1.0.0",

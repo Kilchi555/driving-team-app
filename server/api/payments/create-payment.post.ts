@@ -2,6 +2,13 @@
 import { defineEventHandler, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  validatePaymentData,
+  validateAmount,
+  validateUUID,
+  throwIfInvalid,
+  throwValidationError
+} from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,6 +18,18 @@ export default defineEventHandler(async (event) => {
     if (!paymentData) {
       throw new Error('Payment data is required')
     }
+
+    // Validate payment data
+    const validation = validatePaymentData({
+      user_id: paymentData.user_id,
+      appointment_id: paymentData.appointment_id,
+      total_amount_rappen: paymentData.total_amount_rappen,
+      payment_status: paymentData.payment_status,
+      payment_method: paymentData.payment_method,
+      currency: paymentData.currency
+    })
+    
+    throwIfInvalid(validation)
 
     logger.debug('💳 Server: Creating payment with data:', {
       appointment_id: paymentData.appointment_id,

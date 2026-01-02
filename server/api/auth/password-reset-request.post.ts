@@ -4,6 +4,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
+import { validateRequiredString, throwValidationError } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,8 +16,28 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('🔐 Password reset request from IP:', ipAddress)
     
+    // Parse body first for validation and rate limiting
+    const body = await readBody(event)
+    const { contact, method, tenantId } = body
+
+    // Validate input
+    const errors: Record<string, string> = {}
+    
+    const contactValidation = validateRequiredString(contact, 'E-Mail oder Telefonnummer', 255)
+    if (!contactValidation.valid) {
+      errors.contact = contactValidation.error!
+    }
+    
+    if (!method || !['email', 'phone', 'sms'].includes(String(method).toLowerCase())) {
+      errors.method = 'Methode muss "email" oder "phone" sein'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      throwValidationError(errors)
+    }
+    
     // Apply rate limiting (max 5 attempts per 15 minutes)
-    const rateLimit = checkRateLimit(ipAddress, 'password_reset', 5, 15 * 60)
+    const rateLimit = await checkRateLimit(ipAddress, 'password_reset', 5, 15 * 60 * 1000, contact, tenantId)
     if (!rateLimit.allowed) {
       console.warn('⚠️ Password reset rate limit exceeded for IP:', ipAddress)
       throw createError({
@@ -25,16 +46,6 @@ export default defineEventHandler(async (event) => {
       })
     }
     logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
-
-    const body = await readBody(event)
-    const { contact, method } = body
-
-    if (!contact || !method) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'E-Mail-Adresse oder Telefonnummer und Methode erforderlich'
-      })
-    }
 
     // Normalize method: 'phone' -> 'sms'
     const normalizedMethod = method === 'phone' ? 'sms' : method

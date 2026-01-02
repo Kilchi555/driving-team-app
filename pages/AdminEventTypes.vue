@@ -145,7 +145,7 @@
               v-model="formData.default_duration_minutes"
               type="number"
               min="15"
-              max="480"
+              max="600"
               step="15"
               class="w-32 p-3 border border-gray-300 rounded-lg"
             />

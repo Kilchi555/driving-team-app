@@ -3,6 +3,14 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
+import {
+  validateRequiredString,
+  validatePassword,
+  validateEmail,
+  validateUUID,
+  sanitizeString,
+  throwValidationError
+} from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,7 +23,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('Register', '🔍 Registration attempt from IP:', ipAddress)
     
     // Check rate limit
-    const rateLimit = checkRateLimit(ipAddress)
+    const rateLimit = await checkRateLimit(ipAddress, 'register', undefined, undefined, email, tenantId)
     if (!rateLimit.allowed) {
       console.warn('⚠️ Rate limit exceeded for IP:', ipAddress)
       throw createError({
@@ -44,12 +52,30 @@ export default defineEventHandler(async (event) => {
       captchaToken
     } = body
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !password || !tenantId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Erforderliche Felder fehlen'
-      })
+    // Validate required fields with centralized validators
+    const errors: Record<string, string> = {}
+    
+    const firstNameValidation = validateRequiredString(firstName, 'Vorname', 100)
+    if (!firstNameValidation.valid) errors.firstName = firstNameValidation.error!
+    
+    const lastNameValidation = validateRequiredString(lastName, 'Nachname', 100)
+    if (!lastNameValidation.valid) errors.lastName = lastNameValidation.error!
+    
+    if (!validateEmail(email)) {
+      errors.email = 'Ungültige E-Mail-Adresse'
+    }
+    
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.valid) {
+      errors.password = passwordValidation.message!
+    }
+    
+    if (!tenantId || !validateUUID(tenantId)) {
+      errors.tenantId = 'Ungültige Mandanten-ID'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      throwValidationError(errors)
     }
     
     // Debug: Log categories to verify they're being sent correctly
