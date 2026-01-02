@@ -4,7 +4,12 @@
     
     <header class="hero">
       <div class="container">
-        <span class="pill text-center">Für KMU: Fahrschulen • Coaches • Studios • Agenturen</span>
+        <!-- Für KMU Label mit Logo -->
+        <div class="kmu-label">
+          <span class="pill">Für KMU: Fahrschulen • Coaches • Studios • Agenturen</span>
+          <img src="/simy-logo.png" alt="Simy Logo" class="kmu-logo">
+        </div>
+        
         <h1 class="title" style="margin-top:30px">Simy – Die smarte Business‑Plattform für KMU</h1>
         <p class="lead">Termine, Zahlungen, Kundenverwaltung und Branding – alles in einer Plattform. Schnell startklar, flexibel erweiterbar.</p>
         <div class="cta">
@@ -184,14 +189,14 @@ useHead({
 .lead { margin-top:12px; font-size:18px; color:#475569; }
 .cta { margin-top:24px; display:flex; gap:12px; flex-wrap:wrap }
 .btn { display:inline-flex; align-items:center; justify-content:center; padding:12px 20px; border-radius:10px; font-weight:600; text-decoration:none }
-.btn-primary { background:#2563eb; color:#fff }
-.btn-secondary { border:1px solid #e2e8f0; color:#2563eb; background:#fff }
-.pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#eef2ff; color:#3730a3; font-weight:600; font-size:12px }
+.btn-primary { background:#7C3AED; color:#fff }
+.btn-secondary { border:1px solid #e2e8f0; color:#7C3AED; background:#fff }
+.pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#ede9fe; color:#6d28d9; font-weight:600; font-size:12px }
 .hero-icons { position:absolute; inset:0; pointer-events:none }
 .icon { position:absolute; opacity:.18; filter:blur(.2px) }
 .icon svg { width:48px; height:48px }
-.i1{ top:10%; left:6%; color:#2563eb; animation:floatA 16s ease-in-out infinite }
-.i2{ top:22%; right:8%; color:#4f46e5; animation:floatB 15s ease-in-out infinite }
+.i1{ top:10%; left:6%; color:#7C3AED; animation:floatA 16s ease-in-out infinite }
+.i2{ top:22%; right:8%; color:#7C3AED; animation:floatB 15s ease-in-out infinite }
 .i3{ bottom:18%; left:12%; color:#10b981; animation:floatC 18s ease-in-out infinite }
 .i4{ bottom:10%; right:10%; color:#06b6d4; animation:floatB 14.5s ease-in-out infinite reverse }
 .i5{ top:46%; left:44%; color:#f59e0b; animation:floatA 19s ease-in-out infinite alternate }
@@ -281,4 +286,25 @@ useHead({
 /* Responsive typography */
 @media (max-width: 480px){ .title { font-size:30px } }
 @media (max-width: 360px){ .title { font-size:26px } }
+
+/* KMU Label with Logo */
+.kmu-label { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:24px; width:100% }
+.pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#ede9fe; color:#6d28d9; font-weight:600; font-size:12px }
+.kmu-logo { height:40px; width:auto; filter:drop-shadow(0 2px 4px rgba(124,58,237,0.2)); flex-shrink:0 }
+@media (max-width: 768px){ 
+  .kmu-logo { height:36px }
+}
+@media (max-width: 640px){ 
+  .kmu-label { margin-bottom:20px; gap:8px }
+  .kmu-logo { height:32px }
+  .pill { font-size:11px; padding:6px 10px }
+}
+@media (max-width: 550px){ 
+  .kmu-label { flex-direction:column-reverse; align-items:flex-start; margin-bottom:20px }
+  .kmu-logo { height:36px; align-self:flex-start; margin-bottom:8px }
+}
+@media (max-width: 480px){ 
+  .kmu-logo { height:32px }
+  .pill { font-size:10px; padding:5px 8px }
+}
 </style>

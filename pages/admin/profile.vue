@@ -637,7 +637,7 @@
                   <option :value="60">1 Stunde</option>
                   <option :value="120">2 Stunden</option>
                   <option :value="240">4 Stunden</option>
-                  <option :value="480">8 Stunden</option>
+                  <option :value="600">10 Stunden</option>
                 </select>
                 <p class="text-xs text-gray-500 mt-1">
                   Benutzer werden nach dieser Zeit automatisch abgemeldet

@@ -9,27 +9,27 @@
         <div class="flex items-center space-x-4">        
 
         </div>   
-                  <!-- Action-Buttons (nur bei edit/view mode) -->
-          <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-2">
-            
-            <!-- Kopieren Button -->
-            <button
-              @click="handleCopy"
-              class="ml-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
-              title="Termin kopieren"
-            >
-              Kopieren
-            </button>
-            
-            <!-- Löschen Button -->
-            <button
-              @click="handleDelete"
-              class="px-3 py-1.5 bg-red-600 text-white hover:bg-red-700 rounded text-sm transition-colors"
-              title="Termin löschen"
-            >
-              Löschen
-            </button>
-          </div>
+        <!-- Action-Buttons (nur bei edit/view mode) -->
+        <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-2">
+          
+          <!-- Kopieren Button -->
+          <button
+            @click="handleCopy"
+            class="ml-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
+            title="Termin kopieren"
+          >
+            Kopieren
+          </button>
+          
+          <!-- Löschen Button -->
+          <button
+            @click="handleDelete"
+            class="px-3 py-1.5 bg-red-600 text-white hover:bg-red-700 rounded text-sm transition-colors"
+            title="Termin löschen"
+          >
+            Löschen
+          </button>
+        </div>
 
         <!-- ✅ Schließen Button entfernt - Abbrechen Button ist ausreichend -->
       </div>
@@ -248,11 +248,6 @@
               @products-changed="handleProductsChanged"
               @price-changed="handlePriceChanged"
             />
-          </div>
-
-          <!-- Error Display -->
-          <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p class="text-sm text-red-800">❌ {{ error }}</p>
           </div>
 
           <!-- Loading Display -->
@@ -955,6 +950,25 @@ const handleSaveAppointment = async () => {
     logger.debug('💾 Starting appointment save...')
     isLoading.value = true
     error.value = ''
+    
+    // ✅ FRONTEND TIME VALIDATION - Check if start < end BEFORE saving
+    const startTime = new Date(`2000-01-01 ${formData.value.startTime}`)
+    const endTime = new Date(`2000-01-01 ${formData.value.endTime}`)
+    
+    if (startTime >= endTime) {
+      error.value = 'Startzeit muss vor Endzeit liegen'
+      isLoading.value = false
+      logger.warn('⚠️ Time validation failed:', { startTime: formData.value.startTime, endTime: formData.value.endTime })
+      return
+    }
+    
+    // ✅ FRONTEND DURATION VALIDATION - Check if duration is within valid range
+    if (formData.value.duration_minutes < 15 || formData.value.duration_minutes > 600) {
+      error.value = `Dauer muss zwischen 15 und 600 Minuten liegen (aktuell: ${formData.value.duration_minutes} min)`
+      isLoading.value = false
+      logger.warn('⚠️ Duration validation failed:', { duration: formData.value.duration_minutes })
+      return
+    }
     
     // ✅ NEU: Auto-save billing address before saving appointment
     if (selectedStudent.value && priceDisplayRef.value) {

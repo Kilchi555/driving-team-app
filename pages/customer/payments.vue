@@ -272,9 +272,9 @@
             <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <!-- Jetzt bezahlen Button -->
               <button @click="payIndividual(payment)"
-                      :disabled="isProcessingPayment || isConvertingToOnline"
+                      :disabled="processingPaymentIds.has(payment.id)"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                {{ isProcessingPayment || isConvertingToOnline ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+                {{ processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
               </button>
             </div>
           </div>
@@ -356,6 +356,7 @@ const error = ref<string | null>(null)
 const isProcessingPayment = ref(false)
 const isProcessingReceipt = ref(false)
 const isConvertingToOnline = ref(false) // Used in payIndividual to show processing state
+const processingPaymentIds = ref<Set<string>>(new Set()) // Track which payments are being processed
 const statusFilter = ref('all')
 const methodFilter = ref('all')
 const showDetailsModal = ref(false)
@@ -601,7 +602,8 @@ const payAllUnpaid = async () => {
 const payIndividual = async (payment: any) => {
   if (!payment || !payment.id) return
   
-  isProcessingPayment.value = true
+  // Add this payment ID to the processing set
+  processingPaymentIds.value.add(payment.id)
   
   try {
     // Get current user
@@ -753,7 +755,13 @@ const payIndividual = async (payment: any) => {
     // ✅ Load appointment data for merchant reference
     const { data: appointmentData } = await supabase
       .from('appointments')
-      .select('id, type, event_type_code, start_time, duration_minutes')
+      .select(`
+        id, 
+        type, 
+        event_type_code, 
+        start_time, 
+        duration_minutes
+      `)
       .eq('id', payment.appointment_id)
       .single()
     
@@ -763,6 +771,7 @@ const payIndividual = async (payment: any) => {
       appointmentId: appointmentData?.id,
       eventTypeCode: appointmentData?.event_type_code,
       categoryCode: appointmentData?.type,
+      categoryName: appointmentData?.type,  // Use type as fallback
       staffName: customerName, // Customer name in staffName field
       startTime: appointmentData?.start_time,
       durationMinutes: appointmentData?.duration_minutes
@@ -848,7 +857,8 @@ const payIndividual = async (payment: any) => {
     console.error('❌ Error initiating individual payment:', err)
     alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
   } finally {
-    isProcessingPayment.value = false
+    // Remove this payment ID from the processing set
+    processingPaymentIds.value.delete(payment.id)
   }
 }
 

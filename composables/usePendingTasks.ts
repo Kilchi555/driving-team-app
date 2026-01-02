@@ -212,342 +212,71 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
   try {
     const supabase = getSupabase()
     
-    // Get user's tenant_id for filtering
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    if (userError) throw userError
-    if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
-    
-    // Je nach User-Rolle unterschiedliche Abfragen
-    let query = supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        user_id,
-        status,
-        event_type_code,
-        type,
-        created_by,
-        tenant_id,
-        users!appointments_user_id_fkey (
-          first_name,
-          last_name,
-          category
-        ),
-        created_by_user:created_by (
-          first_name,
-          last_name
-        ),
-        notes (
-          evaluation_criteria_id,
-          criteria_rating
-        ),
-        exam_results (
-          id,
-          passed
-        ),
-        payments (
-          id,
-          payment_method,
-          payment_status,
-          total_amount_rappen,
-          metadata
-        )
-      `)
-      .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
-    
-    // Für Client: Nach user_id filtern (ihre eigenen Termine)
-    // Für Staff: Nach staff_id filtern (ihre eigenen Termine)
-    // Für Admin: Alle Termine (kein Filter)
-    if (userRole === 'client') {
-      logger.debug('🔥 Client detected - filtering by user_id, tenant:', userData.tenant_id)
-      query = query.eq('user_id', userId)
-    } else if (userRole === 'admin') {
-      logger.debug('🔥 Admin detected - loading ALL appointments for tenant:', userData.tenant_id)
-      // Admins sehen alle Termine des Tenants (kein zusätzlicher Filter)
-    } else {
-      logger.debug('🔥 Staff detected - filtering by staff_id, tenant:', userData.tenant_id)
-      query = query.eq('staff_id', userId)
-    }
-    
-    // Debug: Zeige die aktuelle Query
-    if (userRole === 'client') {
-      logger.debug('🔥 Query filter: user_id =', userId)
-    } else if (userRole === 'admin') {
-      logger.debug('🔥 Query filter: admin - no filter (all appointments)')
-    } else {
-      logger.debug('🔥 Query filter: staff_id =', userId)
-    }
-    
-    // ✅ ZWEI QUERIES: 1. Abgeschlossene Termine ohne Evaluation, 2. Nicht-bestätigte Termine
-    // Query 1: Abgeschlossene Termine ohne Evaluation
-    const { data, error: fetchError } = await query
-      .lt('start_time', toLocalTimeString(new Date)) // ✅ Termine die bereits gestartet haben
-      .in('status', ['completed', 'confirmed', 'scheduled']) // Alle relevanten Status für Pendenzen
-      .is('deleted_at', null) // ✅ Soft Delete Filter - nur nicht gelöschte Termine
-      .in('event_type_code', ['lesson', 'exam', 'theory']) // ✅ lesson, exam UND theory Event Types
-      .order('start_time', { ascending: true }) // Älteste zuerst (überfällige zuerst)
-    
-    // Query 2: Nicht-bestätigte Termine (nur für Staff/Admin, nicht für Clients)
-    let unconfirmedAppointments: any[] = []
-    logger.debug('🔍 Checking userRole for unconfirmed query:', userRole, 'type:', typeof userRole)
-    if (userRole === 'staff' || userRole === 'admin') {
-      logger.debug('✅ Loading unconfirmed appointments for', userRole)
-      let unconfirmedQuery = supabase
-        .from('appointments')
-        .select(`
-          id,
-          title,
-          start_time,
-          end_time,
-          user_id,
-          status,
-          event_type_code,
-          type,
-          created_by,
-          tenant_id,
-          confirmation_token,
-          users!appointments_user_id_fkey (
-            first_name,
-            last_name,
-            category
-          ),
-          created_by_user:created_by (
-            first_name,
-            last_name
-          ),
-          payments (
-            id,
-            payment_method,
-            payment_status,
-            total_amount_rappen,
-            metadata
-          )
-        `)
-        .eq('tenant_id', userData.tenant_id)
-        .eq('status', 'pending_confirmation')
-        .not('confirmation_token', 'is', null)
-        .is('deleted_at', null)
-        .in('event_type_code', ['lesson', 'exam', 'theory'])
-        .order('start_time', { ascending: true })
-      
-      // Filter nach staff_id für Staff, alle für Admin
-      if (userRole === 'staff') {
-        unconfirmedQuery = unconfirmedQuery.eq('staff_id', userId)
-      }
-      
-      const { data: unconfirmedData, error: unconfirmedError } = await unconfirmedQuery
-      
-      if (unconfirmedError) {
-        console.warn('⚠️ Error loading unconfirmed appointments:', unconfirmedError)
-      } else {
-        unconfirmedAppointments = unconfirmedData || []
-        logger.debug(`📋 Found ${unconfirmedAppointments.length} unconfirmed appointments`)
-      }
+    // Get auth session for API call
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
     }
 
-    if (fetchError) {
-      console.error('❌ Supabase query error in usePendingTasks:', fetchError)
-      throw fetchError
+    // Use the new backend API endpoint that bypasses RLS
+    logger.debug('🚀 Fetching pending appointments via backend API...')
+    const response = await $fetch('/api/admin/get-pending-appointments', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load pending appointments from API')
     }
 
-    logger.debug('🔥 Fetched appointments (raw data):', data?.length)
-    logger.debug('🔥 Raw appointments data:', data)
-    logger.debug('🔍 Query filter details:', {
-      userId,
-      userRole,
-      filterBy: userRole === 'client' ? 'user_id' : 'staff_id',
-      endTime: toLocalTimeString(new Date()),
-      status: ['completed', 'confirmed', 'scheduled'],
-      eventTypes: ['lesson', 'exam']
-    })
-    logger.debug('🔥 Current time for comparison:', toLocalTimeString(new Date()))
-    logger.debug('🔥 User ID being searched:', userId)
+    logger.debug('✅ Pending appointments loaded successfully via API')
 
-    // ✅ NUR abgeschlossene Termine für Bewertungen verwenden (KEINE unbestätigten Termine)
-    const allAppointments = [...(data || [])]
+    const { pending, unconfirmed, withoutPayment } = response.data
     
-    // Termine ohne Kriterienbewertung oder Prüfungsergebnis filtern
-    const pending: PendingAppointment[] = allAppointments.filter((appointment: any) => {
-      // ✅ Zusätzlicher Filter: Stelle sicher, dass nur nicht gelöschte Termine angezeigt werden
-      logger.debug(`🔥 Checking appointment ${appointment.id}: deleted_at = "${appointment.deleted_at}" (type: ${typeof appointment.deleted_at})`)
-      
-      if (appointment.deleted_at !== null && appointment.deleted_at !== undefined) {
-        logger.debug(`🔥 Skipping deleted appointment: ${appointment.id} (${appointment.title})`)
-        return false
+    // Process pending appointments
+    const formattedPending = (pending || []).map((apt: any) => {
+      try {
+        return getFormattedAppointment(apt)
+      } catch (error) {
+        console.error('❌ Error formatting pending appointment:', error, apt)
+        return apt
       }
-      
-      // ✅ Unbestätigte Termine werden NICHT in pendingAppointments aufgenommen
-      // Sie werden separat in unconfirmedNext24h verwaltet
-      if (appointment.status === 'pending_confirmation') {
-        return false
-      }
-      
-      // Für abgeschlossene Termine: Prüfe auf Kriterien-Bewertung
-      const hasCriteriaEvaluation = appointment.notes && 
-        appointment.notes.some((note: any) => 
-          note.evaluation_criteria_id !== null && 
-          note.criteria_rating !== null
-        );
+    }) as any
 
-      // Prüfe auf Prüfungsergebnis
-      const hasExamResult = appointment.exam_results && 
-        appointment.exam_results.length > 0;
+    globalState.pendingAppointments = formattedPending
 
-      // Termin ist erledigt, wenn er entweder eine Kriterien-Bewertung ODER ein Prüfungsergebnis hat
-      const isCompleted = hasCriteriaEvaluation || hasExamResult;
-
-      logger.debug(`🔥 Appointment ${appointment.id} (${appointment.title}):`, {
-        status: appointment.status,
-        start_time: appointment.start_time,
-        end_time: appointment.end_time,
-        deleted_at: appointment.deleted_at,
-        hasCriteriaEvaluation,
-        hasExamResult,
-        isCompleted,
-        notes: appointment.notes,
-        exam_results: appointment.exam_results
-      })
-
-      return !isCompleted; // Pending, wenn weder Kriterien-Bewertung noch Prüfungsergebnis vorhanden ist
-    }).map((appointment: any): PendingAppointment => ({
-      id: appointment.id,
-      title: appointment.title,
-      start_time: appointment.start_time,
-      end_time: appointment.end_time,
-      user_id: appointment.user_id,
-      status: appointment.status,
-      type: appointment.type, // ✅ Explizit type übertragen
-      event_type_code: appointment.event_type_code || appointment.type || 'lesson',
-      created_by: appointment.created_by,
-      users: appointment.users,
-      created_by_user: appointment.created_by_user,
-      // Wichtig: Filtere hier die notes, damit nur relevante Kriterien-notes enthalten sind
-      notes: appointment.notes.filter((note: any) => note.evaluation_criteria_id !== null),
-      // Neue Zahlungsinformationen
-      payments: appointment.payments || []
-    }))
-
-    logger.debug('🔥 Filtered pending appointments:', pending.length)
-    
-    // WICHTIG: Globalen State komplett ersetzen (nicht mutieren)
-    globalState.pendingAppointments = [...pending]
-    
-    // ✅ Speichere ALLE unbestätigten Termine (nicht nur nächste 24h)
-    // Die Filterung nach Fälligkeit erfolgt im Frontend via unconfirmedWithStatus
-    logger.debug('🔥 Raw unconfirmedAppointments before processing:', unconfirmedAppointments)
-    
-    const formattedUnconfirmed = (unconfirmedAppointments || []).map((apt: any) => {
+    // Process unconfirmed appointments
+    const formattedUnconfirmed = (unconfirmed || []).map((apt: any) => {
       try {
         return getFormattedAppointment(apt)
       } catch (error) {
         console.error('❌ Error formatting unconfirmed appointment:', error, apt)
-        // Fallback: return raw appointment
         return apt
       }
     }) as any
-    
+
     globalState.unconfirmedNext24h = formattedUnconfirmed
-    
-    logger.debug('📌 Unconfirmed next 24h:', globalState.unconfirmedNext24h.length)
-    logger.debug('🔥 Unconfirmed next 24h data:', globalState.unconfirmedNext24h)
-    logger.debug('🔥 Global pending state updated, count:', pendingCount.value)
-    
-    // ✅ Query 3: Appointments mit Payment-Methode "on_bill" aber ohne erfolgreichen Payment
-    // Diese Appointments brauchen eine Rechnungsadresse aber haben keine
-    let appointmentsWithoutPaymentData: PendingAppointment[] = []
-    try {
-      if (userRole === 'staff' || userRole === 'admin') {
-        let billableQuery = supabase
-          .from('appointments')
-          .select(`
-            id,
-            title,
-            start_time,
-            end_time,
-            user_id,
-            status,
-            event_type_code,
-            type,
-            created_by,
-            tenant_id,
-            users!appointments_user_id_fkey (
-              first_name,
-              last_name,
-              category
-            ),
-            created_by_user:created_by (
-              first_name,
-              last_name
-            ),
-            payments (
-              id,
-              payment_method,
-              payment_status,
-              total_amount_rappen,
-              company_billing_address_id
-            )
-          `)
-          .eq('tenant_id', userData.tenant_id)
-          .not('deleted_at', 'is', null)
-          .is('deleted_at', null)
-          .in('event_type_code', ['lesson', 'exam', 'theory'])
-        
-        if (userRole === 'staff') {
-          billableQuery = billableQuery.eq('staff_id', userId)
-        }
-        
-        const { data: billableAppointments, error: billableError } = await billableQuery
-        
-        if (billableError) {
-          console.warn('⚠️ Error loading billable appointments:', billableError)
-        } else if (billableAppointments) {
-          // Filter: Appointments die kein Payment oder nur pending Payment mit on_bill haben
-          appointmentsWithoutPaymentData = billableAppointments
-            .filter((apt: any) => {
-              const hasOnBillPayment = apt.payments?.some((p: any) => p.payment_method === 'on_bill')
-              const hasPendingOnBillPayment = apt.payments?.some((p: any) => 
-                p.payment_method === 'on_bill' && p.payment_status === 'pending'
-              )
-              const noCompletedPayment = !apt.payments?.some((p: any) => 
-                p.payment_status === 'completed' || p.payment_status === 'authorized'
-              )
-              
-              // Zeige Warnung wenn: on_bill payment pending aber keine billing address
-              return hasPendingOnBillPayment && noCompletedPayment && !apt.payments?.[0]?.company_billing_address_id
-            })
-            .map((apt: any): PendingAppointment => ({
-              id: apt.id,
-              title: apt.title,
-              start_time: apt.start_time,
-              end_time: apt.end_time,
-              user_id: apt.user_id,
-              status: apt.status,
-              type: apt.type,
-              event_type_code: apt.event_type_code || apt.type || 'lesson',
-              created_by: apt.created_by,
-              users: apt.users,
-              created_by_user: apt.created_by_user,
-              notes: [],
-              payments: apt.payments || []
-            }))
-          
-          logger.debug(`📋 Found ${appointmentsWithoutPaymentData.length} appointments without billing address`)
-        }
+
+    // Process appointments without payment
+    const formattedWithoutPayment = (withoutPayment || []).map((apt: any) => {
+      try {
+        return getFormattedAppointment(apt)
+      } catch (error) {
+        console.error('❌ Error formatting appointment without payment:', error, apt)
+        return apt
       }
-    } catch (err: any) {
-      console.warn('⚠️ Error in billable appointments query:', err)
-    }
-    
-    globalState.appointmentsWithoutPayment = appointmentsWithoutPaymentData
+    }) as any
+
+    globalState.appointmentsWithoutPayment = formattedWithoutPayment
+
+    logger.debug(`✅ Pending tasks loaded:`, {
+      pending: formattedPending.length,
+      unconfirmed: formattedUnconfirmed.length,
+      withoutPayment: formattedWithoutPayment.length
+    })
+    logger.debug('🔥 Global pending state updated, count:', pendingCount.value)
     
 
   } catch (err: any) {

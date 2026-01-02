@@ -591,7 +591,7 @@ const roleLabel = computed(() => {
   const labels: Record<string, string> = {
     'client': 'Kunde',
     'staff': 'Fahrlehrer',
-    'master_admin': 'Masteradministrator'
+    'super_admin': 'Superadministrator'
   }
   return labels[userDetails.value?.role || ''] || 'Unbekannt'
 })

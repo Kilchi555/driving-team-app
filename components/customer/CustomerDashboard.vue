@@ -894,6 +894,52 @@
     @document-uploaded="loadUserDocuments"
   />
   
+  <!-- 💳 Payment Confirmation Dialog -->
+  <Teleport to="body">
+    <div v-if="showPaymentConfirmDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full animate-in fade-in">
+        <!-- Header -->
+        <div class="flex items-center justify-center mb-6">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0zM7 15a1 1 0 11-2 0 1 1 0 012 0z" />
+            </svg>
+          </div>
+        </div>
+        
+        <!-- Content -->
+        <h2 class="text-2xl font-bold text-gray-900 mb-3 text-center">Zahlung erforderlich</h2>
+        <p class="text-gray-600 text-center mb-8">
+          Dein Termin wurde erfolgreich bestätigt! Möchtest du jetzt bezahlen oder später?
+        </p>
+        
+        <!-- Buttons -->
+        <div class="flex gap-3">
+          <!-- Später Button -->
+          <button
+            @click="handlePayLater"
+            :disabled="isProcessingPayment"
+            class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Später
+          </button>
+          
+          <!-- Jetzt Bezahlen Button -->
+          <button
+            @click="handlePayNow"
+            :disabled="isProcessingPayment"
+            class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            <svg v-if="isProcessingPayment" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {{ isProcessingPayment ? 'Wird...' : 'Jetzt' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+  
 </template>
 
 <script setup lang="ts">
@@ -950,6 +996,11 @@ const HOURS_BEFORE_APPOINTMENT_FOR_IMMEDIATE = 24 // Charge immediately if < 24h
 const automaticPaymentHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE)
 const automaticAuthorizationHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE) // Same as capture time
 const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per appointment ID
+
+// Payment Confirmation Dialog State
+const showPaymentConfirmDialog = ref(false)
+const pendingPaymentUrl = ref<string | null>(null)
+const isProcessingPayment = ref(false)
 
 // Profile Modal State
 const showProfileModal = ref(false)
@@ -1549,7 +1600,7 @@ const loadPendingConfirmations = async () => {
     // ✅ Load payment_items für alle payments
     const paymentItemsMap = new Map()
     const paymentIds = confirmationsData
-      .map(apt => (apt.payment && apt.payment.id) || apt.payment_id)
+      .map((apt: any) => (apt.payment && apt.payment.id) || apt.payment_id)
       .filter(Boolean)
     
     if (paymentIds.length > 0) {
@@ -1566,7 +1617,7 @@ const loadPendingConfirmations = async () => {
       if (itemsData) {
         itemsData.forEach(item => {
           // Find the appointment for this payment_id
-          const appointment = confirmationsData.find(apt => 
+          const appointment = confirmationsData.find((apt: any) => 
             (apt.payment && apt.payment.id === item.payment_id) || 
             apt.payment_id === item.payment_id
           )
@@ -1992,8 +2043,8 @@ const confirmAppointment = async (appointment: any) => {
     const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
     
     // ✅ Customer name (not staff name!)
-    const customerName = userDb 
-      ? `${userDb.first_name || ''} ${userDb.last_name || ''}`.trim()
+    const customerName = (userDb as any)
+      ? `${(userDb as any).first_name || ''} ${(userDb as any).last_name || ''}`.trim()
       : ''
     
     const merchantReferenceDetails = {
@@ -2063,9 +2114,10 @@ const confirmAppointment = async (appointment: any) => {
     // ✅ Der Termin ist bereits bestätigt (siehe oben)
     // Wir aktualisieren den Status NICHT mehr hier, da er bereits auf 'confirmed' gesetzt wurde!
 
-    // Direkt zu Wallee weiterleiten
-    logger.debug('🔄 Redirecting to Wallee payment page...')
-    window.location.href = response.paymentUrl
+    // Speichere Wallee-URL und zeige Dialog statt sofort weiterzuleiten
+    logger.debug('💳 Payment created, showing payment confirmation dialog...')
+    pendingPaymentUrl.value = response.paymentUrl
+    showPaymentConfirmDialog.value = true
   } catch (err: any) {
     console.error('❌ Fehler beim Starten der Zahlung:', err)
     displayToast('error', 'Fehler beim Starten der Zahlung', err?.message || 'Unbekannter Fehler')
@@ -2619,6 +2671,35 @@ onMounted(async () => {
     await navigateTo('/')
   }
 })
+
+// Payment Confirmation Dialog Functions
+const handlePayNow = () => {
+  if (pendingPaymentUrl.value) {
+    isProcessingPayment.value = true
+    logger.debug('💳 Redirecting to Wallee payment...')
+    window.location.href = pendingPaymentUrl.value
+  }
+}
+
+const handlePayLater = async () => {
+  showPaymentConfirmDialog.value = false
+  showConfirmationModal.value = false  // ← Close confirmation modal too!
+  pendingPaymentUrl.value = null
+  isProcessingPayment.value = false
+  
+  displayToast('success', 'Erfolg', 'Dein Termin ist bestätigt! Du kannst später von deinem Dashboard bezahlen.')
+  logger.debug('✅ Payment postponed')
+  
+  // Reload the dashboard data so "pending confirmations" disappears
+  logger.debug('🔄 Reloading dashboard data...')
+  try {
+    await loadAllData()
+    await loadPayments()
+    logger.debug('✅ Dashboard data reloaded')
+  } catch (err) {
+    logger.error('❌ Error reloading dashboard:', err)
+  }
+}
 </script>
 
 <style scoped>

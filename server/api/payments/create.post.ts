@@ -5,6 +5,13 @@ import { getSupabase } from '~/utils/supabase'
 import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import {
+  validateUUID,
+  validateEmail,
+  validateAmount,
+  validatePaymentMethod,
+  throwValidationError
+} from '~/server/utils/validators'
 
 interface PaymentRequest {
   appointmentId?: string
@@ -68,12 +75,37 @@ export default defineEventHandler(async (event): Promise<PaymentResponse> => {
     const body = await readBody(event) as PaymentRequest
     logger.debug('📨 Payment request:', JSON.stringify(body, null, 2))
     
-    // Validierung der erforderlichen Felder
-    if (!body.userId || !body.amount || !body.customerEmail || !body.paymentMethod) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Missing required fields: userId, amount, customerEmail, paymentMethod'
-      })
+    // Validierung der erforderlichen Felder mit validators
+    const errors: Record<string, string> = {}
+    
+    if (!body.userId || !validateUUID(body.userId)) {
+      errors.userId = 'Ungültige Benutzer-ID'
+    }
+    
+    if (!body.amount || !validateAmount(body.amount, 'Betrag').valid) {
+      const amountValidation = validateAmount(body.amount, 'Betrag')
+      errors.amount = amountValidation.error!
+    }
+    
+    if (!body.customerEmail || !validateEmail(body.customerEmail)) {
+      errors.customerEmail = 'Ungültige E-Mail-Adresse'
+    }
+    
+    if (!body.paymentMethod) {
+      errors.paymentMethod = 'Zahlungsmethode ist erforderlich'
+    } else {
+      const methodValidation = validatePaymentMethod(body.paymentMethod)
+      if (!methodValidation.valid) {
+        errors.paymentMethod = methodValidation.error!
+      }
+    }
+    
+    if (body.appointmentId && !validateUUID(body.appointmentId)) {
+      errors.appointmentId = 'Ungültiges Termin-ID Format'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      throwValidationError(errors)
     }
 
     const supabase = getSupabase()

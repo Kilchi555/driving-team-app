@@ -43,7 +43,11 @@
           class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-black bg-white"
           :disabled="disabled"
         />
-          <div v-if="durationMinutes" class="text-xs text-gray-500 mt-1">
+        <!-- ⚠️ Time Validation Warning - SMALL, BELOW ENDTIME -->
+        <div v-if="timeValidationError" class="text-xs text-red-600 mt-1 font-semibold">
+          ⚠️ {{ timeValidationError }}
+        </div>
+        <div v-if="durationMinutes" class="text-xs text-gray-500 mt-1">
           Dauer: {{ durationMinutes }} Minuten
         </div>
       </div>
@@ -52,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface Props {
@@ -81,6 +85,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+
+// ✅ NEW: Real-time validation error
+const timeValidationError = ref<string>('')
 
 // Computed Properties
 const shouldShow = computed(() => {
@@ -113,15 +120,36 @@ const suggestedTimes = computed(() => {
   return ['09:00', '11:00', '14:00', '16:00', '18:00']
 })
 
+// ✅ NEW: Validate times and update error message
+const validateTimes = () => {
+  if (!props.startTime || !props.endTime) {
+    timeValidationError.value = ''
+    return
+  }
+
+  const startTime = new Date(`2000-01-01 ${props.startTime}`)
+  const endTime = new Date(`2000-01-01 ${props.endTime}`)
+
+  if (startTime >= endTime) {
+    timeValidationError.value = 'Startzeit muss vor Endzeit liegen'
+  } else if (props.durationMinutes < 15 || props.durationMinutes > 600) {
+    timeValidationError.value = `Dauer muss zwischen 15 und 600 Minuten liegen (aktuell: ${props.durationMinutes} min)`
+  } else {
+    timeValidationError.value = ''
+  }
+}
+
 // Methods
 const updateStartDate = (value: string) => {
   emit('update:startDate', value)
   calculateEndTime(value, props.startTime)
+  validateTimes()
 }
 
 const updateStartTime = (value: string) => {
   emit('update:startTime', value)
   calculateEndTime(props.startDate, value)
+  validateTimes()
 }
 
 const calculateEndTime = (date: string, time: string) => {
@@ -161,6 +189,8 @@ const updateEndTime = (value: string) => {
       })
     }
   }
+  
+  validateTimes()
 }
 
 const selectSuggestedTime = (time: string) => {
@@ -172,6 +202,12 @@ watch(() => props.durationMinutes, () => {
   if (props.startDate && props.startTime) {
     calculateEndTime(props.startDate, props.startTime)
   }
+  validateTimes()
+})
+
+// ✅ NEW: Watch for prop changes and validate
+watch([() => props.startTime, () => props.endTime, () => props.durationMinutes], () => {
+  validateTimes()
 })
 
 // Expose für Parent-Component

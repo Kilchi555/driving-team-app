@@ -618,157 +618,34 @@ const loadStudents = async (loadAppointments = true) => {
   error.value = null
   
   try {
-    logger.debug('🔄 Loading students from database...', loadAppointments ? 'with appointments' : 'without appointments')
+    logger.debug('🔄 Loading students via API endpoint...', loadAppointments ? 'with appointments' : 'without appointments')
     logger.debug('Current user role:', currentUser.value.role)
     
-    // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
+    // Get auth token
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
     }
 
-    logger.debug('🔍 Customers page - Current tenant_id:', tenantId)
-    
-    // Base query without appointments for faster loading
-    let baseQuery = `
-      id,
-      created_at,
-      email,
-      first_name,
-      last_name,
-      phone,
-      birthdate,
-      street,
-      street_nr,
-      zip,
-      city,
-      invoice_address,
-      is_active,
-      category,
-      assigned_staff_id,
-      payment_provider_customer_id,
-      auth_user_id,
-      onboarding_status,
-      onboarding_token,
-      onboarding_token_expires,
-      student_credits (
-        id,
-        balance_rappen
-      )
-    `
-    
-    // Only add appointments if specifically requested
-    if (loadAppointments) {
-      baseQuery += `,
-        appointments!user_id (
-          id,
-          start_time,
-          status,
-          type,
-          title
-        )`
-    }
-    
-    let query = supabase
-      .from('users')
-      .select(baseQuery)
-      .eq('role', 'client') // Nur Schüler laden
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('first_name', { ascending: true })
-    
-    // FIX: Lade alle Studenten, unabhängig von is_active
-    // Das ermöglicht es, auch inaktive Pending-Users zu sehen
-    
-    // DEBUG: Teste direkte Query
-    logger.debug('🔍 Testing direct query for all students in tenant...')
-    const { data: testData } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-    
-    logger.debug('🔍 Direct query result:', testData)
-    
-    // DEBUG: Teste mit Service Role (ohne RLS)
-    const { data: testDataNoRLS } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-    
-    logger.debug('🔍 Direct query result (no RLS):', testDataNoRLS)
-    
-    // DEBUG: Teste spezifische Query für Max Mustermann
-    logger.debug('🔍 Searching for Max Mustermann by ID...')
-    const { data: maxQuery, error: maxError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', 'b09e0af1-3ded-44e0-a80e-b52b11e630e1')
-    
-    logger.debug('🔍 Max Mustermann by ID result:', maxQuery)
-    logger.debug('🔍 Max Mustermann by ID error:', maxError)
-    
-    
+    // Use the new backend API endpoint that bypasses RLS
+    const response = await $fetch('/api/admin/get-tenant-users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    }) as any
 
-    // ✅ Filterung basierend auf Benutzerrolle
-    if (currentUser.value.role === 'staff' && !showAllStudents.value) {
-      // Staff sieht alle Schüler des Tenants (nicht nur assigned_staff_id)
-      logger.debug('📚 Loading all students for staff (showing all students in tenant):', currentUser.value.id)
-    } else if (currentUser.value.role === 'admin') {
-      // Admin sieht alle Schüler
-      logger.debug('👑 Loading all students for admin')
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load users from API')
     }
 
-    // ✅ FIX: Lade IMMER alle Studenten des Tenants (aktive und inaktive)
-    // Das ermöglicht es, auch inaktive Pending-Users zu sehen
-    logger.debug('📚 Loading ALL students in tenant (active and inactive)')
-
-    // FIX: Verwende die normale users Tabelle, aber ohne appointments
-    // Das umgeht Schema-Cache-Probleme
-    const { data, error: supabaseError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        created_at,
-        email,
-        first_name,
-        last_name,
-        phone,
-        birthdate,
-        street,
-        street_nr,
-        zip,
-        city,
-        is_active,
-        category,
-        assigned_staff_id,
-        assigned_staff_ids,
-        payment_provider_customer_id,
-        auth_user_id,
-        onboarding_status,
-        onboarding_token,
-        onboarding_token_expires,
-        student_credits (
-          id,
-          balance_rappen
-        )
-      `)
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-      .order('first_name', { ascending: true })
+    logger.debug('✅ Users loaded successfully via API:', response.data.length)
     
-
-    if (supabaseError) {
-      throw new Error(`Database error: ${supabaseError.message}`)
-    }
-
+    // Filter for clients only
+    let data = (response.data as any[]).filter((u: any) => u.role === 'client')
+    
+    logger.debug('📚 Filtered to client users:', data.length)
+    
     if (!data) {
       students.value = []
       logger.debug('ℹ️ No students found')
@@ -944,7 +821,7 @@ const loadStudents = async (loadAppointments = true) => {
     logger.debug('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
     // Load billing addresses for students
-    logger.debug('📋 Loading billing addresses for tenantId:', tenantId)
+    logger.debug('📋 Loading billing addresses for students')
     const { data: billingAddresses, error: billingError } = await supabase
       .from('company_billing_addresses')
       .select('id, contact_person, email, phone, street, street_number, zip, city, country')
@@ -1099,7 +976,7 @@ const resendOnboardingSms = async () => {
         phone: latestStudent.phone || undefined,
         tenantId: latestStudent.tenant_id || currentUser.value?.tenant_id
       }
-    })
+    }) as any
 
     logger.debug('✅ Reminder API response:', reminderResponse)
 
@@ -1107,7 +984,7 @@ const resendOnboardingSms = async () => {
     // Send SMS with the new link (if phone is available)
     // ============================================
     let smsSuccess = false
-    if (hasPhone && reminderResponse.token) {
+    if (hasPhone && reminderResponse?.token) {
       try {
         const newLink = `https://simy.ch/onboarding/${reminderResponse.token}`
         const message = `Hallo ${latestStudent.first_name}! Deine Registrierung bei Driving Team. Vervollständige sie hier: ${newLink} (Link 14 Tage gültig)`

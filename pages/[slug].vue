@@ -71,6 +71,7 @@
           </div>
         </div>
 
+
       <!-- Login Form -->
       <div class="p-6">
         <!-- Session Check Loading -->
@@ -123,7 +124,7 @@
         </div>
 
         <!-- Login Form -->
-        <form v-else @submit.prevent="handleLogin" class="space-y-4">
+        <form @submit.prevent="handleLogin" class="space-y-4">
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -205,14 +206,122 @@
           <!-- Login Button -->
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="isLoading || rateLimitCountdown > 0"
             class="w-full py-2.5 px-4 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
             :style="{ backgroundColor: primaryColor }"
           >
-            <span v-if="isLoading">Wird angemeldet...</span>
+            <span v-if="rateLimitCountdown > 0">
+              Bitte warten Sie {{ rateLimitCountdown }}s...
+            </span>
+            <span v-else-if="isLoading">Wird angemeldet...</span>
             <span v-else>Anmelden</span>
           </button>
         </form>
+
+
+        <!-- MFA Verification Form -->
+        <div v-if="mfaFlow.state.value.requiresMFA" class="space-y-4">
+          <!-- MFA Header -->
+          <div class="text-center mb-6">
+            <h2 class="text-xl font-bold text-gray-900">
+              Multi-Faktor-Authentifizierung
+            </h2>
+            <p class="text-sm text-gray-600 mt-2">
+              Wählen Sie eine Verifizierungsmethode
+            </p>
+          </div>
+
+          <!-- MFA-Methoden Auswahl -->
+          <div v-if="mfaFlow.state.value.availableOptions.length > 0" class="space-y-2">
+            <p class="text-sm font-medium text-gray-700">Authentifizierungsmethode:</p>
+            <div class="flex gap-2 flex-wrap">
+              <button
+                v-for="method in mfaFlow.state.value.availableOptions"
+                :key="method.id"
+                type="button"
+                @click="mfaFlow.selectMFAMethod(method.id)"
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors hover:border-gray-400"
+                :style="{
+                  background: mfaFlow.state.value.selectedOption?.id === method.id 
+                    ? primaryColor + '10' 
+                    : 'white',
+                  color: mfaFlow.state.value.selectedOption?.id === method.id
+                    ? primaryColor
+                    : '#374151',
+                  borderColor: mfaFlow.state.value.selectedOption?.id === method.id
+                    ? primaryColor
+                    : '#d1d5db'
+                }"
+              >
+                {{ method.name }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Code Input -->
+          <div>
+            <label for="mfa-code" class="block text-sm font-medium text-gray-700 mb-2">
+              Bestätigungscode
+            </label>
+            <input
+              id="mfa-code"
+              :value="mfaFlow.state.value.code"
+              @input="mfaFlow.updateCode(($event.target as HTMLInputElement).value)"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              placeholder="000000"
+              class="w-full px-4 py-2 text-center text-2xl tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': primaryColor }"
+            >
+            <p class="text-xs text-gray-500 mt-1 text-center">
+              Code an {{ mfaFlow.state.value.email }}
+            </p>
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="mfaFlow.state.value.error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-700">{{ mfaFlow.state.value.error }}</p>
+            <p v-if="mfaFlow.state.value.remainingAttempts > 0 && mfaFlow.state.value.remainingAttempts < 3" class="text-xs text-red-600 mt-1">
+              Noch {{ mfaFlow.state.value.remainingAttempts }} Versuche
+            </p>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-3 pt-2">
+            <!-- Code versenden -->
+            <button
+              type="button"
+              @click="mfaFlow.sendMFACode()"
+              :disabled="mfaFlow.state.value.isVerifying"
+              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span v-if="mfaFlow.state.value.isVerifying">Wird versendet...</span>
+              <span v-else>Erneut versenden</span>
+            </button>
+
+            <!-- Verifizieren -->
+            <button
+              type="button"
+              @click="handleMFAVerify()"
+              :disabled="!mfaFlow.canSubmitCode.value"
+              class="flex-1 px-4 py-2 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              :style="{ background: primaryColor }"
+            >
+              <span v-if="mfaFlow.state.value.isVerifying">Wird überprüft...</span>
+              <span v-else>Verifizieren</span>
+            </button>
+          </div>
+
+          <!-- Zurück Button -->
+          <button
+            type="button"
+            @click="mfaFlow.resetMFAState()"
+            class="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            Zurück
+          </button>
+        </div>
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
@@ -349,13 +458,14 @@
 
 logger.debug('📄 [slug].vue script setup initializing...')
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
 
 logger.debug('📄 [slug].vue imports completed')
@@ -443,7 +553,10 @@ const authStore = useAuthStore()
 const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
 const { currentTenant } = useTenant()
+const mfaFlow = useMFAFlow()
+const webAuthn = useWebAuthn()
 const supabase = getSupabase()
+
 
 // Methods
 const handleLogin = async () => {
@@ -544,13 +657,95 @@ const handleLogin = async () => {
   } catch (error: any) {
     console.error('Login error:', error)
     
-    if (error.message?.includes('Invalid login credentials')) {
+    const errorMsg = error?.data?.statusMessage || 
+                     error?.message || 
+                     error?.cause?.statusMessage ||
+                     'Anmeldung fehlgeschlagen'
+    
+    // Check for rate limit error and start countdown
+    const isRateLimitError = errorMsg?.toLowerCase().includes('too many') || 
+                             errorMsg?.includes('429') || 
+                             errorMsg?.toLowerCase().includes('zu viele')
+    
+    if (isRateLimitError) {
+      loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
+      
+      // Get retry-after time from MULTIPLE possible paths
+      let retryAfter = 60000 // fallback to 60 seconds
+      
+      // Try all possible paths - order matters! Most nested first
+      if (error?.cause?.data?.retryAfter !== undefined) {
+        retryAfter = error.cause.data.retryAfter
+      } else if (error?.data?.data?.retryAfter !== undefined) {
+        retryAfter = error.data.data.retryAfter
+      } else if (error?.data?.retryAfter !== undefined) {
+        retryAfter = error.data.retryAfter
+      }
+      
+      const countdown = Math.ceil(retryAfter / 1000) // convert to seconds
+      rateLimitCountdown.value = Math.max(1, countdown) // minimum 1 second
+      
+      // Start countdown timer
+      if (rateLimitInterval.value) clearInterval(rateLimitInterval.value)
+      rateLimitInterval.value = setInterval(() => {
+        rateLimitCountdown.value--
+        if (rateLimitCountdown.value <= 0) {
+          if (rateLimitInterval.value) clearInterval(rateLimitInterval.value)
+          rateLimitCountdown.value = 0
+        }
+      }, 1000)
+    } else if (error.message?.includes('Invalid login credentials')) {
       loginError.value = 'Falsches Passwort.'
     } else {
       loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleMFAVerify = async () => {
+  const result = await mfaFlow.verifyMFACode(loginForm.value.password)
+  
+  if (result && result.success) {
+    logger.debug('✅ MFA verification successful, logging in...')
+    
+    // MFA erfolgreich - führe normales Login-Ende aus
+    authStore.user = result.user
+    
+    await new Promise(resolve => setTimeout(resolve, 200))
+    await authStore.fetchUserProfile(result.user.id)
+    
+    const user = authStore.userProfile
+    
+    if (!user) {
+      loginError.value = 'Fehler beim Laden des Benutzerprofils.'
+      return
+    }
+    
+    let redirectPath = '/dashboard'
+    
+    if (user.tenant_id) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', user.tenant_id)
+        .single()
+      
+      if (tenant?.slug) {
+        if (user.role === 'admin' || user.role === 'tenant_admin') {
+          redirectPath = '/admin'
+        } else if (user.role === 'staff') {
+          redirectPath = '/dashboard'
+        } else {
+          redirectPath = '/customer-dashboard'
+        }
+      }
+    }
+    
+    showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
+    logger.debug('🔄 Redirecting to:', redirectPath)
+    router.push(redirectPath)
   }
 }
 
@@ -758,6 +953,8 @@ const pendingDeviceId = ref<string | null>(null)
 const pendingAuthUserId = ref<string | null>(null)
 const resendingVerification = ref(false)
 const deviceVerificationWarning = ref<string | null>(null)
+const rateLimitCountdown = ref<number>(0)
+const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
 
 // Password Reset State
 const showForgotPasswordModal = ref(false)
@@ -792,6 +989,7 @@ const isRegisterRoute = computed(() => {
   const currentPath = route.path
   return currentPath.includes('/register')
 })
+
 
 
 // Lifecycle
