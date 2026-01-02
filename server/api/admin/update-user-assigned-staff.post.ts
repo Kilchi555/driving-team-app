@@ -1,9 +1,26 @@
-import { defineEventHandler, createError, readBody } from 'h3'
+import { defineEventHandler, createError, readBody, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
 
 export default defineEventHandler(async (event) => {
+  // Get client IP for rate limiting
+  const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                    getHeader(event, 'x-real-ip') || 
+                    event.node.req.socket.remoteAddress || 
+                    'unknown'
+  
+  // Apply rate limiting: 100 requests per minute per IP (this is a staff operation)
+  const rateLimit = await checkRateLimit(ipAddress, 'register', 100, 60 * 1000)
+  if (!rateLimit.allowed) {
+    logger.warn('🚫 Rate limit exceeded for update-user-assigned-staff from IP:', ipAddress)
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.'
+    })
+  }
+
   const supabaseUrl = process.env.SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
