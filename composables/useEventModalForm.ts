@@ -982,8 +982,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Auto-assign staff to customer (via Backend API to bypass RLS)
       if (mode === 'create' && result.staff_id && result.user_id) {
         try {
+          const supabase = getSupabase()
+          const { data: { session } } = await supabase.auth.getSession()
+          
           const response = await $fetch('/api/admin/update-user-assigned-staff', {
             method: 'POST',
+            headers: session?.access_token ? {
+              'Authorization': `Bearer ${session.access_token}`
+            } : {},
             body: {
               userId: result.user_id,
               staffId: result.staff_id

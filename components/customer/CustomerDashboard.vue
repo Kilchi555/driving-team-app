@@ -897,7 +897,18 @@
   <!-- 💳 Payment Confirmation Dialog -->
   <Teleport to="body">
     <div v-if="showPaymentConfirmDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full animate-in fade-in">
+      <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full animate-in fade-in relative">
+        <!-- Close Button (top right) -->
+        <button
+          @click="handlePayLater"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Schließen"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <!-- Header -->
         <div class="flex items-center justify-center mb-6">
           <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
@@ -2416,17 +2427,28 @@ const loadLocations = async () => {
 
 const loadStaff = async () => {
   try {
+    // ✅ Use backend API to fetch staff (bypasses RLS)
+    // Get auth token first
     const supabase = getSupabase()
-    const { data, error: fetchError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('role', 'staff')
-      .eq('is_active', true)
-
-    if (fetchError) throw fetchError
-    staff.value = data || []
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    const response = await $fetch('/api/customer/get-staff-names', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
+    
+    if (response?.success && response?.data) {
+      staff.value = response.data
+      logger.debug('✅ Staff loaded via API:', staff.value.length)
+    } else {
+      throw new Error('Invalid API response')
+    }
   } catch (err: any) {
     console.error('❌ Error loading staff:', err)
+    // Fallback: continue without staff data
+    staff.value = []
   }
 }
 
@@ -2595,6 +2617,15 @@ onMounted(async () => {
       // Small delay to ensure webhook processed
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
+    
+    // ✅ Reset payment modal if user navigates back from Wallee
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        logger.debug('📱 User returned to page (browser back)')
+        showPaymentConfirmDialog.value = false
+        isProcessingPayment.value = false
+      }
+    })
     
     // Einfacher: Warte auf Auth-Store Initialisierung
     let attempts = 0
