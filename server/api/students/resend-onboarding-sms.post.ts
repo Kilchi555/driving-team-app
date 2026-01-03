@@ -108,6 +108,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // ============ LAYER 3: INPUT VALIDATION ============
     const { studentId } = body
+    
+    logger.debug('📋 Request body received:', { body, studentId })
 
     if (!studentId || typeof studentId !== 'string') {
       await logAudit({
