@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { H3Event } from 'h3'
@@ -25,37 +24,26 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_KEY
+    // Use admin client which already has correct credentials
+    const supabase = getSupabaseAdmin()
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      logger.error('Supabase configuration missing - URL or ANON_KEY not set')
-      await logAudit({
-        action: 'get_discount_sales',
-        status: 'error',
-        error_message: 'Supabase configuration missing',
-        ip_address: ipAddress,
-        details: { authHeader }
-      })
-      throw createError({ statusCode: 500, statusMessage: 'Supabase configuration missing' })
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      await logAudit({
-        action: 'get_discount_sales',
-        status: 'failed',
-        error_message: 'Invalid token',
-        ip_address: ipAddress,
-        details: { authHeader }
-      })
-      throw createError({ statusCode: 401, statusMessage: 'Invalid token' })
+    
+    // Extract user_id from JWT token
+    let requestingUserId: string | null = null
+    try {
+      const parts = token.split('.')
+      if (parts.length === 3) {
+        const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+        requestingUserId = decoded.sub
+      }
+    } catch (e) {
+      logger.warn('Failed to parse JWT token')
     }
-    userId = user.id
-    auditDetails.authenticated_user_id = userId
+    
+    if (!requestingUserId) {
+      throw createError({ statusCode: 401, statusMessage: 'Invalid token format' })
+    }
 
     const query = getQuery(event)
     const appointmentId = query.appointment_id as string
@@ -74,13 +62,11 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid or missing appointment_id' })
     }
 
-    const supabaseAdmin = getSupabaseAdmin()
-
     // Layer 4: Authorization - Only admin/staff/superadmin can use this
-    const { data: userProfile, error: profileError } = await supabaseAdmin
+    const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('tenant_id, role')
-      .eq('auth_user_id', userId)
+      .select('tenant_id, role, id')
+      .eq('auth_user_id', requestingUserId)
       .single()
 
     if (profileError || !userProfile?.tenant_id) {
@@ -95,6 +81,7 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 403, statusMessage: 'User profile not found or tenant_id missing' })
     }
     tenantId = userProfile.tenant_id
+    userId = userProfile.id
     auditDetails.tenant_id = tenantId
 
     if (!['admin', 'staff', 'superadmin'].includes(userProfile.role)) {
@@ -110,7 +97,7 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // Verify appointment belongs to this staff/admin's tenant
-    const { data: appointment, error: appointmentError } = await supabaseAdmin
+    const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .select('id, tenant_id')
       .eq('id', appointmentId)
@@ -130,7 +117,7 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // Fetch discount_sales using service_role to bypass RLS
-    const { data: discountSales, error: discountError } = await supabaseAdmin
+    const { data: discountSales, error: discountError } = await supabase
       .from('discount_sales')
       .select('*')
       .eq('appointment_id', appointmentId)
@@ -166,4 +153,3 @@ export default defineEventHandler(async (event: H3Event) => {
     })
   }
 })
-

@@ -1,15 +1,3 @@
-/**
- * Admin API: Get User for Editing
- * Allows staff/admin to fetch user data for editing
- * 
- * Security:
- * ✅ Layer 1: Authentication (JWT)
- * ✅ Layer 4: Authorization (admin/staff role)
- * ✅ Layer 4: Ownership (must be same tenant)
- * ✅ Layer 7: Error Handling
- */
-
-import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
@@ -23,42 +11,32 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_KEY
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      logger.error('Supabase configuration missing - URL or ANON_KEY not set')
-      throw createError({ statusCode: 500, statusMessage: 'Configuration error' })
-    }
-
-    // Create Supabase client with user's token to verify auth
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey)
+    // Use admin client which already has correct credentials
+    const supabase = getSupabaseAdmin()
     
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser(token)
     
-    if (authError || !user) {
-      logger.warn('Invalid auth token provided')
-      throw createError({ statusCode: 401, statusMessage: 'Invalid token' })
+    // Extract user_id from JWT token
+    let requestingUserId: string | null = null
+    try {
+      const parts = token.split('.')
+      if (parts.length === 3) {
+        const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+        requestingUserId = decoded.sub
+      }
+    } catch (e) {
+      logger.warn('Failed to parse JWT token')
     }
-
-    // Get query parameter
-    const userId = getQuery(event).user_id as string
-    if (!userId) {
-      throw createError({ 
-        statusCode: 400, 
-        statusMessage: 'Missing required query parameter: user_id' 
-      })
+    
+    if (!requestingUserId) {
+      throw createError({ statusCode: 401, statusMessage: 'Invalid token format' })
     }
-
-    // Use admin client to bypass RLS
-    const supabase = getSupabaseAdmin()
 
     // Get requesting user's profile (to check role and tenant)
     const { data: requestingUser, error: reqUserError } = await supabase
       .from('users')
       .select('id, role, tenant_id, auth_user_id')
-      .eq('auth_user_id', user.id)
+      .eq('auth_user_id', requestingUserId)
       .single()
 
     if (reqUserError || !requestingUser) {
@@ -70,6 +48,15 @@ export default defineEventHandler(async (event) => {
     if (!['admin', 'staff', 'superadmin'].includes(requestingUser.role)) {
       logger.warn(`Insufficient permissions for role: ${requestingUser.role}`)
       throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
+    }
+
+    // Get query parameter
+    const userId = getQuery(event).user_id as string
+    if (!userId) {
+      throw createError({ 
+        statusCode: 400, 
+        statusMessage: 'Missing required query parameter: user_id' 
+      })
     }
 
     // Layer 4: Ownership - User must be in same tenant
@@ -100,7 +87,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error: any) {
-    console.error('Error fetching user for edit:', error)
+    logger.error('Error in get-user-for-edit API:', error)
     
     if (error.statusCode && error.statusMessage) {
       throw error
@@ -112,4 +99,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
