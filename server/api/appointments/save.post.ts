@@ -33,11 +33,13 @@ export default defineEventHandler(async (event) => {
       throwValidationError({ eventId: 'Ungültiges Event ID Format' })
     }
 
-    // Validate appointment data
+    // Validate appointment data (basic checks)
     const validation = validateAppointmentData(appointmentData)
     throwIfInvalid(validation)
 
     // Extra security: Validate category against database (if type/category is present)
+    // This ensures that newly added or removed categories are properly handled
+    // Falls back to basic validator if API is unavailable
     if (appointmentData.type) {
       try {
         const authHeader = getHeader(event, 'authorization')
@@ -62,11 +64,13 @@ export default defineEventHandler(async (event) => {
             throwValidationError({ type: categoryValidationResult?.error || 'Fahrkategorie ungültig' })
           }
 
-          logger.debug('✅ Category validated successfully:', appointmentData.type)
+          logger.debug('✅ Category validated successfully against DB:', appointmentData.type)
+        } else {
+          logger.debug('ℹ️ No auth token provided, skipping database category validation')
         }
       } catch (categoryError: any) {
-        logger.warn('⚠️ Category validation API call failed (using fallback):', categoryError.message)
-        // Fall through - the basic validator will catch invalid categories
+        logger.warn('⚠️ Category validation API call failed, using fallback validator:', categoryError.message)
+        // Fall through - the basic validator will catch invalid categories using hardcoded list
       }
     }
 

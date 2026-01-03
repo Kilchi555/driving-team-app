@@ -220,18 +220,49 @@ export function validateAppointmentTimes(
  * Validate driving category
  */
 export function validateDrivingCategory(value: any, fieldName: string = 'Fahrkategorie'): { valid: boolean; error?: string } {
-  // Fallback list of common categories (used when DB is not available)
-  // For complete validation, use the /api/validate/category endpoint
+  // Fallback list of valid driving categories
+  // This list should be kept in sync with the categories table in Supabase
+  // 
+  // IMPORTANT: When adding new categories to Supabase, update this list!
+  // This prevents new categories from being blocked while API is down
+  //
+  // Categories added: 2026-01-03
+  // Last sync: Check /api/validate/category for authoritative list
+  
   const fallbackCategories = [
-    'A', 'A1', 'A2', 'B', 'BE', 'B96', 'B Schaltung', 'BPT',
-    'C', 'C1', 'CE', 'C1E', 'C1/D1',
-    'D', 'D1', 'DE', 'D1E',
-    'F', 'G', 'M',
-    'Boot', 'Motorboot'
+    // Standard EU Categories
+    'A',        // Motorcycle (>70cc, >16 years)
+    'A1',       // Light motorcycle (<=125cc, >=16 years)
+    'A2',       // Medium motorcycle (<=35kW, >=18 years)
+    'B',        // Car (<=3500kg, <=8 seats + driver)
+    'BE',       // Car + trailer (<=750kg trailer)
+    'B96',      // Car + light trailer (3500-4250kg total)
+    'C',        // Truck (>3500kg, <=32 seats)
+    'C1',       // Medium truck (3500-7500kg)
+    'CE',       // Truck + trailer
+    'C1E',      // Medium truck + trailer
+    'D',        // Bus (>8 seats + driver)
+    'D1',       // Medium bus (8-16 seats + driver)
+    'DE',       // Bus + trailer
+    'D1E',      // Medium bus + trailer
+    'F',        // Agricultural vehicle
+    'G',        // Road roller
+    'M',        // Moped (<50cc, <50km/h)
+    
+    // Special Categories (non-standard)
+    'B Schaltung',  // Manual transmission car (special training)
+    'BPT',          // Car + trailer special (Switzerland specific)
+    'C1/D1',        // Combined medium truck/bus
+    'Boot',         // Boat/Motorboat
+    'Motorboot',    // Motorboat (alternative name)
+    'Treffpunkt'    // Meeting point (special - for location-based)
   ]
   
   if (!value || !fallbackCategories.includes(String(value).trim())) {
-    return { valid: false, error: `${fieldName} muss eine gültige Kategorie sein (${fallbackCategories.join(', ')})` }
+    return { 
+      valid: false, 
+      error: `${fieldName} muss eine gültige Kategorie sein (${fallbackCategories.join(', ')})` 
+    }
   }
   
   return { valid: true }
