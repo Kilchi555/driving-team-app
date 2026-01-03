@@ -979,9 +979,15 @@ const resendOnboardingSms = async () => {
     
     const { data: { session } } = await supabase.auth.getSession()
     
+    if (!pendingStudent.value?.id) {
+      logger.error('❌ Student ID missing!', { pendingStudent: pendingStudent.value })
+      throw new Error('Student ID is missing')
+    }
+    
     logger.debug('📋 Sending SMS for student:', {
-      studentId: pendingStudent.value?.id,
-      firstName: pendingStudent.value?.first_name
+      studentId: pendingStudent.value.id,
+      firstName: pendingStudent.value.first_name,
+      hasSession: !!session?.access_token
     })
     
     const smsResponse = await $fetch('/api/students/resend-onboarding-sms', {

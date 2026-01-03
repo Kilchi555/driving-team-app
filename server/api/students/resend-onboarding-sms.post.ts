@@ -109,9 +109,20 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 3: INPUT VALIDATION ============
     const { studentId } = body
     
-    logger.debug('📋 Request body received:', { body, studentId })
+    logger.debug('📋 Request body received:', { 
+      body, 
+      studentId,
+      studentIdType: typeof studentId,
+      bodyKeys: Object.keys(body)
+    })
 
     if (!studentId || typeof studentId !== 'string') {
+      logger.error('❌ Invalid studentId:', { 
+        studentId, 
+        type: typeof studentId,
+        bodyKeys: Object.keys(body),
+        rawBody: JSON.stringify(body)
+      })
       await logAudit({
         user_id: authenticatedUserId,
         action: 'resend_onboarding_sms',
