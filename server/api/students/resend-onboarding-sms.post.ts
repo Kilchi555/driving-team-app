@@ -14,6 +14,14 @@ export default defineEventHandler(async (event: H3Event) => {
   let auditDetails: any = {}
 
   try {
+    // ============ READ BODY ONCE ============
+    let body: any = {}
+    try {
+      body = await readBody(event)
+    } catch (e) {
+      body = {}
+    }
+    
     // ============ LAYER 1: AUTHENTICATION ============
     const authHeader = getHeader(event, 'authorization')
     if (!authHeader) {
@@ -22,7 +30,7 @@ export default defineEventHandler(async (event: H3Event) => {
         status: 'failed',
         error_message: 'Authentication required',
         ip_address: ipAddress,
-        details: { body: await readBody(event).catch(() => 'N/A') }
+        details: { body }
       })
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
@@ -99,7 +107,6 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 3: INPUT VALIDATION ============
-    const body = await readBody(event)
     const { studentId } = body
 
     if (!studentId || typeof studentId !== 'string') {
