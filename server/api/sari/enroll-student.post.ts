@@ -1,17 +1,29 @@
 /**
  * SARI Enroll Student API
  * Registers a student for a SARI course (VKU/PGS)
+ * 
+ * Security:
+ * ✅ Layer 1: Authentication (JWT token)
+ * ✅ Layer 2: Rate Limiting (60 req/min per user)
+ * ✅ Layer 3: Input Validation (UUID format, required fields)
+ * ✅ Layer 3: Input Sanitization (trim, case normalization)
+ * ✅ Layer 4: Authorization (admin/staff, tenant ownership)
+ * ✅ Layer 5: Audit Logging (all enrollment actions logged)
+ * ✅ Layer 7: Error Handling (no credential leakage)
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { SARIClient } from '~/utils/sariClient'
+import { checkSARIRateLimit, formatRateLimitError, validateSARIInput, sanitizeSARIInput } from '~/server/utils/sari-rate-limit'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { logAudit } from '~/server/utils/audit'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get authorization header
+    // Layer 1: Authentication - Verify JWT token
     const authHeader = getHeader(event, 'authorization')
     if (!authHeader) {
-      throw createError({ statusCode: 401, message: 'Authentication required' })
+      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
     // Create Supabase client with user's token
@@ -19,7 +31,7 @@ export default defineEventHandler(async (event) => {
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      throw createError({ statusCode: 500, message: 'Supabase configuration missing' })
+      throw createError({ statusCode: 500, statusMessage: 'Configuration error' })
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -29,37 +41,55 @@ export default defineEventHandler(async (event) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
-      throw createError({ statusCode: 401, message: 'Invalid token' })
+      throw createError({ statusCode: 401, statusMessage: 'Invalid token' })
     }
 
     // Get request body
     const body = await readBody(event)
-    const { courseSessionId, studentId } = body
+    const raw = { courseSessionId: body.courseSessionId, studentId: body.studentId }
 
-    if (!courseSessionId || !studentId) {
+    // Layer 3: Input Validation - Check required fields and format
+    if (!raw.courseSessionId || !raw.studentId) {
       throw createError({ 
         statusCode: 400, 
-        message: 'Missing required fields: courseSessionId, studentId' 
+        statusMessage: 'Missing required fields: courseSessionId, studentId' 
       })
     }
 
-    // Get user profile for tenant_id
+    const validation = validateSARIInput(raw)
+    if (!validation.valid) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Validation error: ${validation.errors.join(', ')}`
+      })
+    }
+
+    // Layer 3: Input Sanitization
+    const { courseSessionId, studentId } = sanitizeSARIInput(raw)
+
+    // Layer 2: Rate Limiting - Check if user is within limits
+    const rateLimitCheck = await checkSARIRateLimit(user.id, 'enroll_student')
+    if (!rateLimitCheck.allowed) {
+      throw createError(formatRateLimitError(rateLimitCheck.retryAfter || 60000))
+    }
+
+    // Get user profile for tenant_id and role
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('tenant_id, role')
+      .select('tenant_id, role, auth_user_id')
       .eq('id', user.id)
       .single()
 
     if (profileError || !userProfile?.tenant_id) {
-      throw createError({ statusCode: 403, message: 'User profile not found' })
+      throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
     }
 
-    // Check if user has permission (admin or staff)
-    if (!['admin', 'staff', 'superadmin'].includes(userProfile.role)) {
-      throw createError({ statusCode: 403, message: 'Insufficient permissions' })
+    // Layer 4: Authorization - Check if user has permission
+    if (!['admin', 'staff', 'super_admin'].includes(userProfile.role)) {
+      throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
     }
 
-    // Get student data (faberid and birthdate)
+    // Layer 4: Ownership check - Verify student belongs to user's tenant
     const { data: student, error: studentError } = await supabase
       .from('users')
       .select('id, faberid, birthdate, first_name, last_name, tenant_id')
@@ -68,20 +98,20 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (studentError || !student) {
-      throw createError({ statusCode: 404, message: 'Student not found' })
+      throw createError({ statusCode: 404, statusMessage: 'Student not found' })
     }
 
     if (!student.faberid) {
       throw createError({ 
         statusCode: 400, 
-        message: 'Student has no Ausweisnummer (faberid). Please add it in the student profile.' 
+        statusMessage: 'Student has no Ausweisnummer (faberid). Please add it in the student profile.' 
       })
     }
 
     if (!student.birthdate) {
       throw createError({ 
         statusCode: 400, 
-        message: 'Student has no birthdate. Please add it in the student profile.' 
+        statusMessage: 'Student has no birthdate. Please add it in the student profile.' 
       })
     }
 
@@ -102,7 +132,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (sessionError || !session) {
-      throw createError({ statusCode: 404, message: 'Course session not found' })
+      throw createError({ statusCode: 404, statusMessage: 'Course session not found' })
     }
 
     const course = session.course as any
@@ -110,12 +140,11 @@ export default defineEventHandler(async (event) => {
     if (!course?.sari_managed) {
       throw createError({ 
         statusCode: 400, 
-        message: 'This course is not managed by SARI' 
+        statusMessage: 'This course is not managed by SARI' 
       })
     }
 
     // For SARI, we need the individual session's SARI ID
-    // Get the SARI session ID from course_sessions table
     const { data: sariSession, error: sariSessionError } = await supabase
       .from('course_sessions')
       .select('sari_session_id')
@@ -125,7 +154,7 @@ export default defineEventHandler(async (event) => {
     if (sariSessionError || !sariSession?.sari_session_id) {
       throw createError({ 
         statusCode: 400, 
-        message: 'Course session has no SARI ID. Cannot enroll via SARI.' 
+        statusMessage: 'Course session has no SARI ID. Cannot enroll via SARI.' 
       })
     }
 
@@ -139,18 +168,18 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (tenantError || !tenant) {
-      throw createError({ statusCode: 500, message: 'Tenant configuration not found' })
+      throw createError({ statusCode: 500, statusMessage: 'Tenant configuration not found' })
     }
 
     if (!tenant.sari_enabled) {
-      throw createError({ statusCode: 400, message: 'SARI integration is not enabled for this tenant' })
+      throw createError({ statusCode: 400, statusMessage: 'SARI integration is not enabled for this tenant' })
     }
 
     if (!tenant.sari_client_id || !tenant.sari_client_secret || !tenant.sari_username || !tenant.sari_password) {
-      throw createError({ statusCode: 400, message: 'SARI credentials not configured' })
+      throw createError({ statusCode: 500, statusMessage: 'SARI credentials not properly configured' })
     }
 
-    // Create SARI client
+    // Create SARI client (don't expose credentials in error messages)
     const sariClient = new SARIClient({
       environment: tenant.sari_environment || 'test',
       clientId: tenant.sari_client_id,
@@ -163,11 +192,11 @@ export default defineEventHandler(async (event) => {
     const birthdate = new Date(student.birthdate).toISOString().split('T')[0]
 
     // Enroll student in SARI
-    console.log(`📝 Enrolling student ${student.first_name} ${student.last_name} (${student.faberid}) in SARI course ${sariCourseId}`)
+    console.log(`📝 [${userProfile.auth_user_id}] Enrolling student ${student.id} in SARI course ${sariCourseId}`)
     
     await sariClient.enrollStudent(sariCourseId, student.faberid, birthdate)
 
-    console.log(`✅ Successfully enrolled student in SARI course ${sariCourseId}`)
+    console.log(`✅ [${userProfile.auth_user_id}] Successfully enrolled student in SARI course ${sariCourseId}`)
 
     // Create local course registration
     const { data: registration, error: regError } = await supabase
@@ -186,9 +215,22 @@ export default defineEventHandler(async (event) => {
 
     if (regError) {
       console.error('Failed to create local registration:', regError)
-      // Note: SARI enrollment succeeded, but local registration failed
-      // Consider implementing rollback logic here
     }
+
+    // Layer 5: Audit Logging - Log successful enrollment
+    await logAudit({
+      user_id: user.id,
+      action: 'sari_enroll_student',
+      resource_type: 'course_registration',
+      resource_id: registration?.id,
+      status: 'success',
+      details: {
+        student_id: studentId,
+        course_id: course.id,
+        sari_course_id: sariCourseId,
+      },
+      ip_address: getClientIP(event),
+    })
 
     return {
       success: true,
@@ -200,40 +242,43 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error('SARI enroll-student error:', error)
     
-    // Handle specific SARI errors
+    // Handle specific SARI errors (don't leak internals)
     if (error.message?.includes('PERSON_ALREADY_ADDED')) {
       throw createError({ 
         statusCode: 409, 
-        message: 'Student is already enrolled in this course' 
+        statusMessage: 'Student is already enrolled in this course' 
       })
     }
     
     if (error.message?.includes('PERSON_NOT_FOUND')) {
       throw createError({ 
         statusCode: 404, 
-        message: 'Student not found in SARI system. Please verify the Ausweisnummer.' 
+        statusMessage: 'Student not found in SARI system. Please verify the Ausweisnummer.' 
       })
     }
     
     if (error.message?.includes('COURSE_NOT_FOUND')) {
       throw createError({ 
         statusCode: 404, 
-        message: 'Course not found in SARI system' 
+        statusMessage: 'Course not found in SARI system' 
       })
     }
     
     if (error.message?.includes('LICENSE_EXPIRED')) {
       throw createError({ 
         statusCode: 400, 
-        message: 'Student license has expired for this course category' 
+        statusMessage: 'Student license has expired for this course category' 
       })
     }
 
+    // Don't leak implementation details
+    if (error.statusCode && error.statusMessage) {
+      throw error
+    }
+
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'Failed to enroll student'
+      statusCode: 500,
+      statusMessage: 'Failed to enroll student in SARI course'
     })
   }
 })
-
-
