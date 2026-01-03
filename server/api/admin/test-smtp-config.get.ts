@@ -71,6 +71,15 @@ export default defineEventHandler(async (event) => {
       ip_address: ip
     }).catch(() => {})
 
+    // AUDIT LOGGING (TEST STARTED)
+    await logAudit({
+      user_id: user.id,
+      action: 'admin_test_smtp_config',
+      status: 'started',
+      details: { test_type: 'smtp_configuration' },
+      ip_address: ip
+    }).catch(() => {})
+
     return {
       success: true,
       message: 'SMTP configuration test completed - check Supabase Dashboard for actual SMTP status',
