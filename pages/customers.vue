@@ -932,10 +932,15 @@ const resendOnboardingSms = async () => {
     // ============================================
     logger.debug('📧 Calling secure API to send onboarding SMS...')
     
+    const { data: { session } } = await supabase.auth.getSession()
+    
     const smsResponse = await $fetch('/api/students/resend-onboarding-sms', {
       method: 'POST',
       body: {
         studentId: pendingStudent.value.id
+      },
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`
       }
     }) as any
 
