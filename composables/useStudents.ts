@@ -234,9 +234,6 @@ export const useStudents = () => {
       const userId = createdStudent.id
       const onboardingToken = createdStudent.onboarding_token
       const onboardingLink = createdStudent.onboardingLink
-      
-      // Use data from API response
-      const data = createdStudent
 
       // 2. Sende SMS oder E-Mail mit Onboarding-Link
       let smsSuccess = false
@@ -244,8 +241,8 @@ export const useStudents = () => {
       
       try {
         // Sanitize phone und email - stelle sicher dass sie Strings sind
-        const cleanPhone = data.phone ? String(data.phone).trim() : ''
-        const cleanEmail = data.email ? String(data.email).trim() : ''
+        const cleanPhone = createdStudent.phone ? String(createdStudent.phone).trim() : ''
+        const cleanEmail = createdStudent.email ? String(createdStudent.email).trim() : ''
         
         // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
         if (cleanPhone !== '') {
@@ -254,7 +251,7 @@ export const useStudents = () => {
             method: 'POST',
             body: {
               phone: cleanPhone,
-              firstName: data.first_name || 'Kunde',
+              firstName: createdStudent.first_name || 'Kunde',
               token: onboardingToken
             }
           }) as any
@@ -274,8 +271,8 @@ export const useStudents = () => {
             method: 'POST',
             body: {
               email: cleanEmail,
-              firstName: data.first_name || 'Kunde',
-              lastName: data.last_name || '',
+              firstName: createdStudent.first_name || 'Kunde',
+              lastName: createdStudent.last_name || '',
               onboardingLink: onboardingLink
             }
           }) as any
@@ -297,14 +294,14 @@ export const useStudents = () => {
       
       // Return mit Status und Link
       const result = {
-        ...data,
+        ...createdStudent,
         smsSuccess,
         emailSuccess,
         onboardingLink
       }
 
       // Zur lokalen Liste hinzufügen
-      students.value.unshift(data as any)
+      students.value.unshift(createdStudent as any)
 
       return result as any
 
