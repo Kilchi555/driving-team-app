@@ -8,34 +8,42 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
-    const authUser = (await getSupabase().auth.getUser()).data.user
-    if (authUser) {
-      const rateLimitResult = await checkRateLimit(authUser.id, 30)
-      if (!rateLimitResult.success) {
-        throw createError({
-          statusCode: 429,
-          statusMessage: 'Too many requests. Please try again later.'
-        })
-      }
-    }
+    // Create Supabase Admin client
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 
     const body = await readBody(event)
     logger.debug('📝 Add student request:', { email: body.email, phone: body.phone })
 
-    // Get auth user and validate
-    const supabase = getSupabase()
-    const { data: { user: authUserData } } = await supabase.auth.getUser()
-    
-    if (!authUserData) {
+    // Get auth user from Authorization header
+    const token = getHeader(event, 'authorization')?.replace('Bearer ', '')
+    if (!token) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
       })
     }
 
+    // Verify the token and get user
+    const { data: { user: authUserData }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    
+    if (authError || !authUserData) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Invalid authentication token'
+      })
+    }
+
+    // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
+    const rateLimitResult = await checkRateLimit(authUserData.id, 30)
+    if (!rateLimitResult.success) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many requests. Please try again later.'
+      })
+    }
+
     // Get user profile and tenant_id
-    const { data: userProfile, error: profileError } = await supabase
+    const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('tenant_id')
       .eq('auth_user_id', authUserData.id)
@@ -49,9 +57,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantId = userProfile.tenant_id
-
-    // Use service role for admin operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 
     // Check for duplicates - phone
     if (body.phone) {
