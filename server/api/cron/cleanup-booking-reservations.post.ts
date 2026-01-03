@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
       logger.error('🚨 Unauthorized cron request to cleanup-booking-reservations')
       throw createError({
         statusCode: 401,
-        message: 'Unauthorized - Invalid cron token'
+        statusMessage: 'Unauthorized - Invalid cron token'
       })
     }
     
