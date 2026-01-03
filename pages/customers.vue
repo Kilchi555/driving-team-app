@@ -1056,7 +1056,24 @@ const copyOnboardingLink = async () => {
 
     const onboardingLink = `https://simy.ch/onboarding/${tokenResponse.onboarding_token}`
     
-    await navigator.clipboard.writeText(onboardingLink)
+    try {
+      // Try modern clipboard API first (works on HTTPS + localhost)
+      await navigator.clipboard.writeText(onboardingLink)
+      logger.debug('✅ Link copied via clipboard API')
+    } catch (clipboardError) {
+      // Fallback: Use old-school method for HTTP/HTTPS compatibility
+      logger.debug('⚠️ Clipboard API failed, using fallback method:', clipboardError)
+      
+      // Create temporary input element
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.value = onboardingLink
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+      logger.debug('✅ Link copied via fallback method')
+    }
     
     showSuccessToast(
       'Link kopiert!',
