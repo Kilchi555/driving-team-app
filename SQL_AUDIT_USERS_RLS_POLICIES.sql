@@ -42,10 +42,10 @@ ORDER BY p.policyname, p.cmd;
 
 SELECT 
   policyname,
-  roles,
+  roles::text as "Roles",
   cmd,
   CASE 
-    WHEN roles @> ARRAY['anon'::regrole] THEN '⚠️ ALLOWS ANON'
+    WHEN 'anon'::regrole = ANY(roles) THEN '⚠️ ALLOWS ANON'
     ELSE '✅ Anon blocked'
   END as "Anon Access",
   qual
