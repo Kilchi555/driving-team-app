@@ -5,9 +5,67 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { getClientIP } from '~/server/utils/ip-utils'
+import sanitize from 'isomorphic-dompurify'
 
 export default defineEventHandler(async (event) => {
+  let user: any = null
+  let ip: string = ''
+  
   try {
+    // 1. AUTHENTICATION
+    user = await getAuthenticatedUser(event)
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Authentication required'
+      })
+    }
+
+    // 2. AUTHORIZATION (Admin/Super Admin)
+    if (!['admin', 'super_admin', 'tenant_admin'].includes(user.role)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden - Admin role required'
+      })
+    }
+
+    // 3. RATE LIMITING
+    ip = getClientIP(event)
+    
+    // Dual rate limiting: Per IP (20/min) AND Per User (50/hour)
+    const rateLimitIP = await checkRateLimit(
+      ip,
+      'send_verification_ip',
+      20,
+      60000
+    )
+
+    if (!rateLimitIP.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Rate limit exceeded (IP). Retry after ${rateLimitIP.retryAfter}ms`
+      })
+    }
+
+    const rateLimitUser = await checkRateLimit(
+      user.id,
+      'send_verification_user',
+      50,
+      3600000
+    )
+
+    if (!rateLimitUser.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Rate limit exceeded (User). Retry after ${rateLimitUser.retryAfter}ms`
+      })
+    }
+
+    // 4. INPUT VALIDATION
     const body = await readBody(event)
     const { userId, deviceId, userEmail, deviceName } = body
 
@@ -18,7 +76,59 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Validate UUID format
+    if (!/^[a-f0-9-]{36}$/.test(userId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid userId format (must be UUID)'
+      })
+    }
+
+    if (!/^[a-f0-9-]{36}$/.test(deviceId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid deviceId format (must be UUID)'
+      })
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid email format'
+      })
+    }
+
+    // 5. INPUT SANITIZATION
+    const sanitizedDeviceName = deviceName ? sanitize(deviceName) : 'Unbekanntes Gerät'
+
     const supabase = getSupabaseAdmin()
+
+    // 6. AUTHORIZATION - Verify user owns the device (ownership check)
+    const { data: device, error: deviceError } = await supabase
+      .from('user_devices')
+      .select('id, user_id')
+      .eq('id', deviceId)
+      .eq('user_id', userId)
+      .single()
+
+    if (deviceError || !device) {
+      // AUDIT LOGGING (Authorization failure)
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_send_verification_unauthorized',
+        resource_type: 'device',
+        resource_id: deviceId,
+        status: 'failed',
+        details: { reason: 'device_not_owned_by_user' },
+        ip_address: ip
+      }).catch(() => {})
+
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Device not found or does not belong to this user'
+      })
+    }
 
     // Generiere Verifikations-Token
     const verificationToken = crypto.randomUUID()
@@ -61,7 +171,7 @@ export default defineEventHandler(async (event) => {
     
     <p>Hallo,</p>
     
-    <p>Ein neues Gerät wurde für Ihr Konto erkannt: <strong>${deviceName || 'Unbekanntes Gerät'}</strong></p>
+    <p>Ein neues Gerät wurde für Ihr Konto erkannt: <strong>${sanitizedDeviceName}</strong></p>
     
     <div style="background-color: white; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 5px;">
       <p style="margin: 5px 0;">Aus Sicherheitsgründen müssen Sie dieses Gerät bestätigen, bevor Sie sich anmelden können.</p>
@@ -107,6 +217,21 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('✅ Device verification email sent:', emailResult.messageId)
 
+      // AUDIT LOGGING (SUCCESS)
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_send_verification_success',
+        resource_type: 'device',
+        resource_id: deviceId,
+        status: 'success',
+        details: {
+          device_name: sanitizedDeviceName,
+          email: userEmail,
+          message_id: emailResult.messageId
+        },
+        ip_address: ip
+      }).catch(() => {})
+
       return {
         success: true,
         message: 'Verification email sent',
@@ -116,8 +241,18 @@ export default defineEventHandler(async (event) => {
     } catch (emailError: any) {
       console.error('❌ Error sending device verification email:', emailError)
       
-      // Auch wenn E-Mail fehlschlägt, geben wir den Token zurück
-      // Der User kann den Link manuell aufrufen
+      // AUDIT LOGGING (Email failure)
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_send_verification_email_failed',
+        resource_type: 'device',
+        resource_id: deviceId,
+        status: 'partial',
+        details: { error_message: emailError.message },
+        ip_address: ip
+      }).catch(() => {})
+
+      // Token wurde erstellt, aber E-Mail fehlgeschlagen
       return {
         success: true,
         message: 'Token created but email failed',
@@ -129,6 +264,18 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Error in send-device-verification:', error)
+
+    // AUDIT LOGGING (ERROR)
+    if (user) {
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_send_verification_error',
+        status: 'error',
+        error_message: error.message || 'Failed to send verification',
+        ip_address: ip
+      }).catch(() => {})
+    }
+
     throw createError({
       statusCode: error.statusCode || 500,
       statusMessage: error.message || 'Failed to send verification email'

@@ -4,61 +4,100 @@
 import { defineEventHandler } from 'h3'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
+  let user: any = null
+  let ip: string = ''
+  
   try {
+    // 1. AUTHENTICATION
+    user = await getAuthenticatedUser(event)
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Authentication required'
+      })
+    }
+
+    // 2. AUTHORIZATION (Super Admin only)
+    if (user.role !== 'super_admin') {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden - Super Admin role required'
+      })
+    }
+
+    // 3. RATE LIMITING (5 requests per hour - very restrictive for test)
+    ip = getClientIP(event)
+    const { allowed, retryAfter } = await checkRateLimit(
+      ip,
+      'test_email_config',
+      5, // 5 requests max
+      3600000 // per 1 hour
+    )
+
+    if (!allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Rate limit exceeded. Retry after ${retryAfter}ms`
+      })
+    }
+
+    logger.debug('🔍 Testing Supabase email configuration...')
+    
     const supabase = getSupabase()
     
     // Test 1: Check if we can access auth settings
-    logger.debug('🔍 Testing Supabase email configuration...')
+    logger.debug('📧 Auth session check...')
     
-    // Test 2: Try to get current auth settings (this might not work with anon key)
     try {
       const { data: authSettings, error: authError } = await supabase.auth.getSession()
-      logger.debug('📧 Auth session check:', { authSettings, authError })
+      logger.debug('📧 Auth session check result:', { hasSession: !!authSettings?.session, error: authError })
     } catch (e) {
-      logger.debug('📧 Auth session check failed (expected with anon key):', e)
+      logger.debug('📧 Auth session check failed (expected):', e)
     }
     
-    // Test 3: Check if we can send a test email (this will fail if not configured)
-    try {
-      const { data: testEmail, error: testError } = await supabase.auth.signUp({
-        email: 'test@example.com',
-        password: 'testpassword123',
-        options: {
-          emailRedirectTo: 'http://localhost:3000/login'
-        }
-      })
-      
-      logger.debug('📧 Test email signup result:', { testEmail, testError })
-      
-      return {
-        success: true,
-        message: 'Email configuration test completed',
-        results: {
-          authSession: 'Checked (expected to fail with anon key)',
-          testSignup: testError ? `Failed: ${testError.message}` : 'Success (but test user created)',
-          recommendation: testError?.message?.includes('email') ? 
-            'Email configuration needs to be set up in Supabase Dashboard' : 
-            'Email configuration appears to be working'
-        }
-      }
-    } catch (e: any) {
-      logger.debug('📧 Test email failed:', e)
-      
-      return {
-        success: false,
-        message: 'Email configuration test failed',
-        error: e.message,
-        recommendation: 'Check Supabase Dashboard → Authentication → Settings → Email'
-      }
+    // AUDIT LOGGING (TEST COMPLETED)
+    await logAudit({
+      user_id: user.id,
+      action: 'admin_test_email_config',
+      status: 'success',
+      details: { test_type: 'email_configuration' },
+      ip_address: ip
+    }).catch(() => {})
+
+    return {
+      success: true,
+      message: 'Email configuration test completed - check Supabase Dashboard for actual email status',
+      recommendations: [
+        'Check Supabase Dashboard → Authentication → Settings → Email',
+        'Verify SMTP configuration is set up',
+        'Check if email templates are configured',
+        'Review email provider settings'
+      ]
     }
     
   } catch (error: any) {
     console.error('Error testing email configuration:', error)
-    return {
-      success: false,
-      error: error.message
+
+    // AUDIT LOGGING (ERROR)
+    if (user) {
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_test_email_config_error',
+        status: 'error',
+        error_message: error.message || 'Failed to test email configuration',
+        ip_address: ip
+      }).catch(() => {})
     }
+
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || 'Failed to test email configuration'
+    })
   }
 })
