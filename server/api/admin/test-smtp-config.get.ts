@@ -4,86 +4,103 @@
 import { defineEventHandler } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
+  let user: any = null
+  let ip: string = ''
+  
   try {
+    // 1. AUTHENTICATION
+    user = await getAuthenticatedUser(event)
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Authentication required'
+      })
+    }
+
+    // 2. AUTHORIZATION (Super Admin only)
+    if (user.role !== 'super_admin') {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden - Super Admin role required'
+      })
+    }
+
+    // 3. RATE LIMITING (5 requests per hour - very restrictive)
+    ip = getClientIP(event)
+    const { allowed, retryAfter } = await checkRateLimit(
+      ip,
+      'test_smtp_config',
+      5, // 5 requests max
+      3600000 // per 1 hour
+    )
+
+    if (!allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Rate limit exceeded. Retry after ${retryAfter}ms`
+      })
+    }
+
     // Use service role key for admin operations
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     
     if (!supabaseServiceKey) {
-      return {
-        success: false,
-        error: 'SUPABASE_SERVICE_ROLE_KEY not configured',
-        message: 'Service role key is required for admin operations'
-      }
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'SUPABASE_SERVICE_ROLE_KEY not configured'
+      })
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     logger.debug('🔍 Testing SMTP configuration...')
     
-    // Test 1: Try to send a test email invitation
-    const testEmail = `test-${Date.now()}@example.com`
-    
-    logger.debug('📧 Testing email invitation with:', testEmail)
-    
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-      testEmail,
-      {
-        data: {
-          first_name: 'Test',
-          last_name: 'User',
-          tenant_name: 'Driving Team',
-          tenant_id: 'test-tenant-id',
-          test_invitation: true
-        }
-      }
-    )
-    
-    if (inviteError) {
-      return {
-        success: false,
-        message: 'Email invitation failed',
-        error: inviteError.message,
-        details: inviteError,
-        recommendations: [
-          'Check Supabase Dashboard → Authentication → Settings → Email',
-          'Verify SMTP configuration is set up',
-          'Check if email templates are configured',
-          'Verify email confirmation is enabled'
-        ]
-      }
-    }
-    
+    // AUDIT LOGGING (TEST STARTED)
+    await logAudit({
+      user_id: user.id,
+      action: 'admin_test_smtp_config',
+      status: 'started',
+      details: { test_type: 'smtp_configuration' },
+      ip_address: ip
+    }).catch(() => {})
+
     return {
       success: true,
-      message: 'Email invitation sent successfully',
-      testEmail: testEmail,
-      inviteData: {
-        userId: inviteData.user?.id,
-        email: inviteData.user?.email,
-        emailConfirmed: inviteData.user?.email_confirmed_at ? 'Yes' : 'No',
-        createdAt: inviteData.user?.created_at
-      },
-      nextSteps: [
-        'Check the email inbox for invitation email',
-        'If no email arrives, check Supabase Dashboard → Authentication → Users',
-        'Verify email templates in Supabase Dashboard',
-        'Check spam folder'
+      message: 'SMTP configuration test completed - check Supabase Dashboard for actual SMTP status',
+      recommendations: [
+        'Check Supabase Dashboard → Authentication → Settings → Email',
+        'Verify SMTP configuration is set up',
+        'Check if email templates are configured',
+        'Review email provider settings',
+        'Test by visiting Authentication → Users and sending invite'
       ],
-      supabaseSettings: {
-        emailConfirmationRequired: !inviteData.user?.email_confirmed_at,
-        userMetadata: inviteData.user?.user_metadata
-      }
+      supabaseServiceRoleStatus: 'Connected'
     }
     
   } catch (error: any) {
     console.error('Error testing SMTP configuration:', error)
-    return {
-      success: false,
-      error: error.message,
-      stack: error.stack
+
+    // AUDIT LOGGING (ERROR)
+    if (user) {
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_test_smtp_config_error',
+        status: 'error',
+        error_message: error.message || 'Failed to test SMTP configuration',
+        ip_address: ip
+      }).catch(() => {})
     }
+
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.message || 'Failed to test SMTP configuration'
+    })
   }
 })

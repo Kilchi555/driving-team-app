@@ -4,13 +4,83 @@
 import { getSupabase } from '~/utils/supabase'
 import { Wallee } from 'wallee'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
+  let user: any = null
+  let ip: string = ''
+  
   try {
+    // 1. AUTHENTICATION
+    user = await getAuthenticatedUser(event)
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Authentication required'
+      })
+    }
+
+    // 2. AUTHORIZATION - Super Admin only (more restrictive!)
+    if (user.role !== 'super_admin') {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden - Super Admin role required'
+      })
+    }
+
+    // 3. RATE LIMITING (More restrictive: 10 requests/minute)
+    ip = getClientIP(event)
+    const { allowed, retryAfter } = await checkRateLimit(
+      ip,
+      'fix_missing_tokens',
+      10, // 10 requests max
+      60000 // per 1 minute
+    )
+
+    if (!allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Rate limit exceeded. Retry after ${retryAfter}ms`
+      })
+    }
+
     logger.debug('🔧 Fix: Checking for payments without saved payment methods...')
 
+    // 4. INPUT VALIDATION
     const body = await readBody(event)
     const { paymentId, transactionId, userId, tenantId } = body
+
+    // Validate inputs are UUIDs or numbers as appropriate
+    if (paymentId && !/^[a-f0-9-]{36}$/.test(paymentId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid paymentId format (must be UUID)'
+      })
+    }
+
+    if (transactionId && !/^\d+$/.test(transactionId.toString())) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid transactionId format (must be numeric)'
+      })
+    }
+
+    if (userId && !/^[a-f0-9-]{36}$/.test(userId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid userId format (must be UUID)'
+      })
+    }
+
+    if (tenantId && !/^[a-f0-9-]{36}$/.test(tenantId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid tenantId format (must be UUID)'
+      })
+    }
 
     const supabase = getSupabase()
 
@@ -72,6 +142,17 @@ export default defineEventHandler(async (event) => {
 
         // Prüfe ob Tokenization aktiviert war (kann nicht mehr geändert werden)
         if (!transaction.customerId) {
+          // AUDIT LOGGING
+          await logAudit({
+            user_id: user.id,
+            action: 'admin_fix_missing_tokens_no_tokenization',
+            resource_type: 'payment',
+            resource_id: payment.id,
+            status: 'skipped',
+            details: { reason: 'no_customer_id' },
+            ip_address: ip
+          }).catch(() => {})
+
           return {
             success: false,
             message: 'Transaction has no customerId - tokenization was likely not enabled',
@@ -91,6 +172,17 @@ export default defineEventHandler(async (event) => {
         }
 
         if (!paymentMethodToken) {
+          // AUDIT LOGGING
+          await logAudit({
+            user_id: user.id,
+            action: 'admin_fix_missing_tokens_no_token',
+            resource_type: 'payment',
+            resource_id: payment.id,
+            status: 'failed',
+            details: { reason: 'token_not_available' },
+            ip_address: ip
+          }).catch(() => {})
+
           return {
             success: false,
             message: 'No payment method token found in Wallee transaction. Possible reasons: tokenization not enabled, payment not completed, or token not yet available.',
@@ -115,12 +207,23 @@ export default defineEventHandler(async (event) => {
             .update({ payment_method_id: existingToken.id })
             .eq('id', payment.id)
 
-          return {
-            success: true,
-            message: 'Token already exists, payment linked to existing token',
-            tokenId: existingToken.id,
-            paymentId: payment.id
-          }
+        // AUDIT LOGGING (SUCCESS)
+        await logAudit({
+          user_id: user.id,
+          action: 'admin_fix_missing_tokens_linked',
+          resource_type: 'payment',
+          resource_id: payment.id,
+          status: 'success',
+          details: { tokenId: existingToken.id },
+          ip_address: ip
+        }).catch(() => {})
+
+        return {
+          success: true,
+          message: 'Token already exists, payment linked to existing token',
+          tokenId: existingToken.id,
+          paymentId: payment.id
+        }
         }
 
         // Speichere neuen Token
@@ -263,6 +366,18 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Error fixing missing payment tokens:', error)
+
+    // AUDIT LOGGING (ERROR)
+    if (user) {
+      await logAudit({
+        user_id: user.id,
+        action: 'admin_fix_missing_tokens_error',
+        status: 'error',
+        error_message: error.message || 'Failed to fix missing tokens',
+        ip_address: ip
+      }).catch(() => {}) // Ignore audit logging errors
+    }
+
     throw createError({
       statusCode: error.statusCode || 500,
       statusMessage: error.message || 'Failed to fix missing payment tokens'
