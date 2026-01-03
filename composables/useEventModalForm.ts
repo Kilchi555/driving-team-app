@@ -338,22 +338,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return
       }
       
-      const supabase = getSupabase()
+      const authStore = useAuthStore()
       
-      logger.debug('🔍 Querying users table for student...')
-      const { data: student, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .eq('role', 'client')
-        .single()
+      logger.debug('🔍 Loading student via backend API...')
+      const { user: student } = await $fetch('/api/admin/get-user-for-edit', {
+        query: { user_id: userId },
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`
+        }
+      })
 
-      logger.debug('📊 Student query result:', { student, error })
-
-      if (error) {
-        console.error('❌ Error loading student:', error)
-        return
-      }
+      logger.debug('📊 Student query result:', { student })
 
       if (student) {
         selectedStudent.value = student
@@ -379,18 +374,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Load existing discount from discount_sales table
   const loadExistingDiscount = async (appointmentId: string) => {
     try {
-      const supabase = getSupabase()
+      const authStore = useAuthStore()
       
-      const { data: discount, error } = await supabase
-        .from('discount_sales')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .single()
+      const { discountSales } = await $fetch('/api/admin/get-discount-sales', {
+        query: { appointment_id: appointmentId },
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`
+        }
+      })
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.warn('⚠️ Error loading discount:', error)
-        return null
-      }
+      const discount = discountSales?.[0]
       
       if (discount) {
         logger.debug('💰 Existing discount loaded:', discount)
