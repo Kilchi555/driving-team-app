@@ -37,7 +37,7 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
       logger.error('🚨 Unauthorized cron request to sync-sari-courses')
       throw createError({
         statusCode: 401,
-        message: 'Unauthorized - Invalid cron token'
+        statusMessage: 'Unauthorized - Invalid cron token'
       })
     }
     

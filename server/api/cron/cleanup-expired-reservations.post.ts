@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
       logger.error('🚨 Unauthorized cron request to cleanup-expired-reservations')
       throw createError({
         statusCode: 401,
-        message: 'Unauthorized - Invalid cron token'
+        statusMessage: 'Unauthorized - Invalid cron token'
       })
     }
     
@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
       
       throw createError({
         statusCode: 500,
-        message: errorMsg
+        statusMessage: errorMsg
       })
     }
     
@@ -111,15 +111,8 @@ export default defineEventHandler(async (event) => {
     
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || 'Internal server error'
+      statusMessage: error.message || 'Internal server error'
     })
-  }
-})
-    console.error('❌ Error in cleanup-expired-reservations cron:', error)
-    return {
-      success: false,
-      error: error.message
-    }
   }
 })
 
