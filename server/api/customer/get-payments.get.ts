@@ -112,6 +112,7 @@ export default defineEventHandler(async (event) => {
         )
       `)
       .eq('tenant_id', userProfile.tenant_id)
+      .eq('user_id', userProfile.id)  // ✅ CRITICAL: Only customer's own payments!
       .order('created_at', { ascending: false })
 
     if (paymentsError) {
