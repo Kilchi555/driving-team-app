@@ -4976,6 +4976,11 @@ const handleEditModeLessonType = async () => {
           selectedPaymentMethod.value = userData.preferred_payment_method
           logger.debug('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
         } else {
+          if (userError && userError.code !== 'PGRST116') {
+            logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
+          } else {
+            logger.debug('ℹ️ No payment preference found, using default: wallee')
+          }
           selectedPaymentMethod.value = 'wallee' // Standard
           logger.debug('💳 Using default payment method: wallee')
         }
@@ -5185,7 +5190,12 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
        .eq('id', studentId)
        .single()
      
-     if (!testError && testData?.preferred_payment_method) {
+     if (testError) {
+       if (testError.code !== 'PGRST116') {
+         logger.warn('⚠️ Error loading payment method, will use default:', testError.message)
+       }
+       // Continue - we'll use default method
+     } else if (testData?.preferred_payment_method) {
        logger.debug('🔍 Current user payment method:', testData.preferred_payment_method)
        
        // Versuche den aktuellen Wert zu aktualisieren (sollte funktionieren)
@@ -5921,7 +5931,14 @@ const loadUserPaymentPreferences = async (userId: string) => {
       .eq('id', userId)
       .single()
     
-    if (!userError && userData?.preferred_payment_method) {
+    if (userError) {
+      if (userError.code !== 'PGRST116') {
+        logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
+      } else {
+        logger.debug('ℹ️ No payment preference found for user, using default')
+      }
+      selectedPaymentMethod.value = 'wallee' // Default
+    } else if (userData?.preferred_payment_method) {
       // ✅ NEU: Zahlungsmethoden für bessere Benutzerfreundlichkeit mappen
       let paymentMethod = userData.preferred_payment_method
       if (paymentMethod === 'twint' || paymentMethod === 'wallee') {
