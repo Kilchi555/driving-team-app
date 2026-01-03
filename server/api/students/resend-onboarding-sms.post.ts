@@ -210,7 +210,8 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 6: SEND SMS ============
     logger.debug('📱 Sending onboarding SMS to:', student.phone)
 
-    const onboardingUrl = `${process.env.NUXT_PUBLIC_APP_URL}/onboarding/${student.onboarding_token}`
+    const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+    const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
     const smsMessage = `Hallo ${student.first_name}, bitte vervollständige deine Registrierung: ${onboardingUrl}`
 
     // Get tenant data for SMS sender name
