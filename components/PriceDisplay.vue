@@ -1190,7 +1190,12 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
       .single()
 
     if (userError) {
-      console.warn('⚠️ Error loading user data:', userError)
+      if (userError.code === 'PGRST116') {
+        // Expected: No billing address found, this is fine
+        logger.debug('ℹ️ No billing address found for student:', studentId)
+      } else {
+        console.warn('⚠️ Error loading user data:', userError)
+      }
       return null
     }
 
