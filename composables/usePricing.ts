@@ -733,13 +733,21 @@ const roundToNearestFranken = (rappen: number): number => {
   
   // ✅ Prüfe dynamisch, ob categoryCode eine gültige Fahrkategorie ist (aus DB)
   let actualTenantId = tenantId
-  if (!actualTenantId && userId) {
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', userId)
-      .single()
-    actualTenantId = userProfile?.tenant_id
+  if (!actualTenantId) {
+    try {
+      // Hole tenant_id aus der Auth-Session des aktuellen Benutzers
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (currentUser) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', currentUser.id)
+          .single()
+        actualTenantId = userProfile?.tenant_id
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not fetch tenant_id:', err)
+    }
   }
   
   // Prüfe ob categoryCode in categories Tabelle existiert

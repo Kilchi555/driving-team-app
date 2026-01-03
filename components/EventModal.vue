@@ -1984,6 +1984,22 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
     // Load durations directly from categories table
     const supabase = getSupabase()
     
+    // ✅ WICHTIG: Hole tenant_id vom aktuell angemeldeten Benutzer
+    let tenantIdToUse: string | null = null
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', authUser.id)
+          .single()
+        tenantIdToUse = userData?.tenant_id
+      }
+    } catch (err) {
+      logger.debug('⚠️ Could not fetch tenant_id from auth:', err)
+    }
+    
     // ✅ WICHTIG: Auch nach tenant_id filtern
     let query = supabase
       .from('categories')
@@ -1992,8 +2008,8 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
       .eq('is_active', true)
     
     // Add tenant_id filter if available
-    if (currentUser.value?.tenant_id) {
-      query = query.eq('tenant_id', currentUser.value.tenant_id)
+    if (tenantIdToUse) {
+      query = query.eq('tenant_id', tenantIdToUse)
     }
     
     const { data: categoryData, error: categoryError } = await query.maybeSingle()
