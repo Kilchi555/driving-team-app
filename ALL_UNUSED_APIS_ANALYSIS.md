@@ -1,30 +1,33 @@
-# ALL UNUSED APIs - 59 Remaining (After Initial Cleanup)
+# ALL UNUSED APIs - 51 Remaining (After Cleanup Wave 2)
 
-**Total Unused:** 59 APIs (0 references anywhere in codebase)  
-**After Previous Delete:** Still 59 more  
-**Total APIs:** ~178 remaining  
+**Total Unused:** 51 APIs (0 references anywhere in codebase)  
+**After Wave 1 Cleanup:** 59 → 51 (8 deleted)  
+**Total APIs in System:** 170 (down from 188)  
+**Total Cleaned:** 18 APIs deleted  
 
 ---
 
 ## 📊 BREAKDOWN BY CATEGORY
 
-### 🔴 ADMIN APIs (14 unused)
+### 🔴 ADMIN APIs (6 unused - down from 14)
 ```
-1. admin/device-security-handler
-2. admin/email-templates
-3. admin/fix-tenants-rls           (RLS fix - maybe important?)
-4. admin/fix-user-devices-rls      (RLS fix - maybe important?)
-5. admin/migrate-missing-student-credits
-6. admin/pendencies/handle-recurrence
-7. admin/pendencies/update-overdue
-8. admin/rate-limit-logs
-9. admin/repair-locations
-10. admin/sync-all-wallee-payments
-11. admin/sync-wallee-payment
-12. admin/test-device-storage
-13. admin/test
-14. admin/update-tenant-user
+1. admin/pendencies/handle-recurrence
+2. admin/pendencies/update-overdue
+3. admin/rate-limit-logs
+4. admin/sync-all-wallee-payments
+5. admin/sync-wallee-payment
+6. admin/test
 ```
+
+**Deleted in Wave 2:**
+- ✂️ admin/device-security-handler
+- ✂️ admin/email-templates
+- ✂️ admin/fix-tenants-rls
+- ✂️ admin/fix-user-devices-rls
+- ✂️ admin/migrate-missing-student-credits
+- ✂️ admin/repair-locations
+- ✂️ admin/test-device-storage
+- ✂️ admin/update-tenant-user
 
 ### 🟠 AUTHENTICATION/WEBAUTHN (6 unused - Never Implemented!)
 ```
@@ -139,7 +142,7 @@
 
 **Date:** January 3, 2026  
 **Action:** Deleted 8 more unused admin APIs  
-**Commit:** 1e5e03c
+**Commit:** 1e5e03c + 3667c3e
 
 ### 🗑️ Deleted Files (Wave 2):
 ```
@@ -153,11 +156,12 @@
 ✂️  admin/update-tenant-user.post.ts
 ```
 
-### 📊 Updated Impact:
-- **Before Wave 2:** 178 APIs
-- **After Wave 2:** 170 APIs (8 removed)
-- **Lines Deleted:** 712 lines
-- **Total Cleaned:** 18 APIs + 1,470 lines
+### 📊 Updated Progress:
+- **Total Cleaned:** 18 APIs (10 in Wave 1 + 8 in Wave 2)
+- **Lines Deleted:** 1,470 lines
+- **APIs Remaining:** 170 (down from 188)
+- **Unused Remaining:** 51 (down from 59)
+- **% Cleaned:** 9.6% of all APIs removed
 
 ---
 
@@ -195,14 +199,13 @@ These were created for fixing RLS issues - might be needed for future maintenanc
 
 ## 🎯 DELETION STRATEGY
 
-### SAFE TO DELETE (28 APIs)
+### Safe to Delete (28 APIs)
 ```
-✂️ All DEBUG/* APIs
-✂️ All AUTH/WEBAUTHN/* APIs (never implemented)
-✂️ FEATURES/* (feature flags not used)
-✂️ TEST/* (test endpoints)
-✂️ courses/* (not using courses feature)
-✂️ course-participants/*
+✂️ All debug/* endpoints (9)
+✂️ All auth/webauthn/* (5 - never implemented)
+✂️ Features flags APIs (2)
+✂️ Test endpoints (1)
+✂️ Courses APIs (3)
 ✂️ appointments/adjust-duration
 ✂️ customer/manage-documents
 ✂️ tenants/seed-defaults, tenants/copy-evaluation-defaults
@@ -212,26 +215,23 @@ These were created for fixing RLS issues - might be needed for future maintenanc
 ✂️ mock/create-transaction
 ```
 
-### RISKY TO DELETE (20 APIs)
+### RISKY TO DELETE (12 APIs)
 ```
 ⚠️ Keep for now:
-- cron/* (scheduled tasks)
-- */webhook* (external systems)
-- admin/sync-* (important for data sync)
-- admin/fix-* (maintenance tools)
-- admin/migrate-* (data migration)
-- sari/* (integration endpoints)
-- student-credits/*
+- cron/* (5 - scheduled tasks)
+- */webhook* (3 - external systems)
+- sari/* (4 - integration endpoints)
 ```
 
 ### UNDECIDED (11 APIs)
 ```
-? admin/device-security-handler (device verification?)
-? admin/rate-limit-logs (monitoring?)
-? admin/email-templates (email config?)
-? admin/repair-locations (data repair?)
-? admin/pendencies/* (background tasks?)
-? students/send-onboarding-sms (notifications?)
+? admin/rate-limit-logs
+? admin/sync-all-wallee-payments
+? admin/sync-wallee-payment
+? admin/pendencies/*
+? students/send-onboarding-sms
+? student-credits/request-withdrawal
+? payments/* (some)
 ```
 
 ---
