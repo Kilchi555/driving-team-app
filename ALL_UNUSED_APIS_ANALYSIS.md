@@ -1,9 +1,11 @@
-# ALL UNUSED APIs - 51 Remaining (After Cleanup Wave 2)
+# ALL UNUSED APIs - 43 Remaining (After Cleanup Wave 3)
 
-**Total Unused:** 51 APIs (0 references anywhere in codebase)  
-**After Wave 1 Cleanup:** 59 → 51 (8 deleted)  
-**Total APIs in System:** 170 (down from 188)  
-**Total Cleaned:** 18 APIs deleted  
+**Total Unused:** 43 APIs (0 references anywhere in codebase)  
+**After Wave 1 Cleanup:** 59 → 51 (10 deleted)  
+**After Wave 2 Cleanup:** 51 → 43 (8 deleted)  
+**After Wave 3 Cleanup:** 43 remaining (9 deleted)  
+**Total APIs in System:** 161 (down from 188)  
+**Total Cleaned:** 27 APIs deleted (2,100+ lines)  
 
 ---
 
@@ -40,17 +42,18 @@
 ```
 **Status:** WebAuthn infrastructure - never activated
 
-### 🟡 DEBUG APIs (9 unused - Testing/Development Only)
+### 🟡 DEBUG APIs (0 unused - down from 9 - ALL DELETED!)
 ```
-21. debug/check-credit-transaction
-22. debug/check-payment
-23. debug/decode-key
-24. debug/manual-payment-update
-25. debug/tenants-direct
-26. debug/test-anon
-27. debug/test-search
+Deleted in Wave 3:
+✂️ debug/check-credit-transaction
+✂️ debug/check-payment
+✂️ debug/decode-key
+✂️ debug/manual-payment-update
+✂️ debug/tenants-direct
+✂️ debug/test-anon
+✂️ debug/test-search
 ```
-**Status:** Development debugging - should be removed from production
+**Status:** All debug endpoints removed from production
 
 ### 🟢 CRON/BACKGROUND JOBS (5 unused)
 ```
