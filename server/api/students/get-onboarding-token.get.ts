@@ -18,7 +18,7 @@
  */
 
 import { defineEventHandler, getHeader, createError, getQuery } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { validateUUID } from '~/server/utils/validators'
 
@@ -35,10 +35,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.substring(7)
-    const supabase = getSupabase(token)
+    
+    // Create Supabase admin client
+    const supabaseAdmin = getSupabaseAdmin()
 
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    // Get current user using the auth token
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     if (authError || !user) {
       logger.warn('❌ Invalid auth token')
       throw createError({
@@ -62,7 +64,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('📋 Getting onboarding token for student:', studentId)
 
     // Get user's profile to check role and tenant
-    const { data: userProfile, error: profileError } = await supabase
+    const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('id, role, tenant_id, email')
       .eq('auth_user_id', user.id)
@@ -95,7 +97,7 @@ export default defineEventHandler(async (event) => {
 
     // 6. TENANT ISOLATION - Query only students in same tenant
     // RLS will also enforce this, but we add an extra check
-    const { data: student, error: studentError } = await supabase
+    const { data: student, error: studentError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, onboarding_token, first_name, last_name')
       .eq('id', studentId)
@@ -141,7 +143,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // 7. AUDIT LOGGING - Log the token retrieval
-    await supabase
+    await supabaseAdmin
       .from('audit_logs')
       .insert({
         tenant_id: userProfile.tenant_id,
