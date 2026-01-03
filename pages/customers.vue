@@ -618,7 +618,6 @@ const loadStudents = async (loadAppointments = true) => {
   error.value = null
   
   try {
-    logger.debug('🔄 Loading students via API endpoint...', loadAppointments ? 'with appointments' : 'without appointments')
     logger.debug('Current user role:', currentUser.value.role)
     
     // Get auth token
@@ -791,11 +790,6 @@ const loadStudents = async (loadAppointments = true) => {
         const lastLesson = studentAppointments
           .filter((apt: any) => !apt.deleted_at)
           .sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
-        
-        logger.debug(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments:`, studentAppointments.length)
-
-        // ✅ Alle Berechnungen verwenden jetzt bereits geladene Daten
-        logger.debug(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments loaded:`, studentAppointments.length)
 
         return {
           ...(student as any),
