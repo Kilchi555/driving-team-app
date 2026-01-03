@@ -5111,17 +5111,27 @@ const loadStudentForEdit = async (userId: string) => {
       return
     }
     
-    // ✅ USE BACKEND API TO AVOID RLS RECURSION ISSUE
+    // ✅ GET AUTH TOKEN FROM SUPABASE SESSION
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    
+    if (!token) {
+      console.error('❌ No auth token available')
+      return
+    }
+    
+    // ✅ USE BACKEND API WITH AUTH TOKEN
     // This bypasses the 406 Not Acceptable error from direct users table queries
-    const { data, error } = await $fetch('/api/admin/get-user-for-edit', {
+    const response = await $fetch('/api/admin/get-user-for-edit', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       query: { user_id: userId }
     })
     
-    if (error) throw error
-    
-    if (data?.user) {
-      selectedStudent.value = data.user
-      logger.debug('👤 Student loaded for edit mode via API:', data.user.first_name)
+    if (response?.user) {
+      selectedStudent.value = response.user
+      logger.debug('👤 Student loaded for edit mode via API:', response.user.first_name)
     }
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
