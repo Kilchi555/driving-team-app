@@ -220,9 +220,16 @@ export function validateAppointmentTimes(
  * Validate driving category
  */
 export function validateDrivingCategory(value: any, fieldName: string = 'Fahrkategorie'): { valid: boolean; error?: string } {
-  const validCategories = ['A', 'A1', 'A2', 'B', 'BE', 'B96', 'C', 'C1', 'CE', 'C1E', 'D', 'D1', 'DE', 'D1E', 'F', 'G', 'M']
+  // All valid driving categories from the pricing system
+  const validCategories = [
+    'A', 'A1', 'A2', 'B', 'BE', 'B96', 'B Schaltung', 'BPT',
+    'C', 'C1', 'CE', 'C1E', 'C1/D1',
+    'D', 'D1', 'DE', 'D1E',
+    'F', 'G', 'M',
+    'Boot', 'Motorboot'
+  ]
   
-  if (!value || !validCategories.includes(String(value).toUpperCase())) {
+  if (!value || !validCategories.includes(String(value).trim())) {
     return { valid: false, error: `${fieldName} muss eine gültige Kategorie sein (${validCategories.join(', ')})` }
   }
   
