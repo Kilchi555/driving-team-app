@@ -943,6 +943,16 @@ const resendOnboardingSms = async () => {
     }
 
     logger.debug('✅ SMS sent via API:', smsResponse)
+    
+    // Show success message to user
+    uiStore.addNotification({
+      type: 'success',
+      title: 'SMS erfolgreich gesendet!',
+      message: `Onboarding-Link wurde an ${smsResponse.phone} gesendet.`
+    })
+    
+    // Close modal
+    showPendingModal.value = false
   } catch (err: any) {
     console.error('❌ Error resending reminder:', err)
     logger.debug('❌ Error details:', err)
