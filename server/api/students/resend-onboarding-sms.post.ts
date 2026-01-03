@@ -4,6 +4,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getHeader, H3Event } from 'h3'
+import { sendSMS } from '~/server/utils/sms'
 
 export default defineEventHandler(async (event: H3Event) => {
   const startTime = Date.now()
@@ -209,26 +210,32 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 6: SEND SMS ============
     logger.debug('📱 Sending onboarding SMS to:', student.phone)
 
-    // Use Supabase edge function to send SMS
     const onboardingUrl = `${process.env.NUXT_PUBLIC_APP_URL}/onboarding/${student.onboarding_token}`
-
     const smsMessage = `Hallo ${student.first_name}, bitte vervollständige deine Registrierung: ${onboardingUrl}`
 
-    // Call SMS service
-    const { data: smsResult, error: smsError } = await supabaseAdmin.functions.invoke('send-sms', {
-      body: {
-        to: student.phone,
-        message: smsMessage
-      }
+    // Get tenant data for SMS sender name
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('name, twilio_from_sender')
+      .eq('id', tenantId)
+      .single()
+
+    let senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+
+    // Send SMS via Twilio
+    const smsResult = await sendSMS({
+      to: student.phone,
+      message: smsMessage,
+      senderName: senderName
     })
 
-    if (smsError) {
-      logger.error('❌ Failed to send SMS:', smsError)
+    if (!smsResult.success) {
+      logger.error('❌ Failed to send SMS:', smsResult.error)
       await logAudit({
         user_id: authenticatedUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
-        error_message: `SMS sending failed: ${smsError.message}`,
+        error_message: `SMS sending failed: ${smsResult.error}`,
         ip_address: ipAddress,
         details: auditDetails
       })
@@ -246,6 +253,7 @@ export default defineEventHandler(async (event: H3Event) => {
       details: {
         ...auditDetails,
         sms_sent_to: student.phone,
+        sms_message_sid: smsResult.messageSid || 'unknown',
         duration_ms: Date.now() - startTime
       }
     })
