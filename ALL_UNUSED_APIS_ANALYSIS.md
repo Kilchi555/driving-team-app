@@ -1,10 +1,11 @@
-# ALL UNUSED APIs - 39 Remaining (After Cleanup Wave 3 + Cron Security)
+# ALL UNUSED APIs - 35 Remaining (After Cleanup Wave 3 + Cron Security + SARI Correction)
 
-**Total Unused:** 39 APIs (0 references anywhere in codebase)  
+**Total Unused:** 35 APIs (0 references anywhere in codebase)  
 **After Wave 1 Cleanup:** 59 → 51 (10 deleted)  
 **After Wave 2 Cleanup:** 51 → 43 (8 deleted)  
 **After Wave 3 Cleanup:** 43 remaining (9 deleted)  
 **After Cron Security:** 43 → 39 (4 secured + enabled)  
+**After SARI Correction:** 39 → 35 (4 FALSE POSITIVES - actually used in Admin Dashboard!)  
 **Total APIs in System:** 157 (down from 188)  
 **Total Cleaned:** 31 APIs deleted (2,200+ lines)  
 
@@ -91,71 +92,87 @@ Deleted in Wave 3:
 ```
 **Status:** Course management - unused features
 
-### 💜 SARI INTEGRATION (4 unused)
+### 💜 SARI INTEGRATION (0 unused - ALL ACTIVE!)
 ```
-31. sari/enroll-student
-32. sari/test-participants
-33. sari/unenroll-student
-34. sari/validate-student
+✅ IN USE (Admin Dashboard - Course Management):
+- sari/enroll-student (Kursverwaltung: Student anmelden)
+- sari/unenroll-student (Kursverwaltung: Student abmelden)
+- sari/validate-student (Kursverwaltung: Student validieren)
+- sari/test-participants (Admin: Test participants endpoint)
+
+✅ IN USE (Other):
+- sari/validate-enrollment (Frontend: Course enrollment validation)
+- sari/lookup-customer (Admin: Customer data lookup)
+- sari/sync-courses (Cron: Sync VKU/PGS courses)
+- sari/sync-participants (Cron: Sync participants)
+- sari/sync-status (Admin: Check sync status)
+- sari/test-connection (Admin: Test SARI connection)
+- sari/save-settings (Admin: Save SARI settings)
 ```
-**Status:** SARI integration endpoints - never called
+**Status:** ✅ ALL ACTIVE - FALSE POSITIVE CORRECTION
+- Previously marked as "unused" but actually called from Admin Dashboard
+- Used for course enrollment, unenrollment, and validation
+- Part of critical SARI integration workflow
+
+**Next Action:** These SARI APIs should be secured with the same security stack as Cron APIs
+- Need: Authentication, Rate Limiting, Input Validation, Audit Logging
 
 ### 🌐 WEBHOOKS (3 unused - IMPORTANT!)
 ```
-35. payment-gateway/webhook
-36. wallee/webhook-payment
-37. webhooks/wallee-refund
+28. payment-gateway/webhook
+29. wallee/webhook-payment
+30. webhooks/wallee-refund
 ```
 **Status:** ⚠️ CRITICAL - Payment webhooks must be active!
 
 ### 📱 CUSTOMER/DOCUMENTS (1 unused)
 ```
-38. customer/manage-documents
+31. customer/manage-documents
 ```
 
 ### 💳 PAYMENTS (4 unused)
 ```
-39. payments/confirm-cash
-40. payments/list
-41. payments/status
-42. mock/create-transaction
+32. payments/confirm-cash
+33. payments/list
+34. payments/status
+35. mock/create-transaction
 ```
 
 ### 🎓 FEATURES (2 unused)
 ```
-43. features/check
-44. features/list
+36. features/check
+37. features/list
 ```
 **Status:** Feature flags - never used
 
 ### 📧 NOTIFICATIONS (3 unused)
 ```
-45. reminder/seed-templates
-46. sms/test-sender
-47. students/send-onboarding-sms
+38. reminder/seed-templates
+39. sms/test-sender
+40. students/send-onboarding-sms
 ```
 
 ### 🏢 TENANTS (2 unused)
 ```
-48. tenants/copy-evaluation-defaults
-49. tenants/seed-defaults
+41. tenants/copy-evaluation-defaults
+42. tenants/seed-defaults
 ```
 **Status:** Setup only
 
 ### 👤 CREDITS (1 unused)
 ```
-50. student-credits/request-withdrawal
+43. student-credits/request-withdrawal
 ```
 
 ### 🔒 SECURITY (2 unused)
 ```
-51. security/block-ip
-52. security/save-settings
+44. security/block-ip
+45. security/save-settings
 ```
 
 ### 🧪 TEST (1 unused)
 ```
-53. test/feature-guards
+46. test/feature-guards
 ```
 
 ---
