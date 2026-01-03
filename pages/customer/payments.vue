@@ -471,37 +471,51 @@ const loadAllData = async () => {
 
   try {
     const supabase = getSupabase()
-    
-    // Get user data from users table - use userProfile.id which is the users table PK
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, preferred_payment_method')
-      .eq('id', userProfile.value.id)
-      .single()
-    
-    if (userError) throw userError
-    if (!userData) throw new Error('User nicht in Datenbank gefunden')
+    const { data: { session } } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
 
-    preferredPaymentMethod.value = userData.preferred_payment_method
-
-    logger.debug('🔍 Loading data for user:', userData.id)
-
-    // ✅ Lade Student Credit Balance
-    const { data: creditData, error: creditError } = await supabase
-      .from('student_credits')
-      .select('balance_rappen')
-      .eq('user_id', userData.id)
-      .single()
-    
-    if (creditError && creditError.code !== 'PGRST116') {
-      console.warn('⚠️ Could not load student credit:', creditError)
-    } else if (creditData) {
-      studentBalance.value = creditData.balance_rappen || 0
-      logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+    if (!accessToken) {
+      throw new Error('No authentication token found')
     }
 
-    // ✅ Verwende das neue useCustomerPayments Composable
-    await loadCustomerPayments()
+    // ✅ Use SINGLE comprehensive API to fetch ALL payment page data
+    // This replaces THREE separate queries with ONE secure API call:
+    // 1. User payment preferences
+    // 2. Student credit balance
+    // 3. Payments with staff data
+    logger.debug('📄 Loading payment page data via secure API...')
+
+    const response = await $fetch('/api/customer/get-payment-page-data', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load payment page data from API')
+    }
+
+    const { data } = response
+
+    // Set user preferences
+    preferredPaymentMethod.value = data.user?.preferred_payment_method || 'wallee'
+    logger.debug('💳 Preferred payment method:', preferredPaymentMethod.value)
+
+    // Set student balance
+    studentBalance.value = data.student_balance_rappen || 0
+    logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+
+    // Load payments directly from API response instead of separate call
+    customerPayments.value = data.payments || []
+    logger.debug('✅ Payments loaded from API:', customerPayments.value.length, 'payments')
+
+    logger.debug('✅ All payment page data loaded via API:', {
+      user: data.user?.id,
+      balance: studentBalance.value / 100,
+      payments: data.payments?.length || 0,
+      stats: data.stats
+    })
 
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
