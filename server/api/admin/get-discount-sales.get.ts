@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { H3Event } from 'h3'
@@ -25,9 +26,9 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_KEY
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       logger.error('Supabase configuration missing for get-discount-sales.')
       await logAudit({
         action: 'get_discount_sales',
@@ -39,7 +40,7 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 500, statusMessage: 'Supabase configuration missing' })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
 

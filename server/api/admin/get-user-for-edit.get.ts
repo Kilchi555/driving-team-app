@@ -9,7 +9,9 @@
  * ✅ Layer 7: Error Handling
  */
 
+import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 
@@ -21,21 +23,22 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_KEY
     
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      logger.error('Supabase configuration missing')
       throw createError({ statusCode: 500, statusMessage: 'Configuration error' })
     }
 
     // Create Supabase client with user's token to verify auth
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabaseUser = createClient(supabaseUrl, process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || '')
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey)
     
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabaseUser.auth.getUser(token)
     
     if (authError || !user) {
+      logger.warn('Invalid auth token provided')
       throw createError({ statusCode: 401, statusMessage: 'Invalid token' })
     }
 
@@ -59,11 +62,13 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (reqUserError || !requestingUser) {
+      logger.error('Requesting user profile not found:', reqUserError)
       throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
     }
 
-    // Layer 4: Authorization - Only admin/staff
-    if (!['admin', 'staff', 'super_admin'].includes(requestingUser.role)) {
+    // Layer 4: Authorization - Only admin/staff/superadmin
+    if (!['admin', 'staff', 'superadmin'].includes(requestingUser.role)) {
+      logger.warn(`Insufficient permissions for role: ${requestingUser.role}`)
       throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
     }
 
