@@ -178,6 +178,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // Check if student has phone number
     if (!student.phone) {
+      logger.error('❌ NO PHONE:', { studentId, phone: student.phone })
       await logAudit({
         user_id: authenticatedUserId,
         action: 'resend_onboarding_sms',
@@ -191,6 +192,11 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // Check if onboarding is still pending
     if (!student.onboarding_token || !student.onboarding_token_expires) {
+      logger.error('❌ NO TOKEN/EXPIRES:', { 
+        studentId, 
+        hasToken: !!student.onboarding_token,
+        hasExpires: !!student.onboarding_token_expires
+      })
       await logAudit({
         user_id: authenticatedUserId,
         action: 'resend_onboarding_sms',
@@ -203,17 +209,41 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // Check if token has expired
-    if (new Date(student.onboarding_token_expires) < new Date()) {
-      logger.warn('Onboarding token expired for student:', studentId)
-      await logAudit({
-        user_id: authenticatedUserId,
-        action: 'resend_onboarding_sms',
-        status: 'failed',
-        error_message: 'Onboarding token has expired',
-        ip_address: ipAddress,
-        details: auditDetails
+    const expiresAt = new Date(student.onboarding_token_expires)
+    const now = new Date()
+    if (expiresAt < now) {
+      logger.warn('⚠️ TOKEN EXPIRED - Generating new one:', { 
+        studentId, 
+        expiresAt: expiresAt.toISOString(), 
+        now: now.toISOString()
       })
-      throw createError({ statusCode: 400, statusMessage: 'Onboarding token has expired. Please request a new one.' })
+      
+      // Generate new token since old one expired
+      const { v4: uuidv4 } = await import('uuid')
+      const newToken = uuidv4()
+      const newExpires = new Date()
+      newExpires.setDate(newExpires.getDate() + 30) // 30 days valid
+      
+      logger.debug('✅ Generated new token, updating DB...')
+      
+      // Update student with new token
+      const { error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({
+          onboarding_token: newToken,
+          onboarding_token_expires: newExpires.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', studentId)
+      
+      if (updateError) {
+        logger.error('❌ Failed to generate new token:', updateError)
+        throw createError({ statusCode: 500, statusMessage: 'Failed to generate new onboarding token' })
+      }
+      
+      // Use new token for SMS
+      student.onboarding_token = newToken
+      logger.debug('✅ Token renewed - will use new token for SMS')
     }
 
     // ============ LAYER 5: AUDIT LOGGING ============
