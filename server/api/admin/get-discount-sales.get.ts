@@ -34,14 +34,18 @@ export default defineEventHandler(async (event: H3Event) => {
     try {
       const parts = token.split('.')
       if (parts.length === 3) {
-        const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+        // Pad base64 string if necessary
+        let padded = parts[1]
+        padded += '='.repeat((4 - padded.length % 4) % 4)
+        const decoded = JSON.parse(Buffer.from(padded, 'base64').toString())
         requestingUserId = decoded.sub
       }
     } catch (e) {
-      logger.warn('Failed to parse JWT token')
+      logger.warn('Failed to parse JWT token:', e)
     }
     
     if (!requestingUserId) {
+      logger.error('Could not extract user ID from token')
       throw createError({ statusCode: 401, statusMessage: 'Invalid token format' })
     }
 
