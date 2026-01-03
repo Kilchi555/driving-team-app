@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     const userId = crypto.randomUUID()
     const onboardingToken = crypto.randomUUID()
     const tokenExpires = new Date()
-    tokenExpires.setDate(tokenExpires.getDate() + 7) // 7 days valid
+    tokenExpires.setDate(tokenExpires.getDate() + 30) // 30 days valid
 
     // Prepare category array
     const categoryArray = body.category
