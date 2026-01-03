@@ -252,8 +252,9 @@
 
       </div>
     </div>
+  </div>
 
-    <!-- Enhanced Student Detail Modal -->
+  <!-- Enhanced Student Detail Modal -->
      <EnhancedStudentModal
     :selected-student="selectedStudent"
     :current-user="currentUser"
@@ -332,7 +333,51 @@
       </div>
     </div>
   </div>
+
+  <!-- Success/Error Toast Modal -->
+  <transition name="fade">
+    <div v-if="showToast" class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div 
+        class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 pointer-events-auto"
+        :class="{
+          'border-l-4 border-green-500': toastType === 'success',
+          'border-l-4 border-red-500': toastType === 'error',
+          'border-l-4 border-yellow-500': toastType === 'warning',
+          'border-l-4 border-blue-500': toastType === 'info'
+        }"
+      >
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            <!-- Icon -->
+            <div class="flex-shrink-0 text-2xl">
+              <span v-if="toastType === 'success'">✅</span>
+              <span v-else-if="toastType === 'error'">❌</span>
+              <span v-else-if="toastType === 'warning'">⚠️</span>
+              <span v-else>ℹ️</span>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                {{ toastTitle }}
+              </h3>
+              <p v-if="toastMessage" class="text-sm text-gray-600">
+                {{ toastMessage }}
+              </p>
+            </div>
+
+            <!-- Close Button -->
+            <button
+              @click="showToast = false"
+              class="flex-shrink-0 text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+  </transition>
 </template>
 
 <script setup lang="ts">
@@ -373,6 +418,12 @@ const pendingStudent = ref<any>(null)
 const isResendingSms = ref(false)
 const showReminderModal = ref(false)
 const currentReminderAppointment = ref<any>(null)
+
+// Toast state
+const showToast = ref(false)
+const toastType = ref<'success' | 'error' | 'warning' | 'info'>('success')
+const toastTitle = ref('')
+const toastMessage = ref('')
 
 // Computed
 const filteredStudents = computed(() => {
@@ -944,25 +995,26 @@ const resendOnboardingSms = async () => {
 
     logger.debug('✅ SMS sent via API:', smsResponse)
     
-    // Show success message to user
-    uiStore.addNotification({
-      type: 'success',
-      title: 'SMS erfolgreich gesendet!',
-      message: `Onboarding-Link wurde an ${smsResponse.phone} gesendet.`
-    })
+    // Show success toast
+    showSuccessToast(
+      'SMS erfolgreich gesendet!',
+      `Onboarding-Link wurde an ${smsResponse.phone} gesendet.`
+    )
     
-    // Close modal
+    // ✅ WICHTIG: Verzögere Modal-Close damit Toast sichtbar bleibt (3 Sekunden)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    logger.debug('🚀 Closing pending modal after toast display')
     showPendingModal.value = false
   } catch (err: any) {
     console.error('❌ Error resending reminder:', err)
     logger.debug('❌ Error details:', err)
     
     const errorMsg = err.message || 'Unbekannter Fehler'
-    uiStore.addNotification({
-      type: 'error',
-      title: 'Fehler',
-      message: 'Erinnerung konnte nicht versendet werden: ' + errorMsg
-    })
+    showErrorToast(
+      'Fehler beim SMS-Versand',
+      errorMsg
+    )
   } finally {
     isResendingSms.value = false
   }
@@ -972,41 +1024,74 @@ const copyOnboardingLink = async () => {
   if (!pendingStudent.value) return
   
   try {
-    // Fetch latest onboarding token from database
-    const { data: latestUser, error: fetchError } = await supabase
-      .from('users')
-      .select('onboarding_token')
-      .eq('id', pendingStudent.value.id)
-      .single()
+    logger.debug('📋 Fetching onboarding token via secure API...')
     
-    if (fetchError || !latestUser?.onboarding_token) {
-      throw new Error('Konnte aktuellen Onboarding-Link nicht laden')
+    // ============================================
+    // Call secure API to get onboarding token
+    // ============================================
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    const tokenResponse = await $fetch('/api/students/get-onboarding-token', {
+      method: 'GET',
+      params: {
+        studentId: pendingStudent.value.id
+      },
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`
+      }
+    }) as any
+
+    if (!tokenResponse?.success || !tokenResponse?.onboarding_token) {
+      throw new Error(tokenResponse?.message || 'Failed to fetch onboarding token')
     }
 
-    const onboardingLink = `https://simy.ch/onboarding/${latestUser.onboarding_token}`
+    logger.debug('✅ Token retrieved via API:', {
+      studentName: tokenResponse.student_name
+    })
+
+    const onboardingLink = `https://simy.ch/onboarding/${tokenResponse.onboarding_token}`
     
     await navigator.clipboard.writeText(onboardingLink)
     
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Link kopiert!',
-      message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
-    })
+    showSuccessToast(
+      'Link kopiert!',
+      'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
+    )
     
     logger.debug('🔗 Onboarding-Link copied:', onboardingLink)
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error copying link:', err)
-    uiStore.addNotification({
-      type: 'error',
-      title: 'Fehler',
-      message: 'Link konnte nicht kopiert werden. Siehe Konsole für Details.'
-    })
+    logger.debug('❌ Error details:', err)
+    
+    const errorMsg = err.message || 'Link konnte nicht kopiert werden'
+    showErrorToast(
+      'Fehler beim Link-Kopieren',
+      errorMsg
+    )
   }
 }
 
 const handleOpenReminderModal = (student: any) => {
   pendingStudent.value = student
   showPendingModal.value = true
+}
+
+// Toast Helper Functions
+const showSuccessToast = (title: string, message: string = '') => {
+  logger.debug('🔔 showSuccessToast called:', { title, message })
+  toastType.value = 'success'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
+}
+
+const showErrorToast = (title: string, message: string = '') => {
+  logger.debug('🔔 showErrorToast called:', { title, message })
+  toastType.value = 'error'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
 }
 </script>
 
