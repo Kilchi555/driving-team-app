@@ -220,8 +220,9 @@ export function validateAppointmentTimes(
  * Validate driving category
  */
 export function validateDrivingCategory(value: any, fieldName: string = 'Fahrkategorie'): { valid: boolean; error?: string } {
-  // All valid driving categories from the pricing system
-  const validCategories = [
+  // Fallback list of common categories (used when DB is not available)
+  // For complete validation, use the /api/validate/category endpoint
+  const fallbackCategories = [
     'A', 'A1', 'A2', 'B', 'BE', 'B96', 'B Schaltung', 'BPT',
     'C', 'C1', 'CE', 'C1E', 'C1/D1',
     'D', 'D1', 'DE', 'D1E',
@@ -229,8 +230,8 @@ export function validateDrivingCategory(value: any, fieldName: string = 'Fahrkat
     'Boot', 'Motorboot'
   ]
   
-  if (!value || !validCategories.includes(String(value).trim())) {
-    return { valid: false, error: `${fieldName} muss eine gültige Kategorie sein (${validCategories.join(', ')})` }
+  if (!value || !fallbackCategories.includes(String(value).trim())) {
+    return { valid: false, error: `${fieldName} muss eine gültige Kategorie sein (${fallbackCategories.join(', ')})` }
   }
   
   return { valid: true }
