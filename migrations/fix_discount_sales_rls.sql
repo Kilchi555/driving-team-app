@@ -1,38 +1,45 @@
--- FIX DISCOUNT_SALES RLS POLICIES
--- These are causing 406 errors when loading discount info
+-- migrations/fix_discount_sales_rls.sql
+-- Secure RLS on discount_sales table
+-- Note: Staff/Admin access to discount_sales should use backend API (service_role)
+-- to avoid RLS recursion and complexity issues
 
--- Step 1: Drop existing policies
-DROP POLICY IF EXISTS "Discount sales select" ON discount_sales;
-DROP POLICY IF EXISTS "Discount sales insert" ON discount_sales;
-DROP POLICY IF EXISTS "Discount sales update" ON discount_sales;
-DROP POLICY IF EXISTS "Users can read discount sales" ON discount_sales;
+-- Enable RLS on discount_sales table
+ALTER TABLE public.discount_sales ENABLE ROW LEVEL SECURITY;
 
--- Step 2: Enable RLS if not already enabled
-ALTER TABLE discount_sales ENABLE ROW LEVEL SECURITY;
-
--- Step 3: Create safe policies
-
--- Policy 1: Service role can read all
-CREATE POLICY "Service role read discount_sales" ON discount_sales
+-- Policy 1: Authenticated users can read their own discount sales
+-- (via their own appointments)
+CREATE POLICY "Authenticated users can read their own discount sales" ON public.discount_sales
   FOR SELECT
-  USING (auth.role() = 'service_role');
+  TO authenticated
+  USING (
+    (EXISTS ( SELECT 1 FROM public.appointments WHERE (appointments.id = discount_sales.appointment_id) AND (appointments.user_id = auth.uid())))
+  );
 
--- Policy 2: Service role can insert
-CREATE POLICY "Service role insert discount_sales" ON discount_sales
-  FOR INSERT
-  WITH CHECK (auth.role() = 'service_role');
-
--- Policy 3: Service role can update
-CREATE POLICY "Service role update discount_sales" ON discount_sales
+-- Policy 2: Authenticated users can update their own discount sales
+CREATE POLICY "Authenticated users can update their own discount sales" ON public.discount_sales
   FOR UPDATE
-  USING (auth.role() = 'service_role')
-  WITH CHECK (auth.role() = 'service_role');
+  TO authenticated
+  USING (
+    (EXISTS ( SELECT 1 FROM public.appointments WHERE (appointments.id = discount_sales.appointment_id) AND (appointments.user_id = auth.uid())))
+  )
+  WITH CHECK (
+    (EXISTS ( SELECT 1 FROM public.appointments WHERE (appointments.id = discount_sales.appointment_id) AND (appointments.user_id = auth.uid())))
+  );
 
--- Policy 4: Service role can delete
-CREATE POLICY "Service role delete discount_sales" ON discount_sales
-  FOR DELETE
-  USING (auth.role() = 'service_role');
+-- Policy 3: Service role has full access (read, insert, update, delete)
+CREATE POLICY "Service role full access to discount_sales" ON public.discount_sales
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
--- Step 4: Verify
-SELECT policyname, cmd FROM pg_policies WHERE tablename='discount_sales' ORDER BY policyname;
+-- Policy 4: Super admin has full access (read, insert, update, delete)
+CREATE POLICY "Super admin full access to discount_sales" ON public.discount_sales
+  FOR ALL
+  USING (
+    (EXISTS ( SELECT 1 FROM public.users WHERE (users.auth_user_id = auth.uid()) AND (users.role = 'superadmin')))
+  )
+  WITH CHECK (
+    (EXISTS ( SELECT 1 FROM public.users WHERE (users.auth_user_id = auth.uid()) AND (users.role = 'superadmin')))
+  );
 
