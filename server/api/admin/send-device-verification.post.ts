@@ -9,7 +9,6 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
-import sanitize from 'isomorphic-dompurify'
 
 export default defineEventHandler(async (event) => {
   let user: any = null
@@ -99,8 +98,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 5. INPUT SANITIZATION
-    const sanitizedDeviceName = deviceName ? sanitize(deviceName) : 'Unbekanntes Gerät'
+    // 5. INPUT SANITIZATION (remove any special characters from deviceName)
+    const sanitizedDeviceName = deviceName ? deviceName.trim().substring(0, 100) : 'Unbekanntes Gerät'
 
     const supabase = getSupabaseAdmin()
 
