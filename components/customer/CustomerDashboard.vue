@@ -1484,7 +1484,8 @@ const loadPendingConfirmations = async () => {
   }
 
   try {
-    // ✅ Use backend API to fetch pending confirmations with staff data (bypasses RLS)
+    // ✅ Use backend API to fetch pending confirmations with ALL data
+    // (staff, payments, categories, payment_items - all in ONE call!)
     const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
     
@@ -1506,91 +1507,19 @@ const loadPendingConfirmations = async () => {
       return
     }
 
-    // ✅ Load payment data for each appointment (including credit_used_rappen)
-    const appointmentIds = confirmationsData.map((apt: any) => apt.id)
-    let paymentsMap = new Map()
-    if (appointmentIds.length > 0) {
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payments')
-        .select('id, appointment_id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_method, payment_status, credit_used_rappen')
-        .in('appointment_id', appointmentIds)
-      
-      if (paymentsError) {
-        console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
-      } else if (paymentsData) {
-        paymentsData.forEach(payment => {
-          paymentsMap.set(payment.appointment_id, payment)
-        })
-      }
-    }
-
-    // ✅ Merge payment data into appointments
-    confirmationsData.forEach((apt: any) => {
-      if (paymentsMap.has(apt.id)) {
-        (apt as any).payment = paymentsMap.get(apt.id)
-      }
-    })
-
-    // ✅ Lade Kategorien separat basierend auf type (z.B. "B")
-    const categoryCodes = [...new Set(confirmationsData.map((apt: any) => apt.type).filter(Boolean))]
-    let categoriesMap = new Map()
-    if (categoryCodes.length > 0) {
-      // TODO: Load categories - need to get tenant_id from somewhere
-      // For now, skip category loading
-    }
-
-    // Merge categories into appointments
-    confirmationsData.forEach((apt: any) => {
-      if (apt.type && categoriesMap.has(apt.type)) {
-        (apt as any).categories = categoriesMap.get(apt.type)
-      }
-    })
-
-    // ✅ Load tenant payment settings (if we can get tenant_id)
-    // TODO: Get tenant_id from user profile and then load settings
-
-
-    // ✅ Load payment_items für alle payments
-    const paymentItemsMap = new Map()
-    const paymentIds = confirmationsData
-      .map((apt: any) => (apt.payment && apt.payment.id) || apt.payment_id)
-      .filter(Boolean)
-    
-    if (paymentIds.length > 0) {
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('payment_items')
-        .select('*')
-        .in('payment_id', paymentIds)
-        .order('created_at', { ascending: true })
-      
-      if (itemsError) {
-        console.warn('⚠️ Error loading payment_items:', itemsError)
-      }
-      
-      if (itemsData) {
-        itemsData.forEach(item => {
-          // Find the appointment for this payment_id
-          const appointment = confirmationsData.find((apt: any) => 
-            (apt.payment && apt.payment.id === item.payment_id) || 
-            apt.payment_id === item.payment_id
-          )
-          
-          if (appointment) {
-            if (!paymentItemsMap.has(appointment.id)) {
-              paymentItemsMap.set(appointment.id, [])
-            }
-            paymentItemsMap.get(appointment.id).push(item)
-          }
-        })
-      }
-    }
-
-    // ✅ Set pending confirmations with all data
+    // ✅ Data already enriched by API - just set it directly!
+    // No need for separate queries:
+    // - Payments: already loaded
+    // - Categories: already loaded
+    // - Payment items: already loaded
+    // - Staff: already loaded
     pendingConfirmations.value = confirmationsData.map((apt: any) => ({
       ...apt,
-      payment_items: paymentItemsMap.get(apt.id) || [],
-      // Payment data already merged above
+      // These are already in the response from the API
+      payment_items: apt.payment_items || [],
     }))
+
+    logger.debug('✅ Pending confirmations loaded with full data from API')
   } catch (err: any) {
     console.error('❌ Error loading pending confirmations:', err)
   }
@@ -1769,13 +1698,15 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    // Hole Payment für diesen Termin (Betrag)
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, total_amount_rappen, payment_method')
-      .eq('appointment_id', appointment.id)
-      .order('created_at', { ascending: false })
-      .maybeSingle()
+    // ✅ Payment ist bereits von der API geladen (in appointment.payment)!
+    // Keine separate Query nötig - das würde RLS-Fehler verursachen
+    const payment = appointment.payment
+    
+    if (!payment) {
+      displayToast('error', 'Fehler', 'Zahlungsdaten für den Termin nicht gefunden')
+      confirmingAppointments.value.delete(appointment.id)
+      return
+    }
 
     // ✅ NEU: Wenn payment_method 'cash', 'invoice' oder 'credit' ist, NICHT zu Wallee weiterleiten!
     if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice' || payment?.payment_method === 'credit') {
