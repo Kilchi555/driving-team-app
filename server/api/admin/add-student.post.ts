@@ -1,20 +1,33 @@
 // server/api/admin/add-student.post.ts
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
 
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export default defineEventHandler(async (event) => {
   try {
+    // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
+    const authUser = (await getSupabase().auth.getUser()).data.user
+    if (authUser) {
+      const rateLimitResult = await checkRateLimit(authUser.id, 30)
+      if (!rateLimitResult.success) {
+        throw createError({
+          statusCode: 429,
+          statusMessage: 'Too many requests. Please try again later.'
+        })
+      }
+    }
+
     const body = await readBody(event)
     logger.debug('📝 Add student request:', { email: body.email, phone: body.phone })
 
     // Get auth user and validate
     const supabase = getSupabase()
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const { data: { user: authUserData } } = await supabase.auth.getUser()
     
-    if (!authUser) {
+    if (!authUserData) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
@@ -25,7 +38,7 @@ export default defineEventHandler(async (event) => {
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('tenant_id')
-      .eq('auth_user_id', authUser.id)
+      .eq('auth_user_id', authUserData.id)
       .single()
 
     if (profileError || !userProfile?.tenant_id) {
