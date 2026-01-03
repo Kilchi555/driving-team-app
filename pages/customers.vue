@@ -979,6 +979,11 @@ const resendOnboardingSms = async () => {
     
     const { data: { session } } = await supabase.auth.getSession()
     
+    logger.debug('📋 Sending SMS for student:', {
+      studentId: pendingStudent.value?.id,
+      firstName: pendingStudent.value?.first_name
+    })
+    
     const smsResponse = await $fetch('/api/students/resend-onboarding-sms', {
       method: 'POST',
       body: {
