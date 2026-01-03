@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
       logger.error('🚨 Unauthorized cron request to process-automatic-payments')
       throw createError({
         statusCode: 401,
-        message: 'Unauthorized - Invalid cron token'
+        statusMessage: 'Unauthorized - Invalid cron token'
       })
     }
     
@@ -142,7 +142,7 @@ export default defineEventHandler(async (event) => {
             appointmentStartTime: appointment.start_time,
             automaticPaymentHoursBefore: 24
           }
-        })
+        }) as { success?: boolean; state?: string } | any
 
         if (authResponse?.success) {
           logger.debug(`✅ [${payment.id}] Payment authorized - State: ${authResponse.state}`)
