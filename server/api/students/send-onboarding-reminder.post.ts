@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ UUID generated:', newToken)
     
     const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 14) // 14 Tage
+    expiresAt.setDate(expiresAt.getDate() + 30) // 30 Tage
     
     logger.debug('✅ New token generated, expires at:', expiresAt.toISOString())
 
