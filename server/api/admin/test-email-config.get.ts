@@ -70,6 +70,15 @@ export default defineEventHandler(async (event) => {
       ip_address: ip
     }).catch(() => {})
 
+    // AUDIT LOGGING (TEST COMPLETED)
+    await logAudit({
+      user_id: user.id,
+      action: 'admin_test_email_config',
+      status: 'success',
+      details: { test_type: 'email_configuration' },
+      ip_address: ip
+    }).catch(() => {})
+
     return {
       success: true,
       message: 'Email configuration test completed - check Supabase Dashboard for actual email status',
