@@ -5111,17 +5111,17 @@ const loadStudentForEdit = async (userId: string) => {
       return
     }
     
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    // ✅ USE BACKEND API TO AVOID RLS RECURSION ISSUE
+    // This bypasses the 406 Not Acceptable error from direct users table queries
+    const { data, error } = await $fetch('/api/admin/get-user-for-edit', {
+      query: { user_id: userId }
+    })
     
     if (error) throw error
     
-    if (data) {
-      selectedStudent.value = data
-      logger.debug('👤 Student loaded for edit mode:', data.first_name)
+    if (data?.user) {
+      selectedStudent.value = data.user
+      logger.debug('👤 Student loaded for edit mode via API:', data.user.first_name)
     }
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
