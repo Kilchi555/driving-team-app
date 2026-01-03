@@ -3,13 +3,19 @@
  * POST /api/cron/sync-sari-courses
  * 
  * Runs periodically to sync courses from SARI for all enabled tenants
- * Triggered by external cron service (e.g., Vercel Cron, EasyCron, etc.)
+ * 
+ * Security:
+ * ✅ Layer 1: Auth - Vercel CRON_SECRET verification
+ * ✅ Layer 2: Rate Limiting - Prevents re-trigger within 30 seconds
+ * ✅ Layer 3: Audit Logging - Logs every execution
+ * ✅ Layer 7: Error Handling - Detailed error messages
  */
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient } from '~/utils/sariClient'
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
 import { logger } from '~/utils/logger'
+import { verifyCronToken, checkCronRateLimit, logCronExecution } from '~/server/utils/cron'
 
 interface CronResult {
   success: boolean
@@ -23,12 +29,40 @@ interface CronResult {
 }
 
 export default defineEventHandler(async (event): Promise<CronResult> => {
-  const startTime = Date.now()
+  const startTime = new Date()
 
   try {
-    logger.debug('🔄 SARI Cron Job started')
-
+    // Layer 1: Authentication - Verify Vercel Cron token
+    if (!verifyCronToken(event)) {
+      logger.error('🚨 Unauthorized cron request to sync-sari-courses')
+      throw createError({
+        statusCode: 401,
+        message: 'Unauthorized - Invalid cron token'
+      })
+    }
+    
     const supabaseAdmin = getSupabaseAdmin()
+    
+    // Layer 2: Rate Limiting - Prevent re-trigger
+    const canRun = await checkCronRateLimit(supabaseAdmin, 'sync-sari-courses', 30)
+    if (!canRun) {
+      logger.warn('⏱️ Rate limited: sync-sari-courses ran too recently')
+      
+      await logCronExecution(supabaseAdmin, 'sync-sari-courses', 'success', {
+        startedAt: startTime,
+        completedAt: new Date(),
+        errorMessage: 'Skipped due to rate limit'
+      })
+      
+      return {
+        success: false,
+        tenants_processed: 0,
+        total_syncs: 0,
+        failed_tenants: []
+      }
+    }
+
+    logger.debug('🔄 SARI Cron Job started')
 
     // 1. Get all tenants with SARI enabled
     const { data: tenants, error: tenantsError } = await supabaseAdmin
@@ -39,11 +73,29 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
       .eq('sari_enabled', true)
 
     if (tenantsError) {
-      throw new Error(`Failed to fetch tenants: ${tenantsError.message}`)
+      const errorMsg = `Failed to fetch tenants: ${tenantsError.message}`
+      logger.error(`❌ ${errorMsg}`)
+      
+      // Layer 3: Audit Logging - Log failure
+      await logCronExecution(supabaseAdmin, 'sync-sari-courses', 'failed', {
+        startedAt: startTime,
+        completedAt: new Date(),
+        errorMessage: errorMsg
+      })
+      
+      throw new Error(errorMsg)
     }
 
     if (!tenants || tenants.length === 0) {
       logger.debug('No tenants with SARI enabled')
+      
+      // Layer 3: Audit Logging - Log success (no work)
+      await logCronExecution(supabaseAdmin, 'sync-sari-courses', 'success', {
+        processedCount: 0,
+        startedAt: startTime,
+        completedAt: new Date()
+      })
+      
       return {
         success: true,
         tenants_processed: 0,
@@ -128,13 +180,21 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
       }
     }
 
-    const duration = Date.now() - startTime
+    const duration = new Date().getTime() - startTime.getTime()
+    const successCount = tenants.length - failedTenants.length
 
     logger.debug('✅ SARI Cron Job completed', {
       tenants_processed: tenants.length,
       total_syncs: totalSyncs,
       failed: failedTenants.length,
       duration_ms: duration
+    })
+
+    // Layer 3: Audit Logging - Log success
+    await logCronExecution(supabaseAdmin, 'sync-sari-courses', 'success', {
+      processedCount: successCount,
+      startedAt: startTime,
+      completedAt: new Date()
     })
 
     return {
@@ -146,6 +206,18 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
   } catch (error: any) {
     const errorMsg = error.message || 'Unknown error'
     logger.error('❌ SARI Cron Job failed', { error: errorMsg })
+    
+    // Log the error if we have supabase access
+    try {
+      const supabaseAdmin = getSupabaseAdmin()
+      await logCronExecution(supabaseAdmin, 'sync-sari-courses', 'failed', {
+        startedAt: startTime,
+        completedAt: new Date(),
+        errorMessage: errorMsg
+      })
+    } catch (logError) {
+      logger.error('❌ Failed to log cron error:', logError)
+    }
 
     throw createError({
       statusCode: 500,
