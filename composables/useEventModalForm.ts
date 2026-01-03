@@ -862,6 +862,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
         throw new Error('User-Profil nicht gefunden')
       }
       
+      if (!dbUser.tenant_id) {
+        throw new Error('Benutzer hat keinen Tenant zugeordnet')
+      }
+      
       // Appointment Data
       // ✅ FIX: Für "other" EventTypes ohne Schüler, verwende staff_id als user_id
       // WICHTIG: user_id darf NIEMALS null sein - Foreign Key Constraint!
@@ -967,16 +971,27 @@ const useEventModalForm = (currentUser?: any, refs?: {
       logger.debug('💾 Saving appointment data:', appointmentData)
       
       // Use API endpoint with admin privileges to bypass RLS foreign key issues
-      const response = await $fetch('/api/appointments/save', {
-        method: 'POST',
-        body: {
-          mode,
-          eventId,
-          appointmentData
-        }
-      })
+      let response
+      try {
+        response = await $fetch('/api/appointments/save', {
+          method: 'POST',
+          body: {
+            mode,
+            eventId,
+            appointmentData
+          }
+        })
+      } catch (fetchError: any) {
+        logger.error('❌ API error saving appointment:', fetchError)
+        // Re-throw with better error message
+        throw new Error(fetchError.data?.message || fetchError.message || 'Fehler beim Speichern des Termins')
+      }
       
       const result = response?.data
+      
+      if (!result) {
+        throw new Error('Keine Daten vom Server erhalten')
+      }
       
       logger.debug('✅ Appointment saved:', result.id)
       
