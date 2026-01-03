@@ -1,66 +1,63 @@
-# QUICK FIX - Apply RLS Migration NOW
+# QUICK FIX - Apply RLS Migrations NOW
 
-## ⚡ IMMEDIATE ACTION NEEDED
+## ⚡ IMMEDIATE ACTION NEEDED - 3 MIGRATIONS
 
-Copy this SQL and paste into **Supabase SQL Editor** NOW:
+Copy each SQL and paste into **Supabase SQL Editor** in this ORDER:
 
-**File:** `migrations/fix_users_rls_ultra_safe.sql`
+**File 1:** `migrations/fix_users_rls_ultra_safe.sql`
+**File 2:** `migrations/cleanup_discount_sales_rls.sql` ← DO THIS FIRST for discount_sales!
+**File 3:** `migrations/fix_discount_sales_rls.sql` ← Then this
 
 This will:
 - ✅ Fix all 406 errors on `users` table
+- ✅ Clean up conflicting policies on `discount_sales`
+- ✅ Apply new safe policies on `discount_sales`
 - ✅ Allow authenticated users to read their own profile
-- ✅ Allow backend APIs to read all users
-- ❌ Will NOT fix `discount_sales` 406 errors (separate migration needed)
+- ✅ Allow backend APIs to read/write all data
 
 ---
 
-## Step-by-Step
+## Step-by-Step (DO IN THIS ORDER)
 
-### 1. Go to Supabase Dashboard
-- https://app.supabase.com
-- Select project: driving-team-app
-- Click: SQL Editor
+### Step 1: Apply fix_users_rls_ultra_safe.sql
 
-### 2. Create New Query
-- Click "+ New Query"
+1. Go to Supabase → SQL Editor → + New Query
+2. Copy from: `/Users/pascalkilchenmann/driving-team-app/migrations/fix_users_rls_ultra_safe.sql`
+3. Paste and click **Run**
+4. Wait for success
 
-### 3. Copy-Paste Full Migration
-From this file:
-```
-/Users/pascalkilchenmann/driving-team-app/migrations/fix_users_rls_ultra_safe.sql
-```
+### Step 2: Apply cleanup_discount_sales_rls.sql
 
-### 4. Execute
-- Click "Run" button
-- Wait for success message
+1. + New Query
+2. Copy from: `/Users/pascalkilchenmann/driving-team-app/migrations/cleanup_discount_sales_rls.sql`
+3. Paste and click **Run**
+4. Wait for success
 
-### 5. Test
-Run this in Supabase to verify:
-```sql
-SELECT policyname, cmd FROM pg_policies WHERE tablename='users' ORDER BY policyname;
-```
+### Step 3: Apply fix_discount_sales_rls.sql
 
-Should show 6 policies with safe names.
+1. + New Query
+2. Copy from: `/Users/pascalkilchenmann/driving-team-app/migrations/fix_discount_sales_rls.sql`
+3. Paste and click **Run**
+4. Wait for success
 
----
-
-## Expected Result After Migration
-
-✅ 406 errors on `/rest/v1/users` → GONE
-⏳ Other 406 errors (discount_sales, etc) → Still there (need separate fix)
-✅ `/api/admin/get-user-for-edit` → Should work now with token
-
----
-
-## Next Steps After Migration Applied
+### Step 4: Test in Browser
 
 1. Reload browser (Ctrl+R or Cmd+R)
 2. Try editing an appointment
-3. Student should load correctly
-4. If still 401 → Token issue remains
-5. If 406 on discount_sales → Need discount_sales RLS fix
+3. Check browser console - should see NO 406 or 401 errors
 
 ---
 
-**APPLY THIS NOW! Don't wait!**
+## Expected Result
+
+✅ 406 errors on users → GONE
+✅ 406 errors on discount_sales → GONE
+✅ 401 on /api/admin/get-user-for-edit → GONE
+✅ Student data loads
+✅ Payment method loads
+
+---
+
+**APPLY ALL 3 IN ORDER NOW!**
+
 
