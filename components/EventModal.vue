@@ -4976,8 +4976,12 @@ const handleEditModeLessonType = async () => {
           selectedPaymentMethod.value = userData.preferred_payment_method
           logger.debug('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
         } else {
-          if (userError && userError.code !== 'PGRST116') {
-            logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
+          if (userError) {
+            if (userError.code === 'PGRST116' || userError.message?.includes('Row Level Security')) {
+              logger.debug('ℹ️ RLS blocked payment preferences (expected for staff viewing client), using default: wallee')
+            } else {
+              logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
+            }
           } else {
             logger.debug('ℹ️ No payment preference found, using default: wallee')
           }
@@ -5932,10 +5936,10 @@ const loadUserPaymentPreferences = async (userId: string) => {
       .single()
     
     if (userError) {
-      if (userError.code !== 'PGRST116') {
-        logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
+      if (userError.code === 'PGRST116' || userError.message?.includes('Row Level Security')) {
+        logger.debug('ℹ️ RLS blocked payment preferences (expected for staff viewing client), using default: wallee')
       } else {
-        logger.debug('ℹ️ No payment preference found for user, using default')
+        logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
       }
       selectedPaymentMethod.value = 'wallee' // Default
     } else if (userData?.preferred_payment_method) {

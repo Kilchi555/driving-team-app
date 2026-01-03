@@ -339,7 +339,7 @@ definePageMeta({
 
 // Composables
 const authStore = useAuthStore()
-const { user: currentUser, isClient } = storeToRefs(authStore)
+const { user: currentUser, isClient, userProfile } = storeToRefs(authStore)
 
 // ✅ Verwende das neue useCustomerPayments Composable
 const {
@@ -467,16 +467,16 @@ const retryLoad = async () => {
 }
 
 const loadAllData = async () => {
-  if (!currentUser.value?.id) return
+  if (!userProfile.value?.id) return
 
   try {
     const supabase = getSupabase()
     
-    // Get user data from users table
+    // Get user data from users table - use userProfile.id which is the users table PK
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, preferred_payment_method')
-      .eq('auth_user_id', currentUser.value.id)
+      .eq('id', userProfile.value.id)
       .single()
     
     if (userError) throw userError
