@@ -483,15 +483,17 @@ const submitForm = async () => {
       `Onboarding-Link wurde via ${contactType} an ${contactInfo} gesendet.`
     )
     
-    // Reset form and close modal - mit VIEL längerer Verzögerung damit Toast sichtbar wird
+    // ✅ WICHTIG: Verzögere resetForm() damit Toast sichtbar bleibt (3 Sekunden)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    logger.debug('🚀 Resetting form after toast display')
     resetForm()
     emit('added', newStudent)
     
-    // Gebe der Toast-Notification Zeit, angezeigt zu werden (2 Sekunden mindestens)
-    setTimeout(() => {
-      logger.debug('🚀 Closing modal after toast display (2000ms delay)')
-      emit('close')
-    }, 2000)
+    // ✅ Dann nach weiterer Verzögerung Modal schließen (500ms später)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    logger.debug('🚀 Closing modal')
+    emit('close')
 
   } catch (error: any) {
     console.error('❌❌❌ Fehler beim Hinzufügen des Schülers:', error)
