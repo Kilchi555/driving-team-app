@@ -196,41 +196,47 @@ export const useStudents = () => {
     try {
       logger.debug('🚀 Adding student via API:', { email: studentData.email, phone: studentData.phone })
       
-      // Call backend API instead of direct DB insert
-      const { data, error } = await useFetch('/api/admin/add-student', {
+      // Get auth token from Supabase session
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
+      if (!token) {
+        throw new Error('No authentication token available')
+      }
+      
+      // Call backend API with Authorization header
+      const response = await $fetch('/api/admin/add-student', {
         method: 'POST',
-        body: studentData
+        body: studentData,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       }) as any
 
-      if (error.value) {
-        logger.error('❌ Add student API error:', error.value)
-        
+      if (!response?.success) {
         // Extract error details
-        const errorMessage = error.value?.data?.statusMessage || error.value?.message || 'Unknown error'
+        const errorMessage = response?.statusMessage || response?.error || 'Failed to add student'
         
         // Handle duplicate errors
         if (errorMessage === 'DUPLICATE_PHONE') {
           const errorObj: any = new Error('DUPLICATE_PHONE')
           errorObj.duplicateType = 'phone'
-          errorObj.existingUser = error.value?.data?.data?.existingUser
+          errorObj.existingUser = response?.data?.existingUser
           throw errorObj
         }
         
         if (errorMessage === 'DUPLICATE_EMAIL') {
           const errorObj: any = new Error('DUPLICATE_EMAIL')
           errorObj.duplicateType = 'email'
-          errorObj.existingUser = error.value?.data?.data?.existingUser
+          errorObj.existingUser = response?.data?.existingUser
           throw errorObj
         }
         
         throw new Error(errorMessage)
       }
 
-      if (!data.value?.success) {
-        throw new Error(data.value?.error || 'Failed to add student')
-      }
-
-      const createdStudent = data.value.data
+      const createdStudent = response.data
       const userId = createdStudent.id
       const onboardingToken = createdStudent.onboarding_token
       const onboardingLink = createdStudent.onboardingLink

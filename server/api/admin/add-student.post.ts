@@ -34,8 +34,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
-    const rateLimitResult = await checkRateLimit(authUserData.id, 30)
-    if (!rateLimitResult.success) {
+    const rateLimitResult = await checkRateLimit(
+      authUserData.id,
+      'register', // Use 'register' operation type
+      30,         // maxRequests override
+      60 * 1000   // windowMs: 1 minute
+    )
+    if (!rateLimitResult.allowed) {
       throw createError({
         statusCode: 429,
         statusMessage: 'Too many requests. Please try again later.'
