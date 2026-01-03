@@ -25,11 +25,11 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
+    const supabaseUrl = process.env.SUPABASE_URL
     const supabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_KEY
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      logger.error('Supabase configuration missing for get-discount-sales.')
+      logger.error('Supabase configuration missing - URL or ANON_KEY not set')
       await logAudit({
         action: 'get_discount_sales',
         status: 'error',
