@@ -20,7 +20,7 @@
 import { defineEventHandler, getHeader, createError, getQuery } from 'h3'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { validateUUID } from '~/utils/validators'
+import { validateUUID } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
