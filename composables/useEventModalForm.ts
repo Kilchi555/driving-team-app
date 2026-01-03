@@ -338,13 +338,19 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return
       }
       
-      const authStore = useAuthStore()
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        logger.error('❌ No access token available')
+        return
+      }
       
       logger.debug('🔍 Loading student via backend API...')
       const { user: student } = await $fetch('/api/admin/get-user-for-edit', {
         query: { user_id: userId },
         headers: {
-          Authorization: `Bearer ${authStore.accessToken}`
+          Authorization: `Bearer ${session.access_token}`
         }
       })
 
@@ -374,12 +380,18 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Load existing discount from discount_sales table
   const loadExistingDiscount = async (appointmentId: string) => {
     try {
-      const authStore = useAuthStore()
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        logger.error('❌ No access token available')
+        return null
+      }
       
       const { discountSales } = await $fetch('/api/admin/get-discount-sales', {
         query: { appointment_id: appointmentId },
         headers: {
-          Authorization: `Bearer ${authStore.accessToken}`
+          Authorization: `Bearer ${session.access_token}`
         }
       })
       
