@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { getHeader } from 'h3'
 import {
   validateAppointmentData,
   validateUUID,
@@ -35,6 +36,39 @@ export default defineEventHandler(async (event) => {
     // Validate appointment data
     const validation = validateAppointmentData(appointmentData)
     throwIfInvalid(validation)
+
+    // Extra security: Validate category against database (if type/category is present)
+    if (appointmentData.type) {
+      try {
+        const authHeader = getHeader(event, 'authorization')
+        const token = authHeader?.replace('Bearer ', '')
+        
+        if (token) {
+          logger.debug('🔍 Validating category against database:', appointmentData.type)
+          
+          const categoryValidationResult = await $fetch('/api/validate/category', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            body: {
+              categoryCode: appointmentData.type,
+              tenantId: appointmentData.tenant_id
+            }
+          }) as any
+
+          if (!categoryValidationResult?.valid) {
+            logger.warn('❌ Category validation failed via API:', categoryValidationResult?.error)
+            throwValidationError({ type: categoryValidationResult?.error || 'Fahrkategorie ungültig' })
+          }
+
+          logger.debug('✅ Category validated successfully:', appointmentData.type)
+        }
+      } catch (categoryError: any) {
+        logger.warn('⚠️ Category validation API call failed (using fallback):', categoryError.message)
+        // Fall through - the basic validator will catch invalid categories
+      }
+    }
 
     // Sanitize string fields to prevent XSS
     if (appointmentData.title) {
