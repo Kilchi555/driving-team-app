@@ -23,11 +23,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
+    const supabaseUrl = process.env.SUPABASE_URL
     const supabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_KEY
     
     if (!supabaseUrl || !supabaseAnonKey) {
-      logger.error('Supabase configuration missing')
+      logger.error('Supabase configuration missing - URL or ANON_KEY not set')
       throw createError({ statusCode: 500, statusMessage: 'Configuration error' })
     }
 
