@@ -9,13 +9,14 @@ SELECT
   'USERS' as table_name,
   policyname,
   cmd,
+  roles::text,
+  SUBSTR(qual, 1, 100) as condition,
   CASE 
-    WHEN 'service_role'::regrole = ANY(roles) THEN 'service_role'
-    WHEN 'authenticated'::regrole = ANY(roles) THEN 'authenticated'
-    WHEN 'anon'::regrole = ANY(roles) THEN '🔴 ANON (DANGER!)'
-    ELSE roles::text
-  END as roles,
-  SUBSTR(qual, 1, 100) as condition
+    WHEN roles::text LIKE '%service_role%' THEN '✅ service_role'
+    WHEN roles::text LIKE '%authenticated%' THEN '✅ authenticated'
+    WHEN roles::text LIKE '%anon%' THEN '🔴 ANON (DANGER!)'
+    ELSE '❓ other'
+  END as role_assessment
 FROM pg_policies
 WHERE tablename = 'users'
 ORDER BY policyname;
@@ -26,13 +27,14 @@ SELECT
   'APPOINTMENTS' as table_name,
   policyname,
   cmd,
+  roles::text,
+  SUBSTR(qual, 1, 100) as condition,
   CASE 
-    WHEN 'service_role'::regrole = ANY(roles) THEN 'service_role'
-    WHEN 'authenticated'::regrole = ANY(roles) THEN 'authenticated'
-    WHEN 'anon'::regrole = ANY(roles) THEN '🔴 ANON (DANGER!)'
-    ELSE roles::text
-  END as roles,
-  SUBSTR(qual, 1, 100) as condition
+    WHEN roles::text LIKE '%service_role%' THEN '✅ service_role'
+    WHEN roles::text LIKE '%authenticated%' THEN '✅ authenticated'
+    WHEN roles::text LIKE '%anon%' THEN '🔴 ANON (DANGER!)'
+    ELSE '❓ other'
+  END as role_assessment
 FROM pg_policies
 WHERE tablename = 'appointments'
 ORDER BY policyname;
@@ -43,13 +45,14 @@ SELECT
   'PAYMENTS' as table_name,
   policyname,
   cmd,
+  roles::text,
+  SUBSTR(qual, 1, 100) as condition,
   CASE 
-    WHEN 'service_role'::regrole = ANY(roles) THEN 'service_role'
-    WHEN 'authenticated'::regrole = ANY(roles) THEN 'authenticated'
-    WHEN 'anon'::regrole = ANY(roles) THEN '🔴 ANON (DANGER!)'
-    ELSE roles::text
-  END as roles,
-  SUBSTR(qual, 1, 100) as condition
+    WHEN roles::text LIKE '%service_role%' THEN '✅ service_role'
+    WHEN roles::text LIKE '%authenticated%' THEN '✅ authenticated'
+    WHEN roles::text LIKE '%anon%' THEN '🔴 ANON (DANGER!)'
+    ELSE '❓ other'
+  END as role_assessment
 FROM pg_policies
 WHERE tablename = 'payments'
 ORDER BY policyname;
@@ -58,11 +61,11 @@ ORDER BY policyname;
 SELECT 
   tablename,
   COUNT(*) as total_policies,
-  COUNT(CASE WHEN 'anon'::regrole = ANY(roles) THEN 1 END) as "🔴 ANON",
-  COUNT(CASE WHEN 'service_role'::regrole = ANY(roles) THEN 1 END) as "✅ service_role",
-  COUNT(CASE WHEN 'authenticated'::regrole = ANY(roles) THEN 1 END) as "✅ authenticated",
+  COUNT(CASE WHEN roles::text LIKE '%anon%' THEN 1 END) as "🔴 ANON",
+  COUNT(CASE WHEN roles::text LIKE '%service_role%' THEN 1 END) as "✅ service_role",
+  COUNT(CASE WHEN roles::text LIKE '%authenticated%' THEN 1 END) as "✅ authenticated",
   CASE 
-    WHEN COUNT(CASE WHEN 'anon'::regrole = ANY(roles) THEN 1 END) > 0 THEN '🔴 PROBLEM: Anon can access!'
+    WHEN COUNT(CASE WHEN roles::text LIKE '%anon%' THEN 1 END) > 0 THEN '🔴 PROBLEM: Anon can access!'
     ELSE '✅ OK: Anon blocked'
   END as risk_assessment
 FROM pg_policies
