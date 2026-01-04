@@ -261,7 +261,6 @@ export default defineEventHandler(async (event: H3Event) => {
 
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
     const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
-    const smsMessage = `Hallo ${student.first_name}, bitte vervollständige deine Registrierung: ${onboardingUrl}`
 
     // Get tenant data for SMS sender name
     const { data: tenant } = await supabaseAdmin
@@ -271,6 +270,17 @@ export default defineEventHandler(async (event: H3Event) => {
       .single()
 
     let senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+    let tenantName = tenant?.name || 'Driving Team'
+
+    // Format professional SMS message with line breaks
+    const smsMessage = `Hallo ${student.first_name},
+
+bitte vervollständige deine Registrierung innerhalb der nächsten 30 Tage:
+
+${onboardingUrl}
+
+Freundliche Grüsse,
+${tenantName}`
 
     // Send SMS via Twilio
     const smsResult = await sendSMS({
