@@ -368,7 +368,7 @@
 
             <!-- Close Button -->
             <button
-              @click="showToast = false"
+              @click="() => { clearToastTimeout(); showToast = false }"
               class="flex-shrink-0 text-gray-400 hover:text-gray-600 text-xl"
             >
               ×
@@ -1104,22 +1104,47 @@ const handleOpenReminderModal = (student: any) => {
   showPendingModal.value = true
 }
 
+// Toast auto-hide timeout
+let toastTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+// Clear existing timeout
+const clearToastTimeout = () => {
+  if (toastTimeoutId) {
+    clearTimeout(toastTimeoutId)
+    toastTimeoutId = null
+  }
+}
+
 // Toast Helper Functions
 const showSuccessToast = (title: string, message: string = '') => {
   logger.debug('🔔 showSuccessToast called:', { title, message })
+  clearToastTimeout()
   toastType.value = 'success'
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
   logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
+  
+  // Auto-hide after 3 seconds
+  toastTimeoutId = setTimeout(() => {
+    showToast.value = false
+    toastTimeoutId = null
+  }, 3000)
 }
 
 const showErrorToast = (title: string, message: string = '') => {
   logger.debug('🔔 showErrorToast called:', { title, message })
+  clearToastTimeout()
   toastType.value = 'error'
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
+  
+  // Auto-hide after 3 seconds
+  toastTimeoutId = setTimeout(() => {
+    showToast.value = false
+    toastTimeoutId = null
+  }, 3000)
 }
 </script>
 
