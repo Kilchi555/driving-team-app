@@ -5,6 +5,7 @@ import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getHeader, H3Event } from 'h3'
 import { sendSMS } from '~/server/utils/sms'
+import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event: H3Event) => {
   const startTime = Date.now()
@@ -219,7 +220,6 @@ export default defineEventHandler(async (event: H3Event) => {
       })
       
       // Generate new token since old one expired
-      const { v4: uuidv4 } = await import('uuid')
       const newToken = uuidv4()
       const newExpires = new Date()
       newExpires.setDate(newExpires.getDate() + 30) // 30 days valid
