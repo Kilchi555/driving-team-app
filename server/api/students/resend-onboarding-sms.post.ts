@@ -231,8 +231,7 @@ export default defineEventHandler(async (event: H3Event) => {
         .from('users')
         .update({
           onboarding_token: newToken,
-          onboarding_token_expires: newExpires.toISOString(),
-          updated_at: new Date().toISOString()
+          onboarding_token_expires: newExpires.toISOString()
         })
         .eq('id', studentId)
       

@@ -58,7 +58,7 @@
                 <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a2 2 0 012-2h14a2 2 0 012 2v2H3V5zm19 4v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9h20zM6 14h5v2H6v-2z"/></svg>
                 Online‑Zahlungen
               </h3>
-              <p>Sichere Zahlungen mit Stripe. Diverse Zahlungsmethoden.</p>
+              <p>Sichere Zahlungen mit Wallee. Diverse Zahlungsmethoden.</p>
               <div class="mini">
                 <span class="chip">Checkout</span>
                 <span class="chip">Einfache Integration</span>
