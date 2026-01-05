@@ -128,6 +128,45 @@ export default defineEventHandler(async (event) => {
       }
       result = data
       logger.debug('✅ Appointment created:', result.id)
+      
+      // ============ CREATE PAYMENT FOR NEW APPOINTMENT ============
+      if (appointmentData.total_amount_rappen) {
+        try {
+          logger.debug('💳 Creating payment for new appointment:', {
+            appointmentId: result.id,
+            userId: result.user_id,
+            amount: appointmentData.total_amount_rappen
+          })
+          
+          const paymentData = {
+            appointment_id: result.id,
+            user_id: result.user_id,
+            tenant_id: appointmentData.tenant_id,
+            total_amount_rappen: appointmentData.total_amount_rappen,
+            payment_method: appointmentData.payment_method || 'wallee',
+            payment_status: 'pending_confirmation',
+            description: appointmentData.title || `Fahrlektio ${appointmentData.type}`,
+            created_at: new Date().toISOString()
+          }
+          
+          const { data: paymentResult, error: paymentError } = await supabase
+            .from('payments')
+            .insert(paymentData)
+            .select()
+            .single()
+          
+          if (paymentError) {
+            logger.warn('⚠️ Failed to create payment (non-critical):', paymentError)
+            // Don't throw - appointment creation succeeded, payment creation is secondary
+          } else {
+            logger.debug('✅ Payment created for appointment:', paymentResult.id)
+            result.payment_id = paymentResult.id
+          }
+        } catch (paymentErr: any) {
+          logger.warn('⚠️ Payment creation exception (non-critical):', paymentErr.message)
+          // Don't throw - appointment is already created
+        }
+      }
     }
 
     return {
