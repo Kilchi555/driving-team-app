@@ -185,11 +185,13 @@ export default defineEventHandler(async (event) => {
     if (paymentsError) {
       logger.error('Error fetching payments:', paymentsError)
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUser.id,  // Use users.id, not auth.uid()
+        auth_user_id: authenticatedUserId,
         action: 'customer_get_payment_page_data',
         status: 'failed',
         error_message: `Failed to fetch payments: ${paymentsError.message}`,
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: auditDetails
       })
       throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
@@ -197,12 +199,14 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 5: AUDIT LOGGING ============
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: requestingUser.id,  // Use users.id, not auth.uid()
+      auth_user_id: authenticatedUserId,
       action: 'customer_get_payment_page_data',
       resource_type: 'customer_data',
       resource_id: requestingUser.id,
       status: 'success',
       ip_address: ipAddress,
+      tenant_id: tenantId,
       details: {
         ...auditDetails,
         payments_count: paymentsData?.length || 0,

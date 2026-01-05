@@ -45,6 +45,7 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 -- RLS Policies
 
 -- 1. Service role (API servers) can do everything - needed for audit logging
+DROP POLICY IF EXISTS "audit_logs_service_role_all" ON public.audit_logs;
 CREATE POLICY "audit_logs_service_role_all" ON public.audit_logs
   FOR ALL
   TO service_role
@@ -52,6 +53,7 @@ CREATE POLICY "audit_logs_service_role_all" ON public.audit_logs
   WITH CHECK (true);
 
 -- 2. Authenticated users (staff/admins) can read their tenant's audit logs
+DROP POLICY IF EXISTS "audit_logs_authenticated_read_tenant" ON public.audit_logs;
 CREATE POLICY "audit_logs_authenticated_read_tenant" ON public.audit_logs
   FOR SELECT
   TO authenticated
@@ -65,6 +67,7 @@ CREATE POLICY "audit_logs_authenticated_read_tenant" ON public.audit_logs
   );
 
 -- 3. Super admins can read all audit logs
+DROP POLICY IF EXISTS "audit_logs_super_admin_read_all" ON public.audit_logs;
 CREATE POLICY "audit_logs_super_admin_read_all" ON public.audit_logs
   FOR SELECT
   TO authenticated
@@ -77,6 +80,7 @@ CREATE POLICY "audit_logs_super_admin_read_all" ON public.audit_logs
   );
 
 -- 4. Authenticated users can read their own audit log entries (self-read)
+DROP POLICY IF EXISTS "audit_logs_authenticated_read_own" ON public.audit_logs;
 CREATE POLICY "audit_logs_authenticated_read_own" ON public.audit_logs
   FOR SELECT
   TO authenticated
