@@ -1660,29 +1660,6 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    // ✅ SCHRITT 1: Setze Termin SOFORT auf 'confirmed' - BEVOR Zahlung starten!
-    logger.debug('🔄 Setting appointment to confirmed immediately...')
-    try {
-      const confirmResult = await $fetch('/api/appointments/confirm', {
-        method: 'POST',
-        body: {
-          appointmentId: appointment.id
-        }
-      }) as { success?: boolean; error?: string }
-      
-      if (!confirmResult.success) {
-        console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-        throw new Error(confirmResult.error || 'Could not confirm appointment')
-      } else {
-        logger.debug('✅ Appointment confirmed immediately')
-      }
-    } catch (err) {
-      console.error('❌ Error confirming appointment:', err)
-      displayToast('error', 'Fehler', 'Termin konnte nicht bestätigt werden')
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
     // ✅ Payment ist bereits von der API geladen (in appointment.payment)!
     // Keine separate Query nötig - das würde RLS-Fehler verursachen
     const payment = appointment.payment
@@ -1725,165 +1702,80 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    // Lade Tenant Payment Settings (für automatische Zahlung)
-    let automaticPaymentEnabledLocal = false
-    let automaticPaymentHoursBeforeLocal = 24
-    let automaticAuthorizationHoursBeforeLocal = 168
+    // ✅ VERWENDE NEUE SICHERE API: Alle Payment Settings werden jetzt vom Server geladen!
+    // Keine direct Supabase Queries mehr - alles geht durch die API
+    let automaticPaymentSettings: any = {
+      enabled: false,
+      hasToken: false,
+      shouldProcessImmediately: false,
+      canScheduleAutomatic: false
+    }
+
     try {
-      const { data: paymentSettings } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', userDb.tenant_id)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      if (paymentSettings?.setting_value) {
-        const settings = typeof paymentSettings.setting_value === 'string' 
-          ? JSON.parse(paymentSettings.setting_value) 
-          : paymentSettings.setting_value
-        automaticPaymentEnabledLocal = !!settings?.automatic_payment_enabled
-        automaticPaymentHoursBeforeLocal = Number(settings?.automatic_payment_hours_before) || 24
-        // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
-        const authHours = Number(settings?.automatic_authorization_hours_before) || 120
-        automaticAuthorizationHoursBeforeLocal = Math.min(authHours, 120)
-        
-        logger.debug('✅ Payment settings loaded:', {
-          automatic_payment_enabled: automaticPaymentEnabledLocal,
-          automatic_payment_hours_before: automaticPaymentHoursBeforeLocal,
-          automatic_authorization_hours_before: automaticAuthorizationHoursBeforeLocal,
-          rawSettings: settings
-        })
+      const confirmResult = await $fetch('/api/appointments/confirm-with-payment', {
+        method: 'POST',
+        body: {
+          appointmentId: appointment.id
+        }
+      }) as { 
+        success?: boolean
+        appointment?: any
+        payment?: any
+        automaticPaymentSettings?: any
+        error?: string 
       }
-    } catch (e) {
-      console.warn('⚠️ Konnte Payment Settings nicht laden:', e)
-    }
+      
+      if (!confirmResult.success) {
+        console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+        displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
+        confirmingAppointments.value.delete(appointment.id)
+        return
+      }
 
-    // ✅ OPTION 1: Hole Default-Zahlungsmittel (falls vorhanden)
-    // Beim ersten Termin: Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)
-    // Bei weiteren Terminen: Token vorhanden → Automatische Zahlung möglich
-    let defaultMethodId: string | null = null
-    if (automaticPaymentEnabledLocal) {
-      const { data: method } = await supabase
-        .from('customer_payment_methods')
-        .select('id')
-        .eq('user_id', userDb.id)
-        .eq('is_active', true)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      automaticPaymentSettings = confirmResult.automaticPaymentSettings || {}
       
-      defaultMethodId = method?.id || null
-      
-      logger.debug('💳 Payment method check:', {
-        hasMethod: !!defaultMethodId,
-        automaticPaymentEnabled: automaticPaymentEnabledLocal,
-        note: defaultMethodId 
-          ? 'Token vorhanden → Automatische Zahlung möglich' 
-          : 'Kein Token → Weiterleitung zu Wallee (Token wird erstellt)'
+      logger.debug('✅ Appointment confirmed via secure API:', {
+        appointmentId: appointment.id,
+        automaticPaymentSettings
       })
+    } catch (err: any) {
+      console.error('⚠️ Error confirming appointment via API:', err)
+      displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
+      confirmingAppointments.value.delete(appointment.id)
+      return
     }
 
-    // ✅ Entscheide: automatische Zahlung planen oder sofortige Zahlung
-    // Regel: Automatische Zahlung mit Token wenn:
-    // 1. Automatische Zahlung aktiviert ist
-    // 2. Ein gespeichertes Zahlungsmittel (Token) vorhanden ist
-    // → ENTWEDER: Genug Zeit → Schedule für später
-    // → ODER: Zu wenig Zeit → Sofort authorize + capture
-    // SONST: Weiterleitung zu Wallee (Token wird erstellt/gespeichert)
-    const startDate = new Date(appointment.start_time)
-    const now = new Date()
-    const diffHours = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60))
-    
-    // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten (entweder scheduled oder immediate)
-    const hasToken = automaticPaymentEnabledLocal && !!defaultMethodId
-    const shouldProcessImmediately = hasToken && diffHours < automaticPaymentHoursBeforeLocal
-    const canScheduleAutomatic = hasToken && diffHours >= automaticPaymentHoursBeforeLocal
-    
-    logger.debug('🔍 Automatic payment decision:', {
-      automaticPaymentEnabled: automaticPaymentEnabledLocal,
-      hasDefaultMethod: !!defaultMethodId,
-      diffHours: diffHours,
-      requiredHours: automaticPaymentHoursBeforeLocal,
-      hasToken: hasToken,
-      shouldProcessImmediately: shouldProcessImmediately,
-      canScheduleAutomatic: canScheduleAutomatic,
-      appointmentStart: appointment.start_time,
-      decision: shouldProcessImmediately
+    logger.debug('🔍 Automatic payment decision from API:', {
+      hasToken: automaticPaymentSettings.hasToken,
+      shouldProcessImmediately: automaticPaymentSettings.shouldProcessImmediately,
+      canScheduleAutomatic: automaticPaymentSettings.canScheduleAutomatic,
+      decision: automaticPaymentSettings.shouldProcessImmediately
         ? '⚡ Token vorhanden + zu wenig Zeit → Sofort authorize + capture'
-        : canScheduleAutomatic 
+        : automaticPaymentSettings.canScheduleAutomatic 
           ? '✅ Token vorhanden + genug Zeit → Automatische Zahlung geplant' 
           : '💳 Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)'
     })
 
-    // ℹ️ NICHT den Status zu 'scheduled' setzen - das erfolgt erst nach erfolgreicher Zahlung via Webhook
-    // Der Termin bleibt auf 'pending_confirmation' bis der Webhook von Wallee kommt
-
-    // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten
-    if (hasToken && payment?.id) {
-      // ✅ Plane automatische Zahlung 24h (oder konfiguriert) vor Termin
-      const scheduledPayDate = new Date(startDate.getTime() - automaticPaymentHoursBeforeLocal * 60 * 60 * 1000)
-      // ✅ Bestimme frühesten Autorisierungszeitpunkt (z. B. 1 Woche vorher)
-      const authDueDate = new Date(startDate.getTime() - automaticAuthorizationHoursBeforeLocal * 60 * 60 * 1000)
+    // ✅ NEU: Wenn automatische Zahlung aktiviert ist und kein Token vorhanden:
+    // Der Termin ist bereits bestätigt und die Zahlung wird automatisch geplant
+    // NICHT zu Wallee weiterleiten!
+    if (automaticPaymentSettings.enabled && !automaticPaymentSettings.hasToken) {
+      displayToast('success', 'Termin bestätigt!', 'Zahlung wird automatisch eingezogen')
+      confirmingAppointments.value.delete(appointment.id)
       
-      // Runde auf die nächste volle Stunde auf (Cron läuft zur vollen Stunde)
-      const roundToNextFullHour = (date: Date) => {
-        const rounded = new Date(date)
-        if (rounded.getMinutes() > 0 || rounded.getSeconds() > 0) {
-          rounded.setHours(rounded.getHours() + 1)
-        }
-        rounded.setMinutes(0)
-        rounded.setSeconds(0)
-        rounded.setMilliseconds(0)
-        return rounded
+      // Entferne bestätigten Termin aus der pendingConfirmations Liste
+      const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
+      if (index !== -1) {
+        pendingConfirmations.value.splice(index, 1)
+        logger.debug('✅ Removed confirmed appointment from pending list')
       }
       
-      const roundedPayDate = roundToNextFullHour(scheduledPayDate)
-      const roundedAuthDate = roundToNextFullHour(authDueDate)
+      // Refresh
+      logger.debug('🔄 Refreshing pending confirmations after confirmation...')
+      await loadPendingConfirmations()
       
-      // ✅ NEU: Bei Immediate Processing IMMER sofort authorize
-      const shouldAuthorizeNow = shouldProcessImmediately || now >= roundedAuthDate
-
-      await supabase
-        .from('payments')
-        .update({
-          automatic_payment_consent: true,
-          automatic_payment_consent_at: new Date().toISOString(),
-          // ✅ Nur scheduled_payment_date setzen, wenn >= 24h entfernt (nicht für sofortige Zahlungen)
-          scheduled_payment_date: shouldProcessImmediately ? null : roundedPayDate.toISOString(),
-          // speichere geplanten Autorisierungszeitpunkt, wenn noch nicht fällig
-          scheduled_authorization_date: shouldAuthorizeNow ? new Date().toISOString() : roundedAuthDate.toISOString(),
-          payment_method_id: defaultMethodId,
-          payment_method: 'wallee',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-
-      // ✅ NEU: Termin sofort auf 'confirmed' setzen, wenn der Kunde bestätigt
-      try {
-        const confirmResult = await $fetch('/api/appointments/confirm', {
-          method: 'POST',
-          body: {
-            appointmentId: appointment.id
-          }
-        }) as { success?: boolean; error?: string }
-        
-        if (!confirmResult.success) {
-          console.error('⚠️ Could not confirm appointment immediately:', confirmResult.error)
-          displayToast('error', 'Fehler', `Termin konnte nicht sofort bestätigt werden: ${confirmResult.error}`)
-          confirmingAppointments.value.delete(appointment.id)
-          return
-        } else {
-          logger.debug('✅ Appointment confirmed immediately after customer click')
-        }
-      } catch (err: any) {
-        console.error('⚠️ Error confirming appointment immediately:', err)
-        displayToast('error', 'Fehler', `Fehler beim sofortigen Bestätigen des Termins: ${err.message}`)
-        confirmingAppointments.value.delete(appointment.id)
-        return
-      }
-      
-      logger.debug('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
+      showConfirmationModal.value = false
+      return // Fertig!
     }
 
     // Erstelle Wallee-Transaktion über Backend
@@ -1911,9 +1803,9 @@ const confirmAppointment = async (appointment: any) => {
     }
     const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
     
-    // ✅ Customer name (not staff name!)
-    const customerName = (userDb as any)
-      ? `${(userDb as any).first_name || ''} ${(userDb as any).last_name || ''}`.trim()
+    // ✅ Customer name (from currentUser)
+    const customerName = currentUser.value
+      ? `${currentUser.value.user_metadata?.first_name || ''} ${currentUser.value.user_metadata?.last_name || ''}`.trim()
       : ''
     
     const merchantReferenceDetails = {
@@ -1928,15 +1820,26 @@ const confirmAppointment = async (appointment: any) => {
     type WalleeResponse = { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
     const orderId = buildMerchantReference(merchantReferenceDetails)
 
+    // ✅ Get customer info from currentUser (Supabase Auth user)
+    // For email and userId, we need to call a secure API since we don't have full user data in currentUser
+    // The payment.user_id and customer email should already be loaded in the appointment via the API
+    const customerEmail = appointment.user?.email || currentUser.value?.email || ''
+    const userId = appointment.user_id
+    
+    if (!customerEmail || !userId) {
+      displayToast('error', 'Fehler', 'Kundendaten fehlen')
+      confirmingAppointments.value.delete(appointment.id)
+      return
+    }
+
     const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
       method: 'POST',
       body: {
         orderId,
         amount: amountRappen / 100, // Wallee erwartet Betrag in CHF
         currency: 'CHF',
-        customerEmail: userDb.email,
-        userId: userDb.id,
-        tenantId: userDb.tenant_id,
+        customerEmail,
+        userId,
         description: summaryLabel,
         successUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
         failedUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
