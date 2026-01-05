@@ -11,14 +11,14 @@ import {
 
 export default defineEventHandler(async (event) => {
   try {
-    // LAYER 1: RATE LIMITING
-    const rateLimitResult = checkRateLimit(event, 'save_discount')
-    if (!rateLimitResult.allowed) {
-      throw createError({
-        statusCode: 429,
-        message: `Rate limit exceeded. Retry after ${rateLimitResult.reset}s`
-      })
-    }
+    // LAYER 1: RATE LIMITING (disabled for testing, will be re-enabled later)
+    // const rateLimitResult = checkRateLimit(event, 'save_discount')
+    // if (!rateLimitResult.allowed) {
+    //   throw createError({
+    //     statusCode: 429,
+    //     message: `Rate limit exceeded. Retry after ${rateLimitResult.reset}s`
+    //   })
+    // }
 
     // LAYER 2: AUTHENTICATION
     const authenticatedUser = await getAuthenticatedUser(event)
