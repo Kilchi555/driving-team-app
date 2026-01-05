@@ -947,9 +947,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let totalAmountRappenForPayment = 0
       if (isChargeableLesson) {
         try {
-          // Berechne aus den formData Feldern (diese haben die korrekten Werte)
+          // ✅ WICHTIG: Nutze dynamicPricing Werte, falls vorhanden
+          // Diese wurden von der PriceDisplay-Komponente berechnet und sind korrekt!
+          let adminFeeRappen = 0
+          if (refs?.dynamicPricing?.value?.adminFeeRappen) {
+            adminFeeRappen = refs.dynamicPricing.value.adminFeeRappen
+            logger.debug('💰 Using admin fee from dynamicPricing:', adminFeeRappen)
+          }
+          
+          // Berechne Preis aus formData + dynamicPricing AdminFee
           const basePriceRappen = Math.round((formData.value.duration_minutes || 45) * 2.11 * 100)
-          const adminFeeRappen = formData.value.admin_fee_rappen || 0
           const productsPriceRappen = formData.value.products_total_rappen || 0
           const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
           
@@ -957,7 +964,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             basePriceRappen + adminFeeRappen + productsPriceRappen - discountAmountRappen
           )
           
-          logger.debug('💰 Payment amount calculated from formData:', {
+          logger.debug('💰 Payment amount calculated:', {
             basePrice: (basePriceRappen / 100).toFixed(2),
             adminFee: (adminFeeRappen / 100).toFixed(2),
             products: (productsPriceRappen / 100).toFixed(2),
