@@ -12,7 +12,7 @@ import {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { mode, eventId, appointmentData } = body
+    const { mode, eventId, appointmentData, totalAmountRappenForPayment, paymentMethodForPayment } = body
 
     if (!appointmentData) {
       throw createError({
@@ -130,21 +130,21 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ Appointment created:', result.id)
       
       // ============ CREATE PAYMENT FOR NEW APPOINTMENT ============
-      if (appointmentData.total_amount_rappen) {
+      if (totalAmountRappenForPayment && totalAmountRappenForPayment > 0) {
         try {
           logger.debug('💳 Creating payment for new appointment:', {
             appointmentId: result.id,
             userId: result.user_id,
-            amount: appointmentData.total_amount_rappen
+            amount: totalAmountRappenForPayment
           })
           
           const paymentData = {
             appointment_id: result.id,
             user_id: result.user_id,
             tenant_id: appointmentData.tenant_id,
-            total_amount_rappen: appointmentData.total_amount_rappen,
-            payment_method: appointmentData.payment_method || 'wallee',
-            payment_status: 'pending_confirmation',
+            total_amount_rappen: totalAmountRappenForPayment,
+            payment_method: paymentMethodForPayment || 'wallee',
+            payment_status: 'pending',
             description: appointmentData.title || `Fahrlektio ${appointmentData.type}`,
             created_at: new Date().toISOString()
           }
