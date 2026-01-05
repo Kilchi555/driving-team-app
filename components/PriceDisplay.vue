@@ -811,6 +811,9 @@ watch(() => studentBillingAddress.value, (newAddress: any) => {
 }, { immediate: false })
 
 // ✅ NEU: Auto-save Watcher - speichere Rechnungsadresse bei Änderungen
+// ⚠️ DISABLED: This causes an endless loop when invoice address is edited
+// The address will be saved explicitly when the user clicks save, not automatically
+/*
 let autoSaveTimeout: NodeJS.Timeout | null = null
 watch(() => invoiceData.value, (newData: any) => {
   try {
@@ -839,6 +842,7 @@ watch(() => invoiceData.value, (newData: any) => {
     // Don't break the app if watcher fails
   }
 }, { deep: true })
+*/
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {

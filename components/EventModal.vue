@@ -3395,7 +3395,6 @@ const resetForm = () => {
   
   // ✅ NEU: Standard-Zahlungsmethode beim Reset setzen
   selectedPaymentMethod.value = 'wallee'
-  logger.debug('💳 Payment method reset to default: wallee')
 }
 
 // Staff Selection Handler
@@ -4982,25 +4981,27 @@ const handleEditModeLessonType = async () => {
     } else {
       // Fallback: Lade aus der users Tabelle
       if (props.eventData.user_id) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('preferred_payment_method')
-          .eq('id', props.eventData.user_id)
-          .single()
-        
-        if (!userError && userData?.preferred_payment_method) {
-          selectedPaymentMethod.value = userData.preferred_payment_method
-          logger.debug('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
-        } else {
-          if (userError) {
-            if (userError.code === 'PGRST116' || userError.message?.includes('Row Level Security')) {
-              logger.debug('ℹ️ RLS blocked payment preferences (expected for staff viewing client), using default: wallee')
-            } else {
-              logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
-            }
+        // ✅ Use secure API instead of direct Supabase query
+        try {
+          const supabase = getSupabase()
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
+            query: { userId: props.eventData.user_id },
+            headers: session?.access_token ? {
+              'Authorization': `Bearer ${session.access_token}`
+            } : {}
+          }) as { success?: boolean, preferred_payment_method?: string }
+          
+          if (paymentMethodResponse.success) {
+            selectedPaymentMethod.value = paymentMethodResponse.preferred_payment_method || 'wallee'
+            logger.debug('💳 Payment method loaded from secure API:', paymentMethodResponse.preferred_payment_method)
           } else {
             logger.debug('ℹ️ No payment preference found, using default: wallee')
+            selectedPaymentMethod.value = 'wallee'
           }
+        } catch (error: any) {
+          logger.debug('ℹ️ Could not load payment preferences via API, using default: wallee', error.message)
           selectedPaymentMethod.value = 'wallee' // Standard
           logger.debug('💳 Using default payment method: wallee')
         }
@@ -5035,7 +5036,6 @@ const handleCreateMode = async () => {
     
     // ✅ NEU: Standard-Zahlungsmethode für Create-Mode setzen
     selectedPaymentMethod.value = 'wallee'
-    logger.debug('💳 CREATE MODE: Default payment method set to wallee')
     
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen
     formData.value.type = 'B' // Standard-Kategorie
@@ -5152,7 +5152,7 @@ const loadStudentForEdit = async (userId: string) => {
         'Authorization': `Bearer ${token}`
       },
       query: { user_id: userId }
-    })
+    }) as { success?: boolean, user?: any }
     
     if (response?.user) {
       selectedStudent.value = response.user
@@ -5180,132 +5180,55 @@ watch(() => formData.value.title, (newTitle, oldTitle) => {
 logger.debug('💾 SAVING WITH TITLE:', formData.value.title)
 
 const saveStudentPaymentPreferences = async (studentId: string, paymentMode: string, data?: any) => {
- 
- try {
-   const supabase = getSupabase()
-   
-   // ✅ Mapping auf existierende payment_methods Werte
-   const paymentMethodMapping: Record<string, string> = {
-     'cash': 'cash',
-     'invoice': 'invoice',
-     'online': 'wallee',
-     'wallee': 'wallee'        // ✅ Direkte Unterstützung für wallee
-   }
-   
-
-   
-   const actualMethodCode = paymentMethodMapping[paymentMode]
-   
-   if (!actualMethodCode) {
-     console.warn('⚠️ Unknown payment mode:', paymentMode)
-     return // Speichere nichts bei unbekannter Methode
-   }
-   
-   // 🔧 DEBUG: Prüfe zuerst, ob der aktuelle Wert des Users gültig ist
-   try {
-     logger.debug('🔍 Testing if current user payment method is valid...')
-     const { data: testData, error: testError } = await supabase
-       .from('users')
-       .select('preferred_payment_method')
-       .eq('id', studentId)
-       .single()
-     
-     if (testError) {
-       if (testError.code !== 'PGRST116') {
-         logger.warn('⚠️ Error loading payment method, will use default:', testError.message)
-       }
-       // Continue - we'll use default method
-     } else if (testData?.preferred_payment_method) {
-       logger.debug('🔍 Current user payment method:', testData.preferred_payment_method)
-       
-       // Versuche den aktuellen Wert zu aktualisieren (sollte funktionieren)
-       const { error: updateTestError } = await supabase
-         .from('users')
-         .update({ preferred_payment_method: testData.preferred_payment_method })
-         .eq('id', studentId)
-       
-       if (updateTestError) {
-         console.error('❌ Current value also fails:', updateTestError)
-         console.error('🔍 Error details:', {
-           code: updateTestError.code,
-           message: updateTestError.message,
-           details: updateTestError.details,
-           hint: updateTestError.hint
-         })
-       } else {
-         logger.debug('✅ Current value works, but new value might not')
-       }
-     }
-   } catch (testErr) {
-     logger.debug('⚠️ Could not test current value:', testErr)
-   }
-   
-   const updateData: any = {
-     preferred_payment_method: actualMethodCode  // ← WICHTIG: actualMethodCode statt paymentMode
-   }
-   
-   // Falls Rechnungsadresse gewählt und Adresse gespeichert
-   if (paymentMode === 'invoice' && data?.currentAddress?.id) {
-     updateData.default_company_billing_address_id = data.currentAddress.id
-     logger.debug('📋 Adding billing address ID:', data.currentAddress.id)
-   }
-   
-   logger.debug('💾 Mapping:', paymentMode, '→', actualMethodCode)
-   logger.debug('💾 Updating user with data:', updateData)
-   logger.debug('👤 For student ID:', studentId)
-   
-   const { error, data: result } = await supabase
-     .from('users')
-     .update(updateData)
-     .eq('id', studentId)
-     .select('id, preferred_payment_method') // ← Debug: Zeige was gespeichert wurde
-   
-   if (error) {
-     console.error('❌ Supabase error:', error)
-     console.error('🔍 Error details:', {
-       code: error.code,
-       message: error.message,
-       details: error.details,
-       hint: error.hint
-     })
-     
-     // 🔧 FALLBACK: Versuche es ohne preferred_payment_method
-     if (error.code === '23503' && error.message.includes('payment_methods')) {
-       logger.debug('🔄 Foreign key constraint error - trying without payment method...')
-       
-       const fallbackUpdateData = { ...updateData }
-       delete fallbackUpdateData.preferred_payment_method
-       
-       logger.debug('🔄 Fallback update data:', fallbackUpdateData)
-       
-       const { error: fallbackError, data: fallbackResult } = await supabase
-         .from('users')
-         .update(fallbackUpdateData)
-         .eq('id', studentId)
-         .select('id')
-       
-       if (fallbackError) {
-         console.error('❌ Fallback also failed:', fallbackError)
-         throw fallbackError
-       } else {
-         logger.debug('✅ Fallback update successful (without payment method)')
-         
-         // ✅ NEU: Lokale Speicherung der Zahlungsmethode für diesen Termin
-         logger.debug('💳 Payment method saved locally for this appointment:', paymentMode)
-         
-         return // Erfolgreich, aber ohne payment method in der users Tabelle
-       }
-     }
-     
-     throw error
-   }
-   
-   logger.debug('✅ Update result:', result)
-   logger.debug('✅ Payment preferences saved successfully!')
-   
- } catch (err) {
-   console.error('❌ Error saving payment preferences:', err)
- }
+  try {
+    // ✅ Mapping auf existierende payment_methods Werte
+    const paymentMethodMapping: Record<string, string> = {
+      'cash': 'cash',
+      'invoice': 'invoice',
+      'online': 'wallee',
+      'wallee': 'wallee'
+    }
+    
+    const actualMethodCode = paymentMethodMapping[paymentMode]
+    
+    if (!actualMethodCode) {
+      console.warn('⚠️ Unknown payment mode:', paymentMode)
+      return
+    }
+    
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // ✅ Use secure API instead of direct Supabase query
+    const updateData: any = {
+      userId: studentId,
+      paymentMethod: actualMethodCode
+    }
+    
+    // Falls Rechnungsadresse gespeichert
+    if (paymentMode === 'invoice' && data?.address?.id) {
+      updateData.billingAddressId = data.address.id
+      logger.debug('📋 Adding billing address ID:', data.address.id)
+    }
+    
+    logger.debug('💾 Updating payment preferences via API:', updateData)
+    
+    const result = await $fetch('/api/admin/update-user-payment-method', {
+      method: 'POST',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {},
+      body: updateData
+    }) as { success?: boolean, data?: any }
+    
+    if (result.success) {
+      logger.debug('✅ Payment preferences saved successfully!', result.data)
+    } else {
+      logger.warn('⚠️ Could not save payment preference')
+    }
+  } catch (err: any) {
+    logger.error('❌ Error in saveStudentPaymentPreferences:', err.message)
+  }
 }
 
 const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← string statt 'invoice' | 'cash' | 'online'
@@ -5313,6 +5236,7 @@ const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← s
   
   // ✅ Payment Method für späteres Speichern in payments Tabelle
   selectedPaymentMethod.value = paymentMode
+  // @ts-ignore - payment_method ist nicht im formData Type definiert, aber wir speichern es für useEventModalForm
   formData.value.payment_method = paymentMode // ← FIX: Speichere in formData damit es in useEventModalForm verfügbar ist!
   selectedPaymentData.value = data
   
@@ -5789,7 +5713,6 @@ watch(() => props.isVisible, async (newVisible) => {
         
         // ✅ NEU: Standard-Zahlungsmethode für neue Termine setzen
         selectedPaymentMethod.value = 'wallee'
-        logger.debug('💳 Default payment method for new appointment: wallee')
         
         // ✅ WICHTIG: Nicht initializeFormData aufrufen - wir haben die Zeit schon oben extrahiert!
         // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
@@ -5946,34 +5869,30 @@ const loadUserPaymentPreferences = async (userId: string) => {
   try {
     logger.debug('💳 Loading payment preferences for user:', userId)
     
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('preferred_payment_method')
-      .eq('id', userId)
-      .single()
+    // ✅ Use secure API instead of direct Supabase query
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (userError) {
-      if (userError.code === 'PGRST116' || userError.message?.includes('Row Level Security')) {
-        logger.debug('ℹ️ RLS blocked payment preferences (expected for staff viewing client), using default: wallee')
-      } else {
-        logger.warn('⚠️ Error loading payment preferences, using default:', userError.message)
-      }
-      selectedPaymentMethod.value = 'wallee' // Default
-    } else if (userData?.preferred_payment_method) {
-      // ✅ NEU: Zahlungsmethoden für bessere Benutzerfreundlichkeit mappen
-      let paymentMethod = userData.preferred_payment_method
+    const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
+      query: { userId },
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as { success?: boolean, preferred_payment_method?: string }
+    
+    if (paymentMethodResponse.success) {
+      let paymentMethod = paymentMethodResponse.preferred_payment_method || 'wallee'
       if (paymentMethod === 'twint' || paymentMethod === 'wallee') {
         paymentMethod = 'wallee'
-        logger.debug('💳 Mapped payment method to "wallee" for better UX:', userData.preferred_payment_method)
+        logger.debug('💳 Mapped payment method to "wallee" for better UX:', paymentMethodResponse.preferred_payment_method)
       }
-      
       selectedPaymentMethod.value = paymentMethod
-      logger.debug('💳 Payment method loaded from user preferences:', paymentMethod)
     } else {
-      logger.debug('ℹ️ No user payment preferences found, keeping default: wallee')
+      selectedPaymentMethod.value = 'wallee' // Default
     }
-  } catch (error) {
-    console.error('❌ Error loading user payment preferences:', error)
+  } catch (error: any) {
+    logger.debug('ℹ️ Could not load payment preferences via API, using default: wallee', error.message)
+    selectedPaymentMethod.value = 'wallee'
   }
 }
 
