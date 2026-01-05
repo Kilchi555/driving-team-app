@@ -20,12 +20,16 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
 
     // Only try to log if we have required fields
     if (!entry.user_id || !entry.action || !entry.status) {
-      console.warn('Invalid audit log entry:', entry)
+      console.warn('Invalid audit log entry - missing required fields:', {
+        has_user_id: !!entry.user_id,
+        has_action: !!entry.action,
+        has_status: !!entry.status
+      })
       return
     }
 
     // Insert to audit_logs table
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from('audit_logs')
       .insert({
         user_id: entry.user_id,
@@ -40,11 +44,22 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
       })
 
     if (error) {
-      console.error('Failed to log audit entry:', error)
+      console.error('Failed to log audit entry - database error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+    } else {
+      console.debug('Audit entry logged successfully:', entry.action, entry.status)
     }
-  } catch (err) {
+  } catch (err: any) {
     // Don't throw - audit logging shouldn't break the main operation
-    console.error('Audit logging error:', err)
+    console.error('Audit logging error:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack?.split('\n')[0]
+    })
   }
 }
 
