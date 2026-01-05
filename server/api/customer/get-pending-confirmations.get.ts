@@ -64,6 +64,8 @@ export default defineEventHandler(async (event) => {
       .from('appointments')
       .select(`
         id,
+        user_id,
+        tenant_id,
         title,
         start_time,
         end_time,
@@ -117,8 +119,26 @@ export default defineEventHandler(async (event) => {
     if (paymentsError) {
       logger.warn('⚠️ Error loading payments for confirmations:', paymentsError)
     } else if (paymentsData) {
-      paymentsData.forEach(payment => {
-        paymentsMap.set(payment.appointment_id, payment)
+      paymentsData.forEach((payment: any) => {
+        // Convert CHF (NUMERIC) to Rappen (INTEGER) if needed
+        // If values are already > 100, assume they're already in Rappen
+        const convertToRappen = (value: any) => {
+          if (!value) return 0
+          const num = parseFloat(value)
+          // If value is < 1000, assume it's CHF and needs conversion
+          return num < 1000 ? Math.round(num * 100) : Math.round(num)
+        }
+        
+        const convertedPayment = {
+          ...payment,
+          total_amount_rappen: convertToRappen(payment.total_amount_rappen),
+          lesson_price_rappen: convertToRappen(payment.lesson_price_rappen),
+          admin_fee_rappen: convertToRappen(payment.admin_fee_rappen),
+          products_price_rappen: convertToRappen(payment.products_price_rappen),
+          discount_amount_rappen: convertToRappen(payment.discount_amount_rappen),
+          credit_used_rappen: convertToRappen(payment.credit_used_rappen)
+        }
+        paymentsMap.set(payment.appointment_id, convertedPayment)
       })
     }
 

@@ -920,16 +920,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let totalAmountRappenForPayment = 0
       if (isChargeableLesson) {
         try {
-          // ✅ WICHTIG: Nutze dynamicPricing Werte, falls vorhanden
-          // Diese wurden von der PriceDisplay-Komponente berechnet und sind korrekt!
-          let adminFeeRappen = 0
-          if (refs?.dynamicPricing?.value?.adminFeeRappen) {
-            adminFeeRappen = refs.dynamicPricing.value.adminFeeRappen
-            logger.debug('💰 Using admin fee from dynamicPricing:', adminFeeRappen)
-          }
+          // ✅ Berechne Preis basierend auf Duration und pricePerMinute
+          // Diese sind IMMER verfügbar, im Gegensatz zu formData.base_price_rappen
+          const durationMinutes = formData.value.duration_minutes || 45
+          const pricePerMinute = refs?.dynamicPricing?.value?.pricePerMinute || 2.11 // Default: CHF 2.11/min
           
-          // Berechne Preis aus formData + dynamicPricing AdminFee
-          const basePriceRappen = Math.round((formData.value.duration_minutes || 45) * 2.11 * 100)
+          // Berechne die Einzelkomponenten
+          const basePriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+          const adminFeeRappen = refs?.dynamicPricing?.value?.adminFeeRappen || 0
           const productsPriceRappen = formData.value.products_total_rappen || 0
           const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
           
@@ -938,6 +936,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
           )
           
           logger.debug('💰 Payment amount calculated:', {
+            duration: durationMinutes,
+            pricePerMinute: pricePerMinute.toFixed(2),
             basePrice: (basePriceRappen / 100).toFixed(2),
             adminFee: (adminFeeRappen / 100).toFixed(2),
             products: (productsPriceRappen / 100).toFixed(2),
