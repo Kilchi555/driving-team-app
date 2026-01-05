@@ -947,38 +947,23 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let totalAmountRappenForPayment = 0
       if (isChargeableLesson) {
         try {
-          // Get pricing info from priceDisplayRef or use fallback
-          let pricePerMinute = 2.11 // Default fallback
-          let totalRappen = 0
+          // Berechne aus den formData Feldern (diese haben die korrekten Werte)
+          const basePriceRappen = Math.round((formData.value.duration_minutes || 45) * 2.11 * 100)
+          const adminFeeRappen = formData.value.admin_fee_rappen || 0
+          const productsPriceRappen = formData.value.products_total_rappen || 0
+          const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
           
-          if (refs?.priceDisplayRef?.value?.total_rappen) {
-            // ✅ Prefer PriceDisplay total if available
-            totalRappen = refs.priceDisplayRef.value.total_rappen
-            logger.debug('💰 Using PriceDisplay total_rappen:', totalRappen)
-          } else if (refs?.dynamicPricing?.value?.pricePerMinute) {
-            // ✅ Alternative: Calculate from dynamicPricing (use refs param)
-            pricePerMinute = refs.dynamicPricing.value.pricePerMinute
-            const lessonPriceRappen = Math.round((formData.value.duration_minutes || 45) * pricePerMinute * 100)
-            const adminFeeRappen = formData.value.admin_fee_rappen || 0
-            const productsPriceRappen = formData.value.products_total_rappen || 0
-            const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
-            totalRappen = Math.max(0, lessonPriceRappen + productsPriceRappen + adminFeeRappen - discountAmountRappen)
-            logger.debug('💰 Calculated from dynamicPricing:', {
-              pricePerMinute,
-              lessonPrice: (lessonPriceRappen / 100).toFixed(2),
-              adminFee: (adminFeeRappen / 100).toFixed(2),
-              products: (productsPriceRappen / 100).toFixed(2),
-              discount: (discountAmountRappen / 100).toFixed(2)
-            })
-          } else {
-            // ✅ Fallback: Use default pricing (45 min × 2.11 CHF/min)
-            const duration = formData.value.duration_minutes || 45
-            totalRappen = Math.round(duration * pricePerMinute * 100)
-            logger.debug('💰 Using fallback pricing:', { duration, pricePerMinute, totalRappen })
-          }
+          totalAmountRappenForPayment = Math.max(0, 
+            basePriceRappen + adminFeeRappen + productsPriceRappen - discountAmountRappen
+          )
           
-          totalAmountRappenForPayment = totalRappen
-          logger.debug('✅ Total payment amount for save:', (totalAmountRappenForPayment / 100).toFixed(2))
+          logger.debug('💰 Payment amount calculated from formData:', {
+            basePrice: (basePriceRappen / 100).toFixed(2),
+            adminFee: (adminFeeRappen / 100).toFixed(2),
+            products: (productsPriceRappen / 100).toFixed(2),
+            discount: (discountAmountRappen / 100).toFixed(2),
+            total: (totalAmountRappenForPayment / 100).toFixed(2)
+          })
         } catch (priceErr: any) {
           logger.warn('⚠️ Could not calculate payment amount:', priceErr)
           // Continue without amount - payment will be created later with correct amount
