@@ -5313,6 +5313,7 @@ const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← s
   
   // ✅ Payment Method für späteres Speichern in payments Tabelle
   selectedPaymentMethod.value = paymentMode
+  formData.value.payment_method = paymentMode // ← FIX: Speichere in formData damit es in useEventModalForm verfügbar ist!
   selectedPaymentData.value = data
   
   // NEU: Wenn Invoice-Mode und wir haben eine Standard-Adresse geladen

@@ -24,7 +24,7 @@ const LIMITS = {
   customer_get_payment_page_data: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
   settle_and_email_payment: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
   confirm_cash_payment: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
-  save_discount: { maxRequests: 50, windowMs: 60 * 1000 }, // 50 per minute - high because staff use this frequently
+  save_discount: { maxRequests: 1000, windowMs: 60 * 1000 }, // 1000 per minute - testing (reduce later)
 }
 
 // Exponential Backoff multipliers (in minutes)

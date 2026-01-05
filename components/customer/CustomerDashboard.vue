@@ -1673,9 +1673,45 @@ const confirmAppointment = async (appointment: any) => {
     // ✅ NEU: Wenn payment_method 'cash', 'invoice' oder 'credit' ist, NICHT zu Wallee weiterleiten!
     if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice' || payment?.payment_method === 'credit') {
       logger.debug('✅ Payment method is', payment.payment_method, '- no online payment needed')
+      
+      // ✅ WICHTIG: Confirm the appointment via secure API auch für non-Wallee payments!
+      try {
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        const confirmResult = await $fetch('/api/appointments/confirm', {
+          method: 'POST',
+          headers: session?.access_token ? {
+            'Authorization': `Bearer ${session.access_token}`
+          } : {},
+          body: {
+            appointmentId: appointment.id
+          }
+        }) as { 
+          success?: boolean
+          appointment?: any
+          error?: string 
+        }
+        
+        if (!confirmResult.success) {
+          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+          displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
+          confirmingAppointments.value.delete(appointment.id)
+          return
+        }
+        
+        logger.debug('✅ Appointment confirmed via secure API:', {
+          appointmentId: appointment.id
+        })
+      } catch (err: any) {
+        console.error('⚠️ Error confirming appointment via API:', err)
+        displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
+        confirmingAppointments.value.delete(appointment.id)
+        return
+      }
+      
       displayToast('success', 'Termin bestätigt!', `Zahlungsart: ${getPaymentMethodLabel(payment.payment_method)}`)
       
-      // Termin ist bereits bestätigt (siehe weiter oben)
       confirmingAppointments.value.delete(appointment.id)
       
       // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
