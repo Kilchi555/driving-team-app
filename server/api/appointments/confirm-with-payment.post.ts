@@ -36,11 +36,28 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // ============ LAYER 2: LOAD APPOINTMENT ============
+    // ============ LAYER 2: GET AUTHENTICATED USER FROM USERS TABLE ============
+    // Convert Auth UID to public.users.id
+    const { data: requestingUser, error: userLookupError } = await supabase
+      .from('users')
+      .select('id, tenant_id, role')
+      .eq('auth_user_id', authenticatedUser.id)
+      .single()
+
+    if (userLookupError || !requestingUser) {
+      console.error('❌ User not found in users table:', userLookupError)
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User not found'
+      })
+    }
+
+    // ============ LAYER 3: LOAD APPOINTMENT ============
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .select('*')
       .eq('id', body.appointmentId)
+      .eq('tenant_id', requestingUser.tenant_id)
       .single()
 
     if (appointmentError || !appointment) {
@@ -51,29 +68,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ============ LAYER 3: AUTHORIZATION CHECK ============
+    // ============ LAYER 4: AUTHORIZATION CHECK ============
     // Customer can only confirm their own appointment
-    if (appointment.user_id !== authenticatedUser.id) {
+    if (appointment.user_id !== requestingUser.id) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Not authorized to confirm this appointment'
       })
     }
 
-    // ============ LAYER 4: LOAD PAYMENT SETTINGS ============
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', appointment.user_id)
-      .single()
-
-    if (userError || !userData) {
-      console.error('❌ User not found:', userError)
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'User not found'
-      })
-    }
+    // ============ LAYER 5: LOAD PAYMENT SETTINGS ============
+    // userData already fetched above as requestingUser, get tenant_id from it
+    const userData = requestingUser
 
     let automaticPaymentEnabled = false
     let automaticPaymentHoursBefore = 24
