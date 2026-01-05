@@ -58,34 +58,33 @@ const formatStartTime = (value?: string | Date | null): string | undefined => {
 }
 
 export const buildMerchantReference = (details: MerchantReferenceDetails = {}): string => {
+  // Standardized format: CUSTOMERNAME|DATE-TIME|DURATION|REF-TIMESTAMP
+  // Example: MAX-MUSTERMANN|20260104-0522|45MIN|REF-1767500558637
+  
   const segments: string[] = []
 
-  const shortAppointmentId = shortenId(details.appointmentId)
-  if (shortAppointmentId) segments.push(`${shortAppointmentId}`)
+  // 1. Customer Name (or fallback to appointment ID)
+  const customerName = details.staffName ? sanitize(details.staffName) : shortenId(details.appointmentId)
+  if (customerName) {
+    segments.push(customerName)
+  }
 
-  const typeLabel = sanitize(details.eventTypeCode)
-  if (typeLabel) segments.push(`${typeLabel}`)
-
-  const categoryLabel = sanitize(details.categoryName || details.categoryCode)
-  if (categoryLabel) segments.push(`${categoryLabel}`)
-
-  const staffLabel = sanitize(details.staffName)
-  if (staffLabel) segments.push(`${staffLabel}`)
-
+  // 2. Date and Time (e.g., 20260104-0522)
   const startLabel = formatStartTime(details.startTime)
-  if (startLabel) segments.push(`${startLabel}`)
+  if (startLabel) {
+    segments.push(startLabel)
+  }
 
+  // 3. Duration in minutes (e.g., 45MIN)
   if (details.durationMinutes && details.durationMinutes > 0) {
     segments.push(`${Math.round(details.durationMinutes)}MIN`)
   }
 
-  const fallback = sanitize(details.fallback) || `${FALLBACK_PREFIX}-${Date.now().toString(36).toUpperCase()}`
-  segments.push(fallback.startsWith(`${FALLBACK_PREFIX}-`) ? fallback : `${FALLBACK_PREFIX}-${fallback}`)
+  // 4. Unique reference (timestamp-based for uniqueness)
+  const timestamp = Date.now().toString(36).toUpperCase()
+  segments.push(`REF-${timestamp}`)
 
-  if (segments.length === 0) {
-    return `${FALLBACK_PREFIX}-${Date.now().toString(36).toUpperCase()}`
-  }
-
+  // Return standardized format
   const joined = segments.join('|')
   return joined.length <= MAX_LENGTH ? joined : joined.substring(0, MAX_LENGTH)
 }

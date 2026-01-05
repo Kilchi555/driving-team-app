@@ -75,3 +75,5 @@ CREATE POLICY "Service role has full access to examiners"
 -- Add comment
 COMMENT ON TABLE "public"."examiners" IS 'Stores examiner information for driving exams';
 
+
+

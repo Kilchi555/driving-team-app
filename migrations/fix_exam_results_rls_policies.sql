@@ -96,3 +96,5 @@ CREATE POLICY "Service role has full access to exam results"
 -- Add comment
 COMMENT ON TABLE "public"."exam_results" IS 'Stores exam result details including ratings and feedback';
 
+
+
