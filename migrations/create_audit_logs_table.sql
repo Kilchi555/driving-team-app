@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- User Information
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  auth_user_id UUID, -- Store auth.uid() when user_id is not yet known
   
   -- Action Details
   action VARCHAR(100) NOT NULL, -- e.g., 'process_payment', 'create_appointment', 'delete_user'
