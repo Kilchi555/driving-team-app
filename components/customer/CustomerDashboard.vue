@@ -638,13 +638,21 @@
                 <!-- Details Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
 
-                  <!-- Fahrlehrer & Kategorie -->
+                  <!-- Event Type Code + "mit" + Staff Name -->
+                  <div class="flex items-center gap-2 text-gray-600">
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">
+                      {{ getEventTypeLabel(appointment.event_type_code) }}
+                    </span>
+                    <span class="font-medium">mit {{ getInstructorName(appointment) }}</span>
+                  </div>
+
+                  <!-- Zahlungsart & Kategorie -->
                   <div class="flex items-center justify-between text-gray-600">
                     <div class="flex items-center">
                       <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 018 17h8a4 4 0 012.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v4a1 1 0 001 1h4a1 1 0 001-1V7m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v2m0 0h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V7m0 0V5a2 2 0 012-2h2a2 2 0 012 2v2" />
                       </svg>
-                      <span class="font-medium">Mit {{ getInstructorName(appointment) }}</span>
+                      <span class="font-medium">{{ getPaymentMethodLabel(appointment.payment?.payment_method) }}</span>
                     </div>
                     <div class="flex items-center">
                       <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
