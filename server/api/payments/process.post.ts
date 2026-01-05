@@ -50,12 +50,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const authHeader = getHeader(event, 'authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       logger.warn('❌ No auth token provided')
-      await logAudit({
-        action: 'process_payment',
-        status: 'failed',
-        error_message: 'Authentication required',
-        ip_address: ipAddress
-      })
+      // Skip audit logging - we don't have a user_id yet
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
@@ -65,12 +60,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     if (authError || !user) {
       logger.warn('❌ Invalid auth token')
-      await logAudit({
-        action: 'process_payment',
-        status: 'failed',
-        error_message: 'Invalid authentication',
-        ip_address: ipAddress
-      })
+      // Skip audit logging - we don't have a valid user yet
       throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
     }
 
@@ -85,14 +75,6 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       60000 // windowMs: 60 seconds
     )
     if (!rateLimitResult.allowed) {
-      await logAudit({
-        user_id: authenticatedUserId,
-        action: 'process_payment',
-        status: 'failed',
-        error_message: 'Rate limit exceeded',
-        ip_address: ipAddress,
-        details: auditDetails
-      })
       throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
     }
 
@@ -306,12 +288,14 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     auditDetails.payment_url_generated = !!paymentPageUrl
 
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: userData.id,  // Use users.id, not auth.uid()
+      auth_user_id: authenticatedUserId,
       action: 'process_payment',
       resource_type: 'payment',
       resource_id: payment.id,
       status: 'success',
       ip_address: ipAddress,
+      tenant_id: tenantId,
       details: {
         ...auditDetails,
         duration_ms: Date.now() - startTime,
@@ -336,12 +320,15 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const errorMessage = error.statusMessage || error.message || 'Internal server error'
     const statusCode = error.statusCode || 500
 
+    // Log with user_id if available (after user lookup), otherwise use auth_user_id
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: userData?.id,  // Will be undefined if user lookup failed
+      auth_user_id: authenticatedUserId,  // Always available
       action: 'process_payment',
       status: 'error',
       error_message: errorMessage,
       ip_address: ipAddress,
+      tenant_id: tenantId,
       details: { ...auditDetails, duration_ms: Date.now() - startTime }
     })
 

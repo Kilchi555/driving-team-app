@@ -4,7 +4,8 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 
 export interface AuditLogEntry {
-  user_id: string
+  user_id?: string  // users.id (can be null if user not found)
+  auth_user_id?: string  // auth.uid() - always available
   action: string
   resource_type?: string
   resource_id?: string
@@ -12,6 +13,7 @@ export interface AuditLogEntry {
   details?: Record<string, any>
   error_message?: string
   ip_address?: string
+  tenant_id?: string
 }
 
 export async function logAudit(entry: AuditLogEntry): Promise<void> {
@@ -19,12 +21,17 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
     const supabase = getSupabaseAdmin()
 
     // Only try to log if we have required fields
-    if (!entry.user_id || !entry.action || !entry.status) {
+    if (!entry.action || !entry.status) {
       console.warn('Invalid audit log entry - missing required fields:', {
-        has_user_id: !!entry.user_id,
         has_action: !!entry.action,
         has_status: !!entry.status
       })
+      return
+    }
+
+    // At least one of user_id or auth_user_id should be provided
+    if (!entry.user_id && !entry.auth_user_id) {
+      console.warn('Invalid audit log entry - missing both user_id and auth_user_id')
       return
     }
 
@@ -32,7 +39,8 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
     const { error, data } = await supabase
       .from('audit_logs')
       .insert({
-        user_id: entry.user_id,
+        user_id: entry.user_id || null,
+        auth_user_id: entry.auth_user_id || null,
         action: entry.action,
         resource_type: entry.resource_type || null,
         resource_id: entry.resource_id || null,
@@ -40,6 +48,7 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
         details: entry.details || null,
         error_message: entry.error_message || null,
         ip_address: entry.ip_address || null,
+        tenant_id: entry.tenant_id || null,
         created_at: new Date().toISOString()
       })
 
