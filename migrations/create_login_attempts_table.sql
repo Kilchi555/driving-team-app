@@ -74,3 +74,5 @@ CREATE POLICY "Allow insert for authenticated and anon users"
   TO authenticated, anon
   WITH CHECK (true);
 
+
+

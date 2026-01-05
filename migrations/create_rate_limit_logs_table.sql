@@ -61,3 +61,5 @@ COMMENT ON TABLE rate_limit_logs IS 'Stores rate limit events for security monit
 COMMENT ON COLUMN rate_limit_logs.operation IS 'Type of operation: login, register, or password_reset';
 COMMENT ON COLUMN rate_limit_logs.status IS 'allowed: within limit, blocked: rate limit exceeded, exceeded: triggered action';
 
+
+

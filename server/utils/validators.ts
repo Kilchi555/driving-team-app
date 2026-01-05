@@ -33,19 +33,19 @@ export function sanitizeString(value: string | null | undefined, maxLength: numb
  * - Must not contain script tags
  * - Must not contain event handlers
  */
-export function validateEmail(email: string | null | undefined): boolean {
-  if (!email) return false
+export function validateEmail(email: string | null | undefined): { valid: boolean } {
+  if (!email) return { valid: false }
   
   const emailStr = String(email).toLowerCase()
   
   // Check for dangerous patterns
   if (/<|>|script|javascript:|on\w+\s*=/.test(emailStr)) {
-    return false
+    return { valid: false }
   }
   
   // Standard email format validation
   const emailRegex = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/
-  return emailRegex.test(emailStr)
+  return { valid: emailRegex.test(emailStr) }
 }
 
 /**
@@ -67,10 +67,10 @@ export function validatePassword(password: string | null | undefined): { valid: 
 /**
  * Validate UUID format
  */
-export function validateUUID(value: string | null | undefined): boolean {
-  if (!value) return false
+export function validateUUID(value: string | null | undefined): { valid: boolean } {
+  if (!value) return { valid: false }
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  return uuidRegex.test(String(value))
+  return { valid: uuidRegex.test(String(value)) }
 }
 
 /**

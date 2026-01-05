@@ -382,6 +382,7 @@ const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
 const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
 const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
 const showRedeemVoucherModal = ref(false) // ✅ NEW: Voucher Modal
+const currentUserData = ref<any>(null) // ✅ NEW: User data from get-payment-page-data API
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -498,12 +499,21 @@ const loadAllData = async () => {
 
     const { data } = response
 
+    // ✅ Store user data for later use in payIndividual
+    // Only update if user data is present (avoid overwriting with empty object)
+    if (data.user && data.user.id) {
+      currentUserData.value = data.user
+    }
+    
     // Set user preferences
     preferredPaymentMethod.value = data.user?.preferred_payment_method || 'wallee'
     logger.debug('💳 Preferred payment method:', preferredPaymentMethod.value)
 
     // Set student balance
-    studentBalance.value = data.student_balance_rappen || 0
+    // Only update if new balance is available (avoid resetting to 0)
+    if (data.student_balance_rappen !== undefined && data.student_balance_rappen !== null) {
+      studentBalance.value = data.student_balance_rappen
+    }
     logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
 
     // Load payments directly from API response instead of separate call
@@ -531,12 +541,13 @@ const payAllUnpaid = async () => {
   isProcessingPayment.value = true
   
   try {
-    logger.debug('💳 Processing direct Wallee payment for all unpaid:', unpaidPayments.value.length)
+    logger.debug('💳 Processing secure payment API for all unpaid:', unpaidPayments.value.length)
     
     // Get current user
     const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
+    if (!user || !session) throw new Error('User not authenticated')
     
     // Get user data from users table
     const { data: userData, error: userError } = await supabase
@@ -550,63 +561,51 @@ const payAllUnpaid = async () => {
     // Calculate total amount
     const totalAmount = unpaidPayments.value.reduce((sum, p) => sum + (p.total_amount_rappen / 100), 0)
     
-    // Create Wallee transaction
-    interface WalleeResponse {
+    // Create batch orderId
+    const batchOrderId = `payment-batch-${unpaidPayments.value.map(p => p.id).join('-')}-${Date.now()}`
+    
+    // For batch payments, use first payment ID as reference
+    const firstPaymentId = unpaidPayments.value[0]?.id
+    if (!firstPaymentId) throw new Error('No payments to process')
+    
+    // Initiate Wallee transaction via secure API
+    interface PaymentResponse {
       success: boolean
+      paymentId?: string
       paymentUrl?: string
-      transactionId?: number | string
+      transactionId?: string | number
       error?: string
     }
     
-    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+    const response = await $fetch<PaymentResponse>('/api/payments/process', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
       body: {
-        orderId: `payment-batch-${unpaidPayments.value.map(p => p.id).join('-')}-${Date.now()}`,
+        userId: userData.id,
         amount: totalAmount,
         currency: 'CHF',
         customerEmail: userData.email,
         customerName: `${userData.first_name} ${userData.last_name}`,
         description: `Zahlung für ${unpaidPayments.value.length} Termin(e)`,
+        paymentMethod: 'wallee',
+        orderId: batchOrderId,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
-        userId: userData.id,
-        tenantId: userData.tenant_id
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
       }
     })
     
-    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
-      // Update all payments with Wallee transaction ID
-      logger.debug('💾 Saving Wallee transaction ID to payments:', walleeResponse.transactionId)
-      
-      for (const paymentId of unpaidPayments.value.map(p => p.id)) {
-        const payment = unpaidPayments.value.find(p => p.id === paymentId)
-        const { error: updateError } = await supabase
-          .from('payments')
-          .update({
-            wallee_transaction_id: walleeResponse.transactionId.toString(),
-            metadata: {
-              ...payment?.metadata,
-              wallee_transaction_id: walleeResponse.transactionId
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', paymentId)
-        
-        if (updateError) {
-          console.error('❌ Error updating payment with transaction ID:', updateError)
-        }
-      }
-      
-      logger.debug('✅ All payments updated with transaction ID')
-      
-      // Redirect directly to Wallee payment page
-      window.location.href = walleeResponse.paymentUrl
+    if (response.success && response.paymentUrl) {
+      logger.debug('✅ Payment processed successfully, redirecting to Wallee')
+      window.location.href = response.paymentUrl
     } else {
-      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+      throw new Error(response.error || 'Payment processing failed')
     }
     
   } catch (err: any) {
     console.error('❌ Error initiating bulk payment:', err)
+    logger.debug('❌ Full error:', err)
     alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
   } finally {
     isProcessingPayment.value = false
@@ -620,69 +619,68 @@ const payIndividual = async (payment: any) => {
   processingPaymentIds.value.add(payment.id)
   
   try {
-    // Get current user
+    // ✅ Use already-loaded user data instead of new query (avoids RLS issues)
+    let userData = currentUserData.value
+    
+    // Fallback: if user data not available, reload it
+    if (!userData || !userData.id) {
+      logger.debug('⚠️ Cached user data missing, reloading from API...')
+      await loadAllData()
+      userData = currentUserData.value
+    }
+    
+    if (!userData || !userData.id) {
+      throw new Error('User data not available - try reloading the page')
+    }
+    
+    logger.debug('💳 Using user data for payment:', userData.id)
+    
+    // Get current user for auth
     const supabase = getSupabase()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')
     
-    // Get user data from users table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    if (userError || !userData) throw new Error('User data not found')
-    
-    // ✅ Check current student credit balance
-    logger.debug('💰 Checking current student credit balance for user:', userData.id)
-    const { data: creditData, error: creditError } = await supabase
-      .from('student_credits')
-      .select('balance_rappen')
-      .eq('user_id', userData.id)
-      .single()
-    
-    if (creditError && creditError.code !== 'PGRST116') {
-      console.warn('⚠️ Could not load student credit:', creditError)
-    }
-    
-    const currentBalance = creditData?.balance_rappen ?? 0
-    logger.debug('💰 Current student balance:', (currentBalance / 100).toFixed(2), 'CHF')
+    // ✅ Use already-loaded student balance (from get-payment-page-data)
+    const currentBalance = studentBalance.value || 0
+    logger.debug('💰 Using cached student balance:', (currentBalance / 100).toFixed(2), 'CHF')
     
     // If payment is not already wallee, convert it first
     if (payment.payment_method !== 'wallee') {
       logger.debug('🔄 Converting payment to online first:', payment.id)
       
-      const result = await $fetch('/api/payments/convert-to-online', {
-        method: 'POST',
-        body: {
-          paymentId: payment.id,
-          customerEmail: currentUser.value?.email
+      try {
+        const result = await $fetch('/api/payments/convert-to-online', {
+          method: 'POST',
+          body: {
+            paymentId: payment.id,
+            customerEmail: userData.email
+          }
+        })
+        
+        logger.debug('✅ Payment converted to online:', result)
+        
+        // Reload payments to get updated data
+        await loadAllData()
+        
+        // Get the updated payment
+        const updatedPayment = customerPayments.value.find(p => p.id === payment.id)
+        if (updatedPayment) {
+          payment = updatedPayment
         }
-      })
-      
-      logger.debug('✅ Payment converted to online:', result)
-      
-      // Reload payments to get updated data
-      await loadAllData()
-      
-      // Get the updated payment
-      const updatedPayment = customerPayments.value.find(p => p.id === payment.id)
-      if (updatedPayment) {
-        payment = updatedPayment
+      } catch (conversionError) {
+        logger.warn('⚠️ Payment conversion failed (not critical):', conversionError)
+        // Continue anyway - payment might already be wallee or conversion not needed
       }
     }
     
-    // 🚀 Direct Wallee redirect - no intermediate page
-    logger.debug('💳 Processing direct Wallee payment for:', payment.id)
+    // 🚀 Direct Wallee redirect via secure API - no intermediate page
+    logger.debug('💳 Processing secure Wallee payment for:', payment.id)
     
-    // Create Wallee transaction
-    interface WalleeResponse {
-      success: boolean
-      paymentUrl?: string
-      transactionId?: number | string
-      error?: string
-    }
+    // Get session for auth
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('User session not found')
+    
+    // Create response interface
     
     // ✅ Calculate amount to pay: full amount minus any credit already used minus new available credit
     const amountAlreadyUsed = payment.credit_used_rappen || 0
@@ -766,18 +764,9 @@ const payIndividual = async (payment: any) => {
       return
     }
     
-    // ✅ Load appointment data for merchant reference
-    const { data: appointmentData } = await supabase
-      .from('appointments')
-      .select(`
-        id, 
-        type, 
-        event_type_code, 
-        start_time, 
-        duration_minutes
-      `)
-      .eq('id', payment.appointment_id)
-      .single()
+    // ✅ Use appointment data from payment object (already loaded via API)
+    const appointmentData = payment.appointments
+    logger.debug('💳 Using appointment data from payment object:', appointmentData?.id)
     
     const customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
     
@@ -794,20 +783,24 @@ const payIndividual = async (payment: any) => {
     const orderId = buildMerchantReference(merchantReferenceDetails)
     logger.debug('📌 Generated merchant reference for payment:', orderId)
     
-    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+    // ✅ Log what we're about to send
+    logger.debug('💳 Preparing to send payment request with:', {
+      paymentId: payment.id,
+      paymentId_type: typeof payment.id,
+      amount: amountToPay
+    })
+    
+    // Initiate Wallee transaction via secure API
+    const walleeResponse = await $fetch('/api/payments/process', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
       body: {
+        paymentId: payment.id,  // ✅ CHANGED: Use existing payment ID
         orderId,
-        amount: amountToPay,
-        currency: 'CHF',
-        customerEmail: userData.email,
-        customerName: `${userData.first_name} ${userData.last_name}`,
-        description: `Zahlung für Appointment`,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
-        userId: userData.id,
-        tenantId: userData.tenant_id,
-        merchantReferenceDetails // ✅ Pass through for potential future use
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
       }
     })
     

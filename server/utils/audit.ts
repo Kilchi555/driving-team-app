@@ -1,7 +1,7 @@
 // server/utils/audit.ts
 // Utility for audit logging to the database
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export interface AuditLogEntry {
   user_id: string
@@ -16,7 +16,7 @@ export interface AuditLogEntry {
 
 export async function logAudit(entry: AuditLogEntry): Promise<void> {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // Only try to log if we have required fields
     if (!entry.user_id || !entry.action || !entry.status) {
@@ -47,4 +47,5 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
     console.error('Audit logging error:', err)
   }
 }
+
 

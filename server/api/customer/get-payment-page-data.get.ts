@@ -100,7 +100,12 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, statusMessage: 'Forbidden: Only customers can access this endpoint' })
     }
 
-    logger.debug(`📄 Loading payment page data for customer ${requestingUser.id}`)
+    logger.debug(`📄 Loading payment page data for customer`, {
+      user_id: requestingUser.id,
+      auth_user_id: authenticatedUserId,
+      tenant_id: tenantId,
+      role: requestingUser.role
+    })
 
     // ============ LAYER 3: INPUT VALIDATION (implicit - no query params) ============
 

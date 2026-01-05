@@ -1660,21 +1660,6 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    const supabase = getSupabase()
-
-    // Hole aktuellen User (DB) inkl. tenant
-    const { data: userDb } = await supabase
-      .from('users')
-      .select('id, tenant_id, email')
-      .eq('auth_user_id', currentUser.value?.id)
-      .single()
-
-    if (!userDb) {
-      displayToast('error', 'Fehler', 'Benutzer nicht gefunden')
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
     // ✅ SCHRITT 1: Setze Termin SOFORT auf 'confirmed' - BEVOR Zahlung starten!
     logger.debug('🔄 Setting appointment to confirmed immediately...')
     try {

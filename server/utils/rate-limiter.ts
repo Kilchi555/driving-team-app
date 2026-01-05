@@ -20,6 +20,10 @@ const LIMITS = {
   register: { maxRequests: 5, windowMs: 60 * 1000 }, // 5 per minute
   password_reset: { maxRequests: 5, windowMs: 15 * 60 * 1000 }, // 5 per 15 minutes
   login: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
+  process_payment: { maxRequests: 20, windowMs: 60 * 1000 }, // 20 per minute
+  customer_get_payment_page_data: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
+  settle_and_email_payment: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
+  confirm_cash_payment: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
 }
 
 // Exponential Backoff multipliers (in minutes)
@@ -106,14 +110,14 @@ async function getConsecutiveBlockCount(
 
 export async function checkRateLimit(
   ipAddress: string,
-  operation: keyof typeof LIMITS = 'register',
+  operation: keyof typeof LIMITS | string = 'register',
   maxRequests?: number,
   windowMs?: number,
   email?: string,
   tenantId?: string
 ): Promise<{ allowed: boolean; remaining: number; limit: number; reset: number }> {
   const now = Date.now()
-  const config = LIMITS[operation]
+  const config = LIMITS[operation as keyof typeof LIMITS] || { maxRequests: maxRequests || 10, windowMs: windowMs || 60000 }
   const max = maxRequests ?? config.maxRequests
   const baseWindow = windowMs ?? config.windowMs
   const key = `${operation}:${ipAddress}`
