@@ -26,8 +26,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ LAYER 1: AUTHENTICATE USER ============
-    const { user: authenticatedUser, error: authError } = await getAuthenticatedUser(event)
-    if (authError || !authenticatedUser) {
+    const authenticatedUser = await getAuthenticatedUser(event)
+    if (!authenticatedUser) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
