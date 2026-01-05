@@ -57,13 +57,6 @@ export default defineEventHandler(async (event) => {
     const rateLimitKey = `reset_payment:${authenticatedUserId}`
     const canProceed = await checkRateLimit(rateLimitKey, 10, 60000) // 10 per minute
     if (!canProceed) {
-      await logAudit({
-        user_id: authenticatedUserId,
-        action: 'reset_failed_payment',
-        status: 'failed',
-        error_message: 'Rate limit exceeded',
-        ip_address: ipAddress
-      })
       throw createError({ statusCode: 429, statusMessage: 'Too many requests. Please try again later.' })
     }
 
@@ -76,13 +69,6 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!body.appointmentId || !validateUUID(body.appointmentId)) {
-      await logAudit({
-        user_id: authenticatedUserId,
-        action: 'reset_failed_payment',
-        status: 'failed',
-        error_message: 'Invalid appointmentId',
-        ip_address: ipAddress
-      })
       throw createError({ statusCode: 400, statusMessage: 'Invalid appointment ID' })
     }
 
@@ -97,8 +83,8 @@ export default defineEventHandler(async (event) => {
 
     if (reqUserError || !requestingUser) {
       await logAudit({
-        user_id: authenticatedUserId,
         action: 'reset_failed_payment',
+        auth_user_id: authenticatedUserId,
         status: 'failed',
         error_message: 'User profile not found',
         ip_address: ipAddress
@@ -113,11 +99,13 @@ export default defineEventHandler(async (event) => {
     // Only staff/admin can reset payments
     if (!['staff', 'admin', 'tenant_admin', 'superadmin'].includes(requestingUser.role)) {
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUser.id,
+        auth_user_id: authenticatedUserId,
         action: 'reset_failed_payment',
         status: 'failed',
         error_message: 'Authorization failed',
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: auditDetails
       })
       throw createError({ statusCode: 403, statusMessage: 'Only staff/admin can reset payments' })
@@ -135,11 +123,12 @@ export default defineEventHandler(async (event) => {
     if (aptError || !appointment) {
       logger.warn('❌ Appointment not found in tenant')
       await logAudit({
-        user_id: authenticatedUserId,
+        auth_user_id: authenticatedUserId,
         action: 'reset_failed_payment',
         status: 'failed',
         error_message: 'Appointment not found or unauthorized',
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: auditDetails
       })
       throw createError({ statusCode: 404, statusMessage: 'Appointment not found' })
@@ -158,11 +147,12 @@ export default defineEventHandler(async (event) => {
     if (paymentError && paymentError.code !== 'PGRST116') {
       logger.error('❌ Payment fetch error:', paymentError)
       await logAudit({
-        user_id: authenticatedUserId,
+        auth_user_id: authenticatedUserId,
         action: 'reset_failed_payment',
         status: 'failed',
         error_message: `Payment fetch failed: ${paymentError.message}`,
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: auditDetails
       })
       throw createError({ statusCode: 500, statusMessage: 'Payment lookup failed' })
@@ -171,11 +161,12 @@ export default defineEventHandler(async (event) => {
     if (!payment) {
       logger.warn('❌ No payment found for appointment')
       await logAudit({
-        user_id: authenticatedUserId,
+        auth_user_id: authenticatedUserId,
         action: 'reset_failed_payment',
         status: 'failed',
         error_message: 'No payment found for appointment',
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: auditDetails
       })
       throw createError({ statusCode: 404, statusMessage: 'No payment found for this appointment' })
@@ -198,11 +189,13 @@ export default defineEventHandler(async (event) => {
     if (updatePaymentError) {
       logger.error('❌ Payment update failed:', updatePaymentError)
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUser.id,
+        auth_user_id: authenticatedUserId,
         action: 'reset_failed_payment',
         status: 'failed',
         error_message: `Payment update failed: ${updatePaymentError.message}`,
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: auditDetails
       })
       throw createError({ statusCode: 500, statusMessage: 'Failed to reset payment' })
@@ -222,11 +215,13 @@ export default defineEventHandler(async (event) => {
     if (updateAptError) {
       logger.error('❌ Appointment update failed:', updateAptError)
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUser.id,
+        auth_user_id: authenticatedUserId,
         action: 'reset_failed_payment',
         status: 'failed',
         error_message: `Appointment update failed: ${updateAptError.message}`,
         ip_address: ipAddress,
+        tenant_id: tenantId,
         details: { ...auditDetails, new_payment_status: 'pending' }
       })
       throw createError({ statusCode: 500, statusMessage: 'Failed to reset appointment' })
@@ -234,12 +229,14 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 8: AUDIT LOGGING ============
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: requestingUser.id,
+      auth_user_id: authenticatedUserId,
       action: 'reset_failed_payment',
       resource_type: 'payment',
       resource_id: payment.id,
       status: 'success',
       ip_address: ipAddress,
+      tenant_id: tenantId,
       details: {
         ...auditDetails,
         new_payment_status: 'pending',
@@ -261,12 +258,15 @@ export default defineEventHandler(async (event) => {
     const errorMessage = error.statusMessage || error.message || 'Internal server error'
     const statusCode = error.statusCode || 500
 
+    // Log with user_id if available (after user lookup), otherwise use auth_user_id
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: requestingUser?.id,
+      auth_user_id: authenticatedUserId,
       action: 'reset_failed_payment',
       status: 'error',
       error_message: errorMessage,
       ip_address: ipAddress,
+      tenant_id: tenantId,
       details: { ...auditDetails, duration_ms: Date.now() - startTime }
     })
 
