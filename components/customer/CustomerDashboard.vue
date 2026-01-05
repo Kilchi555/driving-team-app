@@ -1020,6 +1020,8 @@ const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per 
 const showPaymentConfirmDialog = ref(false)
 const pendingPaymentUrl = ref<string | null>(null)
 const isProcessingPayment = ref(false)
+const currentPaymentAppointment = ref<any>(null)
+const currentPayment = ref<any>(null)
 
 // Profile Modal State
 const showProfileModal = ref(false)
@@ -1782,160 +1784,21 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    // Erstelle Wallee-Transaktion über Backend
-    // Beschriftung für Wallee-Zusammenfassung: Lesson-Type + Datum/Zeit
-    const mapLessonType = (code: string | null | undefined) => {
-      if (!code) return 'Fahrlektion'
-      const c = String(code).toLowerCase()
-      if (c.includes('exam') || c === 'prüfung' || c === 'exam') return 'Prüfung'
-      if (c.includes('theor')) return 'Theorielektion'
-      if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
-      return 'Fahrlektion'
-    }
-    const formatSummaryDate = (dateStr: string) => {
-      // Parse als lokale Zeit (nicht UTC)
-      const parts = dateStr.replace('T', ' ').replace('Z', '').split(/[-: ]/)
-      const d = new Date(
-        parseInt(parts[0]), // year
-        parseInt(parts[1]) - 1, // month (0-indexed)
-        parseInt(parts[2]), // day
-        parseInt(parts[3] || '0'), // hour
-        parseInt(parts[4] || '0'), // minute
-        parseInt(parts[5] || '0')  // second
-      )
-      return `${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
-    }
-    const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
+    // ✅ ONLINE PAYMENT: Zeige "Jetzt oder Später bezahlen" Dialog
+    // Speichere Appointment und Payment für handlePayNow
+    currentPaymentAppointment.value = appointment
+    currentPayment.value = payment
+    confirmingAppointments.value.delete(appointment.id)
     
-    // ✅ Customer name (from currentUser)
-    const customerName = currentUser.value
-      ? `${currentUser.value.user_metadata?.first_name || ''} ${currentUser.value.user_metadata?.last_name || ''}`.trim()
-      : ''
+    // Zeige den Dialog
+    showPaymentConfirmDialog.value = true
+    logger.debug('💳 Showing payment confirmation dialog for online payment')
+    // Benutzer entscheidet im Dialog ob jetzt oder später bezahlt wird
+    // handlePayNow() oder handlePayLater() wird aufgerufen
     
-    const merchantReferenceDetails = {
-      appointmentId: appointment.id,
-      eventTypeCode: appointment.event_type_code || appointment.appointment_type || appointment.type,
-      categoryCode: appointment.type,
-      categoryName: appointment.category_name,
-      staffName: customerName, // Using customerName in staffName field for merchant reference
-      startTime: appointment.start_time,
-      durationMinutes: appointment.duration_minutes
-    }
-    type WalleeResponse = { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
-    const orderId = buildMerchantReference(merchantReferenceDetails)
-
-    // ✅ Get customer info from currentUser (Supabase Auth user)
-    // For email and userId, we need to call a secure API since we don't have full user data in currentUser
-    // The payment.user_id and customer email should already be loaded in the appointment via the API
-    const customerEmail = appointment.user?.email || currentUser.value?.email || userData.value?.email || ''
-    const userId = appointment.user_id
-    
-    logger.debug('🔍 Customer data check:', {
-      appointmentUserEmail: appointment.user?.email,
-      currentUserEmail: currentUser.value?.email,
-      userDataEmail: userData.value?.email,
-      finalEmail: customerEmail,
-      userId
-    })
-    
-    if (!customerEmail || !userId) {
-      logger.error('❌ Missing customer data:', {
-        hasEmail: !!customerEmail,
-        hasUserId: !!userId,
-        sourceEmail: {
-          fromAppointment: !!appointment.user?.email,
-          fromCurrentUser: !!currentUser.value?.email,
-          fromUserData: !!userData.value?.email
-        }
-      })
-      displayToast('error', 'Fehler', 'Kundendaten fehlen')
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
-    logger.debug('💳 Calling Wallee create-transaction API with:', {
-      orderId,
-      amount: amountRappen / 100,
-      customerEmail,
-      userId,
-      appointmentId: appointment.id
-    })
-
-    let response: WalleeResponse
-    try {
-      response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
-        method: 'POST',
-        body: {
-          orderId,
-          amount: amountRappen / 100, // Wallee erwartet Betrag in CHF
-          currency: 'CHF',
-          customerEmail,
-          userId,
-          tenantId: appointment.tenant_id,
-          description: summaryLabel,
-          successUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
-          failedUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
-          merchantReferenceDetails
-        }
-      })
-    } catch (walleeError: any) {
-      console.error('❌ Wallee API Error:', {
-        message: walleeError?.message,
-        status: walleeError?.status,
-        statusCode: walleeError?.statusCode,
-        data: walleeError?.data
-      })
-      logger.error('Wallee API failed:', walleeError)
-      displayToast('error', 'Fehler', `Zahlung konnte nicht gestartet werden: ${walleeError?.message || 'Unbekannter Fehler'}`)
-      
-      try {
-        confirmingAppointments.value.delete(appointment.id)
-      } catch (e) {
-        logger.error('Error during cleanup:', e)
-      }
-      return
-    }
-
-    if (!response?.success || !response?.paymentUrl) {
-      console.error('❌ Create transaction failed:', response)
-      logger.error('Wallee response was not successful:', {
-        success: response?.success,
-        paymentUrl: response?.paymentUrl,
-        fullResponse: response
-      })
-      displayToast('error', 'Fehler', 'Zahlung konnte nicht gestartet werden. Bitte später erneut versuchen.')
-      
-      try {
-        confirmingAppointments.value.delete(appointment.id)
-      } catch (e) {
-        logger.error('Error during cleanup:', e)
-      }
-      return
-    }
-
-    logger.debug('✅ Wallee transaction created:', {
-      transactionId: response.transactionId,
-      paymentId: payment?.id,
-      paymentUrl: response.paymentUrl
-    })
-
-    // ✅ Payment is already confirmed by confirm-with-payment API
-    // Wallee transaction ID will be saved by the backend after payment succeeds (via webhook)
-    // No need to update payment here - just redirect to Wallee payment page
-
-    // Redirect to Wallee payment page
-    logger.debug('🔄 Redirecting to Wallee payment page...')
-    try {
-      confirmingAppointments.value.delete(appointment.id)
-    } catch (e) {
-      logger.error('Error during cleanup:', e)
-    }
-    
-    window.location.href = response.paymentUrl
   } catch (err: any) {
-    console.error('❌ Fehler beim Starten der Zahlung:', err)
-    displayToast('error', 'Fehler beim Starten der Zahlung', err?.message || 'Unbekannter Fehler')
-  } finally {
+    console.error('❌ Fehler beim Bestätigen des Termins:', err)
+    displayToast('error', 'Fehler', err?.message || 'Unbekannter Fehler')
     confirmingAppointments.value.delete(appointment.id)
   }
 }
@@ -2477,11 +2340,73 @@ onMounted(async () => {
 })
 
 // Payment Confirmation Dialog Functions
-const handlePayNow = () => {
-  if (pendingPaymentUrl.value) {
-    isProcessingPayment.value = true
-    logger.debug('💳 Redirecting to Wallee payment...')
-    window.location.href = pendingPaymentUrl.value
+const handlePayNow = async () => {
+  if (!currentPayment.value || !currentPaymentAppointment.value) {
+    displayToast('error', 'Fehler', 'Zahlungsdaten fehlen')
+    return
+  }
+  
+  isProcessingPayment.value = true
+  logger.debug('💳 Starting secure payment process...')
+  
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      displayToast('error', 'Fehler', 'Bitte melde dich erneut an')
+      isProcessingPayment.value = false
+      return
+    }
+    
+    const payment = currentPayment.value
+    const appointment = currentPaymentAppointment.value
+    
+    // Build merchant reference
+    const customerName = currentUser.value
+      ? `${currentUser.value.user_metadata?.first_name || ''} ${currentUser.value.user_metadata?.last_name || ''}`.trim()
+      : ''
+    
+    const merchantReferenceDetails = {
+      appointmentId: appointment.id,
+      eventTypeCode: appointment.event_type_code || appointment.type,
+      categoryCode: appointment.type,
+      categoryName: appointment.category_name,
+      staffName: customerName,
+      startTime: appointment.start_time,
+      durationMinutes: appointment.duration_minutes
+    }
+    
+    const orderId = buildMerchantReference(merchantReferenceDetails)
+    logger.debug('📌 Generated merchant reference:', orderId)
+    
+    // ✅ Call secure payment API (same as /customer/payments page)
+    const walleeResponse = await $fetch('/api/payments/process', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: {
+        paymentId: payment.id,
+        orderId,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+      }
+    }) as { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
+    
+    if (walleeResponse.success && walleeResponse.paymentUrl) {
+      logger.debug('✅ Wallee transaction created:', walleeResponse.transactionId)
+      
+      // Redirect to Wallee payment page
+      window.location.href = walleeResponse.paymentUrl
+    } else {
+      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+    }
+    
+  } catch (err: any) {
+    console.error('❌ Error initiating payment:', err)
+    displayToast('error', 'Fehler', `Zahlung konnte nicht gestartet werden: ${err?.data?.message || err?.message || 'Unbekannter Fehler'}`)
+    isProcessingPayment.value = false
   }
 }
 
@@ -2490,6 +2415,8 @@ const handlePayLater = async () => {
   showConfirmationModal.value = false  // ← Close confirmation modal too!
   pendingPaymentUrl.value = null
   isProcessingPayment.value = false
+  currentPaymentAppointment.value = null
+  currentPayment.value = null
   
   displayToast('success', 'Erfolg', 'Dein Termin ist bestätigt! Du kannst später von deinem Dashboard bezahlen.')
   logger.debug('✅ Payment postponed')
