@@ -1,4 +1,4 @@
-# ALL UNUSED APIs - 35 Remaining (After Cleanup Wave 3 + Cron Security + SARI Correction)
+# ALL UNUSED APIs - 35 Remaining (After Cleanup Wave 3 + Cron Security + SARI Correction + Audit Logging Fix)
 
 **Total Unused:** 35 APIs (0 references anywhere in codebase)  
 **After Wave 1 Cleanup:** 59 → 51 (10 deleted)  
@@ -6,8 +6,15 @@
 **After Wave 3 Cleanup:** 43 remaining (9 deleted)  
 **After Cron Security:** 43 → 39 (4 secured + enabled)  
 **After SARI Correction:** 39 → 35 (4 FALSE POSITIVES - actually used in Admin Dashboard!)  
+**After Audit Logging Fix:** 35 APIs (no changes needed - all payment APIs fixed & tested)  
 **Total APIs in System:** 157 (down from 188)  
-**Total Cleaned:** 31 APIs deleted (2,200+ lines)  
+**Total Cleaned:** 31 APIs deleted (2,200+ lines)
+
+**Latest Changes:**
+- ✅ Audit logs table created with proper RLS
+- ✅ Payment APIs (process, get-payment-page-data, reset-failed) fixed to use users.id for audit logs
+- ✅ All audit log errors resolved - no more FK constraint violations
+- ✅ Audit logging tested and verified in production  
 
 ---
 
