@@ -1712,8 +1712,14 @@ const confirmAppointment = async (appointment: any) => {
     }
 
     try {
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      
       const confirmResult = await $fetch('/api/appointments/confirm-with-payment', {
         method: 'POST',
+        headers: session?.access_token ? {
+          'Authorization': `Bearer ${session.access_token}`
+        } : {},
         body: {
           appointmentId: appointment.id
         }
