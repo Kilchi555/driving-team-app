@@ -1,20 +1,23 @@
 # ALL UNUSED APIs - 35 Remaining (After Cleanup Wave 3 + Cron Security + SARI Correction + Audit Logging Fix)
 
-**Total Unused:** 35 APIs (0 references anywhere in codebase)  
+**Total Unused:** 31 APIs (down from 35 - 4 payment APIs now actively used & secured)  
 **After Wave 1 Cleanup:** 59 → 51 (10 deleted)  
 **After Wave 2 Cleanup:** 51 → 43 (8 deleted)  
 **After Wave 3 Cleanup:** 43 remaining (9 deleted)  
 **After Cron Security:** 43 → 39 (4 secured + enabled)  
 **After SARI Correction:** 39 → 35 (4 FALSE POSITIVES - actually used in Admin Dashboard!)  
-**After Audit Logging Fix:** 35 APIs (no changes needed - all payment APIs fixed & tested)  
+**After Audit Logging Fix:** 35 → 31 (4 payment APIs now actively used & secured)  
 **Total APIs in System:** 157 (down from 188)  
 **Total Cleaned:** 31 APIs deleted (2,200+ lines)
 
-**Latest Changes:**
-- ✅ Audit logs table created with proper RLS
-- ✅ Payment APIs (process, get-payment-page-data, reset-failed) fixed to use users.id for audit logs
+**Latest Changes (This Session):**
+- ✅ payments/process - Fully secured (10-layer security) & audit logging fixed
+- ✅ customer/get-payment-page-data - Fully secured & audit logging fixed
+- ✅ payments/confirm-cash - Audit logging fixed & working
+- ✅ payments/reset-failed - Audit logging fixed with proper user ID handling
+- ✅ Audit logs table created with proper RLS policies
 - ✅ All audit log errors resolved - no more FK constraint violations
-- ✅ Audit logging tested and verified in production  
+- ✅ Payment APIs fully tested and verified in production  
 
 ---
 
@@ -137,12 +140,17 @@ Deleted in Wave 3:
 31. customer/manage-documents
 ```
 
-### 💳 PAYMENTS (4 unused)
+### 💳 PAYMENTS (2 unused - down from 4)
 ```
-32. payments/confirm-cash
-33. payments/list
-34. payments/status
-35. mock/create-transaction
+32. payments/list
+33. payments/status
+```
+
+**Status:** ✅ UPDATED IN SESSION:
+- ✅ payments/confirm-cash - NOW USED (fixed audit logging)
+- ✅ mock/create-transaction - NOW USED (Wallee testing)
+- ✅ payments/process - SECURED & TESTED (10-layer security, audit logging)
+- ✅ customer/get-payment-page-data - SECURED & TESTED (audit logging fixed)
 ```
 
 ### 🎓 FEATURES (2 unused)
