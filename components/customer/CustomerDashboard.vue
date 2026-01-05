@@ -1762,10 +1762,10 @@ const confirmAppointment = async (appointment: any) => {
           : '💳 Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)'
     })
 
-    // ✅ NEU: Wenn automatische Zahlung aktiviert ist und kein Token vorhanden:
+    // ✅ NEU: Wenn automatische Zahlung aktiviert ist UND Token vorhanden UND genug Zeit:
     // Der Termin ist bereits bestätigt und die Zahlung wird automatisch geplant
     // NICHT zu Wallee weiterleiten!
-    if (automaticPaymentSettings.enabled && !automaticPaymentSettings.hasToken) {
+    if (automaticPaymentSettings.canScheduleAutomatic) {
       displayToast('success', 'Termin bestätigt!', 'Zahlung wird automatisch eingezogen')
       confirmingAppointments.value.delete(appointment.id)
       
