@@ -582,7 +582,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
   
-  // ✅ Save discount OR create discount_sales record for products linkage
+  // ✅ Save discount OR create discount_sales record for products linkage (via secure API)
   const saveDiscountOrCreateForProducts = async (appointmentId: string) => {
     const hasDiscount = formData.value.discount && formData.value.discount > 0
     const hasProducts = refs?.selectedProducts?.value && refs.selectedProducts.value.length > 0
@@ -593,23 +593,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
     
     try {
-      const supabase = getSupabase()
-      
-      // Check if discount_sales record already exists for this appointment
-      const { data: existingRecord, error: checkError } = await supabase
-        .from('discount_sales')
-        .select('id')
-        .eq('appointment_id', appointmentId)
-        .single()
-      
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.warn('⚠️ Error checking existing discount_sales:', checkError)
-      }
-      
       const discountData = {
-        appointment_id: appointmentId,
-        user_id: formData.value.user_id,
-        staff_id: formData.value.staff_id,
         discount_amount_rappen: hasDiscount 
           ? (formData.value.discount_type === 'percentage' 
             ? Math.round(formData.value.discount || 0) // Percentage as whole number
@@ -617,43 +601,32 @@ const useEventModalForm = (currentUser?: any, refs?: {
           : 0,
         discount_type: formData.value.discount_type || 'fixed',
         discount_reason: formData.value.discount_reason || '',
-        payment_method: refs?.selectedPaymentMethod?.value || 'pending',
+        staff_id: formData.value.staff_id || null,
+        payment_method: refs?.selectedPaymentMethod?.value || null,
         status: 'pending'
       }
       
-      logger.debug('💰 Saving/creating discount_sales record:', discountData)
+      logger.debug('💰 Saving discount via API:', discountData)
       
-      let discountRecord = null
+      // Call secure API instead of direct Supabase query
+      const result = await $fetch('/api/discounts/save', {
+        method: 'POST',
+        body: {
+          appointmentId,
+          discountData
+        }
+      })
       
-      if (existingRecord) {
-        // Update existing record
-        const { data: updatedRecord, error: updateError } = await supabase
-          .from('discount_sales')
-          .update(discountData)
-          .eq('id', existingRecord.id)
-          .select()
-          .single()
-        
-        if (updateError) throw updateError
-        discountRecord = updatedRecord
-        logger.debug('✅ Discount_sales record updated')
-      } else {
-        // Create new record
-        const { data: newRecord, error: insertError } = await supabase
-          .from('discount_sales')
-          .insert(discountData)
-          .select()
-          .single()
-        
-        if (insertError) throw insertError
-        discountRecord = newRecord
-        logger.debug('✅ Discount_sales record created')
-      }
-      
-      return discountRecord
+      logger.debug('✅ Discount saved via API:', result.discount?.id)
+      return result.discount
       
     } catch (err: any) {
-      console.error('❌ Error saving discount_sales record:', err)
+      console.error('❌ Error saving discount:', err)
+      logger.error('Discount save error:', {
+        message: err.message,
+        status: err.status,
+        statusCode: err.statusCode
+      })
       return null
     }
   }
