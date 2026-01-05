@@ -1,5 +1,7 @@
 -- Fix RLS policies for discount_sales table
--- Allow authenticated users (staff/admins) and service_role to access their tenant's discount_sales
+-- IMPORTANT: discount_sales is now accessed ONLY via secure backend APIs
+-- Frontend uses /api/discounts/save (with service_role backend)
+-- No direct authenticated user access needed
 
 -- Drop existing policies first
 DROP POLICY IF EXISTS "Service role full access" ON discount_sales;
@@ -16,37 +18,18 @@ DROP POLICY IF EXISTS "Discount sales select" ON discount_sales;
 DROP POLICY IF EXISTS "Discount sales insert" ON discount_sales;
 DROP POLICY IF EXISTS "Discount sales update" ON discount_sales;
 DROP POLICY IF EXISTS "Users can read discount sales" ON discount_sales;
+DROP POLICY IF EXISTS "authenticated_tenant_access" ON discount_sales;
 
 -- Enable RLS
 ALTER TABLE discount_sales ENABLE ROW LEVEL SECURITY;
 
--- Policy 1: Service role has full access (for APIs)
+-- Policy: Service role ONLY - for secure backend APIs
+-- Frontend never directly accesses discount_sales
 CREATE POLICY "service_role_all_access" ON discount_sales
   FOR ALL
   TO service_role
   USING (true)
   WITH CHECK (true);
-
--- Policy 2: Authenticated users (staff/admins) can read/write within their tenant
-CREATE POLICY "authenticated_tenant_access" ON discount_sales
-  FOR ALL
-  TO authenticated
-  USING (
-    tenant_id IN (
-      SELECT tenant_id FROM users
-      WHERE auth.uid() = users.auth_user_id
-      AND users.role IN ('staff', 'admin', 'tenant_admin')
-      AND users.is_active = true
-    )
-  )
-  WITH CHECK (
-    tenant_id IN (
-      SELECT tenant_id FROM users
-      WHERE auth.uid() = users.auth_user_id
-      AND users.role IN ('staff', 'admin', 'tenant_admin')
-      AND users.is_active = true
-    )
-  );
 
 -- Verify policies
 SELECT tablename, policyname, cmd FROM pg_policies
