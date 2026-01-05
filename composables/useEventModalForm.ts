@@ -1373,49 +1373,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
         finalPaymentStatus: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending'
       })
       
-      // ✅ Use server API endpoint to create payment (bypasses RLS with admin client)
-      // This allows creating payments with null company_billing_address_id
-      const response = await $fetch('/api/payments/create-payment', {
-        method: 'POST',
-        body: { paymentData }
-      }) as { success: boolean; payment?: any; error?: string }
+      // ✅ Payment now created automatically in POST /api/appointments/save endpoint
+      // No need to call separate create-payment API
+      logger.debug('ℹ️ Payment will be created automatically by appointments/save API')
       
-      if (!response.success || !response.payment) {
-        console.error('❌ Error creating payment: Server returned no payment')
-        logger.debug('❌ Payment creation response:', response)
-        // Don't throw - payment creation shouldn't fail the entire appointment save
-        return null
-      }
-      
-      const payment = response.payment
-      
-      if (!payment) {
-        console.error('❌ Error creating payment: No payment returned')
-        // Don't throw - payment creation shouldn't fail the entire appointment save
-        return null
-      }
-      
-      logger.debug('✅ Payment entry created:', payment.id)
-      
-      // ✅ NEW: Send first reminder email immediately after payment creation
-      try {
-        logger.debug('📧 Sending first payment confirmation reminder via API...')
-        const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
-          method: 'POST',
-          body: {
-            paymentId: payment.id,
-            userId: formData.value.user_id,
-            tenantId: userData?.tenant_id
-          }
-        })
-
-        logger.debug('✅ First reminder sent:', reminderResponse)
-      } catch (reminderError) {
-        console.error('⚠️ Error sending first reminder (non-critical):', reminderError)
-        // Non-critical - don't fail the payment creation
-      }
-      
-      return payment
+      // For now, just return null - payment was created server-side
+      return null
       
     } catch (err: any) {
       console.error('❌ Error in createPaymentEntry:', err)
