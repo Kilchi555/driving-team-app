@@ -1,7 +1,43 @@
 -- Migration: Extend voucher_codes to support discount codes (not just credit)
 -- This consolidates promo codes into one table: credit-based OR discount-based
 
--- ALTER TABLE voucher_codes to support discount codes
+-- First, ensure voucher_codes table exists with all base columns
+CREATE TABLE IF NOT EXISTS voucher_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Code identification
+  code VARCHAR(50) UNIQUE NOT NULL,
+  description TEXT,
+  
+  -- Credit amount (for legacy credit codes)
+  credit_amount_rappen INTEGER,
+  
+  -- Validity period
+  valid_from TIMESTAMPTZ DEFAULT NOW(),
+  valid_until TIMESTAMPTZ,
+  
+  -- Usage limits
+  max_redemptions INTEGER DEFAULT 1,
+  current_redemptions INTEGER DEFAULT 0,
+  
+  -- Status
+  is_active BOOLEAN DEFAULT true,
+  
+  -- Metadata
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Multi-tenancy
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE
+);
+
+-- Create indexes if not exist
+CREATE INDEX IF NOT EXISTS idx_voucher_codes_code ON voucher_codes(code);
+CREATE INDEX IF NOT EXISTS idx_voucher_codes_tenant_id ON voucher_codes(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_voucher_codes_is_active ON voucher_codes(is_active);
+
+-- Now ALTER TABLE voucher_codes to support discount codes
 ALTER TABLE voucher_codes 
 ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'credit' CHECK (type IN ('credit', 'discount')),
 ADD COLUMN IF NOT EXISTS discount_type VARCHAR(20) CHECK (discount_type IN ('percentage', 'fixed')),
