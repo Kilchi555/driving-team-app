@@ -66,10 +66,15 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (appointmentError || !appointment) {
-      await logAudit('save_discount', 'error', 'appointment_not_found', appointmentId, {
+      await logAudit({
+        action: 'save_discount',
+        status: 'error',
+        resource_type: 'appointment',
+        resource_id: appointmentId,
         auth_user_id: authenticatedUser.id,
         user_id: requestingUser.id,
-        reason: 'Appointment not found'
+        tenant_id: requestingUser.tenant_id,
+        error_message: 'Appointment not found'
       })
       throw createError({
         statusCode: 404,
@@ -85,10 +90,15 @@ export default defineEventHandler(async (event) => {
     const sameTenant = requestingUser.tenant_id === appointment.tenant_id
 
     if (!isOwner && (!isStaff || !sameTenant)) {
-      await logAudit('save_discount', 'denied', 'authorization_failed', appointmentId, {
+      await logAudit({
+        action: 'save_discount',
+        status: 'error',
+        resource_type: 'appointment',
+        resource_id: appointmentId,
         auth_user_id: authenticatedUser.id,
         user_id: requestingUser.id,
-        reason: 'User not authorized to save discount for this appointment'
+        tenant_id: requestingUser.tenant_id,
+        error_message: 'User not authorized to save discount for this appointment'
       })
       throw createError({
         statusCode: 403,
@@ -157,12 +167,18 @@ export default defineEventHandler(async (event) => {
     }
 
     // LAYER 9: AUDIT LOGGING
-    await logAudit('save_discount', 'success', 'discount_saved', appointmentId, {
+    await logAudit({
+      action: 'save_discount',
+      status: 'success',
+      resource_type: 'discount_sales',
+      resource_id: result.id,
       auth_user_id: authenticatedUser.id,
       user_id: requestingUser.id,
-      discount_id: result.id,
-      discount_amount_rappen: result.discount_amount_rappen,
-      discount_type: result.discount_type
+      tenant_id: requestingUser.tenant_id,
+      details: {
+        discount_amount_rappen: result.discount_amount_rappen,
+        discount_type: result.discount_type
+      }
     })
 
     return {

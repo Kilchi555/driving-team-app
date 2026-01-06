@@ -1033,12 +1033,8 @@ const getDiscountReason = () => {
 
 // ✅ NEU: Products aus bestehender Payment oder Props
 const getProducts = () => {
-  // Im Edit-Modus: verwende ausschließlich die geladenen Produkte der Payment
-  if (props.isEditMode) {
-    return (existingPayment.value && (existingPayment.value as any).products) ? (existingPayment.value as any).products : []
-  }
-  
-  // Im Create-Modus: Verwende Props
+  // ✅ FIXED: Auch im Edit-Modus props.products verwenden (aus selectedProducts)
+  // Products werden jetzt direkt aus appointment geladen, nicht aus payment
   return props.products || []
 }
 
