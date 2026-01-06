@@ -5288,10 +5288,12 @@ const handleInvoiceAddressSaved = (address: any) => {
   // Speichere die Rechnungsadresse für späteres Speichern
   selectedInvoiceAddress.value = address
   
-  // Wenn ein Schüler ausgewählt ist, speichere die Präferenz
+  // ✅ WICHTIG: NUR die Adresse speichern, NICHT die Payment-Method ändern!
+  // Die Payment-Method wird durch handlePaymentModeChanged gesteuert
   if (selectedStudent.value?.id) {
-    logger.debug('🎯 Saving invoice address preference for student')
-    saveStudentPaymentPreferences(selectedStudent.value.id, 'invoice', { address })
+    logger.debug('🎯 Saving invoice address preference for student (NOT changing payment method)')
+    // Rufe API mit default_company_billing_address_id auf, aber behalte die aktuelle payment_method
+    saveStudentPaymentPreferences(selectedStudent.value.id, selectedPaymentMethod.value, { address })
   }
 }
 
