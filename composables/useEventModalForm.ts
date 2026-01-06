@@ -947,6 +947,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
           // Continue without amount - payment will be created later with correct amount
         }
       }
+      
+      // ✅ NEW: Calculate credit used (for display in confirmation and storage in payment)
+      let creditUsedRappenForPayment = 0
+      const priceDisplay = refs?.priceDisplayRef?.value
+      if (priceDisplay?.usedCredit && priceDisplay.usedCredit > 0) {
+        creditUsedRappenForPayment = Math.round(priceDisplay.usedCredit * 100)
+        logger.debug('💳 Credit used calculated:', {
+          creditChf: priceDisplay.usedCredit,
+          creditRappen: creditUsedRappenForPayment
+        })
+      }
 
       const appointmentData = {
         title: formData.value.title,
@@ -991,7 +1002,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
             basePriceRappen,
             adminFeeRappen,
             productsPriceRappen,
-            discountAmountRappen
+            discountAmountRappen,
+            // ✅ Send credit used (if any)
+            creditUsedRappen: creditUsedRappenForPayment
           }
         })
       } catch (fetchError: any) {
