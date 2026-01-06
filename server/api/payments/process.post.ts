@@ -197,12 +197,32 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     ]
 
+    // ✅ Fetch available payment methods from Wallee Space
+    let availablePaymentMethodIds: number[] = []
+    try {
+      const paymentMethodService = new Wallee.api.PaymentMethodConfigurationService(config)
+      const searchResponse = await paymentMethodService.search(spaceId, { spaceId })
+      
+      if (searchResponse?.body && Array.isArray(searchResponse.body)) {
+        const activePaymentMethods = searchResponse.body.filter((pm: any) => pm.state === 'ACTIVE')
+        availablePaymentMethodIds = activePaymentMethods.map((pm: any) => pm.id as number)
+        
+        logger.debug('💳 Available payment methods:', {
+          total: searchResponse.body.length,
+          active: activePaymentMethods.length,
+          ids: availablePaymentMethodIds
+        })
+      }
+    } catch (pmError: any) {
+      logger.warn('⚠️ Could not fetch payment methods, allowing all:', pmError.message)
+    }
+
     // Create transaction
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: lineItems,
       spaceViewId: null,
       currency: 'CHF',
-      autoConfirmationEnabled: false,
+      autoConfirmationEnabled: true,  // ✅ FIX: Auto-confirm like old API
       chargeRetryEnabled: false,
       customersEmailAddress: userData.email,
       shippingAddress: null,
@@ -212,7 +232,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       tokenizationMode: Wallee.model.TokenizationMode.FORCE,
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`,
-      allowedPaymentMethodConfigurations: []
+      // ✅ FIX: Set available payment methods (empty array = NO payment methods allowed!)
+      allowedPaymentMethodConfigurations: availablePaymentMethodIds.length > 0 ? availablePaymentMethodIds : undefined
     }
 
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)

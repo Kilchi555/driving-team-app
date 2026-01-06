@@ -183,7 +183,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     error.value = null
   }
 
-  const populateFormFromAppointment = (appointment: any) => {
+  const populateFormFromAppointment = async (appointment: any) => {
     logger.debug('📝 Populating form from appointment:', appointment?.id)
     logger.debug('🔍 Full appointment data:', appointment)
     logger.debug('🔍 Appointment event_type_code check:', {
@@ -310,8 +310,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
     // ✅ Load existing discount if appointment ID exists
     if (appointment.id) {
       loadExistingDiscount(appointment.id)
-      // ✅ Load existing products as well
-      loadExistingProducts(appointment.id)
+      // ✅ Load existing products - AWAIT to ensure they're loaded before other operations
+      await loadExistingProducts(appointment.id)
       // ✅ Load invited staff and customers for other event types
       if (isOtherEvent) {
         loadInvitedStaffAndCustomers(appointment.id)
@@ -638,32 +638,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
   
-  // ✅ Load existing products via discount_sales → product_sales chain
+  // ✅ Load existing products directly from appointment
+  // After refactor: products are directly linked to appointments, not via discount_sales
   const loadExistingProducts = async (appointmentId: string) => {
     logger.debug('📦 Loading existing products for appointment:', appointmentId)
     try {
       const supabase = getSupabase()
       
-      // First get the discount_sales record for this appointment
-      const { data: discountSale, error: discountError } = await supabase
-        .from('discount_sales')
-        .select('id')
-        .eq('appointment_id', appointmentId)
-        .single()
-      
-      if (discountError && discountError.code !== 'PGRST116') {
-        console.warn('⚠️ Error loading discount_sales:', discountError)
-        return []
-      }
-      
-      if (!discountSale) {
-        logger.debug('📦 No discount_sales record found, no products to load')
-        return []
-      }
-
-      logger.debug('📦 Found discount_sales record:', discountSale.id)
-
-      // Now load product_sales that reference this discount_sales
+      // ✅ Load products directly by appointment_id (no more discount_sales indirection)
       const { data: productItems, error } = await supabase
         .from('product_sales')
         .select(`
@@ -675,7 +657,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             price_rappen
           )
         `)
-        .eq('product_sale_id', discountSale.id)
+        .eq('appointment_id', appointmentId)
 
       if (error && error.code !== 'PGRST116') {
         console.warn('⚠️ Error loading product_sales:', error)
@@ -683,7 +665,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       if (!productItems || productItems.length === 0) {
-        logger.debug('📦 No product items found')
+        logger.debug('📦 No products found for appointment')
         return []
       }
 
@@ -761,6 +743,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Note: Admin fee loading is now handled directly in usePricing for edit mode
   
   // ✅ Save products to product_sales table if products exist
+  // Products are now directly linked to appointments (not via discount_sales)
   const saveProductsIfExists = async (appointmentId: string, discountSaleId?: string) => {
     // Check if we have selected products (from refs or other sources)
     const selectedProducts = refs?.selectedProducts?.value || []
@@ -770,27 +753,23 @@ const useEventModalForm = (currentUser?: any, refs?: {
       return { totalProductsPriceRappen: 0 }
     }
     
-    if (!discountSaleId) {
-      logger.debug('❌ No discount_sale_id provided for product linkage')
-      return { totalProductsPriceRappen: 0 }
-    }
-    
     try {
       const supabase = getSupabase()
       
-      // First, delete existing products for this discount_sale
+      // Delete existing products for this appointment
       const { error: deleteError } = await supabase
         .from('product_sales')
         .delete()
-        .eq('product_sale_id', discountSaleId)
+        .eq('appointment_id', appointmentId)
       
       if (deleteError) {
         console.warn('⚠️ Error deleting existing products:', deleteError)
       }
       
       // Prepare product data for insertion
+      // ✅ Now using appointment_id directly instead of product_sale_id
       const productData = selectedProducts.map((item: any) => ({
-        product_sale_id: discountSaleId, // Link to discount_sales record
+        appointment_id: appointmentId,  // Direct link to appointment
         product_id: item.product?.id || item.id,
         quantity: item.quantity || 1,
         unit_price_rappen: Math.round((item.product?.price || item.price || 0) * 100),
