@@ -608,9 +608,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('💰 Saving discount via API:', discountData)
       
+      // ✅ Get auth token and add Authorization header
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      
       // Call secure API instead of direct Supabase query
       const result = await $fetch('/api/discounts/save', {
         method: 'POST',
+        headers: session?.access_token ? {
+          'Authorization': `Bearer ${session.access_token}`
+        } : {},
         body: {
           appointmentId,
           discountData
@@ -760,12 +767,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
     
     if (!selectedProducts || selectedProducts.length === 0) {
       logger.debug('ℹ️ No products to save')
-      return
+      return { totalProductsPriceRappen: 0 }
     }
     
     if (!discountSaleId) {
       logger.debug('❌ No discount_sale_id provided for product linkage')
-      return
+      return { totalProductsPriceRappen: 0 }
     }
     
     try {
@@ -801,9 +808,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('✅ Products saved successfully:', productData.length)
       
+      // ✅ Calculate total products price
+      const totalProductsPriceRappen = productData.reduce((sum, item) => sum + (item.total_price_rappen || 0), 0)
+      logger.debug('💰 Total products price:', (totalProductsPriceRappen / 100).toFixed(2), 'CHF')
+      
+      return { totalProductsPriceRappen }
+      
     } catch (err: any) {
       console.error('❌ Error saving products:', err)
       // Don't throw - product saving shouldn't fail the entire appointment save
+      return { totalProductsPriceRappen: 0 }
     }
   }
   
@@ -918,6 +932,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ IMPORTANTE FIX: Berechne total_amount_rappen VOR dem Speichern!
       // Dies ermöglicht der API, das Payment automatisch zu erstellen
       let totalAmountRappenForPayment = 0
+      let basePriceRappen = 0
+      let adminFeeRappen = 0
+      let productsPriceRappen = 0
+      let discountAmountRappen = 0
+      
       if (isChargeableLesson) {
         try {
           // ✅ Berechne Preis basierend auf Duration und pricePerMinute
@@ -926,10 +945,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
           const pricePerMinute = refs?.dynamicPricing?.value?.pricePerMinute || 2.11 // Default: CHF 2.11/min
           
           // Berechne die Einzelkomponenten
-          const basePriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-          const adminFeeRappen = refs?.dynamicPricing?.value?.adminFeeRappen || 0
-          const productsPriceRappen = formData.value.products_total_rappen || 0
-          const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
+          basePriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+          adminFeeRappen = refs?.dynamicPricing?.value?.adminFeeRappen || 0
+          productsPriceRappen = formData.value.products_total_rappen || 0
+          discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
           
           totalAmountRappenForPayment = Math.max(0, 
             basePriceRappen + adminFeeRappen + productsPriceRappen - discountAmountRappen
@@ -988,7 +1007,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
             eventId,
             appointmentData,
             totalAmountRappenForPayment,
-            paymentMethodForPayment: formData.value.payment_method || 'wallee'
+            paymentMethodForPayment: formData.value.payment_method || 'wallee',
+            // ✅ Send price breakdown components
+            basePriceRappen,
+            adminFeeRappen,
+            productsPriceRappen,
+            discountAmountRappen
           }
         })
       } catch (fetchError: any) {
@@ -1038,8 +1062,52 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Save discount and products (create discount_sales record even if no discount, for products linkage)
       const discountSale = await saveDiscountOrCreateForProducts(result.id)
       
-      // ✅ Save products if exists
-      await saveProductsIfExists(result.id, discountSale?.id)
+      // ✅ Save products if exists and get total products price
+      const productResult = await saveProductsIfExists(result.id, discountSale?.id)
+      
+      // ✅ Update payment with products price if products were saved
+      if (productResult?.totalProductsPriceRappen && productResult.totalProductsPriceRappen > 0) {
+        try {
+          logger.debug('💰 Updating payment with products price:', (productResult.totalProductsPriceRappen / 100).toFixed(2))
+          
+          const supabase = getSupabase()
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          // Get the payment record for this appointment
+          const { data: payments, error: paymentFetchError } = await supabase
+            .from('payments')
+            .select('id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, discount_amount_rappen')
+            .eq('appointment_id', result.id)
+            .single()
+          
+          if (!paymentFetchError && payments) {
+            // Recalculate total: lesson + admin_fee + products - discount
+            const newTotal = (payments.lesson_price_rappen || 0) 
+              + (payments.admin_fee_rappen || 0) 
+              + (productResult.totalProductsPriceRappen || 0) 
+              - (payments.discount_amount_rappen || 0)
+            
+            // Update payment with products price
+            const { error: updateError } = await supabase
+              .from('payments')
+              .update({
+                products_price_rappen: productResult.totalProductsPriceRappen,
+                total_amount_rappen: Math.max(0, newTotal),
+                updated_at: new Date().toISOString()
+              })
+              .eq('appointment_id', result.id)
+            
+            if (updateError) {
+              logger.warn('⚠️ Could not update payment with products price:', updateError)
+            } else {
+              logger.debug('✅ Payment updated with products price')
+            }
+          }
+        } catch (err: any) {
+          logger.warn('⚠️ Error updating payment with products:', err.message)
+          // Don't throw - this is secondary update
+        }
+      }
       
       // ✅ Create or update payment entry nur für Lektionen (lesson, exam, theory)
       const appointmentType = formData.value.appointment_type || 'lesson' // Fallback zu 'lesson' wenn undefined
