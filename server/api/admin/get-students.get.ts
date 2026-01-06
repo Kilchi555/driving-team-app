@@ -52,18 +52,52 @@ export default defineEventHandler(async (event) => {
       // Load assigned students for this staff
       logger.debug('👨‍🏫 Loading assigned students for staff:', userId)
       
-      const { data: assignedStudents, error: assignedError } = await serviceSupabase
+      // ✅ Query students where assigned_staff_id (singular) matches
+      // This covers old assignments
+      const { data: oldAssignedStudents, error: oldError } = await serviceSupabase
         .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
+        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client')
-        .eq('assigned_staff_id', userId)
         .eq('tenant_id', tenantId)
+        .eq('assigned_staff_id', userId)
         .or('is_active.eq.true,onboarding_status.eq.pending')
         .order('first_name')
 
-      if (assignedError) throw assignedError
+      if (oldError) throw oldError
 
-      logger.debug('🔍 Assigned students loaded:', assignedStudents?.length || 0)
+      logger.debug('🔍 Old-style assigned students loaded:', oldAssignedStudents?.length || 0)
+
+      // ✅ For new-style assigned_staff_ids (array), we need to load ALL active students
+      // and filter server-side because Supabase array contains is complex
+      // But we'll only do this if we need it (after checking old assignments)
+      const { data: allStudents, error: allError } = await serviceSupabase
+        .from('users')
+        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
+        .eq('role', 'client')
+        .eq('tenant_id', tenantId)
+        .or('is_active.eq.true,onboarding_status.eq.pending')
+        .not('assigned_staff_ids', 'is', null)
+        .order('first_name')
+
+      if (allError) throw allError
+
+      // ✅ Server-side filter: only students where userId is in assigned_staff_ids
+      const newAssignedStudents = (allStudents || []).filter(student => 
+        Array.isArray(student.assigned_staff_ids) && student.assigned_staff_ids.includes(userId)
+      )
+
+      logger.debug('🔍 New-style assigned students loaded:', newAssignedStudents?.length || 0)
+
+      // ✅ Combine both old and new assignments
+      const assignedStudents = [...(oldAssignedStudents || []), ...(newAssignedStudents || [])]
+      const uniqueStudents = Object.values(
+        assignedStudents.reduce((acc: Record<string, any>, student: any) => {
+          acc[student.id] = student
+          return acc
+        }, {})
+      )
+
+      logger.debug('🔍 Total assigned students (deduplicated):', uniqueStudents.length || 0)
 
       // Load students with appointment history
       logger.debug('🔍 Loading students with appointment history for staff:', userId)
@@ -79,22 +113,20 @@ export default defineEventHandler(async (event) => {
         logger.warn('⚠️ Error loading appointment students:', appointmentError)
       }
 
-      // Combine and deduplicate
+      // Combine and deduplicate with appointment students
       const byId: Record<string, any> = {}
 
-      // First: students from appointment history (preferred for category)
-      if (appointmentStudents) {
-        for (const apt of appointmentStudents) {
-          if (apt.users) {
-            byId[apt.users.id] = apt.users
-          }
-        }
+      // First: students from assignment (new and old style)
+      for (const student of uniqueStudents || []) {
+        byId[student.id] = student
       }
 
-      // Then: assigned students - only add if not already present
-      for (const student of assignedStudents || []) {
-        if (!byId[student.id]) {
-          byId[student.id] = student
+      // Then: add students from appointment history (fallback if not assigned)
+      if (appointmentStudents) {
+        for (const apt of appointmentStudents) {
+          if (apt.users && !byId[apt.users.id]) {
+            byId[apt.users.id] = apt.users
+          }
         }
       }
 
