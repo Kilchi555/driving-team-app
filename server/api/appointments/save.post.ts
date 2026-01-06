@@ -158,7 +158,8 @@ export default defineEventHandler(async (event) => {
             admin_fee_rappen: adminFeeRappen,
             products_price_rappen: productsPriceRappen,
             discount_amount_rappen: discountAmountRappen,
-            total_amount_rappen: totalAmountRappenForPayment,
+            // ✅ FIX: total_amount_rappen should be the REMAINING amount after credit is deducted
+            total_amount_rappen: Math.max(0, totalAmountRappenForPayment - creditUsedRappen),
             payment_method: paymentMethodForPayment || 'wallee',
             // ✅ FIX: If credit covers the entire amount, mark as completed
             payment_status: creditUsedRappen >= totalAmountRappenForPayment ? 'completed' : 'pending',

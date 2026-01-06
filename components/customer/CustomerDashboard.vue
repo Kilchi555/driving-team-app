@@ -1742,10 +1742,27 @@ const confirmAppointment = async (appointment: any) => {
     }
 
     const amountRappen = payment?.total_amount_rappen || 0
-    if (!amountRappen || amountRappen <= 0) {
-      displayToast('error', 'Fehler', 'Betrag für den Termin nicht gefunden')
+    
+    // ✅ NEW: If amount is 0 (fully covered by credit or discounts), just show success
+    if (amountRappen <= 0) {
+      logger.debug('✅ Payment fully covered by credit or discounts - no online payment needed')
+      displayToast('success', 'Termin bestätigt!', 'Zahlung wurde durch Guthaben oder Gutscheine gedeckt')
       confirmingAppointments.value.delete(appointment.id)
-      return
+      
+      // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
+      const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
+      if (index !== -1) {
+        pendingConfirmations.value.splice(index, 1)
+        logger.debug('✅ Removed confirmed appointment from pending list')
+      }
+      
+      // ✅ Schließe das Modal
+      showConfirmationModal.value = false
+      
+      // ✅ Refresh pending confirmations
+      await loadPendingConfirmations()
+      
+      return // Fertig!
     }
 
     // ✅ Confirm appointment via secure API
