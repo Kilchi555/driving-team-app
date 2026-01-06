@@ -1176,90 +1176,54 @@ const handleSaveAppointment = async () => {
       return
     }
     
-    // ✅ NEU: Automatische Guthaben-Verwendung nach dem Speichern
+    // ✅ NEW: Use secure backend API to apply credit to appointment
     if (props.mode === 'create' && selectedStudent.value && studentCredit.value && studentCredit.value.balance_rappen > 0) {
       try {
-        logger.debug('💳 Automatically using credit for new appointment...')
+        logger.debug('💳 Using secure API to apply credit for appointment...')
         
-        // ✅ CRITICAL FIX: Calculate TOTAL amount including ALL components
+        // Calculate total price including all components
         const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
-        
-        // Add all product prices
         let productsPrice = 0
         if (selectedProducts.value && selectedProducts.value.length > 0) {
           productsPrice = selectedProducts.value.reduce((sum: number, p: any) => {
             return sum + ((p.product?.price || 0) * 100 * p.quantity)
           }, 0)
-          logger.debug('💳 Added products to credit calculation:', {
-            productsPrice: (productsPrice / 100).toFixed(2),
-            productCount: selectedProducts.value.length
-          })
         }
-        
-        // Add admin fee if it exists
-        let adminFee = savedAppointment.admin_fee_rappen || 0
-        if (adminFee > 0) {
-          logger.debug('💳 Added admin fee to credit calculation:', {
-            adminFee: (adminFee / 100).toFixed(2)
-          })
-        }
-        
-        // Subtract all discounts (from formData)
-        let discountTotal = (formData.value.discount || 0) * 100 // Convert CHF to Rappen
-        if (discountTotal > 0) {
-          logger.debug('💳 Subtracting discount from credit calculation:', {
-            discountTotal: (discountTotal / 100).toFixed(2),
-            discountReason: formData.value.discount_reason
-          })
-        }
-        
-        // Calculate total price
+        const adminFee = savedAppointment?.admin_fee_rappen || 0
+        const discountTotal = (formData.value.discount || 0) * 100
         const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee - discountTotal)
         
-        logger.debug('💳 Total price for credit calculation:', {
-          lessonPrice: (lessonPrice / 100).toFixed(2),
-          productsPrice: (productsPrice / 100).toFixed(2),
-          adminFee: (adminFee / 100).toFixed(2),
-          discountTotal: (discountTotal / 100).toFixed(2),
-          totalPrice: (totalPrice / 100).toFixed(2)
-        })
+        const creditToUse = Math.min(studentCredit.value.balance_rappen, totalPrice)
         
-        const creditData = {
-          user_id: selectedStudent.value.id,
-          amount_rappen: Math.min(studentCredit.value.balance_rappen, totalPrice),
-          appointment_id: savedAppointment.id,
-          notes: `Automatische Guthaben-Verwendung für Lektion: ${formData.value.title || 'Fahrstunde'}`
-        }
-        
-        logger.debug('💳 Using credit for appointment:', creditData)
-        
-        const result = await useCreditForAppointment(creditData)
-        
-        if (result.success) {
-          logger.debug('✅ Credit used successfully:', result)
-          
-          // ✅ NEU: Payment mit Guthaben-Info aktualisieren
+        if (creditToUse > 0 && savedAppointment?.id) {
           const supabase = getSupabase()
-          const { error: paymentError } = await supabase
-            .from('payments')
-            .update({
-              credit_used_rappen: creditData.amount_rappen,
-              credit_transaction_id: result.creditTransactionId // Falls verfügbar
-            })
-            .eq('appointment_id', savedAppointment.id)
+          const { data: { session } } = await supabase.auth.getSession()
           
-          if (paymentError) {
-            console.warn('⚠️ Could not update payment with credit info:', paymentError)
+          const response = await $fetch<{ success: boolean; creditTransactionId?: string }>('/api/credit/use-for-appointment', {
+            method: 'POST',
+            headers: session?.access_token ? {
+              'Authorization': `Bearer ${session.access_token}`
+            } : {},
+            body: {
+              appointmentId: savedAppointment.id,
+              amountRappen: creditToUse,
+              notes: `Guthaben für Termin: ${formData.value.title || 'Fahrstunde'}`
+            }
+          })
+          
+          if (response?.success) {
+            logger.debug('✅ Credit applied successfully via API:', response)
+            // Reload student credit
+            if (selectedStudent.value?.id) {
+              await loadStudentCredit(selectedStudent.value.id)
+            }
           } else {
-            logger.debug('✅ Payment updated with credit information')
+            logger.warn('⚠️ Failed to apply credit via API:', response)
           }
-          
-        } else {
-          console.warn('⚠️ Failed to use credit for appointment')
         }
-      } catch (creditError) {
-        console.error('❌ Error using credit for appointment:', creditError)
-        // Nicht den gesamten Speichervorgang abbrechen, nur loggen
+      } catch (creditError: any) {
+        logger.warn('⚠️ Failed to apply credit for appointment:', creditError.message)
+        // Don't fail the entire flow - appointment was saved successfully
       }
     }
     

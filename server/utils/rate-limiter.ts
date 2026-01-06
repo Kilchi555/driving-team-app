@@ -25,6 +25,8 @@ const LIMITS = {
   settle_and_email_payment: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
   confirm_cash_payment: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
   save_discount: { maxRequests: 1000, windowMs: 60 * 1000 }, // 1000 per minute - testing (reduce later)
+  cancel_appointment: { maxRequests: 10, windowMs: 60 * 60 * 1000 }, // 10 per hour
+  use_credit_for_appointment: { maxRequests: 50, windowMs: 60 * 60 * 1000 }, // ✅ NEW: 50 per hour
 }
 
 // Exponential Backoff multipliers (in minutes)

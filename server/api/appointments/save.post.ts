@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
       appointmentData, 
       totalAmountRappenForPayment, 
       paymentMethodForPayment,
+      creditUsedRappen = 0, // ✅ NEW: Credit used from frontend
       // ✅ NEW: Price breakdown components from frontend
       basePriceRappen = 0,
       adminFeeRappen = 0,
@@ -159,7 +160,12 @@ export default defineEventHandler(async (event) => {
             discount_amount_rappen: discountAmountRappen,
             total_amount_rappen: totalAmountRappenForPayment,
             payment_method: paymentMethodForPayment || 'wallee',
-            payment_status: 'pending',
+            // ✅ FIX: If credit covers the entire amount, mark as completed
+            payment_status: creditUsedRappen >= totalAmountRappenForPayment ? 'completed' : 'pending',
+            // ✅ FIX: Set paid_at if payment is completed
+            ...(creditUsedRappen >= totalAmountRappenForPayment && { paid_at: new Date().toISOString() }),
+            // ✅ NEW: Store credit used in payment record
+            credit_used_rappen: creditUsedRappen,
             description: appointmentData.title || `Fahrlektio ${appointmentData.type}`,
             created_at: new Date().toISOString()
           }

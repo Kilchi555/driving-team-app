@@ -1,22 +1,23 @@
 // server/api/appointments/cancel-customer.post.ts
+// SECURED: Customer appointment cancellation with full security layers
 import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { logAudit } from '~/server/utils/audit'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { validateUUID } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
+  const ipAddress = getClientIP(event)
+  let authenticatedUserId: string | undefined
+  let tenantId: string | undefined
+  let userProfile: any = null
+  let payment: any = null  // ✅ FIX: Define payment at top scope
+  
   try {
-    const body = await readBody(event)
-    const { appointmentId, cancellationReasonId } = body
-
-    if (!appointmentId || !cancellationReasonId) {
-      throw createError({
-        statusCode: 400,
-        message: 'appointmentId and cancellationReasonId are required'
-      })
-    }
-
-    // Get current user from Authorization header
-    const supabase = getSupabase()
+    // ============ LAYER 1: AUTHENTICATION ============
     const authHeader = getHeader(event, 'authorization')
     
     if (!authHeader) {
@@ -27,6 +28,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
+    const supabase = getSupabase()
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
@@ -37,17 +39,65 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    authenticatedUserId = user.id
     logger.debug('✅ Authenticated user:', user.id, user.email)
 
-    // Get user profile from database (use admin client to bypass RLS)
+    // ============ LAYER 2: RATE LIMITING ============
+    const rateLimitResult = await checkRateLimit(
+      authenticatedUserId,
+      'cancel_appointment',
+      10, // Max 10 cancellations per hour
+      3600000 // 1 hour window
+    )
+    
+    if (!rateLimitResult.allowed) {
+      await logAudit({
+        auth_user_id: authenticatedUserId,
+        action: 'cancel_appointment',
+        status: 'blocked',
+        error_message: 'Rate limit exceeded',
+        ip_address: ipAddress,
+        details: { remaining: rateLimitResult.remaining, limit: rateLimitResult.limit }
+      })
+      
+      throw createError({
+        statusCode: 429,
+        message: 'Too many cancellation requests. Please try again later.'
+      })
+    }
+
+    // ============ LAYER 3: READ & VALIDATE INPUT ============
+    const body = await readBody(event)
+    const { appointmentId, cancellationReasonId } = body
+
+    // ============ LAYER 4: INPUT VALIDATION ============
+    const errors: any = {}
+
+    if (!appointmentId || !validateUUID(appointmentId).valid) {
+      errors.appointmentId = 'Valid appointment ID required'
+    }
+
+    if (!cancellationReasonId || !validateUUID(cancellationReasonId).valid) {
+      errors.cancellationReasonId = 'Valid cancellation reason ID required'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      logger.warn('❌ Validation errors:', errors)
+      throw createError({
+        statusCode: 400,
+        message: `Validation errors: ${JSON.stringify(errors)}`
+      })
+    }
+
+    // ============ LAYER 5: GET TENANT FROM AUTHENTICATED USER ============
     const supabaseAdmin = getSupabaseAdmin()
-    const { data: userProfile, error: profileError } = await supabaseAdmin
+    const { data: userProfileData, error: profileError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, role, email')
       .eq('auth_user_id', user.id)
       .single()
 
-    logger.debug('🔍 User profile query result:', { userProfile, profileError })
+    logger.debug('🔍 User profile query result:', { userProfile: userProfileData, profileError })
 
     if (profileError) {
       console.error('❌ Profile error:', profileError)
@@ -57,13 +107,26 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!userProfile) {
+    if (!userProfileData) {
       console.error('❌ No profile found for auth_user_id:', user.id)
+      
+      await logAudit({
+        auth_user_id: authenticatedUserId,
+        action: 'cancel_appointment',
+        status: 'failed',
+        error_message: 'User profile not found',
+        ip_address: ipAddress
+      })
+      
       throw createError({
         statusCode: 403,
         message: `User profile not found. Please contact support. (auth_user_id: ${user.id})`
       })
     }
+
+    // ✅ Assign to outer scope variable
+    userProfile = userProfileData
+    tenantId = userProfile.tenant_id
 
     const now = new Date()
 
@@ -71,7 +134,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('👤 User:', userProfile.id)
     logger.debug('📋 Reason ID:', cancellationReasonId)
 
-    // 1. Get appointment with payment
+    // ============ LAYER 6: AUTHORIZATION CHECK ============
+    // Get appointment with payment
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .select(`
@@ -82,6 +146,18 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (appointmentError || !appointment) {
+      await logAudit({
+        user_id: userProfile.id,
+        auth_user_id: authenticatedUserId,
+        action: 'cancel_appointment',
+        resource_type: 'appointment',
+        resource_id: appointmentId,
+        status: 'failed',
+        error_message: 'Appointment not found',
+        ip_address: ipAddress,
+        tenant_id: tenantId
+      })
+      
       throw createError({
         statusCode: 404,
         message: 'Appointment not found'
@@ -90,6 +166,22 @@ export default defineEventHandler(async (event) => {
 
     // Verify user owns this appointment
     if (appointment.user_id !== userProfile.id) {
+      await logAudit({
+        user_id: userProfile.id,
+        auth_user_id: authenticatedUserId,
+        action: 'cancel_appointment',
+        resource_type: 'appointment',
+        resource_id: appointmentId,
+        status: 'failed',
+        error_message: 'Unauthorized: Appointment does not belong to user',
+        ip_address: ipAddress,
+        tenant_id: tenantId,
+        details: { 
+          appointment_user_id: appointment.user_id,
+          requesting_user_id: userProfile.id
+        }
+      })
+      
       throw createError({
         statusCode: 403,
         message: 'You can only cancel your own appointments'
@@ -221,19 +313,128 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Appointment cancelled successfully')
 
+    // ============ AUDIT LOGGING: Success ============
+    await logAudit({
+      user_id: userProfile.id,
+      auth_user_id: authenticatedUserId,
+      action: 'cancel_appointment',
+      resource_type: 'appointment',
+      resource_id: appointmentId,
+      status: 'success',
+      ip_address: ipAddress,
+      tenant_id: tenantId,
+      details: {
+        cancellation_reason: reason.name_de,
+        charge_percentage: chargePercentage,
+        hours_until_appointment: hoursUntilAppointment.toFixed(2),
+        payment_status: payment?.payment_status,
+        refund_amount: payment?.payment_status === 'completed' ? payment.total_amount_rappen : 0,
+        duration_ms: Date.now() - startTime
+      }
+    })
+
     // 8. Handle payment if exists
-    const payment = Array.isArray(appointment.payments) 
+    payment = Array.isArray(appointment.payments) 
       ? appointment.payments[0] 
       : appointment.payments
 
     if (payment && hoursUntilAppointment >= hoursBeforeCancellationFree) {
-      // Cancel payment if more than threshold hours before appointment
-      if (payment.payment_status === 'authorized') {
+      // ✅ FREE CANCELLATION: Handle based on payment status
+      
+      if (payment.payment_status === 'completed') {
+        // ✅ Payment was completed → Refund to student credit
+        logger.debug('💳 Payment was completed - refunding to student credit:', {
+          paymentId: payment.id,
+          amount: (payment.total_amount_rappen / 100).toFixed(2)
+        })
+        
+        // Load or create student credit
+        let { data: studentCredit, error: creditError } = await supabaseAdmin
+          .from('student_credits')
+          .select('id, balance_rappen')
+          .eq('user_id', appointment.user_id)
+          .single()
+        
+        // Create if doesn't exist
+        if (creditError && creditError.code === 'PGRST116') {
+          const { data: newCredit, error: createError } = await supabaseAdmin
+            .from('student_credits')
+            .insert([{
+              user_id: appointment.user_id,
+              balance_rappen: 0,
+              tenant_id: userProfile.tenant_id
+            }])
+            .select('id, balance_rappen')
+            .single()
+          
+          if (createError) {
+            console.error('❌ Failed to create student credit:', createError)
+          } else {
+            studentCredit = newCredit
+            logger.debug('✅ Created new student credit record:', newCredit.id)
+          }
+        }
+        
+        if (studentCredit) {
+          const oldBalance = studentCredit.balance_rappen || 0
+          const refundAmount = payment.total_amount_rappen
+          const newBalance = oldBalance + refundAmount
+          
+          // Update credit balance
+          const { error: updateCreditError } = await supabaseAdmin
+            .from('student_credits')
+            .update({
+              balance_rappen: newBalance,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', studentCredit.id)
+          
+          if (updateCreditError) {
+            console.error('❌ Failed to update student credit:', updateCreditError)
+          } else {
+            logger.debug('✅ Student credit updated:', {
+              oldBalance: (oldBalance / 100).toFixed(2),
+              refund: (refundAmount / 100).toFixed(2),
+              newBalance: (newBalance / 100).toFixed(2)
+            })
+            
+            // Create credit transaction
+            await supabaseAdmin
+              .from('credit_transactions')
+              .insert([{
+                user_id: appointment.user_id,
+                transaction_type: 'cancellation',
+                amount_rappen: refundAmount,
+                balance_before_rappen: oldBalance,
+                balance_after_rappen: newBalance,
+                payment_method: 'refund',
+                reference_id: appointmentId,
+                reference_type: 'appointment',
+                created_by: userProfile.id,
+                notes: `Kostenlose Stornierung: ${reason.name_de} (CHF ${(refundAmount / 100).toFixed(2)})`
+              }])
+            
+            logger.debug('✅ Credit transaction created')
+          }
+        }
+        
+        // Mark payment as refunded
+        await supabaseAdmin
+          .from('payments')
+          .update({
+            payment_status: 'refunded',
+            refunded_at: new Date().toISOString(),
+            notes: `Kostenlose Stornierung: ${reason.name_de}`,
+            updated_at: toLocalTimeString(now)
+          })
+          .eq('id', payment.id)
+        
+        logger.debug('✅ Payment marked as refunded')
+      } 
+      else if (payment.payment_status === 'authorized') {
         // TODO: Void Wallee authorization
         logger.debug('⚠️ TODO: Void Wallee authorization:', payment.wallee_transaction_id)
-      }
-
-      if (payment.payment_status === 'pending' || payment.payment_status === 'authorized') {
+        
         await supabaseAdmin
           .from('payments')
           .update({
@@ -242,7 +443,18 @@ export default defineEventHandler(async (event) => {
           })
           .eq('id', payment.id)
         
-        logger.debug('✅ Payment cancelled')
+        logger.debug('✅ Payment cancelled (authorized)')
+      }
+      else if (payment.payment_status === 'pending') {
+        await supabaseAdmin
+          .from('payments')
+          .update({
+            payment_status: 'cancelled',
+            updated_at: toLocalTimeString(now)
+          })
+          .eq('id', payment.id)
+        
+        logger.debug('✅ Payment cancelled (pending)')
       }
     }
     // await sendEmailNotification({
@@ -261,6 +473,23 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Customer cancellation error:', error)
+    
+    // ============ AUDIT LOGGING: Error ============
+    await logAudit({
+      user_id: userProfile?.id,
+      auth_user_id: authenticatedUserId,
+      action: 'cancel_appointment',
+      resource_type: 'appointment',
+      status: 'error',
+      error_message: error.message || error.statusMessage || 'Unknown error',
+      ip_address: ipAddress,
+      tenant_id: tenantId,
+      details: {
+        duration_ms: Date.now() - startTime,
+        error_stack: error.stack
+      }
+    })
+    
     throw error
   }
 })
