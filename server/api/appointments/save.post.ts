@@ -12,7 +12,18 @@ import {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { mode, eventId, appointmentData, totalAmountRappenForPayment, paymentMethodForPayment } = body
+    const { 
+      mode, 
+      eventId, 
+      appointmentData, 
+      totalAmountRappenForPayment, 
+      paymentMethodForPayment,
+      // ✅ NEW: Price breakdown components from frontend
+      basePriceRappen = 0,
+      adminFeeRappen = 0,
+      productsPriceRappen = 0,
+      discountAmountRappen = 0
+    } = body
 
     if (!appointmentData) {
       throw createError({
@@ -142,10 +153,10 @@ export default defineEventHandler(async (event) => {
             appointment_id: result.id,
             user_id: result.user_id,
             tenant_id: appointmentData.tenant_id,
-            lesson_price_rappen: totalAmountRappenForPayment,
-            admin_fee_rappen: 0,
-            products_price_rappen: 0,
-            discount_amount_rappen: 0,
+            lesson_price_rappen: basePriceRappen || totalAmountRappenForPayment,
+            admin_fee_rappen: adminFeeRappen,
+            products_price_rappen: productsPriceRappen,
+            discount_amount_rappen: discountAmountRappen,
             total_amount_rappen: totalAmountRappenForPayment,
             payment_method: paymentMethodForPayment || 'wallee',
             payment_status: 'pending',

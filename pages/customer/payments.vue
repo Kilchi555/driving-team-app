@@ -504,7 +504,7 @@ const loadAllData = async () => {
     if (data.user && data.user.id) {
       currentUserData.value = data.user
     }
-    
+
     // Set user preferences
     preferredPaymentMethod.value = data.user?.preferred_payment_method || 'wallee'
     logger.debug('💳 Preferred payment method:', preferredPaymentMethod.value)
@@ -649,23 +649,23 @@ const payIndividual = async (payment: any) => {
       logger.debug('🔄 Converting payment to online first:', payment.id)
       
       try {
-        const result = await $fetch('/api/payments/convert-to-online', {
-          method: 'POST',
-          body: {
-            paymentId: payment.id,
+      const result = await $fetch('/api/payments/convert-to-online', {
+        method: 'POST',
+        body: {
+          paymentId: payment.id,
             customerEmail: userData.email
-          }
-        })
-        
-        logger.debug('✅ Payment converted to online:', result)
-        
-        // Reload payments to get updated data
-        await loadAllData()
-        
-        // Get the updated payment
-        const updatedPayment = customerPayments.value.find(p => p.id === payment.id)
-        if (updatedPayment) {
-          payment = updatedPayment
+        }
+      })
+      
+      logger.debug('✅ Payment converted to online:', result)
+      
+      // Reload payments to get updated data
+      await loadAllData()
+      
+      // Get the updated payment
+      const updatedPayment = customerPayments.value.find(p => p.id === payment.id)
+      if (updatedPayment) {
+        payment = updatedPayment
         }
       } catch (conversionError) {
         logger.warn('⚠️ Payment conversion failed (not critical):', conversionError)
