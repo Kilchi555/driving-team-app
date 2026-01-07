@@ -359,8 +359,8 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
     }
   }
   
-  // Category
-  if (data.type) {
+  // Category (can be null for "other" event types like meetings, training)
+  if (data.type !== undefined && data.type !== null) {
     const categoryValidation = validateDrivingCategory(data.type)
     if (!categoryValidation.valid) {
       errors.type = categoryValidation.error!
@@ -375,8 +375,10 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
     }
   }
   
-  // Status
-  if (data.status) {
+  // Status (required - default to pending_confirmation if not provided)
+  if (!data.status) {
+    errors.status = 'Status ist erforderlich'
+  } else {
     const statusValidation = validateAppointmentStatus(data.status)
     if (!statusValidation.valid) {
       errors.status = statusValidation.error!
