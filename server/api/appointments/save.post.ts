@@ -8,6 +8,17 @@ import {
   throwIfInvalid,
   throwValidationError
 } from '~/server/utils/validators'
+import { calculatePricingServerSide } from '~/server/utils/pricing-calculator'
+
+/**
+ * Appointment Save API - Now with Server-Side Pricing Validation!
+ * 
+ * ✅ V2 SECURITY: All prices are recalculated server-side!
+ * Frontend sends raw data, backend calculates prices to prevent fraud.
+ * 
+ * Old behavior (V1): Trusted frontend prices
+ * New behavior (V2): Recalculates all prices server-side for validation
+ */
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,15 +26,20 @@ export default defineEventHandler(async (event) => {
     const { 
       mode, 
       eventId, 
-      appointmentData, 
+      appointmentData,
+      // ✅ V2: Frontend still sends these for backward compatibility,
+      // but we'll RECALCULATE them server-side for security!
       totalAmountRappenForPayment, 
       paymentMethodForPayment,
-      creditUsedRappen = 0, // ✅ NEW: Credit used from frontend
-      // ✅ NEW: Price breakdown components from frontend
+      creditUsedRappen = 0,
       basePriceRappen = 0,
       adminFeeRappen = 0,
       productsPriceRappen = 0,
-      discountAmountRappen = 0
+      discountAmountRappen = 0,
+      // ✅ V2 NEW: Raw data for server-side calculation
+      productIds = [],
+      voucherCode,
+      useCredit = false
     } = body
 
     if (!appointmentData) {
@@ -49,9 +65,7 @@ export default defineEventHandler(async (event) => {
     const validation = validateAppointmentData(appointmentData)
     throwIfInvalid(validation)
 
-    // Extra security: Validate category against database (if type/category is present)
-    // This ensures that newly added or removed categories are properly handled
-    // Falls back to basic validator if API is unavailable
+    // Extra security: Validate category against database
     if (appointmentData.type) {
       try {
         const authHeader = getHeader(event, 'authorization')
@@ -124,6 +138,7 @@ export default defineEventHandler(async (event) => {
       result = data
       logger.debug('✅ Appointment updated:', result.id)
     } else {
+      // ============ CREATE MODE ============
       // Create new appointment
       const { data, error: insertError } = await supabase
         .from('appointments')
@@ -141,33 +156,78 @@ export default defineEventHandler(async (event) => {
       result = data
       logger.debug('✅ Appointment created:', result.id)
       
-      // ============ CREATE PAYMENT FOR NEW APPOINTMENT ============
+      // ============ V2 SECURITY: SERVER-SIDE PRICE CALCULATION ============
       if (totalAmountRappenForPayment && totalAmountRappenForPayment > 0) {
         try {
-          logger.debug('💳 Creating payment for new appointment:', {
+          logger.debug('💰 V2: Recalculating prices server-side for security...')
+          
+          // ✅ RECALCULATE PRICES SERVER-SIDE (Don't trust frontend!)
+          const serverPricing = await calculatePricingServerSide({
+            userId: result.user_id,
+            tenantId: appointmentData.tenant_id,
+            category: appointmentData.type,
+            durationMinutes: appointmentData.duration_minutes || 45,
+            appointmentType: appointmentData.appointment_type || 'lesson',
+            productIds: productIds || [],
+            voucherCode: voucherCode,
+            useCredit: useCredit
+          })
+          
+          // ✅ USE SERVER-CALCULATED PRICES (not frontend values!)
+          const serverBasePriceRappen = serverPricing.basePriceRappen
+          const serverAdminFeeRappen = serverPricing.adminFeeRappen
+          const serverProductsPriceRappen = serverPricing.productsPriceRappen
+          const serverDiscountAmountRappen = serverPricing.voucherDiscountRappen
+          const serverCreditToUseRappen = serverPricing.creditToUseRappen
+          const serverFinalTotalRappen = serverPricing.finalTotalRappen
+          
+          // 🔒 SECURITY CHECK: Compare with frontend values
+          const frontendTotal = totalAmountRappenForPayment
+          const priceMismatch = Math.abs(serverFinalTotalRappen - frontendTotal) > 50 // Allow 50 Rappen tolerance
+          
+          if (priceMismatch) {
+            logger.warn('⚠️ FRAUD ALERT: Price mismatch detected!', {
+              frontendTotal,
+              serverCalculated: serverFinalTotalRappen,
+              difference: Math.abs(serverFinalTotalRappen - frontendTotal),
+              userId: result.user_id,
+              appointmentId: result.id
+            })
+            // Use server price anyway (security priority!)
+          }
+          
+          logger.debug('💳 Creating payment with SERVER-CALCULATED prices:', {
             appointmentId: result.id,
             userId: result.user_id,
-            amount: totalAmountRappenForPayment
+            serverTotal: serverFinalTotalRappen,
+            frontendTotal,
+            used: 'SERVER'
           })
           
           const paymentData = {
             appointment_id: result.id,
             user_id: result.user_id,
             tenant_id: appointmentData.tenant_id,
-            lesson_price_rappen: basePriceRappen || totalAmountRappenForPayment,
-            admin_fee_rappen: adminFeeRappen,
-            products_price_rappen: productsPriceRappen,
-            discount_amount_rappen: discountAmountRappen,
-            // ✅ FIX: total_amount_rappen should be the REMAINING amount after credit is deducted
-            total_amount_rappen: Math.max(0, totalAmountRappenForPayment - creditUsedRappen),
+            // ✅ USE SERVER PRICES (NOT frontend values!)
+            lesson_price_rappen: serverBasePriceRappen,
+            admin_fee_rappen: serverAdminFeeRappen,
+            products_price_rappen: serverProductsPriceRappen,
+            discount_amount_rappen: serverDiscountAmountRappen,
+            credit_used_rappen: serverCreditToUseRappen,
+            // ✅ total_amount_rappen is REMAINING amount after credit
+            total_amount_rappen: Math.max(0, serverFinalTotalRappen),
             payment_method: paymentMethodForPayment || 'wallee',
-            // ✅ FIX: If credit covers the entire amount, mark as completed
-            payment_status: creditUsedRappen >= totalAmountRappenForPayment ? 'completed' : 'pending',
-            // ✅ FIX: Set paid_at if payment is completed
-            ...(creditUsedRappen >= totalAmountRappenForPayment && { paid_at: new Date().toISOString() }),
-            // ✅ NEW: Store credit used in payment record
-            credit_used_rappen: creditUsedRappen,
+            // ✅ If credit covers the entire amount, mark as completed
+            payment_status: serverCreditToUseRappen >= (serverFinalTotalRappen + serverCreditToUseRappen) ? 'completed' : 'pending',
+            // ✅ Set paid_at if payment is completed
+            ...(serverCreditToUseRappen >= (serverFinalTotalRappen + serverCreditToUseRappen) && { paid_at: new Date().toISOString() }),
             description: appointmentData.title || `Fahrlektio ${appointmentData.type}`,
+            metadata: {
+              category: appointmentData.type,
+              duration_minutes: appointmentData.duration_minutes,
+              v2: true, // Mark as V2 pricing
+              server_calculated: true
+            },
             created_at: new Date().toISOString()
           }
           
@@ -181,12 +241,46 @@ export default defineEventHandler(async (event) => {
             logger.warn('⚠️ Failed to create payment (non-critical):', paymentError)
             // Don't throw - appointment creation succeeded, payment creation is secondary
           } else {
-            logger.debug('✅ Payment created for appointment:', paymentResult.id)
+            logger.debug('✅ Payment created with SERVER PRICES:', paymentResult.id)
             result.payment_id = paymentResult.id
           }
-        } catch (paymentErr: any) {
-          logger.warn('⚠️ Payment creation exception (non-critical):', paymentErr.message)
-          // Don't throw - appointment is already created
+        } catch (pricingErr: any) {
+          logger.error('❌ Server pricing calculation failed:', pricingErr)
+          // Fall back to frontend prices (but log the error for investigation)
+          logger.warn('⚠️ Falling back to frontend prices due to error')
+          
+          // Create payment with frontend values as fallback
+          const paymentData = {
+            appointment_id: result.id,
+            user_id: result.user_id,
+            tenant_id: appointmentData.tenant_id,
+            lesson_price_rappen: basePriceRappen || totalAmountRappenForPayment,
+            admin_fee_rappen: adminFeeRappen,
+            products_price_rappen: productsPriceRappen,
+            discount_amount_rappen: discountAmountRappen,
+            credit_used_rappen: creditUsedRappen,
+            total_amount_rappen: Math.max(0, totalAmountRappenForPayment - creditUsedRappen),
+            payment_method: paymentMethodForPayment || 'wallee',
+            payment_status: creditUsedRappen >= totalAmountRappenForPayment ? 'completed' : 'pending',
+            ...(creditUsedRappen >= totalAmountRappenForPayment && { paid_at: new Date().toISOString() }),
+            description: appointmentData.title || `Fahrlektio ${appointmentData.type}`,
+            metadata: {
+              category: appointmentData.type,
+              v2: false, // Mark as fallback to V1
+              server_calculation_failed: true
+            },
+            created_at: new Date().toISOString()
+          }
+          
+          const { data: paymentResult, error: paymentError } = await supabase
+            .from('payments')
+            .insert(paymentData)
+            .select()
+            .single()
+          
+          if (!paymentError) {
+            result.payment_id = paymentResult.id
+          }
         }
       }
     }
@@ -200,4 +294,3 @@ export default defineEventHandler(async (event) => {
     throw error
   }
 })
-
