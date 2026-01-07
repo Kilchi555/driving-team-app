@@ -3,14 +3,14 @@
     <!-- Modal Container - Ganzer verfügbarer Raum -->
     <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
 
-      <!-- ✅ FIXED HEADER -->
-      <div class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <!-- ✅ FIXED HEADER (nur im Edit/View mode) -->
+      <div v-if="props.mode === 'edit' || props.mode === 'view'" class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <!-- Links: Staff Selector und Reload Button -->
         <div class="flex items-center space-x-4">        
 
         </div>   
         <!-- Action-Buttons (nur bei edit/view mode) -->
-        <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-2">
+        <div v-if="(props.mode === 'edit' || props.mode === 'view') && props.eventData?.id" class="flex items-center space-x-2">
           
           <!-- Kopieren Button -->
           <button
@@ -39,7 +39,7 @@
         <div class="px-4 py-4 space-y-4">
           
           <!-- Student Selector -->
-          <div v-if="showStudentSelector" class="py-2">
+          <div v-if="showStudentSelector" class="py-0">
             <StudentSelector
               ref="studentSelectorRef"
               v-model="selectedStudent"
@@ -49,7 +49,7 @@
               :is-freeslot-mode="isFreeslotMode"
               :allow-student-change="!(props.mode === 'edit' && isPastAppointment)"
               :show-clear-button="!(props.mode === 'edit' && isPastAppointment)"
-              :show-switch-to-other="!(props.mode === 'edit' && isPastAppointment)"
+              :show-switch-to-other="props.mode === 'create'"
               @student-selected="handleStudentSelected"
               @student-cleared="handleStudentCleared"
               @switch-to-other="switchToOtherEventType"
@@ -89,8 +89,8 @@
           </div>
 
           <!-- Typ ändern Button für other event types (nur bei edit mode und zukünftigen Terminen) -->
-          <!-- DISABLED: Temporarily hidden for first phase testing -->
-          <div v-if="false && props.mode !== 'create' && !isLessonType(formData.eventType) && formData.eventType !== 'other' && !isPastAppointment" class="py-2">
+          <!-- ✅ ENABLED: Other Event Types jetzt full supported! -->
+          <div v-if="props.mode !== 'create' && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other'" class="py-2">
             <button
               @click="changeEventType"
               class="w-full px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm transition-colors"
@@ -133,10 +133,10 @@
               :event-type="eventTypeForTitle"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
-              :category-code="formData.type"
+              :category-code="formData.type || undefined"
               :selected-location="selectedLocation"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              :auto-generate="true"
+              :auto-generate="!isOtherEventType"
               :is-loading-from-database="props.mode === 'edit'"
               @title-generated="handleTitleGenerated"
             />
@@ -881,6 +881,12 @@ const isPastAppointment = computed(() => {
   })
   
   return isPast
+})
+
+// ✅ Check if current event is an "other" event type (VKU, Nothelfer, Meeting, etc.)
+const isOtherEventType = computed(() => {
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  return !lessonTypes.includes(formData.value.eventType || 'lesson')
 })
 
 // Helper function für Lesson Type Text
@@ -2453,9 +2459,10 @@ const handleStudentSelected = async (student: Student | null) => {
           // It's a special event type (nothelfer, vku, etc.)
           formData.value.eventType = 'other'
           formData.value.selectedSpecialType = defaultEventType.code
-          formData.value.appointment_type = defaultEventType.code
+          // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
+          formData.value.appointment_type = defaultEventType.code // e.g., 'vku', 'nothelfer'
           formData.value.title = defaultEventType.name
-          formData.value.type = defaultEventType.code
+          formData.value.type = null as any // ✅ CRITICAL: No driving category for special events!
           formData.value.duration_minutes = defaultEventType.default_duration_minutes || 60
           calculateEndTime()
           
@@ -2809,6 +2816,8 @@ const switchToOtherEventType = () => {
   logger.debug('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
   
   formData.value.eventType = 'other' // Wird später überschrieben wenn User wählt
+  formData.value.type = null as any // ✅ CRITICAL: Set category to null for other event types!
+  // ✅ Don't set appointment_type yet - will be set when user selects specific event type
   showEventTypeSelection.value = true
   selectedStudent.value = null
   formData.value.user_id = ''
@@ -2842,9 +2851,10 @@ const handleEventTypeSelected = (eventType: any) => {
   invitedCustomers.value = []
   
   formData.value.selectedSpecialType = eventType.code
-  formData.value.appointment_type = eventType.code // ✅ WICHTIG: appointment_type für event_type_code setzen
+  // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
+  formData.value.appointment_type = eventType.code // e.g., 'vku', 'nothelfer'
   formData.value.title = eventType.name
-  formData.value.type = eventType.code
+  formData.value.type = null as any // ✅ CRITICAL: No driving category for special events (VKU, Nothelfer, etc.)!
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
   calculateEndTime()
   
@@ -3235,7 +3245,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
                   appointmentNumber: priceResult.appointment_number,
                   hasAdminFee: priceResult.admin_fee_rappen > 0,
                   totalPriceChf: priceResult.total_chf,
-                  category: formData.value.type,
+                  category: formData.value.type || '',
                   duration: newDurationMinutes,
                   isLoading: false,
                   error: ''
@@ -3245,7 +3255,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
               })
               .catch(error => {
                 logger.debug('🔄 Online pricing failed, using offline calculation:', error)
-                calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
+                calculateOfflinePrice(formData.value.type || '', newDurationMinutes, appointmentNum)
               })
           } else {
             // ✅ Offline: Direkte Offline-Berechnung
