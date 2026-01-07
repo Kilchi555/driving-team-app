@@ -908,8 +908,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       const nowLocal = toLocalTimeString(new Date()) // Current timestamp (unchanged for now)
 
-      // ✅ IMPORTANTE FIX: Berechne total_amount_rappen VOR dem Speichern!
-      // Dies ermöglicht der API, das Payment automatisch zu erstellen
+      // ✅ V2 SECURITY: Collect RAW data for server-side calculation
+      // Backend will recalculate all prices to prevent manipulation!
+      const productIds = formData.value.products?.map((p: any) => p.id) || []
+      const voucherCode = formData.value.voucher_code || undefined
+      const useCredit = priceDisplay?.usedCredit > 0 || false
+      
+      // ⚠️ DEPRECATED: Still calculate prices client-side for backward compatibility
+      // and for display purposes, but server will OVERRIDE these values!
       let totalAmountRappenForPayment = 0
       let basePriceRappen = 0
       let adminFeeRappen = 0
@@ -923,7 +929,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
           const durationMinutes = formData.value.duration_minutes || 45
           const pricePerMinute = refs?.dynamicPricing?.value?.pricePerMinute || 2.11 // Default: CHF 2.11/min
           
-          // Berechne die Einzelkomponenten
+          // Berechne die Einzelkomponenten (client-side, will be overridden by server!)
           basePriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
           adminFeeRappen = refs?.dynamicPricing?.value?.adminFeeRappen || 0
           productsPriceRappen = formData.value.products_total_rappen || 0
@@ -933,14 +939,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
             basePriceRappen + adminFeeRappen + productsPriceRappen - discountAmountRappen
           )
           
-          logger.debug('💰 Payment amount calculated:', {
+          logger.debug('💰 Payment amount calculated (CLIENT-SIDE, will be validated by server):', {
             duration: durationMinutes,
             pricePerMinute: pricePerMinute.toFixed(2),
             basePrice: (basePriceRappen / 100).toFixed(2),
             adminFee: (adminFeeRappen / 100).toFixed(2),
             products: (productsPriceRappen / 100).toFixed(2),
             discount: (discountAmountRappen / 100).toFixed(2),
-            total: (totalAmountRappenForPayment / 100).toFixed(2)
+            total: (totalAmountRappenForPayment / 100).toFixed(2),
+            v2Note: 'Server will recalculate and override these values!'
           })
         } catch (priceErr: any) {
           logger.warn('⚠️ Could not calculate payment amount:', priceErr)
@@ -996,14 +1003,18 @@ const useEventModalForm = (currentUser?: any, refs?: {
             mode,
             eventId,
             appointmentData,
+            // ✅ V2: Send RAW data for server-side calculation
+            productIds,
+            voucherCode,
+            useCredit,
+            // ⚠️ DEPRECATED: Still send for backward compatibility
+            // but server will OVERRIDE these with its own calculations!
             totalAmountRappenForPayment,
             paymentMethodForPayment: formData.value.payment_method || 'wallee',
-            // ✅ Send price breakdown components
             basePriceRappen,
             adminFeeRappen,
             productsPriceRappen,
             discountAmountRappen,
-            // ✅ Send credit used (if any)
             creditUsedRappen: creditUsedRappenForPayment
           }
         })
