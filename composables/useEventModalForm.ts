@@ -912,7 +912,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // Backend will recalculate all prices to prevent manipulation!
       const productIds = formData.value.products?.map((p: any) => p.id) || []
       const voucherCode = formData.value.voucher_code || undefined
-      const useCredit = priceDisplay?.usedCredit > 0 || false
+      const useCredit = (refs?.priceDisplayRef?.value?.usedCredit || 0) > 0
       
       // ⚠️ DEPRECATED: Still calculate prices client-side for backward compatibility
       // and for display purposes, but server will OVERRIDE these values!
