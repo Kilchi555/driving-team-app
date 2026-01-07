@@ -156,7 +156,65 @@ export default defineEventHandler(async (event) => {
       result = data
       logger.debug('✅ Appointment created:', result.id)
       
+      // ============ OTHER EVENT TYPE HANDLING ============
+      // ✅ Check if this is NOT a lesson-type appointment
+      const isOtherEventType = !['lesson', 'exam', 'theory'].includes(appointmentData.appointment_type || 'lesson')
+      
+      if (isOtherEventType) {
+        logger.debug('📅 Other Event Type detected:', appointmentData.appointment_type)
+        logger.debug('📋 Other Event Type Details:', {
+          appointmentId: result.id,
+          type: appointmentData.appointment_type,
+          staffId: appointmentData.staff_id,
+          duration: appointmentData.duration_minutes,
+          title: appointmentData.title
+        })
+        
+        // ✅ VALIDATION for Other Event Types:
+        // 1. NO STUDENT (user_id should be null for meetings, trainings, etc.)
+        if (result.user_id && result.user_id !== '') {
+          logger.warn('⚠️ Other event type should not have user_id, updating to null')
+          const { error: updateError } = await supabase
+            .from('appointments')
+            .update({ user_id: null })
+            .eq('id', result.id)
+          if (!updateError) {
+            result.user_id = null
+          }
+        }
+        
+        // 2. NO TYPE FIELD (type = null für non-lessons!)
+        if (result.type && result.type !== '') {
+          logger.warn('⚠️ Other event type should not have category type, updating to null')
+          const { error: updateError } = await supabase
+            .from('appointments')
+            .update({ type: null })
+            .eq('id', result.id)
+          if (!updateError) {
+            result.type = null
+          }
+        }
+        
+        // 3. STAFF MUST BE SET
+        if (!result.staff_id) {
+          logger.error('❌ Other event type MUST have staff_id')
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Staff erforderlich für diese Terminart'
+          })
+        }
+        
+        logger.debug('✅ Other Event Type validated and saved (NO payment created)')
+        
+        // Skip payment creation for other event types!
+        return {
+          success: true,
+          data: result
+        }
+      }
+      
       // ============ V2 SECURITY: SERVER-SIDE PRICE CALCULATION ============
+      // (Only for lesson-type appointments)
       if (totalAmountRappenForPayment && totalAmountRappenForPayment > 0) {
         try {
           logger.debug('💰 V2: Recalculating prices server-side for security...')
