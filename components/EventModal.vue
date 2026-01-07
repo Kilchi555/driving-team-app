@@ -136,7 +136,7 @@
               :category-code="formData.type || undefined"
               :selected-location="selectedLocation"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              :auto-generate="true"
+              :auto-generate="!isOtherEventType"
               :is-loading-from-database="props.mode === 'edit'"
               @title-generated="handleTitleGenerated"
             />
@@ -881,6 +881,12 @@ const isPastAppointment = computed(() => {
   })
   
   return isPast
+})
+
+// ✅ Check if current event is an "other" event type (VKU, Nothelfer, Meeting, etc.)
+const isOtherEventType = computed(() => {
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  return !lessonTypes.includes(formData.value.eventType || 'lesson')
 })
 
 // Helper function für Lesson Type Text
