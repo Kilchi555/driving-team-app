@@ -49,7 +49,7 @@
               :is-freeslot-mode="isFreeslotMode"
               :allow-student-change="!(props.mode === 'edit' && isPastAppointment)"
               :show-clear-button="!(props.mode === 'edit' && isPastAppointment)"
-              :show-switch-to-other="!(props.mode === 'edit' && isPastAppointment)"
+              :show-switch-to-other="props.mode === 'create'"
               @student-selected="handleStudentSelected"
               @student-cleared="handleStudentCleared"
               @switch-to-other="switchToOtherEventType"
