@@ -61,6 +61,18 @@ export default defineEventHandler(async (event) => {
       throwValidationError({ eventId: 'Ungültiges Event ID Format' })
     }
 
+    // ✅ DEBUG: Log what we received from frontend
+    logger.debug('🐛 DEBUG appointmentData received from frontend:', {
+      type: appointmentData.type,
+      type_typeof: typeof appointmentData.type,
+      type_is_null: appointmentData.type === null,
+      type_is_undefined: appointmentData.type === undefined,
+      type_value: JSON.stringify(appointmentData.type),
+      event_type_code: appointmentData.event_type_code,
+      status: appointmentData.status,
+      title: appointmentData.title
+    })
+
     // Validate appointment data (basic checks)
     const validation = validateAppointmentData(appointmentData)
     throwIfInvalid(validation)
