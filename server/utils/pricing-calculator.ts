@@ -1,0 +1,255 @@
+/**
+ * Server-Side Pricing Calculator
+ * 
+ * ✅ USES EXACT SAME LOGIC AS usePricing.ts composable!
+ * 
+ * This helper is used by:
+ * - /api/v2/pricing/calculate.get.ts (for frontend display)
+ * - /api/appointments/save.post.ts (for server-side validation)
+ * - /api/payments/process.post.ts (for server-side validation)
+ * 
+ * This ensures 100% consistency and prevents fraud/manipulation.
+ */
+
+import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
+
+export interface PricingInput {
+  userId: string
+  tenantId: string
+  category: string
+  durationMinutes: number
+  appointmentType?: 'lesson' | 'theory' | 'consultation'
+  productIds?: string[]
+  voucherCode?: string
+  useCredit?: boolean
+}
+
+export interface PricingResult {
+  basePriceRappen: number
+  adminFeeRappen: number
+  productsPriceRappen: number
+  voucherDiscountRappen: number
+  creditAvailableRappen: number
+  creditToUseRappen: number
+  subtotalRappen: number
+  totalDiscountRappen: number
+  totalBeforeCreditRappen: number
+  finalTotalRappen: number
+  productDetails?: any[]
+  voucherDetails?: any
+}
+
+// ✅ HELPER: Round to nearest Franken (from usePricing.ts line 469-476)
+const roundToNearestFranken = (rappen: number): number => {
+  const remainder = rappen % 100
+  if (remainder < 50) {
+    return rappen - remainder
+  } else {
+    return rappen + (100 - remainder)
+  }
+}
+
+/**
+ * Calculate pricing server-side using exact same logic as usePricing.ts
+ */
+export async function calculatePricingServerSide(input: PricingInput): Promise<PricingResult> {
+  const supabaseAdmin = getSupabaseAdmin()
+  const {
+    userId,
+    tenantId,
+    category,
+    durationMinutes,
+    appointmentType = 'lesson',
+    productIds = [],
+    voucherCode,
+    useCredit = false
+  } = input
+
+  // ============ STEP 1: CALCULATE BASE PRICE ============
+  const { data: pricingRule, error: pricingError } = await supabaseAdmin
+    .from('pricing_rules')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('category_code', category)
+    .eq('rule_type', appointmentType === 'theory' ? 'theory' : appointmentType === 'consultation' ? 'consultation' : 'base_price')
+    .single()
+
+  if (pricingError || !pricingRule) {
+    throw new Error(`No pricing rule found for category ${category} type ${appointmentType}`)
+  }
+
+  const pricePerMinuteRappen = pricingRule.price_per_minute || 0
+  let basePriceRappen = Math.round(durationMinutes * pricePerMinuteRappen)
+  basePriceRappen = roundToNearestFranken(basePriceRappen)
+
+  // ============ STEP 2: CALCULATE ADMIN FEE ============
+  const motorcycleCategories = ['A', 'A1', 'A35kW']
+  const isMotorcycle = motorcycleCategories.includes(category)
+  
+  let adminFeeRappen = 0
+  
+  if (!isMotorcycle && appointmentType !== 'theory' && appointmentType !== 'consultation') {
+    // Get appointment count
+    const { count: appointmentCount } = await supabaseAdmin
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('type', category)
+      .is('deleted_at', null)
+      .not('status', 'in', '(cancelled,aborted)')
+    
+    // Check if admin fee was already paid
+    const { data: paymentsData } = await supabaseAdmin
+      .from('payments')
+      .select('id, admin_fee_rappen, metadata')
+      .eq('user_id', userId)
+      .gt('admin_fee_rappen', 0)
+      .limit(100)
+    
+    const paymentsWithAdminFee = paymentsData?.filter(payment => {
+      let metadataObj: any = {}
+      try {
+        if (payment.metadata == null) {
+          metadataObj = {}
+        } else if (typeof payment.metadata === 'string') {
+          metadataObj = JSON.parse(payment.metadata)
+        } else if (typeof payment.metadata === 'object') {
+          metadataObj = payment.metadata
+        } else {
+          metadataObj = {}
+        }
+      } catch (_e) {
+        metadataObj = {}
+      }
+      return metadataObj?.category === category
+    }) || []
+    
+    const adminFeeAlreadyPaid = paymentsWithAdminFee.length > 0
+    const currentAppointmentNumber = (appointmentCount || 0) + 1
+    const shouldApplyAdminFee = currentAppointmentNumber === 2 && !adminFeeAlreadyPaid
+    
+    if (shouldApplyAdminFee) {
+      const { data: adminFeeRule } = await supabaseAdmin
+        .from('pricing_rules')
+        .select('admin_fee, admin_fee_applies_from')
+        .eq('tenant_id', tenantId)
+        .eq('category_code', category)
+        .eq('rule_type', 'admin_fee')
+        .single()
+      
+      if (adminFeeRule) {
+        adminFeeRappen = adminFeeRule.admin_fee || 0
+      }
+    }
+  }
+
+  // ============ STEP 3: CALCULATE PRODUCTS PRICE ============
+  let productsPriceRappen = 0
+  const productDetails: any[] = []
+
+  if (productIds.length > 0) {
+    const { data: products, error: productsError } = await supabaseAdmin
+      .from('products')
+      .select('id, name, price_rappen')
+      .in('id', productIds)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+
+    if (!productsError && products) {
+      productsPriceRappen = products.reduce((sum, p) => sum + (p.price_rappen || 0), 0)
+      productDetails.push(...products)
+    }
+  }
+
+  // ============ STEP 4: VALIDATE & CALCULATE VOUCHER DISCOUNT ============
+  let voucherDiscountRappen = 0
+  let voucherDetails: any = null
+
+  if (voucherCode) {
+    const { data: voucher, error: voucherError } = await supabaseAdmin
+      .from('voucher_codes')
+      .select('*')
+      .eq('code', voucherCode.toUpperCase())
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .single()
+
+    if (!voucherError && voucher) {
+      const now = new Date()
+      if (voucher.valid_from && new Date(voucher.valid_from) > now) {
+        voucherDetails = { error: 'Dieser Gutschein ist noch nicht gültig' }
+      } else if (voucher.valid_until && new Date(voucher.valid_until) < now) {
+        voucherDetails = { error: 'Dieser Gutschein ist abgelaufen' }
+      } else if (voucher.type === 'discount') {
+        const { count: redemptionCount } = await supabaseAdmin
+          .from('voucher_redemptions')
+          .select('*', { count: 'exact', head: true })
+          .eq('voucher_code_id', voucher.id)
+
+        if (voucher.max_redemptions && redemptionCount && redemptionCount >= voucher.max_redemptions) {
+          voucherDetails = { error: 'Dieser Gutschein hat sein Verwendungslimit erreicht' }
+        } else {
+          const subtotal = basePriceRappen + adminFeeRappen + productsPriceRappen
+          
+          if (voucher.discount_type === 'percentage') {
+            voucherDiscountRappen = Math.round((subtotal * voucher.discount_value) / 100)
+            if (voucher.max_discount_rappen && voucherDiscountRappen > voucher.max_discount_rappen) {
+              voucherDiscountRappen = voucher.max_discount_rappen
+            }
+          } else if (voucher.discount_type === 'fixed') {
+            voucherDiscountRappen = voucher.discount_value
+          }
+
+          voucherDetails = {
+            code: voucher.code,
+            type: voucher.discount_type,
+            value: voucher.discount_value,
+            discount: voucherDiscountRappen
+          }
+        }
+      }
+    } else {
+      voucherDetails = { error: `Gutschein-Code "${voucherCode}" ist ungültig` }
+    }
+  }
+
+  // ============ STEP 5: CALCULATE CREDIT ============
+  let creditAvailableRappen = 0
+  let creditToUseRappen = 0
+
+  if (useCredit) {
+    const { data: studentCredit } = await supabaseAdmin
+      .from('student_credits')
+      .select('balance_rappen')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    creditAvailableRappen = studentCredit?.balance_rappen || 0
+    const totalBeforeCredit = Math.max(0, basePriceRappen + adminFeeRappen + productsPriceRappen - voucherDiscountRappen)
+    creditToUseRappen = Math.min(creditAvailableRappen, totalBeforeCredit)
+  }
+
+  // ============ STEP 6: CALCULATE TOTALS ============
+  const subtotal = basePriceRappen + adminFeeRappen + productsPriceRappen
+  const totalDiscount = voucherDiscountRappen
+  const totalBeforeCredit = Math.max(0, subtotal - totalDiscount)
+  const finalTotal = Math.max(0, totalBeforeCredit - creditToUseRappen)
+
+  return {
+    basePriceRappen,
+    adminFeeRappen,
+    productsPriceRappen,
+    voucherDiscountRappen,
+    creditAvailableRappen,
+    creditToUseRappen,
+    subtotalRappen: subtotal,
+    totalDiscountRappen: totalDiscount,
+    totalBeforeCreditRappen: totalBeforeCredit,
+    finalTotalRappen: finalTotal,
+    productDetails,
+    voucherDetails
+  }
+}
+

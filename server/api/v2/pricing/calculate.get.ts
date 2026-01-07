@@ -4,11 +4,12 @@ import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
+import { calculatePricingServerSide } from '~/server/utils/pricing-calculator'
 
 /**
  * V2 Pricing API - Server-Side Price Calculation
  * 
- * ✅ USES EXACT SAME LOGIC AS usePricing.ts composable!
+ * ✅ USES EXACT SAME LOGIC AS usePricing.ts composable via shared helper!
  * 
  * This API calculates ALL prices on the server to prevent client-side manipulation.
  * Frontend only provides data, server calculates and returns the breakdown.
@@ -22,16 +23,6 @@ import { validateUUID } from '~/server/utils/validators'
  * - useCredit: boolean (optional)
  * - productIds: string[] (optional, comma-separated)
  */
-
-// ✅ HELPER: Round to nearest Franken (from usePricing.ts line 469-476)
-const roundToNearestFranken = (rappen: number): number => {
-  const remainder = rappen % 100
-  if (remainder < 50) {
-    return rappen - remainder
-  } else {
-    return rappen + (100 - remainder)
-  }
-}
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -113,233 +104,20 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, statusMessage: 'Not authorized' })
     }
 
-    // ============ LAYER 6: CALCULATE BASE PRICE ============
-    // ✅ SAME LOGIC AS usePricing.ts line 828-847
-    
-    // Load pricing rules for this category and tenant
-    const { data: pricingRule, error: pricingError } = await supabaseAdmin
-      .from('pricing_rules')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('category_code', category)
-      .eq('rule_type', appointmentType === 'theory' ? 'theory' : appointmentType === 'consultation' ? 'consultation' : 'base_price')
-      .single()
-
-    if (pricingError || !pricingRule) {
-      logger.warn(`⚠️ No pricing rule found for category ${category} type ${appointmentType}`)
-      throw createError({ statusCode: 404, statusMessage: 'Pricing rule not found for this category' })
-    }
-
-    const pricePerMinuteRappen = pricingRule.price_per_minute || 0
-    let basePriceRappen = Math.round(durationMinutes * pricePerMinuteRappen)
-    
-    // ✅ USE EXISTING LOGIC: Round to nearest Franken (like usePricing.ts does)
-    basePriceRappen = roundToNearestFranken(basePriceRappen)
-
-    logger.debug('💰 Base price calculated:', {
-      category,
+    // ============ LAYER 6: CALCULATE PRICING SERVER-SIDE ============
+    const pricing = await calculatePricingServerSide({
+      userId: userId as string,
+      tenantId,
+      category: category as string,
       durationMinutes,
-      pricePerMinute: (pricePerMinuteRappen / 100).toFixed(2),
-      basePrice: (basePriceRappen / 100).toFixed(2)
+      appointmentType: appointmentType as any,
+      productIds,
+      voucherCode: voucherCode as string,
+      useCredit
     })
 
-    // ============ LAYER 7: CALCULATE ADMIN FEE ============
-    // ✅ SAME LOGIC AS usePricing.ts line 849-867
-    
-    const motorcycleCategories = ['A', 'A1', 'A35kW']
-    const isMotorcycle = motorcycleCategories.includes(category)
-    
-    let adminFeeRappen = 0
-    
-    if (!isMotorcycle && appointmentType !== 'theory' && appointmentType !== 'consultation') {
-      // Get appointment count (from usePricing.ts line 576-596)
-      const { count: appointmentCount } = await supabaseAdmin
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('type', category)
-        .is('deleted_at', null)
-        .not('status', 'in', '(cancelled,aborted)')
-      
-      // Check if admin fee was already paid (from usePricing.ts line 505-556)
-      const { data: paymentsData } = await supabaseAdmin
-        .from('payments')
-        .select('id, admin_fee_rappen, metadata')
-        .eq('user_id', userId)
-        .gt('admin_fee_rappen', 0)
-        .limit(100)
-      
-      const paymentsWithAdminFee = paymentsData?.filter(payment => {
-        let metadataObj: any = {}
-        try {
-          if (payment.metadata == null) {
-            metadataObj = {}
-          } else if (typeof payment.metadata === 'string') {
-            metadataObj = JSON.parse(payment.metadata)
-          } else if (typeof payment.metadata === 'object') {
-            metadataObj = payment.metadata
-          } else {
-            metadataObj = {}
-          }
-        } catch (_e) {
-          metadataObj = {}
-        }
-        return metadataObj?.category === category
-      }) || []
-      
-      const adminFeeAlreadyPaid = paymentsWithAdminFee.length > 0
-      
-      // ✅ EXACT LOGIC from usePricing.ts line 559-574
-      // Admin fee applies on appointment #2 AND not yet paid
-      const currentAppointmentNumber = (appointmentCount || 0) + 1
-      const shouldApplyAdminFee = currentAppointmentNumber === 2 && !adminFeeAlreadyPaid
-      
-      if (shouldApplyAdminFee) {
-        // Load admin fee from pricing rules
-        const { data: adminFeeRule } = await supabaseAdmin
-          .from('pricing_rules')
-          .select('admin_fee, admin_fee_applies_from')
-          .eq('tenant_id', tenantId)
-          .eq('category_code', category)
-          .eq('rule_type', 'admin_fee')
-          .single()
-        
-        if (adminFeeRule) {
-          adminFeeRappen = adminFeeRule.admin_fee || 0
-        }
-      }
-      
-      logger.debug('💰 Admin fee calculated:', {
-        appointmentCount: currentAppointmentNumber,
-        adminFeeAlreadyPaid,
-        shouldApply: shouldApplyAdminFee,
-        adminFee: (adminFeeRappen / 100).toFixed(2)
-      })
-    }
-
-    // ============ LAYER 8: CALCULATE PRODUCTS PRICE ============
-    let productsPriceRappen = 0
-    const productDetails: any[] = []
-
-    if (productIds.length > 0) {
-      const { data: products, error: productsError } = await supabaseAdmin
-        .from('products')
-        .select('id, name, price_rappen')
-        .in('id', productIds)
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
-
-      if (!productsError && products) {
-        productsPriceRappen = products.reduce((sum, p) => sum + (p.price_rappen || 0), 0)
-        productDetails.push(...products)
-      }
-    }
-
-    logger.debug('💰 Products price calculated:', {
-      productCount: productIds.length,
-      productsPrice: (productsPriceRappen / 100).toFixed(2)
-    })
-
-    // ============ LAYER 9: VALIDATE & CALCULATE VOUCHER DISCOUNT ============
-    let voucherDiscountRappen = 0
-    let voucherDetails: any = null
-
-    if (voucherCode) {
-      const { data: voucher, error: voucherError } = await supabaseAdmin
-        .from('voucher_codes')
-        .select('*')
-        .eq('code', voucherCode.toUpperCase())
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
-        .single()
-
-      if (voucherError) {
-        // Don't throw - just return 0 discount and error message
-        logger.warn(`⚠️ Voucher code not found: ${voucherCode}`)
-        voucherDetails = { error: `Gutschein-Code "${voucherCode}" ist ungültig` }
-      } else {
-        // Validate voucher
-        const now = new Date()
-        if (voucher.valid_from && new Date(voucher.valid_from) > now) {
-          voucherDetails = { error: 'Dieser Gutschein ist noch nicht gültig' }
-        } else if (voucher.valid_until && new Date(voucher.valid_until) < now) {
-          voucherDetails = { error: 'Dieser Gutschein ist abgelaufen' }
-        } else if (voucher.type === 'discount') {
-          // Check usage limits
-          const { count: redemptionCount } = await supabaseAdmin
-            .from('voucher_redemptions')
-            .select('*', { count: 'exact', head: true })
-            .eq('voucher_code_id', voucher.id)
-
-          if (voucher.max_redemptions && redemptionCount && redemptionCount >= voucher.max_redemptions) {
-            voucherDetails = { error: 'Dieser Gutschein hat sein Verwendungslimit erreicht' }
-          } else {
-            // Calculate discount
-            const subtotal = basePriceRappen + adminFeeRappen + productsPriceRappen
-            
-            if (voucher.discount_type === 'percentage') {
-              voucherDiscountRappen = Math.round((subtotal * voucher.discount_value) / 100)
-              if (voucher.max_discount_rappen && voucherDiscountRappen > voucher.max_discount_rappen) {
-                voucherDiscountRappen = voucher.max_discount_rappen
-              }
-            } else if (voucher.discount_type === 'fixed') {
-              voucherDiscountRappen = voucher.discount_value
-            }
-
-            voucherDetails = {
-              code: voucher.code,
-              type: voucher.discount_type,
-              value: voucher.discount_value,
-              discount: voucherDiscountRappen
-            }
-          }
-        } else {
-          voucherDetails = { error: `Code "${voucherCode}" ist kein Rabatt-Code` }
-        }
-      }
-    }
-
-    logger.debug('💰 Voucher discount calculated:', {
-      voucherCode,
-      discount: (voucherDiscountRappen / 100).toFixed(2)
-    })
-
-    // ============ LAYER 10: CALCULATE CREDIT AVAILABLE ============
-    let creditAvailableRappen = 0
-    let creditToUseRappen = 0
-
-    if (useCredit) {
-      const { data: studentCredit } = await supabaseAdmin
-        .from('student_credits')
-        .select('balance_rappen')
-        .eq('user_id', userId)
-        .eq('tenant_id', tenantId)
-        .single()
-
-      creditAvailableRappen = studentCredit?.balance_rappen || 0
-
-      // Calculate how much credit can be used
-      const totalBeforeCredit = Math.max(0, basePriceRappen + adminFeeRappen + productsPriceRappen - voucherDiscountRappen)
-      creditToUseRappen = Math.min(creditAvailableRappen, totalBeforeCredit)
-    }
-
-    logger.debug('💰 Credit calculated:', {
-      available: (creditAvailableRappen / 100).toFixed(2),
-      toUse: (creditToUseRappen / 100).toFixed(2)
-    })
-
-    // ============ LAYER 11: CALCULATE FINAL TOTAL ============
-    const subtotal = basePriceRappen + adminFeeRappen + productsPriceRappen
-    const totalDiscount = voucherDiscountRappen
-    const totalBeforeCredit = Math.max(0, subtotal - totalDiscount)
-    const finalTotal = Math.max(0, totalBeforeCredit - creditToUseRappen)
-
-    logger.debug('✅ Final price calculated:', {
-      subtotal: (subtotal / 100).toFixed(2),
-      discount: (totalDiscount / 100).toFixed(2),
-      beforeCredit: (totalBeforeCredit / 100).toFixed(2),
-      creditUsed: (creditToUseRappen / 100).toFixed(2),
-      finalTotal: (finalTotal / 100).toFixed(2),
+    logger.debug('✅ Pricing calculated:', {
+      finalTotal: (pricing.finalTotalRappen / 100).toFixed(2),
       duration_ms: Date.now() - startTime
     })
 
@@ -347,33 +125,32 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       pricing: {
-        basePriceRappen,
-        adminFeeRappen,
-        productsPriceRappen,
-        voucherDiscountRappen,
-        creditAvailableRappen,
-        creditToUseRappen,
-        subtotalRappen: subtotal,
-        totalDiscountRappen: totalDiscount,
-        totalBeforeCreditRappen: totalBeforeCredit,
-        finalTotalRappen: finalTotal
+        basePriceRappen: pricing.basePriceRappen,
+        adminFeeRappen: pricing.adminFeeRappen,
+        productsPriceRappen: pricing.productsPriceRappen,
+        voucherDiscountRappen: pricing.voucherDiscountRappen,
+        creditAvailableRappen: pricing.creditAvailableRappen,
+        creditToUseRappen: pricing.creditToUseRappen,
+        subtotalRappen: pricing.subtotalRappen,
+        totalDiscountRappen: pricing.totalDiscountRappen,
+        totalBeforeCreditRappen: pricing.totalBeforeCreditRappen,
+        finalTotalRappen: pricing.finalTotalRappen
       },
       breakdown: {
-        basePrice: (basePriceRappen / 100).toFixed(2),
-        adminFee: (adminFeeRappen / 100).toFixed(2),
-        productsPrice: (productsPriceRappen / 100).toFixed(2),
-        voucherDiscount: (voucherDiscountRappen / 100).toFixed(2),
-        creditAvailable: (creditAvailableRappen / 100).toFixed(2),
-        creditToUse: (creditToUseRappen / 100).toFixed(2),
-        subtotal: (subtotal / 100).toFixed(2),
-        totalDiscount: (totalDiscount / 100).toFixed(2),
-        totalBeforeCredit: (totalBeforeCredit / 100).toFixed(2),
-        finalTotal: (finalTotal / 100).toFixed(2)
+        basePrice: (pricing.basePriceRappen / 100).toFixed(2),
+        adminFee: (pricing.adminFeeRappen / 100).toFixed(2),
+        productsPrice: (pricing.productsPriceRappen / 100).toFixed(2),
+        voucherDiscount: (pricing.voucherDiscountRappen / 100).toFixed(2),
+        creditAvailable: (pricing.creditAvailableRappen / 100).toFixed(2),
+        creditToUse: (pricing.creditToUseRappen / 100).toFixed(2),
+        subtotal: (pricing.subtotalRappen / 100).toFixed(2),
+        totalDiscount: (pricing.totalDiscountRappen / 100).toFixed(2),
+        totalBeforeCredit: (pricing.totalBeforeCreditRappen / 100).toFixed(2),
+        finalTotal: (pricing.finalTotalRappen / 100).toFixed(2)
       },
       details: {
-        pricePerMinute: (pricePerMinuteRappen / 100).toFixed(2),
-        products: productDetails,
-        voucher: voucherDetails
+        products: pricing.productDetails || [],
+        voucher: pricing.voucherDetails || null
       }
     }
 
