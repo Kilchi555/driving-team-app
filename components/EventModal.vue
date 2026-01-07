@@ -2453,7 +2453,8 @@ const handleStudentSelected = async (student: Student | null) => {
           // It's a special event type (nothelfer, vku, etc.)
           formData.value.eventType = 'other'
           formData.value.selectedSpecialType = defaultEventType.code
-          formData.value.appointment_type = defaultEventType.code
+          // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
+          formData.value.appointment_type = defaultEventType.code // e.g., 'vku', 'nothelfer'
           formData.value.title = defaultEventType.name
           formData.value.type = null as any // ✅ CRITICAL: No driving category for special events!
           formData.value.duration_minutes = defaultEventType.default_duration_minutes || 60
@@ -2810,7 +2811,7 @@ const switchToOtherEventType = () => {
   
   formData.value.eventType = 'other' // Wird später überschrieben wenn User wählt
   formData.value.type = null as any // ✅ CRITICAL: Set category to null for other event types!
-  formData.value.appointment_type = 'other' // ✅ Set event_type_code to 'other'
+  // ✅ Don't set appointment_type yet - will be set when user selects specific event type
   showEventTypeSelection.value = true
   selectedStudent.value = null
   formData.value.user_id = ''
@@ -2844,7 +2845,8 @@ const handleEventTypeSelected = (eventType: any) => {
   invitedCustomers.value = []
   
   formData.value.selectedSpecialType = eventType.code
-  formData.value.appointment_type = eventType.code // ✅ WICHTIG: appointment_type für event_type_code setzen
+  // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
+  formData.value.appointment_type = eventType.code // e.g., 'vku', 'nothelfer'
   formData.value.title = eventType.name
   formData.value.type = null as any // ✅ CRITICAL: No driving category for special events (VKU, Nothelfer, etc.)!
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
