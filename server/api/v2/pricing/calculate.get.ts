@@ -8,6 +8,8 @@ import { validateUUID } from '~/server/utils/validators'
 /**
  * V2 Pricing API - Server-Side Price Calculation
  * 
+ * ✅ USES EXACT SAME LOGIC AS usePricing.ts composable!
+ * 
  * This API calculates ALL prices on the server to prevent client-side manipulation.
  * Frontend only provides data, server calculates and returns the breakdown.
  * 
@@ -20,6 +22,16 @@ import { validateUUID } from '~/server/utils/validators'
  * - useCredit: boolean (optional)
  * - productIds: string[] (optional, comma-separated)
  */
+
+// ✅ HELPER: Round to nearest Franken (from usePricing.ts line 469-476)
+const roundToNearestFranken = (rappen: number): number => {
+  const remainder = rappen % 100
+  if (remainder < 50) {
+    return rappen - remainder
+  } else {
+    return rappen + (100 - remainder)
+  }
+}
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -102,6 +114,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ LAYER 6: CALCULATE BASE PRICE ============
+    // ✅ SAME LOGIC AS usePricing.ts line 828-847
+    
     // Load pricing rules for this category and tenant
     const { data: pricingRule, error: pricingError } = await supabaseAdmin
       .from('pricing_rules')
@@ -117,7 +131,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const pricePerMinuteRappen = pricingRule.price_per_minute || 0
-    const basePriceRappen = Math.round(durationMinutes * pricePerMinuteRappen)
+    let basePriceRappen = Math.round(durationMinutes * pricePerMinuteRappen)
+    
+    // ✅ USE EXISTING LOGIC: Round to nearest Franken (like usePricing.ts does)
+    basePriceRappen = roundToNearestFranken(basePriceRappen)
 
     logger.debug('💰 Base price calculated:', {
       category,
@@ -127,35 +144,78 @@ export default defineEventHandler(async (event) => {
     })
 
     // ============ LAYER 7: CALCULATE ADMIN FEE ============
-    // Check if admin fee applies (from appointment #2 onwards)
-    const { count: appointmentCount } = await supabaseAdmin
-      .from('appointments')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('type', category)
-      .is('deleted_at', null)
-      .not('status', 'in', '(cancelled,aborted)')
-
-    const { data: adminFeeRule } = await supabaseAdmin
-      .from('pricing_rules')
-      .select('admin_fee, admin_fee_applies_from')
-      .eq('tenant_id', tenantId)
-      .eq('category_code', category)
-      .eq('rule_type', 'admin_fee')
-      .single()
-
+    // ✅ SAME LOGIC AS usePricing.ts line 849-867
+    
+    const motorcycleCategories = ['A', 'A1', 'A35kW']
+    const isMotorcycle = motorcycleCategories.includes(category)
+    
     let adminFeeRappen = 0
-    if (adminFeeRule && appointmentCount !== null) {
-      const appliesFrom = adminFeeRule.admin_fee_applies_from || 2
-      if ((appointmentCount + 1) >= appliesFrom) {
-        adminFeeRappen = adminFeeRule.admin_fee || 0
+    
+    if (!isMotorcycle && appointmentType !== 'theory' && appointmentType !== 'consultation') {
+      // Get appointment count (from usePricing.ts line 576-596)
+      const { count: appointmentCount } = await supabaseAdmin
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', category)
+        .is('deleted_at', null)
+        .not('status', 'in', '(cancelled,aborted)')
+      
+      // Check if admin fee was already paid (from usePricing.ts line 505-556)
+      const { data: paymentsData } = await supabaseAdmin
+        .from('payments')
+        .select('id, admin_fee_rappen, metadata')
+        .eq('user_id', userId)
+        .gt('admin_fee_rappen', 0)
+        .limit(100)
+      
+      const paymentsWithAdminFee = paymentsData?.filter(payment => {
+        let metadataObj: any = {}
+        try {
+          if (payment.metadata == null) {
+            metadataObj = {}
+          } else if (typeof payment.metadata === 'string') {
+            metadataObj = JSON.parse(payment.metadata)
+          } else if (typeof payment.metadata === 'object') {
+            metadataObj = payment.metadata
+          } else {
+            metadataObj = {}
+          }
+        } catch (_e) {
+          metadataObj = {}
+        }
+        return metadataObj?.category === category
+      }) || []
+      
+      const adminFeeAlreadyPaid = paymentsWithAdminFee.length > 0
+      
+      // ✅ EXACT LOGIC from usePricing.ts line 559-574
+      // Admin fee applies on appointment #2 AND not yet paid
+      const currentAppointmentNumber = (appointmentCount || 0) + 1
+      const shouldApplyAdminFee = currentAppointmentNumber === 2 && !adminFeeAlreadyPaid
+      
+      if (shouldApplyAdminFee) {
+        // Load admin fee from pricing rules
+        const { data: adminFeeRule } = await supabaseAdmin
+          .from('pricing_rules')
+          .select('admin_fee, admin_fee_applies_from')
+          .eq('tenant_id', tenantId)
+          .eq('category_code', category)
+          .eq('rule_type', 'admin_fee')
+          .single()
+        
+        if (adminFeeRule) {
+          adminFeeRappen = adminFeeRule.admin_fee || 0
+        }
       }
+      
+      logger.debug('💰 Admin fee calculated:', {
+        appointmentCount: currentAppointmentNumber,
+        adminFeeAlreadyPaid,
+        shouldApply: shouldApplyAdminFee,
+        adminFee: (adminFeeRappen / 100).toFixed(2)
+      })
     }
-
-    logger.debug('💰 Admin fee calculated:', {
-      appointmentCount: (appointmentCount || 0) + 1,
-      adminFee: (adminFeeRappen / 100).toFixed(2)
-    })
 
     // ============ LAYER 8: CALCULATE PRODUCTS PRICE ============
     let productsPriceRappen = 0
@@ -312,7 +372,6 @@ export default defineEventHandler(async (event) => {
       },
       details: {
         pricePerMinute: (pricePerMinuteRappen / 100).toFixed(2),
-        appointmentCount: (appointmentCount || 0) + 1,
         products: productDetails,
         voucher: voucherDetails
       }
@@ -323,4 +382,3 @@ export default defineEventHandler(async (event) => {
     throw error
   }
 })
-
