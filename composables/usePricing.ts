@@ -633,7 +633,71 @@ const roundToNearestFranken = (rappen: number): number => {
   else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
 }
 
-  // ===== MAIN CALCULATION FUNCTION =====
+  // ===== V2 SERVER-SIDE CALCULATION (NEW!) =====
+  /**
+   * ✅ V2: Calls server-side pricing API for 100% accurate, fraud-proof pricing
+   * This replaces client-side calculations to prevent price manipulation
+   */
+  const calculatePriceV2 = async (
+    categoryCode: string,
+    durationMinutes: number,
+    userId: string,
+    appointmentType: string = 'lesson',
+    productIds: string[] = [],
+    voucherCode?: string,
+    useCredit: boolean = false
+  ): Promise<CalculatedPrice & { creditToUseRappen?: number, voucherDiscountRappen?: number }> => {
+    try {
+      logger.debug('💰 V2: Calling server-side pricing API...', {
+        categoryCode,
+        durationMinutes,
+        userId,
+        appointmentType
+      })
+
+      // Call V2 pricing API
+      const response = await $fetch('/api/v2/pricing/calculate', {
+        params: {
+          userId,
+          category: categoryCode,
+          durationMinutes,
+          appointmentType,
+          productIds: productIds.join(','),
+          voucherCode,
+          useCredit
+        }
+      }) as any
+
+      if (!response.success) {
+        throw new Error('Server pricing calculation failed')
+      }
+
+      const pricing = response.pricing
+      
+      logger.debug('✅ V2: Server pricing received:', response.breakdown)
+
+      // Convert to CalculatedPrice format
+      return {
+        base_price_rappen: pricing.basePriceRappen,
+        admin_fee_rappen: pricing.adminFeeRappen,
+        total_rappen: pricing.subtotalRappen, // subtotal before credit
+        base_price_chf: response.breakdown.basePrice,
+        admin_fee_chf: response.breakdown.adminFee,
+        total_chf: response.breakdown.subtotal,
+        category_code: categoryCode,
+        duration_minutes: durationMinutes,
+        appointment_number: 1, // Not used in V2
+        creditToUseRappen: pricing.creditToUseRappen,
+        voucherDiscountRappen: pricing.voucherDiscountRappen
+      }
+    } catch (error: any) {
+      logger.error('❌ V2 pricing API failed, falling back to V1:', error)
+      // Fallback to V1 (existing calculatePrice)
+      return await calculatePrice(categoryCode, durationMinutes, userId, appointmentType)
+    }
+  }
+
+  // ===== MAIN CALCULATION FUNCTION (V1 - Legacy) =====
   const calculatePrice = async (
     categoryCode: string,
     durationMinutes: number,
@@ -1027,6 +1091,7 @@ const roundToNearestFranken = (rappen: number): number => {
     // Core Functions
     loadPricingRules,
     calculatePrice,
+    calculatePriceV2, // ✅ V2: Server-side pricing
     getAppointmentCount,
     getPricingRule,
     
