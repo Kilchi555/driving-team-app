@@ -1,11 +1,11 @@
 <template>
   <div class="student-selector">
     <!-- Toggle nur anzeigen wenn kein Student ausgewählt -->
-    <div class="flex items-center gap-2 mb-4">    
+    <div class="flex items-center gap-2">    
       <button 
-            v-if="false && showSwitchToOther"
+            v-if="showSwitchToOther"
             @click="handleSwitchToOther"
-            class="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            class="w-full px-4 py-2 mb-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
             >
             Andere Terminart
           </button>
