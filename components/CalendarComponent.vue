@@ -896,7 +896,9 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
           eventTitle = studentName
         }
       } else {
-        eventTitle = apt.title || apt.type || 'Termin'
+        // ✅ For other event types (VKU, Nothelfer, etc.), show event type code
+        const eventTypeLabel = apt.event_type_code ? `[${apt.event_type_code.toUpperCase()}]` : ''
+        eventTitle = eventTypeLabel ? `${eventTypeLabel} ${apt.title || 'Termin'}` : (apt.title || apt.type || 'Termin')
       }
       
       // ✅ Kategorie vom Appointment type Feld nehmen

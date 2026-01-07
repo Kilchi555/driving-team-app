@@ -254,12 +254,14 @@ export function validateDrivingCategory(value: any, fieldName: string = 'Fahrkat
 
 /**
  * Validate event type
+ * ✅ UPDATED: Now accepts any non-empty string as custom event types (vku, nothelfer, etc.) 
+ * are stored in the event_types table and validated via Foreign Key constraint
  */
 export function validateEventType(value: any, fieldName: string = 'Event Typ'): { valid: boolean; error?: string } {
-  const validTypes = ['lesson', 'exam', 'practice', 'course', 'other']
-  
-  if (!value || !validTypes.includes(String(value).toLowerCase())) {
-    return { valid: false, error: `${fieldName} muss einer der folgenden Werte sein: ${validTypes.join(', ')}` }
+  // Just check if it's a non-empty string
+  // The actual validation happens via FK constraint to event_types table
+  if (!value || typeof value !== 'string' || !value.trim()) {
+    return { valid: false, error: `${fieldName} ist erforderlich` }
   }
   
   return { valid: true }
@@ -359,8 +361,8 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
     }
   }
   
-  // Category
-  if (data.type) {
+  // Category (can be null for "other" event types like meetings, training)
+  if (data.type !== undefined && data.type !== null) {
     const categoryValidation = validateDrivingCategory(data.type)
     if (!categoryValidation.valid) {
       errors.type = categoryValidation.error!
@@ -375,8 +377,10 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
     }
   }
   
-  // Status
-  if (data.status) {
+  // Status (required - default to pending_confirmation if not provided)
+  if (!data.status) {
+    errors.status = 'Status ist erforderlich'
+  } else {
     const statusValidation = validateAppointmentStatus(data.status)
     if (!statusValidation.valid) {
       errors.status = statusValidation.error!
