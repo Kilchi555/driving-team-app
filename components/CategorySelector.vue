@@ -69,7 +69,7 @@ interface CategoryWithDurations extends Category {
 // }
 
 interface Props {
-  modelValue: string
+  modelValue: string | null // ✅ Can be null for "other" event types
   selectedUser?: any
   currentUser?: any
   currentUserRole?: string
@@ -79,7 +79,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: string | null): void // ✅ Allow null
   (e: 'category-selected', category: CategoryWithDurations | null): void
   (e: 'price-changed', price: number): void
   (e: 'durations-changed', durations: number[]): void

@@ -11,7 +11,7 @@ interface AppointmentData {
   id?: string
   title: string
   description: string
-  type: string
+  type: string | null // ✅ Can be null for "other" event types (meetings, training)
   appointment_type?: string  // ✅ Added missing property
   startDate: string
   startTime: string
