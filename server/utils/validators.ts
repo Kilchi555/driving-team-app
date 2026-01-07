@@ -362,17 +362,6 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
   }
   
   // Category (can be null for "other" event types like meetings, training)
-  // ✅ DEBUG: Log category validation
-  console.log('🐛 DEBUG Validator - Category check:', {
-    type: data.type,
-    type_typeof: typeof data.type,
-    type_is_null: data.type === null,
-    type_is_undefined: data.type === undefined,
-    type_strict_null: data.type === null,
-    type_strict_undefined: data.type === undefined,
-    will_validate: data.type !== undefined && data.type !== null
-  })
-  
   if (data.type !== undefined && data.type !== null) {
     const categoryValidation = validateDrivingCategory(data.type)
     if (!categoryValidation.valid) {
