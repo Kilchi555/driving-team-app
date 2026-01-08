@@ -141,15 +141,8 @@ const suggestions = computed(() => {
     }
   }
   
-  // 2. Get event type code suffix
-  let eventTypeSuffix = ''
-  if (props.eventTypeCode) {
-    const codeUpper = props.eventTypeCode.toUpperCase()
-    // Only add if it's not a standard lesson/exam/theory
-    if (!['LESSON', 'EXAM', 'THEORY'].includes(codeUpper)) {
-      eventTypeSuffix = ` [${codeUpper}]`
-    }
-  }
+  // 2. Event type code suffix - REMOVED (not needed anymore)
+  // Titles will be clean without [VKU], [NOTHELFER] suffixes
   
   // 3. Check if appointment is without customer
   // Case 1: user_id === staff_id (staff created appointment for themselves)
@@ -161,8 +154,8 @@ const suggestions = computed(() => {
   const suggestions: string[] = []
   
   if (isWithoutCustomer || !props.selectedStudent) {
-    // No customer: Just "Location [EVENT_CODE]"
-    suggestions.push(`${location}${eventTypeSuffix}`)
+    // No customer: Just "Location" (without event code)
+    suggestions.push(`${location}`)
     
     // Additional variations for events without customers
     if (props.selectedSpecialType) {
@@ -183,11 +176,10 @@ const suggestions = computed(() => {
     const fullName = `${firstName} ${lastName}`
     const category = props.categoryCode ? ` ${props.categoryCode}` : ''
     
-    // Main suggestion with event type code
-    suggestions.push(`${fullName} - ${location}${eventTypeSuffix}`)
+    // Main suggestion without event type code
+    suggestions.push(`${fullName} - ${location}`)
     
     // Additional variations
-    suggestions.push(`${fullName} - ${location}`)
     suggestions.push(`${fullName} - Fahrstunde ${location}`)
     suggestions.push(`${firstName} ${lastName} - ${location}${category}`)
     suggestions.push(`${fullName} - Übungsfahrt ${location}`)
@@ -209,8 +201,8 @@ const suggestions = computed(() => {
     }
     
     if (props.eventType === 'other' || props.eventType === 'nothelfer' || props.eventType === 'vku') {
-      // For "other" events without specific data, just use location
-      suggestions.push(`${location}${eventTypeSuffix}`)
+      // For "other" events without specific data, just use location (without event code)
+      suggestions.push(`${location}`)
       
       if (props.selectedSpecialType) {
         suggestions.push(`${props.selectedSpecialType} - ${location}`)
@@ -227,11 +219,9 @@ const suggestions = computed(() => {
   
   logger.debug('📍 TitleInput - Generated suggestions:', {
     location,
-    eventTypeSuffix,
     isWithoutCustomer,
     userId: props.userId,
     staffId: props.staffId,
-    eventTypeCode: props.eventTypeCode,
     suggestions
   })
   

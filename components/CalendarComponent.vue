@@ -875,15 +875,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       // ✅ PRIORITY 1: Use title from DB if available (user may have customized it!)
       if (apt.title && apt.title.trim() !== '') {
         eventTitle = apt.title
-        
-        // ✅ For non-lesson events, add event type code prefix if not already present
-        if (apt.event_type_code && !['lesson', 'exam', 'theory'].includes(apt.event_type_code.toLowerCase())) {
-          const codeUpper = apt.event_type_code.toUpperCase()
-          // Only add if not already in title
-          if (!eventTitle.includes(`[${codeUpper}]`)) {
-            eventTitle = `[${codeUpper}] ${eventTitle}`
-          }
-        }
+        // ✅ No event type code prefix anymore - keep title clean
       }
       // ✅ FALLBACK: Generate title if none in DB
       else if (apt.type === 'lesson' || !apt.type) {
@@ -911,9 +903,8 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
           eventTitle = studentName
         }
       } else {
-        // ✅ For other event types (VKU, Nothelfer, etc.), show event type code
-        const eventTypeLabel = apt.event_type_code ? `[${apt.event_type_code.toUpperCase()}]` : ''
-        eventTitle = eventTypeLabel ? `${eventTypeLabel} ${apt.title || 'Termin'}` : (apt.title || apt.type || 'Termin')
+        // ✅ For other event types, just use the title from DB (no event type code prefix)
+        eventTitle = apt.title || apt.type || 'Termin'
       }
       
       // ✅ Kategorie vom Appointment type Feld nehmen
