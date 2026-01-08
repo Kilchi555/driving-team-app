@@ -110,6 +110,31 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`✅ Fetched ${appointments?.length || 0} appointments`)
 
+    // ✅ SECURITY LAYER: Batch-load payment status for appointments
+    // Only for appointments that passed all security filters above!
+    let paymentsMap: Record<string, any> = {}
+    const appointmentIds = (appointments || []).map((apt: any) => apt.id).filter(Boolean)
+    
+    if (appointmentIds.length > 0) {
+      const { data: payments, error: paymentsError } = await serviceSupabase
+        .from('payments')
+        .select('appointment_id, payment_status, paid_at')
+        .in('appointment_id', appointmentIds)  // ✅ Only for pre-filtered appointments
+        .eq('tenant_id', tenantId)             // ✅ Defense-in-Depth: Additional tenant isolation
+      
+      if (paymentsError) {
+        logger.warn('⚠️ Error fetching payment data:', paymentsError)
+        // Continue without payment data - non-critical
+      } else {
+        paymentsMap = (payments || []).reduce((map: Record<string, any>, p: any) => {
+          map[p.appointment_id] = p
+          return map
+        }, {})
+        
+        logger.debug(`✅ Fetched payment status for ${Object.keys(paymentsMap).length} appointments`)
+      }
+    }
+
     // Now fetch user data for all user_ids in appointments (batch query)
     const userIds = [...new Set(
       (appointments || [])
@@ -182,13 +207,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Enrich appointments with user data
+    // Enrich appointments with user data and payment status
     const enrichedAppointments = (appointments || []).map((apt: any) => ({
       ...apt,
       user: usersMap[apt.user_id] || null,
       staff: usersMap[apt.staff_id] || null,
       created_by_user: usersMap[apt.created_by] || null,
-      location: apt.location_id ? locationsMap[apt.location_id] : null
+      location: apt.location_id ? locationsMap[apt.location_id] : null,
+      // ✅ ADD: Payment status for visual indication in calendar
+      payment_status: paymentsMap[apt.id]?.payment_status || null,
+      paid_at: paymentsMap[apt.id]?.paid_at || null
     }))
 
     logger.info(`✅ Successfully fetched ${enrichedAppointments.length} enriched appointments for user ${userId}`)

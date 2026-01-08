@@ -967,7 +967,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         eventType = 'lesson'
       }
       
-      const eventColor = getEventColor(eventType, apt.status, category)
+      const eventColor = getEventColor(eventType, apt.status, category, apt.payment_status, apt.user_id)
       
       // ✅ DEBUG: Event-Transformation
       logger.debug('🔄 Converting appointment to event:', {
@@ -1043,7 +1043,11 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
           appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
           is_team_invite: isTeamInvite,
           original_type: (apt as any).user?.category || apt.type || 'B',
-          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson') // ✅ KORRIGIERT: event_type_code für eventType verwenden
+          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson'), // ✅ KORRIGIERT: event_type_code für eventType verwenden
+          // ✅ NEW: Payment status for color indication
+          payment_status: apt.payment_status || null,
+          paid_at: apt.paid_at || null,
+          is_paid: apt.payment_status === 'completed' && apt.paid_at ? true : false
         }
       }
       
@@ -1217,7 +1221,7 @@ const loadAppointments = async (forceReload = false) => {
 }
 
 // ✅ Helper-Funktion für Event-Farben
-const getEventColor = (type: string, status?: string, category?: string): string => {
+const getEventColor = (type: string, status?: string, category?: string, paymentStatus?: string | null, userId?: string | null): string => {
   // ✅ Kategorie-basierte Farben für Fahrstunden
   const categoryColors = {
     'B': '#10b981',      // Grün für Auto
@@ -1269,6 +1273,18 @@ const getEventColor = (type: string, status?: string, category?: string): string
     baseColor = categoryColors[category as keyof typeof categoryColors]
   }
   
+  // ✅ NEW: Make color lighter for unpaid appointments with customers
+  // Only apply to appointments that have a customer (user_id present)
+  // and are not yet paid (payment_status is not 'completed')
+  const hasCustomer = userId && userId !== ''
+  const isUnpaid = !paymentStatus || paymentStatus !== 'completed'
+  
+  if (hasCustomer && isUnpaid) {
+    // Make color 40% lighter for unpaid appointments
+    baseColor = lightenColor(baseColor, 0.4)
+    logger.debug(`💰 Applying lighter color for unpaid appointment:`, baseColor)
+  }
+  
   // ✅ Status-basierte Anpassungen (überschreibt alles)
   if (status === 'completed') {
     baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
@@ -1276,6 +1292,22 @@ const getEventColor = (type: string, status?: string, category?: string): string
   // ✅ cancelled Events behalten ihre normale Farbe
   
   return baseColor
+}
+
+// ✅ Helper function: Lighten a hex color by a percentage
+const lightenColor = (hex: string, percent: number): string => {
+  // Convert hex to RGB
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  
+  // Lighten by moving towards white (255)
+  const newR = Math.round(r + (255 - r) * percent)
+  const newG = Math.round(g + (255 - g) * percent)
+  const newB = Math.round(b + (255 - b) * percent)
+  
+  // Convert back to hex
+  return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`
 }
     
 const handleMoveError = (error: string) => {
