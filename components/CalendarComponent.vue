@@ -969,7 +969,12 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       
       const eventColor = getEventColor(eventType, apt.status, category, apt.payment_status, apt.user_id)
       
-      logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user_id=${apt.user_id ? 'YES' : 'NO'}, color=${eventColor}`)
+      // ✅ Roter Rahmen für unbezahlte Termine mit Kunden
+      const hasCustomer = apt.user_id && apt.user_id !== ''
+      const isUnpaid = !apt.payment_status || apt.payment_status !== 'completed'
+      const borderColor = (hasCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
+      
+      logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user_id=${apt.user_id ? 'YES' : 'NO'}, color=${eventColor}, border=${borderColor}`)
       
       // Convert UTC appointment times to local time for display
       // Appointments are stored in UTC, calendar expects local time
@@ -1001,7 +1006,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         end: parseUTCTime(apt.end_time),
         allDay: false,
         backgroundColor: eventColor,
-        borderColor: eventColor,
+        borderColor: borderColor, // ✅ Roter Rahmen für unbezahlt
         textColor: '#ffffff',
         // ✅ DEBUG: Zusätzliche Event-Daten direkt am Event-Objekt
         event_type_code: apt.event_type_code || 'lesson', // ✅ NEU: event_type_code direkt am Event
@@ -1269,30 +1274,10 @@ const getEventColor = (type: string, status?: string, category?: string, payment
     logger.debug(`🎨 Using fallback type color for "${type}":`, baseColor)
   }
   
-  logger.debug(`🎨 Base color BEFORE payment check:`, { type, category, baseColor })
+  logger.debug(`🎨 Final color (no lightening, using red border for unpaid):`, { type, category, baseColor })
   
-  // ✅ Make color lighter for unpaid appointments with customers
-  // Only apply to appointments that have a customer (user_id present)
-  // and are not yet paid (payment_status is not 'completed')
-  const hasCustomer = userId && userId !== ''
-  const isUnpaid = !paymentStatus || paymentStatus !== 'completed'
-  
-  logger.debug(`💡 Payment lightening check:`, {
-    userId: userId ? 'YES' : 'NO',
-    paymentStatus,
-    hasCustomer,
-    isUnpaid,
-    willLighten: hasCustomer && isUnpaid,
-    colorBefore: baseColor
-  })
-  
-  if (hasCustomer && isUnpaid) {
-    // Make color 70% lighter for unpaid appointments (much more visible!)
-    const colorBefore = baseColor
-    baseColor = lightenColor(baseColor, 0.7)
-    logger.debug(`💰 LIGHTENED: ${colorBefore} → ${baseColor}`)
-  }
-  // ✅ cancelled Events behalten ihre normale Farbe
+  // ✅ NO MORE COLOR LIGHTENING - we use red border instead!
+  // Border is set in the event creation above
   
   return baseColor
 }
