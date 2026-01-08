@@ -557,6 +557,14 @@ const handleLogin = async () => {
     
     logger.debug('✅ Login successful')
     
+    // ✅ SAVE: Remember this tenant for next session
+    try {
+      localStorage.setItem('last_tenant_slug', tenantSlug.value)
+      logger.debug('💾 Saved tenant slug to localStorage:', tenantSlug.value)
+    } catch (e) {
+      logger.warn('⚠️ Could not save tenant slug to localStorage:', e)
+    }
+    
     // Wait for auth store to update with user profile
     logger.debug('⏳ Waiting for user profile to load...')
     let attempts = 0
@@ -664,6 +672,14 @@ const handleMFAVerify = async () => {
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
     
+    // ✅ SAVE: Remember this tenant for next session
+    try {
+      localStorage.setItem('last_tenant_slug', tenantSlug.value)
+      logger.debug('💾 Saved tenant slug to localStorage:', tenantSlug.value)
+    } catch (e) {
+      logger.warn('⚠️ Could not save tenant slug to localStorage:', e)
+    }
+    
     // MFA erfolgreich - führe normales Login-Ende aus
     authStore.user = result.user
     
@@ -706,6 +722,10 @@ const handleMFAVerify = async () => {
 const handleLogout = async () => {
   try {
     await logout()
+    
+    // ✅ KEEP: Don't clear last_tenant_slug on logout - so user can login again to same tenant
+    // localStorage.setItem('last_tenant_slug', '') // Keep it for next login
+    
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     // Zur tenant-spezifischen Login-Seite weiterleiten
     if (currentTenant.value?.slug) {
