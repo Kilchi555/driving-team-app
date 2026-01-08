@@ -871,7 +871,22 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       
       // ✅ Event-Titel bestimmen
       let eventTitle = ''
-      if (apt.type === 'lesson' || !apt.type) {
+      
+      // ✅ PRIORITY 1: Use title from DB if available (user may have customized it!)
+      if (apt.title && apt.title.trim() !== '') {
+        eventTitle = apt.title
+        
+        // ✅ For non-lesson events, add event type code prefix if not already present
+        if (apt.event_type_code && !['lesson', 'exam', 'theory'].includes(apt.event_type_code.toLowerCase())) {
+          const codeUpper = apt.event_type_code.toUpperCase()
+          // Only add if not already in title
+          if (!eventTitle.includes(`[${codeUpper}]`)) {
+            eventTitle = `[${codeUpper}] ${eventTitle}`
+          }
+        }
+      }
+      // ✅ FALLBACK: Generate title if none in DB
+      else if (apt.type === 'lesson' || !apt.type) {
         // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
         const locationText = (apt as any).location_address || 
             (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
