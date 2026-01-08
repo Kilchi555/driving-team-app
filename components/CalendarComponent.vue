@@ -976,7 +976,11 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         event_type_code: apt.event_type_code,
         category: category,
         eventType: eventType,
-        title: eventTitle
+        title: eventTitle,
+        payment_status: apt.payment_status,
+        user_id: apt.user_id,
+        hasCustomer: apt.user_id && apt.user_id !== '',
+        isUnpaid: !apt.payment_status || apt.payment_status !== 'completed'
       })
       
       // Convert UTC appointment times to local time for display
