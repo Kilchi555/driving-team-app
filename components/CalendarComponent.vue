@@ -969,22 +969,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       
       const eventColor = getEventColor(eventType, apt.status, category, apt.payment_status, apt.user_id)
       
-      // ✅ DIRECT DEBUG: Check payment status
       logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user_id=${apt.user_id ? 'YES' : 'NO'}, color=${eventColor}`)
-      
-      // ✅ DEBUG: Event-Transformation
-      logger.debug('🔄 Converting appointment to event:', {
-        id: apt.id,
-        type: apt.type,
-        event_type_code: apt.event_type_code,
-        category: category,
-        eventType: eventType,
-        title: eventTitle,
-        payment_status: apt.payment_status,
-        user_id: apt.user_id,
-        hasCustomer: apt.user_id && apt.user_id !== '',
-        isUnpaid: !apt.payment_status || apt.payment_status !== 'completed'
-      })
       
       // Convert UTC appointment times to local time for display
       // Appointments are stored in UTC, calendar expects local time
@@ -1284,16 +1269,9 @@ const getEventColor = (type: string, status?: string, category?: string, payment
     logger.debug(`🎨 Using fallback type color for "${type}":`, baseColor)
   }
   
-  logger.debug(`🎨 Base color BEFORE status/payment:`, { type, category, baseColor })
+  logger.debug(`🎨 Base color BEFORE payment check:`, { type, category, baseColor })
   
-  // ✅ Status-basierte Anpassungen FIRST (before payment lightening)
-  if (status === 'completed') {
-    baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
-    logger.debug(`🎨 Applied completed status color:`, baseColor)
-  }
-  
-  // ✅ NEW: Make color lighter for unpaid appointments with customers
-  // Apply AFTER status color, so payment status is visible even for completed appointments
+  // ✅ Make color lighter for unpaid appointments with customers
   // Only apply to appointments that have a customer (user_id present)
   // and are not yet paid (payment_status is not 'completed')
   const hasCustomer = userId && userId !== ''
