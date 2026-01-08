@@ -318,16 +318,19 @@ onMounted(async () => {
     const authStore = useAuthStore()
     await authStore.logout()
     
-    // ✅ Redirect: Versuche zur Slug-Route, sonst zum Login
-    const route = useRoute()
-    const slugMatch = route.path.match(/^\/([^\/]+)/)
-    if (slugMatch && slugMatch[1] && slugMatch[1] !== 'dashboard') {
-      const slug = slugMatch[1]
-      logger.debug('Auth: Redirecting to slug route:', `/${slug}`)
-      return await navigateTo(`/${slug}`)
+    // ✅ Redirect: Versuche zur Slug-Route aus localStorage, sonst zum Login
+    let lastTenantSlug: string | null = null
+    try {
+      lastTenantSlug = localStorage.getItem('last_tenant_slug')
+      if (lastTenantSlug) {
+        logger.debug('Auth: Redirecting to last tenant slug:', `/${lastTenantSlug}`)
+        return await navigateTo(`/${lastTenantSlug}`)
+      }
+    } catch (e) {
+      logger.warn('Auth: Could not read localStorage:', e)
     }
     
-    logger.debug('Auth: No slug found, redirecting to login')
+    logger.debug('Auth: No last tenant slug found, redirecting to login')
     return await navigateTo('/login')
   }
 
