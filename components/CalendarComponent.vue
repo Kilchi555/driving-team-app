@@ -969,6 +969,9 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       
       const eventColor = getEventColor(eventType, apt.status, category, apt.payment_status, apt.user_id)
       
+      // ✅ DIRECT DEBUG: Check payment status
+      logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user_id=${apt.user_id ? 'YES' : 'NO'}, color=${eventColor}`)
+      
       // ✅ DEBUG: Event-Transformation
       logger.debug('🔄 Converting appointment to event:', {
         id: apt.id,
