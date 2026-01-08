@@ -910,39 +910,63 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         // ✅ No event type code prefix anymore - keep title clean
       }
       // ✅ FALLBACK: Generate title if none in DB
-      else if (apt.type === 'lesson' || !apt.type) {
-        // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
-        const locationText = (apt as any).location_address || 
-            (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
-            (apt as any).location_name || 
-            (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
+      else {
+        // Determine if this is an "other event type" (not lesson/exam/theory)
+        const isOtherEventType = apt.event_type_code && !['lesson', 'exam', 'theory'].includes(apt.event_type_code)
         
-        // ✅ Debug: Location-Daten loggen
-        logger.debug('🔍 Location debug for appointment:', apt.id, {
-          location_id: apt.location_id,
-          location_name: (apt as any).location_name,
-          location_address: (apt as any).location_address,
-          locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
-          final_locationText: locationText,
-          userObj: userObj,
-          studentName: studentName
-        })
-        
-        // ✅ Titel mit Location kombinieren falls vorhanden
-        if (locationText) {
-          eventTitle = `${studentName} - ${locationText}`
+        if (isOtherEventType) {
+          // ✅ For other event types (VKU, Nothelfer, etc.), just use location (no student name)
+          const locationText = (apt as any).location_address || 
+              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              (apt as any).location_name || 
+              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 'Termin'
+          eventTitle = locationText
         } else {
-          eventTitle = studentName
+          // ✅ For lessons/exams, use student name + location
+          // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
+          const locationText = (apt as any).location_address || 
+              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              (apt as any).location_name || 
+              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
+          
+          // ✅ Debug: Location-Daten loggen
+          logger.debug('🔍 Location debug for appointment:', apt.id, {
+            location_id: apt.location_id,
+            location_name: (apt as any).location_name,
+            location_address: (apt as any).location_address,
+            locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
+            final_locationText: locationText,
+            userObj: userObj,
+            studentName: studentName
+          })
+          
+          // ✅ Titel mit Location kombinieren falls vorhanden
+          if (locationText) {
+            eventTitle = `${studentName} - ${locationText}`
+          } else {
+            eventTitle = studentName
+          }
         }
-      } else {
-        // ✅ For other event types, just use the title from DB (no event type code prefix)
-        eventTitle = apt.title || apt.type || 'Termin'
       }
       
       // ✅ Kategorie vom Appointment type Feld nehmen
       const category = apt.type || 'B'
-      // ✅ Type korrekt setzen: Wenn type eine Kategorie ist, dann ist es eine Fahrstunde
-      const eventType = (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson')
+      
+      // ✅ FIXED: event_type_code has PRIORITY over type
+      // If event_type_code is NOT a standard lesson type (lesson/exam/theory), use it
+      // Otherwise, determine from type field
+      let eventType = 'lesson' // default
+      if (apt.event_type_code && !['lesson', 'exam', 'theory'].includes(apt.event_type_code)) {
+        // Non-standard event type (vku, nothelfer, meeting, etc.)
+        eventType = apt.event_type_code
+      } else if (apt.event_type_code) {
+        // Standard event type explicitly set
+        eventType = apt.event_type_code
+      } else if (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) {
+        // Has a driving category, so it's a lesson
+        eventType = 'lesson'
+      }
+      
       const eventColor = getEventColor(eventType, apt.status, category)
       
       // ✅ DEBUG: Event-Transformation

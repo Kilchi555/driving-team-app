@@ -959,6 +959,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
         })
       }
 
+      // ✅ Determine if this is an "other event type" (non-lesson)
+      const eventTypeCode = formData.value.appointment_type || 'lesson'
+      const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventTypeCode)
+
       const appointmentData = {
         title: formData.value.title,
         description: formData.value.description,
@@ -968,12 +972,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
         start_time: localStart,
         end_time: localEnd,
         duration_minutes: formData.value.duration_minutes,
-        type: formData.value.type,
+        // ✅ IMPORTANT: Set type to null for "other event types" (VKU, Nothelfer, etc.)
+        type: isOtherEventType ? null : formData.value.type,
         // For chargeable lessons, newly created appointments should require confirmation first
         // For other events or edits, use pending_confirmation as default
         status: (mode === 'create' || isChargeableLesson) ? 'pending_confirmation' : (formData.value.status || 'pending_confirmation'),
         // ✅ Missing fields added
-        event_type_code: formData.value.appointment_type || 'lesson',
+        event_type_code: eventTypeCode,
         custom_location_address: formData.value.custom_location_address || undefined,
         custom_location_name: formData.value.custom_location_name || undefined,
         google_place_id: formData.value.google_place_id || undefined,
