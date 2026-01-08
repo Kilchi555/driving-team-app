@@ -976,8 +976,6 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       const borderColor = (hasRealCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
       const unpaidClass = (hasRealCustomer && isUnpaid) ? 'unpaid-appointment' : ''
       
-      logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user=${apt.user_id ? 'YES' : 'NO'}, staff=${apt.staff_id}, isRealCustomer=${hasRealCustomer}, border=${borderColor}`)
-      
       // Convert UTC appointment times to local time for display
       // Appointments are stored in UTC, calendar expects local time
       const parseUTCTime = (utcTimeString: string) => {
@@ -1263,20 +1261,15 @@ const getEventColor = (type: string, status?: string, category?: string, payment
   if (category && categoryColors[category as keyof typeof categoryColors] && 
       (!type || ['lesson', 'exam', 'theory'].includes(type))) {
     baseColor = categoryColors[category as keyof typeof categoryColors]
-    logger.debug(`🎨 Using category color for "${category}":`, baseColor)
   }
   // ✅ PRIORITÄT 2: Event type colors from DB (für VKU, Nothelfer, etc.)
   else if (type && eventTypeColorsMap.value[type]) {
     baseColor = eventTypeColorsMap.value[type]
-    logger.debug(`🎨 Using DB color for event type "${type}":`, baseColor)
   }
   // ✅ PRIORITÄT 3: Fallback to hardcoded type colors
   else if (type && typeColorsFallback[type as keyof typeof typeColorsFallback]) {
     baseColor = typeColorsFallback[type as keyof typeof typeColorsFallback]
-    logger.debug(`🎨 Using fallback type color for "${type}":`, baseColor)
   }
-  
-  logger.debug(`🎨 Final color (no lightening, using red border for unpaid):`, { type, category, baseColor })
   
   // ✅ NO MORE COLOR LIGHTENING - we use red border instead!
   // Border is set in the event creation above
