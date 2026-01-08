@@ -1292,10 +1292,20 @@ const getEventColor = (type: string, status?: string, category?: string, payment
   const hasCustomer = userId && userId !== ''
   const isUnpaid = !paymentStatus || paymentStatus !== 'completed'
   
+  logger.debug(`💡 Payment lightening check:`, {
+    userId: userId ? 'YES' : 'NO',
+    paymentStatus,
+    hasCustomer,
+    isUnpaid,
+    willLighten: hasCustomer && isUnpaid,
+    colorBefore: baseColor
+  })
+  
   if (hasCustomer && isUnpaid) {
     // Make color 40% lighter for unpaid appointments
+    const colorBefore = baseColor
     baseColor = lightenColor(baseColor, 0.4)
-    logger.debug(`💰 Applying lighter color for unpaid appointment:`, baseColor)
+    logger.debug(`💰 LIGHTENED: ${colorBefore} → ${baseColor}`)
   }
   // ✅ cancelled Events behalten ihre normale Farbe
   
