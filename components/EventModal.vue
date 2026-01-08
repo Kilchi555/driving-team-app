@@ -138,6 +138,9 @@
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               :auto-generate="!isOtherEventType"
               :is-loading-from-database="props.mode === 'edit'"
+              :user-id="formData.user_id"
+              :staff-id="formData.staff_id"
+              :event-type-code="formData.appointment_type"
               @title-generated="handleTitleGenerated"
             />
           </div>

@@ -35,6 +35,9 @@ interface Props {
   showCharacterCount?: boolean
   autoGenerate?: boolean
   isLoadingFromDatabase?: boolean  // ✅ NEW: Flag to indicate title is from DB
+  userId?: string  // ✅ NEW: For checking if user == staff (no customer)
+  staffId?: string  // ✅ NEW: For checking if user == staff (no customer)
+  eventTypeCode?: string  // ✅ NEW: Event type code to append (vku, nothelfer, etc.)
 }
 
 interface Emits {
@@ -104,105 +107,135 @@ const computedPlaceholder = computed(() => {
 const suggestions = computed(() => {
   if (!shouldShow.value) return []
   
-  if (props.eventType === 'lesson' && props.selectedStudent) {
+  // ✅ WICHTIG: Im Edit Mode (isLoadingFromDatabase) KEINE Suggestions generieren!
+  // Der Title kommt aus der DB und soll nicht überschrieben werden
+  if (props.isLoadingFromDatabase) {
+    logger.debug('🛑 TitleInput - Edit mode: Skip suggestion generation, use DB title')
+    return []
+  }
+  
+  // ✅ NEW LOGIC: Generate title based on requirements
+  // Format: [Name -] Location [EVENT_CODE]
+  // If user_id === staff_id: Only "Location [EVENT_CODE]" (no customer name)
+  
+  // 1. Get location
+  let location = 'Treffpunkt'
+  
+  if (props.selectedLocation?.custom_location_address) {
+    const customAddress = props.selectedLocation.custom_location_address
+    if (customAddress.address && customAddress.address.includes(',')) {
+      location = customAddress.address
+    } else if (customAddress.name) {
+      location = customAddress.name
+    }
+  } else if (props.selectedLocation?.name) {
+    location = props.selectedLocation.name
+  } else if (props.selectedLocation?.address) {
+    location = props.selectedLocation.address
+  }
+  
+  // If location name doesn't include city, try to use full address
+  if (location && !location.includes(',')) {
+    if (props.selectedLocation?.address && props.selectedLocation.address.includes(',')) {
+      location = props.selectedLocation.address
+    }
+  }
+  
+  // 2. Get event type code suffix
+  let eventTypeSuffix = ''
+  if (props.eventTypeCode) {
+    const codeUpper = props.eventTypeCode.toUpperCase()
+    // Only add if it's not a standard lesson/exam/theory
+    if (!['LESSON', 'EXAM', 'THEORY'].includes(codeUpper)) {
+      eventTypeSuffix = ` [${codeUpper}]`
+    }
+  }
+  
+  // 3. Check if appointment is without customer
+  // Case 1: user_id === staff_id (staff created appointment for themselves)
+  // Case 2: user_id is empty (no student selected - "Other Event Types")
+  const isWithoutCustomer = (!props.userId || props.userId === '') || 
+                           (props.userId && props.staffId && props.userId === props.staffId)
+  
+  // 4. Generate title
+  const suggestions: string[] = []
+  
+  if (isWithoutCustomer || !props.selectedStudent) {
+    // No customer: Just "Location [EVENT_CODE]"
+    suggestions.push(`${location}${eventTypeSuffix}`)
+    
+    // Additional variations for events without customers
+    if (props.selectedSpecialType) {
+      suggestions.push(`${props.selectedSpecialType} - ${location}`)
+    }
+    if (props.eventTypeCode === 'vku') {
+      suggestions.push(`Verkehrskunde - ${location}`)
+      suggestions.push(`VKU ${location}`)
+    }
+    if (props.eventTypeCode === 'nothelfer') {
+      suggestions.push(`Nothelfer - ${location}`)
+      suggestions.push(`Nothelferkurs ${location}`)
+    }
+  } else if (props.selectedStudent) {
+    // With customer: "Name - Location [EVENT_CODE]"
     const firstName = props.selectedStudent.first_name
     const lastName = props.selectedStudent.last_name
     const fullName = `${firstName} ${lastName}`
     const category = props.categoryCode ? ` ${props.categoryCode}` : ''
-    // ✅ NEU: Vollständige Adresse mit Ort verwenden
-    let location = 'Treffpunkt'
     
-    // ✅ PRIORITÄT 1: Verwende die custom_location_address falls verfügbar (enthält den vollständigen Ort)
-    if (props.selectedLocation?.custom_location_address) {
-      const customAddress = props.selectedLocation.custom_location_address
-      if (customAddress.address && customAddress.address.includes(',')) {
-        location = customAddress.address
-        logger.debug('📍 TitleInput - Using custom_location_address:', location)
-      } else if (customAddress.name) {
-        location = customAddress.name
-        logger.debug('📍 TitleInput - Using custom_location_address name:', location)
+    // Main suggestion with event type code
+    suggestions.push(`${fullName} - ${location}${eventTypeSuffix}`)
+    
+    // Additional variations
+    suggestions.push(`${fullName} - ${location}`)
+    suggestions.push(`${fullName} - Fahrstunde ${location}`)
+    suggestions.push(`${firstName} ${lastName} - ${location}${category}`)
+    suggestions.push(`${fullName} - Übungsfahrt ${location}`)
+    suggestions.push(`${fullName} - Prüfungsvorbereitung ${location}`)
+    suggestions.push(`${firstName} ${lastName} - Erste Fahrstunde ${location}`)
+    suggestions.push(`${fullName} - Autobahnfahrt ab ${location}`)
+    suggestions.push(`${firstName} ${lastName} - Nachtfahrt ${location}`)
+  } else {
+    // Fallback for other event types
+    if (props.eventType === 'staff_meeting') {
+      return [
+        'Team Meeting',
+        'Wochenplanung',
+        'Kundenbesprechu',
+        'Qualitätssicherung',
+        'Fahrzeugkontrolle',
+        'Administration'
+      ]
+    }
+    
+    if (props.eventType === 'other' || props.eventType === 'nothelfer' || props.eventType === 'vku') {
+      // For "other" events without specific data, just use location
+      suggestions.push(`${location}${eventTypeSuffix}`)
+      
+      if (props.selectedSpecialType) {
+        suggestions.push(`${props.selectedSpecialType} - ${location}`)
       }
+      
+      suggestions.push('Beratung')
+      suggestions.push('Theorieunterricht')
+      suggestions.push('Fahrzeugwartung')
+      suggestions.push('Prüfung')
+      suggestions.push('Verwaltung')
+      suggestions.push('Pause')
     }
-    // ✅ PRIORITÄT 2: Fallback auf normale Location-Daten
-    else if (props.selectedLocation?.name) {
-      location = props.selectedLocation.name
-      logger.debug('📍 TitleInput - Using location name:', location)
-    } else if (props.selectedLocation?.address) {
-      location = props.selectedLocation.address
-      logger.debug('📍 TitleInput - Using location address:', location)
-    }
-    
-    // ✅ DEBUG: Zeige was für die Location verwendet wird
-    logger.debug('📍 TitleInput - Location data:', {
-      name: props.selectedLocation?.name,
-      address: props.selectedLocation?.address,
-      custom_location_address: props.selectedLocation?.custom_location_address,
-      selectedLocation: props.selectedLocation,
-      finalLocation: location
-    })
-    
-    // ✅ NEU: Wenn die Location nur den Namen hat, aber wir brauchen den vollständigen Ort,
-    // versuche die Adresse zu extrahieren
-    if (location && !location.includes(',')) {
-      // Der Name enthält wahrscheinlich nicht den vollständigen Ort
-      // Versuche die Adresse zu verwenden, falls vorhanden
-      if (props.selectedLocation?.address && props.selectedLocation.address.includes(',')) {
-        location = props.selectedLocation.address
-        logger.debug('📍 TitleInput - Using full address instead of name:', location)
-      }
-    }
-    
-    return [
-      `${fullName} - ${location}`,
-      `${fullName} - Fahrstunde ${location}`,
-      `${firstName} ${lastName} - ${location}${category}`,
-      `${fullName} - Übungsfahrt ${location}`,
-      `${fullName} - Prüfungsvorbereitung ${location}`,
-      `${firstName} ${lastName} - Erste Fahrstunde ${location}`,
-      `${fullName} - Autobahnfahrt ab ${location}`,
-      `${firstName} ${lastName} - Nachtfahrt ${location}`
-    ]
   }
   
-  if (props.eventType === 'staff_meeting') {
-    return [
-      'Team Meeting',
-      'Wochenplanung',
-      'Kundenbesprechu',
-      'Qualitätssicherung',
-      'Fahrzeugkontrolle',
-      'Administration'
-    ]
-  }
+  logger.debug('📍 TitleInput - Generated suggestions:', {
+    location,
+    eventTypeSuffix,
+    isWithoutCustomer,
+    userId: props.userId,
+    staffId: props.staffId,
+    eventTypeCode: props.eventTypeCode,
+    suggestions
+  })
   
-  if (props.eventType === 'other') {
-    return [
-      'Beratung',
-      'Theorieunterricht',
-      'Fahrzeugwartung',
-      'Prüfung',
-      'Verwaltung',
-      'Pause'
-    ]
-  }
-  
-  if (props.eventType === 'nothelfer') {
-    return [
-      'Nothelfer-Begrüssung',
-      'Nothelfer-Kurs',
-      'Nothelfer-Prüfung'
-    ]
-  }
-  
-  if (props.eventType === 'vku') {
-    return [
-      'VKU',
-      'Verkehrskundeunterricht',
-      'VKU-Prüfung'
-    ]
-  }
-  
-  return []
+  return suggestions
 })
 
 const validationMessage = computed(() => {
