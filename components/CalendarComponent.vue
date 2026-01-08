@@ -1239,44 +1239,11 @@ const editAppointment = (appointment: CalendarAppointment) => {
 }
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
-  logger.debug('💾 Event saved, updating calendar...', eventData)
+  logger.debug('💾 Event saved, refreshing calendar...', eventData)
   
-  if (calendar.value?.getApi && eventData.id && eventData.title) {
-    const calendarApi = calendar.value.getApi()
-    const event = calendarApi.getEventById(eventData.id)
-    
-    if (event) {
-      // ✅ Existierender Event - nur Title updaten
-      event.setProp('title', eventData.title)
-      logger.debug('✅ Existing event title updated:', eventData.title)
-    } else {
-      // ✅ Neuer Event - zum Calendar hinzufügen mit korrektem Title
-      logger.debug('📍 Adding new event to calendar:', { id: eventData.id, title: eventData.title })
-      calendarApi.addEvent({
-        id: eventData.id,
-        title: eventData.title,
-        start: eventData.start,
-        end: eventData.end,
-        allDay: eventData.allDay || false
-      })
-      logger.debug('✅ New event added with correct title')
-    }
-  }
-  
-  // View-Position speichern
-  const currentDate = calendar.value?.getApi()?.getDate()
-  
-  // ✅ Im Hintergrund neu laden um konsistent zu bleiben
-  // Dies wird nicht blockierend ausgeführt
-  loadAppointments(true).catch(err => {
-    logger.debug('⚠️ Background reload failed:', err)
-  })
-  
-  // View-Position wiederherstellen falls nötig
-  if (currentDate && calendar.value?.getApi) {
-    calendar.value.getApi().gotoDate(currentDate)
-    logger.debug('✅ View position preserved:', currentDate)
-  }
+  // ✅ EINFACH: Kompletter Reload der Calendar-Daten aus DB
+  // Dies stellt sicher, dass alle Änderungen (inkl. manuell editierter Titel) korrekt angezeigt werden
+  await loadAppointments(true)
   
   emit('appointment-changed', { type: 'saved', data: eventData })
   isModalVisible.value = false
