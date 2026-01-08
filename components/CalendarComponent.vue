@@ -1266,20 +1266,22 @@ const getEventColor = (type: string, status?: string, category?: string, payment
   
   let baseColor = defaultColor
   
-  // ✅ Priorität 1: Event type colors from DB (dynamic)
-  if (type && eventTypeColorsMap.value[type]) {
+  // ✅ PRIORITÄT 1: Kategorie-basierte Farbe für Lessons/Exams/Theory
+  // Diese Events nutzen die Farben aus driving_categories, nicht aus event_types!
+  if (category && categoryColors[category as keyof typeof categoryColors] && 
+      (!type || ['lesson', 'exam', 'theory'].includes(type))) {
+    baseColor = categoryColors[category as keyof typeof categoryColors]
+    logger.debug(`🎨 Using category color for "${category}":`, baseColor)
+  }
+  // ✅ PRIORITÄT 2: Event type colors from DB (für VKU, Nothelfer, etc.)
+  else if (type && eventTypeColorsMap.value[type]) {
     baseColor = eventTypeColorsMap.value[type]
     logger.debug(`🎨 Using DB color for event type "${type}":`, baseColor)
   }
-  // ✅ Priorität 2: Fallback to hardcoded type colors
+  // ✅ PRIORITÄT 3: Fallback to hardcoded type colors
   else if (type && typeColorsFallback[type as keyof typeof typeColorsFallback]) {
     baseColor = typeColorsFallback[type as keyof typeof typeColorsFallback]
     logger.debug(`🎨 Using fallback type color for "${type}":`, baseColor)
-  }
-  // ✅ Priorität 3: Kategorie-basierte Farbe (für Fahrstunden) - überschreibt Typ-Farbe
-  else if (category && categoryColors[category as keyof typeof categoryColors]) {
-    baseColor = categoryColors[category as keyof typeof categoryColors]
-    logger.debug(`🎨 Using category color for "${category}":`, baseColor)
   }
   
   logger.debug(`🎨 Base color BEFORE status/payment:`, { type, category, baseColor })
