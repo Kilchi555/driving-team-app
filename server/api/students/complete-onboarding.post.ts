@@ -1,19 +1,77 @@
 // server/api/students/complete-onboarding.post.ts
+// ✅ SECURITY HARDENED: Token validation, rate limiting, input validation, audit logging
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    logger.debug('📝 Complete onboarding request body:', JSON.stringify(body, null, 2))
+    logger.debug('📝 Complete onboarding request received')
     
     const { token, firstName, lastName, phone, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
 
+    // ✅ LAYER 1: Validate required fields
     if (!token || !password || !email) {
-      console.error('❌ Missing required fields:', { token: !!token, password: !!password, email: !!email })
+      logger.warn('⚠️ Complete onboarding: Missing required fields', { 
+        token: !!token, 
+        password: !!password, 
+        email: !!email 
+      })
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields: token, password, and email are required'
+      })
+    }
+
+    // ✅ LAYER 2: Input validation
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      logger.warn('⚠️ Complete onboarding: Invalid email format', { email })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid email format'
+      })
+    }
+
+    if (password && password.length < 8) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Password must be at least 8 characters long'
+      })
+    }
+
+    if (firstName && firstName.length > 100) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'First name is too long'
+      })
+    }
+
+    if (lastName && lastName.length > 100) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Last name is too long'
+      })
+    }
+
+    // ✅ LAYER 3: Rate limiting (max 5 completions per token per hour)
+    const rateLimitKey = `complete_onboarding_${token.substring(0, 20)}`
+    const rateLimitResult = await checkRateLimit(
+      rateLimitKey,
+      5, // max 5 attempts
+      3600 // per hour
+    )
+
+    if (!rateLimitResult.allowed) {
+      logger.warn('⚠️ Complete onboarding: Rate limit exceeded', { 
+        token: token.substring(0, 10) + '...',
+        retryAfter: rateLimitResult.retryAfter 
+      })
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Too many attempts. Please try again in ${rateLimitResult.retryAfter} seconds.`,
+        data: { retryAfter: rateLimitResult.retryAfter * 1000 }
       })
     }
 
@@ -23,8 +81,8 @@ export default defineEventHandler(async (event) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 1. Find user by token
-    logger.debug('🔍 Looking for user with token:', token)
+    // ✅ LAYER 4: Find user by token and validate
+    logger.debug('🔍 Looking for user with token...')
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -33,7 +91,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (userError) {
-      console.error('❌ User lookup error:', userError)
+      logger.warn('⚠️ Complete onboarding: User lookup error', { error: userError.message })
       throw createError({
         statusCode: 400,
         statusMessage: `User lookup failed: ${userError.message}`
@@ -41,7 +99,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!user) {
-      console.error('❌ User not found with token:', token)
+      logger.warn('⚠️ Complete onboarding: User not found with token')
       throw createError({
         statusCode: 400,
         statusMessage: 'Invalid or expired token'
@@ -50,29 +108,30 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Found user:', { id: user.id, email: user.email, tenant_id: user.tenant_id })
 
-    // 2. Check token expiration
+    // ✅ LAYER 5: Check token expiration
     const expiresAt = new Date(user.onboarding_token_expires)
     if (expiresAt < new Date()) {
+      logger.warn('⚠️ Complete onboarding: Token expired', { userId: user.id })
       throw createError({
         statusCode: 400,
         statusMessage: 'Token has expired'
       })
     }
 
-    // 3. Create Auth User
+    // ✅ LAYER 6: Create Auth User
     logger.debug('👤 Creating auth user for email:', email)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: password,
       email_confirm: true, // Mark email as confirmed
       user_metadata: {
-        first_name: user.first_name,
-        last_name: user.last_name
+        first_name: firstName,
+        last_name: lastName
       }
     })
 
     if (authError) {
-      console.error('❌ Auth user creation error:', authError)
+      logger.warn('⚠️ Complete onboarding: Auth user creation error', { error: authError.message })
       
       // Provide user-friendly error messages
       let userMessage = 'Fehler beim Erstellen des Benutzerkontos'
@@ -92,7 +151,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
 
-    // 4. Update user record with all data
+    // ✅ LAYER 7: Update user record with all data
     // Ensure category stored as array - support both old (category) and new (categories) format
     const categoryValue = Array.isArray(categories) ? categories : 
                          Array.isArray(category) ? category : 
@@ -102,9 +161,9 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .update({
         auth_user_id: authData.user.id,
-        first_name: firstName,  // ✅ NEU: Speichere Vornamen
-        last_name: lastName,    // ✅ NEU: Speichere Nachnamen
-        phone: phone,           // ✅ NEU: Speichere Telefonnummer
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
         email: email,
         birthdate: birthdate,
         category: categoryValue,
@@ -122,7 +181,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', user.id)
 
     if (updateError) {
-      console.error('❌ User update error:', updateError)
+      logger.error('❌ Complete onboarding: User update error', { error: updateError.message, userId: user.id })
       
       // Provide user-friendly error messages
       let userMessage = 'Fehler beim Speichern der Profildaten'
@@ -140,7 +199,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ User profile updated successfully')
 
-    // ✅ NEU: Aktualisiere auch den Auth User mit den korrekten Namen (Display Name)
+    // ✅ LAYER 8: Update auth user display name
     logger.debug('🔐 Updating auth user display name...')
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
       user_metadata: {
@@ -150,8 +209,7 @@ export default defineEventHandler(async (event) => {
     })
     
     if (authUpdateError) {
-      console.warn('⚠️ Auth user update warning (non-critical):', authUpdateError)
-      // Nicht den ganzen Prozess abbrechen, nur warnen
+      logger.warn('⚠️ Auth user update warning (non-critical):', authUpdateError)
     } else {
       logger.debug('✅ Auth user display name updated')
     }
@@ -174,8 +232,7 @@ export default defineEventHandler(async (event) => {
         })
 
       if (createCreditError) {
-        console.warn('⚠️ Error creating student_credits (non-critical):', createCreditError)
-        // Don't fail the whole onboarding if this fails
+        logger.warn('⚠️ Error creating student_credits (non-critical):', createCreditError)
       } else {
         logger.debug('✅ student_credits record created')
       }
@@ -183,12 +240,10 @@ export default defineEventHandler(async (event) => {
       logger.debug('ℹ️ student_credits already exists for user:', user.id)
     }
 
-    // 6. Send pending payment reminders
-    // After onboarding is complete, send first reminder for any payments that were skipped
+    // ✅ LAYER 9: Send pending payment reminders
     try {
       logger.debug('📧 Checking for pending payment reminders...')
       
-      // Find all pending payments for this user where first reminder was not sent
       const { data: pendingPayments, error: paymentsError } = await supabaseAdmin
         .from('payments')
         .select('id, tenant_id')
@@ -197,15 +252,13 @@ export default defineEventHandler(async (event) => {
         .is('first_reminder_sent_at', null)
       
       if (paymentsError) {
-        console.error('⚠️ Error checking pending payments:', paymentsError)
+        logger.warn('⚠️ Error checking pending payments:', paymentsError)
       } else if (pendingPayments && pendingPayments.length > 0) {
-        logger.debug(`📧 Found ${pendingPayments.length} pending payment(s) without reminder, sending now...`)
+        logger.debug(`📧 Found ${pendingPayments.length} pending payment(s) without reminder`)
         
-        // Send first reminder for each pending payment
         for (const payment of pendingPayments) {
           try {
-            // Call the reminder API endpoint
-            const reminderResponse = await $fetch('/api/reminders/send-payment-confirmation', {
+            await $fetch('/api/reminders/send-payment-confirmation', {
               method: 'POST',
               body: {
                 paymentId: payment.id,
@@ -214,44 +267,60 @@ export default defineEventHandler(async (event) => {
               }
             })
             
-            logger.debug(`✅ First reminder sent for payment ${payment.id}:`, reminderResponse)
+            logger.debug(`✅ First reminder sent for payment ${payment.id}`)
           } catch (reminderError: any) {
-            console.error(`⚠️ Error sending reminder for payment ${payment.id}:`, reminderError)
-            // Don't fail the onboarding if reminder fails
+            logger.warn(`⚠️ Error sending reminder for payment ${payment.id}:`, reminderError)
           }
         }
-      } else {
-        logger.debug('ℹ️ No pending payments found without reminder')
       }
     } catch (reminderCheckError) {
-      console.error('⚠️ Error in reminder check (non-critical):', reminderCheckError)
-      // Don't fail the onboarding if reminder check fails
+      logger.warn('⚠️ Error in reminder check (non-critical):', reminderCheckError)
     }
+
+    // ✅ LAYER 10: Audit logging
+    await logAudit({
+      action: 'onboarding_completed',
+      userId: user.id,
+      tenantId: user.tenant_id,
+      resourceType: 'user_onboarding',
+      resourceId: user.id,
+      details: {
+        email: email,
+        categories: categoryValue,
+        firstName: firstName,
+        lastName: lastName
+      },
+      severity: 'info'
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
+    logger.debug('✅ Onboarding completed successfully for user:', user.id)
 
     return {
       success: true,
       message: 'Onboarding completed successfully',
       userId: user.id,
-      authUserId: authData.user.id
+      authUserId: authData.user.id,
+      tenant_slug: (await supabaseAdmin
+        .from('tenants')
+        .select('slug')
+        .eq('id', user.tenant_id)
+        .single()
+      ).data?.slug
     }
 
   } catch (error: any) {
-    console.error('❌ Complete onboarding error:', error)
-    console.error('❌ Error details:', {
-      message: error.message,
-      statusCode: error.statusCode,
-      stack: error.stack
+    logger.error('❌ Complete onboarding error:', { 
+      message: error.message, 
+      statusCode: error.statusCode 
     })
     
-    // Return more detailed error information
     const statusCode = error.statusCode || 500
-    const statusMessage = error.message || 'Onboarding completion failed'
-    
-    console.error('❌ Throwing error:', { statusCode, statusMessage })
+    const statusMessage = error.statusMessage || 'Onboarding completion failed'
     
     throw createError({
       statusCode,
-      statusMessage
+      statusMessage,
+      data: error.data
     })
   }
 })

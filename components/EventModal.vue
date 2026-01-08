@@ -273,7 +273,7 @@
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           title="Schüler Fortschritt anzeigen"
         >
-          Kundenprofil
+          Profil
         </button>
         <div v-else></div>
         
@@ -1261,7 +1261,60 @@ const handleSaveAppointment = async () => {
     
   } catch (error: any) {
     console.error('❌ Error saving appointment:', error)
-    error.value = error.message || 'Fehler beim Speichern des Termins'
+    
+    // ✅ LAYER 1: Handle duplicate phone/email errors with user-friendly messages
+    const errorMessage = error.message || error.statusMessage || 'Fehler beim Speichern des Termins'
+    const errorCode = error.code || error.statusCode || null
+    
+    // Check for duplicate errors from useStudents composable
+    if (error.duplicateType === 'phone' || errorMessage === 'DUPLICATE_PHONE') {
+      const existing = error.existingUser || {}
+      const userInfo = existing.first_name || existing.email || existing.phone || 'Unbekannter Benutzer'
+      error.value = `Diese Telefonnummer ist bereits registriert (${userInfo}). Bitte verwende eine andere Telefonnummer.`
+      
+      // Show toast notification for better UX
+      const { addNotification } = useUIStore()
+      addNotification({
+        type: 'error',
+        title: 'Telefonnummer bereits vorhanden',
+        message: `Ein Schüler mit dieser Telefonnummer existiert bereits. Bitte verwende eine andere Nummer.`
+      })
+    } else if (error.duplicateType === 'email' || errorMessage === 'DUPLICATE_EMAIL') {
+      const existing = error.existingUser || {}
+      const userInfo = existing.first_name || existing.phone || existing.email || 'Unbekannter Benutzer'
+      error.value = `Diese E-Mail-Adresse ist bereits registriert (${userInfo}). Bitte verwende eine andere E-Mail.`
+      
+      // Show toast notification for better UX
+      const { addNotification } = useUIStore()
+      addNotification({
+        type: 'error',
+        title: 'E-Mail bereits vorhanden',
+        message: `Ein Schüler mit dieser E-Mail existiert bereits. Bitte verwende eine andere E-Mail.`
+      })
+    } else if (errorCode === 409 && (errorMessage.includes('DUPLICATE') || errorMessage.includes('duplicate'))) {
+      // Handle 409 Conflict errors
+      error.value = `Duplikat gefunden: ${errorMessage.replace('DUPLICATE_', '').toLowerCase()}. Bitte überprüfe die Eingaben.`
+      
+      const { addNotification } = useUIStore()
+      addNotification({
+        type: 'error',
+        title: 'Duplikat gefunden',
+        message: 'Ein Schüler mit diesen Daten existiert bereits.'
+      })
+    } else {
+      // Default error message
+      error.value = errorMessage
+      
+      // Show toast for critical errors
+      if (errorCode >= 400) {
+        const { addNotification } = useUIStore()
+        addNotification({
+          type: 'error',
+          title: 'Fehler beim Speichern',
+          message: errorMessage
+        })
+      }
+    }
   } finally {
     isLoading.value = false
   }
@@ -3820,6 +3873,8 @@ const handleNoPolicyChoice = async (chargePercent: number) => {
 const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff', withCosts: boolean = true) => {
   if (!props.eventData?.id) return
   
+  const uiStore = useUIStore() // ✅ For notifications
+  
   logger.debug('🗑️ Performing soft delete with reason for appointment:', props.eventData.id)
   logger.debug('🗑️ Deletion reason:', deletionReason)
   logger.debug('🗑️ Cancellation reason ID:', cancellationReasonId)
@@ -3896,9 +3951,19 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             chargePercentage,
             shouldCreditHours: true
           }
-        })
+        }) as any
         
         logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
+        
+        // ✅ API handled everything: payments, products, discounts, appointment update
+        // No need to do manual cleanup!
+        
+        // Show success notification
+        uiStore.addNotification({
+          type: 'success',
+          title: 'Termin storniert',
+          message: staffCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
+        })
         
         // ✅ After successful staff cancellation, emit close and refresh
         emit('appointment-deleted', props.eventData.id)
@@ -3907,247 +3972,82 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         return
       }
       
-      // ✅ For customer cancellation: call handle-cancellation API
-      logger.debug('💳 Customer cancellation - calling handle-cancellation API')
+      // ✅ For customer cancellation: call customer cancel API
+      logger.debug('👤 Customer cancellation - calling cancel-customer API')
       
-      const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      
+      if (!accessToken) {
+        throw new Error('No valid session for customer cancellation')
+      }
+      
+      const customerCancellationResult = await $fetch('/api/appointments/cancel-customer', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
         body: {
           appointmentId: props.eventData.id,
-          deletionReason,
-          lessonPriceRappen,
-          adminFeeRappen,
-          shouldCreditHours: true,
-          chargePercentage,
-          originalLessonPrice: lessonPriceRappen,
-          originalAdminFee: adminFeeRappen
+          cancellationReasonId: cancellationReasonId,
+          deletionReason
         }
+      }) as any
+      
+      logger.debug('✅ Customer cancellation via secure API completed:', customerCancellationResult)
+      
+      // ✅ API handled everything: payments, products, discounts, appointment update
+      // No need to do manual cleanup!
+      
+      // Show success notification
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Termin storniert',
+        message: customerCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
       })
       
-      logger.debug('✅ Cancellation processed:', cancellationResult)
+      // ✅ After successful cancellation, emit close and refresh
+      emit('appointment-deleted', props.eventData.id)
+      emit('save-event', { type: 'deleted', id: props.eventData.id })
+      handleClose()
+      return
     }
     
-    // ✅ Void authorized payments if cancellation is >24h before
-    const appointmentTimeForVoid = new Date(props.eventData.start || props.eventData.start_time)
-    const nowForVoid = new Date()
-    const hoursUntilAppointmentForVoid = (appointmentTimeForVoid.getTime() - nowForVoid.getTime()) / (1000 * 60 * 60)
+    // ✅ For non-lesson types (VKU, etc.): Simple soft delete without payment handling
+    logger.debug('ℹ️ Non-lesson type - performing simple soft delete')
     
-    if (hoursUntilAppointmentForVoid > 24) {
-      // ✅ Hole authorized Payments und storniere sie
-      const { data: authorizedPayments } = await supabase
-        .from('payments')
-        .select('id, wallee_transaction_id, payment_status')
-        .eq('appointment_id', props.eventData.id)
-        .eq('payment_status', 'authorized')
-        .not('wallee_transaction_id', 'is', null)
-      
-      if (authorizedPayments && authorizedPayments.length > 0) {
-        logger.debug(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
-        
-        for (const payment of authorizedPayments) {
-          try {
-            await $fetch('/api/wallee/void-payment', {
-              method: 'POST',
-              body: {
-                paymentId: payment.id,
-                transactionId: payment.wallee_transaction_id,
-                reason: `Appointment cancelled more than 24h before start: ${deletionReason}`
-              }
-            })
-            logger.debug(`✅ Payment ${payment.id} voided successfully`)
-          } catch (voidError: any) {
-            console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
-          }
-        }
-      }
-    }
-    
-    // ✅ NOTE: Payments are NOT deleted! The handle-cancellation endpoint already:
-    // - Updates payment_status to 'refunded'
-    // - Sets refunded_at timestamp
-    // - Keeps payment record for audit trail and accounting
-    // This allows full tracking of all financial transactions
-    
-    // 1.2 Product sales und items löschen (inklusive Rabatte)
-    logger.debug('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
-    
-    // Zuerst alle product_sale_ids sammeln
-    const { data: productSales } = await supabase
-      .from('product_sales')
-      .select('id')
-      .eq('appointment_id', props.eventData.id)
-    
-    if (productSales && productSales.length > 0) {
-      const productSaleIds = productSales.map(ps => ps.id)
-      logger.debug('🗑️ Found product sales to delete:', productSaleIds)
-      
-      // Product sale items löschen (zuerst)
-      const { error: productSaleItemsError } = await supabase
-        .from('product_sale_items')
-        .delete()
-        .in('product_sale_id', productSaleIds)
-      
-      if (productSaleItemsError) {
-        console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
-      } else {
-        logger.debug('✅ Product sale items deleted successfully')
-      }
-      
-      // Dann product_sales löschen (inklusive Rabatte)
-      const { error: productSalesError } = await supabase
-        .from('product_sales')
-        .delete()
-        .eq('appointment_id', props.eventData.id)
-      
-      if (productSalesError) {
-        console.warn('⚠️ Could not delete product sales:', productSalesError)
-      } else {
-        logger.debug('✅ Product sales deleted successfully')
-      }
-    }
-    
-    // ✅ SCHRITT 2: Soft Delete des Appointments mit Absage-Grund
-    logger.debug('🗑️ Soft deleting appointment with cancellation reason')
-    
-    // Get the cancellation reason to check if medical certificate is required and force_charge_percentage
-    const { data: reasonData } = await supabase
-      .from('cancellation_reasons')
-      .select('requires_proof, force_charge_percentage')
-      .eq('id', cancellationReasonId)
-      .single()
-    
-    logger.debug('🔍 Cancellation reason data:', reasonData)
-    
-    // Prepare update data with policy information
     const updateData: any = {
-      status: status,
+      status: 'cancelled',
       deleted_at: new Date().toISOString(),
       deletion_reason: deletionReason,
       cancellation_reason_id: cancellationReasonId,
       cancellation_type: cancellationType,
       deleted_by: props.currentUser?.id
     }
-
-    // ✅ Use force_charge_percentage if available (for staff cancellations = 0%)
-    if (reasonData?.force_charge_percentage !== null && reasonData?.force_charge_percentage !== undefined) {
-      const chargePercentage = reasonData.force_charge_percentage
-      updateData.cancellation_charge_percentage = chargePercentage
-      logger.debug(`💰 Using force_charge_percentage from cancellation reason: ${chargePercentage}%`)
-      
-      // If staff cancels (force_charge_percentage = 0), don't charge customer
-      if (chargePercentage === 0) {
-        logger.debug('✅ Staff cancellation - NO CHARGE for customer')
-      }
-    } else if (cancellationPolicyResult.value) {
-      // Fallback: Use calculated policy if no force_charge_percentage
-      updateData.cancellation_charge_percentage = cancellationPolicyResult.value.calculation.chargePercentage
-      logger.debug(`💳 Using calculated policy charge percentage: ${cancellationPolicyResult.value.calculation.chargePercentage}%`)
-    }
-
-    // ✅ Set medical certificate status if required
-    if (reasonData?.requires_proof) {
-      updateData.medical_certificate_status = 'pending'
-      updateData.original_charge_percentage = updateData.cancellation_charge_percentage || 100
-      logger.debug('📄 Medical certificate required - status set to pending')
-    }
-
-    // Add credit hours information if available
-    if (cancellationPolicyResult.value?.shouldCreditHours) {
-      updateData.cancellation_credit_hours = true
-    }
-
-    const { data, error } = await supabase
+    
+    const { error: updateError } = await supabase
       .from('appointments')
       .update(updateData)
       .eq('id', props.eventData.id)
-      .select()
     
-    if (error) {
-      console.error('❌ Soft delete error:', error)
-      throw error
+    if (updateError) {
+      throw updateError
     }
     
-    logger.debug('✅ Appointment soft deleted successfully with reason:', data)
-    logger.debug('✅ Status set to:', status)
-    logger.debug('✅ Deletion reason:', deletionReason)
-    logger.debug('✅ Cancellation reason ID:', cancellationReasonId)
-    logger.debug('✅ Database response:', data)
+    logger.debug('✅ Non-lesson appointment cancelled successfully')
     
-    // ✅ REMOVED: Cancellation fee invoice creation
-    // Cancellation charges are now handled via pending payments
-    // They will be automatically added to the next appointment payment
-    
-    // ✅ NEU: SMS und Email versenden bei Löschung
-    const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
-    const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
-    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || 'Fahrschüler')
-    const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || 'dein Fahrlehrer')
-    const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    // Show success notification
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Termin storniert',
+      message: 'Der Termin wurde erfolgreich storniert.'
     })
     
-    // SMS versenden
-    if (phoneNumber) {
-      logger.debug('📱 Sending SMS notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/sms/send', {
-          method: 'POST',
-          body: {
-            phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`,
-            senderName: tenantName.value
-          }
-        })
-        logger.debug('✅ SMS sent successfully:', result)
-      } catch (smsError: any) {
-        console.error('❌ Failed to send SMS:', smsError)
-      }
-    } else {
-      logger.debug('⚠️ No phone number available for SMS', { 
-        'eventData.phone': props.eventData?.phone,
-        'extendedProps.phone': props.eventData?.extendedProps?.phone 
-      })
-    }
+    // ✅ NOTE: SMS/Email notifications should be sent by the APIs
+    // But as a fallback or for staff workflow, we can optionally send them here
     
-    // Email versenden
-    if (studentEmail) {
-      logger.debug('📧 Sending Email notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: studentEmail,
-            studentName: firstName,
-            appointmentTime: appointmentTime,
-            staffName: instructorName,
-            cancellationReason: deletionReason,
-            type: 'cancelled',
-            tenantName: tenantName.value,
-            tenantId: props.currentUser?.tenant_id
-          }
-        })
-        logger.debug('✅ Email sent successfully:', result)
-      } catch (emailError: any) {
-        console.error('❌ Failed to send Email:', emailError)
-      }
-    } else {
-      logger.debug('⚠️ No email address available for email notification', {
-        'eventData.email': props.eventData?.email,
-        'extendedProps.email': props.eventData?.extendedProps?.email
-      })
-    }
-    
-    // Events emittieren
     emit('appointment-deleted', props.eventData.id)
     emit('save-event', { type: 'deleted', id: props.eventData.id })
-    
-    // Modal schließen
     handleClose()
     
   } catch (err: any) {

@@ -206,13 +206,42 @@ export const useStudents = () => {
       }
       
       // Call backend API with Authorization header
-      const response = await $fetch('/api/admin/add-student', {
-        method: 'POST',
-        body: studentData,
-        headers: {
-          'Authorization': `Bearer ${token}`
+      let response: any = null
+      try {
+        response = await $fetch('/api/admin/add-student', {
+          method: 'POST',
+          body: studentData,
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }) as any
+      } catch (fetchError: any) {
+        // ✅ LAYER 1: Handle FetchError with HTTP status codes
+        const statusCode = fetchError.status || fetchError.statusCode
+        const statusMessage = fetchError.data?.statusMessage || fetchError.message || 'Failed to add student'
+        
+        logger.debug('❌ Fetch Error Details:', { statusCode, statusMessage, data: fetchError.data })
+        
+        // Handle 409 Conflict errors (duplicates)
+        if (statusCode === 409) {
+          if (statusMessage === 'DUPLICATE_PHONE' || statusMessage.includes('DUPLICATE_PHONE')) {
+            const errorObj: any = new Error('DUPLICATE_PHONE')
+            errorObj.duplicateType = 'phone'
+            errorObj.existingUser = fetchError.data?.data?.existingUser
+            throw errorObj
+          }
+          
+          if (statusMessage === 'DUPLICATE_EMAIL' || statusMessage.includes('DUPLICATE_EMAIL')) {
+            const errorObj: any = new Error('DUPLICATE_EMAIL')
+            errorObj.duplicateType = 'email'
+            errorObj.existingUser = fetchError.data?.data?.existingUser
+            throw errorObj
+          }
         }
-      }) as any
+        
+        // Re-throw as generic error
+        throw fetchError
+      }
 
       if (!response?.success) {
         // Extract error details

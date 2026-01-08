@@ -162,7 +162,14 @@ const groupedTenants = computed(() => {
     groups.get(tenant.business_type)!.tenants.push(tenant)
   })
 
-  return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name))
+  // Sort: driving_school first, then others alphabetically
+  return Array.from(groups.values()).sort((a, b) => {
+    // Driving schools always first
+    if (a.code === 'driving_school' && b.code !== 'driving_school') return -1
+    if (a.code !== 'driving_school' && b.code === 'driving_school') return 1
+    // Then alphabetically
+    return a.name.localeCompare(b.name)
+  })
 })
 
 // Methods

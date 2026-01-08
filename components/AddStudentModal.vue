@@ -34,16 +34,6 @@
       <!-- Content -->
       <div class="p-6 space-y-4">
         <p class="text-gray-700">{{ duplicateInfo.message }}</p>
-        
-        <!-- Existing User Info (nur wenn Daten vorhanden) -->
-        <div v-if="duplicateInfo.existingUser && duplicateInfo.existingUser.first_name" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <p class="text-sm font-medium text-gray-900 mb-2">Bestehender Schüler:</p>
-          <div class="space-y-1 text-sm text-gray-600">
-            <p><strong>Name:</strong> {{ duplicateInfo.existingUser.first_name }} {{ duplicateInfo.existingUser.last_name }}</p>
-            <p v-if="duplicateInfo.existingUser.email"><strong>E-Mail:</strong> {{ duplicateInfo.existingUser.email }}</p>
-            <p v-if="duplicateInfo.existingUser.phone"><strong>Telefon:</strong> {{ duplicateInfo.existingUser.phone }}</p>
-          </div>
-        </div>
 
         <!-- Action Instructions -->
         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -207,6 +197,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useStudents } from '~/composables/useStudents'
 import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
+import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
 
 const uiStore = useUIStore()
@@ -512,66 +503,143 @@ const submitForm = async () => {
     if (error.message === 'DUPLICATE_PHONE' || isDatabaseDuplicatePhone) {
       const existing = error.existingUser
       const hasAccount = existing?.auth_user_id !== null
+      const isActive = existing?.is_active
+      const onboardingStatus = existing?.onboarding_status
       
+      let title = 'Telefonnummer bereits vorhanden'
       let message = `Diese Telefonnummer ist bereits registriert.`
+      let actionTitle = '⚠️ Telefonnummer bereits verwendet'
+      let actions: string[] = []
       
       if (existing?.first_name && existing?.last_name) {
         message = `Diese Telefonnummer ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
       }
       
+      // ✅ Status-basierte Meldungen
+      if (isActive && hasAccount) {
+        // Aktiver Schüler mit Konto
+        title = '✅ Schüler ist bereits aktiv'
+        actionTitle = 'Der Schüler ist bereits registriert und hat ein Konto'
+        actions = [
+          'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
+          'Bei Passwort vergessen: "Passwort vergessen" verwenden'
+        ]
+      } else if (onboardingStatus === 'pending' && !hasAccount) {
+        // Pending - Onboarding noch nicht abgeschlossen
+        title = '⏳ Schüler wartet auf Onboarding'
+        actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
+        actions = [
+          'Schüler:in kann den Link in der Onboarding-SMS/E-Mail noch verwenden',
+          'Falls dieser nicht mehr gültig ist, kannst du ein neues SMS/E-Mail senden. Geh dafür in sein Profil und klick auf "Onboarding-Link erneut senden"',
+        ]
+      } else if (onboardingStatus === 'completed' && !hasAccount) {
+        // Completed aber kein Account - ungewöhnlich
+        title = '⚠️ Onboarding abgeschlossen, aber kein Konto'
+        actionTitle = 'Der Schüler hat Onboarding gemacht, aber hat kein aktives Konto'
+        actions = [
+          'Kontakt mit dem Schüler aufnehmen',
+          'Konto manuell aktivieren oder neu erstellen',
+          'Technischer Support kontaktieren'
+        ]
+      } else if (!isActive && !hasAccount) {
+        // Inaktiver Schüler ohne Konto
+        title = '❌ Schüler ist inaktiv'
+        actionTitle = 'Der Schüler ist inaktiv oder wurde gelöscht'
+        actions = [
+          'Bestehende Telefonnummer in der Schülerliste suchen',
+          'Ggf. inaktiven/alten Schüler aktivieren oder löschen',
+          'Andere Telefonnummer verwenden'
+        ]
+      }
+      
       duplicateInfo.value = {
-        title: 'Telefonnummer bereits vorhanden',
+        title: title,
         message: message,
         existingUser: existing || null,
-        actionTitle: existing 
-          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
-          : '⚠️ Telefonnummer bereits verwendet',
-        actions: existing && hasAccount 
-          ? [
-              'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
-              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
-            ]
-          : [
-              'Bestehende Telefonnummer in der Schülerliste suchen',
-              'Ggf. inaktiven/alten Schüler löschen',
-              'Andere Telefonnummer verwenden'
-            ]
+        actionTitle: actionTitle,
+        actions: actions
       }
       
       errors.value.phone = 'Diese Telefonnummer ist bereits registriert'
       showDuplicateWarning.value = true
       
+      // ✅ AUCH Toast anzeigen
+      uiStore.addNotification({
+        type: 'error',
+        title: title,
+        message: message
+      })
+      
     } else if (error.message === 'DUPLICATE_EMAIL' || isDatabaseDuplicateEmail) {
       const existing = error.existingUser
       const hasAccount = existing?.auth_user_id !== null
+      const isActive = existing?.is_active
+      const onboardingStatus = existing?.onboarding_status
       
+      let title = 'E-Mail bereits vorhanden'
       let message = `Diese E-Mail-Adresse ist bereits registriert.`
+      let actionTitle = '⚠️ E-Mail bereits verwendet'
+      let actions: string[] = []
       
       if (existing?.first_name && existing?.last_name) {
         message = `Diese E-Mail-Adresse ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
       }
       
+      // ✅ Status-basierte Meldungen
+      if (isActive && hasAccount) {
+        // Aktiver Schüler mit Konto
+        title = '✅ Schüler ist bereits aktiv'
+        actionTitle = 'Der Schüler ist bereits registriert und hat ein Konto'
+        actions = [
+          'Schüler anweisen, sich mit E-Mail anzumelden',
+          'Bei Passwort vergessen: "Passwort vergessen" verwenden'
+        ]
+      } else if (onboardingStatus === 'pending' && !hasAccount) {
+        // Pending - Onboarding noch nicht abgeschlossen
+        title = '⏳ Schüler wartet auf Onboarding'
+        actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
+        actions = [
+          'Schüler kann noch die Onboarding-SMS/E-Mail verwenden',
+          'Erneut SMS/E-Mail senden (falls nicht erhalten)',
+          'Konto manuell löschen und neu erstellen falls nötig'
+        ]
+      } else if (onboardingStatus === 'completed' && !hasAccount) {
+        // Completed aber kein Account - ungewöhnlich
+        title = '⚠️ Onboarding abgeschlossen, aber kein Konto'
+        actionTitle = 'Der Schüler hat Onboarding gemacht, aber hat kein aktives Konto'
+        actions = [
+          'Kontakt mit dem Schüler aufnehmen',
+          'Konto manuell aktivieren oder neu erstellen',
+          'Technischer Support kontaktieren'
+        ]
+      } else if (!isActive && !hasAccount) {
+        // Inaktiver Schüler ohne Konto
+        title = '❌ Schüler ist inaktiv'
+        actionTitle = 'Der Schüler ist inaktiv oder wurde gelöscht'
+        actions = [
+          'Bestehende E-Mail in der Schülerliste suchen',
+          'Ggf. inaktiven/alten Schüler aktivieren oder löschen',
+          'Andere E-Mail verwenden'
+        ]
+      }
+      
       duplicateInfo.value = {
-        title: 'E-Mail bereits vorhanden',
+        title: title,
         message: message,
         existingUser: existing || null,
-        actionTitle: existing 
-          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
-          : '⚠️ E-Mail bereits verwendet',
-        actions: existing && hasAccount 
-          ? [
-              'Schüler anweisen, sich mit E-Mail anzumelden',
-              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
-            ]
-          : [
-              'Bestehende E-Mail in der Schülerliste suchen',
-              'Ggf. inaktiven/alten Schüler löschen',
-              'Andere E-Mail verwenden'
-            ]
+        actionTitle: actionTitle,
+        actions: actions
       }
       
       errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert'
       showDuplicateWarning.value = true
+      
+      // ✅ AUCH Toast anzeigen
+      uiStore.addNotification({
+        type: 'error',
+        title: title,
+        message: message
+      })
       
     } else if (error.message?.includes('duplicate')) {
       errors.value.email = 'Diese E-Mail-Adresse oder Telefonnummer ist bereits registriert'

@@ -74,6 +74,7 @@ export default defineEventHandler(async (event) => {
         event_type_code,
         user_id,
         staff_id,
+        confirmation_token,
         staff:users!staff_id (
           id,
           first_name,
@@ -103,8 +104,47 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to fetch appointments' })
     }
 
-    logger.info(`✅ Fetched ${appointmentsData?.length || 0} appointments for customer ${userProfile.id}`)
-    return { success: true, data: appointmentsData || [] }
+    // ✅ Load payments for all appointments
+    const appointmentIds = (appointmentsData || []).map(a => a.id)
+    let paymentsMap: Record<string, any> = {}
+    
+    if (appointmentIds.length > 0) {
+      const { data: paymentsData, error: paymentsError } = await serviceSupabase
+        .from('payments')
+        .select(`
+          id,
+          appointment_id,
+          lesson_price_rappen,
+          admin_fee_rappen,
+          products_price_rappen,
+          discount_amount_rappen,
+          total_amount_rappen,
+          credit_used_rappen,
+          payment_status,
+          payment_method,
+          paid_at
+        `)
+        .in('appointment_id', appointmentIds)
+      
+      if (paymentsError) {
+        logger.warn('⚠️ Error fetching payments for appointments:', paymentsError)
+      } else if (paymentsData) {
+        // Create a map of appointment_id -> payment
+        paymentsMap = paymentsData.reduce((acc, payment) => {
+          acc[payment.appointment_id] = payment
+          return acc
+        }, {} as Record<string, any>)
+      }
+    }
+
+    // ✅ Merge payments into appointments
+    const appointmentsWithPayments = (appointmentsData || []).map(appointment => ({
+      ...appointment,
+      payment: paymentsMap[appointment.id] || null
+    }))
+
+    logger.info(`✅ Fetched ${appointmentsWithPayments.length} appointments for customer ${userProfile.id}`)
+    return { success: true, data: appointmentsWithPayments }
 
   } catch (error: any) {
     logger.error('❌ Error in get-appointments API:', error)
