@@ -3393,8 +3393,8 @@ defineExpose({
 
 /* ✅ Roter Rahmen für unbezahlte Termine */
 .fc-event.unpaid-appointment {
-  border: 2px solid #ef4444 !important;
-  border-left: 3px solid #ef4444 !important;
+  border: 1px solid #ef4444 !important;
+  border-left: 2px solid #ef4444 !important;
 }
 
 /* Tailwind CSS ::selection Duplikate bereinigen */
