@@ -1287,9 +1287,9 @@ const getEventColor = (type: string, status?: string, category?: string, payment
   })
   
   if (hasCustomer && isUnpaid) {
-    // Make color 40% lighter for unpaid appointments
+    // Make color 70% lighter for unpaid appointments (much more visible!)
     const colorBefore = baseColor
-    baseColor = lightenColor(baseColor, 0.4)
+    baseColor = lightenColor(baseColor, 0.7)
     logger.debug(`💰 LIGHTENED: ${colorBefore} → ${baseColor}`)
   }
   // ✅ cancelled Events behalten ihre normale Farbe
