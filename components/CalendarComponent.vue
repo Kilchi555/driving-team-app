@@ -351,6 +351,9 @@ const currentYear = ref(new Date().getFullYear())
 const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
 let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 
+// ✅ NEW: Event types color map (loaded from DB)
+const eventTypeColorsMap = ref<Record<string, string>>({})
+
 // Working Hours Management
 const { 
   loadWorkingHours, 
@@ -363,6 +366,35 @@ const emit = defineEmits(['view-updated', 'appointment-changed'])
 
 // NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
 const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
+
+// ✅ NEW FUNCTION: Load event types and their colors from DB
+const loadEventTypeColors = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data: eventTypes, error } = await supabase
+      .from('event_types')
+      .select('code, default_color')
+      .eq('is_active', true)
+    
+    if (error) {
+      logger.warn('⚠️ Failed to load event type colors:', error)
+      return
+    }
+    
+    if (eventTypes && eventTypes.length > 0) {
+      const colorsMap: Record<string, string> = {}
+      eventTypes.forEach(et => {
+        if (et.code && et.default_color) {
+          colorsMap[et.code] = et.default_color
+        }
+      })
+      eventTypeColorsMap.value = colorsMap
+      logger.debug('✅ Event type colors loaded:', colorsMap)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Error loading event type colors:', err)
+  }
+}
   try {
     logger.debug('🔒 Loading non-working hours blocks from DB...')
     
@@ -1178,8 +1210,8 @@ const getEventColor = (type: string, status?: string, category?: string): string
     'BPT': '#10b981'     // Grün für BPT
   }
   
-  // ✅ Typ-basierte Farben für andere Termine (dunklere Farben für bessere Sichtbarkeit)
-  const typeColors = {
+  // ✅ Typ-basierte Farben für andere Termine (Fallback wenn nicht in DB)
+  const typeColorsFallback = {
     'lesson': '#10b981',      // Grün für Fahrstunden
     'exam': '#f59e0b',        // Orange für Prüfungen  
     'theory': '#3b82f6',      // Blau für Theorie
@@ -1189,8 +1221,8 @@ const getEventColor = (type: string, status?: string, category?: string): string
     'maintenance': '#dc2626', // Dunkel-Rot für Wartung
     'admin': '#0891b2',       // Dunkel-Cyan für Admin
     'team_invite': '#0284c7', // Blau für Team-Einladungen
-    'vku': '#059669',         // Grün für VKU
-    'nothelfer': '#d97706',   // Bernstein für Nothelfer
+    'vku': '#059669',         // Grün für VKU (Fallback)
+    'nothelfer': '#d97706',   // Bernstein für Nothelfer (Fallback)
     'other': '#374151'        // Dunkelgrau für Sonstiges
   }
   
@@ -1199,11 +1231,16 @@ const getEventColor = (type: string, status?: string, category?: string): string
   
   let baseColor = defaultColor
   
-  // ✅ Priorität 1: Typ-basierte Farbe (für other event types)
-  if (type && typeColors[type as keyof typeof typeColors]) {
-    baseColor = typeColors[type as keyof typeof typeColors]
+  // ✅ Priorität 1: Event type colors from DB (dynamic)
+  if (type && eventTypeColorsMap.value[type]) {
+    baseColor = eventTypeColorsMap.value[type]
+    logger.debug(`🎨 Using DB color for event type "${type}":`, baseColor)
   }
-  // ✅ Priorität 2: Kategorie-basierte Farbe (für Fahrstunden) - überschreibt Typ-Farbe
+  // ✅ Priorität 2: Fallback to hardcoded type colors
+  else if (type && typeColorsFallback[type as keyof typeof typeColorsFallback]) {
+    baseColor = typeColorsFallback[type as keyof typeof typeColorsFallback]
+  }
+  // ✅ Priorität 3: Kategorie-basierte Farbe (für Fahrstunden) - überschreibt Typ-Farbe
   else if (category && categoryColors[category as keyof typeof categoryColors]) {
     baseColor = categoryColors[category as keyof typeof categoryColors]
   }
@@ -2401,6 +2438,9 @@ onMounted(async () => {
     logger.debug('📅 CalendarComponent mounted')
     isCalendarReady.value = true
     attachSwipe()
+    
+    // ✅ Load event type colors from DB
+    await loadEventTypeColors()
     
     // ✅ Load tenant name for SMS/Email
     try {
