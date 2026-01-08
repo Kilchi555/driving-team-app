@@ -364,9 +364,6 @@ const {
 
 const emit = defineEmits(['view-updated', 'appointment-changed'])
 
-// NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
-const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
-
 // ✅ NEW FUNCTION: Load event types and their colors from DB
 const loadEventTypeColors = async () => {
   try {
@@ -395,6 +392,9 @@ const loadEventTypeColors = async () => {
     logger.warn('⚠️ Error loading event type colors:', err)
   }
 }
+
+// NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
+const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
   try {
     logger.debug('🔒 Loading non-working hours blocks from DB...')
     
