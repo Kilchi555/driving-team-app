@@ -969,12 +969,14 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       
       const eventColor = getEventColor(eventType, apt.status, category, apt.payment_status, apt.user_id)
       
-      // ✅ Roter Rahmen für unbezahlte Termine mit Kunden
-      const hasCustomer = apt.user_id && apt.user_id !== ''
+      // ✅ Roter Rahmen für unbezahlte Termine mit echten Kunden
+      // Nur wenn user_id != staff_id (echte Kundentermine, keine internen Blöcke)
+      const hasRealCustomer = apt.user_id && apt.user_id !== '' && apt.user_id !== apt.staff_id
       const isUnpaid = !apt.payment_status || apt.payment_status !== 'completed'
-      const borderColor = (hasCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
+      const borderColor = (hasRealCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
+      const unpaidClass = (hasRealCustomer && isUnpaid) ? 'unpaid-appointment' : ''
       
-      logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user_id=${apt.user_id ? 'YES' : 'NO'}, color=${eventColor}, border=${borderColor}`)
+      logger.debug(`💰 Payment for ${apt.id.substring(0, 8)}: status=${apt.payment_status}, user=${apt.user_id ? 'YES' : 'NO'}, staff=${apt.staff_id}, isRealCustomer=${hasRealCustomer}, border=${borderColor}`)
       
       // Convert UTC appointment times to local time for display
       // Appointments are stored in UTC, calendar expects local time
@@ -1017,7 +1019,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         duration_minutes: apt.duration_minutes,
         status: apt.status,
         // ✅ Debug: Event-Farben direkt setzen
-        classNames: [`category-${category}`],
+        classNames: [`category-${category}`, unpaidClass].filter(Boolean),
         extendedProps: {
           // ✅ Location für 'other' Events wieder hinzufügen - gleiche Priorität wie im Titel
           location: (apt.location_id ? locationsMap[apt.location_id]?.address : '') || '',
@@ -3388,6 +3390,12 @@ defineExpose({
   background-color: white !important;
   background: white !important;
 } */
+
+/* ✅ Roter Rahmen für unbezahlte Termine */
+.fc-event.unpaid-appointment {
+  border: 2px solid #ef4444 !important;
+  border-left: 3px solid #ef4444 !important;
+}
 
 /* Tailwind CSS ::selection Duplikate bereinigen */
 ::selection {
