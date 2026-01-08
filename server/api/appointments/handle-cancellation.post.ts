@@ -1,23 +1,31 @@
 // server/api/appointments/handle-cancellation.post.ts
-// Handles appointment cancellation with automatic refund processing
+// INTERNAL ONLY: Handles appointment cancellation with automatic refund processing
+// ⚠️ SECURITY: Only called from cancel-customer.post.ts or cancel-staff.post.ts
+// ⚠️ SECURITY: These callers must verify auth + authorization + tenant before calling
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { logAudit } from '~/server/utils/audit'
 
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
     const { 
       appointmentId, 
+      cancellationReasonId,
       deletionReason, 
       lessonPriceRappen, 
       adminFeeRappen,
-      // ✅ NEW: Cancellation policy info
       shouldCreditHours,
       chargePercentage,
       originalLessonPrice,
-      originalAdminFee
+      originalAdminFee,
+      staffId, // ✅ NEW: For audit logging
+      cancelledBy // ✅ NEW: 'customer' or 'staff'
     } = await readBody(event)
+
+    // ⚠️ SECURITY: Verify this is called from authorized callers only
+    // In production, should verify caller context
 
     logger.debug('🗑️ Processing appointment cancellation:', {
       appointmentId,

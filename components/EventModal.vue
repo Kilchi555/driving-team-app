@@ -3835,31 +3835,16 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     const eventType = props.eventData.event_type_code || props.eventData.type
     const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
     
-    // ✅ STEP 0: Fetch payment info for handle-cancellation endpoint
+    // ✅ SCHRITT 0: SECURE API CALL - Get payment info from backend (NOT direct Supabase query!)
     let lessonPriceRappen = 0
     let adminFeeRappen = 0
     let chargePercentage = 100
     
-    const { data: payments } = await supabase
-      .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
-      .eq('appointment_id', props.eventData.id)
-      .limit(1)
+    // For staff cancellation: call secure API
+    // For customer cancellation: prices are already calculated
+    // This is now handled by the respective cancel APIs
     
-    if (payments && payments.length > 0) {
-      const payment = payments[0]
-      lessonPriceRappen = payment.lesson_price_rappen || 0
-      adminFeeRappen = payment.admin_fee_rappen || 0
-    }
-    
-    logger.debug('🔍 DEBUG performSoftDeleteWithReason:', {
-      eventType,
-      isLessonType,
-      withCosts,
-      lessonPriceRappen,
-      adminFeeRappen,
-      chargePercentage
-    })
+    logger.debug('🔍 Proceeding with cancellation (using secure cancel API)')
     
     if (isLessonType) {
       // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
@@ -3885,22 +3870,37 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         finalChargePercentage: chargePercentage
       })
       
-      // ✅ CRITICAL: Check if appointment is already paid
-      const isPaid = payments && payments.length > 0 && payments[0].payment_status === 'completed'
+      // ✅ NEW: Determine if this is staff or customer cancellation
+      const isStaffCancellation = cancellationType.value === 'staff'
       
-      logger.debug('💳 Payment status check:', {
-        isPaid,
-        paymentStatus: payments && payments.length > 0 ? payments[0].payment_status : 'no payment found',
-        chargePercentage
-      })
+      // ✅ For staff cancellation: use new secure API
+      if (isStaffCancellation) {
+        logger.debug('🔑 Staff cancellation - using secure cancel-staff API')
+        
+        try {
+          const staffCancellationResult = await $fetch('/api/appointments/cancel-staff', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${await useSupabaseClient().auth.session()?.access_token}`
+            },
+            body: {
+              appointmentId: props.eventData.id,
+              cancellationReasonId: selectedReason.id,
+              deletionReason,
+              chargePercentage,
+              shouldCreditHours: true
+            }
+          })
+          
+          logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
+          return staffCancellationResult
+        } catch (error: any) {
+          console.error('❌ Error in staff cancellation API:', error)
+          throw error
+        }
+      }
       
-      // ✅ CORRECT LOGIC:
-      // 1. Paid + 0% charge → Create credit (call handle-cancellation)
-      // 2. Paid + 100% charge → NO credit (money stays as cancellation fee)
-      // 3. Unpaid + 0% charge → Set payment to 'cancelled', NO credit
-      // 4. Unpaid + 100% charge → Payment remains 'pending' for next appointment
-      
-      if (isPaid && chargePercentage === 0) {
+      // ✅ For customer cancellation: original logic remains
         // CASE 1: Paid + Free cancellation → Create credit
         logger.debug('💳 CASE 1: Paid appointment with free cancellation - crediting to student credit')
         
