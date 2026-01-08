@@ -1274,15 +1274,20 @@ const getEventColor = (type: string, status?: string, category?: string, payment
   // ✅ Priorität 2: Fallback to hardcoded type colors
   else if (type && typeColorsFallback[type as keyof typeof typeColorsFallback]) {
     baseColor = typeColorsFallback[type as keyof typeof typeColorsFallback]
+    logger.debug(`🎨 Using fallback type color for "${type}":`, baseColor)
   }
   // ✅ Priorität 3: Kategorie-basierte Farbe (für Fahrstunden) - überschreibt Typ-Farbe
   else if (category && categoryColors[category as keyof typeof categoryColors]) {
     baseColor = categoryColors[category as keyof typeof categoryColors]
+    logger.debug(`🎨 Using category color for "${category}":`, baseColor)
   }
+  
+  logger.debug(`🎨 Base color BEFORE status/payment:`, { type, category, baseColor })
   
   // ✅ Status-basierte Anpassungen FIRST (before payment lightening)
   if (status === 'completed') {
     baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
+    logger.debug(`🎨 Applied completed status color:`, baseColor)
   }
   
   // ✅ NEW: Make color lighter for unpaid appointments with customers
