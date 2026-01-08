@@ -76,3 +76,4 @@ CREATE POLICY "Allow insert for authenticated and anon users"
 
 
 
+

@@ -838,56 +838,67 @@ const goToLogin = async () => {
 // Load and display regulations
 const openRegulationModal = async (type: string) => {
   try {
-    const supabase = getSupabase()
     const activeTenantId = userData.value?.tenant_id
+    const onboardingToken = route.params.token as string
     
     const typeLabel = type === 'nutzungsbedingungen' ? 'Nutzungsbedingungen' : 'Datenschutzerklärung'
-    logger.debug('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
+    logger.debug('📋 Loading regulation via API:', { type, tenantId: activeTenantId, token: onboardingToken })
     
     if (!activeTenantId) {
       console.error('❌ No tenant_id available')
       showErrorMessage(`Fehler: Die Tenant-Informationen fehlen. Bitte kontaktiere die Fahrschule.`)
       return
     }
-    
-    // Try to load tenant-specific reglement first, then fall back to global
-    const { data: regulations, error } = await supabase
-      .from('tenant_reglements')
-      .select('*')
-      .eq('type', type)
-      .eq('is_active', true)
-      .or(`tenant_id.eq.${activeTenantId},tenant_id.is.null`)
-      .order('tenant_id', { ascending: false })
-      .limit(1)
-    
-    logger.debug('📋 Query result:', { regulations, error })
-    
-    if (error) {
-      console.error('❌ Error loading reglement:', error)
-      showErrorMessage(`Fehler beim Laden der ${typeLabel}. Bitte versuche es später erneut oder kontaktiere die Fahrschule.`)
+
+    if (!onboardingToken) {
+      console.error('❌ No onboarding token available')
+      showErrorMessage(`Fehler: Token fehlt. Bitte versuche es später erneut.`)
       return
     }
     
-    if (regulations && regulations.length > 0) {
+    // ✅ Call secure API endpoint instead of direct DB query
+    const regulation = await $fetch<any>('/api/onboarding/reglements', {
+      method: 'GET',
+      query: {
+        type,
+        tenantId: activeTenantId,
+        token: onboardingToken
+      }
+    }).catch((err: any) => {
+      logger.error('❌ API Error:', err)
+      throw err
+    })
+    
+    if (regulation?.data) {
       // Load tenant data for placeholder replacement
       const tenantData = await loadTenantData(activeTenantId)
       
       // Replace placeholders in content
       const processedRegulation = {
-        ...regulations[0],
-        content: replacePlaceholders(regulations[0].content, tenantData)
+        ...regulation.data,
+        content: replacePlaceholders(regulation.data.content, tenantData)
       }
       
       currentRegulation.value = processedRegulation
       showRegulationModal.value = true
-      logger.debug('✅ Opened reglement modal:', type, regulations[0].title)
+      logger.debug('✅ Opened reglement modal:', type, regulation.data.title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
       showErrorMessage(`${typeLabel} sind noch nicht verfügbar. Bitte kontaktiere die Fahrschule.`)
     }
   } catch (err: any) {
-    console.error('❌ Error opening reglement modal:', err)
-    showErrorMessage('Fehler beim Laden der Dokumente. Bitte versuche es später erneut.')
+    logger.error('❌ Error opening reglement modal:', err)
+    const errorMessage = err?.data?.statusMessage || err?.message || 'Fehler beim Laden der Dokumente'
+    
+    if (errorMessage.includes('Too many requests')) {
+      showErrorMessage('Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.')
+    } else if (errorMessage.includes('expired')) {
+      showErrorMessage('Dein Onboarding-Link ist abgelaufen. Bitte fordere einen neuen an.')
+    } else if (errorMessage.includes('not found')) {
+      showErrorMessage(`${err?.data?.statusMessage?.split(' ')[0] || 'Reglement'} sind noch nicht verfügbar.`)
+    } else {
+      showErrorMessage(errorMessage)
+    }
   }
 }
 
@@ -959,7 +970,7 @@ const completeOnboarding = async () => {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('type', type)
-        formData.append('userId', userData.value.id)
+        formData.append('token', token)
 
         try {
           const { data: uploadData, error: uploadError } = await useFetch('/api/students/upload-document', {
@@ -1058,4 +1069,5 @@ const completeOnboarding = async () => {
   }
 }
 </script>
+
 

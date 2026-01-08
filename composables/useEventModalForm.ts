@@ -918,6 +918,20 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       if (isChargeableLesson) {
         try {
+          // ✅ CRITICAL FIX: Calculate products BEFORE payment calculation
+          const selectedProducts = refs?.selectedProducts?.value || []
+          const calculatedProductsPriceRappen = selectedProducts.reduce((total: number, item: any) => {
+            const price = item.product?.price || item.price || 0
+            const quantity = item.quantity || 1
+            return total + Math.round(price * quantity * 100)
+          }, 0)
+          
+          logger.debug('📦 Products calculation for payment:', {
+            productCount: selectedProducts.length,
+            productsPriceRappen: calculatedProductsPriceRappen,
+            productsPriceCHF: (calculatedProductsPriceRappen / 100).toFixed(2)
+          })
+          
           // ✅ Berechne Preis basierend auf Duration und pricePerMinute
           // Diese sind IMMER verfügbar, im Gegensatz zu formData.base_price_rappen
           const durationMinutes = formData.value.duration_minutes || 45
@@ -926,7 +940,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
           // Berechne die Einzelkomponenten
           basePriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
           adminFeeRappen = refs?.dynamicPricing?.value?.adminFeeRappen || 0
-          productsPriceRappen = formData.value.products_total_rappen || 0
+          productsPriceRappen = calculatedProductsPriceRappen // ✅ Use calculated value instead of formData
           discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
           
           totalAmountRappenForPayment = Math.max(0, 

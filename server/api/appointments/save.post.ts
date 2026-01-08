@@ -123,6 +123,86 @@ export default defineEventHandler(async (event) => {
       }
       result = data
       logger.debug('✅ Appointment updated:', result.id)
+      
+      // ============ UPDATE PAYMENT FOR EDITED APPOINTMENT ============
+      // ✅ If this is a lesson/exam/theory appointment, update the existing payment
+      const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
+      
+      if (isChargeableEventType && (totalAmountRappenForPayment !== undefined || productsPriceRappen !== undefined || discountAmountRappen !== undefined)) {
+        try {
+          // Check if payment exists
+          const { data: existingPayment } = await supabase
+            .from('payments')
+            .select('id, payment_status, total_amount_rappen')
+            .eq('appointment_id', eventId)
+            .maybeSingle()
+          
+          if (existingPayment) {
+            // Calculate new amounts
+            let finalTotalAmount = totalAmountRappenForPayment ?? 0
+            let finalBasePrice = basePriceRappen || 0
+            
+            if (!finalBasePrice || finalBasePrice <= 0) {
+              const durationMins = appointmentData.duration_minutes || 45
+              const pricePerMin = 2.11
+              finalBasePrice = Math.round(durationMins * pricePerMin * 100)
+            }
+            
+            if (finalTotalAmount === undefined || finalTotalAmount === null) {
+              finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
+            }
+            
+            finalTotalAmount = Math.max(0, finalTotalAmount)
+            const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
+            
+            logger.debug('💳 Updating payment for edited appointment:', {
+              paymentId: existingPayment.id,
+              appointmentId: eventId,
+              oldTotal: (existingPayment.total_amount_rappen / 100).toFixed(2),
+              newTotal: (remainingAmountRappen / 100).toFixed(2),
+              creditUsed: ((creditUsedRappen || 0) / 100).toFixed(2)
+            })
+            
+            const paymentUpdateData: any = {
+              lesson_price_rappen: finalBasePrice,
+              admin_fee_rappen: adminFeeRappen || 0,
+              products_price_rappen: productsPriceRappen || 0,
+              discount_amount_rappen: discountAmountRappen || 0,
+              total_amount_rappen: remainingAmountRappen,
+              credit_used_rappen: creditUsedRappen || 0,
+              updated_at: new Date().toISOString()
+            }
+            
+            // ✅ Update payment_status based on remaining amount
+            // Only change status if it was 'pending' before (don't override 'completed' if paid, or 'cancelled')
+            if (existingPayment.payment_status === 'pending' || existingPayment.payment_status === 'completed') {
+              paymentUpdateData.payment_status = remainingAmountRappen === 0 ? 'completed' : 'pending'
+              
+              // Set or clear paid_at
+              if (remainingAmountRappen === 0 && !existingPayment.paid_at) {
+                paymentUpdateData.paid_at = new Date().toISOString()
+              } else if (remainingAmountRappen > 0) {
+                paymentUpdateData.paid_at = null
+              }
+            }
+            
+            const { error: updatePaymentError } = await supabase
+              .from('payments')
+              .update(paymentUpdateData)
+              .eq('id', existingPayment.id)
+            
+            if (updatePaymentError) {
+              logger.warn('⚠️ Failed to update payment (non-critical):', updatePaymentError)
+            } else {
+              logger.debug('✅ Payment updated for edited appointment')
+            }
+          } else {
+            logger.debug('ℹ️ No existing payment found for edited appointment, skipping payment update')
+          }
+        } catch (paymentErr: any) {
+          logger.warn('⚠️ Payment update exception (non-critical):', paymentErr.message)
+        }
+      }
     } else {
       // Create new appointment
       const { data, error: insertError } = await supabase
@@ -142,32 +222,62 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ Appointment created:', result.id)
       
       // ============ CREATE PAYMENT FOR NEW APPOINTMENT ============
-      if (totalAmountRappenForPayment && totalAmountRappenForPayment > 0) {
+      // ✅ FIX: ALWAYS create payment for lesson/exam/theory appointments (even if amount is 0!)
+      const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
+      
+      if (isChargeableEventType) {
         try {
+          // ✅ Calculate amount from appointment if not provided or if it's explicitly 0 (after discounts)
+          let finalTotalAmount = totalAmountRappenForPayment ?? 0
+          let finalBasePrice = basePriceRappen || 0
+          
+          // Fallback calculation if base price not provided
+          if (!finalBasePrice || finalBasePrice <= 0) {
+            const durationMins = appointmentData.duration_minutes || 45
+            const pricePerMin = 2.11 // Default CHF 2.11/min
+            finalBasePrice = Math.round(durationMins * pricePerMin * 100)
+          }
+          
+          // Recalculate total if not explicitly provided
+          if (finalTotalAmount === undefined || finalTotalAmount === null) {
+            finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
+          }
+          
+          // ✅ Ensure amount is never negative
+          finalTotalAmount = Math.max(0, finalTotalAmount)
+          
           logger.debug('💳 Creating payment for new appointment:', {
             appointmentId: result.id,
             userId: result.user_id,
-            amount: totalAmountRappenForPayment
+            basePrice: (finalBasePrice / 100).toFixed(2),
+            adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
+            products: ((productsPriceRappen || 0) / 100).toFixed(2),
+            discount: ((discountAmountRappen || 0) / 100).toFixed(2),
+            totalAmount: (finalTotalAmount / 100).toFixed(2),
+            creditUsed: ((creditUsedRappen || 0) / 100).toFixed(2)
           })
+          
+          // ✅ Calculate the remaining amount after credit is deducted
+          const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
           
           const paymentData = {
             appointment_id: result.id,
             user_id: result.user_id,
             tenant_id: appointmentData.tenant_id,
-            lesson_price_rappen: basePriceRappen || totalAmountRappenForPayment,
-            admin_fee_rappen: adminFeeRappen,
-            products_price_rappen: productsPriceRappen,
-            discount_amount_rappen: discountAmountRappen,
-            // ✅ FIX: total_amount_rappen should be the REMAINING amount after credit is deducted
-            total_amount_rappen: Math.max(0, totalAmountRappenForPayment - creditUsedRappen),
+            lesson_price_rappen: finalBasePrice,
+            admin_fee_rappen: adminFeeRappen || 0,
+            products_price_rappen: productsPriceRappen || 0,
+            discount_amount_rappen: discountAmountRappen || 0,
+            // ✅ FIX: total_amount_rappen is the REMAINING amount after credit is deducted
+            total_amount_rappen: remainingAmountRappen,
             payment_method: paymentMethodForPayment || 'wallee',
-            // ✅ FIX: If credit covers the entire amount, mark as completed
-            payment_status: creditUsedRappen >= totalAmountRappenForPayment ? 'completed' : 'pending',
-            // ✅ FIX: Set paid_at if payment is completed
-            ...(creditUsedRappen >= totalAmountRappenForPayment && { paid_at: new Date().toISOString() }),
+            // ✅ CRITICAL FIX: Check REMAINING amount (after credit), not finalTotalAmount!
+            payment_status: remainingAmountRappen === 0 ? 'completed' : 'pending',
+            // ✅ FIX: Set paid_at ONLY if remaining amount is 0 (nothing left to pay)
+            ...(remainingAmountRappen === 0 ? { paid_at: new Date().toISOString() } : {}),
             // ✅ NEW: Store credit used in payment record
-            credit_used_rappen: creditUsedRappen,
-            description: appointmentData.title || `Fahrlektio ${appointmentData.type}`,
+            credit_used_rappen: creditUsedRappen || 0,
+            description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,
             created_at: new Date().toISOString()
           }
           

@@ -579,6 +579,39 @@
       </div>
     </div>
 
+    <!-- ✅ MODAL: Reglement Detail-Ansicht (IN MODAL, nicht als separate Seite!) -->
+    <div v-if="showReglementDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 flex-shrink-0 flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-gray-900">{{ showReglementTitle }}</h2>
+          <button 
+            @click="showReglementDetailModal = false"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto flex-1 prose prose-lg max-w-none">
+          <div v-html="showReglementContent"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-6 border-t border-gray-200 flex-shrink-0">
+          <button 
+            @click="showReglementDetailModal = false; showReglementeModal = true"
+            class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Zurück zur Übersicht
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ✅ MODAL: Bestätigung mit automatischer Zahlung -->
     <div v-if="showConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -1008,6 +1041,9 @@ const selectedInstructor = ref<any>(null)
 const pendingConfirmations = ref<any[]>([])
 const showConfirmationModal = ref(false)
 const showReglementeModal = ref(false)
+const showReglementDetailModal = ref(false)
+const showReglementContent = ref('')
+const showReglementTitle = ref('')
 const hasPaymentMethod = ref(false)
 // Hardcoded payment thresholds
 const HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE = 24  // Capture exactly 24h before
@@ -1444,7 +1480,34 @@ const navigateToShop = async () => {
 }
 
 const navigateToReglement = async (type: string) => {
-  await navigateTo(`/customer/reglemente/${type}`)
+  // ✅ CHANGED: Don't navigate away, instead load and show reglement in modal
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      console.error('No auth token')
+      return
+    }
+
+    // Load reglement content via API
+    const response = await $fetch<any>('/api/customer/reglements', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      query: { type }
+    })
+
+    if (response?.success && response?.data) {
+      // Show in modal with content
+      showReglementContent.value = response.data.content || ''
+      showReglementTitle.value = response.data.title || type
+      showReglementDetailModal.value = true
+    }
+  } catch (err) {
+    console.error('Error loading reglement:', err)
+  }
 }
 
 const navigateToMyCourses = async () => {

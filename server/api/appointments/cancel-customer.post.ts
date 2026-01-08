@@ -44,10 +44,8 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 2: RATE LIMITING ============
     const rateLimitResult = await checkRateLimit(
-      authenticatedUserId,
-      'cancel_appointment',
-      10, // Max 10 cancellations per hour
-      3600000 // 1 hour window
+      ipAddress,
+      'cancel_customer'
     )
     
     if (!rateLimitResult.allowed) {

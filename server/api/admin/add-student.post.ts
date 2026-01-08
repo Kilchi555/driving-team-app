@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     if (body.phone) {
       const { data: existingPhone } = await supabaseAdmin
         .from('users')
-        .select('id, email, auth_user_id')
+        .select('id, email, auth_user_id, is_active, onboarding_status, first_name, last_name')
         .eq('tenant_id', tenantId)
         .eq('phone', body.phone)
         .single()
@@ -85,7 +85,7 @@ export default defineEventHandler(async (event) => {
     if (body.email && body.email.trim() !== '') {
       const { data: existingEmail } = await supabaseAdmin
         .from('users')
-        .select('id, phone, auth_user_id')
+        .select('id, phone, auth_user_id, is_active, onboarding_status, first_name, last_name')
         .eq('tenant_id', tenantId)
         .eq('email', body.email.trim())
         .neq('email', '')

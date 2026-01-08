@@ -87,9 +87,8 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 4: RATE LIMITING ============
     const { allowed, retryAfter } = await checkRateLimit(
-      authenticatedUserId,
-      'cancel_appointment',
-      ipAddress
+      ipAddress,
+      'cancel_staff'
     )
 
     if (!allowed) {

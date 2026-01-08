@@ -802,7 +802,7 @@ const payIndividual = async (payment: any) => {
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
         failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
       }
-    })
+    }) as any
     
     if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
       // Update payment with Wallee transaction ID and credit used
