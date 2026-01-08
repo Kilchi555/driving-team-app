@@ -1280,7 +1280,13 @@ const getEventColor = (type: string, status?: string, category?: string, payment
     baseColor = categoryColors[category as keyof typeof categoryColors]
   }
   
+  // ✅ Status-basierte Anpassungen FIRST (before payment lightening)
+  if (status === 'completed') {
+    baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
+  }
+  
   // ✅ NEW: Make color lighter for unpaid appointments with customers
+  // Apply AFTER status color, so payment status is visible even for completed appointments
   // Only apply to appointments that have a customer (user_id present)
   // and are not yet paid (payment_status is not 'completed')
   const hasCustomer = userId && userId !== ''
@@ -1290,11 +1296,6 @@ const getEventColor = (type: string, status?: string, category?: string, payment
     // Make color 40% lighter for unpaid appointments
     baseColor = lightenColor(baseColor, 0.4)
     logger.debug(`💰 Applying lighter color for unpaid appointment:`, baseColor)
-  }
-  
-  // ✅ Status-basierte Anpassungen (überschreibt alles)
-  if (status === 'completed') {
-    baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
   }
   // ✅ cancelled Events behalten ihre normale Farbe
   
