@@ -3871,164 +3871,138 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       })
       
       // ✅ NEW: Determine if this is staff or customer cancellation
-      const isStaffCancellation = cancellationType.value === 'staff'
+      const isStaffCancellation = cancellationType === 'staff'
       
       // ✅ For staff cancellation: use new secure API
       if (isStaffCancellation) {
         logger.debug('🔑 Staff cancellation - using secure cancel-staff API')
         
-        try {
-          const staffCancellationResult = await $fetch('/api/appointments/cancel-staff', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${await useSupabaseClient().auth.session()?.access_token}`
-            },
-            body: {
-              appointmentId: props.eventData.id,
-              cancellationReasonId: selectedReason.id,
-              deletionReason,
-              chargePercentage,
-              shouldCreditHours: true
-            }
-          })
-          
-          logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
-          return staffCancellationResult
-        } catch (error: any) {
-          console.error('❌ Error in staff cancellation API:', error)
-          throw error
+        const { data: sessionData } = await supabase.auth.getSession()
+        const accessToken = sessionData?.session?.access_token
+        
+        if (!accessToken) {
+          throw new Error('No valid session for staff cancellation')
         }
+        
+        const staffCancellationResult = await $fetch('/api/appointments/cancel-staff', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: {
+            appointmentId: props.eventData.id,
+            cancellationReasonId: cancellationReasonId,
+            deletionReason,
+            chargePercentage,
+            shouldCreditHours: true
+          }
+        })
+        
+        logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
+        
+        // ✅ After successful staff cancellation, emit close and refresh
+        emit('appointment-deleted', props.eventData.id)
+        emit('save-event', { type: 'deleted', id: props.eventData.id })
+        handleClose()
+        return
       }
       
-      // ✅ For customer cancellation: original logic remains
-        // CASE 1: Paid + Free cancellation → Create credit
-        logger.debug('💳 CASE 1: Paid appointment with free cancellation - crediting to student credit')
-        
-        try {
-          const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
-            method: 'POST',
-            body: {
-              appointmentId: props.eventData.id,
-              deletionReason,
-              lessonPriceRappen,
-              adminFeeRappen,
-              shouldCreditHours: true,
-              chargePercentage: 0,
-              originalLessonPrice: lessonPriceRappen,
-              originalAdminFee: adminFeeRappen
-            }
-          })
-          
-          logger.debug('✅ Credit created for paid appointment:', cancellationResult)
-        } catch (error: any) {
-          console.error('❌ Error creating credit:', error)
+      // ✅ For customer cancellation: call handle-cancellation API
+      logger.debug('💳 Customer cancellation - calling handle-cancellation API')
+      
+      const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+        method: 'POST',
+        body: {
+          appointmentId: props.eventData.id,
+          deletionReason,
+          lessonPriceRappen,
+          adminFeeRappen,
+          shouldCreditHours: true,
+          chargePercentage,
+          originalLessonPrice: lessonPriceRappen,
+          originalAdminFee: adminFeeRappen
         }
-      } else if (isPaid && chargePercentage > 0) {
-        // CASE 2: Paid + Charged cancellation → No credit
-        logger.debug('💳 CASE 2: Paid appointment with charge - NO credit given (cancellation fee applies)')
-        logger.debug('   - Payment remains completed')
-        logger.debug('   - Amount is kept as cancellation fee')
-      } else if (!isPaid && chargePercentage === 0) {
-        // CASE 3: Unpaid + Free cancellation → Set payment to cancelled, NO credit
-        logger.debug('💳 CASE 3: Unpaid appointment with free cancellation - setting payment to cancelled')
+      })
+      
+      logger.debug('✅ Cancellation processed:', cancellationResult)
+    }
+    
+    // ✅ Void authorized payments if cancellation is >24h before
+    const appointmentTimeForVoid = new Date(props.eventData.start || props.eventData.start_time)
+    const nowForVoid = new Date()
+    const hoursUntilAppointmentForVoid = (appointmentTimeForVoid.getTime() - nowForVoid.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursUntilAppointmentForVoid > 24) {
+      // ✅ Hole authorized Payments und storniere sie
+      const { data: authorizedPayments } = await supabase
+        .from('payments')
+        .select('id, wallee_transaction_id, payment_status')
+        .eq('appointment_id', props.eventData.id)
+        .eq('payment_status', 'authorized')
+        .not('wallee_transaction_id', 'is', null)
+      
+      if (authorizedPayments && authorizedPayments.length > 0) {
+        logger.debug(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
         
-        if (payments && payments.length > 0) {
-          const { error: updatePaymentError } = await supabase
-            .from('payments')
-            .update({
-              payment_status: 'cancelled',
-              updated_at: new Date().toISOString()
+        for (const payment of authorizedPayments) {
+          try {
+            await $fetch('/api/wallee/void-payment', {
+              method: 'POST',
+              body: {
+                paymentId: payment.id,
+                transactionId: payment.wallee_transaction_id,
+                reason: `Appointment cancelled more than 24h before start: ${deletionReason}`
+              }
             })
-            .eq('id', payments[0].id)
-          
-          if (updatePaymentError) {
-            console.error('❌ Error updating payment to cancelled:', updatePaymentError)
-          } else {
-            logger.debug('✅ Payment set to cancelled - no credit given')
-          }
-        }
-      } else if (!isPaid && chargePercentage > 0) {
-        // CASE 4: Unpaid + Charged cancellation → Payment remains pending
-        logger.debug('💳 CASE 4: Unpaid appointment with charge - payment remains pending')
-        logger.debug('   - Payment status: Will remain pending')
-        logger.debug('   - Will be charged on next appointment')
-      }
-      const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
-      const now = new Date()
-      const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
-      
-      if (hoursUntilAppointment > 24) {
-        // ✅ Hole authorized Payments und storniere sie
-        const { data: authorizedPayments } = await supabase
-          .from('payments')
-          .select('id, wallee_transaction_id, payment_status')
-          .eq('appointment_id', props.eventData.id)
-          .eq('payment_status', 'authorized')
-          .not('wallee_transaction_id', 'is', null)
-        
-        if (authorizedPayments && authorizedPayments.length > 0) {
-          logger.debug(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
-          
-          for (const payment of authorizedPayments) {
-            try {
-              await $fetch('/api/wallee/void-payment', {
-                method: 'POST',
-                body: {
-                  paymentId: payment.id,
-                  transactionId: payment.wallee_transaction_id,
-                  reason: `Appointment cancelled more than 24h before start: ${deletionReason}`
-                }
-              })
-              logger.debug(`✅ Payment ${payment.id} voided successfully`)
-            } catch (voidError: any) {
-              console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
-            }
+            logger.debug(`✅ Payment ${payment.id} voided successfully`)
+          } catch (voidError: any) {
+            console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
           }
         }
       }
+    }
+    
+    // ✅ NOTE: Payments are NOT deleted! The handle-cancellation endpoint already:
+    // - Updates payment_status to 'refunded'
+    // - Sets refunded_at timestamp
+    // - Keeps payment record for audit trail and accounting
+    // This allows full tracking of all financial transactions
+    
+    // 1.2 Product sales und items löschen (inklusive Rabatte)
+    logger.debug('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
+    
+    // Zuerst alle product_sale_ids sammeln
+    const { data: productSales } = await supabase
+      .from('product_sales')
+      .select('id')
+      .eq('appointment_id', props.eventData.id)
+    
+    if (productSales && productSales.length > 0) {
+      const productSaleIds = productSales.map(ps => ps.id)
+      logger.debug('🗑️ Found product sales to delete:', productSaleIds)
       
-      // ✅ NOTE: Payments are NOT deleted! The handle-cancellation endpoint already:
-      // - Updates payment_status to 'refunded'
-      // - Sets refunded_at timestamp
-      // - Keeps payment record for audit trail and accounting
-      // This allows full tracking of all financial transactions
+      // Product sale items löschen (zuerst)
+      const { error: productSaleItemsError } = await supabase
+        .from('product_sale_items')
+        .delete()
+        .in('product_sale_id', productSaleIds)
       
-      // 1.2 Product sales und items löschen (inklusive Rabatte)
-      logger.debug('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
+      if (productSaleItemsError) {
+        console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
+      } else {
+        logger.debug('✅ Product sale items deleted successfully')
+      }
       
-      // Zuerst alle product_sale_ids sammeln
-      const { data: productSales } = await supabase
+      // Dann product_sales löschen (inklusive Rabatte)
+      const { error: productSalesError } = await supabase
         .from('product_sales')
-        .select('id')
+        .delete()
         .eq('appointment_id', props.eventData.id)
       
-      if (productSales && productSales.length > 0) {
-        const productSaleIds = productSales.map(ps => ps.id)
-        logger.debug('🗑️ Found product sales to delete:', productSaleIds)
-        
-        // Product sale items löschen (zuerst)
-        const { error: productSaleItemsError } = await supabase
-          .from('product_sale_items')
-          .delete()
-          .in('product_sale_id', productSaleIds)
-        
-        if (productSaleItemsError) {
-          console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
-        } else {
-          logger.debug('✅ Product sale items deleted successfully')
-        }
-        
-        // Dann product_sales löschen (inklusive Rabatte)
-        const { error: productSalesError } = await supabase
-          .from('product_sales')
-          .delete()
-          .eq('appointment_id', props.eventData.id)
-        
-        if (productSalesError) {
-          console.warn('⚠️ Could not delete product sales:', productSalesError)
-        } else {
-          logger.debug('✅ Product sales deleted successfully')
-        }
+      if (productSalesError) {
+        console.warn('⚠️ Could not delete product sales:', productSalesError)
+      } else {
+        logger.debug('✅ Product sales deleted successfully')
       }
     }
     
