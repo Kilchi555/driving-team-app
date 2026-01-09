@@ -2,11 +2,11 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
-import { getAuthUser } from '~/server/utils/auth'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    const user = await getAuthUser(event)
+    const user = await getAuthenticatedUser(event)
     if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     if (!['admin', 'staff'].includes(user.role || '')) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
 
