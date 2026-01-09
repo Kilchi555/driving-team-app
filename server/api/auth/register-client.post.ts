@@ -95,44 +95,41 @@ export default defineEventHandler(async (event) => {
     }
     logger.debug('Register', '✅ Email validation passed')
 
-    // Verify hCaptcha token
-    if (!captchaToken) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Captcha-Verifikation erforderlich'
-      })
-    }
+    // Verify hCaptcha token (only if provided - adaptive captcha)
+    if (captchaToken) {
+      logger.debug('Register', '🔐 Verifying hCaptcha token...')
+      const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
+      if (!hcaptchaSecret) {
+        console.error('❌ HCAPTCHA_SECRET_KEY not configured')
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Server configuration error'
+        })
+      }
 
-    logger.debug('Register', '🔐 Verifying hCaptcha token...')
-    const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
-    if (!hcaptchaSecret) {
-      console.error('❌ HCAPTCHA_SECRET_KEY not configured')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
+      const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          secret: hcaptchaSecret,
+          response: captchaToken
+        }).toString()
       })
-    }
 
-    const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        secret: hcaptchaSecret,
-        response: captchaToken
-      }).toString()
-    })
-
-    const captchaData = await captchaResponse.json()
-    if (!captchaData.success) {
-      console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      })
+      const captchaData = await captchaResponse.json()
+      if (!captchaData.success) {
+        console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
+        })
+      }
+      logger.debug('Register', '✅ hCaptcha verified successfully')
+    } else {
+      logger.debug('Register', 'ℹ️ No captcha token provided (adaptive captcha - first registration from IP)')
     }
-    logger.debug('Register', '✅ hCaptcha verified successfully')
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
