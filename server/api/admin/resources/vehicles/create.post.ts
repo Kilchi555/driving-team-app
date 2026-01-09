@@ -1,0 +1,49 @@
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getAuthUser } from '~/server/utils/auth'
+
+export default defineEventHandler(async (event) => {
+  try {
+    const user = await getAuthUser(event)
+    if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    if (!['admin', 'staff'].includes(user.role || '')) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+
+    const rateLimitKey = `vehicle_create:${user.id}`
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000)
+    if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
+
+    const tenantId = user.tenant_id
+    if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'No tenant' })
+
+    const body = await readBody(event)
+    const { name, license_plate, type, capacity } = body
+
+    if (!name || !license_plate) throw createError({ statusCode: 400, statusMessage: 'Missing required fields' })
+
+    const supabase = getSupabaseAdmin()
+
+    const { data: vehicle, error: err } = await supabase
+      .from('vehicles')
+      .insert({
+        tenant_id: tenantId,
+        name,
+        license_plate,
+        type,
+        capacity,
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (err) throw err
+
+    logger.debug('✅ Vehicle created:', vehicle.id)
+    return { success: true, data: vehicle, error: null }
+  } catch (error: any) {
+    logger.error('❌ Error creating vehicle:', error)
+    return { success: false, data: null, error: error.statusMessage || 'Failed' }
+  }
+})
+
