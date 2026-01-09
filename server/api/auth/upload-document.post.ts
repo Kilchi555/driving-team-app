@@ -13,6 +13,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ LAYER 1: File Type Validation
+    const fileExtension = fileName.split('.').pop()?.toLowerCase()
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf']
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      logger.warn('❌ Invalid file type:', fileExtension)
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Ungültiger Dateityp. Nur JPG, PNG und PDF sind erlaubt.`
+      })
+    }
+
     // Create service role client to bypass RLS for storage
     const { createClient } = await import('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
@@ -42,22 +53,42 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ LAYER 2: File Size Validation (5MB limit)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (fileBuffer.length > maxSize) {
+      logger.warn('❌ File too large:', fileBuffer.length, 'bytes')
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Datei zu groß (${(fileBuffer.length / (1024 * 1024)).toFixed(2)} MB). Maximale Größe: 5 MB.`
+      })
+    }
+
+    // Determine content type based on file extension
+    const contentTypeMap: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'pdf': 'application/pdf'
+    }
+    const contentType = contentTypeMap[fileExtension] || 'image/jpeg'
+
     // Upload file to storage in user-specific folder with timestamp
     // Format: lernfahrausweis_B_1234567890.jpg (matches parser in list-user-documents)
     const category = path.split('/')[0] // Extract category code
-    const fileExtension = fileName.split('.').pop()
     const timestampedFileName = `lernfahrausweis_${category}_${Date.now()}.${fileExtension}`
     const storagePath = `${userId}/${timestampedFileName}`
     logger.debug(`📤 Uploading file to ${bucket}/${storagePath}`, {
       category,
-      fileName: timestampedFileName
+      fileName: timestampedFileName,
+      size: fileBuffer.length,
+      contentType
     })
     const { data, error: uploadError } = await serviceSupabase.storage
       .from(bucket)
       .upload(storagePath, fileBuffer, {
         cacheControl: '3600',
         upsert: false,
-        contentType: 'image/jpeg'
+        contentType
       })
 
     if (uploadError) {
@@ -95,7 +126,7 @@ export default defineEventHandler(async (event) => {
             side: 'front',
             file_name: timestampedFileName,
             file_size: fileBuffer.length,
-            file_type: 'image/jpeg',
+            file_type: contentType, // ✅ Use correct content type
             storage_path: storagePath,
             title: `Lernfahrausweis (${path})`,
             is_verified: false

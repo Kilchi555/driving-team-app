@@ -977,36 +977,73 @@ const triggerCategoryUpload = (category: string) => {
 const handleCategoryFileUpload = (event: Event, category: string) => {
   logger.debug('📤 Category file upload started for:', category)
   const file = (event.target as HTMLInputElement).files?.[0]
+  const input = categoryFileInputs.value[category]
+  
+  if (!file) return
+  
   logger.debug('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
   
-  if (file) {
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      console.error('❌ File too large:', file.size, 'bytes')
-      showError(
-        'Datei zu groß', 
-        `Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.`
-      )
-      // Clear the file input to prevent accidental submission
-      const input = categoryFileInputs.value[category]
-      if (input) {
-        input.value = ''
+  // ✅ Check file type (JPG, PNG, PDF only)
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+  if (!allowedTypes.includes(file.type)) {
+    console.error('❌ Invalid file type:', file.type)
+    showError(
+      'Ungültiger Dateityp',
+      `Nur JPG, PNG und PDF-Dateien sind erlaubt. Ihre Datei ist vom Typ: ${file.type || 'unbekannt'}`
+    )
+    if (input) input.value = ''
+    return
+  }
+  
+  // ✅ Check file size (5MB limit)
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    console.error('❌ File too large:', file.size, 'bytes')
+    showError(
+      'Datei zu groß',
+      `Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.`
+    )
+    if (input) input.value = ''
+    return
+  }
+  
+  const reader = new FileReader()
+  
+  // ✅ Error handling for FileReader
+  reader.onerror = (error) => {
+    console.error('❌ FileReader error for category:', category, error)
+    showError(
+      'Lesefehler',
+      'Die Datei konnte nicht gelesen werden. Bitte versuchen Sie eine andere Datei oder ein anderes Format.'
+    )
+    if (input) input.value = ''
+  }
+  
+  reader.onload = (e) => {
+    try {
+      const result = e.target?.result as string
+      if (!result) {
+        throw new Error('Leere Datei')
       }
-      return
-    }
-    
-    const reader = new FileReader()
-    reader.onload = (e) => {
+      
       logger.debug('✅ File read complete for category:', category)
       uploadedDocuments.value[category] = {
-        data: e.target?.result as string,
+        data: result,
         type: file.type,
         fileName: file.name
       }
       logger.debug('✅ uploadedDocuments updated:', Object.keys(uploadedDocuments.value))
+    } catch (err: any) {
+      console.error('❌ Error processing file:', err)
+      showError(
+        'Fehler beim Verarbeiten',
+        'Die Datei konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.'
+      )
+      if (input) input.value = ''
     }
-    reader.readAsDataURL(file)
   }
+  
+  reader.readAsDataURL(file)
 }
 
 // Clear image for specific category
