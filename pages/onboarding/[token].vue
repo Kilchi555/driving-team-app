@@ -960,6 +960,7 @@ const clearCategoryError = () => {
 // Complete onboarding
 const completeOnboarding = async () => {
   isSubmitting.value = true
+  const documentUploadErrors: Record<string, string> = {} // Track upload errors
 
   try {
     // Upload documents first
@@ -980,16 +981,43 @@ const completeOnboarding = async () => {
 
           if (uploadError.value) {
             console.error('❌ Document upload error:', uploadError.value)
-            throw new Error(`Dokument-Upload fehlgeschlagen: ${uploadError.value.message || 'Unbekannter Fehler'}`)
+            // Store error but don't stop registration - user can continue
+            const errorMsg = uploadError.value.data?.message || uploadError.value.message || 'Unbekannter Fehler'
+            documentUploadErrors[type] = errorMsg
+            logger.warn(`⚠️ Document upload failed for ${type}: ${errorMsg}`)
+            continue // Continue with next file instead of throwing
           }
 
-        if (uploadData.value?.url) {
-          documentUrls[type] = uploadData.value.url
+          if (uploadData.value?.url) {
+            documentUrls[type] = uploadData.value.url
+            logger.debug(`✅ Document uploaded for ${type}`)
           }
         } catch (uploadErr: any) {
           console.error('❌ Error uploading document for category', type, ':', uploadErr)
-          throw new Error(`Fehler beim Upload der Dokumente (${type}): ${uploadErr.message}`)
+          documentUploadErrors[type] = uploadErr.message || 'Upload fehlgeschlagen'
+          logger.warn(`⚠️ Exception uploading document for ${type}: ${uploadErr.message}`)
+          // Continue instead of throwing - registration should not fail due to document upload
+          continue
         }
+      }
+    }
+    
+    // Show document upload errors as warnings, not blockers
+    if (Object.keys(documentUploadErrors).length > 0) {
+      const errorList = Object.entries(documentUploadErrors)
+        .map(([type, msg]) => `• ${type}: ${msg}`)
+        .join('\n')
+      
+      logger.warn('⚠️ Document upload errors:', documentUploadErrors)
+      
+      // Show warning to user but allow them to continue
+      const userConfirmed = confirm(
+        `Einige Dokumente konnten nicht hochgeladen werden:\n\n${errorList}\n\nDu kannst die Registrierung fortsetzen und die Dokumente später hochladen.`
+      )
+      
+      if (!userConfirmed) {
+        isSubmitting.value = false
+        return // User chose to cancel
       }
     }
 

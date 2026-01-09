@@ -21,17 +21,6 @@ export default defineEventHandler(async (event) => {
                       'unknown'
     
     logger.debug('Register', '🔍 Registration attempt from IP:', ipAddress)
-    
-    // Check rate limit
-    const rateLimit = await checkRateLimit(ipAddress, 'register', undefined, undefined, email, tenantId)
-    if (!rateLimit.allowed) {
-      console.warn('⚠️ Rate limit exceeded for IP:', ipAddress)
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es in einer Minute erneut.'
-      })
-    }
-    logger.debug('Register', '✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     const body = await readBody(event)
     const {
@@ -51,6 +40,17 @@ export default defineEventHandler(async (event) => {
       isAdmin = false,
       captchaToken
     } = body
+
+    // Check rate limit (after body is read so we have email and tenantId)
+    const rateLimit = await checkRateLimit(ipAddress, 'register', undefined, undefined, email, tenantId)
+    if (!rateLimit.allowed) {
+      console.warn('⚠️ Rate limit exceeded for IP:', ipAddress)
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es in einer Minute erneut.'
+      })
+    }
+    logger.debug('Register', '✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     // Validate required fields with centralized validators
     const errors: Record<string, string> = {}
