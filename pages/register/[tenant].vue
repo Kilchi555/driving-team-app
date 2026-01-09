@@ -163,8 +163,13 @@
                 v-model="formData.birthDate"
                 type="date"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                @blur="validateBirthDate"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                  fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                ]"
               />
+              <p v-if="fieldErrors.birthDate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthDate }}</p>
             </div>
 
             <!-- Phone -->
@@ -177,10 +182,14 @@
                 type="tel"
                 required
                 @blur="normalizePhone"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                  fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                ]"
                 placeholder="079 123 45 67"
               />
-              <p class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
+              <p v-if="fieldErrors.phone" class="mt-1 text-sm text-red-600">{{ fieldErrors.phone }}</p>
+              <p v-else class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
             </div>
 
             <!-- Email (for Admin Registration) -->
@@ -235,9 +244,14 @@
                 type="text"
                 required
                 pattern="[0-9]{4}"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                @blur="validateZip"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                  fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                ]"
                 placeholder="8000"
               />
+              <p v-if="fieldErrors.zip" class="mt-1 text-sm text-red-600">{{ fieldErrors.zip }}</p>
             </div>
 
             <!-- City -->
@@ -401,9 +415,14 @@
                 type="email"
                 autocomplete="email"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                @blur="validateEmail"
+                :class="[
+                  'w-full px-4 py-3 border rounded-lg focus:ring-2',
+                  fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                ]"
                 placeholder="ihre.email@beispiel.ch"
               />
+              <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
             </div>
 
             <!-- Passwort -->
@@ -782,6 +801,84 @@ const passwordIsValid = computed(() => {
          passwordChecks.value.number
 })
 
+// Field-specific errors
+const fieldErrors = ref<Record<string, string>>({
+  email: '',
+  phone: '',
+  birthDate: '',
+  firstName: '',
+  lastName: '',
+  zip: ''
+})
+
+// Validation functions
+const validateEmail = () => {
+  if (!formData.value.email) {
+    fieldErrors.value.email = ''
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.value.email)) {
+    fieldErrors.value.email = 'Ungültige E-Mail-Adresse'
+  } else {
+    fieldErrors.value.email = ''
+  }
+}
+
+const validatePhone = () => {
+  if (!formData.value.phone) {
+    fieldErrors.value.phone = ''
+    return
+  }
+  
+  const phoneRegex = /^\+41[0-9]{9}$/
+  if (!phoneRegex.test(formData.value.phone.replace(/\s/g, ''))) {
+    fieldErrors.value.phone = 'Format: +41791234567'
+  } else {
+    fieldErrors.value.phone = ''
+  }
+}
+
+const validateBirthDate = () => {
+  if (!formData.value.birthDate) {
+    fieldErrors.value.birthDate = ''
+    return
+  }
+  
+  const birthDate = new Date(formData.value.birthDate)
+  const today = new Date()
+  
+  if (birthDate > today) {
+    fieldErrors.value.birthDate = 'Geburtsdatum darf nicht in der Zukunft liegen'
+    return
+  }
+  
+  const age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  const dayDiff = today.getDate() - birthDate.getDate()
+  const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0)
+  
+  if (actualAge < 16) {
+    fieldErrors.value.birthDate = 'Mindestalter: 16 Jahre'
+  } else {
+    fieldErrors.value.birthDate = ''
+  }
+}
+
+const validateZip = () => {
+  if (!formData.value.zip) {
+    fieldErrors.value.zip = ''
+    return
+  }
+  
+  if (!/^[0-9]{4}$/.test(formData.value.zip)) {
+    fieldErrors.value.zip = 'PLZ muss 4 Ziffern haben (z.B. 8000)'
+  } else {
+    fieldErrors.value.zip = ''
+  }
+}
+
 // Methods
 const normalizePhone = () => {
   let phone = formData.value.phone.replace(/[^0-9+]/g, '')
@@ -793,6 +890,7 @@ const normalizePhone = () => {
   }
   
   formData.value.phone = phone
+  validatePhone()
 }
 
 const nextStep = () => {
