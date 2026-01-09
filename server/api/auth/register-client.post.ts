@@ -3,6 +3,7 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
+import { logAudit } from '~/server/utils/audit'
 import {
   validateRequiredString,
   validatePassword,
@@ -13,6 +14,7 @@ import {
 } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
   try {
     // Get client IP for rate limiting
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
@@ -148,6 +150,15 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
     const supabase = getSupabase()
 
+    // ✅ Sanitize all string inputs to prevent XSS
+    const sanitizedFirstName = sanitizeString(firstName, 100)
+    const sanitizedLastName = sanitizeString(lastName, 100)
+    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+    const sanitizedStreet = street ? sanitizeString(street, 100) : null
+    const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
+    const sanitizedCity = city ? sanitizeString(city, 100) : null
+    const sanitizedLernfahrausweisNr = lernfahrausweisNr ? sanitizeString(lernfahrausweisNr, 50) : null
+
     // 1. Create auth user
     logger.debug('Register', '🔐 Creating auth user for:', email)
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
@@ -155,8 +166,8 @@ export default defineEventHandler(async (event) => {
       password: password,
       email_confirm: true,
       user_metadata: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim()
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName
       }
     })
 
@@ -192,16 +203,16 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .update({
           auth_user_id: authData.user.id,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone?.trim() || null,
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
+          phone: sanitizedPhone,
           birthdate: birthDate || null,
-          street: street?.trim() || null,
-          street_nr: streetNr?.trim() || null,
+          street: sanitizedStreet,
+          street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
-          city: city?.trim() || null,
+          city: sanitizedCity,
           category: categoryArray,
-          lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
+          lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
           is_active: true
         })
@@ -229,17 +240,17 @@ export default defineEventHandler(async (event) => {
         .insert({
           auth_user_id: authData.user.id,
           tenant_id: tenantId,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
           email: email.toLowerCase().trim(),
-          phone: phone?.trim() || null,
+          phone: sanitizedPhone,
           birthdate: birthDate || null,
-          street: street?.trim() || null,
-          street_nr: streetNr?.trim() || null,
+          street: sanitizedStreet,
+          street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
-          city: city?.trim() || null,
+          city: sanitizedCity,
           category: categoryArray, // Store as array
-          lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
+          lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
           is_active: true
         })
@@ -300,6 +311,23 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Email send error:', emailErr.message)
     }
 
+    // 5. Audit logging
+    await logAudit({
+      action: 'user_registration',
+      user_id: userProfile.id,
+      tenant_id: tenantId,
+      resource_type: 'user',
+      resource_id: userProfile.id,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        email: email.toLowerCase().trim(),
+        categories: categoryArray,
+        is_admin: isAdmin,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     return {
       success: true,
       userId: userProfile.id,
@@ -308,6 +336,19 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Registration error:', error)
+
+    // Audit log for failed registration
+    await logAudit({
+      action: 'user_registration',
+      tenant_id: (error as any).tenantId,
+      resource_type: 'user',
+      ip_address: getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown',
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     if (error.statusCode) {
       throw error
