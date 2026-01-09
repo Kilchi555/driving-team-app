@@ -48,28 +48,12 @@
               @click="navigateToRegister(tenant.slug)"
               class="p-6 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
             >
-              <!-- Logo -->
-              <div v-if="tenant.logo_url || tenant.logo_square_url" class="mb-4">
-                <img
-                  :src="(tenant.logo_url || tenant.logo_square_url) as string"
-                  :alt="tenant.name"
-                  class="h-12 w-12 object-contain group-hover:scale-110 transition-transform"
-                />
-              </div>
 
               <!-- Tenant Info -->
               <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                 {{ tenant.name }}
               </h3>
-              <p class="text-sm text-gray-600 mt-1">{{ tenant.contact_email }}</p>
               <p class="text-xs text-gray-500 mt-2">{{ tenant.address }}</p>
-
-              <!-- Trial Badge -->
-              <div v-if="tenant.is_trial" class="mt-3">
-                <span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                  Trial
-                </span>
-              </div>
 
               <!-- CTA -->
               <div class="mt-4 flex items-center text-blue-600 group-hover:text-blue-700 font-semibold">
