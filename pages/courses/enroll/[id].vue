@@ -766,8 +766,8 @@ const processWalleePayment = async () => {
       participantName: `${sariParticipant.value.first_name} ${sariParticipant.value.last_name}`
     })
 
-    // Create transaction via Wallee
-    const response = await $fetch('/api/payment-gateway/create-transaction', {
+    // Create product sale via secure payments API
+    const response = await $fetch('/api/payments/process', {
       method: 'POST',
       body: {
         orderId: `SARI-${course.value.id}-${Date.now()}`,
@@ -778,7 +778,6 @@ const processWalleePayment = async () => {
         description: `Kurs: ${course.value.name}`,
         successUrl: `${window.location.origin}/courses/enrollment-success?courseId=${course.value.id}&sari=true`,
         failedUrl: window.location.href,
-        userId: 'anonymous',
         tenantId: course.value.tenant_id,
         metadata: {
           type: 'SARI_COURSE_ENROLLMENT',
