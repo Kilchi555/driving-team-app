@@ -30,49 +30,6 @@ export const usePayments = () => {
   const hasPriceError = computed(() => !!priceError.value)
 
   // Methods
-  const calculatePrice = async (
-    categoryCode: string,
-    durationMinutes: number,
-    staffId?: string
-  ) => {
-    try {
-      isLoadingPrice.value = true
-      priceError.value = null
-
-      // Get base price from categories table
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('categories')
-        .select('base_price_rappen')
-        .eq('code', categoryCode)
-        .single()
-
-      if (categoryError) throw categoryError
-      if (!categoryData) throw new Error('Kategorie nicht gefunden')
-
-      let basePrice = categoryData.base_price_rappen
-
-      // ✅ ENTFERNT: Staff-specific pricing wird nicht mehr verwendet
-      // Preise werden jetzt direkt aus der categories Tabelle geladen
-
-      // Calculate total based on duration
-      const totalPrice = Math.round((basePrice * durationMinutes) / 45)
-      const adminFee = Math.round(totalPrice * 0.05) // 5% admin fee
-      const totalWithFee = totalPrice + adminFee
-
-      return {
-        base_price_rappen: totalPrice,
-        admin_fee_rappen: adminFee,
-        total_rappen: totalWithFee,
-        category_code: categoryCode,
-        duration_minutes: durationMinutes
-      }
-    } catch (error: any) {
-      priceError.value = error.message || 'Fehler bei der Preisberechnung'
-      throw error
-    } finally {
-      isLoadingPrice.value = false
-    }
-  }
 
   // Create payment record in database with new structure
   const createPaymentRecord = async (data: Partial<Payment>): Promise<Payment> => {
@@ -868,7 +825,6 @@ export const usePayments = () => {
     hasPriceError,
 
     // Methods
-    calculatePrice,
     createPaymentRecord,
     createPaymentItems,
     processCashPayment,
