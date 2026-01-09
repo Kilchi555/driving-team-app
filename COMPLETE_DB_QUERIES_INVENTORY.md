@@ -51,21 +51,22 @@
 ---
 
 ### ADMIN PAGES (19 files with direct queries)
-**Total Queries:** ~160+
+**Total Queries:** ~160+ (30 removed from index.vue)
+**Status:** ✅ index.vue MIGRATED (0 direct queries now)
 
-| Page | Queries | Risk |
-|------|---------|------|
-| **courses.vue** | 32 | 🔴 CRITICAL |
-| **index.vue** | 30 | 🔴 CRITICAL |
-| **categories.vue** | 24 | 🔴 CRITICAL |
-| **profile.vue** | 15 | 🔴 HIGH |
-| **product-sales.vue** | 10 | 🟡 HIGH |
-| **products.vue** | 8 | 🟡 HIGH |
-| **discounts.vue** | 7 | 🟡 HIGH |
-| **exam-statistics.vue** | 7 | 🟡 MEDIUM |
-| **examiners.vue** | 7 | 🟡 MEDIUM |
-| **staff-hours.vue** | 6 | 🟡 MEDIUM |
-| **... 9 more pages** | 40+ | 🟡 |
+| Page | Queries | Risk | Status |
+|------|---------|------|--------|
+| **courses.vue** | 32 | 🔴 CRITICAL | Pending |
+| **index.vue** | 0 | ✅ SECURED | ✅ COMPLETED |
+| **categories.vue** | 24 | 🔴 CRITICAL | Pending |
+| **profile.vue** | 15 | 🔴 HIGH | Pending |
+| **product-sales.vue** | 10 | 🟡 HIGH | Pending |
+| **products.vue** | 8 | 🟡 HIGH | Pending |
+| **discounts.vue** | 7 | 🟡 HIGH | Pending |
+| **exam-statistics.vue** | 7 | 🟡 MEDIUM | Pending |
+| **examiners.vue** | 7 | 🟡 MEDIUM | Pending |
+| **staff-hours.vue** | 6 | 🟡 MEDIUM | Pending |
+| **... 9 more pages** | 40+ | 🟡 | Pending |
 
 ---
 
@@ -290,29 +291,31 @@ GET    /api/admin/evaluations (paginated)
 
 ---
 
-## 📈 Impact Analysis
+## 📈 Impact Analysis (UPDATED)
 
 ### **Current State (Unsecured)**
-- ❌ 600+ direct DB queries
+- ❌ ~660+ direct DB queries (started)
+- ❌ ~630 queries remaining
 - ❌ No rate limiting
 - ❌ No audit logging
 - ❌ Vulnerable to N+1 attacks
 - ❌ Vulnerable to pagination DoS
 
-### **After Phase 1 (Urgent fixes)**
-- ✅ Core 60+ queries secured
+### **After First Migration (admin/index.vue)**
+- ✅ 30 queries secured (4.5%)
+- ✅ Dashboard page protected
+- ✅ All stats loaded in parallel (better performance)
+- 🟡 ~630 queries still exposed
+- 🟡 Other admin pages still vulnerable
+
+### **After Phase 1 (Critical paths)**
+- ✅ 110+ queries secured
 - ✅ Appointment creation protected
 - ✅ Payment system hardened
-- 🟡 150+ queries still exposed
-
-### **After Phase 2 (High-priority)**
-- ✅ 110+ queries secured
-- ✅ Calendar protected
-- ✅ Student data secured
-- 🟡 100+ queries still exposed
+- 🟡 ~550 queries still exposed
 
 ### **After Phase 4 (Complete)**
-- ✅ All 600+ queries secured
+- ✅ All ~660 queries secured
 - ✅ Full audit logging
 - ✅ Rate limiting on all operations
 - ✅ Enterprise-grade security
@@ -333,6 +336,25 @@ This codebase was built **rapidly** for an MVP and now has **significant technic
 
 ---
 
-**Next Step:** Agree on PHASE 1 scope and begin implementation of critical endpoints.
+## ✅ COMPLETED MIGRATIONS
+
+### 1. **pages/admin/index.vue** - ✅ DONE
+**Queries Removed:** 30 direct DB queries
+**APIs Created:** 
+- `/api/admin/dashboard-summary.post.ts` - All dashboard stats (revenue, pending students, invoices, activities, courses, credits, cancellations, hours)
+- `/api/admin/dashboard-revenue-12m.post.ts` - 12-month revenue data
+
+**Changes:**
+- Consolidated 8 load functions into 1 API call
+- All data now loaded in parallel for better performance
+- Added auth, rate limiting (20 req/min), tenant isolation
+- Marked as admin-only
+- Non-blocking error handling (graceful degradation)
+
+**Before:** ~30 Supabase queries spread across 8 functions
+**After:** 2 consolidated API endpoints
+**Performance:** Improved (parallel loading + single API call)
+
+---
 
 
