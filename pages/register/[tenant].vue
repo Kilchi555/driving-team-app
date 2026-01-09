@@ -433,12 +433,17 @@
               <div class="mt-2 space-y-1">
                 <div class="flex items-center space-x-2">
                   <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                    {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
+                    {{ passwordChecks.length ? '✓' : '○' }} Mindestens 12 Zeichen
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
                   <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
                     {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.lowercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.lowercase ? '✓' : '○' }} Kleinbuchstabe
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -764,14 +769,16 @@ const canSubmit = computed(() => {
 })
 
 const passwordChecks = computed(() => ({
-  length: formData.value.password.length >= 8,
+  length: formData.value.password.length >= 12,
   uppercase: /[A-Z]/.test(formData.value.password),
+  lowercase: /[a-z]/.test(formData.value.password),
   number: /[0-9]/.test(formData.value.password)
 }))
 
 const passwordIsValid = computed(() => {
   return passwordChecks.value.length && 
          passwordChecks.value.uppercase && 
+         passwordChecks.value.lowercase &&
          passwordChecks.value.number
 })
 
@@ -1102,7 +1109,7 @@ const submitRegistration = async () => {
     } else if (errorMessage.includes('Invalid email')) {
       errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
     } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
-      errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe und 1 Zahl erforderlich.'
+      errorMessage = 'Passwort zu schwach. Mindestens 12 Zeichen, 1 Großbuchstabe, 1 Kleinbuchstabe und 1 Zahl erforderlich.'
     } else if (errorMessage.includes('Captcha') || errorMessage.includes('captcha') || errorMessage.includes('hCaptcha')) {
       errorTitle = 'Captcha-Verifizierung fehlgeschlagen'
       errorMessage = 'Die Captcha-Verifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut und stellen Sie sicher, dass Sie das Captcha korrekt ausgefüllt haben.'
