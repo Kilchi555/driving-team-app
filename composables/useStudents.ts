@@ -275,49 +275,62 @@ export const useStudents = () => {
       let emailSuccess = false
       
       try {
-        // Sanitize phone und email - stelle sicher dass sie Strings sind
-        const cleanPhone = createdStudent.phone ? String(createdStudent.phone).trim() : ''
-        const cleanEmail = createdStudent.email ? String(createdStudent.email).trim() : ''
-        
-        // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
-        if (cleanPhone !== '') {
-          // ✅ SMS-Versand
-          const smsResponse = await $fetch('/api/students/send-onboarding-sms', {
-            method: 'POST',
-            body: {
-              phone: cleanPhone,
-              firstName: createdStudent.first_name || 'Kunde',
-              token: onboardingToken
+        // Get current session for authentication
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          logger.warn('⚠️ No authentication session for sending SMS')
+          smsSuccess = false
+        } else {
+          // Sanitize phone und email - stelle sicher dass sie Strings sind
+          const cleanPhone = createdStudent.phone ? String(createdStudent.phone).trim() : ''
+          const cleanEmail = createdStudent.email ? String(createdStudent.email).trim() : ''
+          
+          // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
+          if (cleanPhone !== '') {
+            // ✅ SMS-Versand (secure API with authentication)
+            const smsResponse = await $fetch('/api/students/send-onboarding-sms', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: {
+                phone: cleanPhone,
+                firstName: createdStudent.first_name || 'Kunde',
+                onboardingToken: onboardingToken
+              }
+            }) as any
+            
+            if (smsResponse?.success) {
+              logger.debug('✅ Onboarding SMS sent to:', cleanPhone)
+              smsSuccess = true
+            } else {
+              console.warn('⚠️ SMS sending failed:', smsResponse?.error)
+              smsSuccess = false
             }
-          }) as any
-          
-          if (smsResponse?.success) {
-            logger.debug('✅ Onboarding SMS sent to:', cleanPhone)
-            smsSuccess = true
-          } else {
-            console.warn('⚠️ SMS sending failed:', smsResponse?.error)
-            smsSuccess = false
-          }
-        } else if (cleanEmail !== '') {
-          // ✅ E-Mail-Versand
-          logger.debug('📧 Sending onboarding email to:', cleanEmail)
-          
-          const emailResponse = await $fetch('/api/students/send-onboarding-email', {
-            method: 'POST',
-            body: {
-              email: cleanEmail,
-              firstName: createdStudent.first_name || 'Kunde',
-              lastName: createdStudent.last_name || '',
-              onboardingLink: onboardingLink
+          } else if (cleanEmail !== '') {
+            // ✅ E-Mail-Versand
+            logger.debug('📧 Sending onboarding email to:', cleanEmail)
+            
+            const emailResponse = await $fetch('/api/students/send-onboarding-email', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: {
+                email: cleanEmail,
+                firstName: createdStudent.first_name || 'Kunde',
+                lastName: createdStudent.last_name || '',
+                onboardingLink: onboardingLink
+              }
+            }) as any
+            
+            if (emailResponse?.success) {
+              logger.debug('✅ Onboarding email sent to:', cleanEmail)
+              emailSuccess = true
+            } else {
+              console.warn('⚠️ Email sending failed')
+              emailSuccess = false
             }
-          }) as any
-          
-          if (emailResponse?.success) {
-            logger.debug('✅ Onboarding email sent to:', cleanEmail)
-            emailSuccess = true
-          } else {
-            console.warn('⚠️ Email sending failed')
-            emailSuccess = false
           }
         }
         

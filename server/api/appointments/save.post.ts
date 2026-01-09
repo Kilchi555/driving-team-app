@@ -29,14 +29,14 @@ export default defineEventHandler(async (event) => {
     if (!appointmentData) {
       throw createError({
         statusCode: 400,
-        message: 'Appointment data is required'
+        statusMessage: 'Appointment data is required'
       })
     }
 
     if (mode === 'edit' && !eventId) {
       throw createError({
         statusCode: 400,
-        message: 'Event ID is required for edit mode'
+        statusMessage: 'Event ID is required for edit mode'
       })
     }
 
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
         logger.error('❌ Error updating appointment:', updateError)
         throw createError({
           statusCode: 500,
-          message: `Fehler beim Aktualisieren des Termins: ${updateError.message}`
+          statusMessage: `Fehler beim Aktualisieren des Termins: ${updateError.message}`
         })
       }
       result = data
@@ -179,7 +179,8 @@ export default defineEventHandler(async (event) => {
               paymentUpdateData.payment_status = remainingAmountRappen === 0 ? 'completed' : 'pending'
               
               // Set or clear paid_at
-              if (remainingAmountRappen === 0 && !existingPayment.paid_at) {
+              const existingPaidAt = (existingPayment as any).paid_at
+              if (remainingAmountRappen === 0 && !existingPaidAt) {
                 paymentUpdateData.paid_at = new Date().toISOString()
               } else if (remainingAmountRappen > 0) {
                 paymentUpdateData.paid_at = null
@@ -215,7 +216,7 @@ export default defineEventHandler(async (event) => {
         logger.error('❌ Error creating appointment:', insertError)
         throw createError({
           statusCode: 500,
-          message: `Fehler beim Erstellen des Termins: ${insertError.message}`
+          statusMessage: `Fehler beim Erstellen des Termins: ${insertError.message}`
         })
       }
       result = data
@@ -298,6 +299,25 @@ export default defineEventHandler(async (event) => {
           logger.warn('⚠️ Payment creation exception (non-critical):', paymentErr.message)
           // Don't throw - appointment is already created
         }
+      }
+    }
+
+    // ✅ NEW: Send appointment confirmation email (immediately after creation)
+    if (mode === 'create') {
+      try {
+        logger.debug('📧 Sending appointment confirmation email...')
+        const confirmationResponse = await $fetch('/api/reminders/send-appointment-confirmation', {
+          method: 'POST',
+          body: {
+            appointmentId: result.id,
+            userId: appointmentData.user_id,
+            tenantId: appointmentData.tenant_id
+          }
+        })
+        logger.debug('✅ Appointment confirmation email sent:', confirmationResponse)
+      } catch (confirmationErr: any) {
+        logger.warn('⚠️ Failed to send appointment confirmation email (non-critical):', confirmationErr.message)
+        // Don't throw - appointment was created successfully
       }
     }
 

@@ -262,15 +262,17 @@ export default defineEventHandler(async (event: H3Event) => {
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
     const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
 
-    // Get tenant data for SMS sender name
+    // Get tenant data for SMS sender name and slug
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
-      .select('name, twilio_from_sender')
+      .select('name, slug, twilio_from_sender')
       .eq('id', tenantId)
       .single()
 
     let senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
     let tenantName = tenant?.name || 'Driving Team'
+    let tenantSlug = tenant?.slug || ''
+    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
 
     // Format professional SMS message with line breaks
     const smsMessage = `Hallo ${student.first_name},
@@ -278,6 +280,10 @@ export default defineEventHandler(async (event: H3Event) => {
 bitte vervollständige deine Registrierung innerhalb der nächsten 30 Tage:
 
 ${onboardingUrl}
+
+Nach der Registrierung kannst du dich über folgenden Link anmelden:
+
+${loginLink}
 
 Freundliche Grüsse,
 ${tenantName}`
