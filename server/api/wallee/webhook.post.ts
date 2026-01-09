@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
     const walleeState = body.state
     const spaceId = body.spaceId
     
-    logger.debug('🔔 Wallee Webhook received:', {
+    logger.info('🔔 Wallee Webhook received:', {
       transactionId,
       walleeState,
       spaceId,
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
     // Trust FULFILL immediately - this is the final state
     if (walleeState === 'FULFILL') {
       paymentStatus = 'completed'
-      logger.debug('✅ FULFILL state - payment is completed')
+      logger.info('✅ FULFILL state - payment is completed')
     }
     
     // ============ LAYER 3: FIND PAYMENT BY TRANSACTION ID ============
@@ -210,7 +210,7 @@ export default defineEventHandler(async (event) => {
         return await processAnonymousSale(anonymousSale, paymentStatus)
       }
       
-      logger.warn('❌ No payment found for transaction:', transactionId)
+      logger.info('❌ No payment found for transaction:', transactionId)
       // Return 200 to prevent Wallee from retrying
       return { 
         success: false, 
@@ -220,7 +220,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    logger.debug('✅ Found payments:', payments.length)
+    logger.info('✅ Found payments:', payments.length)
     
     // ============ LAYER 6: PREVENT STATUS DOWNGRADES ============
     const newPriority = STATUS_PRIORITY[paymentStatus] ?? -1
@@ -266,7 +266,7 @@ export default defineEventHandler(async (event) => {
       return { success: false, error: 'Failed to update payments' }
     }
     
-    logger.debug(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
+    logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
     
     // ============ LAYER 8: UPDATE APPOINTMENTS ============
     if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
@@ -288,7 +288,7 @@ export default defineEventHandler(async (event) => {
         if (appointmentError) {
           logger.warn('⚠️ Error updating appointments:', appointmentError)
         } else {
-          logger.debug(`✅ Updated ${appointmentIds.length} appointment(s) to: ${appointmentStatus}`)
+          logger.info(`✅ Updated ${appointmentIds.length} appointment(s) to: ${appointmentStatus}`)
         }
       }
     }
@@ -310,7 +310,7 @@ export default defineEventHandler(async (event) => {
     }
     
     const duration = Date.now() - startTime
-    logger.debug(`🎉 Webhook processed in ${duration}ms`)
+    logger.info(`🎉 Webhook processed in ${duration}ms`)
     
     return {
       success: true,
