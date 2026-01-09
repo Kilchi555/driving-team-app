@@ -109,7 +109,7 @@
                 >
                 <div class="mt-1 text-xs">
                   <p :class="passwordTooShort ? 'text-red-600' : 'text-gray-500'">
-                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, empfohlen: Gross-/Kleinbuchstaben, Zahlen & Sonderzeichen' }}
+                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, Gross-/Kleinbuchstaben, Zahlen' }}
                   </p>
                 </div>
               </div>
@@ -296,7 +296,7 @@
                     v-for="cat in categories" 
                     :key="cat.code || cat.id" 
                     class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-colors cursor-pointer"
-                    @click.stop="toggleCategory(cat.code || cat.id)"
+                    @click="toggleCategory(cat.code || cat.id)"
                   >
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center space-x-3">
@@ -304,7 +304,7 @@
                         <span class="text-sm text-gray-600">{{ cat.name }}</span>
                       </div>
                     </div>
-                    <div class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0" @click.stop>
+                    <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0">
                       <input
                         v-model="form.categories"
                         :value="cat.code || cat.id"
@@ -313,7 +313,7 @@
                         @change="clearCategoryError"
                       />
                       <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    </div>
+                    </label>
                   </div>
                 </div>
 
@@ -1054,8 +1054,8 @@ const completeOnboarding = async () => {
       // Provide more helpful error messages
       if (errorMessage.includes('duplicate') || errorMessage.includes('Email')) {
         errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder kontaktiere die Fahrschule.'
-      } else if (errorMessage.includes('password')) {
-        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 8 Zeichen, groß- und kleinbuchstaben, zahlen)'
+      } else if (errorMessage.includes('password') || errorMessage.includes('Passwort')) {
+        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 12 Zeichen, Gross- und Kleinbuchstaben, Zahlen)'
       } else if (errorMessage.includes('Token')) {
         errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
       }

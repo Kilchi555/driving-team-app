@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
+import { sanitizeString } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -34,10 +35,31 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (password && password.length < 8) {
+    if (password && password.length < 12) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Password must be at least 8 characters long'
+        statusMessage: 'Passwort muss mindestens 12 Zeichen lang sein'
+      })
+    }
+    
+    if (password && !/[A-Z]/.test(password)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Passwort muss mindestens einen Großbuchstaben enthalten'
+      })
+    }
+    
+    if (password && !/[a-z]/.test(password)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Passwort muss mindestens einen Kleinbuchstaben enthalten'
+      })
+    }
+    
+    if (password && !/[0-9]/.test(password)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Passwort muss mindestens eine Zahl enthalten'
       })
     }
 
@@ -157,20 +179,28 @@ export default defineEventHandler(async (event) => {
                          Array.isArray(category) ? category : 
                          (category ? [category] : [])
 
+    // ✅ Sanitize all string inputs to prevent XSS
+    const sanitizedFirstName = sanitizeString(firstName, 100)
+    const sanitizedLastName = sanitizeString(lastName, 100)
+    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+    const sanitizedStreet = street ? sanitizeString(street, 100) : null
+    const sanitizedStreetNr = street_nr ? sanitizeString(street_nr, 10) : null
+    const sanitizedCity = city ? sanitizeString(city, 100) : null
+
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
         auth_user_id: authData.user.id,
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone,
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName,
+        phone: sanitizedPhone,
         email: email,
         birthdate: birthdate,
         category: categoryValue,
-        street: street,
-        street_nr: street_nr,
+        street: sanitizedStreet,
+        street_nr: sanitizedStreetNr,
         zip: zip,
-        city: city,
+        city: sanitizedCity,
         is_active: true,
         onboarding_status: 'completed',
         onboarding_completed_at: new Date().toISOString(),
@@ -203,8 +233,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔐 Updating auth user display name...')
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
       user_metadata: {
-        first_name: firstName,
-        last_name: lastName
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName
       }
     })
     
@@ -287,8 +317,8 @@ export default defineEventHandler(async (event) => {
       details: {
         email: email,
         categories: categoryValue,
-        firstName: firstName,
-        lastName: lastName
+        firstName: sanitizedFirstName,
+        lastName: sanitizedLastName
       },
       severity: 'info'
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))

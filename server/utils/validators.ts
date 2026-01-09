@@ -50,13 +50,13 @@ export function validateEmail(email: string | null | undefined): { valid: boolea
 
 /**
  * Validate password strength
- * - Min: 8 characters
+ * - Min: 12 characters
  * - Max: 500 characters (prevent DoS attacks)
  * - Must contain uppercase, lowercase, numbers
  */
 export function validatePassword(password: string | null | undefined): { valid: boolean; message?: string } {
   if (!password) return { valid: false, message: 'Passwort ist erforderlich' }
-  if (password.length < 8) return { valid: false, message: 'Passwort muss mindestens 8 Zeichen lang sein' }
+  if (password.length < 12) return { valid: false, message: 'Passwort muss mindestens 12 Zeichen lang sein' }
   if (password.length > 500) return { valid: false, message: 'Passwort darf maximal 500 Zeichen lang sein' }
   if (!/[A-Z]/.test(password)) return { valid: false, message: 'Passwort muss Großbuchstaben enthalten' }
   if (!/[a-z]/.test(password)) return { valid: false, message: 'Passwort muss Kleinbuchstaben enthalten' }
