@@ -2,71 +2,229 @@
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
-
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { logAudit } from '~/server/utils/audit'
+import { getHeader } from 'h3'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
+  const ipAddress = getClientIP(event)
+  let authenticatedUserId: string | undefined
+  let tenantId: string | undefined
+
   try {
-    const { phone, firstName, token } = await readBody(event)
+    // ============ LAYER 1: AUTHENTICATION ============
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader) {
+      await logAudit({
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Authentication required',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
+      })
+    }
 
-    logger.debug('📱 Onboarding SMS request received:', { phone, firstName, token: token?.substring(0, 10) + '...' })
+    const token = authHeader.replace('Bearer ', '')
+    const supabaseAdmin = getSupabaseAdmin()
 
-    if (!phone || !firstName || !token) {
-      logger.error('OnboardingSMS', 'Missing required fields:', { phone: !!phone, firstName: !!firstName, token: !!token })
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+
+    if (authError || !user) {
+      await logAudit({
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Invalid or expired token',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Invalid or expired token'
+      })
+    }
+
+    authenticatedUserId = user.id
+
+    // ============ LAYER 2: AUTHORIZATION ============
+    const { data: requestingUser, error: reqUserError } = await supabaseAdmin
+      .from('users')
+      .select('id, role, tenant_id, auth_user_id')
+      .eq('auth_user_id', authenticatedUserId)
+      .single()
+
+    if (reqUserError || !requestingUser) {
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'User profile not found',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'User profile not found'
+      })
+    }
+
+    tenantId = requestingUser.tenant_id
+
+    // Only admin/staff can send onboarding SMS
+    if (!['admin', 'staff', 'tenant_admin', 'superadmin'].includes(requestingUser.role)) {
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Insufficient permissions',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Insufficient permissions'
+      })
+    }
+
+    // ============ LAYER 3: RATE LIMITING ============
+    const rateLimitKey = `send_onboarding_sms:${authenticatedUserId}`
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 3600 * 1000) // 20 per hour
+    if (!rateLimitResult.allowed) {
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Rate limit exceeded',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many requests. Please try again later.'
+      })
+    }
+
+    // ============ LAYER 4: INPUT VALIDATION ============
+    const body = await readBody(event)
+    const { phone, firstName, onboardingToken } = body
+
+    if (!phone || !firstName || !onboardingToken) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: phone, firstName, token'
+        statusMessage: 'Missing required fields: phone, firstName, onboardingToken'
+      })
+    }
+
+    // Validate types
+    if (typeof phone !== 'string' || typeof firstName !== 'string' || typeof onboardingToken !== 'string') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid field types'
+      })
+    }
+
+    // Sanitize inputs
+    const sanitizedFirstName = firstName.trim().substring(0, 100)
+    if (!sanitizedFirstName) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid firstName'
+      })
+    }
+
+    // Validate UUID format for token
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(onboardingToken)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid onboarding token format'
+      })
+    }
+
+    // ============ LAYER 5: TOKEN VALIDATION & TENANT ISOLATION ============
+    const { data: onboardingUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, tenant_id, onboarding_token, onboarding_token_expires, first_name, phone')
+      .eq('onboarding_token', onboardingToken)
+      .eq('onboarding_status', 'pending')
+      .single()
+
+    if (userError || !onboardingUser) {
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Invalid or expired onboarding token',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid or expired onboarding token'
+      })
+    }
+
+    // ✅ TENANT ISOLATION: Ensure token belongs to requesting user's tenant
+    if (onboardingUser.tenant_id !== tenantId) {
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Cross-tenant access attempt',
+        ip_address: ipAddress,
+        details: {
+          token_tenant_id: onboardingUser.tenant_id,
+          requesting_tenant_id: tenantId
+        }
+      })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Invalid token'
+      })
+    }
+
+    // ============ LAYER 6: TOKEN EXPIRATION CHECK ============
+    const expiresAt = new Date(onboardingUser.onboarding_token_expires)
+    if (expiresAt < new Date()) {
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: 'Onboarding token expired',
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Onboarding token has expired'
       })
     }
 
     // Format phone number (ensure +41 format)
     const formattedPhone = formatSwissPhoneNumber(phone)
-    
+
     // Build onboarding link (force public domain)
-    const onboardingLink = `https://simy.ch/onboarding/${token}`
-    
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    
-    // Load tenant name from token
-    let tenantName = 'Driving Team' // Default fallback
-    try {
-      const { data: user } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('onboarding_token', token)
-        .single()
-      
-      if (user?.tenant_id) {
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('name, twilio_from_sender')
-          .eq('id', user.tenant_id)
-          .single()
-        
-        if (tenant?.twilio_from_sender) {
-          tenantName = tenant.twilio_from_sender
-          logger.debug('📱 Using twilio_from_sender:', tenantName)
-        } else if (tenant?.name) {
-          tenantName = tenant.name
-          logger.debug('📱 Fallback to tenant name:', tenantName)
-        }
-      }
-    } catch (tenantError) {
-      logger.warn('⚠️ Could not load tenant name from token, using default:', tenantError)
-    }
-    
-    // SMS Message
-    const message = `Hallo ${firstName}! Willkommen bei ${tenantName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
+    const onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
+
+    // ============ LAYER 7: LOAD TENANT DATA ============
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('name, slug, twilio_from_sender')
+      .eq('id', tenantId)
+      .single()
+
+    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+    let tenantSlug = tenant?.slug || ''
+
+    // SMS Message with onboarding link and login link
+    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
+    const message = `Hallo ${sanitizedFirstName}! Willkommen bei ${tenantName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 30 Tage gültig). Nach der Registrierung kannst du dich über folgenden Link anmelden: ${loginLink}`
 
     logger.debug('📱 Sending onboarding SMS:', {
-      to: formattedPhone,
-      firstName,
-      link: onboardingLink,
+      to: formattedPhone.substring(0, 6) + '****',
+      firstName: sanitizedFirstName,
       senderName: tenantName
     })
-    
-    // Use local sendSMS function with Alphanumeric Sender ID support
+
+    // ============ LAYER 8: SEND SMS ============
     let smsResult
     try {
       smsResult = await sendSMS({
@@ -77,25 +235,26 @@ export default defineEventHandler(async (event) => {
     } catch (smsError: any) {
       logger.error('OnboardingSMS', '❌ SMS sending failed:', {
         error: smsError.message,
-        errorCode: smsError.code,
-        phone: formattedPhone,
-        senderName: tenantName
+        errorCode: smsError.code
       })
-      // Don't throw - student was created, SMS can be resent manually
-      return {
-        success: false,
-        phone: formattedPhone,
-        message: 'SMS sending failed, but student was created',
-        error: smsError.message,
-        onboardingLink: onboardingLink
-      }
+      await logAudit({
+        user_id: authenticatedUserId,
+        action: 'send_onboarding_sms',
+        status: 'failed',
+        error_message: `SMS sending failed: ${smsError.message}`,
+        ip_address: ipAddress
+      })
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to send SMS'
+      })
     }
 
-    logger.debug('✅ Onboarding SMS sent successfully:', smsResult)
+    logger.debug('✅ Onboarding SMS sent successfully')
 
-    // Log SMS in database
+    // ============ LAYER 9: LOG SMS & AUDIT ============
     try {
-      await supabase
+      await supabaseAdmin
         .from('sms_logs')
         .insert({
           to_phone: formattedPhone,
@@ -106,23 +265,46 @@ export default defineEventHandler(async (event) => {
           purpose: 'student_onboarding'
         })
     } catch (logError) {
-      console.warn('⚠️ Failed to log SMS:', logError)
-      // Continue even if logging fails
+      logger.warn('⚠️ Failed to log SMS:', logError)
     }
+
+    await logAudit({
+      user_id: authenticatedUserId,
+      action: 'send_onboarding_sms',
+      resource_type: 'user',
+      resource_id: onboardingUser.id,
+      status: 'success',
+      ip_address: ipAddress,
+      details: {
+        tenant_id: tenantId,
+        phone_masked: formattedPhone.substring(0, 6) + '****',
+        duration_ms: Date.now() - startTime
+      }
+    })
 
     return {
       success: true,
-      phone: formattedPhone,
       message: 'SMS sent successfully',
-      onboardingLink: onboardingLink,
-      smsData: smsResult
+      phone: formattedPhone.substring(0, 6) + '****' // Masked phone
     }
 
   } catch (error: any) {
-    console.error('SMS sending error:', error)
+    logger.error('❌ Error in send-onboarding-sms:', error)
+
+    const errorMessage = error.statusMessage || error.message || 'Internal server error'
+    const statusCode = error.statusCode || 500
+
+    await logAudit({
+      user_id: authenticatedUserId,
+      action: 'send_onboarding_sms',
+      status: 'error',
+      error_message: errorMessage,
+      ip_address: ipAddress
+    })
+
     throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.message || 'Failed to send SMS'
+      statusCode,
+      statusMessage: errorMessage
     })
   }
 })
@@ -131,74 +313,73 @@ export default defineEventHandler(async (event) => {
 function formatSwissPhoneNumber(phone: string): string {
   // Remove all non-numeric characters except +
   let cleaned = phone.replace(/[^\d+]/g, '')
-  
+
   // If starts with 0, replace with +41
   if (cleaned.startsWith('0')) {
     cleaned = '+41' + cleaned.substring(1)
   }
-  
+
   // If starts with 41, add +
   if (cleaned.startsWith('41') && !cleaned.startsWith('+41')) {
     cleaned = '+' + cleaned
   }
-  
+
   // If no prefix, add +41
   if (!cleaned.startsWith('+')) {
     cleaned = '+41' + cleaned
   }
-  
+
   return cleaned
 }
 
-// TODO: Implement SMS providers
-
-/*
-// Example: Twilio
-async function sendViaTwilio(to: string, message: string) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER
-  
-  const response = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        To: to,
-        From: fromNumber,
-        Body: message
-      })
-    }
-  )
-  
-  return await response.json()
-}
-
-// Example: Nexmo/Vonage
-async function sendViaNexmo(to: string, message: string) {
-  const apiKey = process.env.NEXMO_API_KEY
-  const apiSecret = process.env.NEXMO_API_SECRET
-  const fromName = process.env.NEXMO_FROM_NAME || 'Fahrschule'
-  
-  const response = await fetch('https://rest.nexmo.com/sms/json', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      api_key: apiKey,
-      api_secret: apiSecret,
-      to: to.replace('+', ''),
-      from: fromName,
-      text: message
-    })
-  })
-  
-  return await response.json()
-}
-*/
-
+/**
+ * SECURITY LAYERS IMPLEMENTED:
+ *
+ * Layer 1: AUTHENTICATION ✅
+ *   - JWT token validation via Supabase
+ *   - Bearer token extraction
+ *
+ * Layer 2: AUTHORIZATION ✅
+ *   - Only admin/staff/tenant_admin/superadmin can send SMS
+ *   - Role-based access control
+ *
+ * Layer 3: RATE LIMITING ✅
+ *   - Max 20 requests per hour per user
+ *   - Prevents SMS flooding/abuse
+ *
+ * Layer 4: INPUT VALIDATION ✅
+ *   - All fields required (phone, firstName, onboardingToken)
+ *   - Type checking (string validation)
+ *   - Input sanitization (firstName limited to 100 chars)
+ *   - UUID format validation for token
+ *
+ * Layer 5: TOKEN VALIDATION & TENANT ISOLATION ✅
+ *   - Token must exist and be valid
+ *   - User must be in pending onboarding status
+ *   - Token's tenant_id must match requesting user's tenant_id
+ *   - Prevents cross-tenant access
+ *
+ * Layer 6: TOKEN EXPIRATION CHECK ✅
+ *   - Validates token hasn't expired
+ *   - Returns error for expired tokens
+ *
+ * Layer 7: TENANT DATA LOADING ✅
+ *   - Loads tenant-specific SMS sender name
+ *   - Loads tenant slug for login link
+ *
+ * Layer 8: SMS SENDING ✅
+ *   - Proper error handling
+ *   - No sensitive data in responses
+ *
+ * Layer 9: AUDIT LOGGING & SMS LOGGING ✅
+ *   - Logs all SMS sends to database
+ *   - Logs who initiated the request
+ *   - Logs IP address
+ *   - Logs success/failure
+ *   - Masks phone numbers in logs
+ *
+ * Layer 10: RESPONSE SECURITY ✅
+ *   - Phone numbers masked with asterisks
+ *   - No token or onboardingLink returned
+ *   - No sensitive data in response
+ */

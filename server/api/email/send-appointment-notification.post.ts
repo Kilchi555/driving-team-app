@@ -9,7 +9,7 @@ interface AppointmentNotificationBody {
   email: string
   studentName: string
   appointmentTime?: string
-  type: 'pending_payment' | 'cancelled' | 'rescheduled'
+  type: 'pending_payment' | 'cancelled' | 'rescheduled' | 'appointment_confirmation'
   cancellationReason?: string
   newTime?: string
   oldTime?: string
@@ -19,11 +19,82 @@ interface AppointmentNotificationBody {
   tenantId?: string
   tenantSlug?: string
   amount?: string
+  confirmationLink?: string
+  customerDashboard?: string
+  // ✅ NEW: Payment & refund details for cancellation emails
+  wasPaid?: boolean
+  chargePercentage?: number
+  refundAmount?: string
+  chargeAmount?: string
 }
 
 // ========== TEMPLATES - Dynamic with tenant colors ==========
 
 const TEMPLATES = {
+  appointment_confirmation: {
+    subject: 'Terminbestätigung erforderlich',
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+      const firstName = data.studentName?.split(' ')[0] || data.studentName
+      const confirmUrl = data.confirmationLink || (data.customerDashboard || 'https://www.simy.ch/login')
+      const dashboardUrl = data.customerDashboard || (data.tenantSlug 
+        ? `https://www.simy.ch/${data.tenantSlug}` 
+        : 'https://www.simy.ch/login')
+      
+      return `
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          <tr>
+            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung erforderlich</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details und bestätige deinen Termin:</p>
+              
+              <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
+                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+                ${data.amount ? `<p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
+              </div>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bestätige deinen Termin und überprüfe die Zahlungsdetails in deinem Kundenkonto.</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+                  Termin bestätigen
+                </a>
+              </div>
+              
+              <div style="text-align: center; margin: 10px 0;">
+                <a href="${dashboardUrl}" style="color: ${primaryColor}; text-decoration: none; font-size: 14px;">
+                  Oder zum Kundenkonto
+                </a>
+              </div>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+      `
+    }
+  },
+  
   pending_payment: {
     subject: 'Terminbestätigung erforderlich',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
@@ -89,6 +160,12 @@ const TEMPLATES = {
         ? `https://www.simy.ch/${data.tenantSlug}` 
         : 'https://www.simy.ch/login'
       
+      // ✅ Payment & Refund details
+      const wasPaid = data.wasPaid || false
+      const chargePercentage = data.chargePercentage || 0
+      const refundAmount = data.refundAmount
+      const chargeAmount = data.chargeAmount
+      
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -110,6 +187,20 @@ const TEMPLATES = {
                 ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Stornierter Termin:</strong> ${data.appointmentTime}</p>` : ''}
                 ${data.cancellationReason ? `<p style="margin: 5px 0; color: #374151;"><strong>Grund:</strong> ${data.cancellationReason}</p>` : ''}
               </div>
+              
+              ${wasPaid || chargePercentage > 0 ? `
+              <div style="background-color: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">Zahlungsinformationen:</p>
+                ${wasPaid ? `<p style="margin: 5px 0; color: #374151;">✅ Termin war bereits bezahlt</p>` : `<p style="margin: 5px 0; color: #374151;">ℹ️ Termin war noch nicht bezahlt</p>`}
+                ${chargePercentage === 0 ? `
+                  <p style="margin: 5px 0; color: #10b981; font-weight: bold;">✅ Kostenlose Stornierung (keine Verrechnung)</p>
+                  ${wasPaid && refundAmount ? `<p style="margin: 5px 0; color: #10b981;">💰 Rückerstattung auf Guthaben: ${refundAmount}</p>` : ''}
+                ` : `
+                  <p style="margin: 5px 0; color: #dc2626; font-weight: bold;">⚠️ Stornierungsgebühr: ${chargePercentage}%</p>
+                  ${chargeAmount ? `<p style="margin: 5px 0; color: #dc2626;">Zu zahlender Betrag: ${chargeAmount}</p>` : ''}
+                `}
+              </div>
+              ` : ''}
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Falls du Fragen hast oder einen neuen Termin buchen möchtest, besuche einfach dein Kundenkonto.</p>
               
