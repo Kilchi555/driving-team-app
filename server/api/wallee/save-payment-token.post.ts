@@ -1,7 +1,7 @@
 // server/api/wallee/save-payment-token.post.ts
 // Speichert Wallee Payment Method Token nach erfolgreicher Zahlung
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
@@ -24,7 +24,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabase()
+    // ✅ Use Admin client to bypass RLS
+    const supabase = getSupabaseAdmin()
 
     // ✅ GET WALLEE CONFIG FOR TENANT (Multi-Tenant Support!)
     logger.debug('🔍 Fetching Wallee config for tenant:', tenantId)
