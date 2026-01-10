@@ -18,6 +18,7 @@ interface UserPaymentSummary {
   has_unpaid_appointments: boolean
   total_unpaid_amount: number
   total_appointments: number
+  oldest_appointment_date: string | null // For sorting
 }
 
 interface ApiResponse {
@@ -181,6 +182,15 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         appointment.user_id === user.id
       )
       
+      // Find the oldest appointment date
+      const oldestAppointment = userAppointments.length > 0
+        ? userAppointments.reduce((oldest, current) => {
+            const oldestTime = new Date(oldest.start_time).getTime()
+            const currentTime = new Date(current.start_time).getTime()
+            return currentTime < oldestTime ? current : oldest
+          })
+        : null
+      
       // Find unpaid payments for this user
       const userUnpaidPayments = (paymentsData || []).filter(payment => 
         payment.user_id === user.id && 
@@ -207,12 +217,27 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         has_company_billing: hasCompanyBilling,
         has_unpaid_appointments: userUnpaidPayments.length > 0,
         total_unpaid_amount: totalUnpaidAmount,
-        total_appointments: userAppointments.length
+        total_appointments: userAppointments.length,
+        oldest_appointment_date: oldestAppointment?.start_time || null // ✅ For sorting
       }
     })
 
+    // ✅ Sort by oldest appointment (ascending - oldest first)
+    const sortedUsers = processedUsers.sort((a, b) => {
+      // Users with appointments come first, sorted by oldest appointment
+      if (a.oldest_appointment_date && b.oldest_appointment_date) {
+        const aTime = new Date(a.oldest_appointment_date).getTime()
+        const bTime = new Date(b.oldest_appointment_date).getTime()
+        return aTime - bTime // Ascending: oldest first
+      }
+      // Users without appointments go to end
+      if (a.oldest_appointment_date) return -1
+      if (b.oldest_appointment_date) return 1
+      return 0
+    })
+
     // Apply pagination
-    const paginatedUsers = processedUsers.slice(offset, offset + limit)
+    const paginatedUsers = sortedUsers.slice(offset, offset + limit)
 
     // ✅ 7. AUDIT LOGGING - Log the request
     await logAudit({
@@ -232,13 +257,13 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
 
     // ✅ 8. RESPONSE - Return aggregated stats
     const stats = {
-      total_users: processedUsers.length,
-      users_with_unpaid: processedUsers.filter(u => u.has_unpaid_appointments).length,
-      users_with_company_billing: processedUsers.filter(u => u.has_company_billing).length,
-      total_unpaid_amount: processedUsers.reduce((sum, u) => sum + u.total_unpaid_amount, 0)
+      total_users: sortedUsers.length,
+      users_with_unpaid: sortedUsers.filter(u => u.has_unpaid_appointments).length,
+      users_with_company_billing: sortedUsers.filter(u => u.has_company_billing).length,
+      total_unpaid_amount: sortedUsers.reduce((sum, u) => sum + u.total_unpaid_amount, 0)
     }
 
-    logger.debug(`✅ [get-payments-overview] Successfully loaded ${paginatedUsers.length} users (${processedUsers.length} total)`)
+    logger.debug(`✅ [get-payments-overview] Successfully loaded ${paginatedUsers.length} users (${sortedUsers.length} total), sorted by oldest appointment`)
 
     return {
       success: true,
