@@ -541,20 +541,28 @@ const anonymousSales = computed(() => sales.value.filter(sale => sale.sale_type 
 const loadSales = async () => {
   isLoading.value = true
   try {
-    const supabase = getSupabase()
-    const allSales: ProductSale[] = []
+    logger.debug('🔄 Loading product sales via API...')
+    
+    // ✅ Use new secure API instead of direct DB queries
+    const response = await $fetch('/api/admin/get-product-sales', {
+      method: 'GET',
+      query: { limit: 1000, offset: 0 }
+    }) as any
 
-    // Get current user's tenant_id
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to load product sales')
+    }
+
+    // Load current tenant info (can be fetched from API too, but optional)
+    const supabase = getSupabase()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     const { data: userProfile } = await supabase
       .from('users')
-      .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
+      .select('id, tenant_id')
+      .eq('auth_user_id', currentUser?.id)
       .single()
     const tenantId = userProfile?.tenant_id
-    logger.debug('🔍 Admin Product Sales - Current tenant_id:', tenantId)
     
-    // Load current tenant info
     if (tenantId) {
       const { data: tenantData } = await supabase
         .from('tenants')
@@ -565,84 +573,10 @@ const loadSales = async () => {
       logger.debug('🔍 Current tenant:', tenantData)
     }
 
-    // 1. Lade direkte Verkäufe (aus payments mit product items) - gefiltert nach tenant_id
-    logger.debug('🔄 Lade direkte Verkäufe...')
-    const { data: directSalesData, error: directSalesError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        user_id,
-        staff_id,
-        total_amount_rappen,
-        payment_status,
-        payment_method,
-        created_at,
-        updated_at,
-        description,
-        metadata
-      `)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('created_at', { ascending: false })
-
-    if (directSalesError) throw directSalesError
-
-    // Lade Kundeninformationen für direkte Verkäufe (nur die mit user_id)
-    const directSalesWithUsers = directSalesData?.filter(sale => sale.user_id) || []
-    const directUserIds = [...new Set(directSalesWithUsers.map(sale => sale.user_id).filter(Boolean) || [])]
+    // ✅ All data processing now done by API
+    const allSales: ProductSale[] = response.data || []
     
-    let directUsersData: any[] = []
-    if (directUserIds.length > 0) {
-      const { data, error: directUsersError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, phone')
-        .in('id', directUserIds)
-      
-      if (directUsersError) throw directUsersError
-      directUsersData = data || []
-    }
-
-    // Lade Produktinformationen für direkte Verkäufe (aus payment_items)
-    const directPaymentIds = directSalesWithUsers.map(sale => sale.id)
-    const { data: directItemsData, error: directItemsError } = await supabase
-      .from('payment_items')
-      .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
-      .in('payment_id', directPaymentIds)
-      .eq('item_type', 'product')
-
-    if (directItemsError) throw directItemsError
-
-    // Erstelle Lookup-Maps für direkte Verkäufe
-    const directUsersMap = new Map(directUsersData.map(user => [user.id, user]))
-    const directItemsMap = new Map()
-
-    directItemsData?.forEach((item: any) => {
-      if (!directItemsMap.has(item.payment_id)) {
-        directItemsMap.set(item.payment_id, [])
-      }
-      directItemsMap.get(item.payment_id).push(item)
-    })
-
-    // Transformiere direkte Verkäufe (nur die mit user_id)
-    directSalesWithUsers.forEach(sale => {
-      const user = directUsersMap.get(sale.user_id)
-      const items = directItemsMap.get(sale.id) || []
-
-      allSales.push({
-        id: sale.id,
-        customer_name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Unbekannt',
-        customer_email: user?.email,
-        customer_phone: user?.phone,
-        product_count: items.length,
-        product_names: items.length > 0 ? items.map((item: any) => item.item_name).filter(Boolean).join(', ') : 'Keine Produkte',
-        total_amount_rappen: sale.total_amount_rappen || 0,
-        status: sale.payment_status || 'pending',
-        created_at: sale.created_at || new Date().toISOString(),
-        sale_type: 'direct' as const
-      })
-    })
-
-    // 1b. Lade anonyme Verkäufe (aus payments ohne user_id) - gefiltert nach tenant_id
-    logger.debug('🔄 Lade anonyme Verkäufe...')
+    logger.debug('🔄 Product sales loaded from API...')
     const { data: anonymousSalesData, error: anonymousSalesError } = await supabase
       .from('payments')
       .select(`
