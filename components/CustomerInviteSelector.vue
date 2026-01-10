@@ -134,29 +134,6 @@
               </p>
             </div>
 
-            <!-- Kategorie -->
-            <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">
-                Kategorie
-              </label>
-              <select
-                v-model="newCustomer.category"
-                :disabled="disabled || isLoadingCategories"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-              >
-                <option value="">
-                  {{ isLoadingCategories ? 'Kategorien laden...' : 'Kategorie wählen' }}
-                </option>
-                <option 
-                  v-for="category in categories" 
-                  :key="category.code"
-                  :value="category.code"
-                >
-                  {{ category.name }}
-                </option>
-              </select>
-            </div>
-
             <!-- Add Button -->
             <div class="flex justify-end">
               <button
@@ -188,11 +165,6 @@
                       <span class="font-medium text-gray-900">
                         {{ customer.first_name }} {{ customer.last_name }}
                       </span>
-                      <span v-if="customer.category" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
-                        {{ customer.category }}
-                      </span>
-                      
-                      <!-- Contact info (only phone now) -->
                       <span v-if="customer.phone" class="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded">
                         📱 {{ customer.phone }}
                       </span>
@@ -320,7 +292,6 @@ interface NewCustomer {
   first_name?: string
   last_name?: string
   phone?: string
-  category?: string
   notes?: string
 }
 
@@ -347,8 +318,6 @@ const emit = defineEmits<{
 const isExpanded = ref(false)
 const isProcessing = ref(false)
 const error = ref<string | null>(null)
-const categories = ref<any[]>([])
-const isLoadingCategories = ref(false)
 const smsStatus = ref<Record<string, { sent: boolean, sid?: string, error?: string }>>({})
 const sendingSms = ref(false)
 const tenantSenderName = ref<string>('Fahrschule')
@@ -357,7 +326,6 @@ const newCustomer = ref<NewCustomer>({
   first_name: '',
   last_name: '',
   phone: '',
-  category: '',
   notes: ''
 })
 
@@ -463,87 +431,6 @@ const createInvitationSmsMessage = (customer: NewCustomer, appointmentData?: any
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value
   logger.debug('🔄 CustomerInviteSelector expanded:', isExpanded.value)
-  
-  // Auto-load categories when expanded for the first time
-  if (isExpanded.value && categories.value.length === 0) {
-    loadCategories()
-  }
-}
-
-const loadCategories = async () => {
-  if (isLoadingCategories.value) return
-  
-  isLoadingCategories.value = true
-  
-  try {
-    logger.debug('🔄 Loading categories from database...')
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    // Get tenant business_type and SMS sender name
-    const { data: tenantData, error: tenantError } = await supabase
-      .from('tenants')
-      .select('business_type, name, twilio_from_sender')
-      .eq('id', userProfile.tenant_id)
-      .single()
-
-    if (tenantError) throw tenantError
-    
-    // Set SMS sender name
-    if (tenantData?.twilio_from_sender) {
-      tenantSenderName.value = tenantData.twilio_from_sender
-    } else if (tenantData?.name) {
-      tenantSenderName.value = tenantData.name
-    }
-    
-    // Only load categories if business_type is driving_school
-    if (tenantData?.business_type !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
-      categories.value = []
-      isLoadingCategories.value = false
-      return
-    }
-    
-    const { data, error } = await supabase
-      .from('categories')
-      .select('code, name, is_active')
-      .eq('tenant_id', userProfile.tenant_id)
-      .eq('is_active', true)
-      .order('code')
-    
-    if (error) throw error
-    
-    categories.value = data || []
-    logger.debug('✅ Categories loaded:', categories.value.length)
-    
-  } catch (err: any) {
-    console.error('❌ Error loading categories:', err)
-    // Fallback categories
-    categories.value = [
-      { code: 'B', name: 'B - Auto' },
-      { code: 'A1', name: 'A1 - Motorrad 125cc' },
-      { code: 'A', name: 'A - Motorrad' },
-      { code: 'BE', name: 'BE - Anhänger' },
-      { code: 'C', name: 'C - LKW' },
-      { code: 'C1', name: 'C1 - LKW klein' },
-      { code: 'CE', name: 'CE - LKW mit Anhänger' }
-    ]
-    logger.debug('🔄 Using fallback categories')
-  } finally {
-    isLoadingCategories.value = false
-  }
 }
 
 const addCustomer = async () => {
@@ -603,7 +490,6 @@ const addCustomer = async () => {
       first_name: newCustomer.value.first_name?.trim() || undefined,
       last_name: newCustomer.value.last_name?.trim() || undefined,
       phone: formatPhone(newCustomer.value.phone || ''),
-      category: newCustomer.value.category || undefined,
       notes: newCustomer.value.notes || undefined
     }
 
@@ -615,7 +501,6 @@ const addCustomer = async () => {
       first_name: '',
       last_name: '',
       phone: '',
-      category: '',
       notes: ''
     }
 
@@ -638,13 +523,13 @@ const removeCustomer = (index: number) => {
 
 const clearAll = () => {
   invitedCustomers.value = []
-  newCustomer.value = {
+  const clearedCustomer: NewCustomer = {
     first_name: '',
     last_name: '',
     phone: '',
-    category: '',
     notes: ''
   }
+  newCustomer.value = clearedCustomer
   error.value = null
   logger.debug('🗑️ All invited customers cleared')
   emit('customers-cleared')
@@ -679,7 +564,6 @@ const createInvitedCustomers = async (appointmentData: any) => {
         last_name: customer.last_name || null,
         phone: customer.phone || null,
         email: customer.email || null,
-        category: customer.category || null,
         notes: customer.notes || null,
         invited_by_staff_id: props.currentUser?.id,
         appointment_id: appointmentData.id, // ← Verknüpfung zum Termin
