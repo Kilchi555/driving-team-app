@@ -14,6 +14,24 @@ import { logAudit } from '~/server/utils/audit'
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://simy.ch').replace(/\/$/, '')
 
 export default defineEventHandler(async (event) => {
+  // ============ DISABLED - WAITING FOR RPC FUNCTION ============
+  // This cron job is temporarily disabled because it has a critical bug:
+  // It sends reminders for ALL pending payments, not just those 24h before appointment
+  // 
+  // TODO: 
+  // 1. Run migration: create_payment_reminders_function.sql (creates RPC function)
+  // 2. Re-enable this cron job to use the RPC function
+  // 3. RPC will filter payments correctly to only those 23-25h before appointment
+  
+  return {
+    success: false,
+    message: 'Payment reminders cron job is disabled - waiting for RPC function setup',
+    status: 'DISABLED_PENDING_RPC_SETUP'
+  }
+})
+
+/*
+export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   const ipAddress = getClientIP(event)
   let auditDetails: any = {}
@@ -64,38 +82,15 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const now = new Date()
 
-    // Calculate time window: reminders sent 24 hours before appointment
-    const reminderTimeStart = new Date(now.getTime() + 23 * 60 * 60 * 1000) // 23h from now
-    const reminderTimeEnd = new Date(now.getTime() + 25 * 60 * 60 * 1000) // 25h from now
-
-    // Get all pending Wallee payments with appointments that are 24h away
+    // ✅ FIX: Use RPC function to get payments due for reminders (23-25 hours before appointment)
+    // This ensures we ONLY get payments where appointment is tomorrow, not all pending payments
+    logger.debug('📡 Calling get_payments_due_for_reminders() RPC function...')
+    
     const { data: payments, error: paymentsError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        user_id,
-        total_amount_rappen,
-        payment_method,
-        payment_status,
-        reminder_sent_at,
-        appointments (
-          id,
-          start_time,
-          end_time,
-          staff_id,
-          status,
-          title,
-          location_id
-        )
-      `)
-      .eq('payment_status', 'pending')
-      .in('payment_method', ['wallee', 'cash', 'invoice'])
-      .not('appointments', 'is', null)
-      .filter('appointments.start_time', 'gte', reminderTimeStart.toISOString())
-      .filter('appointments.start_time', 'lt', reminderTimeEnd.toISOString())
+      .rpc('get_payments_due_for_reminders')
 
     if (paymentsError) {
-      console.error('❌ Error loading payments:', paymentsError)
+      console.error('❌ Error calling RPC:', paymentsError)
       throw paymentsError
     }
 
@@ -109,30 +104,40 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    logger.debug(`💰 Found ${payments.length} payments due for reminders`)
+    logger.debug(`💰 Found ${payments.length} payments due for reminders (23-25h before appointment)`)
 
     let totalEmailsSent = 0
     const results: any[] = []
 
     // Process each payment
-    for (const payment of payments) {
+    for (const paymentRow of payments) {
       try {
-        const appointment = Array.isArray(payment.appointments) 
-          ? payment.appointments[0] 
-          : payment.appointments
+        const paymentId = paymentRow.payment_id
+        const userId = paymentRow.user_id
+        const tenantId = paymentRow.tenant_id
+        const appointmentId = paymentRow.appointment_id
+        const appointmentStartTime = paymentRow.appointment_start_time
+        const paymentMethod = paymentRow.payment_method
+        const totalAmountRappen = paymentRow.total_amount_rappen
+        const reminderSentAt = paymentRow.reminder_sent_at
 
-        if (!appointment) {
-          logger.warn(`⚠️ No appointment found for payment ${payment.id}`)
-          continue
-        }
+        // Get full appointment data for email
+        const { data: appointment, error: appointmentError } = await supabase
+          .from('appointments')
+          .select(`
+            id,
+            start_time,
+            end_time,
+            staff_id,
+            status,
+            title,
+            location_id
+          `)
+          .eq('id', appointmentId)
+          .single()
 
-        // Skip if reminder already sent (within last 24 hours)
-        const lastReminderSent = payment.reminder_sent_at 
-          ? new Date(payment.reminder_sent_at)
-          : null
-        
-        if (lastReminderSent && now.getTime() - lastReminderSent.getTime() < 24 * 60 * 60 * 1000) {
-          logger.debug(`⏭️ Reminder already sent for payment ${payment.id} in last 24h, skipping`)
+        if (appointmentError || !appointment) {
+          logger.warn(`⚠️ Appointment not found for payment ${paymentId}`)
           continue
         }
 
@@ -141,11 +146,11 @@ export default defineEventHandler(async (event) => {
           const { data: user, error: userError } = await supabase
             .from('users')
             .select('first_name, last_name, email, tenant_id')
-            .eq('id', payment.user_id)
+            .eq('id', userId)
             .single()
 
           if (userError || !user) {
-            logger.warn(`⚠️ User not found for payment ${payment.id}`)
+            logger.warn(`⚠️ User not found for payment ${paymentId}`)
             continue
           }
 
@@ -164,11 +169,11 @@ export default defineEventHandler(async (event) => {
           const { data: tenant, error: tenantError } = await supabase
             .from('tenants')
             .select('name, slug, primary_color')
-            .eq('id', user.tenant_id)
+            .eq('id', tenantId)
             .single()
 
           if (tenantError || !tenant) {
-            logger.warn(`⚠️ Tenant not found for user ${payment.user_id}`)
+            logger.warn(`⚠️ Tenant not found for payment ${paymentId}`)
             continue
           }
 
@@ -193,7 +198,7 @@ export default defineEventHandler(async (event) => {
             hour: '2-digit',
             minute: '2-digit'
           })
-          const amount = (payment.total_amount_rappen / 100).toFixed(2)
+          const amount = (totalAmountRappen / 100).toFixed(2)
           const customerName = `${user.first_name} ${user.last_name}`
           const dashboardLink = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
           const locationName = location?.name || 'Treffpunkt'
@@ -215,13 +220,13 @@ export default defineEventHandler(async (event) => {
           let subject = ''
           let emailHtml = ''
 
-          if (payment.payment_method === 'wallee') {
+          if (paymentMethod === 'wallee') {
             subject = `Zahlung erforderlich - Termin morgen um ${appointmentTime} - ${tenant.name}`
             emailHtml = generateWalleePaymentReminderEmail(emailData)
-          } else if (payment.payment_method === 'cash') {
+          } else if (paymentMethod === 'cash') {
             subject = `Barzahlung für Termin morgen - ${tenant.name}`
             emailHtml = generateCashPaymentReminderEmail(emailData)
-          } else if (payment.payment_method === 'invoice') {
+          } else if (paymentMethod === 'invoice') {
             subject = `Rechnung für Termin - Zahlung erforderlich - ${tenant.name}`
             emailHtml = generateInvoicePaymentReminderEmail(emailData)
           }
@@ -237,14 +242,14 @@ export default defineEventHandler(async (event) => {
           await supabase
             .from('payment_reminders')
             .insert({
-              payment_id: payment.id,
+              payment_id: paymentId,
               reminder_type: 'email',
               reminder_number: 1,
               status: 'sent',
               metadata: {
                 message_id: emailResult.messageId,
                 sent_to: user.email,
-                payment_method: payment.payment_method
+                payment_method: paymentMethod
               }
             })
 
@@ -252,10 +257,10 @@ export default defineEventHandler(async (event) => {
           await supabase
             .from('reminder_logs')
             .insert({
-              tenant_id: user.tenant_id,
-              payment_id: payment.id,
-              appointment_id: appointment.id,
-              user_id: payment.user_id,
+              tenant_id: tenantId,
+              payment_id: paymentId,
+              appointment_id: appointmentId,
+              user_id: userId,
               channel: 'email',
               recipient: user.email,
               subject,
@@ -274,29 +279,29 @@ export default defineEventHandler(async (event) => {
             .update({
               reminder_sent_at: now.toISOString()
             })
-            .eq('id', payment.id)
+            .eq('id', paymentId)
 
           totalEmailsSent++
           results.push({
-            payment_id: payment.id,
-            payment_method: payment.payment_method,
+            payment_id: paymentId,
+            payment_method: paymentMethod,
             type: 'email',
             success: true,
             recipient: user.email
           })
 
-          logger.debug(`✅ Payment reminder sent for ${payment.payment_method} payment ${payment.id}`)
+          logger.debug(`✅ Payment reminder sent for ${paymentMethod} payment ${paymentId}`)
         } catch (emailError: any) {
-          console.error(`❌ Error sending email for payment ${payment.id}:`, emailError)
+          console.error(`❌ Error sending email for payment ${paymentId}:`, emailError)
           results.push({
-            payment_id: payment.id,
+            payment_id: paymentId,
             type: 'email',
             success: false,
             error: emailError.message
           })
         }
       } catch (paymentError: any) {
-        console.error(`❌ Error processing payment ${payment.id}:`, paymentError)
+        console.error(`❌ Error processing payment ${paymentId}:`, paymentError)
       }
     }
 
