@@ -16,9 +16,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate type
-    const validTypes = ['nutzungsbedingungen', 'datenschutzerklaerung']
-    if (!validTypes.includes(type)) {
+    // Validate type and normalize it
+    const typeMapping: Record<string, string> = {
+      'nutzungsbedingungen': 'nutzungsbedingungen',
+      'agb': 'nutzungsbedingungen', // Map 'agb' to 'nutzungsbedingungen'
+      'datenschutzerklaerung': 'datenschutzerklaerung',
+      'datenschutz': 'datenschutzerklaerung' // Map 'datenschutz' to 'datenschutzerklaerung'
+    }
+    
+    const normalizedType = typeMapping[type]
+    if (!normalizedType) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Invalid reglement type'
@@ -78,7 +85,7 @@ export default defineEventHandler(async (event) => {
     const { data: regulations, error } = await supabaseAdmin
       .from('tenant_reglements')
       .select('id, type, title, content, is_active, created_at')
-      .eq('type', type)
+      .eq('type', normalizedType)
       .eq('is_active', true)
       .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
       .order('tenant_id', { ascending: false })
@@ -104,7 +111,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Reglement fetched successfully:', {
       userId: user.id,
       tenantId: tenantId,
-      type: type,
+      requestedType: type,
+      normalizedType: normalizedType,
       regulationId: regulations[0].id
     })
 
