@@ -82,7 +82,7 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
             <!-- Info Banner -->
             <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              ℹ️ Mindestens Vor- oder Nachname + Telefon oder E-Mail erforderlich
+              ℹ️ Mindestens Vor- oder Nachname + Telefon erforderlich
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -116,11 +116,10 @@
                 <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
               </div>
 
-
               <!-- Phone -->
               <div class="md:col-span-2">
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer <span class="text-gray-400 text-xs">(oder E-Mail)</span>
+                  Telefonnummer *
                 </label>
                 <input
                   id="phone"
@@ -131,22 +130,6 @@
                   placeholder="+41 79 123 45 67"
                 >
                 <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
-              </div>
-
-              <!-- Email -->
-              <div class="md:col-span-2">
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse <span class="text-gray-400 text-xs">(oder Telefonnummer)</span>
-                </label>
-                <input
-                  id="email"
-                  v-model="form.email"
-                  type="email"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.email }"
-                  placeholder="max.mustermann@example.com"
-                >
-                <p v-if="errors.email" class="text-red-600 text-xs mt-1">{{ errors.email }}</p>
               </div>
             </div>
           </div>
@@ -261,7 +244,6 @@ const duplicateInfo = ref({
 const form = ref({
   first_name: '',
   last_name: '',
-  email: '',
   phone: '',
   birthdate: '',
   street: '',
@@ -279,11 +261,10 @@ const isFormValid = computed(() => {
   // Mindestens ein Name (Vor- ODER Nachname)
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   
-  // Mindestens Telefon ODER Email
+  // Telefon ist erforderlich (nur SMS now)
   const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
-  const hasEmail = form.value.email && isValidEmail(form.value.email)
   
-  return hasName && (hasPhone || hasEmail)
+  return hasName && hasPhone
 })
 
 // Methods
@@ -325,18 +306,10 @@ const validateForm = () => {
     errors.value.first_name = 'Mindestens Vor- oder Nachname erforderlich'
   }
 
-  // Mindestens Telefon ODER Email erforderlich
+  // Telefon ist erforderlich (nur SMS)
   const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
-  const hasEmail = form.value.email && isValidEmail(form.value.email)
-  
-  if (!hasPhone && !hasEmail) {
-    errors.value.phone = 'Telefonnummer oder E-Mail erforderlich'
-    errors.value.email = 'Telefonnummer oder E-Mail erforderlich'
-  }
-
-  // E-Mail-Validierung (nur wenn angegeben)
-  if (form.value.email && !isValidEmail(form.value.email)) {
-    errors.value.email = 'Ungültige E-Mail-Adresse'
+  if (!hasPhone) {
+    errors.value.phone = 'Gültige Telefonnummer erforderlich'
   }
 
   return Object.keys(errors.value).length === 0
@@ -346,7 +319,6 @@ const resetForm = () => {
   form.value = {
     first_name: '',
     last_name: '',
-    email: '',
     phone: '',
     birthdate: '',
     street: '',
@@ -437,7 +409,6 @@ const submitForm = async () => {
     const studentData: any = {
       first_name: form.value.first_name.trim() || '',
       last_name: form.value.last_name.trim() || '',
-      email: form.value.email.trim() || '',
       phone: form.value.phone.trim() || ''
     }
     
@@ -464,9 +435,9 @@ const submitForm = async () => {
     logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
     // ✅ Benachrichtigung - zeige Erfolg an wenn Schüler erstellt wurde
-    // SMS/Email werden automatisch im Backend versendet
-    const contactInfo = form.value.phone || form.value.email
-    const contactType = form.value.phone ? 'SMS' : 'E-Mail'
+    // SMS wird automatisch im Backend versendet
+    const contactInfo = form.value.phone
+    const contactType = 'SMS'
     
     logger.debug('✅ Schüler erstellt und Einladung versendet via:', contactType)
     showSuccessToast(
@@ -677,12 +648,6 @@ watch(() => props.show, (newValue) => {
 })
 
 // Real-time validation
-watch(() => form.value.email, () => {
-  if (errors.value.email && isValidEmail(form.value.email)) {
-    delete errors.value.email
-  }
-})
-
 watch(() => form.value.first_name, () => {
   if (errors.value.first_name && form.value.first_name.trim()) {
     delete errors.value.first_name
