@@ -156,6 +156,47 @@ export default defineEventHandler(async (event) => {
     const sanitizedCity = city ? sanitizeString(city, 100) : null
     const sanitizedLernfahrausweisNr = lernfahrausweisNr ? sanitizeString(lernfahrausweisNr, 50) : null
 
+    // ============ PRE-CHECK: Duplicate Phone & Email ============
+    // Check BEFORE creating auth user to avoid orphaned auth users
+    
+    // Check for existing email in this tenant
+    const { data: existingEmailUser } = await serviceSupabase
+      .from('users')
+      .select('id, first_name, last_name, is_active, onboarding_status')
+      .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', tenantId)
+      .single()
+    
+    if (existingEmailUser) {
+      logger.warn('⚠️ Duplicate email detected:', email.toLowerCase().trim())
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere E-Mail.',
+        data: { code: 'DUPLICATE_EMAIL' }
+      })
+    }
+    
+    // Check for existing phone in this tenant (if phone provided)
+    if (sanitizedPhone) {
+      const { data: existingPhoneUser } = await serviceSupabase
+        .from('users')
+        .select('id, first_name, last_name, is_active, onboarding_status')
+        .eq('phone', sanitizedPhone)
+        .eq('tenant_id', tenantId)
+        .single()
+      
+      if (existingPhoneUser) {
+        logger.warn('⚠️ Duplicate phone detected:', sanitizedPhone)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere Nummer.',
+          data: { code: 'DUPLICATE_PHONE' }
+        })
+      }
+    }
+    
+    logger.debug('Register', '✅ No duplicate email or phone found - proceeding with registration')
+
     // 1. Create auth user
     logger.debug('Register', '🔐 Creating auth user for:', email)
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
