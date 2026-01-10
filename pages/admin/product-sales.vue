@@ -544,8 +544,15 @@ const loadSales = async () => {
     logger.debug('🔄 Loading product sales via API...')
     
     // ✅ Use new secure API instead of direct DB queries
+    // Get auth token for API call
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
     const response = await $fetch('/api/admin/get-product-sales', {
       method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+      },
       query: { limit: 1000, offset: 0 }
     }) as any
 
@@ -553,8 +560,7 @@ const loadSales = async () => {
       throw new Error(response.error || 'Failed to load product sales')
     }
 
-    // Load current tenant info (can be fetched from API too, but optional)
-    const supabase = getSupabase()
+    // Load current tenant info
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     const { data: userProfile } = await supabase
       .from('users')

@@ -1121,8 +1121,15 @@ const loadUsers = async () => {
     logger.debug('🔄 Loading users via API...')
     
     // ✅ Use new secure API instead of direct DB queries
+    // Get auth token for API call
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
     const response = await $fetch('/api/admin/get-users-with-stats', {
-      method: 'GET'
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+      }
     }) as any
 
     if (!response.success) {
@@ -1130,7 +1137,6 @@ const loadUsers = async () => {
     }
 
     // Load current tenant info
-    const supabase = getSupabase()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     const { data: userProfile } = await supabase
       .from('users')
