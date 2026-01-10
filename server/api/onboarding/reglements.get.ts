@@ -17,12 +17,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // Validate type and normalize it
-    // The database stores shorter type names: 'datenschutz', 'nutzungsbedingungen', 'agb'
+    // Database stores these types: 'datenschutz', 'agb', 'nutzungsbedingungen', 'haftung', 'rueckerstattung'
+    // Frontend may send long form names, so we normalize them
     const typeMapping: Record<string, string> = {
-      'nutzungsbedingungen': 'nutzungsbedingungen',
-      'agb': 'agb', // Map both 'agb' and 'nutzungsbedingungen' to 'agb' (shorter name)
-      'datenschutzerklaerung': 'datenschutz', // Map 'datenschutzerklaerung' to 'datenschutz' (shorter name)
-      'datenschutz': 'datenschutz' // Already in correct format
+      'nutzungsbedingungen': 'nutzungsbedingungen', // Use as-is
+      'agb': 'agb', // Use as-is
+      'datenschutzerklaerung': 'datenschutz', // Normalize long form to short form
+      'datenschutz': 'datenschutz', // Use as-is
+      'haftung': 'haftung', // Use as-is
+      'rueckerstattung': 'rueckerstattung' // Use as-is
     }
     
     const normalizedType = typeMapping[type]
