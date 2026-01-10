@@ -2,8 +2,13 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { logAudit } from '~/server/utils/audit'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
+  let userId: string | undefined
+  let tenantId: string | undefined
+  
   try {
     // ============ LAYER 1: RATE LIMITING ============
     const ipAddress = getClientIP(event)
@@ -22,7 +27,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event)
-    const { userId, fileData, fileName, bucket, path, tenantId } = body
+    userId = body.userId
+    tenantId = body.tenantId
+    const { fileData, fileName, bucket, path } = body
 
     if (!userId || !fileData || !fileName || !bucket || !path) {
       throw createError({
@@ -31,18 +38,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 2: File Type Validation
-    const fileExtension = fileName.split('.').pop()?.toLowerCase()
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf']
-    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
-      logger.warn('❌ Invalid file type:', fileExtension)
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Ungültiger Dateityp. Nur JPG, PNG und PDF sind erlaubt.`
-      })
-    }
-
-    // Create service role client to bypass RLS for storage
+    // ✅ LAYER 2: User Validation & Tenant Isolation
     const { createClient } = await import('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -56,6 +52,44 @@ export default defineEventHandler(async (event) => {
     }
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+
+    // Verify user exists and belongs to the provided tenant
+    const { data: user, error: userError } = await serviceSupabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !user) {
+      logger.warn('❌ Invalid userId for document upload:', userId)
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Ungültiger Benutzer'
+      })
+    }
+
+    // Enforce tenant isolation: user must belong to the specified tenant
+    if (tenantId && user.tenant_id !== tenantId) {
+      logger.warn('❌ Tenant mismatch for document upload:', { userId, userTenant: user.tenant_id, providedTenant: tenantId })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Zugriff verweigert: Tenant-Isolation verletzt'
+      })
+    }
+
+    // Use the validated tenant_id from the database
+    tenantId = user.tenant_id
+
+    // ✅ LAYER 3: File Type Validation
+    const fileExtension = fileName.split('.').pop()?.toLowerCase()
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf']
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      logger.warn('❌ Invalid file type:', fileExtension)
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Ungültiger Dateityp. Nur JPG, PNG und PDF sind erlaubt.`
+      })
+    }
 
     // Convert base64 data URL to Uint8Array
     let fileBuffer: Uint8Array
@@ -71,7 +105,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 3: File Size Validation (5MB limit)
+    // ✅ LAYER 4: File Size Validation (5MB limit)
     const maxSize = 5 * 1024 * 1024 // 5MB
     if (fileBuffer.length > maxSize) {
       logger.warn('❌ File too large:', fileBuffer.length, 'bytes')
@@ -118,6 +152,25 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ File uploaded successfully:', data.path)
+
+    // ============ LAYER 5: AUDIT LOGGING ============
+    await logAudit({
+      action: 'document_upload_registration',
+      user_id: userId,
+      tenant_id: tenantId,
+      resource_type: 'document',
+      resource_id: data.path,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        file_name: timestampedFileName,
+        file_size: fileBuffer.length,
+        file_type: contentType,
+        category: category,
+        storage_path: storagePath,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     // Create document record in user_documents table
     if (tenantId) {
@@ -180,6 +233,21 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Document upload error:', error)
+
+    // Audit log for failed upload
+    const ipAddress = getClientIP(event)
+    await logAudit({
+      action: 'document_upload_registration',
+      user_id: userId,
+      tenant_id: tenantId,
+      resource_type: 'document',
+      ip_address: ipAddress,
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     if (error.statusCode) {
       throw error

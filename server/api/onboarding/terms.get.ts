@@ -2,10 +2,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logger } from '~/utils/logger'
+import { logAudit } from '~/server/utils/audit'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
+  let token: string | undefined
+  let tenantId: string | undefined
+  
   try {
-    const token = getQuery(event).token as string | undefined
+    token = getQuery(event).token as string | undefined
 
     if (!token) {
       throw createError({
@@ -36,7 +41,7 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 2: TOKEN VALIDATION ============
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('tenant_id, onboarding_token_expires, onboarding_status')
+      .select('id, tenant_id, onboarding_token_expires, onboarding_status')
       .eq('onboarding_token', token)
       .single()
 
@@ -66,7 +71,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const tenantId = user.tenant_id
+    tenantId = user.tenant_id
 
     // Try tenant-specific policies table first
     let terms: string | null = null
@@ -103,9 +108,36 @@ export default defineEventHandler(async (event) => {
       terms = 'Bitte bestätige die Allgemeinen Geschäftsbedingungen deiner Fahrschule.'
     }
 
+    // ============ LAYER 4: AUDIT LOGGING ============
+    await logAudit({
+      action: 'onboarding_terms_loaded',
+      user_id: user.id,
+      tenant_id: tenantId,
+      resource_type: 'terms',
+      status: 'success',
+      details: {
+        token_prefix: token.substring(0, 8),
+        terms_length: terms.length,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     return { terms }
   } catch (error: any) {
     logger.error('❌ Error loading terms:', error.message)
+    
+    // Audit log for failed request
+    await logAudit({
+      action: 'onboarding_terms_loaded',
+      tenant_id: tenantId,
+      resource_type: 'terms',
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        token_prefix: token ? token.substring(0, 8) : 'N/A',
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
     
     // Return error with proper status code
     if (error.statusCode) {
