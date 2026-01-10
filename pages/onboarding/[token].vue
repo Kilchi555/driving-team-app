@@ -386,7 +386,8 @@
                   @dragleave="handleDragLeave($event, category)"
                   :class="[
                     'border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200',
-                    dragOver[category] ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400'
+                    dragOver[category] ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400',
+                    fileErrors[category] ? 'border-red-400 bg-red-50' : ''
                   ]"
                 >
                   <div v-if="!uploadedFiles[category]">
@@ -415,7 +416,7 @@
                   </div>
                   
                   <!-- File Preview -->
-                  <div v-else class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div v-else-if="uploadedFiles[category]" class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex items-center space-x-3 min-w-0 flex-1">
                       <div class="flex-shrink-0">
                         <svg v-if="uploadedFiles[category].type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,6 +444,19 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
                     </button>
+                  </div>
+                </div>
+                
+                <!-- Error Message -->
+                <div v-if="fileErrors[category]" class="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div class="flex items-start">
+                    <svg class="h-5 w-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                      <p class="text-sm font-medium text-red-800">{{ fileErrors[category] }}</p>
+                      <p class="text-xs text-red-600 mt-1">Bitte wähle eine andere Datei aus</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -689,6 +703,7 @@ const form = reactive({
 
 const uploadedFiles = reactive<Record<string, File>>({})
 const dragOver = reactive<Record<string, boolean>>({})
+const fileErrors = reactive<Record<string, string>>({}) // Track file validation errors
 
 // Normalize phone number to +41 79... format
 function normalizePhoneNumber() {
@@ -883,12 +898,47 @@ onMounted(async () => {
   }
 })
 
-// Handle file uploads
+// Validate file before upload
+const validateFile = (file: File): string | null => {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
+  
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return `Datei ist zu gross. Maximal 10MB erlaubt (aktuell: ${formatFileSize(file.size)})`
+  }
+  
+  // Check file type
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return `Dateiformat nicht erlaubt. Nur PNG, JPG, PDF erlaubt (aktuell: ${file.type || 'unbekannt'})`
+  }
+  
+  // Check file name for suspicious content
+  const fileName = file.name.toLowerCase()
+  if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+    return 'Ungültiger Dateiname'
+  }
+  
+  return null // No error
+}
+
+// Handle file uploads with validation
 const handleFileUpload = (event: Event, type: string) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (file) {
-    uploadedFiles[type] = file
+    // Validate file immediately
+    const validationError = validateFile(file)
+    if (validationError) {
+      fileErrors[type] = validationError
+      // Clear the input so they can try again
+      target.value = ''
+      delete uploadedFiles[type]
+    } else {
+      uploadedFiles[type] = file
+      fileErrors[type] = '' // Clear any previous errors
+      logger.debug(`✅ File validated for ${type}: ${file.name} (${formatFileSize(file.size)})`)
+    }
   }
 }
 
@@ -900,8 +950,16 @@ const handleDrop = (event: DragEvent, type: string) => {
   const files = event.dataTransfer?.files
   if (files && files.length > 0) {
     const file = files[0]
-    if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+    
+    // Validate file
+    const validationError = validateFile(file)
+    if (validationError) {
+      fileErrors[type] = validationError
+      delete uploadedFiles[type]
+    } else if (file.type.startsWith('image/') || file.type === 'application/pdf') {
       uploadedFiles[type] = file
+      fileErrors[type] = ''
+      logger.debug(`✅ File dragged and validated for ${type}: ${file.name}`)
     }
   }
 }
@@ -921,6 +979,7 @@ const handleDragLeave = (event: DragEvent, type: string) => {
 // Remove file
 const removeFile = (type: string) => {
   delete uploadedFiles[type]
+  fileErrors[type] = '' // Clear error when removing file
 }
 
 // Format file size
