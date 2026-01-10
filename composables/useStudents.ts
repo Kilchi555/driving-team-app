@@ -320,7 +320,8 @@ export const useStudents = () => {
                 email: cleanEmail,
                 firstName: createdStudent.first_name || 'Kunde',
                 lastName: createdStudent.last_name || '',
-                onboardingLink: onboardingLink
+                onboardingLink: onboardingLink,
+                tenantId: createdStudent.tenant_id  // ✅ FIX: Added missing tenantId
               }
             }) as any
             
