@@ -417,142 +417,26 @@ const fetchUsersSummary = async () => {
   error.value = null
   
   try {
-    logger.debug('🔄 Loading users payment summary...')
+    logger.debug('🔄 Loading users payment summary via API...')
     
-    // Get current user's tenant_id first
-    const { data: currentUserData } = await supabase.auth.getUser()
-    if (!currentUserData?.user) throw new Error('Not authenticated')
+    // ✅ Use new secure API instead of direct DB queries
+    // Get auth token for API call
+    const { data: { session } } = await supabase.auth.getSession()
     
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUserData.user.id)
-      .single()
-    
-    if (profileError || !userProfile?.tenant_id) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    logger.debug('🔍 Loading users for tenant:', userProfile.tenant_id)
-    
-    // Lade nur Kunden/Schüler (keine Admins oder Staff) - FILTERED BY TENANT
-    const { data: usersData, error: usersError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        role,
-        preferred_payment_method,
-        default_company_billing_address_id,
-        is_active
-      `)
-      .eq('is_active', true)
-      .eq('role', 'client')
-      .eq('tenant_id', userProfile.tenant_id)
-    
-    if (usersError) {
-      throw new Error(usersError.message)
-    }
-
-    // ✅ GEÄNDERT: Lade alle Termine für alle Benutzer (nicht nur Payments) - FILTERED BY TENANT
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        user_id,
-        start_time,
-        duration_minutes,
-        status,
-        created_at
-      `)
-      .eq('tenant_id', userProfile.tenant_id)
-      .order('start_time', { ascending: false })
-
-    if (appointmentsError) {
-      console.error('❌ Error loading appointments:', appointmentsError)
-      throw new Error(`Appointments error: ${appointmentsError.message}`)
-    }
-
-    // ✅ Lade alle Payments für die Zahlungsinformationen - FILTERED BY TENANT
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from('payments')
-      .select(`
-        user_id,
-        appointment_id,
-        payment_status,
-        paid_at,
-        total_amount_rappen,
-        description
-      `)
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (paymentsError) {
-      console.error('❌ Error loading payments:', paymentsError)
-      throw new Error(`Payments error: ${paymentsError.message}`)
-    }
-
-    // Lade Company Billing Adressen
-    const { data: billingData, error: billingError } = await supabase
-      .from('company_billing_addresses')
-      .select('created_by')
-
-    if (billingError) {
-      console.warn('Warning loading billing addresses:', billingError.message)
-    }
-
-    // Verarbeite die Daten
-    const processedUsers = (usersData || []).map(user => {
-      // ✅ Finde alle Termine für diesen User
-      const userAppointments = (appointmentsData || []).filter(appointment => 
-        appointment.user_id === user.id
-      )
-      
-      // ✅ Finde unbezahlte Payments für diesen User
-      const userUnpaidPayments = (paymentsData || []).filter(payment => 
-        payment.user_id === user.id && 
-        (payment.payment_status === 'pending' || !payment.paid_at)
-      )
-      
-      logger.debug(`📊 User ${user.first_name} ${user.last_name}:`, {
-        totalAppointments: userAppointments.length,
-        totalUnpaidPayments: userUnpaidPayments.length,
-        appointmentsSample: userAppointments.slice(0, 2).map(apt => ({
-          date: apt.start_time,
-          status: apt.status
-        }))
-      })
-      
-      // ✅ total_amount_rappen enthält bereits alle Gebühren (lesson + admin + products - discount)
-      const totalUnpaidAmount = userUnpaidPayments.reduce((sum, payment) => {
-        return sum + ((payment.total_amount_rappen || 0) / 100)
-      }, 0)
-
-      logger.debug(`💰 Total unpaid amount for ${user.first_name}: ${totalUnpaidAmount} CHF`)
-
-      // Prüfe Company Billing
-      const hasCompanyBilling = billingData?.some(billing => billing.created_by === user.id) || 
-                               !!user.default_company_billing_address_id
-
-      return {
-        user_id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        preferred_payment_method: user.preferred_payment_method,
-        has_company_billing: hasCompanyBilling,
-        has_unpaid_appointments: userUnpaidPayments.length > 0,
-        total_unpaid_amount: totalUnpaidAmount,
-        total_appointments: userAppointments.length // ✅ NEU: Gesamtanzahl Termine
+    const response = await $fetch('/api/admin/get-payments-overview', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
       }
-    })
+    }) as any
 
-    users.value = processedUsers
-    logger.debug('✅ Users payment summary loaded:', users.value.length)
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to load users payment summary')
+    }
+
+    // ✅ API already returns users with stats calculated
+    users.value = response.data || []
+    logger.debug('✅ Users payment summary loaded from API:', users.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading users payment summary:', err)
