@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
+import { logger } from '~/utils/logger'
 
 interface UserPaymentSummary {
   user_id: string
