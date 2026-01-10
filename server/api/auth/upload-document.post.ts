@@ -1,8 +1,26 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
   try {
+    // ============ LAYER 1: RATE LIMITING ============
+    const ipAddress = getClientIP(event)
+    const rateLimitResult = await checkRateLimit(
+      ipAddress,
+      'upload_document_registration',
+      10, // 10 uploads per hour
+      3600 * 1000
+    )
+    if (!rateLimitResult.allowed) {
+      logger.warn('❌ Rate limit exceeded for document upload:', ipAddress)
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Zu viele Upload-Versuche. Bitte versuchen Sie es später erneut.'
+      })
+    }
+
     const body = await readBody(event)
     const { userId, fileData, fileName, bucket, path, tenantId } = body
 
@@ -13,7 +31,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 1: File Type Validation
+    // ✅ LAYER 2: File Type Validation
     const fileExtension = fileName.split('.').pop()?.toLowerCase()
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf']
     if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
@@ -53,7 +71,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 2: File Size Validation (5MB limit)
+    // ✅ LAYER 3: File Size Validation (5MB limit)
     const maxSize = 5 * 1024 * 1024 // 5MB
     if (fileBuffer.length > maxSize) {
       logger.warn('❌ File too large:', fileBuffer.length, 'bytes')
