@@ -17,11 +17,12 @@ export default defineEventHandler(async (event) => {
     }
 
     // Validate type and normalize it
+    // The database stores shorter type names: 'datenschutz', 'nutzungsbedingungen', 'agb'
     const typeMapping: Record<string, string> = {
       'nutzungsbedingungen': 'nutzungsbedingungen',
-      'agb': 'nutzungsbedingungen', // Map 'agb' to 'nutzungsbedingungen'
-      'datenschutzerklaerung': 'datenschutzerklaerung',
-      'datenschutz': 'datenschutzerklaerung' // Map 'datenschutz' to 'datenschutzerklaerung'
+      'agb': 'agb', // Map both 'agb' and 'nutzungsbedingungen' to 'agb' (shorter name)
+      'datenschutzerklaerung': 'datenschutz', // Map 'datenschutzerklaerung' to 'datenschutz' (shorter name)
+      'datenschutz': 'datenschutz' // Already in correct format
     }
     
     const normalizedType = typeMapping[type]
@@ -100,10 +101,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!regulations || regulations.length === 0) {
-      logger.warn('⚠️ No regulations found for:', { type, tenantId })
+      logger.warn('⚠️ No regulations found for:', { 
+        type: normalizedType, 
+        tenantId,
+        requestedType: type
+      })
       throw createError({
         statusCode: 404,
-        statusMessage: 'Regulations not found'
+        statusMessage: `Regulations for ${type} are not yet available. Please contact the driving school.`
       })
     }
 
