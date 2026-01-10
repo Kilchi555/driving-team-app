@@ -36,9 +36,11 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
     const rateLimitResult = await checkRateLimit(
       authUserData.id,
-      'register', // Use 'register' operation type
-      30,         // maxRequests override
-      60 * 1000   // windowMs: 1 minute
+      'add_student',  // Specific operation for add student
+      30,             // maxRequests override
+      60 * 1000,      // windowMs: 1 minute
+      body.email,     // email parameter
+      tenantId        // tenantId parameter
     )
     if (!rateLimitResult.allowed) {
       throw createError({
