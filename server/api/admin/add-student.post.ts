@@ -33,22 +33,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
-    const rateLimitResult = await checkRateLimit(
-      authUserData.id,
-      'add_student',  // Specific operation for add student
-      30,             // maxRequests override
-      60 * 1000,      // windowMs: 1 minute
-      body.email,     // email parameter
-      tenantId        // tenantId parameter
-    )
-    if (!rateLimitResult.allowed) {
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Too many requests. Please try again later.'
-      })
-    }
-
     // Get user profile and tenant_id
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
@@ -64,6 +48,22 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantId = userProfile.tenant_id
+
+    // ✅ LAYER 1: Rate Limiting (30 requests per minute per user)
+    const rateLimitResult = await checkRateLimit(
+      authUserData.id,
+      'add_student',  // Specific operation for add student
+      30,             // maxRequests override
+      60 * 1000,      // windowMs: 1 minute
+      body.email,     // email parameter
+      tenantId        // tenantId parameter
+    )
+    if (!rateLimitResult.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many requests. Please try again later.'
+      })
+    }
 
     // Check for duplicates - phone
     if (body.phone) {
