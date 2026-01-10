@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
       const { data: oldAssignedStudents, error: oldError } = await serviceSupabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
-        .eq('role', 'client')
+        .eq('role', 'client') // Only clients, not staff
         .eq('tenant_id', tenantId)
         .eq('assigned_staff_id', userId)
         .or('is_active.eq.true,onboarding_status.eq.pending')
@@ -69,13 +69,12 @@ export default defineEventHandler(async (event) => {
 
       // ✅ For new-style assigned_staff_ids (array), we need to load ALL active students
       // and filter server-side because Supabase array contains is complex
-      // But we'll only do this if we need it (after checking old assignments)
+      // Load students with assigned_staff_ids regardless of is_active status
       const { data: allStudents, error: allError } = await serviceSupabase
         .from('users')
         .select('id, first_name, last_name, email, phone, category, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client')
         .eq('tenant_id', tenantId)
-        .or('is_active.eq.true,onboarding_status.eq.pending')
         .not('assigned_staff_ids', 'is', null)
         .order('first_name')
 
@@ -122,9 +121,10 @@ export default defineEventHandler(async (event) => {
       }
 
       // Then: add students from appointment history (fallback if not assigned)
+      // But exclude the staff member themselves
       if (appointmentStudents) {
         for (const apt of appointmentStudents) {
-          if (apt.users && !byId[apt.users.id]) {
+          if (apt.users && !byId[apt.users.id] && apt.users.id !== userId) { // ✅ Exclude staff member
             byId[apt.users.id] = apt.users
           }
         }
