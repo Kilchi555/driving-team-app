@@ -65,7 +65,7 @@ Last Updated: January 10, 2025
 
 ### PRIORITY 1: CRITICAL (Core Functionality)
 
-#### 1. **product-sales.vue** - Sales Dashboard
+#### 1. **product-sales.vue** - Sales Dashboard (Admin Only)
 **Location:** `pages/admin/product-sales.vue` (Lines 570-612)
 
 **Current Queries:**
@@ -83,13 +83,34 @@ supabase.from('payment_items').select(...)
 ```
 
 **Risk Level:** 🟡 **MEDIUM** - Admin only but no rate limiting
-**Impact:** Sales analytics page
+**Impact:** Sales analytics page (admin-only)
 
 **Action:** Should migrate to `/api/admin/get-product-sales.get.ts`
 
 ---
 
-#### 2. **learning.vue** - Evaluation Data
+#### 2. **customer/payments.vue** - Customer Payment Actions (Customer-Facing)
+**Location:** `pages/customer/payments.vue` (Lines 710-720, 813+)
+
+**Current Queries:**
+```typescript
+// UPDATE: Mark payment as completed with credit
+supabase.from('payments')
+  .update({ payment_status: 'completed', credit_used_rappen, ... })
+  .eq('id', payment.id)
+
+// Likely other direct queries on lines 813+
+```
+
+**Risk Level:** 🔴 **HIGH** - Customer-facing, data modification
+**Impact:** Customer paying with credit - directly updates database
+**Security Risk:** Customer could bypass audit logging
+
+**Action:** URGENT - Migrate to `/api/payments/pay-with-credit.post.ts`
+
+---
+
+#### 3. **learning.vue** - Evaluation Data
 **Location:** `pages/learning.vue` (Lines 267-312)
 
 **Current Queries:**
