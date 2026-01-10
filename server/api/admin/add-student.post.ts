@@ -113,6 +113,11 @@ export default defineEventHandler(async (event) => {
       ? (Array.isArray(body.category) ? body.category : [body.category])
       : []
 
+    // Prepare assigned staff IDs array - include the assigned_staff_id in the array
+    const assignedStaffIds = body.assigned_staff_id 
+      ? [body.assigned_staff_id]  // ✅ NEW: Store in array format
+      : []
+
     // Insert new student (using service role)
     const { error: insertError } = await supabaseAdmin
       .from('users')
@@ -131,6 +136,7 @@ export default defineEventHandler(async (event) => {
         city: body.city || null,
         category: categoryArray,
         assigned_staff_id: body.assigned_staff_id || null,
+        assigned_staff_ids: assignedStaffIds,  // ✅ NEW: Also store as array
         role: 'client',
         is_active: false, // Inactive until onboarding complete
         onboarding_status: 'pending',
