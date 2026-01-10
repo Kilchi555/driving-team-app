@@ -116,37 +116,8 @@
               </div>
             </div>
 
-            <!-- Einladungsmethode -->
+            <!-- Telefonnummer -->
             <div>
-              <label class="block text-xs font-medium text-gray-700 mb-2">
-                Einladungsmethode *
-              </label>
-              <div class="flex gap-4">
-                <label class="flex items-center">
-                  <input
-                    v-model="invitationMethod"
-                    type="radio"
-                    value="sms"
-                    :disabled="disabled"
-                    class="mr-2"
-                  />
-                  <span class="text-sm">📱 SMS</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="invitationMethod"
-                    type="radio"
-                    value="email"
-                    :disabled="disabled"
-                    class="mr-2"
-                  />
-                  <span class="text-sm">📧 E-Mail</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Telefonnummer (nur bei SMS) -->
-            <div v-if="invitationMethod === 'sms'">
               <label class="block text-xs font-medium text-gray-700 mb-1">
                 Telefonnummer *
               </label>
@@ -160,24 +131,6 @@
               />
               <p class="text-xs text-gray-500 mt-1">
                 Der Kunde erhält eine SMS-Einladung an diese Nummer
-              </p>
-            </div>
-
-            <!-- E-Mail (nur bei E-Mail) -->
-            <div v-if="invitationMethod === 'email'">
-              <label class="block text-xs font-medium text-gray-700 mb-1">
-                E-Mail-Adresse *
-              </label>
-              <input
-                v-model="newCustomer.email"
-                type="email"
-                placeholder="kunde@beispiel.ch"
-                :disabled="disabled"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                @keydown.enter="addCustomer"
-              />
-              <p class="text-xs text-gray-500 mt-1">
-                Der Kunde erhält eine E-Mail-Einladung an diese Adresse
               </p>
             </div>
 
@@ -239,28 +192,12 @@
                         {{ customer.category }}
                       </span>
                       
-                      <!-- Contact info -->
+                      <!-- Contact info (only phone now) -->
                       <span v-if="customer.phone" class="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded">
                         📱 {{ customer.phone }}
                       </span>
-                      <span v-if="customer.email" class="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded">
-                        📧 {{ customer.email }}
-                      </span>
                       
-                      <!-- SMS Status Badge (only for SMS customers) -->
-                      <span v-if="customer.phone && smsStatus[customer.phone]" class="text-xs px-2 py-0.5 rounded flex items-center gap-1"
-                        :class="smsStatus[customer.phone].sent 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'"
-                      >
-                        <span v-if="smsStatus[customer.phone].sent">✅ SMS</span>
-                        <span v-else>❌ SMS</span>
-                      </span>
-                      
-                      <!-- Email Status Badge (for email customers) -->
-                      <span v-if="customer.email" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
-                        📧 E-Mail
-                      </span>
+                      <!-- Email Status Badge removed - only SMS now -->
                     </div>
                   <div class="text-sm text-gray-600">
                     <span v-if="customer.notes">
@@ -378,12 +315,11 @@ import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useSmsService } from '~/composables/useSmsService'
 
-// Customer Interface - vereinfacht für temp users
+// Customer Interface - simplified for phone-only invitations
 interface NewCustomer {
   first_name?: string
   last_name?: string
   phone?: string
-  email?: string
   category?: string
   notes?: string
 }
@@ -421,13 +357,11 @@ const newCustomer = ref<NewCustomer>({
   first_name: '',
   last_name: '',
   phone: '',
-  email: '',
   category: '',
   notes: ''
 })
 
-// Invitation method selection
-const invitationMethod = ref<'sms' | 'email'>('sms')
+// Always use SMS (removed invitationMethod selector)
 
 // Computed
 const invitedCustomers = computed({
@@ -437,16 +371,9 @@ const invitedCustomers = computed({
 
 const isNewCustomerValid = computed(() => {
   const hasName = newCustomer.value.first_name?.trim() || newCustomer.value.last_name?.trim()
+  const hasPhone = newCustomer.value.phone?.trim() && isValidPhone(newCustomer.value.phone)
   
-  if (invitationMethod.value === 'sms') {
-    return newCustomer.value.phone?.trim() &&
-           isValidPhone(newCustomer.value.phone) &&
-           hasName
-  } else {
-    return newCustomer.value.email?.trim() &&
-           isValidEmail(newCustomer.value.email) &&
-           hasName
-  }
+  return hasPhone && hasName
 })
 
 // Computed für SMS Status Display:
@@ -468,9 +395,8 @@ const isValidPhone = (phone: string): boolean => {
 }
 
 const isValidEmail = (email: string): boolean => {
-  // Email validation (not used anymore but kept for potential future use)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
+  // Email validation - no longer used
+  return true
 }
 
 const formatPhone = (phone: string): string => {
@@ -622,22 +548,18 @@ const loadCategories = async () => {
 
 const addCustomer = async () => {
   if (!isNewCustomerValid.value) {
-    // Spezifische Fehlermeldung basierend auf fehlenden Feldern
+    // Specific error message
     const hasName = newCustomer.value.first_name?.trim() || newCustomer.value.last_name?.trim()
-    const hasContact = invitationMethod.value === 'sms' 
-      ? (newCustomer.value.phone?.trim() && isValidPhone(newCustomer.value.phone))
-      : (newCustomer.value.email?.trim() && isValidEmail(newCustomer.value.email))
+    const hasPhone = newCustomer.value.phone?.trim() && isValidPhone(newCustomer.value.phone)
     
-    if (!hasName && !hasContact) {
-      error.value = 'Bitte geben Sie mindestens Vor- oder Nachname und eine Kontaktmöglichkeit (Telefon oder E-Mail) an'
+    if (!hasName && !hasPhone) {
+      error.value = 'Bitte geben Sie mindestens Vor- oder Nachname und eine Telefonnummer an'
     } else if (!hasName) {
       error.value = 'Bitte geben Sie mindestens den Vor- oder Nachnamen an'
-    } else if (!hasContact) {
-      error.value = invitationMethod.value === 'sms' 
-        ? 'Bitte geben Sie eine gültige Telefonnummer an' 
-        : 'Bitte geben Sie eine gültige E-Mail-Adresse an'
+    } else if (!hasPhone) {
+      error.value = 'Bitte geben Sie eine gültige Telefonnummer an'
     } else {
-    error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
+      error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
     }
     return
   }
@@ -656,24 +578,16 @@ const addCustomer = async () => {
     isProcessing.value = true
     error.value = null
 
-  // Check if customer already exists in database OR invited_customers
+  // Check if customer already exists in database
   const supabase = getSupabase()
   
-  // Check regular users based on invitation method
+  // Check existing customers by phone (only SMS now)
   let existingCustomer = null
-  if (invitationMethod.value === 'sms' && newCustomer.value.phone) {
+  if (newCustomer.value.phone) {
     const { data } = await supabase
       .from('users')
       .select('id, first_name, last_name, phone')
       .eq('phone', formatPhone(newCustomer.value.phone))
-      .eq('role', 'client')
-      .maybeSingle()
-    existingCustomer = data
-  } else if (invitationMethod.value === 'email' && newCustomer.value.email) {
-    const { data } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email')
-      .eq('email', newCustomer.value.email.trim().toLowerCase())
       .eq('role', 'client')
       .maybeSingle()
     existingCustomer = data
@@ -684,12 +598,11 @@ const addCustomer = async () => {
     return
   }
 
-    // Dann direkt zum Hinzufügen zur Liste:
+    // Add to invite list
     const customerToAdd: NewCustomer = {
       first_name: newCustomer.value.first_name?.trim() || undefined,
       last_name: newCustomer.value.last_name?.trim() || undefined,
-      phone: invitationMethod.value === 'sms' ? formatPhone(newCustomer.value.phone || '') : undefined,
-      email: invitationMethod.value === 'email' ? newCustomer.value.email?.trim().toLowerCase() : undefined,
+      phone: formatPhone(newCustomer.value.phone || ''),
       category: newCustomer.value.category || undefined,
       notes: newCustomer.value.notes || undefined
     }
@@ -702,7 +615,6 @@ const addCustomer = async () => {
       first_name: '',
       last_name: '',
       phone: '',
-      email: '',
       category: '',
       notes: ''
     }
@@ -730,7 +642,6 @@ const clearAll = () => {
     first_name: '',
     last_name: '',
     phone: '',
-    email: '',
     category: '',
     notes: ''
   }
@@ -792,7 +703,7 @@ const createInvitedCustomers = async (appointmentData: any) => {
 
       logger.debug('✅ Invitation upserted with ID:', invite.id)
 
-      // 2. Send invitation (SMS or Email)
+      // 2. Send SMS invitation (only SMS now)
       try {
         if (customer.phone) {
           // Send SMS invitation
@@ -802,109 +713,44 @@ const createInvitedCustomers = async (appointmentData: any) => {
 
           const smsResult = await sendSms(customer.phone, smsMessage, tenantSenderName.value)
 
-       if (smsResult.success) {
-          logger.debug('✅ SMS sent successfully:', smsResult.data?.sid)
-          
-          // Update SMS status tracking
-          smsStatus.value[customer.phone] = {
-            sent: true,
-            sid: smsResult.data?.sid
-          }
-
-          // Update invitation record with SMS status - VERWENDE VORHANDENE FELDER
-          await supabase
-            .from('invited_customers')
-            .update({
-              invitation_sent_at: toLocalTimeString(new Date()), // ← Statt sms_sent_at
-              metadata: { // ← Speichere SMS-Details im metadata-Feld (JSONB)
-                sms_sent: true,
-                sms_sid: smsResult.data?.sid,
-                sms_sent_at: toLocalTimeString(new Date())
-              }
-            })
-            .eq('id', invite.id)
-
-        } else {
-          console.error('❌ SMS failed:', smsResult.error)
-          smsStatus.value[customer.phone] = {
-            sent: false,
-            error: smsResult.error
-          }
-
-          // Update invitation record with SMS failure - VERWENDE VORHANDENE FELDER
-          await supabase
-            .from('invited_customers')
-            .update({
-              invitation_sent_at: toLocalTimeString(new Date()), // ← Versucht wurde es trotzdem
-              metadata: { // ← Speichere Fehler-Details im metadata-Feld
-                sms_sent: false,
-                sms_error: smsResult.error,
-                sms_sent_at: toLocalTimeString(new Date())
-              }
-            })
-            .eq('id', invite.id)
-        }
-
-        } else if (customer.email) {
-          // Send Email invitation using Supabase Auth
-          logger.debug('📧 Sending Email invitation to:', customer.email)
-          
-          try {
-            const { data: emailResult, error: emailError } = await supabase.auth.admin.inviteUserByEmail(
-              customer.email,
-              {
-                data: {
-                  first_name: customer.first_name,
-                  last_name: customer.last_name,
-                  tenant_id: props.currentUser?.tenant_id,
-                  tenant_name: 'Driving Team', // TODO: Get from current tenant
-                  appointment_id: appointmentData.id,
-                  category: customer.category,
-                  notes: customer.notes
-                }
-              }
-            )
+          if (smsResult.success) {
+            logger.debug('✅ SMS sent successfully:', smsResult.data?.sid)
             
-            if (emailError) {
-              console.error('❌ Email invitation failed:', emailError)
-              // Update invitation record with email failure
-              await supabase
-                .from('invited_customers')
-                .update({
-                  invitation_sent_at: toLocalTimeString(new Date()),
-                  metadata: {
-                    email_sent: false,
-                    email_error: emailError.message,
-                    email_sent_at: toLocalTimeString(new Date())
-                  }
-                })
-                .eq('id', invite.id)
-            } else {
-              logger.debug('✅ Email invitation sent successfully:', emailResult.user?.id)
-              // Update invitation record with email success
-              await supabase
-                .from('invited_customers')
-                .update({
-                  invitation_sent_at: toLocalTimeString(new Date()),
-                  metadata: {
-                    email_sent: true,
-                    email_user_id: emailResult.user?.id,
-                    email_sent_at: toLocalTimeString(new Date())
-                  }
-                })
-                .eq('id', invite.id)
+            // Update SMS status tracking
+            smsStatus.value[customer.phone] = {
+              sent: true,
+              sid: smsResult.data?.sid
             }
-          } catch (emailError: any) {
-            console.error('❌ Email invitation error:', emailError)
-            // Update invitation record with email error
+
+            // Update invitation record with SMS status
             await supabase
               .from('invited_customers')
               .update({
                 invitation_sent_at: toLocalTimeString(new Date()),
                 metadata: {
-                  email_sent: false,
-                  email_error: emailError.message || 'Email Fehler',
-                  email_sent_at: toLocalTimeString(new Date())
+                  sms_sent: true,
+                  sms_sid: smsResult.data?.sid,
+                  sms_sent_at: toLocalTimeString(new Date())
+                }
+              })
+              .eq('id', invite.id)
+
+          } else {
+            console.error('❌ SMS failed:', smsResult.error)
+            smsStatus.value[customer.phone] = {
+              sent: false,
+              error: smsResult.error
+            }
+
+            // Update invitation record with SMS failure
+            await supabase
+              .from('invited_customers')
+              .update({
+                invitation_sent_at: toLocalTimeString(new Date()),
+                metadata: {
+                  sms_sent: false,
+                  sms_error: smsResult.error,
+                  sms_sent_at: toLocalTimeString(new Date())
                 }
               })
               .eq('id', invite.id)
