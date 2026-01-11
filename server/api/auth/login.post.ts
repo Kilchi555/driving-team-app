@@ -284,6 +284,27 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Login successful for user:', data.user.id)
 
+    // Log successful login attempt
+    try {
+      await adminSupabase
+        .from('login_attempts')
+        .insert({
+          user_id: data.user.id,
+          email: email.toLowerCase().trim(),
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          device_name: getDeviceNameFromUserAgent(userAgent),
+          success: true,
+          error_message: null,
+          attempted_at: new Date().toISOString()
+        })
+        .throwOnError()
+      logger.debug('✅ Login attempt logged for user:', data.user.id)
+    } catch (logError: any) {
+      logger.warn('⚠️ Failed to log successful login attempt:', logError.message)
+      // Don't fail login if logging fails
+    }
+
     // Set httpOnly cookies for session (secure, XSS-protected)
     setAuthCookies(event, data.session.access_token, data.session.refresh_token, {
       rememberMe,
@@ -385,36 +406,67 @@ export default defineEventHandler(async (event) => {
         // Send email using sendEmail utility
         const { sendEmail } = await import('~/server/utils/email')
         
+        const deviceName = getDeviceNameFromUserAgent(userAgent)
+        const loginTime = new Date().toLocaleString('de-CH')
+
         const emailHtml = `
-          <h2>Neues Gerät erkannt</h2>
-          <p>Hallo ${userData.first_name},</p>
-          <p>Wir haben eine Anmeldung von einem neuen Gerät erkannt.</p>
-          
-          <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0;">
-            <p><strong>Gerätedetails:</strong></p>
-            <p>Gerätename: ${getDeviceNameFromUserAgent(userAgent)}</p>
-            <p>Zeitstempel: ${new Date().toLocaleString('de-CH')}</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1f2937;">Neues Gerät erkannt</h2>
+            <p>Hallo ${userData.first_name},</p>
+            <p>Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in Ihrem Account erkannt.</p>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0 0 10px 0;"><strong>Anmeldungsdetails:</strong></p>
+              <p style="margin: 5px 0;"><strong>Gerät:</strong> ${deviceName}</p>
+              <p style="margin: 5px 0;"><strong>Zeit:</strong> ${loginTime}</p>
+              <p style="margin: 5px 0;"><strong>IP-Adresse:</strong> ${clientIp}</p>
+            </div>
+            
+            <p style="color: #27ae60; font-weight: bold;">✓ Falls Sie das waren:</p>
+            <p style="margin: 10px 0;">Sie können diese E-Mail einfach ignorieren. Das Gerät ist jetzt gespeichert.</p>
+            
+            <p style="color: #e74c3c; font-weight: bold;">✗ Falls Sie das NICHT waren:</p>
+            <p style="margin: 10px 0;">Ihr Account könnte kompromittiert sein. Bitte kontaktieren Sie uns sofort:</p>
+            <p style="margin: 15px 0;">
+              <strong>Email:</strong> <a href="mailto:info@simy.ch" style="color: #2563eb; text-decoration: none;">info@simy.ch</a>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+            
+            <p style="color: #6b7280; font-size: 12px; margin: 0;">
+              Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}. Bitte antworten Sie nicht auf diese E-Mail.
+            </p>
           </div>
-          
-          <p><strong>Falls Sie sich gerade angemeldet haben:</strong></p>
-          <p>Das ist normal. Sie können diese Meldung ignorieren.</p>
-          
-          <p><strong>Falls Sie sich NICHT gerade angemeldet haben:</strong></p>
-          <p>Ihr Account könnte kompromittiert sein. Ändern Sie sofort Ihr Passwort:</p>
-          <a href="https://www.simy.ch/password-reset" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0;">
-            Passwort ändern
-          </a>
-          
-          <p style="color: #666; font-size: 12px; margin-top: 30px;">
-            Dieser Sicherheitshinweis wurde automatisch von ${tenantName} gesendet.
-          </p>
+        `
+
+        const emailText = `
+Neues Gerät erkannt
+
+Hallo ${userData.first_name},
+
+Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in Ihrem Account erkannt.
+
+ANMELDUNGSDETAILS:
+- Gerät: ${deviceName}
+- Zeit: ${loginTime}
+- IP-Adresse: ${clientIp}
+
+FALLS SIE DAS WAREN:
+Sie können diese E-Mail einfach ignorieren. Das Gerät ist jetzt gespeichert.
+
+FALLS SIE DAS NICHT WAREN:
+Ihr Account könnte kompromittiert sein. Bitte kontaktieren Sie uns sofort:
+Email: info@simy.ch
+
+---
+Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
         `
 
         await sendEmail({
           to: userData.email,
-          subject: `${tenantName} - Neues Gerät erkannt`,
+          subject: `${tenantName} - Anmeldung von neuem Gerät`,
           html: emailHtml,
-          text: `Neues Gerät erkannt\n\nHallo ${userData.first_name},\n\nWir haben eine Anmeldung von einem neuen Gerät erkannt.\n\nGerätedetails:\n- Gerätename: ${getDeviceNameFromUserAgent(userAgent)}\n- Zeitstempel: ${new Date().toLocaleString('de-CH')}\n\nFalls Sie sich gerade angemeldet haben, ist das normal.\nFalls nicht, ändern Sie sofort Ihr Passwort.`
+          text: emailText
         })
 
         logger.debug('✅ Device verification email sent successfully')
