@@ -28,7 +28,7 @@
         </div>
 
         <!-- Login Form / MFA Form -->
-        <form v-if="!mfaFlow.state.value.requiresMFA" @submit.prevent="handleLogin" class="space-y-4">
+        <form v-if="!mfaFlow.state.value.requiresMFA" @submit.prevent="handleLogin" class="space-y-4" novalidate>
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -39,7 +39,6 @@
               v-model="loginForm.email"
               type="email"
               autocomplete="email"
-              required
               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent"
               :class="emailError ? 'border-red-500' : 'border-gray-300'"
               :style="{ '--tw-ring-color': emailError ? '#ef4444' : '#7C3AED' }"
@@ -60,7 +59,6 @@
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
-                required
                 class="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:border-transparent"
                 :class="passwordError ? 'border-red-500' : 'border-gray-300'"
                 :style="{ '--tw-ring-color': passwordError ? '#ef4444' : '#7C3AED' }"
@@ -483,18 +481,16 @@ watch(() => loginForm.value.email, (newEmail) => {
   }
 })
 
-// Validate password length in real-time
+// Validate password length in real-time (only minimum check for login)
 watch(() => loginForm.value.password, (newPassword) => {
   if (!newPassword) {
     passwordError.value = null
     return
   }
   
-  if (newPassword.length < 8) {
-    passwordError.value = 'Passwort muss mindestens 8 Zeichen lang sein'
-  } else {
-    passwordError.value = null
-  }
+  // No minimum length check on login - accept any password
+  // (users might have old passwords that don't meet new requirements)
+  passwordError.value = null
 })
 
 
