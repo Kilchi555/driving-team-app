@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
+import { setAuthCookies } from '~/server/utils/cookies'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -263,6 +264,13 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Login successful for user:', data.user.id)
+
+    // Set httpOnly cookies for session (secure, XSS-protected)
+    setAuthCookies(event, data.session.access_token, data.session.refresh_token, {
+      rememberMe,
+      maxAge: sessionDuration
+    })
+    logger.debug('✅ Session cookies set (httpOnly, secure, sameSite)')
 
     // Reset failed login attempts on successful login
     try {
