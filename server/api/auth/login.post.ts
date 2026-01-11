@@ -5,6 +5,25 @@ import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
 import { setAuthCookies } from '~/server/utils/cookies'
 
+// Helper function to extract device name from User-Agent
+function getDeviceNameFromUserAgent(userAgent: string): string {
+  if (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone')) {
+    return 'Mobile Device'
+  } else if (userAgent.includes('Tablet') || userAgent.includes('iPad')) {
+    return 'Tablet'
+  } else if (userAgent.includes('Chrome')) {
+    return 'Chrome Browser'
+  } else if (userAgent.includes('Firefox')) {
+    return 'Firefox Browser'
+  } else if (userAgent.includes('Safari')) {
+    return 'Safari Browser'
+  } else if (userAgent.includes('Edge')) {
+    return 'Edge Browser'
+  } else {
+    return 'Unknown Device'
+  }
+}
+
 export default defineEventHandler(async (event) => {
   try {
     // Get client IP for rate limiting
@@ -271,6 +290,141 @@ export default defineEventHandler(async (event) => {
       maxAge: sessionDuration
     })
     logger.debug('✅ Session cookies set (httpOnly, secure, sameSite)')
+
+    // Get user agent and IP for device verification
+    const userAgent = getHeader(event, 'user-agent') || 'Unknown'
+    const clientIp = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                     getHeader(event, 'x-real-ip') || 
+                     event.node.req.socket.remoteAddress || 
+                     'unknown'
+
+    // Queue device verification email (run in background, don't block response)
+    // Generate simple MAC-like fingerprint from user agent hash
+    const userAgentHash = Array.from(new TextEncoder().encode(userAgent))
+      .reduce((acc, byte) => acc + byte.toString(16).padStart(2, '0'), '')
+      .substring(0, 16)
+
+    // Try to send device verification email (best effort, non-blocking)
+    // This runs asynchronously without waiting
+    (async () => {
+      try {
+        logger.debug('📱 Checking device and sending verification email if new...')
+        
+        // Check if device is already known
+        const { data: existingDevice } = await adminSupabase
+          .from('user_devices')
+          .select('id, is_trusted')
+          .eq('user_id', data.user.id)
+          .eq('mac_address', userAgentHash)
+          .single()
+
+        if (existingDevice) {
+          logger.debug('✅ Known device - updating last_seen')
+          // Update last_seen
+          await adminSupabase
+            .from('user_devices')
+            .update({ 
+              last_seen: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingDevice.id)
+          return
+        }
+
+        // New device - register and send email
+        logger.debug('🆕 New device detected - registering and sending verification email')
+
+        // Register device
+        const { data: newDevice } = await adminSupabase
+          .from('user_devices')
+          .insert({
+            user_id: data.user.id,
+            mac_address: userAgentHash,
+            device_name: getDeviceNameFromUserAgent(userAgent),
+            user_agent: userAgent,
+            ip_address: clientIp,
+            first_seen: new Date().toISOString(),
+            last_seen: new Date().toISOString(),
+            is_trusted: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single()
+
+        if (!newDevice) {
+          logger.warn('⚠️ Could not register new device')
+          return
+        }
+
+        // Get user email
+        const { data: userData } = await adminSupabase
+          .from('users')
+          .select('email, first_name, tenant_id')
+          .eq('id', data.user.id)
+          .single()
+
+        if (!userData?.email) {
+          logger.warn('⚠️ Could not fetch user email for device notification')
+          return
+        }
+
+        // Get tenant name
+        let tenantName = 'Simy'
+        if (userData.tenant_id) {
+          const { data: tenantData } = await adminSupabase
+            .from('tenants')
+            .select('name')
+            .eq('id', userData.tenant_id)
+            .single()
+          if (tenantData?.name) {
+            tenantName = tenantData.name
+          }
+        }
+
+        // Send email using sendEmail utility
+        const { sendEmail } = await import('~/server/utils/email')
+        
+        const emailHtml = `
+          <h2>Neues Gerät erkannt</h2>
+          <p>Hallo ${userData.first_name},</p>
+          <p>Wir haben eine Anmeldung von einem neuen Gerät erkannt.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0;">
+            <p><strong>Gerätedetails:</strong></p>
+            <p>Gerätename: ${getDeviceNameFromUserAgent(userAgent)}</p>
+            <p>Zeitstempel: ${new Date().toLocaleString('de-CH')}</p>
+          </div>
+          
+          <p><strong>Falls Sie sich gerade angemeldet haben:</strong></p>
+          <p>Das ist normal. Sie können diese Meldung ignorieren.</p>
+          
+          <p><strong>Falls Sie sich NICHT gerade angemeldet haben:</strong></p>
+          <p>Ihr Account könnte kompromittiert sein. Ändern Sie sofort Ihr Passwort:</p>
+          <a href="https://www.simy.ch/password-reset" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0;">
+            Passwort ändern
+          </a>
+          
+          <p style="color: #666; font-size: 12px; margin-top: 30px;">
+            Dieser Sicherheitshinweis wurde automatisch von ${tenantName} gesendet.
+          </p>
+        `
+
+        await sendEmail({
+          to: userData.email,
+          subject: `${tenantName} - Neues Gerät erkannt`,
+          html: emailHtml,
+          text: `Neues Gerät erkannt\n\nHallo ${userData.first_name},\n\nWir haben eine Anmeldung von einem neuen Gerät erkannt.\n\nGerätedetails:\n- Gerätename: ${getDeviceNameFromUserAgent(userAgent)}\n- Zeitstempel: ${new Date().toLocaleString('de-CH')}\n\nFalls Sie sich gerade angemeldet haben, ist das normal.\nFalls nicht, ändern Sie sofort Ihr Passwort.`
+        })
+
+        logger.debug('✅ Device verification email sent successfully')
+      } catch (deviceError: any) {
+        logger.warn('⚠️ Device verification failed (non-blocking):', deviceError?.message)
+        // Don't fail login if device verification fails
+      }
+    })().catch((err: any) => {
+      logger.warn('⚠️ Async device verification error:', err)
+    })
 
     // Reset failed login attempts on successful login
     try {
