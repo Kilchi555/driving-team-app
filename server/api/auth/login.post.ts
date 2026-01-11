@@ -449,7 +449,15 @@ export default defineEventHandler(async (event) => {
         const { sendEmail } = await import('~/server/utils/email')
         
         const deviceName = getDeviceNameFromUserAgent(userAgent)
-        const loginTime = new Date().toLocaleString('de-CH')
+        
+        // Format time in Swiss timezone (or user's timezone if available)
+        const timezone = geoData?.timezone || 'Europe/Zurich'
+        const loginTime = new Date().toLocaleString('de-CH', { 
+          timeZone: timezone,
+          dateStyle: 'long',
+          timeStyle: 'short'
+        })
+        
         const location = geoData 
           ? `${geoData.city || 'Unbekannt'}, ${geoData.country || 'Unbekannt'}`
           : 'Unbekannt'
