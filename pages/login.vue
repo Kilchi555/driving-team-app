@@ -40,11 +40,13 @@
               type="email"
               autocomplete="email"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-              :style="{ '--tw-ring-color': '#7C3AED' }"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent"
+              :class="emailError ? 'border-red-500' : 'border-gray-300'"
+              :style="{ '--tw-ring-color': emailError ? '#ef4444' : '#7C3AED' }"
               placeholder="ihre@email.com"
               :disabled="isLoading"
             >
+            <p v-if="emailError" class="text-sm text-red-600 mt-1">{{ emailError }}</p>
           </div>
 
           <!-- Password Input -->
@@ -59,8 +61,9 @@
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 required
-                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                :style="{ '--tw-ring-color': '#7C3AED' }"
+                class="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:border-transparent"
+                :class="passwordError ? 'border-red-500' : 'border-gray-300'"
+                :style="{ '--tw-ring-color': passwordError ? '#ef4444' : '#7C3AED' }"
                 placeholder="Ihr Passwort"
                 :disabled="isLoading"
               >
@@ -79,6 +82,7 @@
                 </svg>
               </button>
             </div>
+            <p v-if="passwordError" class="text-sm text-red-600 mt-1">{{ passwordError }}</p>
           </div>
 
           <!-- Remember Me -->
@@ -458,6 +462,39 @@ const loginForm = ref({
   email: '',
   password: '',
   rememberMe: false
+})
+
+// Inline validation errors
+const emailError = ref<string | null>(null)
+const passwordError = ref<string | null>(null)
+
+// Validate email in real-time
+watch(() => loginForm.value.email, (newEmail) => {
+  if (!newEmail) {
+    emailError.value = null
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newEmail.trim())) {
+    emailError.value = 'Ungültige E-Mail-Adresse'
+  } else {
+    emailError.value = null
+  }
+})
+
+// Validate password length in real-time
+watch(() => loginForm.value.password, (newPassword) => {
+  if (!newPassword) {
+    passwordError.value = null
+    return
+  }
+  
+  if (newPassword.length < 8) {
+    passwordError.value = 'Passwort muss mindestens 8 Zeichen lang sein'
+  } else {
+    passwordError.value = null
+  }
 })
 
 
