@@ -462,6 +462,20 @@ export default defineEventHandler(async (event) => {
           ? `${geoData.city || 'Unbekannt'}, ${geoData.country || 'Unbekannt'}`
           : 'Unbekannt'
 
+        // Create mailto link with pre-filled content for suspicious login report
+        const reportBody = encodeURIComponent(
+          `VERDÄCHTIGE ANMELDUNG MELDEN\n\n` +
+          `Ich habe diese Anmeldung NICHT durchgeführt:\n\n` +
+          `Gerät: ${deviceName}\n` +
+          `Zeit: ${loginTime}\n` +
+          `Standort: ${location}\n` +
+          `IP-Adresse: ${clientIp}\n` +
+          `${geoData?.isp ? `Internet Anbieter: ${geoData.isp}\n` : ''}` +
+          `\n` +
+          `Bitte sperren Sie meinen Account sofort.`
+        )
+        const mailtoLink = `mailto:info@simy.ch?subject=VERDÄCHTIGE ANMELDUNG&body=${reportBody}`
+
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1f2937;">Neues Gerät erkannt</h2>
@@ -474,7 +488,7 @@ export default defineEventHandler(async (event) => {
               <p style="margin: 5px 0;"><strong>Zeit:</strong> ${loginTime}</p>
               <p style="margin: 5px 0;"><strong>Standort:</strong> ${location}</p>
               <p style="margin: 5px 0;"><strong>IP-Adresse:</strong> ${clientIp}</p>
-              ${geoData?.isp ? `<p style="margin: 5px 0;"><strong>ISP:</strong> ${geoData.isp}</p>` : ''}
+              ${geoData?.isp ? `<p style="margin: 5px 0;"><strong>Internet Anbieter:</strong> ${geoData.isp}</p>` : ''}
             </div>
             
             <p style="color: #27ae60; font-weight: bold;">✓ Falls Sie das waren:</p>
@@ -483,7 +497,12 @@ export default defineEventHandler(async (event) => {
             <p style="color: #e74c3c; font-weight: bold;">✗ Falls Sie das NICHT waren:</p>
             <p style="margin: 10px 0;">Ihr Account könnte kompromittiert sein. Bitte kontaktieren Sie uns sofort:</p>
             <p style="margin: 15px 0;">
-              <strong>Email:</strong> <a href="mailto:info@simy.ch" style="color: #2563eb; text-decoration: none;">info@simy.ch</a>
+              <a href="${mailtoLink}" style="background-color: #e74c3c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
+                Verdächtige Anmeldung melden
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 13px;">
+              Oder direkt an: <a href="${mailtoLink}" style="color: #2563eb;">info@simy.ch</a>
             </p>
             
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
@@ -505,7 +524,7 @@ ANMELDUNGSDETAILS:
 - Gerät: ${deviceName}
 - Zeit: ${loginTime}
 - Standort: ${location}
-- IP-Adresse: ${clientIp}${geoData?.isp ? `\n- ISP: ${geoData.isp}` : ''}
+- IP-Adresse: ${clientIp}${geoData?.isp ? `\n- Internet Anbieter: ${geoData.isp}` : ''}
 
 FALLS SIE DAS WAREN:
 Sie können diese E-Mail einfach ignorieren. Das Gerät ist jetzt gespeichert.
