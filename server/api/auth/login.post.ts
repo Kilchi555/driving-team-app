@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Parse request body FIRST
-    const { email, password, tenantId } = await readBody(event)
+    const { email, password, tenantId, rememberMe } = await readBody(event)
 
     // Validate input
     const errors: Record<string, string> = {}
@@ -72,6 +72,12 @@ export default defineEventHandler(async (event) => {
     if (Object.keys(errors).length > 0) {
       throwValidationError(errors)
     }
+    
+    // Remember Me: Adjust session duration
+    // Default: 1 hour (3600 seconds)
+    // Remember Me: 7 days (604800 seconds)
+    const sessionDuration = rememberMe ? 604800 : 3600
+    logger.debug('🔐 Session duration:', rememberMe ? '7 days' : '1 hour')
     
     // Apply rate limiting (max 10 attempts per minute) - AFTER parsing email
     const rateLimit = await checkRateLimit(ipAddress, 'login', undefined, undefined, email.toLowerCase().trim(), tenantId)
@@ -266,9 +272,10 @@ export default defineEventHandler(async (event) => {
       session: {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
-        expires_in: data.session.expires_in,
-        expires_at: data.session.expires_at
-      }
+        expires_in: sessionDuration, // Use custom session duration
+        expires_at: Math.floor(Date.now() / 1000) + sessionDuration // Unix timestamp
+      },
+      rememberMe // Pass back to frontend
     }
 
   } catch (error: any) {
