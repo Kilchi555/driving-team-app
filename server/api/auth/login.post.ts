@@ -284,26 +284,12 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Login successful for user:', data.user.id)
 
-    // Log successful login attempt
-    try {
-      await adminSupabase
-        .from('login_attempts')
-        .insert({
-          user_id: data.user.id,
-          email: email.toLowerCase().trim(),
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          device_name: getDeviceNameFromUserAgent(userAgent),
-          success: true,
-          error_message: null,
-          attempted_at: new Date().toISOString()
-        })
-        .throwOnError()
-      logger.debug('✅ Login attempt logged for user:', data.user.id)
-    } catch (logError: any) {
-      logger.warn('⚠️ Failed to log successful login attempt:', logError.message)
-      // Don't fail login if logging fails
-    }
+    // Get user agent and IP for device verification
+    const userAgent = getHeader(event, 'user-agent') || 'Unknown'
+    const clientIp = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                     getHeader(event, 'x-real-ip') || 
+                     event.node.req.socket.remoteAddress || 
+                     'unknown'
 
     // Set httpOnly cookies for session (secure, XSS-protected)
     setAuthCookies(event, data.session.access_token, data.session.refresh_token, {
@@ -312,18 +298,21 @@ export default defineEventHandler(async (event) => {
     })
     logger.debug('✅ Session cookies set (httpOnly, secure, sameSite)')
 
-    // Get user agent and IP for device verification
-    const userAgent = getHeader(event, 'user-agent') || 'Unknown'
-    const clientIp = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
-                     getHeader(event, 'x-real-ip') || 
-                     event.node.req.socket.remoteAddress || 
-                     'unknown'
-
     // Queue device verification email (run in background, don't block response)
     // Generate simple MAC-like fingerprint from user agent hash
-    const userAgentHash = Array.from(new TextEncoder().encode(userAgent))
-      .reduce((acc, byte) => acc + byte.toString(16).padStart(2, '0'), '')
-      .substring(0, 16)
+    let userAgentHash = ''
+    try {
+      const encoder = new TextEncoder()
+      const data = encoder.encode(userAgent)
+      const hashArray = Array.from(data)
+      userAgentHash = hashArray
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('')
+        .slice(0, 16)
+    } catch (hashError) {
+      logger.warn('⚠️ Failed to generate user agent hash:', hashError)
+      userAgentHash = 'unknown'
+    }
 
     // Try to send device verification email (best effort, non-blocking)
     // This runs asynchronously without waiting
@@ -331,31 +320,70 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug('📱 Checking device and sending verification email if new...')
         
+        // Get geolocation for IP
+        const { getGeoLocation, isSuspiciousLocation } = await import('~/server/utils/geolocation')
+        const geoData = await getGeoLocation(clientIp)
+        
         // Check if device is already known
         const { data: existingDevice } = await adminSupabase
           .from('user_devices')
-          .select('id, is_trusted')
+          .select('id, is_trusted, latitude, longitude, last_seen')
           .eq('user_id', data.user.id)
           .eq('mac_address', userAgentHash)
           .single()
 
         if (existingDevice) {
           logger.debug('✅ Known device - updating last_seen')
-          // Update last_seen
+          
+          // Check for suspicious location
+          let suspiciousLogin = false
+          if (geoData && existingDevice.latitude && existingDevice.longitude) {
+            const suspicionCheck = isSuspiciousLocation(
+              existingDevice.latitude,
+              existingDevice.longitude,
+              new Date(existingDevice.last_seen),
+              geoData.latitude,
+              geoData.longitude
+            )
+            
+            if (suspicionCheck.suspicious) {
+              logger.warn('🚨 SUSPICIOUS LOGIN DETECTED:', suspicionCheck.reason)
+              suspiciousLogin = true
+            }
+          }
+          
+          // Update last_seen and geo data
           await adminSupabase
             .from('user_devices')
             .update({ 
               last_seen: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              ...(geoData && {
+                country: geoData.country,
+                country_code: geoData.countryCode,
+                region: geoData.region,
+                city: geoData.city,
+                latitude: geoData.latitude,
+                longitude: geoData.longitude,
+                timezone: geoData.timezone,
+                isp: geoData.isp
+              })
             })
             .eq('id', existingDevice.id)
+          
+          // If suspicious, send warning email even though device is known
+          if (suspiciousLogin) {
+            // TODO: Send suspicious login email
+            logger.warn('⚠️ Suspicious login - would send warning email')
+          }
+          
           return
         }
 
         // New device - register and send email
         logger.debug('🆕 New device detected - registering and sending verification email')
 
-        // Register device
+        // Register device with geolocation
         const { data: newDevice } = await adminSupabase
           .from('user_devices')
           .insert({
@@ -368,7 +396,17 @@ export default defineEventHandler(async (event) => {
             last_seen: new Date().toISOString(),
             is_trusted: false,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            ...(geoData && {
+              country: geoData.country,
+              country_code: geoData.countryCode,
+              region: geoData.region,
+              city: geoData.city,
+              latitude: geoData.latitude,
+              longitude: geoData.longitude,
+              timezone: geoData.timezone,
+              isp: geoData.isp
+            })
           })
           .select()
           .single()
@@ -378,17 +416,21 @@ export default defineEventHandler(async (event) => {
           return
         }
 
-        // Get user email
-        const { data: userData } = await adminSupabase
-          .from('users')
-          .select('email, first_name, tenant_id')
-          .eq('id', data.user.id)
-          .single()
-
-        if (!userData?.email) {
-          logger.warn('⚠️ Could not fetch user email for device notification')
+        // Get user email - use the email from the login data
+        const userEmail = data.user.email
+        if (!userEmail) {
+          logger.warn('⚠️ No email found in user data')
           return
         }
+
+        // Get user details from public.users table for first_name and tenant
+        const { data: userData } = await adminSupabase
+          .from('users')
+          .select('first_name, tenant_id')
+          .eq('email', userEmail)
+          .single()
+
+        const firstName = userData?.first_name || 'dort'
 
         // Get tenant name
         let tenantName = 'Simy'
@@ -408,18 +450,23 @@ export default defineEventHandler(async (event) => {
         
         const deviceName = getDeviceNameFromUserAgent(userAgent)
         const loginTime = new Date().toLocaleString('de-CH')
+        const location = geoData 
+          ? `${geoData.city || 'Unbekannt'}, ${geoData.country || 'Unbekannt'}`
+          : 'Unbekannt'
 
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1f2937;">Neues Gerät erkannt</h2>
-            <p>Hallo ${userData.first_name},</p>
+            <p>Hallo ${firstName},</p>
             <p>Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in Ihrem Account erkannt.</p>
             
             <div style="background-color: #f3f4f6; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 4px;">
               <p style="margin: 0 0 10px 0;"><strong>Anmeldungsdetails:</strong></p>
               <p style="margin: 5px 0;"><strong>Gerät:</strong> ${deviceName}</p>
               <p style="margin: 5px 0;"><strong>Zeit:</strong> ${loginTime}</p>
+              <p style="margin: 5px 0;"><strong>Standort:</strong> ${location}</p>
               <p style="margin: 5px 0;"><strong>IP-Adresse:</strong> ${clientIp}</p>
+              ${geoData?.isp ? `<p style="margin: 5px 0;"><strong>ISP:</strong> ${geoData.isp}</p>` : ''}
             </div>
             
             <p style="color: #27ae60; font-weight: bold;">✓ Falls Sie das waren:</p>
@@ -449,7 +496,8 @@ Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in Ihrem Account er
 ANMELDUNGSDETAILS:
 - Gerät: ${deviceName}
 - Zeit: ${loginTime}
-- IP-Adresse: ${clientIp}
+- Standort: ${location}
+- IP-Adresse: ${clientIp}${geoData?.isp ? `\n- ISP: ${geoData.isp}` : ''}
 
 FALLS SIE DAS WAREN:
 Sie können diese E-Mail einfach ignorieren. Das Gerät ist jetzt gespeichert.
@@ -463,7 +511,7 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
         `
 
         await sendEmail({
-          to: userData.email,
+          to: userEmail,
           subject: `${tenantName} - Anmeldung von neuem Gerät`,
           html: emailHtml,
           text: emailText
@@ -489,24 +537,6 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
     } catch (resetError: any) {
       console.warn('⚠️ Failed to reset login attempts:', resetError.message)
       // Don't fail the login for this
-    }
-
-    // Log successful login
-    if (serviceRoleKey) {
-      try {
-        await adminSupabase
-          .from('login_attempts')
-          .insert({
-            email: email.toLowerCase().trim(),
-            ip_address: ipAddress,
-            success: true,
-            user_id: data.user.id,
-            attempted_at: new Date().toISOString()
-          })
-          .throwOnError()
-      } catch (logError: any) {
-        console.warn('⚠️ Failed to log successful login:', logError.message)
-      }
     }
 
     // Return session data
