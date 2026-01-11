@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Parse request body FIRST
-    const { email, password, tenantId, rememberMe } = await readBody(event)
+    const { email, password, tenantId, rememberMe, captchaToken } = await readBody(event)
 
     // Validate input
     const errors: Record<string, string> = {}
@@ -71,6 +71,40 @@ export default defineEventHandler(async (event) => {
     
     if (Object.keys(errors).length > 0) {
       throwValidationError(errors)
+    }
+    
+    // Verify hCaptcha token if provided
+    if (captchaToken) {
+      logger.debug('🔐 Verifying hCaptcha token...')
+      const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
+      if (!hcaptchaSecret) {
+        console.error('❌ HCAPTCHA_SECRET_KEY not configured')
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Server configuration error'
+        })
+      }
+
+      const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          secret: hcaptchaSecret,
+          response: captchaToken
+        }).toString()
+      })
+
+      const captchaData = await captchaResponse.json()
+      if (!captchaData.success) {
+        console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
+        })
+      }
+      logger.debug('✅ hCaptcha verified successfully')
     }
     
     // Remember Me: Adjust session duration
