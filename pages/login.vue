@@ -645,9 +645,9 @@ const handleLogin = async () => {
     } else if (errorMsg?.includes('Account')) {
       loginError.value = errorMsg
     } else if (errorMsg?.includes('Email not confirmed')) {
-      loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst. Prüfen Sie Ihren Posteingang.'
+      loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst.'
     } else if (errorMsg?.includes('User not found')) {
-      loginError.value = 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.'
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
     } else if (errorMsg?.includes('disabled')) {
       loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
     } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {

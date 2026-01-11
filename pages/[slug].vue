@@ -511,7 +511,6 @@ const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
 const { currentTenant } = useTenant()
 const mfaFlow = useMFAFlow()
-const webAuthn = useWebAuthn()
 const supabase = getSupabase()
 
 
@@ -537,12 +536,14 @@ const handleLogin = async () => {
 
     if (validationError) {
       console.error('Validation error:', validationError)
-      loginError.value = 'Benutzer nicht vorhanden.'
+      // Don't reveal if user exists - generic error
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
       return
     }
 
     if (!validationResult) {
-      loginError.value = 'Benutzer nicht vorhanden.'
+      // Don't reveal if user exists - generic error
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
       return
     }
 
@@ -656,8 +657,8 @@ const handleLogin = async () => {
           rateLimitCountdown.value = 0
         }
       }, 1000)
-    } else if (error.message?.includes('Invalid login credentials')) {
-      loginError.value = 'Falsches Passwort.'
+    } else if (errorMsg?.includes('Invalid login credentials')) {
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
     } else {
       loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
