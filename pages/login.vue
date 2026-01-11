@@ -107,6 +107,20 @@
             <p class="text-sm text-red-700">{{ loginError }}</p>
           </div>
 
+          <!-- hCaptcha - only show after 3 failed attempts -->
+          <div v-if="requiresCaptcha" class="flex flex-col items-center">
+            <div
+              id="login-hcaptcha"
+              :class="{ 'ring-2 ring-red-500 rounded': captchaError }"
+            ></div>
+            <p v-if="captchaError" class="text-sm text-red-600 mt-2 text-center">
+              Bitte bestätigen Sie, dass Sie kein Roboter sind
+            </p>
+            <p class="text-xs text-gray-500 mt-2 text-center">
+              Sicherheitsüberprüfung erforderlich (mehrere fehlgeschlagene Anmeldeversuche)
+            </p>
+          </div>
+
           <!-- Login Button -->
           <button
             type="submit"
@@ -423,6 +437,12 @@ const showForgotPasswordModal = ref(false)
 const rateLimitCountdown = ref<number>(0)
 const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
 
+// Adaptive Captcha State
+const failedLoginAttempts = ref<number>(0)
+const requiresCaptcha = computed(() => failedLoginAttempts.value >= 3)
+const captchaError = ref(false)
+const widgetId = ref<number | null>(null)
+
 // Password Reset State
 const resetContactMethod = ref<'email' | 'phone'>('email')
 const resetIsLoading = ref(false)
@@ -450,9 +470,43 @@ const handleLogin = async () => {
 
   isLoading.value = true
   loginError.value = null
+  captchaError.value = false
 
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
+    
+    // Get hCaptcha token if required
+    let captchaToken: string | null = null
+    if (requiresCaptcha.value && process.client) {
+      logger.debug('🔐 Captcha required, getting token...')
+      
+      for (let attempt = 0; attempt < 10; attempt++) {
+        if ((window as any).hcaptcha && widgetId.value !== null) {
+          try {
+            const response = (window as any).hcaptcha.getResponse(widgetId.value)
+            if (response && typeof response === 'string' && response.length > 0) {
+              captchaToken = response
+              logger.debug('✅ hCaptcha token received')
+              break
+            } else if (attempt === 0) {
+              logger.debug('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
+            }
+          } catch (error: any) {
+            logger.debug(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error)
+          }
+        }
+        
+        if (attempt < 9 && !captchaToken) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+      }
+      
+      if (!captchaToken) {
+        captchaError.value = true
+        loginError.value = 'Bitte führen Sie die Captcha-Verifikation durch'
+        return
+      }
+    }
     
     // Versuche zu authentifizieren über den neuen Login-Endpoint mit MFA-Support
     const response = await $fetch('/api/auth/login', {
@@ -461,7 +515,8 @@ const handleLogin = async () => {
         email: loginForm.value.email.toLowerCase().trim(),
         password: loginForm.value.password,
         tenantId: currentTenant.value?.id || null,
-        rememberMe: loginForm.value.rememberMe // Send "Remember Me" preference
+        rememberMe: loginForm.value.rememberMe, // Send "Remember Me" preference
+        captchaToken // Send captcha token if available
       }
     }) as any
 
@@ -492,6 +547,9 @@ const handleLogin = async () => {
 
     // Normales Login erfolgreich
     logger.debug('✅ Login successful')
+    
+    // Reset failed login attempts on success
+    failedLoginAttempts.value = 0
     
     // Setze die Supabase Session manuell mit den Tokens vom Server
     const supabase = getSupabase()
@@ -604,6 +662,10 @@ const handleLogin = async () => {
     
   } catch (error: any) {
     console.error('Login error:', error)
+    
+    // Increment failed login attempts (for adaptive captcha)
+    failedLoginAttempts.value++
+    logger.debug(`❌ Failed login attempt #${failedLoginAttempts.value}`)
     
     // Get the status message from multiple possible paths
     const errorMsg = error?.data?.statusMessage || 
@@ -861,12 +923,43 @@ onMounted(async () => {
   }
 })
 
+// Watch for captcha requirement and render hCaptcha
+watch(requiresCaptcha, async (required) => {
+  if (required && process.client) {
+    logger.debug('📍 Captcha required, rendering hCaptcha...')
+    
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    const hcaptchaContainer = document.getElementById('login-hcaptcha')
+    if (hcaptchaContainer && (window as any).hcaptcha && widgetId.value === null) {
+      try {
+        const siteKey = '50bb4c3b-c52d-4997-a7ea-64f4e7ab0d86' // Your hCaptcha site key
+        widgetId.value = (window as any).hcaptcha.render('login-hcaptcha', {
+          sitekey: siteKey,
+          theme: 'light'
+        })
+        logger.debug('✅ hCaptcha rendered successfully with widget ID:', widgetId.value)
+      } catch (error: any) {
+        console.error('❌ Error rendering hCaptcha:', error?.message || error)
+      }
+    }
+  }
+})
+
 // SEO
 useHead({
   title: 'Anmelden - Simy',
   meta: [
     { name: 'description', content: 'Melden Sie sich in Ihrem Simy Account an.' },
     { name: 'robots', content: 'noindex, nofollow' }
+  ],
+  script: [
+    {
+      src: 'https://js.hcaptcha.com/1/api.js',
+      async: true,
+      defer: false
+    }
   ]
 })
 </script>
