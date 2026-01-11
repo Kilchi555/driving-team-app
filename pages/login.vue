@@ -460,7 +460,8 @@ const handleLogin = async () => {
       body: {
         email: loginForm.value.email.toLowerCase().trim(),
         password: loginForm.value.password,
-        tenantId: currentTenant.value?.id || null
+        tenantId: currentTenant.value?.id || null,
+        rememberMe: loginForm.value.rememberMe // Send "Remember Me" preference
       }
     }) as any
 
@@ -497,7 +498,7 @@ const handleLogin = async () => {
     if (response.session) {
       logger.debug('🔐 Setting Supabase session with tokens from server')
       
-      // Speichere Tokens direkt in localStorage (Supabase wird diese automatisch laden)
+      // Speichere Tokens in localStorage oder sessionStorage basierend auf Remember Me
       if (typeof window !== 'undefined') {
         try {
           // Supabase speichert Session unter diesem Key
@@ -514,14 +515,17 @@ const handleLogin = async () => {
             type: 'signup'
           }
           
-          localStorage.setItem(key, JSON.stringify(sessionData))
-          logger.debug('✅ Session stored in localStorage with key:', key)
+          // Choose storage based on Remember Me
+          const storage = loginForm.value.rememberMe ? localStorage : sessionStorage
+          storage.setItem(key, JSON.stringify(sessionData))
+          logger.debug('✅ Session stored in', loginForm.value.rememberMe ? 'localStorage (7 days)' : 'sessionStorage (browser session)', 'with key:', key)
           logger.debug('🔍 Session data stored:', {
             hasAccessToken: !!response.session.access_token,
-            hasRefreshToken: !!response.session.refresh_token
+            hasRefreshToken: !!response.session.refresh_token,
+            expiresIn: response.session.expires_in
           })
         } catch (err) {
-          logger.debug('⚠️ Failed to store session in localStorage:', err)
+          logger.debug('⚠️ Failed to store session:', err)
         }
       }
       

@@ -548,7 +548,11 @@ const handleLogin = async () => {
     }
 
     // 2. If validation passes, proceed with login
-    const loginSuccess = await login(loginForm.value.email, loginForm.value.password)
+    const loginSuccess = await login(
+      loginForm.value.email, 
+      loginForm.value.password,
+      loginForm.value.rememberMe
+    )
     
     if (!loginSuccess) {
       console.error('❌ Login failed - no success returned')

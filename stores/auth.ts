@@ -132,21 +132,22 @@ const isAdmin = computed(() => {
       }
     }
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     loading.value = true
     errorMessage.value = null
 
     try {
-      logger.debug('🔑 Attempting login for:', email)
+      logger.debug('🔑 Attempting login for:', email, 'Remember Me:', rememberMe)
       
       // Call backend endpoint which handles rate limiting, authentication, and MFA
       const backendResponse = await $fetch('/api/auth/login', {
         method: 'POST',
         body: {
           email: email.toLowerCase().trim(),
-          password
+          password,
+          rememberMe
         }
-      })
+      }) as any
 
       if (!backendResponse?.success) {
         throw new Error(backendResponse?.message || 'Login fehlgeschlagen')
