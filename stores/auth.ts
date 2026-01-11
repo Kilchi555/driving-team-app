@@ -251,6 +251,14 @@ const isAdmin = computed(() => {
         }
       }
       
+      // Call backend logout API to clear httpOnly cookies
+      try {
+        await $fetch('/api/auth/logout', { method: 'POST' })
+        logger.debug('✅ Backend logout successful (cookies cleared)')
+      } catch (logoutError) {
+        logger.warn('⚠️ Backend logout failed, continuing with local logout:', logoutError)
+      }
+      
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
         throw new Error('Failed to get Supabase client')

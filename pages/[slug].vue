@@ -81,7 +81,7 @@
         </div>
 
         <!-- Login Form -->
-        <form @submit.prevent="handleLogin" class="space-y-4">
+        <form @submit.prevent="handleLogin" class="space-y-4" novalidate>
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -91,12 +91,15 @@
               id="email"
               v-model="loginForm.email"
               type="email"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-              :style="{ '--focus-color': primaryColor }"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+              :class="[
+                emailError ? 'border-2 border-red-500' : 'border border-gray-300'
+              ]"
+              :style="{ '--focus-color': emailError ? '#ef4444' : primaryColor }"
               placeholder="ihre@email.com"
               :disabled="isLoading"
             >
+            <p v-if="emailError" class="text-sm text-red-600 mt-1">{{ emailError }}</p>
           </div>
 
           <!-- Password Input -->
@@ -109,9 +112,11 @@
                 id="password"
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
-                required
-                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                :style="{ '--focus-color': primaryColor }"
+                class="w-full px-3 py-2 pr-10 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+                :class="[
+                  passwordError ? 'border-2 border-red-500' : 'border border-gray-300'
+                ]"
+                :style="{ '--focus-color': passwordError ? '#ef4444' : primaryColor }"
                 placeholder="Ihr Passwort"
                 :disabled="isLoading"
               >
@@ -130,6 +135,7 @@
                 </svg>
               </button>
             </div>
+            <p v-if="passwordError" class="text-sm text-red-600 mt-1">{{ passwordError }}</p>
           </div>
 
           <!-- Remember Me -->
@@ -907,6 +913,32 @@ const loginForm = ref({
   email: '',
   password: '',
   rememberMe: false
+})
+
+// Inline validation errors
+const emailError = ref<string | null>(null)
+const passwordError = ref<string | null>(null)
+
+// Validate email in real-time
+watch(() => loginForm.value.email, (newEmail) => {
+  if (!newEmail) {
+    emailError.value = null
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newEmail.trim())) {
+    emailError.value = 'Ungültige E-Mail-Adresse'
+  } else {
+    emailError.value = null
+  }
+})
+
+// Validate password (accept any length on login)
+watch(() => loginForm.value.password, (newPassword) => {
+  // No validation on login - accept any password length
+  // (users have different password requirements from different registration times)
+  passwordError.value = null
 })
 
 // Computed

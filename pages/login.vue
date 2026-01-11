@@ -39,8 +39,10 @@
               v-model="loginForm.email"
               type="email"
               autocomplete="email"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent"
-              :class="emailError ? 'border-red-500' : 'border-gray-300'"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+              :class="[
+                emailError ? 'border-2 border-red-500' : 'border border-gray-300'
+              ]"
               :style="{ '--tw-ring-color': emailError ? '#ef4444' : '#7C3AED' }"
               placeholder="ihre@email.com"
               :disabled="isLoading"
@@ -59,8 +61,10 @@
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
-                class="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:border-transparent"
-                :class="passwordError ? 'border-red-500' : 'border-gray-300'"
+                class="w-full px-3 py-2 pr-10 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+                :class="[
+                  passwordError ? 'border-2 border-red-500' : 'border border-gray-300'
+                ]"
                 :style="{ '--tw-ring-color': passwordError ? '#ef4444' : '#7C3AED' }"
                 placeholder="Ihr Passwort"
                 :disabled="isLoading"
@@ -483,13 +487,8 @@ watch(() => loginForm.value.email, (newEmail) => {
 
 // Validate password length in real-time (only minimum check for login)
 watch(() => loginForm.value.password, (newPassword) => {
-  if (!newPassword) {
-    passwordError.value = null
-    return
-  }
-  
-  // No minimum length check on login - accept any password
-  // (users might have old passwords that don't meet new requirements)
+  // No validation on login - accept any password length
+  // (users have different password requirements from different registration times)
   passwordError.value = null
 })
 
@@ -584,55 +583,25 @@ const handleLogin = async () => {
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
     
-    // Setze die Supabase Session manuell mit den Tokens vom Server
+    // Session is now stored in httpOnly cookie (secure, XSS-protected)
+    // No need to store tokens in localStorage/sessionStorage anymore!
+    logger.debug('🔐 Session stored in httpOnly cookie (secure)')
+    
+    // Note: We still call setSession to update Supabase client state
     const supabase = getSupabase()
     if (response.session) {
-      logger.debug('🔐 Setting Supabase session with tokens from server')
-      
-      // Speichere Tokens in localStorage oder sessionStorage basierend auf Remember Me
-      if (typeof window !== 'undefined') {
-        try {
-          // Supabase speichert Session unter diesem Key
-          const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-          const projectId = supabaseUrl.split('.')[0].split('//')[1]
-          const key = `sb-${projectId}-auth-token`
-          
-          const sessionData = {
-            access_token: response.session.access_token,
-            refresh_token: response.session.refresh_token,
-            expires_in: response.session.expires_in,
-            expires_at: response.session.expires_at,
-            token_type: 'bearer',
-            type: 'signup'
-          }
-          
-          // Choose storage based on Remember Me
-          const storage = loginForm.value.rememberMe ? localStorage : sessionStorage
-          storage.setItem(key, JSON.stringify(sessionData))
-          logger.debug('✅ Session stored in', loginForm.value.rememberMe ? 'localStorage (7 days)' : 'sessionStorage (browser session)', 'with key:', key)
-          logger.debug('🔍 Session data stored:', {
-            hasAccessToken: !!response.session.access_token,
-            hasRefreshToken: !!response.session.refresh_token,
-            expiresIn: response.session.expires_in
-          })
-        } catch (err) {
-          logger.debug('⚠️ Failed to store session:', err)
-        }
-      }
-      
-      // Versuche auch setSession zu verwenden
       try {
-        const { data, error } = await supabase.auth.setSession({
+        const { error: sessionError } = await supabase.auth.setSession({
           access_token: response.session.access_token,
           refresh_token: response.session.refresh_token
         })
-        if (error) {
-          logger.debug('⚠️ setSession returned error:', error.message)
+        if (sessionError) {
+          logger.debug('⚠️ setSession returned error:', sessionError.message)
         } else {
-          logger.debug('✅ setSession succeeded')
+          logger.debug('✅ Supabase client session updated')
         }
       } catch (err) {
-        logger.debug('⚠️ setSession threw error (but localStorage is set):', err)
+        logger.debug('⚠️ setSession threw error:', err)
       }
     }
     
