@@ -68,13 +68,15 @@ CREATE TABLE IF NOT EXISTS availability_slots (
 -- ============================================
 
 -- Main query: Find available slots for tenant/staff/time range
+-- Note: Cannot use NOW() in index predicate (not IMMUTABLE)
+-- Expired reservations cleaned up by cron job
 CREATE INDEX idx_availability_lookup ON availability_slots(
   tenant_id, 
   staff_id, 
   is_available, 
   start_time, 
   end_time
-) WHERE is_available = true AND (reserved_until IS NULL OR reserved_until < NOW());
+) WHERE is_available = true;
 
 -- Cleanup: Find expired reservations
 CREATE INDEX idx_availability_expired_reservations ON availability_slots(
