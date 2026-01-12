@@ -29,9 +29,12 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
       return
     }
 
-    // At least one of user_id or auth_user_id should be provided
-    if (!entry.user_id && !entry.auth_user_id) {
-      console.warn('Invalid audit log entry - missing both user_id and auth_user_id')
+    // For anonymous actions (e.g., public tenant branding access after logout),
+    // it's OK to have neither user_id nor auth_user_id
+    // We'll rely on ip_address for tracking
+    const isAnonymous = !entry.user_id && !entry.auth_user_id
+    if (isAnonymous && !entry.ip_address) {
+      console.warn('Invalid audit log entry - anonymous action without IP address')
       return
     }
 
