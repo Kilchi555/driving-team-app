@@ -85,7 +85,11 @@ export default defineEventHandler(async (event) => {
         notes (
           id,
           staff_rating,
-          staff_note
+          staff_note,
+          evaluation_criteria_id,
+          criteria_rating,
+          criteria_note,
+          created_at
         ),
         exam_results (
           id,
