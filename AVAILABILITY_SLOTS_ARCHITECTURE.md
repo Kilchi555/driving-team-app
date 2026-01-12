@@ -312,28 +312,56 @@ Security:
 
 ## 🚀 MIGRATION PLAN
 
-### Phase 1: Setup (Week 1)
+### Phase 1: Setup (Week 1) ✅ COMPLETED
 1. ✅ Create `availability_slots` table
-2. Create calculator service
-3. Create cron job (nightly)
-4. Create public API endpoints
+2. ✅ Create calculator service (`server/services/availability-calculator.ts`)
+3. ✅ Create cron job (nightly at 2 AM)
+4. ✅ Create public API endpoints:
+   - ✅ `/api/booking/get-available-slots.get.ts`
+   - ✅ `/api/booking/reserve-slot.post.ts`
+   - ✅ `/api/booking/create-appointment.post.ts`
+5. ✅ Create secure composable (`composables/useSecureAvailability.ts`)
 
-### Phase 2: Parallel Run (Week 2)
+### Phase 2: Initial Data Load (NEXT)
+1. ⏳ Run initial availability calculation
+   - Execute: POST `/api/cron/calculate-availability`
+   - Generate slots for next 30 days
+   - Verify slot data in `availability_slots` table
+
+2. ⏳ Test APIs manually
+   - Test: GET `/api/booking/get-available-slots`
+   - Test: POST `/api/booking/reserve-slot`
+   - Verify: Slot reservation works atomically
+
+### Phase 3: Frontend Migration (NEXT)
+1. ⏳ Update `pages/booking/availability/[slug].vue`
+   - Replace `useAvailabilitySystem` with `useSecureAvailability`
+   - Remove all direct DB queries (22 queries → 1 API call)
+   - Update slot selection logic
+   - Update booking flow
+
+2. ⏳ Test booking flow end-to-end
+   - Browse slots
+   - Reserve slot
+   - Create appointment
+   - Verify payment flow
+
+### Phase 4: Parallel Run (Week 2)
 1. Run both old and new system
 2. Compare results
 3. Fix discrepancies
 4. Monitor performance
 
-### Phase 3: Switch (Week 3)
-1. Update frontend to use new API
-2. Remove direct DB queries
+### Phase 5: Full Switch (Week 3)
+1. Remove old composable (`useAvailabilitySystem.ts`)
+2. Update documentation
 3. Monitor for issues
 4. Rollback plan ready
 
-### Phase 4: Cleanup (Week 4)
+### Phase 6: Cleanup (Week 4)
 1. Remove old booking logic
-2. Update documentation
-3. Performance optimization
+2. Performance optimization
+3. Add analytics
 4. Done! 🎉
 
 ---
