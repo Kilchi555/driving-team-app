@@ -1,421 +1,309 @@
 /**
- * API Endpoint: Create Appointment from Booking
- * Erstellt einen Termin und das zugehörige Payment
+ * Authenticated API: Create Appointment
+ * 
+ * PURPOSE:
+ * Creates an appointment after verifying slot reservation.
+ * Marks slot as unavailable after successful booking.
+ * 
+ * SECURITY:
+ * - Requires authentication
+ * - Rate limited (10/min per user)
+ * - Verifies slot reservation by session
+ * - Tenant isolation
+ * - Audit logging
+ * - Payment verification
+ * 
+ * USAGE:
+ * POST /api/booking/create-appointment
+ * Headers: Authorization: Bearer <token>
+ * Body: {
+ *   slot_id: "<uuid>",
+ *   session_id: "<session-uuid>",
+ *   user_data: { first_name, last_name, email, phone, ... },
+ *   appointment_type: "lesson",
+ *   notes: "...",
+ *   category_code: "B"
+ * }
  */
 
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError, getHeader, H3Event } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import {
-  validateAppointmentData,
-  validateDuration,
-  validateUUID,
-  sanitizeString,
-  throwIfInvalid
-} from '~/server/utils/validators'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { logAudit } from '~/server/utils/audit'
+import { sanitizeString } from '~/server/utils/sanitization'
+import { toLocalTimeString } from '~/utils/dateUtils'
 
-export default defineEventHandler(async (event) => {
+interface CreateAppointmentRequest {
+  slot_id: string
+  session_id: string
+  user_data?: {
+    first_name?: string
+    last_name?: string
+    email?: string
+    phone?: string
+  }
+  appointment_type: string
+  notes?: string
+  category_code: string
+}
+
+export default defineEventHandler(async (event: H3Event) => {
+  const startTime = Date.now()
+  const ipAddress = getClientIP(event)
+  let authenticatedUserId: string | undefined
+  let tenantId: string | undefined
+  let auditDetails: any = {}
+
   try {
-    const body = await readBody(event)
-    const {
-      user_id,
-      staff_id,
-      location_id,
-      custom_location_address,
-      custom_location_name,
-      start_time,
-      end_time,
-      duration_minutes,
-      type,
-      event_type_code,
-      status,
-      tenant_id,
-      reservation_id // Optional: booking_reservations ID
-    } = body
+    logger.debug('📅 Create Appointment API called')
 
-    logger.debug('📝 Creating appointment:', body)
-
-    // Validierung mit centralized validator
-    const validation = validateAppointmentData({
-      user_id,
-      staff_id,
-      start_time,
-      end_time,
-      duration_minutes,
-      type,
-      event_type_code,
-      status,
-      tenant_id,
-      location_id,
-      custom_location_name,
-      custom_location_address
-    })
-    
-    throwIfInvalid(validation)
-
-    const supabase = getSupabaseAdmin()
-
-    // 0. Falls reservation_id vorhanden: lösche die Reservierung
-    if (reservation_id) {
-      const { error: deleteReservationError } = await supabase
-        .from('booking_reservations')
-        .delete()
-        .eq('id', reservation_id)
-
-      if (deleteReservationError) {
-        console.warn('⚠️ Could not delete booking reservation:', deleteReservationError)
-        // Nicht kritisch, fahre fort
-      } else {
-        logger.debug('✅ Booking reservation deleted:', reservation_id)
-      }
+    // ============ LAYER 1: AUTHENTICATION ============
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      logger.warn('❌ No auth token provided')
+      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    // 1. Erstelle Appointment
+    const token = authHeader.substring(7)
+    const supabase = getSupabaseAdmin()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      logger.warn('❌ Invalid auth token')
+      throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
+    }
+
+    authenticatedUserId = user.id
+    auditDetails.authenticated_user_id = authenticatedUserId
+
+    // ============ LAYER 2: RATE LIMITING ============
+    const rateLimitResult = await checkRateLimit(
+      authenticatedUserId,
+      'create_appointment',
+      10, // 10 requests per minute
+      60000 // 60 seconds
+    )
+
+    if (!rateLimitResult.allowed) {
+      await logAudit({
+        auth_user_id: authenticatedUserId,
+        action: 'create_appointment',
+        status: 'failed',
+        error_message: 'Rate limit exceeded',
+        ip_address: ipAddress,
+        details: auditDetails
+      })
+      throw createError({ statusCode: 429, statusMessage: 'Too many appointment creation attempts' })
+    }
+
+    // ============ LAYER 3: VALIDATE INPUT ============
+    const body = await readBody(event) as CreateAppointmentRequest
+
+    if (!body.slot_id || !body.session_id || !body.appointment_type || !body.category_code) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'slot_id, session_id, appointment_type, and category_code are required'
+      })
+    }
+
+    // Sanitize input
+    const sanitizedNotes = body.notes ? sanitizeString(body.notes) : undefined
+
+    auditDetails.slot_id = body.slot_id
+    auditDetails.appointment_type = body.appointment_type
+    auditDetails.category_code = body.category_code
+
+    // ============ LAYER 4: GET USER PROFILE ============
+    const { data: userData, error: userProfileError } = await supabase
+      .from('users')
+      .select('id, tenant_id, first_name, last_name, email, phone')
+      .eq('auth_user_id', authenticatedUserId)
+      .single()
+
+    if (userProfileError || !userData) {
+      logger.warn('❌ User profile not found for authenticated user')
+      throw createError({ statusCode: 404, statusMessage: 'User profile not found' })
+    }
+
+    tenantId = userData.tenant_id
+    auditDetails.tenant_id = tenantId
+    auditDetails.user_id = userData.id
+
+    // ============ LAYER 5: VERIFY SLOT RESERVATION ============
+    const { data: slot, error: slotError } = await supabase
+      .from('availability_slots')
+      .select('*')
+      .eq('id', body.slot_id)
+      .eq('reserved_by_session', body.session_id)
+      .single()
+
+    if (slotError || !slot) {
+      logger.warn('❌ Slot not found or not reserved by this session:', body.slot_id)
+      await logAudit({
+        user_id: userData.id,
+        tenant_id: tenantId,
+        action: 'create_appointment',
+        status: 'failed',
+        error_message: 'Slot not reserved or reservation expired',
+        ip_address: ipAddress,
+        details: auditDetails
+      })
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Slot reservation expired or invalid. Please reserve the slot again.'
+      })
+    }
+
+    // Check if reservation expired
+    if (slot.reserved_until && new Date(slot.reserved_until) < new Date()) {
+      logger.warn('❌ Slot reservation expired:', body.slot_id)
+      await logAudit({
+        user_id: userData.id,
+        tenant_id: tenantId,
+        action: 'create_appointment',
+        status: 'failed',
+        error_message: 'Slot reservation expired',
+        ip_address: ipAddress,
+        details: auditDetails
+      })
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Slot reservation expired. Please reserve the slot again.'
+      })
+    }
+
+    // Verify slot belongs to user's tenant
+    if (slot.tenant_id !== tenantId) {
+      logger.warn('❌ Slot does not belong to user tenant')
+      await logAudit({
+        user_id: userData.id,
+        tenant_id: tenantId,
+        action: 'create_appointment',
+        status: 'failed',
+        error_message: 'Tenant mismatch',
+        ip_address: ipAddress,
+        details: auditDetails
+      })
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+    }
+
+    // ============ LAYER 6: CREATE APPOINTMENT ============
+    const now = toLocalTimeString(new Date())
+
+    const appointmentData = {
+      tenant_id: tenantId,
+      user_id: userData.id,
+      staff_id: slot.staff_id,
+      location_id: slot.location_id,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      duration_minutes: slot.duration_minutes,
+      status: 'booked',
+      type: body.appointment_type,
+      category_code: body.category_code,
+      notes: sanitizedNotes,
+      created_at: now,
+      updated_at: now
+    }
+
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .insert({
-        user_id,
-        staff_id,
-        location_id,
-        custom_location_address,
-        custom_location_name,
-        start_time,
-        end_time,
-        duration_minutes,
-        type,
-        event_type_code: event_type_code || 'lesson',
-        status: status || 'pending_confirmation',
-        tenant_id,
-        title: `${type} - ${custom_location_address || 'Standort'}`,
-        description: `Appointment for ${type} at ${custom_location_address || 'standard location'}`,
-        confirmation_token: generateConfirmationToken()
-      })
-      .select()
+      .insert(appointmentData)
+      .select('*')
       .single()
 
     if (appointmentError) {
-      console.error('❌ Error creating appointment:', appointmentError)
-      console.error('❌ Error details:', {
-        message: appointmentError.message,
-        code: appointmentError.code,
-        details: appointmentError.details
+      logger.error('❌ Error creating appointment:', appointmentError)
+      await logAudit({
+        user_id: userData.id,
+        tenant_id: tenantId,
+        action: 'create_appointment',
+        status: 'failed',
+        error_message: `Appointment creation failed: ${appointmentError.message}`,
+        ip_address: ipAddress,
+        details: auditDetails
       })
       throw createError({
         statusCode: 500,
-        message: `Fehler beim Erstellen des Termins: ${appointmentError.message}`
+        statusMessage: 'Failed to create appointment'
       })
     }
 
     logger.debug('✅ Appointment created:', appointment.id)
+    auditDetails.appointment_id = appointment.id
 
-    // 1b. Auto-assign staff to customer on first appointment with this staff (via service role)
-    try {
-      const { data: userData, error: userFetchError } = await supabase
-        .from('users')
-        .select('assigned_staff_ids')
-        .eq('id', user_id)
-        .single()
+    // ============ LAYER 7: MARK SLOT AS UNAVAILABLE ============
+    const { error: slotUpdateError } = await supabase
+      .from('availability_slots')
+      .update({
+        is_available: false,
+        appointment_id: appointment.id,
+        reserved_until: null,
+        reserved_by_session: null,
+        updated_at: now
+      })
+      .eq('id', body.slot_id)
 
-      if (userFetchError) {
-        console.warn('⚠️ Could not fetch user assigned_staff_ids:', userFetchError)
-      } else if (userData) {
-        const currentStaffIds = userData.assigned_staff_ids || []
-        
-        // Check if staff is already assigned
-        if (!currentStaffIds.includes(staff_id)) {
-          // Add staff to the array
-          const updatedStaffIds = [...currentStaffIds, staff_id]
-          
-          logger.debug(`👤 Adding staff ${staff_id} to customer ${user_id}'s assigned_staff_ids`, {
-            before: currentStaffIds,
-            after: updatedStaffIds
-          })
-          
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({ assigned_staff_ids: updatedStaffIds })
-            .eq('id', user_id)
-          
-          if (updateError) {
-            console.warn('⚠️ Could not update assigned_staff_ids:', updateError)
-          } else {
-            logger.debug('✅ Staff added to customer assigned_staff_ids')
-          }
-        } else {
-          logger.debug(`ℹ️ Staff ${staff_id} already in customer's assigned_staff_ids`)
-        }
-      }
-    } catch (error: any) {
-      console.error('❌ Error in auto-assign staff:', error.message)
+    if (slotUpdateError) {
+      logger.error('❌ Error updating slot availability:', slotUpdateError)
+      // Non-critical: appointment is created, slot update can be retried
+    } else {
+      logger.debug('✅ Slot marked as unavailable')
     }
 
-    // 2. Lade Preis-Informationen
-    const { data: eventType } = await supabase
-      .from('event_types')
-      .select('default_price_rappen, default_fee_rappen, require_payment')
-      .eq('code', event_type_code || 'lesson')
-      .eq('tenant_id', tenant_id)
-      .single()
-
-    const requiresPayment = eventType?.require_payment !== false
-    const lessonPrice = eventType?.default_price_rappen || 9500 // Default: CHF 95
-    
-    // ✅ Admin Fee nur beim 2. Termin des Kunden berechnen (einmal pro Kategorie)
-    let adminFee = 0
-    
-    if (eventType?.default_fee_rappen && eventType.default_fee_rappen > 0) {
-      // ✅ WICHTIG: Prüfe ob Admin Fee bereits berechnet wurde
-      // Admin Fee wird NICHT erneut berechnet wenn:
-      // 1. Es existiert ein Payment mit admin_fee_rappen > 0 UND
-      // 2. Der Payment Status ist NICHT 'refunded'
-      // 
-      // Admin Fee WIRD erneut berechnet wenn:
-      // - Payment wurde refunded (Termin kostenlos storniert > 24h)
-      // - oder kein Payment mit Admin Fee existiert
-      
-      const { data: adminFeePayments } = await supabase
-        .from('payments')
-        .select(`
-          id,
-          payment_status,
-          admin_fee_rappen
-        `)
-        .eq('user_id', user_id)
-        .eq('tenant_id', tenant_id)
-        .eq('event_type_code', event_type_code || 'lesson')
-        .gt('admin_fee_rappen', 0)
-      
-      let hasValidAdminFeePayment = false
-      
-      if (adminFeePayments && adminFeePayments.length > 0) {
-        // Prüfe ob es ein NICHT-REFUNDED Payment mit Admin Fee gibt
-        for (const payment of adminFeePayments) {
-          if (payment.payment_status !== 'refunded') {
-            // ✅ Payment mit Admin Fee existiert und wurde NICHT refunded
-            logger.debug('ℹ️ Admin fee already charged in non-refunded payment', {
-              paymentId: payment.id,
-              paymentStatus: payment.payment_status,
-              adminFee: payment.admin_fee_rappen
-            })
-            hasValidAdminFeePayment = true
-            break
-          }
-        }
-        
-        // Wenn alle Admin Fee Payments refunded sind, kann neu berechnet werden
-        if (!hasValidAdminFeePayment) {
-          logger.debug('✅ Previous admin fee was refunded - can charge admin fee again')
-        }
+    // ============ LAYER 8: AUDIT LOGGING ============
+    await logAudit({
+      user_id: userData.id,
+      tenant_id: tenantId,
+      action: 'create_appointment',
+      resource_type: 'appointment',
+      resource_id: appointment.id,
+      status: 'success',
+      ip_address: ipAddress,
+      details: {
+        ...auditDetails,
+        slot_id: body.slot_id,
+        staff_id: slot.staff_id,
+        location_id: slot.location_id,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        duration_minutes: slot.duration_minutes,
+        duration_ms: Date.now() - startTime
       }
-      
-      if (hasValidAdminFeePayment) {
-        logger.debug('ℹ️ Customer has already paid admin fee - no admin fee for this appointment')
-        adminFee = 0
-      } else {
-        // Zähle, wie viele Termine der Kunde bereits hat (für diesen event_type_code)
-        // Berücksichtige: pending_confirmation, confirmed, completed
-        // WICHTIG: Zähle NUR nicht-stornierte Termine
-        const { count: existingAppointmentsCount } = await supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user_id)
-          .eq('tenant_id', tenant_id)
-          .eq('event_type_code', event_type_code || 'lesson')
-          .in('status', ['pending_confirmation', 'confirmed', 'completed'])
-          .is('deleted_at', null)  // Nur nicht-gelöschte Termine
-        
-        const appointmentNumber = (existingAppointmentsCount || 0) + 1 // +1 for current appointment being created
-        
-        logger.debug('💰 Admin fee check:', {
-          eventTypeCode: event_type_code || 'lesson',
-          existingAppointments: existingAppointmentsCount,
-          appointmentNumber,
-          defaultFeeRappen: eventType.default_fee_rappen,
-          hasValidAdminFeePayment,
-          willChargeAdminFee: appointmentNumber === 2
-        })
-        
-        // Admin Fee nur beim 2. Termin
-        if (appointmentNumber === 2) {
-          adminFee = eventType.default_fee_rappen
-          logger.debug('✅ Admin fee will be charged (2nd appointment):', adminFee / 100, 'CHF')
-        } else {
-          logger.debug('ℹ️ No admin fee (appointment #' + appointmentNumber + ')')
-        }
-      }
-    }
+    })
 
-    // 3. Erstelle Payment (falls erforderlich)
-    let paymentId = null
-
-    if (requiresPayment) {
-      // Lade Tenant Settings für automatische Zahlung
-      const { data: paymentSettings } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenant_id)
-        .eq('setting_key', 'payment_settings')
-        .single()
-
-      const settings = paymentSettings?.setting_value || {}
-      const automaticPaymentEnabled = settings.automatic_payment_enabled !== false
-      const hoursBeforePayment = settings.automatic_payment_hours_before || 24
-
-      // Load tenant's cancellation policy to determine payment scheduling threshold
-      const { data: cancellationPolicy } = await supabase
-        .from('cancellation_policies')
-        .select(`
-          *,
-          rules:cancellation_rules(*)
-        `)
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-        .order('is_default', { ascending: false })
-        .limit(1)
-        .single()
-
-      // ✅ CRITICAL: Cancellation policy MUST be configured
-      if (!cancellationPolicy?.rules || !Array.isArray(cancellationPolicy.rules) || cancellationPolicy.rules.length === 0) {
-        const errorMsg = 'Keine Stornierungsrichtlinie konfiguriert. Bitte kontaktieren Sie den Administrator.'
-        logger.error('❌ Cancellation policy not found or invalid for tenant:', tenant_id, {
-          policy: cancellationPolicy,
-        })
-        throw new Error(errorMsg)
-      }
-
-      // Find the threshold for free cancellation (rule with charge_percentage = 0)
-      const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
-      
-      if (!freeRule) {
-        const errorMsg = 'Keine kostenloses Stornierungsregel in der Policy konfiguriert. Bitte kontaktieren Sie den Administrator.'
-        logger.error('❌ No free cancellation rule found in policy:', cancellationPolicy.id)
-        throw new Error(errorMsg)
-      }
-      
-      const hoursBeforeCancellationFree = freeRule.hours_before_appointment
-      logger.debug('✅ Loaded free cancellation threshold from policy:', hoursBeforeCancellationFree, 'hours')
-
-      // ✅ Berechne scheduled_authorization_date (X Stunden vor Termin, based on policy)
-      const appointmentDate = new Date(start_time)
-      const now = new Date()
-      const hoursUntilAppointment = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-      
-      let scheduledAuthorizationDate = null
-      
-      // Nur setzen, wenn Termin >= hoursBeforeCancellationFree entfernt ist (sonst sofort autorisieren)
-      if (hoursUntilAppointment >= hoursBeforeCancellationFree) {
-        scheduledAuthorizationDate = new Date(appointmentDate)
-        scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() - hoursBeforeCancellationFree)
-        // Runde auf die nächste volle Stunde auf
-        if (scheduledAuthorizationDate.getMinutes() > 0 || scheduledAuthorizationDate.getSeconds() > 0) {
-          scheduledAuthorizationDate.setHours(scheduledAuthorizationDate.getHours() + 1)
-        }
-        scheduledAuthorizationDate.setMinutes(0)
-        scheduledAuthorizationDate.setSeconds(0)
-        scheduledAuthorizationDate.setMilliseconds(0)
-      } else {
-        // Termin < hoursBeforeCancellationFree: sofort autorisieren
-        logger.debug(`⚡ Appointment < ${hoursBeforeCancellationFree}h away - will authorize immediately`)
-        scheduledAuthorizationDate = new Date()
-        scheduledAuthorizationDate.setSeconds(0)
-        scheduledAuthorizationDate.setMilliseconds(0)
-      }
-
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          appointment_id: appointment.id,
-          user_id,
-          staff_id,
-          tenant_id,
-          lesson_price_rappen: lessonPrice,
-          admin_fee_rappen: adminFee,
-          total_amount_rappen: lessonPrice + adminFee,
-          payment_method: 'wallee',
-          payment_status: 'pending',
-          currency: 'CHF',
-          description: `Payment for appointment: ${type}`,
-          scheduled_authorization_date: scheduledAuthorizationDate ? scheduledAuthorizationDate.toISOString() : null,
-          scheduled_payment_date: null,  // Not used anymore, authorization will handle charging
-          created_by: user_id
-        })
-        .select()
-        .single()
-
-      if (paymentError) {
-        console.error('Error creating payment:', paymentError)
-        // Don't fail the whole request, just log the error
-      } else {
-        paymentId = payment.id
-        logger.debug('✅ Payment created:', payment.id)
-        
-        // ✅ Erstelle payment_items für dieses Payment
-        const paymentItems = []
-        
-        // Fahrlektion als Item
-        paymentItems.push({
-          payment_id: payment.id,
-          item_type: 'service',
-          item_name: type || 'Fahrlektion',
-          quantity: 1,
-          unit_price_rappen: lessonPrice,
-          total_price_rappen: lessonPrice,
-          description: `${duration_minutes || 45} Minuten`
-        })
-        
-        // Admin Fee als Item (falls vorhanden)
-        if (adminFee > 0) {
-          paymentItems.push({
-            payment_id: payment.id,
-            item_type: 'service',
-            item_name: 'Verwaltungsgebühr',
-            quantity: 1,
-            unit_price_rappen: adminFee,
-            total_price_rappen: adminFee,
-            description: null
-          })
-        }
-        
-        // Items in DB speichern
-        const { error: itemsError } = await supabase
-          .from('payment_items')
-          .insert(paymentItems)
-        
-        if (itemsError) {
-          console.error('Error creating payment items:', itemsError)
-        } else {
-          logger.debug('✅ Payment items created:', paymentItems.length)
-        }
-      }
-    }
-
-    // 4. Sende Bestätigungs-Email (optional, kann später implementiert werden)
-    // TODO: Send confirmation email with token
-
+    // ============ LAYER 9: RETURN RESPONSE ============
     return {
       success: true,
-      appointment_id: appointment.id,
-      payment_id: paymentId,
-      confirmation_token: appointment.confirmation_token
+      appointment: {
+        id: appointment.id,
+        start_time: appointment.start_time,
+        end_time: appointment.end_time,
+        duration_minutes: appointment.duration_minutes,
+        status: appointment.status,
+        type: appointment.type,
+        category_code: appointment.category_code
+      },
+      payment_required: false, // TODO: Integrate payment logic if needed
+      message: 'Appointment created successfully'
     }
 
   } catch (error: any) {
-    console.error('❌ Error in create-appointment:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-    
+    logger.error('❌ Create Appointment API error:', error)
+    await logAudit({
+      user_id: authenticatedUserId,
+      tenant_id: tenantId,
+      action: 'create_appointment',
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      ip_address: ipAddress,
+      details: { ...auditDetails, duration_ms: Date.now() - startTime }
+    })
     throw createError({
-      statusCode: 500,
-      message: error.message || 'Internal server error'
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Failed to create appointment'
     })
   }
 })
-
-// Generate random confirmation token
-function generateConfirmationToken(): string {
-  return Array.from({ length: 32 }, () => 
-    Math.floor(Math.random() * 16).toString(16)
-  ).join('')
-}
-

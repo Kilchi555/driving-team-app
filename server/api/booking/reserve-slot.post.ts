@@ -1,129 +1,146 @@
 /**
- * API Endpoint: Reserve Appointment Slot
- * Reserviert einen Termin für 5 Minuten in der booking_reservations Tabelle
+ * Public API: Reserve Slot (Temporary)
+ * 
+ * PURPOSE:
+ * Temporarily reserves an available slot for 10 minutes.
+ * Prevents race conditions when multiple users try to book the same slot.
+ * 
+ * SECURITY:
+ * - Public endpoint (no auth required)
+ * - Rate limited (10/min per IP)
+ * - Atomic UPDATE (prevents double-booking)
+ * - Auto-cleanup after expiry (cron job)
+ * - Session-based reservation
+ * 
+ * USAGE:
+ * POST /api/booking/reserve-slot
+ * Body: { slot_id: "<uuid>", session_id: "<session-uuid>" }
  */
 
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError, H3Event } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import {
-  validateUUID,
-  validateISODate,
-  validateAppointmentTimes,
-  validateDuration,
-  throwValidationError
-} from '~/server/utils/validators'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
 
-export default defineEventHandler(async (event) => {
+interface ReserveSlotRequest {
+  slot_id: string
+  session_id: string
+}
+
+export default defineEventHandler(async (event: H3Event) => {
+  const startTime = Date.now()
+  const ipAddress = getClientIP(event)
+
   try {
-    const body = await readBody(event)
-    const {
-      staff_id,
-      start_time,
-      end_time,
-      duration_minutes,
-      category_code,
-      location_id,
-      tenant_id
-    } = body
+    logger.debug('🔒 Reserve Slot API called')
 
-    logger.debug('🔄 Reserving slot:', { staff_id, start_time })
+    // ============ LAYER 1: RATE LIMITING ============
+    const rateLimitResult = await checkRateLimit(
+      ipAddress,
+      'reserve_slot',
+      10, // 10 requests per minute per IP
+      60000 // 60 seconds
+    )
 
-    // Validierung mit centralized validators
-    const errors: Record<string, string> = {}
-    
-    if (!staff_id || !validateUUID(staff_id)) {
-      errors.staff_id = 'Ungültige Mitarbeiter-ID'
-    }
-    
-    if (!tenant_id || !validateUUID(tenant_id)) {
-      errors.tenant_id = 'Ungültige Mandanten-ID'
-    }
-    
-    // Validate times
-    // ✅ Allow past appointments - for reservations of past slots
-    const timeValidation = validateAppointmentTimes(start_time, end_time, true)
-    if (!timeValidation.valid) {
-      errors.times = timeValidation.error!
-    }
-    
-    // Validate duration if provided
-    if (duration_minutes !== undefined) {
-      const durationValidation = validateDuration(duration_minutes)
-      if (!durationValidation.valid) {
-        errors.duration_minutes = durationValidation.error!
-      }
-    }
-    
-    // Validate location_id if provided
-    if (location_id && !validateUUID(location_id)) {
-      errors.location_id = 'Ungültiges Standort-ID Format'
-    }
-    
-    if (Object.keys(errors).length > 0) {
-      throwValidationError(errors)
-    }
-
-    const supabase = getSupabaseAdmin()
-    
-    const startTime = new Date(start_time).toISOString()
-    const endTime = new Date(end_time).toISOString()
-
-    // Calculate expiration time (5 minutes from now)
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-
-    logger.debug('📅 Reservation times:', { startTime, endTime, expiresAt })
-
-    // Reserviere den Slot in booking_reservations (nicht in appointments!)
-    const { data: reservation, error: reservationError } = await supabase
-      .from('booking_reservations')
-      .insert({
-        staff_id,
-        location_id,
-        start_time: startTime,
-        end_time: endTime,
-        duration_minutes,
-        category_code: category_code || 'lesson',
-        tenant_id,
-        expires_at: expiresAt,
-        status: 'reserved'
+    if (!rateLimitResult.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many reservation attempts. Please try again later.'
       })
-      .select()
+    }
+
+    // ============ LAYER 2: VALIDATE INPUT ============
+    const body = await readBody(event) as ReserveSlotRequest
+
+    if (!body.slot_id) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'slot_id is required'
+      })
+    }
+
+    if (!body.session_id) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'session_id is required'
+      })
+    }
+
+    // ============ LAYER 3: ATOMIC RESERVATION ============
+    const supabase = getSupabaseAdmin()
+
+    // Calculate reservation expiry (10 minutes from now)
+    const reservedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    // ATOMIC UPDATE:
+    // - Only update if slot is available
+    // - Only update if not already reserved (or reservation expired)
+    // - Return updated row (or nothing if conditions not met)
+    const { data: reservedSlot, error: reserveError } = await supabase
+      .from('availability_slots')
+      .update({
+        reserved_until: reservedUntil,
+        reserved_by_session: body.session_id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', body.slot_id)
+      .eq('is_available', true)
+      .or(`reserved_until.is.null,reserved_until.lt.${new Date().toISOString()}`)
+      .select('id, staff_id, location_id, start_time, end_time, duration_minutes, reserved_until')
       .single()
 
-    if (reservationError) {
-      console.error('❌ Error creating reservation:', reservationError)
+    if (reserveError) {
+      // Check if it's a "no rows" error (slot already reserved)
+      if (reserveError.code === 'PGRST116') {
+        logger.warn('⚠️ Slot already reserved or unavailable:', body.slot_id)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'This slot is no longer available. Please select another slot.'
+        })
+      }
+
+      logger.error('❌ Error reserving slot:', reserveError)
       throw createError({
         statusCode: 500,
-        message: `Reservierung fehlgeschlagen: ${reservationError.message}`
+        statusMessage: 'Failed to reserve slot'
       })
     }
 
-    const reservationId = reservation.id
-    logger.debug('✅ Slot reserved in booking_reservations:', reservationId)
+    if (!reservedSlot) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'This slot is no longer available. Please select another slot.'
+      })
+    }
+
+    const duration = Date.now() - startTime
+    logger.debug('✅ Slot reserved successfully:', {
+      slot_id: reservedSlot.id,
+      session_id: body.session_id,
+      reserved_until: reservedUntil,
+      duration: `${duration}ms`
+    })
 
     return {
       success: true,
-      reservation_id: reservationId,
-      reserved_until: expiresAt
+      message: 'Slot reserved for 10 minutes',
+      slot: {
+        id: reservedSlot.id,
+        staff_id: reservedSlot.staff_id,
+        location_id: reservedSlot.location_id,
+        start_time: reservedSlot.start_time,
+        end_time: reservedSlot.end_time,
+        duration_minutes: reservedSlot.duration_minutes,
+        reserved_until: reservedSlot.reserved_until
+      }
     }
 
   } catch (error: any) {
-    console.error('❌ Error in reserve-slot:', error)
-    console.error('❌ Error details:', {
-      message: error?.message,
-      code: error?.code,
-      details: error?.details,
-      hint: error?.hint,
-      stack: error?.stack?.substring(0, 500)
-    })
-    
-    if (error.statusCode) {
-      throw error
-    }
-    
+    logger.error('❌ Reserve Slot API error:', error)
     throw createError({
-      statusCode: 500,
-      message: error.message || 'Internal server error'
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Failed to reserve slot'
     })
   }
 })
