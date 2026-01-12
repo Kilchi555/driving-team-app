@@ -255,81 +255,56 @@ onMounted(async () => {
   try {
     const supabase = getSupabase()
     const auth = useAuthStore()
-    const { user, userProfile } = storeToRefs(auth)
+    const { user } = storeToRefs(auth)
     if (!user.value?.id) throw new Error('Nicht eingeloggt')
-    // appointments.user_id referenziert die interne users.id, daher userProfile.id verwenden
-    const currentUserId = userProfile.value?.id
-    if (!currentUserId) throw new Error('Kein Benutzerprofil gefunden')
     
-    console.log('🔍 Learning page - Current user ID:', currentUserId)
+    console.log('🔍 Learning page - Loading via API...')
 
-    // 1) Fahrkategorien des Schülers sammeln (aus users.category und appointments.type)
-    const { data: userData } = await supabase
-      .from('users')
-      .select('category')
-      .eq('id', currentUserId)
-      .single()
-    
-    let studentCategoryCodes: string[] = []
-    
-    // Hauptkategorie aus users.category (kann Array oder String sein)
-    if (userData?.category) {
-      if (Array.isArray(userData.category)) {
-        studentCategoryCodes.push(...userData.category)
-      } else {
-        studentCategoryCodes.push(userData.category)
-      }
+    // ✅ SECURE API CALL - Get all learning progress data
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      throw new Error('No session available')
     }
 
-    // 2) Termine des Schülers laden (inkl. type = Kategorie)
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('id, type')
-      .eq('user_id', currentUserId)
-    
-    console.log('📅 Appointments loaded:', appointments?.length || 0)
-    
-    // Kategorien aus Appointments sammeln
-    const appointmentCategories = [...new Set(
-      (appointments || [])
-        .map(a => a.type)
-        .filter(Boolean)
-    )]
-    
-    // Kombiniere beide Listen und dedupliziere
-    studentCategoryCodes = [...new Set([...studentCategoryCodes, ...appointmentCategories])]
-    console.log('🚗 Student categories (from users + appointments):', studentCategoryCodes)
+    const response = await $fetch('/api/customer/get-learning-progress', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+      }
+    }) as any
 
-    const aptIds = (appointments || []).map(a => a.id)
-    if (aptIds.length === 0) {
+    if (!response.success) {
+      throw new Error('Failed to load learning progress')
+    }
+
+    // ✅ Extract data from API response
+    const { 
+      studentCategories: studentCategoryCodes, 
+      appointments, 
+      maxRating, 
+      notes, 
+      categories: allCategories, 
+      criteria: allCriteria 
+    } = response.data
+
+    console.log('✅ API Response:', {
+      studentCategories: studentCategoryCodes.length,
+      appointments: appointments.length,
+      maxRating,
+      notes: notes.length,
+      categories: allCategories.length,
+      criteria: allCriteria.length
+    })
+
+    if (appointments.length === 0) {
       console.log('⚠️ No appointments found')
       items.value = []
       return
     }
 
-    // 3) Load max evaluation scale rating
-    const { data: scaleData } = await supabase
-      .from('evaluation_scale')
-      .select('rating')
-      .order('rating', { ascending: false })
-      .limit(1)
-    
-    const maxRating = scaleData?.[0]?.rating || 5
-    console.log('⭐ Max rating:', maxRating)
-
-    // 4) Notes/Evaluations zu diesen Terminen laden
-    const { data: notes } = await supabase
-      .from('notes')
-      .select('evaluation_criteria_id, criteria_rating, appointment_id')
-      .in('appointment_id', aptIds)
-      .not('evaluation_criteria_id', 'is', null)
-      .not('criteria_rating', 'is', null)
-    
-    console.log('📝 Notes loaded:', notes?.length || 0)
-    
     // Create map: criteria_id -> ratings[]
     const criteriaRatingsMap = new Map()
-    notes?.forEach(note => {
+    notes?.forEach((note: any) => {
       if (!criteriaRatingsMap.has(note.evaluation_criteria_id)) {
         criteriaRatingsMap.set(note.evaluation_criteria_id, [])
       }
@@ -337,46 +312,6 @@ onMounted(async () => {
     })
     
     console.log('📊 Criteria with ratings:', criteriaRatingsMap.size)
-
-    // 5) Get user's tenant_id
-    const tenantId = userData.tenant_id || userProfile.value?.tenant_id
-    if (!tenantId) {
-      console.error('❌ No tenant_id found')
-      items.value = []
-      return
-    }
-
-    // 6) Load ALL evaluation_categories for this tenant
-    const { data: allCategories } = await supabase
-      .from('evaluation_categories')
-      .select('id, name, display_order, color, is_theory')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .order('display_order')
-    
-    console.log('📂 All categories loaded:', allCategories?.length || 0)
-
-    // 7) Load ALL criteria for student's categories (with educational content)
-    const { data: allCriteria, error: criteriaError } = await supabase
-      .from('evaluation_criteria')
-      .select(`
-        id, 
-        name, 
-        educational_content, 
-        driving_categories,
-        category_id,
-        display_order,
-        evaluation_categories!inner(id, name, display_order, color, tenant_id)
-      `)
-      .eq('evaluation_categories.tenant_id', tenantId)
-      .eq('is_active', true)
-      .order('display_order')
-    
-    if (criteriaError) {
-      console.error('❌ Error loading criteria:', criteriaError)
-    }
-    
-    console.log('📚 All criteria loaded:', allCriteria?.length || 0)
 
     // 8) Filter: Only criteria WITH content AND for student's categories
     const criteriaWithContent = (allCriteria || []).filter(c => {
