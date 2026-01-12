@@ -1908,23 +1908,6 @@ const generateTimeSlotsForSpecificCombination = async () => {
   }
 }
 
-  if (!reserved) {
-    selectedSlot.value = null
-    return
-  }
-  
-  // Go to final confirmation step (Pickup-Adresse oder Zusammenfassung)
-  await waitForPressEffect()
-  currentStep.value = 6
-  
-  // Initialize Google Places Autocomplete for pickup address
-  if (selectedLocation.value?.isPickup) {
-    nextTick(() => {
-      initializeAddressAutocomplete()
-    })
-  }
-}
-
 // Initialize Google Places Autocomplete
 const initializeAddressAutocomplete = () => {
   if (!pickupAddressInput.value) {
