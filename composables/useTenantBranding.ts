@@ -118,6 +118,19 @@ const cssVariables = computed(() => {
 export const useTenantBranding = () => {
   const supabase = getSupabase()
 
+  // Helper: Get auth header if user is authenticated
+  const getAuthHeader = async (): Promise<string | null> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        return `Bearer ${session.access_token}`
+      }
+    } catch (e) {
+      logger.debug('No auth session available')
+    }
+    return null
+  }
+
   // Tenant-Branding laden (by slug)
   const loadTenantBranding = async (tenantSlug?: string) => {
     logger.debug('🎨 loadTenantBranding called with slug:', tenantSlug)
@@ -130,51 +143,34 @@ export const useTenantBranding = () => {
         throw new Error('Tenant slug is required')
       }
       
-      logger.debug('🔍 loadTenantBranding: Starting client query for slug:', tenantSlug)
+      logger.debug('🔍 loadTenantBranding: Calling secure API for slug:', tenantSlug)
 
-      const { data, error: queryError } = await supabase
-        .from('tenants')
-        .select(`
-          id, name, slug,
-          contact_email, contact_phone, address,
-          primary_color, secondary_color, accent_color,
-          success_color, warning_color, error_color, info_color,
-          background_color, surface_color, text_color, text_secondary_color,
-          font_family, heading_font_family, font_size_base,
-          border_radius, spacing_unit,
-          logo_url, logo_square_url, logo_wide_url, logo_dark_url, favicon_url,
-          website_url, social_facebook, social_instagram, social_linkedin, social_twitter,
-          brand_name, brand_tagline, brand_description, meta_description, meta_keywords,
-          custom_css, custom_js, default_theme, allow_theme_switch
-        `)
-        .eq('is_active', true)
-        .eq('slug', tenantSlug)
-        .maybeSingle()
+      // ✅ SECURE API CALL - No direct DB access
+      try {
+        const authHeader = await getAuthHeader()
+        const response: any = await $fetch('/api/tenants/branding', {
+          method: 'GET',
+          query: { slug: tenantSlug },
+          headers: authHeader ? { Authorization: authHeader } : {}
+        })
 
-      if (!data || queryError) {
-        console.warn('⚠️ Tenant not found for slug (client query):', tenantSlug, 'Error:', queryError?.message, '→ trying server API fallback')
-        // Fallback to server API (bypasses RLS)
-        try {
-          logger.debug('📡 Calling /api/tenants/by-slug with slug:', tenantSlug)
-          const serverResp: any = await $fetch(`/api/tenants/by-slug?slug=${tenantSlug}`)
-          logger.debug('✅ Server API response:', serverResp)
-          if (serverResp?.success && serverResp.data) {
-            logger.debug('✅ Processing tenant data from server API:', serverResp.data.name)
-            await processTenantData(serverResp.data)
-            return
-          } else {
-            console.warn('⚠️ Server API returned invalid response:', serverResp)
-          }
-        } catch (e: any) {
-          console.error('❌ Server API fallback failed:', e.message, e)
+        if (response?.success && response.data) {
+          logger.debug('✅ Tenant branding loaded from secure API:', response.data.name)
+          await processTenantData(response.data)
+          return
+        } else {
+          console.warn('⚠️ API returned invalid response:', response)
+          currentTenantBranding.value = null
+          error.value = 'Tenant nicht gefunden'
+          await applyBrandingStyles()
+          return
         }
+      } catch (apiError: any) {
+        console.error('❌ Secure API failed:', apiError.message, apiError)
         currentTenantBranding.value = null
         error.value = 'Tenant nicht gefunden'
         await applyBrandingStyles()
-        return
       }
-
-      await processTenantData(data)
 
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load tenant branding'
@@ -190,35 +186,23 @@ export const useTenantBranding = () => {
     error.value = null
     
     try {
-      const { data, error: queryError } = await supabase
-        .from('tenants')
-        .select(`
-          id, name, slug,
-          contact_email, contact_phone, address,
-          primary_color, secondary_color, accent_color,
-          success_color, warning_color, error_color, info_color,
-          background_color, surface_color, text_color, text_secondary_color,
-          font_family, heading_font_family, font_size_base,
-          border_radius, spacing_unit,
-          logo_url, logo_square_url, logo_wide_url, logo_dark_url, favicon_url,
-          website_url, social_facebook, social_instagram, social_linkedin, social_twitter,
-          brand_name, brand_tagline, brand_description, meta_description, meta_keywords,
-          custom_css, custom_js, default_theme, allow_theme_switch
-        `)
-        .eq('is_active', true)
-        .eq('id', tenantId)
-        .maybeSingle()
+      logger.debug('🔍 loadTenantBrandingById: Calling secure API for ID:', tenantId)
 
-      logger.debug('🔍 Raw query result:', { data, queryError })
+      // ✅ SECURE API CALL - No direct DB access
+      const authHeader = await getAuthHeader()
+      const response: any = await $fetch('/api/tenants/branding', {
+        method: 'GET',
+        query: { id: tenantId },
+        headers: authHeader ? { Authorization: authHeader } : {}
+      })
 
-      if (queryError) throw queryError
-      if (!data) {
+      if (!response?.success || !response.data) {
         console.warn('⚠️ Tenant not found for id:', tenantId)
         error.value = 'Tenant nicht gefunden'
         return
       }
 
-      await processTenantData(data)
+      await processTenantData(response.data)
 
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load tenant branding'
@@ -435,54 +419,38 @@ export const useTenantBranding = () => {
 
       logger.debug('📝 Final updateData to be saved:', updateData)
 
-      // Try update with current client first
-      let updateResult, updateError
-      
-      const updateResponse = await supabase
-        .from('tenants')
-        .update(updateData)
-        .eq('id', tenantId)
-        .select()
+      // ✅ SECURE API CALL - Use new secure branding update API
+      const authHeader = await getAuthHeader()
+      if (!authHeader) {
+        throw new Error('Authentication required for branding updates')
+      }
+
+      try {
+        const response: any = await $fetch('/api/tenants/branding', {
+          method: 'POST',
+          headers: {
+            Authorization: authHeader
+          },
+          body: {
+            tenantId,
+            updateData
+          }
+        })
         
-      updateResult = updateResponse.data
-      updateError = updateResponse.error
-      
-      // If no rows updated, try with service role (for admin updates)
-      if (!updateError && (!updateResult || updateResult.length === 0)) {
-        logger.debug('🔄 Retrying update with service role...')
+        logger.debug('🚀 Secure API update response:', response)
         
-        try {
-          const response = await $fetch('/api/tenants/update-branding', {
-            method: 'POST',
-            body: {
-              tenantId,
-              updateData
-            }
-          })
-          
-          logger.debug('🚀 Service role update response:', response)
-          updateResult = [response]
-          updateError = null
-        } catch (serviceError) {
-          console.error('❌ Service role update failed:', serviceError)
+        if (!response?.success || !response.data) {
+          throw new Error('Update failed - no data returned')
         }
+
+        logger.debug('✅ Database update successful via secure API, reloading branding...')
+        // Branding neu laden
+        await loadTenantBrandingById(tenantId)
+
+      } catch (apiError: any) {
+        console.error('❌ Secure API update failed:', apiError)
+        throw new Error(apiError.data?.statusMessage || apiError.message || 'Update failed')
       }
-
-      logger.debug('📊 Update result:', { updateResult, updateError })
-
-      if (updateError) {
-        console.error('❌ Database update failed:', updateError)
-        throw updateError
-      }
-
-      if (!updateResult || updateResult.length === 0) {
-        console.error('❌ No rows were updated - possible RLS policy issue')
-        throw new Error('Update failed - no rows affected. Check RLS policies.')
-      }
-
-      logger.debug('✅ Database update successful, reloading branding...')
-      // Branding neu laden
-      await loadTenantBrandingById(tenantId)
 
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to update tenant branding'
