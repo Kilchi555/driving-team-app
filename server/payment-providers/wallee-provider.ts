@@ -70,6 +70,7 @@ export class WalleeProvider implements IPaymentProvider {
         autoConfirmationEnabled: true,
         chargeRetryEnabled: false,
         customerId: request.userId,
+        tokenizationMode: Wallee.model.TokenizationMode.FORCE, // ✅ CRITICAL FIX: Enable token storage!
         merchantReference: merchantReference,
         metaData: {
           ...request.metadata,

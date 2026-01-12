@@ -225,6 +225,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       autoConfirmationEnabled: true,  // ✅ FIX: Auto-confirm like old API
       chargeRetryEnabled: false,
       customersEmailAddress: userData.email,
+      customerId: `dt-${tenantId}-${userData.id}`, // ✅ CRITICAL FIX: Required for tokenization!
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
