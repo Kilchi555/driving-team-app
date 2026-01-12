@@ -409,15 +409,14 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: userData.email,
-      customerId: `dt-${tenantId}-${userData.id}`, // Required for tokenization
+      // customerId removed temporarily - was blocking payment methods
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: body.orderId || `payment-${payment.id}`,
-      tokenizationMode: Wallee.model.TokenizationMode.ALLOW, // Tokenisierung wenn möglich
+      // tokenizationMode removed - not needed without customerId
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
-      // NOTE: allowedPaymentMethodConfigurations removed - let Wallee show all available methods
     }
 
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)
