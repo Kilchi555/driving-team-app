@@ -716,7 +716,7 @@
 
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { logger } from '~/utils/logger'
-import { useAvailabilitySystem } from '~/composables/useAvailabilitySystem'
+import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { getSupabase } from '~/utils/supabase'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
@@ -733,21 +733,28 @@ definePageMeta({
   layout: 'default'
 })
 
-// Composables
-const { 
-  isLoading, 
-  error, 
-  availableSlots, 
-  staffLocationCategories,
-  getAvailableSlots,
-  getAllAvailableSlots,
-  getStaffLocationCategories,
-  getAvailableSlotsForCombination,
-  loadBaseData,
-  activeStaff,
-  validateSlotsWithTravelTime,
-  loadAppointments
-} = useAvailabilitySystem()
+// Composables - NEW: Secure Availability API
+const {
+  isLoading: isLoadingSlots,
+  error: slotsError,
+  availableSlots,
+  fetchAvailableSlots,
+  reserveSlot,
+  createAppointment,
+  groupSlotsByDate,
+  generateSessionId
+} = useSecureAvailability()
+
+// Keep for UI compatibility
+const isLoading = ref(false)
+const error = ref<string | null>(null)
+
+// Session management for slot reservation
+const sessionId = ref(generateSessionId())
+const reservedSlotId = ref<string | null>(null)
+const reservationExpiry = ref<Date | null>(null)
+const reservationCountdown = ref(600) // 10 minutes in seconds
+let countdownInterval: any = null
 
 const { autoSyncCalendars } = useExternalCalendarSync()
 
