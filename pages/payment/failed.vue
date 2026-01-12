@@ -108,29 +108,19 @@ const loadFailureDetails = async () => {
     logger.debug('❌ Payment failed:', { transactionId, errorCode, errorMessage })
 
     if (transactionId) {
-      // ✅ SECURITY FIX: Use secure API instead of direct DB update
+      // ✅ SECURITY FIX: Use existing secure API instead of direct DB update
       try {
-        await $fetch('/api/payments/mark-failed', {
+        const result = await $fetch('/api/payments/status', {
           method: 'POST',
-          body: { transactionId }
+          body: {
+            transactionId,
+            status: 'failed'
+          }
         })
         
-        // Try to load payment details for display (optional, non-critical)
-        const { data: payment, error } = await supabase
-          .from('payments')
-          .select(`
-            *,
-            appointments (
-              title,
-              start_time,
-              duration_minutes
-            )
-          `)
-          .eq('wallee_transaction_id', transactionId)
-          .maybeSingle()
-        
-        if (!error && payment) {
-          failedPayment.value = payment
+        // Payment details are returned by the API
+        if (result.success && result.payment) {
+          failedPayment.value = result.payment
         }
       } catch (apiError: any) {
         logger.warn('⚠️ Could not mark payment as failed via API:', apiError.message)
