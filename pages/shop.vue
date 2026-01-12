@@ -1747,66 +1747,12 @@ const autoSave = useAutoSave(
   }
 )
 
-// Updated startOnlinePayment mit finalizeDraft und besserer Fehlerbehandlung
+// ⚠️ DEPRECATED - NOT USED ANYMORE
+// Payment is now handled by PaymentComponent in step 3
+// This function is kept for reference but should not be called
 const startOnlinePayment = async () => {
-  if (!hasProducts.value) return
-  
-  isSubmitting.value = true
-  
-  try {
-    // Finalize draft as payment_pending
-    let order = await autoSave.finalizeDraft('payment_pending')
-    
-    if (!order) {
-      // Fallback: direct save
-      order = await submitOrderWithStatus('payment_pending')
-    }
-    
-    // Create Wallee payment
-    const paymentData = {
-      orderId: order.id,
-      amount: totalPrice.value,
-      currency: 'CHF',
-      customerEmail: formData.value.email,
-      customerName: `${formData.value.firstName} ${formData.value.lastName}`,
-      description: `Driving Team Bestellung #${order.id}`,
-      successUrl: `${window.location.origin}/payment/success?order=${order.id}`,
-      failedUrl: `${window.location.origin}/payment/failed?order=${order.id}`,
-      // Pseudonyme Customer-ID Inputs (Gast-Checkout: nur tenantId verfügbar)
-      tenantId: tenantId.value || undefined
-    }
-    
-    const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
-      method: 'POST',
-      body: paymentData
-    })
-    
-    if (response.success && response.paymentUrl) {
-      window.location.href = response.paymentUrl
-    } else {
-      throw new Error('Payment URL konnte nicht erstellt werden')
-    }
-    
-  } catch (error: any) {
-    console.error('❌ Online payment error:', error)
-    
-    // Spezifische Fehlerbehandlung für Wallee
-    let errorMessage = '❌ Fehler beim Starten der Online-Zahlung.'
-    
-    if (error.statusCode === 442) {
-      errorMessage = '❌ Zahlungssystem temporär nicht verfügbar. Bitte wählen Sie "Rechnung senden" oder versuchen Sie es später erneut.'
-    } else if (error.statusCode === 401) {
-      errorMessage = '❌ Authentifizierungsfehler. Bitte kontaktieren Sie den Support.'
-    } else if (error.statusCode === 403) {
-      errorMessage = '❌ Zugriff verweigert. Bitte kontaktieren Sie den Support.'
-    } else if (error.data?.message?.includes('Permission denied')) {
-      errorMessage = '❌ Zahlungssystem konfiguriert. Bitte wählen Sie "Rechnung senden" oder kontaktieren Sie den Support.'
-    }
-    
-    alert(`${errorMessage}\n\nIhre Daten sind gespeichert und Sie können die Bestellung später abschließen.`)
-  } finally {
-    isSubmitting.value = false
-  }
+  console.warn('⚠️ startOnlinePayment is deprecated - PaymentComponent handles payments now')
+  alert('Diese Funktion wird nicht mehr verwendet. Bitte nutzen Sie den Zahlungsprozess in Schritt 3.')
 }
 
 // Updated submitOrder mit finalizeDraft
