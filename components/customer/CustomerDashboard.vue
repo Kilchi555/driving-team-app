@@ -1044,7 +1044,6 @@ const showReglementeModal = ref(false)
 const showReglementDetailModal = ref(false)
 const showReglementContent = ref('')
 const showReglementTitle = ref('')
-const hasPaymentMethod = ref(false)
 // Hardcoded payment thresholds
 const HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE = 24  // Capture exactly 24h before
 const HOURS_BEFORE_APPOINTMENT_FOR_IMMEDIATE = 24 // Charge immediately if < 24h away
@@ -1290,8 +1289,7 @@ const refreshData = async () => {
     const results = await Promise.allSettled([
       loadAllData(),
       loadPayments(),
-      loadPendingConfirmations(),
-      checkPaymentMethod()
+      loadPendingConfirmations()
     ])
     
     // Check results for errors
@@ -1547,8 +1545,7 @@ const loadAllData = async () => {
       loadAppointments(),
       loadLocations(),
       loadStaff(),
-      loadPendingConfirmations(),
-      checkPaymentMethod()
+      loadPendingConfirmations()
     ])
 
     // Load instructors after appointments are loaded
@@ -1608,38 +1605,6 @@ const loadPendingConfirmations = async () => {
     logger.debug('✅ Pending confirmations loaded with full data from API')
   } catch (err: any) {
     console.error('❌ Error loading pending confirmations:', err)
-  }
-}
-
-// ✅ Check if user has payment method
-const checkPaymentMethod = async () => {
-  if (!currentUser.value?.id) return
-
-  try {
-    const supabase = getSupabase()
-    
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
-    
-    if (userError || !userData) return
-
-    const { data, error } = await supabase
-      .from('customer_payment_methods')
-      .select('id')
-      .eq('user_id', userData.id)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle()
-    
-    hasPaymentMethod.value = !!data && !error
-    
-    logger.debug('✅ Payment method check:', hasPaymentMethod.value ? 'Has payment method' : 'No payment method')
-  } catch (err: any) {
-    console.error('❌ Error checking payment method:', err)
-    hasPaymentMethod.value = false
   }
 }
 
