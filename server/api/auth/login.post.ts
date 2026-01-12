@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { checkProgressiveRateLimitWithHistory } from '~/server/utils/progressive-rate-limiter'
 import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
 import { setAuthCookies } from '~/server/utils/cookies'
@@ -146,6 +147,75 @@ export default defineEventHandler(async (event) => {
       })
     }
     logger.debug('✅ Rate limit check passed. Remaining attempts:', rateLimit.remaining)
+
+    // ✅ TENANT VALIDATION: If tenantId provided, validate user belongs to that tenant
+    if (tenantId) {
+      logger.debug('🏢 Tenant-specific login, validating user belongs to tenant:', tenantId)
+      
+      try {
+        const { data: user, error: userError } = await adminSupabase
+          .from('users')
+          .select('id, tenant_id')
+          .eq('email', email.toLowerCase().trim())
+          .eq('is_active', true)
+          .single()
+        
+        if (userError || !user) {
+          // User doesn't exist or is inactive
+          logger.debug('❌ User not found or inactive')
+          
+          // Record failed login attempt
+          try {
+            await adminSupabase.rpc('record_failed_login', {
+              p_email: email.toLowerCase().trim(),
+              p_ip_address: ipAddress,
+              p_tenant_id: tenantId
+            })
+          } catch (recordError: any) {
+            console.warn('⚠️ Failed to record failed login:', recordError.message)
+          }
+          
+          throw createError({
+            statusCode: 401,
+            statusMessage: 'Ungültige Anmeldedaten'  // Generic error - no user enumeration
+          })
+        }
+        
+        if (user.tenant_id !== tenantId) {
+          // User belongs to different tenant
+          logger.debug('❌ User belongs to different tenant:', user.tenant_id, '!==', tenantId)
+          
+          // Record failed login attempt
+          try {
+            await adminSupabase.rpc('record_failed_login', {
+              p_email: email.toLowerCase().trim(),
+              p_ip_address: ipAddress,
+              p_tenant_id: tenantId
+            })
+          } catch (recordError: any) {
+            console.warn('⚠️ Failed to record failed login:', recordError.message)
+          }
+          
+          throw createError({
+            statusCode: 401,
+            statusMessage: 'Ungültige Anmeldedaten'  // Generic error - no tenant enumeration
+          })
+        }
+        
+        logger.debug('✅ User belongs to tenant, proceeding with login')
+      } catch (tenantError: any) {
+        // If it's already a createError, rethrow it
+        if (tenantError.statusCode) {
+          throw tenantError
+        }
+        // Otherwise log and throw generic error
+        console.error('❌ Tenant validation error:', tenantError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Anmeldung fehlgeschlagen'
+        })
+      }
+    }
 
     // Check login security status
     try {

@@ -79,24 +79,37 @@ export default defineEventHandler(async (event) => {
     // Find user by email or phone
     logger.debug(`🔍 Looking up user by ${method}:`, contact)
     
-    let userQuery
+    let user = null
+    let userError = null
+    
     if (method === 'email') {
-      userQuery = serviceSupabase
+      // Email should be unique - use .single()
+      const { data, error } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
         .eq('email', contact.toLowerCase().trim())
+        .eq('is_active', true)
         .single()
+      
+      user = data
+      userError = error
     } else {
-      // For phone, try multiple formats to handle different formatting
-      // First try exact match
-      userQuery = serviceSupabase
+      // ✅ FIX: Phone might not be unique! Use .limit(1) to get first match
+      const { data, error } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
         .eq('phone', contact)
-        .single()
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })  // Get most recent user
+        .limit(1)
+      
+      if (!error && data && data.length > 0) {
+        user = data[0]
+        userError = null
+      } else {
+        userError = error
+      }
     }
-
-    let { data: user, error: userError } = await userQuery
 
     // If phone number not found, try with different formatting
     if ((userError || !user) && method === 'sms') {
@@ -106,16 +119,20 @@ export default defineEventHandler(async (event) => {
       const normalizedPhone = contact.replace(/[^\d+]/g, '')
       logger.debug(`🔍 Trying normalized phone:`, normalizedPhone)
       
-      const { data: phoneUser, error: phoneError } = await serviceSupabase
+      // ✅ FIX: Use .limit(1) instead of .single() to handle multiple matches gracefully
+      const { data: phoneUsers, error: phoneError } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
-        .or(`phone.eq.${normalizedPhone},phone.ilike.%${normalizedPhone}%`)
-        .single()
+        .eq('phone', normalizedPhone)
+        .eq('is_active', true)
+        .limit(1)
       
-      if (!phoneError && phoneUser) {
-        user = phoneUser
+      if (!phoneError && phoneUsers && phoneUsers.length > 0) {
+        user = phoneUsers[0]
         userError = null
         logger.debug(`✅ Found user with normalized phone format`)
+      } else {
+        logger.debug(`ℹ️ No active user found with phone: ${normalizedPhone}`)
       }
     }
 

@@ -533,42 +533,77 @@ const handleLogin = async () => {
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
     
-    // 1. First validate that user belongs to this tenant
-    const { data: validationResult, error: validationError } = await supabase
-      .rpc('validate_user_tenant_login', {
-        user_email: loginForm.value.email,
-        tenant_slug: tenantSlug.value
-      })
+    // ✅ SECURE: Call login API directly with tenantId (same as /login page)
+    // Backend will validate that user belongs to this tenant
+    const response = await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: loginForm.value.email.toLowerCase().trim(),
+        password: loginForm.value.password,
+        tenantId: currentTenant.value?.id,  // ← Backend validates tenant membership
+        rememberMe: loginForm.value.rememberMe
+      }
+    }) as any
 
-    if (validationError) {
-      console.error('Validation error:', validationError)
-      // Don't reveal if user exists - generic error
-      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
+    logger.debug('📋 Login response:', { requiresMFA: response?.requiresMFA, success: response?.success })
+
+    // Check if MFA is required
+    if (response?.requiresMFA) {
+      logger.debug('🔐 MFA required for:', response.email)
+      // TODO: Implement MFA flow for [slug] page (currently only on /login)
+      loginError.value = 'Multi-Faktor-Authentifizierung erforderlich. Bitte verwenden Sie /login für MFA.'
       return
     }
 
-    if (!validationResult) {
-      // Don't reveal if user exists - generic error
-      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
+    // Check if login failed
+    if (!response?.success) {
+      const errorMsg = response?.statusMessage || 'Anmeldung fehlgeschlagen'
+      logger.debug('❌ Login failed:', errorMsg)
+      loginError.value = errorMsg
       return
     }
 
-    // 2. If validation passes, proceed with login
-    const loginSuccess = await login(
-      loginForm.value.email, 
-      loginForm.value.password,
-      loginForm.value.rememberMe
-    )
-    
-    if (!loginSuccess) {
-      console.error('❌ Login failed - no success returned')
-      loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      return
-    }
-    
     logger.debug('✅ Login successful')
-    
-    // ✅ SAVE: Remember this tenant for next session
+
+    // Set session from response
+    const supabase = getSupabase()
+    if (response.session) {
+      try {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: response.session.access_token,
+          refresh_token: response.session.refresh_token
+        })
+        if (sessionError) {
+          logger.debug('⚠️ setSession returned error:', sessionError.message)
+        } else {
+          logger.debug('✅ Supabase client session updated')
+        }
+      } catch (err) {
+        logger.debug('⚠️ setSession threw error:', err)
+      }
+    }
+
+    // Store session and user
+    authStore.user = response.user
+
+    // Wait for auth state update
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    // Load user profile
+    await authStore.fetchUserProfile(response.user.id)
+
+    const user = authStore.userProfile
+
+    if (!user) {
+      console.error('❌ User profile not loaded after login!')
+      loginError.value = 'Fehler beim Laden des Benutzerprofils. Bitte erneut einloggen.'
+      await logout()
+      return
+    }
+
+    logger.debug('✅ User profile loaded:', user.email)
+
+    // Save tenant slug for next session
     try {
       localStorage.setItem('last_tenant_slug', tenantSlug.value)
       logger.debug('💾 Saved tenant slug to localStorage:', tenantSlug.value)
@@ -576,27 +611,7 @@ const handleLogin = async () => {
       logger.warn('⚠️ Could not save tenant slug to localStorage:', e)
     }
     
-    // Wait for auth store to update with user profile
-    logger.debug('⏳ Waiting for user profile to load...')
-    let attempts = 0
-    while (!authStore.userProfile && attempts < 20) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-      attempts++
-    }
-    
-    if (!authStore.userProfile) {
-      console.error('❌ User profile not loaded after login!')
-      loginError.value = 'Fehler beim Laden des Benutzerprofils. Bitte erneut einloggen.'
-      await logout()
-      return
-    }
-    
-    logger.debug('✅ User profile loaded:', authStore.userProfile.email)
-    
-    // Device security temporarily disabled - will be re-enabled with logging functionality
-    
-    // ✅ Erfolgsmeldung und sofortiger Redirect - Device-Check blockiert NICHT
-    logger.debug('✅ Login completed, redirecting to dashboard...')
+    // Show success message and redirect
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
     
     // Check if there's a redirect parameter first
@@ -617,8 +632,7 @@ const handleLogin = async () => {
       return
     }
     
-    // Weiterleitung basierend auf Rolle (fallback)
-    const user = authStore.userProfile
+    // Redirect based on role (fallback)
     if (user?.role === 'admin' || user?.role === 'tenant_admin') {
       router.push('/admin')
     } else if (user?.role === 'staff') {

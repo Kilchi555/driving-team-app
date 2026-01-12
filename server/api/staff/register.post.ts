@@ -1,9 +1,20 @@
 // server/api/staff/register.post.ts
+// ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { sanitizeString, validatePassword, validateEmail } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
   try {
+    // ✅ LAYER 1: Get client IP for rate limiting
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                      getHeader(event, 'x-real-ip') || 
+                      event.node.req.socket.remoteAddress || 
+                      'unknown'
+
     const body = await readBody(event)
     const { 
       invitationToken,
@@ -20,13 +31,52 @@ export default defineEventHandler(async (event) => {
       selectedCategories
     } = body
 
-    logger.debug('📝 Staff registration request:', { email, firstName, lastName })
+    logger.debug('📝 Staff registration request:', { email, firstName, lastName, ipAddress })
 
-    // Validate required fields
+    // ✅ LAYER 2: Rate limiting (5 registrations per hour per IP)
+    const rateLimit = await checkRateLimit(ipAddress, 'staff_register', 5, 3600, email)
+    if (!rateLimit.allowed) {
+      logger.warn('⚠️ Rate limit exceeded for staff registration:', ipAddress)
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Zu viele Registrierungsversuche. Bitte versuchen Sie es in ${rateLimit.retryAfter} Sekunden erneut.`
+      })
+    }
+    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
+
+    // ✅ LAYER 3: Validate required fields
     if (!invitationToken || !email || !firstName || !lastName || !password) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Pflichtfelder fehlen'
+      })
+    }
+
+    // ✅ LAYER 4: Email validation (format + disposable check)
+    if (!validateEmail(email)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige E-Mail-Adresse'
+      })
+    }
+
+    const { validateRegistrationEmail } = await import('~/server/utils/email-validator')
+    const emailValidation = validateRegistrationEmail(email)
+    if (!emailValidation.valid) {
+      logger.warn('⚠️ Email validation failed for staff registration:', emailValidation.reason)
+      throw createError({
+        statusCode: 400,
+        statusMessage: emailValidation.reason || 'Ungültige E-Mail-Adresse'
+      })
+    }
+    logger.debug('✅ Disposable email check passed')
+
+    // ✅ LAYER 5: Password validation
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.valid) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: passwordValidation.message || 'Passwort erfüllt nicht die Anforderungen (min. 12 Zeichen, Groß-/Kleinbuchstaben, Zahlen)'
       })
     }
 
@@ -71,14 +121,39 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Invitation verified:', invitation.id)
 
+    // ✅ LAYER 6: XSS Protection - Sanitize all string inputs
+    const sanitizedFirstName = sanitizeString(firstName, 100)
+    const sanitizedLastName = sanitizeString(lastName, 100)
+    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+    const sanitizedStreet = street ? sanitizeString(street, 100) : null
+    const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
+    const sanitizedCity = city ? sanitizeString(city, 100) : null
+
+    // ✅ LAYER 7: Check for duplicate email BEFORE creating auth user
+    const { data: existingUser } = await serviceSupabase
+      .from('users')
+      .select('id')
+      .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', invitation.tenant_id)
+      .single()
+
+    if (existingUser) {
+      logger.warn('⚠️ Duplicate email detected for staff registration:', email)
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese E-Mail-Adresse ist bereits registriert.'
+      })
+    }
+
     // 2. Create Supabase Auth user
+    logger.debug('🔐 Creating auth user for staff:', email)
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
-      email: email,
+      email: email.toLowerCase().trim(),
       password: password,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
-        first_name: firstName,
-        last_name: lastName
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName
       }
     })
 
@@ -110,23 +185,23 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Auth user created:', authData.user.id)
 
-    // 3. Create user profile in database
+    // 3. Create user profile in database with sanitized inputs
     const { data: newUser, error: profileError } = await serviceSupabase
       .from('users')
       .insert({
         auth_user_id: authData.user.id,
-        email: email,
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone || null,
+        email: email.toLowerCase().trim(),
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName,
+        phone: sanitizedPhone,
         role: 'staff',
         tenant_id: invitation.tenant_id,
         is_active: true,
         birthdate: birthdate || null,
-        street: street || null,
-        street_nr: streetNr || null,
+        street: sanitizedStreet,
+        street_nr: sanitizedStreetNr,
         zip: zip || null,
-        city: city || null
+        city: sanitizedCity
       })
       .select('id')
       .single()
@@ -173,6 +248,24 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Invitation marked as accepted')
 
+    // ✅ LAYER 8: Audit logging - Success
+    await logAudit({
+      action: 'staff_registration',
+      user_id: newUser.id,
+      tenant_id: invitation.tenant_id,
+      resource_type: 'user',
+      resource_id: newUser.id,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        email: email.toLowerCase().trim(),
+        invitation_id: invitation.id,
+        categories: selectedCategories || [],
+        invited_by: invitation.invited_by,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     return {
       success: true,
       userId: newUser.id,
@@ -181,6 +274,23 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Staff registration error:', error)
+
+    // ✅ LAYER 8: Audit logging - Failure
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+    await logAudit({
+      action: 'staff_registration',
+      tenant_id: (error as any).tenant_id,
+      resource_type: 'user',
+      ip_address: ipAddress,
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        email: (error as any).email,
+        invitation_token: (error as any).invitationToken?.substring(0, 10) + '...',
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     throw createError({
       statusCode: error.statusCode || 500,
       statusMessage: error.statusMessage || error.message || 'Registrierung fehlgeschlagen'
