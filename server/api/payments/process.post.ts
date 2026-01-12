@@ -434,7 +434,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: body.orderId || `payment-${payment.id}`,
-      tokenizationMode: Wallee.model.TokenizationMode.FORCE,
+      tokenizationMode: Wallee.model.TokenizationMode.ALLOW, // ✅ ALLOW statt FORCE - Tokenisierung wenn möglich, ohne Failure
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`,
       // ✅ FIX: Set available payment methods (empty array = NO payment methods allowed!)
