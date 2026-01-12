@@ -2,7 +2,6 @@
 // Globales Loading-Logo-System mit Tenant-Logo-Cache
 
 import { ref, computed, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 
 interface CachedLogo {
   url: string
@@ -11,7 +10,6 @@ interface CachedLogo {
 }
 
 export const useLoadingLogo = () => {
-  const supabase = getSupabase()
   
   // State
   const currentLogo = ref<string | null>(null)
@@ -48,20 +46,19 @@ export const useLoadingLogo = () => {
       isLoadingLogo.value = true
       logoError.value = null
       
-      logger.debug('🔄 Loading tenant logo for:', tenantId)
+      logger.debug('🔄 Loading tenant logo via secure API for:', tenantId)
       
-      // Load from database
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('logo_square_url, logo_wide_url, logo_url, name')
-        .eq('id', tenantId)
-        .eq('is_active', true)
-        .single()
+      // Load via secure API (no direct DB query)
+      const response: any = await $fetch('/api/tenants/branding', {
+        params: { id: tenantId }
+      })
       
-      if (error) {
-        console.error('❌ Error loading tenant logo:', error)
+      if (!response?.success || !response.data) {
+        console.error('❌ Error loading tenant logo from API')
         return null
       }
+      
+      const data = response.data
       
       // Prefer square logo, then wide, then standard
       const logoUrl = data.logo_square_url || data.logo_wide_url || data.logo_url || null
@@ -73,7 +70,7 @@ export const useLoadingLogo = () => {
         tenantId
       })
       
-      logger.debug('✅ Tenant logo loaded and cached:', data.name, logoUrl)
+      logger.debug('✅ Tenant logo loaded via API and cached:', data.name, logoUrl)
       
       // Preload the image to avoid flash
       if (process.client && logoUrl) {
@@ -102,53 +99,33 @@ export const useLoadingLogo = () => {
       isLoadingLogo.value = true
       logoError.value = null
       
-      logger.debug('🔄 Loading tenant logo by slug:', tenantSlug)
+      logger.debug('🔄 Loading tenant logo by slug via secure API:', tenantSlug)
       
-      // Load from database
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('id, logo_square_url, logo_wide_url, logo_url, name')
-        .eq('slug', tenantSlug)
-        .eq('is_active', true)
-        .single()
+      // Load via secure API (no direct DB query)
+      const response: any = await $fetch('/api/tenants/branding', {
+        params: { slug: tenantSlug }
+      })
       
-      if (error) {
-        console.warn('⚠️ Tenant not found for slug (client query):', tenantSlug, '→ trying server API fallback')
-        // Fallback to server API (bypasses RLS)
-        try {
-          const serverResp: any = await $fetch(`/api/tenants/by-slug`, { params: { slug: tenantSlug } })
-          if (serverResp?.success && serverResp.data) {
-            const logoUrl = serverResp.data.logo_square_url || serverResp.data.logo_wide_url || serverResp.data.logo_url || null
-            
-            // Cache the result using the tenant ID
-            if (serverResp.data.id) {
-              logoCache.value.set(serverResp.data.id, {
-                url: logoUrl,
-                timestamp: Date.now(),
-                tenantId: serverResp.data.id
-              })
-            }
-            
-            logger.debug('✅ Tenant logo loaded via server API:', serverResp.data.name, logoUrl)
-            return logoUrl
-          }
-        } catch (e) {
-          console.warn('Server API fallback failed:', e)
-        }
+      if (!response?.success || !response.data) {
+        console.warn('⚠️ Tenant not found for slug:', tenantSlug)
         return null
       }
+      
+      const data = response.data
       
       // Prefer square logo, then wide, then standard
       const logoUrl = data.logo_square_url || data.logo_wide_url || data.logo_url || null
       
-      // Cache the result
-      logoCache.value.set(data.id, {
-        url: logoUrl,
-        timestamp: Date.now(),
-        tenantId: data.id
-      })
+      // Cache the result using the tenant ID
+      if (data.id) {
+        logoCache.value.set(data.id, {
+          url: logoUrl,
+          timestamp: Date.now(),
+          tenantId: data.id
+        })
+      }
       
-      logger.debug('✅ Tenant logo loaded and cached:', data.name, logoUrl)
+      logger.debug('✅ Tenant logo loaded via API and cached:', data.name, logoUrl)
       
       // Preload the image to avoid flash
       if (process.client && logoUrl) {
@@ -169,26 +146,16 @@ export const useLoadingLogo = () => {
   // Load logo for current user's tenant
   const loadCurrentTenantLogo = async (): Promise<string | null> => {
     try {
-      // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        logger.debug('🖼️ No authenticated user, no logo available')
-        return null
-      }
+      // Get current user's tenant_id via secure API
+      const authStore = useAuthStore()
+      const tenantId = authStore.user?.tenant_id
       
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .eq('is_active', true)
-        .single()
-      
-      if (!userProfile?.tenant_id) {
+      if (!tenantId) {
         logger.debug('🖼️ No tenant_id found for user, no logo available')
         return null
       }
       
-      const logoUrl = await getTenantLogo(userProfile.tenant_id)
+      const logoUrl = await getTenantLogo(tenantId)
       currentLogo.value = logoUrl
       return logoUrl
       
