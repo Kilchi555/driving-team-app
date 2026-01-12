@@ -2,9 +2,19 @@ import { getSupabase } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { sanitizeString, validateEmail } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
   try {
+    // ✅ LAYER 1: Get client IP for audit logging
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                      getHeader(event, 'x-real-ip') || 
+                      event.node.req.socket.remoteAddress || 
+                      'unknown'
+
     const body = await readBody(event)
     const { firstName, lastName, email, phone, sendVia } = body
 
@@ -13,6 +23,14 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'Vorname, Nachname und E-Mail sind erforderlich'
+      })
+    }
+
+    // ✅ LAYER 2: Email validation
+    if (!validateEmail(email)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige E-Mail-Adresse'
       })
     }
 
@@ -43,6 +61,17 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ User authenticated:', user.email, 'User ID:', user.id)
+
+    // ✅ LAYER 3: Rate limiting (10 invitations per hour per admin user)
+    const rateLimit = await checkRateLimit(user.id, 'staff_invite', 10, 3600)
+    if (!rateLimit.allowed) {
+      logger.warn('⚠️ Rate limit exceeded for staff invitation:', user.email)
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Zu viele Einladungen. Bitte warten Sie ${rateLimit.retryAfter} Sekunden.`
+      })
+    }
+    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
@@ -87,6 +116,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
+    const sanitizedFirstName = sanitizeString(firstName, 100)
+    const sanitizedLastName = sanitizeString(lastName, 100)
+    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+
     // Generate invitation token
     const token = generateToken()
     const expiresAt = new Date()
@@ -99,10 +133,10 @@ export default defineEventHandler(async (event) => {
       .from('staff_invitations')
       .insert({
         tenant_id: userProfile.tenant_id,
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        phone: phone || null,
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName,
+        email: email.toLowerCase().trim(),
+        phone: sanitizedPhone,
         invitation_token: token,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
@@ -120,6 +154,24 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Invitation created:', invitation.id)
+
+    // ✅ LAYER 5: Audit logging - Invitation created
+    await logAudit({
+      action: 'staff_invitation_created',
+      user_id: user.id,
+      tenant_id: userProfile.tenant_id,
+      resource_type: 'staff_invitation',
+      resource_id: invitation.id,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        invited_email: email.toLowerCase().trim(),
+        invited_name: `${sanitizedFirstName} ${sanitizedLastName}`,
+        send_via: sendVia || 'none',
+        expires_at: expiresAt.toISOString(),
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     // Generate invitation link
     // Priority: 1. Environment variable, 2. Production domain (simy.ch), 3. Request host
@@ -372,6 +424,22 @@ ${tenantName}`
 
   } catch (error: any) {
     console.error('Error in staff invitation:', error)
+
+    // ✅ LAYER 5: Audit logging - Failure
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+    await logAudit({
+      action: 'staff_invitation_created',
+      tenant_id: (error as any).tenant_id,
+      resource_type: 'staff_invitation',
+      ip_address: ipAddress,
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        invited_email: (error as any).email,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     throw createError({
       statusCode: error.statusCode || 500,
       statusMessage: error.statusMessage || 'Interner Serverfehler'
