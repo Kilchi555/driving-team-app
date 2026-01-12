@@ -1920,27 +1920,35 @@ const loadAppointments = async () => {
     }
 
     const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
-    logger.debug('🔍 Searching evaluations for appointments:', appointmentIds.length)
+    logger.debug('🔍 Extracting evaluations from API response for appointments:', appointmentIds.length)
 
-    const { data: notes, error: notesError } = await supabase
-      .from('notes')
-      .select(`
-        appointment_id,
-        evaluation_criteria_id,
-        criteria_rating,
-        criteria_note,
-        created_at
-      `)
-      .in('appointment_id', appointmentIds)
-      .not('evaluation_criteria_id', 'is', null)
-      .not('criteria_rating', 'is', null)
-
-    if (notesError) {
-      console.error('❌ Notes error:', notesError)
-      throw notesError
+    // Skip if no appointments
+    if (appointmentIds.length === 0) {
+      logger.debug('⚠️ No appointments found')
+      appointments.value = []
+      return
     }
 
-    logger.debug('✅ Evaluations loaded:', notes?.length || 0)
+    // ✅ Extract notes from API response (already loaded with appointments)
+    const notes: any[] = []
+    appointmentsData.forEach((apt: any) => {
+      if (apt.notes && Array.isArray(apt.notes)) {
+        apt.notes.forEach((note: any) => {
+          // Only include evaluations (notes with criteria + rating)
+          if (note.evaluation_criteria_id && note.criteria_rating !== null) {
+            notes.push({
+              appointment_id: apt.id,
+              evaluation_criteria_id: note.evaluation_criteria_id,
+              criteria_rating: note.criteria_rating,
+              criteria_note: note.criteria_note,
+              created_at: note.created_at
+            })
+          }
+        })
+      }
+    })
+
+    logger.debug('✅ Evaluations extracted from API:', notes.length)
 
     const criteriaIds = [...new Set(notes?.map(n => n.evaluation_criteria_id).filter(Boolean))]
     let criteriaMap: Record<string, any> = {}
