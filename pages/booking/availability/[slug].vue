@@ -2453,8 +2453,16 @@ const confirmBooking = async () => {
       }
     }
     
-    // Step 4: Create appointment
-    await createAppointment(userData)
+    // Step 4: Create appointment via secure API
+    const appointmentResult = await createAppointmentSecure(userData)
+    
+    if (appointmentResult.payment_required) {
+      // Handle payment flow if needed
+      logger.debug('💳 Payment required for appointment:', appointmentResult.appointment_id)
+    } else {
+      // Show success
+      logger.debug('✅ Appointment booked successfully (no payment required)')
+    }
     
   } catch (error: any) {
     console.error('Error confirming booking:', error)
@@ -2464,74 +2472,74 @@ const confirmBooking = async () => {
 }
 
 // Create appointment in database
-const createAppointment = async (userData: any) => {
+const createAppointmentSecure = async (userData: any) => {
   isCreatingBooking.value = true
   
   try {
-    logger.debug('🔄 Creating appointment...')
+    logger.debug('📅 Creating appointment via secure API...')
     
-    // Check for collision one more time before creating
+    // Get auth token
     const supabase = getSupabase()
-    const startTime = new Date(selectedSlot.value.start_time).toISOString()
-    const endTime = new Date(selectedSlot.value.end_time).toISOString()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    logger.debug('🔍 Final collision check:', {
-      staff_id: selectedInstructor.value.id,
-      start_time: startTime,
-      end_time: endTime
-    })
-    
-    // Query for conflicts - check all non-deleted appointments
-    // Overlap condition: apt.start < slot.end AND apt.end > slot.start
-    const { data: conflictingAppointments, error: collisionError } = await supabase
-      .from('appointments')
-      .select('id, status, start_time, end_time')
-      .eq('staff_id', selectedInstructor.value.id)
-      .is('deleted_at', null) // Not deleted
-      .not('status', 'eq', 'deleted') // All statuses except logically deleted
-      .lt('start_time', endTime) // apt.start < slot.end
-      .gt('end_time', startTime) // apt.end > slot.start
-    
-    logger.debug('📋 Collision check result:', {
-      conflicting_count: conflictingAppointments?.length || 0,
-      conflicts: conflictingAppointments,
-      error: collisionError
-    })
-    
-    if (conflictingAppointments && conflictingAppointments.length > 0) {
-      throw new Error(`Der Termin wurde leider soeben vergeben (${conflictingAppointments.length} Konflikt(e)). Versuchen Sie es mit einem anderen Termin.`)
+    if (!session) {
+      throw new Error('Bitte melden Sie sich an um fortzufahren.')
     }
     
-    const appointmentData = {
-      user_id: userData.id,
-      staff_id: selectedInstructor.value.id,
-      location_id: selectedLocation.value.isPickup ? null : selectedLocation.value.id,
-      custom_location_address: selectedLocation.value.isPickup ? pickupAddressDetails.value?.formatted : null,
-      custom_location_name: selectedLocation.value.isPickup ? (pickupAddressDetails.value?.name || 'Pickup') : null,
-      start_time: selectedSlot.value.start_time,
-      end_time: selectedSlot.value.end_time,
-      duration_minutes: selectedSlot.value.duration_minutes,
-      type: selectedCategory.value.code,
-      event_type_code: 'lesson',
-      // All bookings from this flow are directly confirmed
-      // - Authenticated users: self-booking, no approval needed
-      // - Unauthenticated users: will pay via Wallee, then register
-      status: 'confirmed',
-      tenant_id: currentTenant.value.id
+    if (!reservedSlotId.value) {
+      throw new Error('Slot-Reservierung abgelaufen. Bitte wählen Sie erneut einen Zeitslot.')
     }
     
-    logger.debug('📝 Appointment data:', appointmentData)
+    // Use the new composable's createAppointment method
+    const response = await createAppointment(
+      {
+        slot_id: reservedSlotId.value,
+        session_id: sessionId.value,
+        appointment_type: 'lesson',
+        category_code: selectedCategory.value?.code || '',
+        notes: bookingNotes.value || undefined
+      },
+      session.access_token
+    )
     
-    // Call API to create appointment
-    const response = await $fetch<{
-      success: boolean
-      appointment_id: string
-      payment_id: string | null
-      confirmation_token: string
-    }>('/api/booking/create-appointment', {
-      method: 'POST',
-      body: appointmentData
-    })
+    logger.debug('✅ Appointment created:', response.appointment.id)
+    
+    // Clear reservation
+    reservedSlotId.value = null
+    reservationExpiry.value = null
+    if (countdownInterval) {
+      clearInterval(countdownInterval)
+    }
+    
+    // Return appointment ID for further processing
+    return {
+      success: true,
+      appointment_id: response.appointment.id,
+      payment_required: response.payment_required
+    }
+    
+  } catch (err: any) {
+    logger.error('❌ Appointment creation failed:', err)
+    
+    if (err.statusCode === 409) {
+      // Reservation expired
+      error.value = 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie erneut einen Zeitslot.'
+      // Go back to slot selection
+      currentStep.value = 4
+    } else {
+      error.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    }
+    
+    throw err
+  } finally {
+    isCreatingBooking.value = false
+  }
+}
+
+// Keep old function for backwards compatibility (calls new one)
+const createAppointment_OLD = async (userData: any) => {
+  return await createAppointmentSecure(userData)
+}
     
     logger.debug('✅ Appointment created:', response)
     
