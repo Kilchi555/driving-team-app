@@ -401,44 +401,23 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     ]
 
-    // ✅ Fetch available payment methods from Wallee Space
-    let availablePaymentMethodIds: number[] = []
-    try {
-      const paymentMethodService = new Wallee.api.PaymentMethodConfigurationService(config)
-      const searchResponse = await paymentMethodService.search(spaceId, { spaceId })
-      
-      if (searchResponse?.body && Array.isArray(searchResponse.body)) {
-        const activePaymentMethods = searchResponse.body.filter((pm: any) => pm.state === 'ACTIVE')
-        availablePaymentMethodIds = activePaymentMethods.map((pm: any) => pm.id as number)
-        
-        logger.debug('💳 Available payment methods:', {
-          total: searchResponse.body.length,
-          active: activePaymentMethods.length,
-          ids: availablePaymentMethodIds
-        })
-      }
-    } catch (pmError: any) {
-      logger.warn('⚠️ Could not fetch payment methods, allowing all:', pmError.message)
-    }
-
-    // Create transaction
+    // Create transaction (let Wallee show ALL available payment methods)
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: lineItems,
       spaceViewId: null,
       currency: 'CHF',
-      autoConfirmationEnabled: true,  // ✅ FIX: Auto-confirm like old API
+      autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: userData.email,
-      customerId: `dt-${tenantId}-${userData.id}`, // ✅ CRITICAL FIX: Required for tokenization!
+      customerId: `dt-${tenantId}-${userData.id}`, // Required for tokenization
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: body.orderId || `payment-${payment.id}`,
-      tokenizationMode: Wallee.model.TokenizationMode.ALLOW, // ✅ ALLOW statt FORCE - Tokenisierung wenn möglich, ohne Failure
+      tokenizationMode: Wallee.model.TokenizationMode.ALLOW, // Tokenisierung wenn möglich
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
-      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`,
-      // ✅ FIX: Set available payment methods (empty array = NO payment methods allowed!)
-      allowedPaymentMethodConfigurations: availablePaymentMethodIds.length > 0 ? availablePaymentMethodIds : undefined
+      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
+      // NOTE: allowedPaymentMethodConfigurations removed - let Wallee show all available methods
     }
 
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)
