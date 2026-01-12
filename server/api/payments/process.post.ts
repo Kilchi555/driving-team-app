@@ -17,6 +17,7 @@ import {
 } from '~/server/utils/validators'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { buildMerchantReference } from '~/utils/merchantReference'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -102,7 +103,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     // ============ LAYER 5: GET TENANT FROM AUTHENTICATED USER ============
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, tenant_id, email')
+      .select('id, tenant_id, email, first_name, last_name')
       .eq('auth_user_id', authenticatedUserId)
       .single()
 
@@ -401,6 +402,16 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     ]
 
+    // Build merchant reference with customer name, date, time, duration
+    const merchantReference = body.orderId || buildMerchantReference({
+      staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
+      startTime: payment.appointments?.start_time,
+      durationMinutes: payment.appointments?.duration_minutes,
+      appointmentId: payment.appointments?.id
+    })
+
+    logger.debug('📋 Generated merchant reference:', merchantReference)
+
     // Create transaction (let Wallee show ALL available payment methods)
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: lineItems,
@@ -413,7 +424,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
-      merchantReference: body.orderId || `payment-${payment.id}`,
+      merchantReference: merchantReference,
       // tokenizationMode removed - not needed without customerId
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
