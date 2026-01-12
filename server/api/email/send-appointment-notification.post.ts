@@ -35,7 +35,10 @@ const TEMPLATES = {
     subject: 'Terminbestätigung erforderlich',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const confirmUrl = data.confirmationLink || (data.customerDashboard || 'https://www.simy.ch/login')
+      // ✅ SECURITY FIX: Immer zum Login/Dashboard leiten, NIE zu /confirm/[token]
+      const confirmUrl = data.customerDashboard || (data.tenantSlug 
+        ? `https://www.simy.ch/${data.tenantSlug}` 
+        : 'https://www.simy.ch/login')
       const dashboardUrl = data.customerDashboard || (data.tenantSlug 
         ? `https://www.simy.ch/${data.tenantSlug}` 
         : 'https://www.simy.ch/login')
