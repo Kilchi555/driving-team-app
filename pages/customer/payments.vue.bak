@@ -638,7 +638,7 @@ const payIndividual = async (payment: any) => {
             paymentId: payment.id,
             customerEmail: userData?.email
           }
-        }) as { success: boolean }
+        })
         
         if (result.success) {
           logger.debug('✅ Payment converted to online')
@@ -709,6 +709,255 @@ const payIndividual = async (payment: any) => {
   }
 }
   
+const downloadAllReceipts = async () => {
+    
+    // Fallback: if user data not available, reload it
+    if (!userData || !userData.id) {
+      logger.debug('⚠️ Cached user data missing, reloading from API...')
+      await loadAllData()
+      userData = currentUserData.value
+    }
+    
+    if (!userData || !userData.id) {
+      throw new Error('User data not available - try reloading the page')
+    }
+    
+    logger.debug('💳 Using user data for payment:', userData.id)
+    
+    // Get current user for auth
+    const supabase = getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+    
+    // ✅ Use already-loaded student balance (from get-payment-page-data)
+    const currentBalance = studentBalance.value || 0
+    logger.debug('💰 Using cached student balance:', (currentBalance / 100).toFixed(2), 'CHF')
+    
+    // If payment is not already wallee, convert it first
+    if (payment.payment_method !== 'wallee') {
+      logger.debug('🔄 Converting payment to online first:', payment.id)
+      
+      try {
+      const result = await $fetch('/api/payments/convert-to-online', {
+        method: 'POST',
+        body: {
+          paymentId: payment.id,
+            customerEmail: userData.email
+        }
+      })
+      
+      logger.debug('✅ Payment converted to online:', result)
+      
+      // Reload payments to get updated data
+      await loadAllData()
+      
+      // Get the updated payment
+      const updatedPayment = customerPayments.value.find(p => p.id === payment.id)
+      if (updatedPayment) {
+        payment = updatedPayment
+        }
+      } catch (conversionError) {
+        logger.warn('⚠️ Payment conversion failed (not critical):', conversionError)
+        // Continue anyway - payment might already be wallee or conversion not needed
+      }
+    }
+    
+    // 🚀 Direct Wallee redirect via secure API - no intermediate page
+    logger.debug('💳 Processing secure Wallee payment for:', payment.id)
+    
+    // Get session for auth
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('User session not found')
+    
+    // Create response interface
+    
+    // ✅ Calculate amount to pay: full amount minus any credit already used minus new available credit
+    const amountAlreadyUsed = payment.credit_used_rappen || 0
+    const remainingAmount = payment.total_amount_rappen - amountAlreadyUsed
+    
+    // Deduct available credit from remaining amount
+    const creditToDeduct = Math.min(currentBalance, remainingAmount)
+    const amountToPay = (remainingAmount - creditToDeduct) / 100
+    const newTotalCredit = amountAlreadyUsed + creditToDeduct
+    
+    logger.debug('💳 Wallee payment calculation:', {
+      total_amount: payment.total_amount_rappen / 100,
+      credit_already_used: (amountAlreadyUsed / 100).toFixed(2),
+      remaining_amount: (remainingAmount / 100).toFixed(2),
+      available_balance: (currentBalance / 100).toFixed(2),
+      credit_to_deduct_now: (creditToDeduct / 100).toFixed(2),
+      total_credit_used: (newTotalCredit / 100).toFixed(2),
+      amount_to_pay: amountToPay.toFixed(2)
+    })
+    
+    // If amount is 0 or less, just mark as completed with full credit
+    if (amountToPay <= 0) {
+      logger.debug('✅ Payment fully covered by credit, marking as completed')
+      logger.debug('💰 Deducting credit - currentBalance:', (currentBalance / 100).toFixed(2), 'creditToDeduct:', (creditToDeduct / 100).toFixed(2))
+      
+      // Update payment to mark as completed with credit
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          payment_status: 'completed',
+          payment_method: 'credit',
+          credit_used_rappen: newTotalCredit,
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+      
+      if (updateError) {
+        throw updateError
+      }
+      
+      logger.debug('✅ Payment updated')
+      
+      // Deduct credit from student_credits
+      if (creditToDeduct > 0) {
+        const newBalance = currentBalance - creditToDeduct
+        logger.debug('💰 Updating student_credits - new balance:', (newBalance / 100).toFixed(2), 'for user:', userData.id)
+        
+        const { error: creditUpdateError } = await supabase
+          .from('student_credits')
+          .update({
+            balance_rappen: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userData.id)
+        
+        if (creditUpdateError) {
+          console.error('❌ Error updating student credit balance:', creditUpdateError)
+          throw creditUpdateError
+        }
+        
+        logger.debug('✅ Student credit updated successfully')
+        
+        // Update local balance
+        studentBalance.value = newBalance
+      }
+      
+      logger.debug('✅ Payment completed with credit')
+      
+      // Reload data to show updated payment and balance
+      await loadAllData()
+      
+      // Show success with toast
+      const uiStore = useUIStore()
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Zahlung erfolgreich',
+        message: `CHF ${(creditToDeduct / 100).toFixed(2)} vom Guthaben verwendet. Neuer Guthabenstand: CHF ${((currentBalance - creditToDeduct) / 100).toFixed(2)}`
+      })
+      
+      return
+    }
+    
+    // ✅ Use appointment data from payment object (already loaded via API)
+    const appointmentData = payment.appointments
+    logger.debug('💳 Using appointment data from payment object:', appointmentData?.id)
+    
+    const customerName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
+    
+    const merchantReferenceDetails = {
+      appointmentId: appointmentData?.id,
+      eventTypeCode: appointmentData?.event_type_code,
+      categoryCode: appointmentData?.type,
+      categoryName: appointmentData?.type,  // Use type as fallback
+      staffName: customerName, // Customer name in staffName field
+      startTime: appointmentData?.start_time,
+      durationMinutes: appointmentData?.duration_minutes
+    }
+    
+    const orderId = buildMerchantReference(merchantReferenceDetails)
+    logger.debug('📌 Generated merchant reference for payment:', orderId)
+    
+    // ✅ Log what we're about to send
+    logger.debug('💳 Preparing to send payment request with:', {
+      paymentId: payment.id,
+      paymentId_type: typeof payment.id,
+      amount: amountToPay
+    })
+    
+    // Initiate Wallee transaction via secure API
+    const walleeResponse = await $fetch('/api/payments/process', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: {
+        paymentId: payment.id,  // ✅ CHANGED: Use existing payment ID
+        orderId,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+      }
+    }) as any
+    
+    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
+      // Update payment with Wallee transaction ID and credit used
+      // ✅ Guthaben wird SOFORT abgezogen, bei Abbruch/Fehler wird es im Webhook zurückerstattet
+      logger.debug('💾 Saving Wallee transaction ID and credit to payment:', walleeResponse.transactionId)
+      
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          wallee_transaction_id: walleeResponse.transactionId.toString(),
+          credit_used_rappen: newTotalCredit,
+          metadata: {
+            ...payment.metadata,
+            wallee_transaction_id: walleeResponse.transactionId,
+            pending_credit_refund: creditToDeduct // Bei Abbruch/Fehler zurückerstatten
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', payment.id)
+      
+      if (updateError) {
+        console.error('❌ Error updating payment with transaction ID:', updateError)
+      }
+      
+      // ✅ Deduct credit from student_credits immediately
+      if (creditToDeduct > 0) {
+        const newBalance = currentBalance - creditToDeduct
+        logger.debug('💰 Deducting credit immediately - new balance:', (newBalance / 100).toFixed(2), 'for user:', userData.id)
+        
+        const { error: creditUpdateError } = await supabase
+          .from('student_credits')
+          .update({
+            balance_rappen: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userData.id)
+        
+        if (creditUpdateError) {
+          console.error('❌ Error updating student credit balance:', creditUpdateError)
+          logger.debug('❌ Full error:', JSON.stringify(creditUpdateError, null, 2))
+          throw new Error('Failed to update student credit')
+        }
+        
+        logger.debug('✅ Student credit deducted immediately')
+        // Update local balance
+        studentBalance.value = newBalance
+      }
+      
+      logger.debug('✅ Payment updated with transaction ID and credit deducted')
+      logger.debug('⚠️ If payment fails/is cancelled, credit will be refunded in webhook')
+      
+      // Redirect directly to Wallee payment page
+      window.location.href = walleeResponse.paymentUrl
+    } else {
+      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+    }
+    
+  } catch (err: any) {
+    console.error('❌ Error initiating individual payment:', err)
+    alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
+  } finally {
+    // Remove this payment ID from the processing set
+    processingPaymentIds.value.delete(payment.id)
+  }
+}
+
 const downloadAllReceipts = async () => {
   if (paidPayments.value.length === 0) {
     alert('Keine bezahlten Zahlungen gefunden.')
