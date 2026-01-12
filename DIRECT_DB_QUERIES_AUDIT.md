@@ -1,8 +1,8 @@
 # Direct Database Queries Audit - Frontend
 
-## Status: IN PROGRESS - Migration underway
+## Status: IN PROGRESS - Customer Dashboard 9/10 Secure! 🎉
 
-Last Updated: January 10, 2025
+Last Updated: January 12, 2026
 
 ---
 
@@ -61,77 +61,185 @@ Last Updated: January 10, 2025
 
 ---
 
+### 6. **Product Sales Dashboard** - Admin Sales Analytics
+**Previous Direct Queries:** 
+- `supabase.from('payments').select(...)`
+- `supabase.from('users').select(...)`
+- `supabase.from('payment_items').select(...)`
+
+**Status:** ✅ **MIGRATED** to `/api/admin/get-product-sales.get.ts`
+**Date:** January 11, 2026
+
+**Features:**
+- Fetches direct sales, anonymous sales, and shop sales
+- Includes tenant branding information
+- Admin-only with tenant isolation
+- Rate limited and audit logged
+
+---
+
+### 7. **Learning Progress** - Customer Evaluation Data
+**Previous Direct Queries:** 
+- `supabase.from('users').select('category')`
+- `supabase.from('appointments').select(...)`
+- `supabase.from('evaluation_scale').select(...)`
+- `supabase.from('notes').select(...)`
+- `supabase.from('evaluation_categories').select(...)`
+- `supabase.from('evaluation_criteria').select(...)`
+
+**Status:** ✅ **MIGRATED** to `/api/customer/get-learning-progress.get.ts`
+**Date:** January 11, 2026
+
+**Features:**
+- Consolidated 6 separate queries into 1 API call
+- Server-side progress calculation
+- Customer-only with strict tenant isolation
+- Rate limited and audit logged
+
+---
+
+### 8. **Customer Payment Processing** - Credit & Wallee Payments
+**Previous Direct Queries:** 
+- `supabase.from('payments').update(...)`
+- `supabase.from('student_credits').select/update(...)`
+- Direct Wallee API calls from frontend
+
+**Status:** ✅ **MIGRATED** to `/api/payments/process.post.ts`
+**Date:** January 10-12, 2026
+
+**Features:**
+- Integrated credit payment logic (check, deduct, mark paid)
+- Wallee payment processing with tokenization (FORCE mode)
+- Webhook rollback for failed payments (credit refunds)
+- Credit transaction tracking in `credit_transactions` table
+- Comprehensive audit logging
+
+---
+
+### 9. **Tenant Branding** - XSS & Information Disclosure Fix 🔒
+**Previous Direct Queries:** 
+- `supabase.from('tenants').select('*')` (Anonymous SELECT!)
+
+**Status:** ✅ **MIGRATED** to `/api/tenants/branding.get.ts` & `.post.ts`
+**Date:** January 12, 2026
+
+**CRITICAL SECURITY FIXES:**
+1. **Information Disclosure:**
+   - RLS policy `tenants_anonymous_select` allowed anonymous access to ALL tenant data
+   - Including: `wallee_secret_key`, internal settings, etc.
+   
+2. **XSS Vulnerability:**
+   - `custom_css` and `custom_js` were returned unsanitized
+   - Potential for persistent XSS attacks
+   
+3. **No Authorization:**
+   - Anyone could read/update tenant branding
+
+**New Security:**
+- Field filtering (only safe/public fields for anonymous)
+- Custom CSS/JS sanitized (only for admins)
+- Rate limiting (30/min IP, 120/min user)
+- Audit logging for all access
+- Admin-only updates with tenant isolation
+
+**Affected Composable:** `composables/useTenantBranding.ts` - fully refactored
+
+---
+
+### 10. **Tenant Logo Loading** - useLoadingLogo Composable
+**Previous Direct Queries:** 
+- `supabase.from('tenants').select(logo fields)` (by ID)
+- `supabase.from('tenants').select(logo fields)` (by slug)
+
+**Status:** ✅ **MIGRATED** to `/api/tenants/branding.get.ts`
+**Date:** January 12, 2026
+
+**Changes:**
+- `getTenantLogo()` → uses branding API
+- `getTenantLogoBySlug()` → uses branding API
+- `loadCurrentTenantLogo()` → uses auth store instead of direct query
+
+---
+
+### 11. **Tenant Loading** - useTenant Composable
+**Previous Direct Query:** 
+- `supabase.from('tenants').select('*')` (by slug/domain)
+
+**Status:** ✅ **MIGRATED** to `/api/tenants/branding.get.ts`
+**Date:** January 12, 2026
+
+**Changes:**
+- `loadTenant()` → uses branding API
+- `getAllTenants()` → @deprecated (not used anywhere)
+
+---
+
+### 12. **Customer Dashboard** - Tenant Info & Dead Code
+**Previous Direct Queries:** 
+- `supabase.from('tenants').select('*')` - Tenant data loading
+- `supabase.from('users').select('id')` - Payment method check
+- `supabase.from('customer_payment_methods').select(...)` - Payment method check
+
+**Status:** ✅ **MIGRATED & CLEANED UP**
+**Date:** January 12, 2026
+
+**Changes:**
+1. Tenant loading → uses `useTenantBranding` composable (secure API)
+2. Payment method check → **DEAD CODE REMOVED** (37 lines)
+   - `checkPaymentMethod()` was never used in template
+   - Payment methods loaded on-demand via Wallee
+3. Duplicate notes query → Fixed (see #13)
+
+---
+
+### 13. **Customer Dashboard Notes/Evaluations** - Duplicate Query Fix
+**Previous Issue:** 
+- API loaded appointments WITH notes (but incomplete fields)
+- Frontend loaded notes AGAIN (separate query)
+- Result: 0 evaluations displayed (duplicate work, missing data)
+
+**Status:** ✅ **FIXED**
+**Date:** January 12, 2026
+
+**Changes:**
+1. **API Extended:** `/api/customer/get-appointments.get.ts`
+   - Now includes: `evaluation_criteria_id`, `criteria_rating`, `criteria_note`, `created_at`
+   
+2. **Frontend Optimized:** `CustomerDashboard.vue`
+   - Extracts evaluations from API response (no duplicate query)
+   - Eliminates 1 direct `.from('notes')` query
+   
+**Result:** Notes/Evaluations now display correctly! ✨
+
+---
+
 ## ACTIVE DIRECT QUERIES (Still need migration)
 
-### PRIORITY 1: CRITICAL (Core Functionality)
+### CUSTOMER DASHBOARD - REMAINING QUERIES 🟢 LOW RISK
 
-#### 1. **product-sales.vue** - Sales Dashboard (Admin Only)
-**Location:** `pages/admin/product-sales.vue` (Lines 570-612)
+#### **locations** - Location Data
+**Current Query:** `supabase.from('locations').select(...).in('id', locationIds)`
+**Risk Level:** 🟢 **LOW** 
+- Has RLS + Tenant Isolation ✅
+- Only loads locations for user's own appointments ✅
+- Read-only query ✅
 
-**Current Queries:**
-```typescript
-supabase.from('payments').select(...)
-  .eq('tenant_id', tenantId)
-  .order('created_at', { ascending: false })
-
-supabase.from('users').select(...)
-  .in('id', directUserIds)
-
-supabase.from('payment_items').select(...)
-  .in('payment_id', directPaymentIds)
-  .eq('item_type', 'product')
-```
-
-**Risk Level:** 🟡 **MEDIUM** - Admin only but no rate limiting
-**Impact:** Sales analytics page (admin-only)
-
-**Action:** Should migrate to `/api/admin/get-product-sales.get.ts`
+**Action:** Nice-to-have - could migrate to include in appointments API response
 
 ---
 
-#### 2. **customer/payments.vue** - Customer Payment Actions (Customer-Facing)
-**Location:** `pages/customer/payments.vue` (Lines 710-720, 813+)
+#### **evaluation_criteria** - Criteria Names
+**Current Query:** `supabase.from('evaluation_criteria').select('id, name').in('id', criteriaIds)`
+**Risk Level:** 🟢 **LOW** 
+- Public reference data ✅
+- Has RLS ✅
+- Read-only ✅
 
-**Current Queries:**
-```typescript
-// UPDATE: Mark payment as completed with credit
-supabase.from('payments')
-  .update({ payment_status: 'completed', credit_used_rappen, ... })
-  .eq('id', payment.id)
-
-// Likely other direct queries on lines 813+
-```
-
-**Risk Level:** 🔴 **HIGH** - Customer-facing, data modification
-**Impact:** Customer paying with credit - directly updates database
-**Security Risk:** Customer could bypass audit logging
-
-**Action:** URGENT - Migrate to `/api/payments/pay-with-credit.post.ts`
+**Action:** Nice-to-have - could include in learning progress API
 
 ---
 
-#### 3. **learning.vue** - Evaluation Data
-**Location:** `pages/learning.vue` (Lines 267-312)
-
-**Current Queries:**
-```typescript
-supabase.from('users').select('category')
-  .eq('id', currentUserId)
-
-supabase.from('appointments').select('id, type')
-  .eq('user_id', currentUserId)
-
-supabase.from('evaluation_scale').select(...)
-```
-
-**Risk Level:** 🟡 **MEDIUM** - Customer-facing but limited impact
-**Impact:** Evaluation tracking for customer
-
-**Action:** Should migrate to `/api/customer/get-learning-progress.get.ts`
-
----
-
-### PRIORITY 2: HIGH-USE COMPOSABLES
+### PRIORITY 1: CRITICAL (Admin Pages)
 
 #### 3. **usePendencies.ts** - Pendency Loading
 **Location:** `composables/usePendencies.ts` (Lines 70-82)
@@ -163,7 +271,7 @@ supabase.from('pendencies')
 
 ---
 
-### PRIORITY 3: ADMIN PAGES (Lower Risk)
+### PRIORITY 2: ADMIN PAGES (Lower Risk)
 
 #### 5. **tenant-admin/index.vue** - Dashboard Stats
 **Location:** `pages/tenant-admin/index.vue` (Lines 320-353)
@@ -187,6 +295,69 @@ supabase.from('users').select('id, auth_user_id, tenant_id, role')
 
 ---
 
+#### 5. **tenant-admin/index.vue** - Dashboard Stats
+**Location:** `pages/tenant-admin/index.vue` (Lines 320-353)
+
+**Current Queries:**
+```typescript
+supabase.from('tenants').select('id, is_active, is_trial')
+supabase.from('users').select('id, auth_user_id, tenant_id, role')
+```
+
+**Risk Level:** 🟢 **LOW** - Tenant admin only
+**Action:** Nice-to-have migration to `/api/tenant-admin/get-stats.get.ts`
+
+---
+
+#### 6. **exam-statistics.vue** - Exam Data
+**Location:** `pages/admin/exam-statistics.vue` (Lines 592-667)
+
+**Risk Level:** 🟢 **LOW** - Admin only
+**Action:** Can migrate to `/api/admin/get-exam-stats.get.ts`
+
+---
+
+#### 7. **admin/courses.vue** - Course Management (~32 queries)
+**Location:** `pages/admin/courses.vue`
+
+**Risk Level:** 🟡 **MEDIUM** - Admin only, but MANY queries
+**Impact:** Course management page with extensive DB interactions
+**Action:** Should consolidate into `/api/admin/courses/*` endpoints
+
+---
+
+#### 8. **admin/index.vue** - Dashboard (~30 queries)
+**Location:** `pages/admin/index.vue`
+
+**Risk Level:** 🟡 **MEDIUM** - Admin only, but MANY queries
+**Impact:** Main admin dashboard with stats and overview
+**Action:** Should consolidate into `/api/admin/dashboard.get.ts`
+
+---
+
+## RECENT FIXES & IMPROVEMENTS 🔧
+
+### Database Migrations
+
+#### **audit_logs** - Allow NULL user_id for Anonymous Actions
+**Date:** January 12, 2026
+**Migration:** `migrations/fix_audit_logs_allow_null_user_id.sql`
+
+**Problem:**
+- Anonymous requests (e.g., tenant branding after logout) failed with:
+  `"null value in column user_id violates not-null constraint"`
+
+**Solution:**
+1. `ALTER COLUMN user_id DROP NOT NULL` - Allow anonymous audit logs
+2. Added constraint: `audit_logs_has_identifier`
+   - Ensures at least ONE identifier: `user_id OR auth_user_id OR ip_address`
+
+**Result:**
+- Anonymous actions now tracked via IP address ✅
+- No audit logging errors ✅
+
+---
+
 ## KNOWN ISSUES TO FIX
 
 ### Debug Logs in Composables
@@ -197,21 +368,32 @@ supabase.from('users').select('id, auth_user_id, tenant_id, role')
 
 ## RECOMMENDATION FOR MIGRATION ORDER
 
-### Phase 1 (This Week) - Critical
-1. ✅ **StudentSelector** - DONE
-2. ✅ **Reglements Loading** - DONE  
-3. ✅ **Customer Appointments** - DONE
-4. ✅ **Customer Payments** - DONE
-5. ⏳ **product-sales.vue** → `/api/admin/get-product-sales.get.ts`
+### ✅ Phase 1 (January 10-12, 2026) - COMPLETED!
+1. ✅ **StudentSelector** - Migrated to `/api/admin/get-students`
+2. ✅ **Reglements Loading** - Migrated to `/api/customer/reglements` & `/api/onboarding/reglements`
+3. ✅ **Customer Appointments** - Migrated to `/api/customer/get-appointments`
+4. ✅ **Customer Payments** - Migrated to `/api/customer/get-payments`
+5. ✅ **product-sales.vue** - Migrated to `/api/admin/get-product-sales`
+6. ✅ **learning.vue** - Migrated to `/api/customer/get-learning-progress`
+7. ✅ **customer/payments.vue** - Migrated to `/api/payments/process`
+8. ✅ **useTenantBranding** - CRITICAL SECURITY FIX - Migrated to `/api/tenants/branding`
+9. ✅ **useLoadingLogo** - Migrated to `/api/tenants/branding`
+10. ✅ **useTenant** - Migrated to `/api/tenants/branding`
+11. ✅ **CustomerDashboard** - Dead code removed, notes fixed
 
-### Phase 2 (Next Week) - High-Use
-6. **learning.vue** → `/api/customer/get-learning-progress.get.ts`
-7. **useInvoices.ts** → `/api/invoices/get.get.ts`
+**Result:** Customer Dashboard is now **9/10 SECURE!** 🎉
 
-### Phase 3 (Following Week) - Admin Pages
-8. **usePendencies.ts** → Verify usage, then migrate or remove
-9. **tenant-admin/index.vue** → `/api/tenant-admin/get-stats.get.ts`
-10. **exam-statistics.vue** → `/api/admin/get-exam-stats.get.ts`
+### Phase 2 (Next) - Admin Consolidation
+12. **admin/courses.vue** → Consolidate ~32 queries into `/api/admin/courses/*`
+13. **admin/index.vue** → Consolidate ~30 queries into `/api/admin/dashboard.get.ts`
+14. **useInvoices.ts** → Migrate to `/api/invoices/get.get.ts`
+
+### Phase 3 (Future) - Cleanup & Nice-to-Haves
+15. **usePendencies.ts** → Verify usage, migrate or remove
+16. **tenant-admin/index.vue** → `/api/tenant-admin/get-stats.get.ts`
+17. **exam-statistics.vue** → `/api/admin/get-exam-stats.get.ts`
+18. **CustomerDashboard locations** → Include in appointments API
+19. **CustomerDashboard criteria** → Include in learning progress API
 
 ---
 
