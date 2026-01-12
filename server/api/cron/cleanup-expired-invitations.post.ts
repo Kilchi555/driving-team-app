@@ -8,6 +8,18 @@ import { logAudit } from '~/server/utils/audit'
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   try {
+    // ✅ Verify cron secret (security)
+    const authHeader = getHeader(event, 'authorization')
+    const cronSecret = process.env.CRON_SECRET
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      logger.warn('⚠️ Unauthorized cron job attempt')
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized'
+      })
+    }
+
     logger.debug('🧹 Starting cleanup of expired staff invitations')
 
     const supabase = getSupabaseAdmin()
