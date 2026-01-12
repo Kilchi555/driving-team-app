@@ -1,7 +1,7 @@
 // server/api/payments/status.post.ts
 // ✅ Payment Status API für Updates und Abfragen (mit Auth + Audit Logging)
 
-import { getSupabaseServerClient } from '~/server/utils/supabase-server'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
@@ -37,10 +37,19 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       })
     }
 
-    const supabase = getSupabaseServerClient(event)
+    const supabase = getSupabaseAdmin()
     
-    // ✅ SECURITY: Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // ✅ SECURITY: Get authenticated user from Bearer token
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized'
+      })
+    }
+
+    const token = authHeader.substring(7)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       throw createError({
         statusCode: 401,
