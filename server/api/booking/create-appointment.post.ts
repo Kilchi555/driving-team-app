@@ -32,7 +32,7 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
-import { sanitizeString } from '~/server/utils/sanitization'
+import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
 interface CreateAppointmentRequest {
