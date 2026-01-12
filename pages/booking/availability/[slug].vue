@@ -768,8 +768,11 @@ const isOnlineBookingEnabled = computed(() => {
 const route = useRoute()
 const supabase = getSupabase()
 
-// Optimized batch availability check function with local time handling and working hours
-const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: Date, endTime: Date }[]): Promise<boolean[]> => {
+// ❌ REMOVED: checkBatchAvailability (replaced by backend API)
+// Old function did 22+ direct DB queries - now handled by availability-calculator service
+
+// NEW: Fetch pre-computed availability slots from secure API
+const fetchAvailableSlotsForCombination = async () => {
   try {
     if (timeSlots.length === 0) return []
     
@@ -1822,7 +1825,93 @@ const selectInstructor = async (instructor: any) => {
   await generateTimeSlotsForSpecificCombination()
 }
 
+// ❌ REMOVED: Old generateTimeSlotsForSpecificCombination (replaced with secure API)
+// New implementation uses pre-computed slots from availability_slots table
+
 const generateTimeSlotsForSpecificCombination = async () => {
+  try {
+    isLoadingTimeSlots.value = true
+    error.value = null
+    
+    logger.debug('🔄 Fetching available slots via secure API...')
+    
+    // Calculate date range (next 4 weeks, matching old behavior)
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 28) // 4 weeks
+    
+    // Validate required filters
+    if (!selectedInstructor.value?.id || !selectedLocation.value?.id || !selectedCategory.value?.code) {
+      error.value = 'Bitte wählen Sie zuerst Kategorie, Dauer, und Standort aus.'
+      isLoadingTimeSlots.value = false
+      return
+    }
+    
+    // Get duration (handle array format from old code)
+    const duration = Array.isArray(filters.value.duration_minutes) 
+      ? filters.value.duration_minutes[0] || 45 
+      : filters.value.duration_minutes || 45
+    
+    // Fetch slots from secure API
+    const slots = await fetchAvailableSlots({
+      tenant_id: tenant.value?.id || '',
+      staff_id: selectedInstructor.value.id,
+      location_id: selectedLocation.value.id,
+      category_code: selectedCategory.value.code,
+      duration_minutes: duration,
+      start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+      end_date: endDate.toISOString().split('T')[0]
+    })
+    
+    logger.debug('✅ Fetched', slots.length, 'pre-computed slots from API')
+    
+    // Convert to format expected by UI
+    const timeSlots = slots.map(slot => {
+      const slotStartDate = new Date(slot.start_time)
+      const slotEndDate = new Date(slot.end_time)
+      
+      // Calculate week number (1-4)
+      const weeksDiff = Math.floor((slotStartDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000))
+      
+      return {
+        id: slot.id,
+        staff_id: slot.staff_id,
+        staff_name: slot.staff_name,
+        location_id: slot.location_id,
+        location_name: slot.location_name,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        duration_minutes: slot.duration_minutes,
+        is_available: true, // Already filtered by API
+        week_number: Math.max(1, Math.min(4, weeksDiff + 1)),
+        day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long' }),
+        date_formatted: slotStartDate.toLocaleDateString('de-DE'),
+        time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+        category_code: slot.category_code
+      }
+    })
+    
+    logger.debug(`✅ Converted ${timeSlots.length} slots for UI display`)
+    
+    // Store globally for UI
+    availableSlotsForCalendar.value = timeSlots
+    
+    // Update per-week slots (for UI compatibility)
+    if (Array.isArray(slotsPerWeek.value)) {
+      slotsPerWeek.value = [1, 2, 3, 4].map(weekNum => 
+        timeSlots.filter(slot => slot.week_number === weekNum)
+      )
+    }
+    
+  } catch (err: any) {
+    logger.error('❌ Error fetching slots:', err)
+    error.value = err.message || 'Fehler beim Laden der Verfügbarkeit'
+  } finally {
+    isLoadingTimeSlots.value = false
+  }
+}
+
+// ❌ REMOVED: OLD generateTimeSlotsForSpecificCombination implementation below
   try {
     isLoadingTimeSlots.value = true
     
