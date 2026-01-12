@@ -83,32 +83,22 @@ export const useTenant = () => {
     error.value = null
     
     try {
-      // Nutze Supabase-Modul Client
-      const supabase = getSupabase()
+      logger.debug('🏢 Loading tenant via secure API:', identifier)
       
-      // Versuche zuerst per Slug zu finden
-      let query = supabase
-        .from('tenants')
-        .select('*')
-        .eq('is_active', true)
+      // Load via secure API (no direct DB query)
+      // For domain lookups, we'll use slug as fallback since our API doesn't support domain yet
+      const response: any = await $fetch('/api/tenants/branding', {
+        params: { slug: identifier }
+      })
       
-      // Prüfe ob identifier eine Domain oder ein Slug ist
-      if (identifier.includes('.') && !identifier.includes('localhost')) {
-        query = query.eq('domain', identifier)
-      } else {
-        query = query.eq('slug', identifier)
+      if (!response?.success || !response.data) {
+        console.error('🏢 Tenant not found via API')
+        throw new Error(`Tenant '${identifier}' nicht gefunden`)
       }
       
-      const { data, error: fetchError } = await query.single()
-      
-      if (fetchError) {
-        // Kein Fallback - Tenant muss existieren
-        console.error('🏢 Tenant not found:', fetchError.message)
-        throw new Error(`Tenant '${identifier}' nicht gefunden: ${fetchError.message}`)
-      }
-      
+      const data = response.data
       currentTenant.value = data
-      logger.debug('🏢 Loaded tenant:', data.name, `(${data.slug})`)
+      logger.debug('🏢 Loaded tenant via API:', data.name, `(${data.slug})`)
       return data
       
     } catch (err: any) {
@@ -130,8 +120,11 @@ export const useTenant = () => {
   
   /**
    * Holt alle verfügbaren Tenants
+   * @deprecated Use a secure API endpoint instead (not yet implemented)
+   * TODO: Create /api/tenants/list.get.ts for this functionality
    */
   const getAllTenants = async () => {
+    console.warn('⚠️ getAllTenants() uses direct DB query - migrate to secure API')
     try {
       const supabase = getSupabase()
       const { data, error: fetchError } = await supabase

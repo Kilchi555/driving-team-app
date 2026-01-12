@@ -2392,24 +2392,14 @@ onMounted(async () => {
     if (userData.value?.tenant_id) {
       logger.debug('🎨 Loading tenant data for:', userData.value.tenant_id)
       
-      // Load tenant info from database using tenant_id
-      const supabase = getSupabase()
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', userData.value.tenant_id)
-        .single()
-      
-      if (!tenantError && tenantData) {
-        logger.debug('✅ Tenant loaded:', tenantData.name)
-        // Update the useTenant composable with the loaded tenant
-        setTenant(tenantData)
-      } else {
-        console.warn('⚠️ Error loading tenant:', tenantError?.message)
-      }
-      
-      // Also load branding
+      // Load tenant branding via secure API (replaces direct DB query)
       await loadTenantBrandingById(userData.value.tenant_id)
+      
+      // Set tenant in useTenant composable from branding data
+      if (currentTenantBranding.value) {
+        setTenant(currentTenantBranding.value as any)
+        logger.debug('✅ Tenant loaded via secure API:', currentTenantBranding.value.name)
+      }
     }
     
     await loadAllData()
