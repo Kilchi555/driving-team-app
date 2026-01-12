@@ -238,6 +238,31 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         }
 
         logger.debug('✅ Student credit updated - new balance:', (newBalance / 100).toFixed(2))
+        
+        // ✅ Create credit_transaction for the deduction
+        const { error: transactionError } = await supabaseAdmin
+          .from('credit_transactions')
+          .insert({
+            user_id: userData.id,
+            tenant_id: tenantId,
+            transaction_type: 'payment',
+            amount_rappen: -creditToDeduct, // Negative for deduction
+            balance_before_rappen: availableCredit,
+            balance_after_rappen: newBalance,
+            payment_method: 'credit',
+            reference_id: payment.id,
+            reference_type: 'payment',
+            notes: `Guthaben für Zahlung verwendet (Payment ID: ${payment.id}, Betrag: CHF ${(payment.total_amount_rappen / 100).toFixed(2)})`,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          })
+
+        if (transactionError) {
+          logger.warn('⚠️ Could not create credit transaction:', transactionError)
+          // Non-critical, continue
+        } else {
+          logger.debug('✅ Credit transaction created')
+        }
       }
 
       // Mark payment as completed

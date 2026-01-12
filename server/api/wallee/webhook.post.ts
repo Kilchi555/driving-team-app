@@ -423,8 +423,10 @@ async function handleCreditRefund(payments: any[]) {
         .single()
       
       if (creditData) {
-        const newBalance = (creditData.balance_rappen || 0) + pendingRefund
+        const balanceBefore = creditData.balance_rappen || 0
+        const newBalance = balanceBefore + pendingRefund
         
+        // 1. Update student_credits balance
         await supabase
           .from('student_credits')
           .update({
@@ -433,19 +435,39 @@ async function handleCreditRefund(payments: any[]) {
           })
           .eq('user_id', payment.user_id)
         
-        // Clear pending refund flag
+        // 2. ✅ Create credit_transaction for the refund
+        await supabase
+          .from('credit_transactions')
+          .insert({
+            user_id: payment.user_id,
+            tenant_id: payment.tenant_id,
+            transaction_type: 'refund',
+            amount_rappen: pendingRefund,
+            balance_before_rappen: balanceBefore,
+            balance_after_rappen: newBalance,
+            payment_method: 'wallee_failed',
+            reference_id: payment.id,
+            reference_type: 'payment',
+            notes: `Rückerstattung wegen fehlgeschlagener Wallee-Zahlung (Payment ID: ${payment.id})`,
+            status: 'completed',
+            created_at: new Date().toISOString()
+          })
+        
+        // 3. Clear pending refund flag
         await supabase
           .from('payments')
           .update({
             metadata: {
               ...payment.metadata,
               pending_credit_refund: null,
-              credit_refunded_at: new Date().toISOString()
+              credit_refunded: true,
+              credit_refunded_at: new Date().toISOString(),
+              credit_refund_amount: pendingRefund
             }
           })
           .eq('id', payment.id)
         
-        logger.debug('✅ Credit refunded successfully')
+        logger.debug('✅ Credit refunded successfully with transaction record')
       }
     }
   }
@@ -455,11 +477,46 @@ async function confirmCreditDeduction(payments: any[]) {
   const supabase = getSupabaseAdmin()
   
   for (const payment of payments) {
+    const creditUsed = payment.credit_used_rappen
     const pendingRefund = payment.metadata?.pending_credit_refund
     
-    if (pendingRefund && pendingRefund > 0) {
-      logger.debug(`✅ Confirming credit deduction: ${(pendingRefund / 100).toFixed(2)} CHF`)
+    // If credit was used in this payment, create a transaction record
+    if (creditUsed && creditUsed > 0 && payment.user_id) {
+      logger.debug(`✅ Confirming credit deduction: ${(creditUsed / 100).toFixed(2)} CHF`)
       
+      // Get current balance to calculate balance_before
+      const { data: creditData } = await supabase
+        .from('student_credits')
+        .select('balance_rappen')
+        .eq('user_id', payment.user_id)
+        .single()
+      
+      const currentBalance = creditData?.balance_rappen || 0
+      const balanceBefore = currentBalance + creditUsed // Reconstruct balance before deduction
+      
+      // ✅ Create credit_transaction for the usage
+      await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: payment.user_id,
+          tenant_id: payment.tenant_id,
+          transaction_type: 'payment',
+          amount_rappen: -creditUsed, // Negative for deduction
+          balance_before_rappen: balanceBefore,
+          balance_after_rappen: currentBalance,
+          payment_method: 'credit',
+          reference_id: payment.id,
+          reference_type: 'payment',
+          notes: `Guthaben für Zahlung verwendet (Payment ID: ${payment.id}, Betrag: CHF ${(payment.total_amount_rappen / 100).toFixed(2)})`,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        })
+      
+      logger.debug('✅ Credit transaction created for payment')
+    }
+    
+    // Clear pending_credit_refund if it exists
+    if (pendingRefund && pendingRefund > 0) {
       await supabase
         .from('payments')
         .update({
