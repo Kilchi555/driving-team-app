@@ -2206,8 +2206,8 @@ const selectTimeSlot = async (slot: any) => {
   selectedSlot.value = slot
   logger.debug('✅ Time slot selected:', slot)
   
-  // Reserve the slot for 5 minutes
-  const reserved = await reserveSlot()
+  // Reserve the slot using new secure API
+  const reserved = await reserveSlotSecure()
   if (!reserved) {
     selectedSlot.value = null
     return
@@ -2769,38 +2769,27 @@ watch(() => currentStep.value, (newStep: number) => {
   }
 })
 
-// Reservation functions
-const reserveSlot = async (userId?: string) => {
-  if (!selectedSlot.value || !selectedInstructor.value || !currentTenant.value) {
-    console.warn('⚠️ Missing required data for reservation')
+// Reservation functions - UPDATED to use new secure API
+const reserveSlotSecure = async (userId?: string) => {
+  if (!selectedSlot.value) {
+    console.warn('⚠️ No slot selected')
     return false
   }
   
   try {
-    logger.debug('🔄 Reserving slot...')
+    isLoading.value = true
+    logger.debug('🔒 Reserving slot via secure API...', selectedSlot.value.id)
     
-    // Server will determine user_id from auth token or generate session ID
-    const response = await $fetch<{
-      success: boolean
-      reservation_id: string
-      reserved_until: string
-    }>('/api/booking/reserve-slot', {
-      method: 'POST',
-      body: {
-        staff_id: selectedInstructor.value.id,
-        start_time: selectedSlot.value.start_time,
-        end_time: selectedSlot.value.end_time,
-        duration_minutes: selectedSlot.value.duration_minutes || selectedDuration.value,
-        category_code: selectedCategory.value?.code,
-        location_id: selectedLocation.value?.id,
-        tenant_id: currentTenant.value.id
-      }
+    // Use the new composable's reserveSlot method
+    const reservation = await reserveSlot({
+      slot_id: selectedSlot.value.id,
+      session_id: sessionId.value
     })
-
-    if (response.success) {
-      logger.debug('✅ Slot reserved:', response.reservation_id)
-      currentReservationId.value = response.reservation_id
-      reservedUntil.value = new Date(response.reserved_until)
+    
+    if (reservation.success) {
+      logger.debug('✅ Slot reserved:', reservation.slot.reserved_until)
+      reservedSlotId.value = selectedSlot.value.id
+      reservationExpiry.value = new Date(reservation.slot.reserved_until)
       startCountdown()
       return true
     } else {
@@ -2809,10 +2798,23 @@ const reserveSlot = async (userId?: string) => {
     }
   } catch (error: any) {
     console.error('❌ Error reserving slot:', error)
-    alert(`Fehler bei der Reservierung: ${error?.data?.message || error?.message}`)
+    
+    if (error.statusCode === 409) {
+      // Slot already taken
+      error.value = 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wählen Sie einen anderen.'
+      // Refresh slots
+      await generateTimeSlotsForSpecificCombination()
+    } else {
+      error.value = error.statusMessage || 'Reservierung fehlgeschlagen'
+    }
     return false
+  } finally {
+    isLoading.value = false
   }
 }
+
+// Keep old function name for backwards compatibility
+const reserveSlot_OLD = reserveSlotSecure
 
 const cancelReservation = async (silent: boolean = false) => {
   if (!currentReservationId.value) return
