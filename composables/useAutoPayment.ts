@@ -153,9 +153,9 @@ export const useAutoPayment = () => {
       if (paymentError) throw paymentError
       if (!payment) throw new Error('Payment not found')
 
-      // Redirect zu Payment-Process Seite
+      // Redirect to payments page
       if (typeof window !== 'undefined') {
-        await navigateTo(`/customer/payment-process?payments=${payment.id}`)
+        await navigateTo('/customer/payments')
       }
 
     } catch (err: any) {

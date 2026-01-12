@@ -1320,8 +1320,8 @@ const processPendingPayments = async () => {
   if (pendingPayments.value.length === 0) return
   
   try {
-    const paymentIds = pendingPayments.value.map(p => p.id).join(',')
-    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
+    // Redirect to payments page where user can select and pay
+    await navigateTo('/customer/payments')
   } catch (err) {
     console.error('❌ Error processing pending payments:', err)
     displayToast('error', 'Fehler', 'Fehler beim Weiterleiten zur Zahlung.')

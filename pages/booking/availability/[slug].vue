@@ -2539,8 +2539,8 @@ const createAppointment = async (userData: any) => {
       
       // If no token or automatic payment failed, redirect to payment page
       if (isWallee && paymentData?.payment_status === 'pending') {
-        logger.debug('🔄 Redirecting to payment process page...')
-        await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
+        logger.debug('🔄 Redirecting to payments page...')
+        await navigateTo('/customer/payments')
       } else {
         logger.debug('✅ Payment already processed or no payment needed')
         successMessage.value = {
