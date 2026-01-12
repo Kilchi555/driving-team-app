@@ -303,20 +303,34 @@ failedUrl: `${window.location.origin}/payment/failed?transaction_id=${transactio
 
 ---
 
-## 8. NEUE SICHERE API
+## 8. ERWEITERTE BESTEHENDE API
 
-### `/api/payments/mark-failed.post.ts`
+### ✅ `/api/payments/status.post.ts` - **ERWEITERT**
 
-**PURPOSE:** Sichere Markierung von fehlgeschlagenen Zahlungen
+**VORHER:**
+```typescript
+// ❌ Keine Auth-Check
+const supabase = getSupabase()
 
-**SECURITY FEATURES:**
+// ❌ Keine Ownership-Verification
+const { data: payment } = await supabase
+  .from('payments')
+  .select('*')
+  .eq('id', body.paymentId)
+
+// ❌ Keine Audit Logs
+```
+
+**NACHHER:**
 ```typescript
 // ✅ Authentication Required
 const { data: { user } } = await supabase.auth.getUser()
 
 // ✅ Tenant Isolation
-.eq('user_id', userData.id)
-.eq('tenant_id', userData.tenant_id)
+const { data: userData } = await supabase
+  .from('users')
+  .select('id, tenant_id')
+  .eq('auth_user_id', user.id)
 
 // ✅ Ownership Verification
 if (payment.user_id !== userData.id) {
@@ -325,19 +339,29 @@ if (payment.user_id !== userData.id) {
 
 // ✅ Audit Logging
 await logAudit({
-  action: 'payment_marked_failed',
+  action: 'payment_status_updated',
+  previous_status: payment.payment_status,
+  new_status: body.status,
   ...
 })
+
+// ✅ Support transactionId lookup
+if (body.transactionId) {
+  query = query.eq('wallee_transaction_id', body.transactionId)
+}
 ```
 
-**REPLACES:**
-```typescript
-// ❌ OLD (Direct DB Update in Frontend)
-await supabase
-  .from('payments')
-  .update({ payment_status: 'failed' })
-  .eq('id', payment.id)
-```
+**NEUE FEATURES:**
+- ✅ `transactionId` lookup (zusätzlich zu `paymentId`)
+- ✅ Authentication + Tenant Isolation
+- ✅ Ownership Verification
+- ✅ Audit Logging für alle Status-Changes
+- ✅ Error Handling mit Audit Logs
+
+**WARUM NICHT NEUE API:**
+- Bestehende API hatte bereits die richtige Logik
+- Nur Security-Layer fehlten (Auth, Audit, Ownership-Check)
+- Vermeidet Duplikation und Konfusion
 
 ---
 
