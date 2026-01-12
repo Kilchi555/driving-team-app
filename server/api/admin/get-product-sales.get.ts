@@ -30,7 +30,13 @@ interface ProductSale {
   total_amount_rappen: number
   status: string
   created_at: string
-  sale_type: 'direct' | 'anonymous'
+  sale_type: 'direct' | 'anonymous' | 'shop'
+}
+
+interface TenantInfo {
+  id: string
+  name: string
+  slug: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -120,6 +126,24 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 4: TENANT ISOLATION + DATA LOADING ============
     
+    // 0. Load tenant info
+    const { data: tenantData, error: tenantError } = await supabaseAdmin
+      .from('tenants')
+      .select('id, name, slug')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantError) {
+      logger.error('❌ Error fetching tenant:', tenantError)
+      throw tenantError
+    }
+
+    const tenantInfo: TenantInfo = {
+      id: tenantData.id,
+      name: tenantData.name,
+      slug: tenantData.slug
+    }
+    
     // 1. Load all payments for this tenant with products
     const { data: paymentsData, error: paymentsError } = await supabaseAdmin
       .from('payments')
@@ -137,41 +161,15 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+      .limit(limit)
 
     if (paymentsError) {
       logger.error('❌ Error fetching payments:', paymentsError)
       throw paymentsError
     }
 
-    if (!paymentsData || paymentsData.length === 0) {
-      logger.debug('ℹ️ No product sales found for tenant:', tenantId)
-      await logAudit({
-        user_id: userId,
-        action: 'get_product_sales',
-        resource_type: 'product_sales',
-        resource_id: tenantId,
-        status: 'success',
-        details: {
-          result_count: 0,
-          limit,
-          offset
-        }
-      })
-
-      return {
-        success: true,
-        data: [],
-        pagination: {
-          limit,
-          offset,
-          total: 0
-        }
-      }
-    }
-
     // 2. Load customer info for payments with user_id
-    const directSalesWithUsers = paymentsData.filter(sale => sale.user_id) || []
+    const directSalesWithUsers = paymentsData?.filter(sale => sale.user_id) || []
     const directUserIds = [
       ...new Set(
         directSalesWithUsers.map(sale => sale.user_id).filter(Boolean) || []
@@ -194,16 +192,34 @@ export default defineEventHandler(async (event) => {
     }
 
     // 3. Load product items for all payments
-    const paymentIds = paymentsData.map(sale => sale.id)
-    const { data: itemsData, error: itemsError } = await supabaseAdmin
-      .from('payment_items')
-      .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
-      .in('payment_id', paymentIds)
-      .eq('item_type', 'product')
+    const paymentIds = paymentsData?.map(sale => sale.id) || []
+    let itemsData: any[] = []
+    if (paymentIds.length > 0) {
+      const { data, error: itemsError } = await supabaseAdmin
+        .from('payment_items')
+        .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
+        .in('payment_id', paymentIds)
+        .eq('item_type', 'product')
 
-    if (itemsError) {
-      logger.error('❌ Error fetching payment items:', itemsError)
-      throw itemsError
+      if (itemsError) {
+        logger.error('❌ Error fetching payment items:', itemsError)
+        throw itemsError
+      }
+      itemsData = data || []
+    }
+
+    // 4. Load shop sales from invited_customers
+    const { data: shopSalesData, error: shopSalesError } = await supabaseAdmin
+      .from('invited_customers')
+      .select('*')
+      .not('metadata->products', 'is', null) // Only customers with products
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (shopSalesError) {
+      logger.error('❌ Error fetching shop sales:', shopSalesError)
+      throw shopSalesError
     }
 
     // ============ LAYER 6: TRANSFORM DATA ============
@@ -244,23 +260,50 @@ export default defineEventHandler(async (event) => {
     })
 
     // Process anonymous sales (without customers)
-    const anonymousSales = paymentsData.filter(sale => !sale.user_id) || []
+    const anonymousSales = paymentsData?.filter(sale => !sale.user_id) || []
     anonymousSales.forEach(sale => {
       const items = itemsMap.get(sale.id) || []
+      const metadata = sale.metadata || {}
 
       results.push({
         id: sale.id,
-        customer_name: 'Anonym',
+        customer_name: metadata.customer_name || 'Anonymer Kunde',
+        customer_email: metadata.customer_email,
+        customer_phone: metadata.customer_phone,
         product_count: items.length,
         product_names: items.length > 0
           ? items.map((item: any) => item.item_name).filter(Boolean).join(', ')
           : 'Keine Produkte',
         total_amount_rappen: sale.total_amount_rappen || 0,
-        status: sale.payment_status || 'pending',
+        status: sale.payment_status || 'completed',
         created_at: sale.created_at || new Date().toISOString(),
         sale_type: 'anonymous'
       })
     })
+
+    // Process shop sales (from invited_customers)
+    shopSalesData?.forEach(customer => {
+      const products = customer.metadata?.products || []
+      if (products.length > 0) {
+        const totalAmount = products.reduce((sum: number, product: any) => sum + (product.total_price_rappen || 0), 0)
+        
+        results.push({
+          id: customer.id,
+          customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+          customer_email: customer.email,
+          customer_phone: customer.phone,
+          product_count: products.length,
+          product_names: products.map((product: any) => product.product_name).filter(Boolean).join(', '),
+          total_amount_rappen: totalAmount,
+          status: 'completed', // Shop sales are completed by default
+          created_at: customer.created_at,
+          sale_type: 'shop'
+        })
+      }
+    })
+
+    // Sort all sales by date (newest first)
+    results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     // ============ LAYER 7: AUDIT LOGGING ============
     await logAudit({
@@ -271,6 +314,9 @@ export default defineEventHandler(async (event) => {
       status: 'success',
       details: {
         result_count: results.length,
+        direct_sales: results.filter(s => s.sale_type === 'direct').length,
+        anonymous_sales: results.filter(s => s.sale_type === 'anonymous').length,
+        shop_sales: results.filter(s => s.sale_type === 'shop').length,
         limit,
         offset,
         duration_ms: Date.now() - startTime
@@ -280,12 +326,16 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Product sales fetched successfully:', {
       tenantId,
       count: results.length,
+      direct: results.filter(s => s.sale_type === 'direct').length,
+      anonymous: results.filter(s => s.sale_type === 'anonymous').length,
+      shop: results.filter(s => s.sale_type === 'shop').length,
       durationMs: Date.now() - startTime
     })
 
     return {
       success: true,
       data: results,
+      tenant: tenantInfo,
       pagination: {
         limit,
         offset,
