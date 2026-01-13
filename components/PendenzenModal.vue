@@ -117,12 +117,13 @@
               v-for="pendency in userPendencies"
               :key="pendency.id"
               :class="[
-                'rounded-lg border p-4 hover:shadow-md transition-all',
+                'rounded-lg border p-4 hover:shadow-md transition-all cursor-pointer',
                 pendency.status === 'abgeschlossen' ? 'border-green-300 bg-green-50' :
                 pendency.status === 'überfällig' ? 'border-red-300 bg-red-50' :
                 pendency.status === 'in_bearbeitung' ? 'border-yellow-300 bg-yellow-50' :
                 'border-blue-300 bg-blue-50'
               ]"
+              @click="handlePendencyClick(pendency)"
             >
               <!-- Titel und Priority Badge nebeneinander -->
               <div class="flex items-center space-x-2 mb-3">
@@ -146,7 +147,7 @@
                 <div class="text-xs text-gray-500">
                   <span>📅 {{ new Date(pendency.due_date).toLocaleDateString('de-CH') }}</span>
                 </div>
-                <div class="relative">
+                <div class="relative" @click.stop>
                   <select 
                     :value="pendency.status"
                     @change="(e) => changeStatus(pendency.id, (e.target as any).value)"
@@ -355,6 +356,16 @@
     @close="showCashPaymentModal = false"
     @payment-confirmed="onCashPaymentConfirmed"
   />
+
+  <!-- Invoice Address Modal -->
+  <InvoiceAddressModal
+    v-if="showInvoiceAddressModal"
+    :is-open="showInvoiceAddressModal"
+    :invoice-data="currentInvoiceData"
+    :user-address="currentPendencyUser"
+    @close="showInvoiceAddressModal = false"
+    @save="saveInvoiceAddress"
+  />
 </template>
 
 <script setup lang="ts">
@@ -370,6 +381,7 @@ import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import InvoiceAddressModal from '~/components/InvoiceAddressModal.vue'
 import { getSupabase } from '~/utils/supabase'
 
 // Props
@@ -428,6 +440,12 @@ const currentPayment = ref<any>(null)
 // ✅ NEUE REFS FÜR EXAM RESULT
 const showExamResultModal = ref(false)
 const currentExamAppointment = ref<any>(null)
+
+// ✅ NEUE REFS FÜR INVOICE ADDRESS MODAL
+const showInvoiceAddressModal = ref(false)
+const currentInvoiceData = ref<any>({})
+const currentPendencyUser = ref<any>(null)
+const currentPendencyPaymentId = ref<string | null>(null)
 
 // Ref für gefilterte Pendenzen (wird von watch aktualisiert)
 const userPendencies = ref<any[]>([])
@@ -902,6 +920,181 @@ const checkAndShowCashPaymentConfirmation = async (appointmentId: string) => {
 }
 
 /**
+ * Wird aufgerufen, wenn auf eine Pendenz geklickt wird
+ */
+const handlePendencyClick = async (pendency: any) => {
+  logger.debug('📋 Pendency clicked:', pendency)
+  
+  // Prüfe ob es eine Rechnungsadress-Pendenz ist
+  if (pendency.title?.includes('Rechnungsadresse') || pendency.tags?.includes('missing-address')) {
+    await openInvoiceAddressModal(pendency)
+  }
+}
+
+/**
+ * Öffnet das Invoice Address Modal für eine Pendenz
+ */
+const openInvoiceAddressModal = async (pendency: any) => {
+  try {
+    logger.debug('📋 Opening invoice address modal for pendency:', pendency)
+    
+    // Extrahiere Payment ID aus den Notes (falls vorhanden)
+    const paymentIdMatch = pendency.notes?.match(/Payment ID: ([a-f0-9-]+)/)
+    const paymentId = paymentIdMatch ? paymentIdMatch[1] : null
+    
+    if (!paymentId) {
+      logger.warn('⚠️ No payment ID found in pendency notes')
+      alert('Fehler: Keine Zahlungs-ID in der Pendenz gefunden.')
+      return
+    }
+    
+    currentPendencyPaymentId.value = paymentId
+    logger.debug('💳 Payment ID:', paymentId)
+    
+    // Lade Payment und User-Daten
+    const supabase = getSupabase()
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        users:user_id (
+          first_name,
+          last_name,
+          email,
+          phone
+        )
+      `)
+      .eq('id', paymentId)
+      .single()
+    
+    if (paymentError || !payment) {
+      logger.error('❌ Error loading payment:', paymentError)
+      alert('Fehler beim Laden der Zahlungsinformationen.')
+      return
+    }
+    
+    logger.debug('✅ Payment loaded:', payment)
+    
+    // Setze aktuelle Daten
+    currentInvoiceData.value = payment.invoice_address || {}
+    currentPendencyUser.value = payment.users || null
+    
+    // Öffne Modal
+    showInvoiceAddressModal.value = true
+    
+  } catch (error: any) {
+    console.error('❌ Error opening invoice address modal:', error)
+    alert('Fehler: ' + error.message)
+  }
+}
+
+/**
+ * Speichert die Rechnungsadresse und schließt das Modal
+ */
+const saveInvoiceAddress = async (invoiceData: any) => {
+  try {
+    logger.debug('💾 Saving invoice address:', invoiceData)
+    
+    if (!currentPendencyPaymentId.value) {
+      logger.error('❌ No payment ID set')
+      return
+    }
+    
+    const supabase = getSupabase()
+    
+    // 1. Lade das Payment um die user_id zu bekommen
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('user_id, tenant_id')
+      .eq('id', currentPendencyPaymentId.value)
+      .single()
+    
+    if (paymentError || !payment) {
+      logger.error('❌ Error fetching payment:', paymentError)
+      alert('Fehler beim Laden der Zahlungsinformationen.')
+      return
+    }
+    
+    logger.debug('✅ Payment user_id:', payment.user_id, 'tenant_id:', payment.tenant_id)
+    
+    // 2. Speichere in company_billing_address Table
+    const { data: addressData, error: addressError } = await supabase
+      .from('company_billing_address')
+      .insert({
+        user_id: payment.user_id,
+        tenant_id: payment.tenant_id,
+        company_name: invoiceData.company_name || '',
+        contact_person: invoiceData.contact_person,
+        email: invoiceData.email,
+        phone: invoiceData.phone || '',
+        street: invoiceData.street,
+        street_number: invoiceData.street_number,
+        zip: invoiceData.zip,
+        city: invoiceData.city,
+        country: invoiceData.country || 'Schweiz',
+        vat_number: invoiceData.vat_number || '',
+        company_register_number: invoiceData.company_register_number || '',
+        notes: invoiceData.notes || '',
+        is_active: true,
+        is_verified: false,
+        created_by: props.currentUser?.id
+      })
+      .select()
+      .single()
+    
+    if (addressError) {
+      logger.error('❌ Error saving to company_billing_address:', addressError)
+      alert('Fehler beim Speichern der Rechnungsadresse.')
+      return
+    }
+    
+    logger.debug('✅ Address saved to company_billing_address:', addressData)
+    
+    // 3. Update payment mit invoice_address und company_billing_address_id
+    const { error: updatePaymentError } = await supabase
+      .from('payments')
+      .update({
+        invoice_address: invoiceData,
+        company_billing_address_id: addressData.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', currentPendencyPaymentId.value)
+    
+    if (updatePaymentError) {
+      logger.error('❌ Error updating payment:', updatePaymentError)
+      alert('Fehler beim Speichern der Rechnungsadresse.')
+      return
+    }
+    
+    logger.debug('✅ Payment updated with invoice address')
+    
+    // 4. Aktualisiere die Pendenz auf "abgeschlossen"
+    const currentPendency = userPendencies.value.find((p: any) => 
+      p.notes?.includes(currentPendencyPaymentId.value!)
+    )
+    
+    if (currentPendency) {
+      await changeStatus(currentPendency.id, 'abgeschlossen')
+      logger.debug('✅ Pendency marked as completed')
+    }
+    
+    // 5. Schließe Modal
+    showInvoiceAddressModal.value = false
+    currentPendencyPaymentId.value = null
+    
+    // 6. Lade Daten neu
+    await refreshData()
+    
+    // Success message
+    alert('✅ Rechnungsadresse erfolgreich gespeichert!')
+    
+  } catch (error: any) {
+    console.error('❌ Error saving invoice address:', error)
+    alert('Fehler: ' + error.message)
+  }
+}
+
+/**
  * Wird aufgerufen, wenn die Barzahlung bestätigt wurde
  */
 const onCashPaymentConfirmed = async (payment: any) => {
@@ -1122,7 +1315,146 @@ onMounted(() => {
     refreshData()
   }
 })
+
+// Watch für Modal-Öffnung
+watch(() => props.isOpen, async (newIsOpen) => {
+  logger.debug('🔥 PendenzenModal isOpen changed:', newIsOpen)
+  logger.debug('🔥 Current user in modal:', props.currentUser)
+  
+  if (newIsOpen && props.currentUser?.id) {
+    logger.debug('🔄 PendenzenModal opened - loading data...')
+    try {
+      await refreshData()
+      logger.debug('✅ refreshData completed')
+    } catch (error) {
+      console.error('❌ Error in refreshData:', error)
+    }
+    
+    // Nutze MEHRERE nextTick um sicherzustellen, dass alle computed values aktualisiert sind
+    logger.debug('⏳ Waiting for nextTick...')
+    await nextTick()
+    logger.debug('⏳ Waiting for timeout...')
+    await new Promise(resolve => setTimeout(resolve, 100)) // Extra delay
+    logger.debug('⏳ Waiting for second nextTick...')
+    await nextTick()
+    logger.debug('✅ All nextTicks completed')
+    
+    // Setze Tab anhand defaultTab, falls übergeben
+    if (props.defaultTab) {
+      activeTab.value = props.defaultTab
+      logger.debug('📌 Using defaultTab:', props.defaultTab)
+    } else {
+      logger.debug('🔄 Starting tab selection logic...')
+      try {
+        // Debug: Direct access to pendencies.value
+        console.log('🔧 Tab selection debug - pendencies.value:', pendencies.value)
+        console.log('🔧 Tab selection debug - userPendencies.value:', userPendencies.value)
+        console.log('🔧 Tab selection debug - currentUser.value?.id:', currentUser.value?.id)
+        
+        // Priorisiere den Tab mit den meisten Pendenzen
+        const bewertungenCount = pendingCount.value || 0
+        const unbestätigtCount = unconfirmedNext24hCount.value || 0
+        const pendenzenCount = userPendencies.value?.length || 0
+        
+        logger.debug('📊 Tab selection - Final counts:', { 
+          bewertungenCount, 
+          unbestätigtCount,
+          pendenzenCount,
+          pendenciesValueLength: pendencies.value?.length
+        })
+        
+        // Wähle den Tab mit den meisten Items
+        if (pendenzenCount > 0 && pendenzenCount >= bewertungenCount && pendenzenCount >= unbestätigtCount) {
+          activeTab.value = 'pendenzen'
+          logger.debug('📌 Switching to Pendenzen tab (most pending)')
+        } else if (unbestätigtCount > 0 && unbestätigtCount > bewertungenCount) {
+          activeTab.value = 'unconfirmed'
+          logger.debug('📌 Switching to Unbestätigt tab (more pending)')
+        } else {
+          activeTab.value = 'bewertungen'
+          logger.debug('📌 Switching to Bewertungen tab')
+        }
+      } catch (error) {
+        console.error('❌ Error in tab selection:', error)
+        activeTab.value = 'pendenzen'  // Default to pendenzen now
+      }
+    }
+  } else if (!newIsOpen) {
+    logger.debug('ℹ️ PendenzenModal closed')
+  } else {
+    console.warn('⚠️ Modal opened but no user ID available')
+  }
+}, { immediate: true })
+
+// Debug: Watch pendingCount changes
+watch(pendingCount, (newCount, oldCount) => {
+  logger.debug(`🔄 PendenzenModal - pending count changed: ${oldCount} → ${newCount}`)
+}, { immediate: true })
+
+// Debug: Watch pendencies and userPendencies
+watch(() => pendencies.value, (newVal) => {
+  console.log('🔧 pendencies.value changed:', {
+    length: newVal?.length,
+    items: newVal?.map(p => ({ id: p.id, assigned_to: p.assigned_to, created_by: p.created_by }))
+  })
+}, { deep: true })
+
+watch(() => userPendencies.value, (newVal) => {
+  console.log('🔧 userPendencies.value changed:', {
+    length: newVal?.length,
+    currentUserId: currentUser.value?.id,
+    items: newVal?.map(p => ({ id: p.id, title: p.title, assigned_to: p.assigned_to }))
+  })
+}, { deep: true })
+
+// Initial load wenn Component gemounted wird UND Modal bereits offen ist
+onMounted(() => {
+  if (props.isOpen && props.currentUser?.id) {
+    logger.debug('🔄 PendenzenModal mounted with open state - loading data...')
+    refreshData()
+  }
+})
 </script>
+
+<style scoped>
+/* Custom scrollbar */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+.transition-colors {
+  transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Mobile optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:bg-gray-100:hover {
+    background-color: #f3f4f6;
+  }
+}
+
+/* Ensure text doesn't break layout on small screens */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>
+
 
 <style scoped>
 /* Custom scrollbar */

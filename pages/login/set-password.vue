@@ -87,20 +87,36 @@
           </div>
 
           <!-- Password Requirements -->
-          <div class="text-xs text-gray-500">
-            <p class="font-medium mb-1">Passwort-Anforderungen:</p>
-            <ul class="list-disc list-inside space-y-1">
-              <li :class="password.length >= 8 ? 'text-green-600' : 'text-gray-500'">
-                Mindestens 8 Zeichen
+          <div class="text-xs">
+            <p class="font-medium mb-2 text-gray-700">Passwort-Anforderungen:</p>
+            <ul class="space-y-2">
+              <li class="flex items-center gap-2">
+                <span v-if="password.length >= 8" class="text-green-600 font-bold">✓</span>
+                <span v-else class="text-red-500 font-bold">✗</span>
+                <span :class="password.length >= 8 ? 'text-green-600 font-medium' : 'text-red-500'">
+                  Mindestens 8 Zeichen
+                </span>
               </li>
-              <li :class="hasUppercase ? 'text-green-600' : 'text-gray-500'">
-                Mindestens ein Großbuchstabe
+              <li class="flex items-center gap-2">
+                <span v-if="hasUppercase" class="text-green-600 font-bold">✓</span>
+                <span v-else class="text-red-500 font-bold">✗</span>
+                <span :class="hasUppercase ? 'text-green-600 font-medium' : 'text-red-500'">
+                  Mindestens ein Großbuchstabe
+                </span>
               </li>
-              <li :class="hasNumber ? 'text-green-600' : 'text-gray-500'">
-                Mindestens eine Zahl
+              <li class="flex items-center gap-2">
+                <span v-if="hasNumber" class="text-green-600 font-bold">✓</span>
+                <span v-else class="text-red-500 font-bold">✗</span>
+                <span :class="hasNumber ? 'text-green-600 font-medium' : 'text-red-500'">
+                  Mindestens eine Zahl
+                </span>
               </li>
-              <li :class="passwordsMatch ? 'text-green-600' : 'text-gray-500'">
-                Passwörter stimmen überein
+              <li class="flex items-center gap-2">
+                <span v-if="passwordsMatch && password.length > 0" class="text-green-600 font-bold">✓</span>
+                <span v-else class="text-red-500 font-bold">✗</span>
+                <span :class="passwordsMatch && password.length > 0 ? 'text-green-600 font-medium' : 'text-red-500'">
+                  Passwörter stimmen überein
+                </span>
               </li>
             </ul>
           </div>
@@ -114,11 +130,18 @@
           <button
             type="submit"
             :disabled="!isValidPassword || isLoading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 transition-colors"
           >
             <span v-if="isLoading">Speichere...</span>
+            <span v-else-if="!isValidPassword">⚠️ Bitte erfüllen Sie alle Anforderungen</span>
             <span v-else>🔐 Passwort festlegen</span>
           </button>
+          
+          <!-- Helper text when button is disabled -->
+          <p v-if="!isValidPassword && !isLoading && (password.length > 0 || confirmPassword.length > 0)" 
+             class="text-xs text-center text-red-600 -mt-2">
+            Sie können erst fortfahren, wenn alle Anforderungen erfüllt sind
+          </p>
         </form>
       </div>
     </div>

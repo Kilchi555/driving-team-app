@@ -285,13 +285,6 @@
                 bezahlt am {{ new Date(existingPayment.paid_at).toLocaleDateString('de-CH') }}
               </span>
             </div>
-            
-            <!-- Rechnungsadresse für Invoice -->
-            <div v-if="existingPayment?.payment_method === 'invoice' && hasInvoiceAddress" 
-                 class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <div class="text-sm font-medium text-gray-700 mb-2">Rechnungsadresse</div>
-              <div class="text-sm text-gray-600 whitespace-pre-line">{{ formatInvoiceAddress() }}</div>
-            </div>
           </div>
         </div>
 
@@ -343,10 +336,52 @@
         </div>
         
 
+        <!-- Gespeicherte Rechnungsadresse Anzeige -->
+        <div v-if="selectedPaymentMethod === 'invoice' && studentBillingAddress && !isEditingBillingAddress" 
+             class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+          <div class="flex justify-between items-start mb-2">
+            <h5 class="text-sm font-medium text-green-800">Gespeicherte Rechnungsadresse</h5>
+            <button
+              type="button"
+              @click="isEditingBillingAddress = true"
+              class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Bearbeiten
+            </button>
+          </div>
+          
+          <div class="text-sm text-gray-700 space-y-1">
+            <div v-if="studentBillingAddress.company_name" class="font-medium">
+              {{ studentBillingAddress.company_name }}
+            </div>
+            <div>{{ studentBillingAddress.contact_person }}</div>
+            <div>{{ studentBillingAddress.street }} {{ studentBillingAddress.street_number }}</div>
+            <div>{{ studentBillingAddress.zip }} {{ studentBillingAddress.city }}</div>
+            <div v-if="studentBillingAddress.country">{{ studentBillingAddress.country }}</div>
+            <div class="pt-1 border-t border-green-200 mt-2">
+              <div>📧 {{ studentBillingAddress.email }}</div>
+              <div v-if="studentBillingAddress.phone">📞 {{ studentBillingAddress.phone }}</div>
+            </div>
+            <div v-if="studentBillingAddress.vat_number" class="text-xs text-gray-600 pt-1">
+              MWST-Nr: {{ studentBillingAddress.vat_number }}
+            </div>
+          </div>
+        </div>
+
         <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
         <div v-if="shouldShowBillingAddressForm" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
               <h5 class="text-sm font-medium text-gray-700">Rechnungsadresse</h5>
+              
+              <!-- Abbrechen Button wenn im Bearbeiten-Modus -->
+              <button
+                v-if="isEditingBillingAddress"
+                type="button"
+                @click="isEditingBillingAddress = false"
+                class="text-xs px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                Abbrechen
+              </button>
               
               <!-- Toggle: Gleich wie Kundenadresse (mobil unterhalb, desktop rechts) -->
               <div class="flex items-center space-x-2">
@@ -725,6 +760,14 @@ const invoiceData = ref({
 
 const isSavingInvoice = ref(false)
 const invoiceSaveMessage = ref<{ type: 'success' | 'error', text: string } | null>(null)
+
+// Watch: Load billing address when invoice is selected
+watch(selectedPaymentMethod, async (newMethod) => {
+  if (newMethod === 'invoice' && props.studentId && !studentBillingAddress.value) {
+    logger.debug('💳 Invoice selected - loading billing address for student:', props.studentId)
+    await loadStudentBillingAddress(props.studentId)
+  }
+})
 
 // Lifecycle
 onMounted(async () => {
@@ -1509,16 +1552,24 @@ const showExistingPaymentInfo = computed(() => {
 const shouldShowBillingAddressForm = computed(() => {
   const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
   const hasPaymentSelection = showPaymentSelection.value
+  const hasNoSavedAddress = !studentBillingAddress.value
+  const isEditing = isEditingBillingAddress.value
   
-  // Formular soll IMMER angezeigt werden wenn Rechnung ausgewählt ist
-  const result = isInvoiceSelected && hasPaymentSelection
+  // Formular soll NUR angezeigt werden wenn:
+  // 1. Rechnung ausgewählt ist UND
+  // 2. (Keine gespeicherte Adresse vorhanden ODER explizit im Bearbeiten-Modus)
+  // WICHTIG: Wenn gespeicherte Adresse vorhanden ist und NICHT bearbeitet wird, zeige NUR die Anzeige!
+  const result = isInvoiceSelected && hasPaymentSelection && (hasNoSavedAddress || isEditing)
   
   logger.debug('📝 shouldShowBillingAddressForm check:', {
     isInvoiceSelected,
     hasPaymentSelection,
+    hasNoSavedAddress,
+    hasSavedAddress: !!studentBillingAddress.value,
+    isEditing,
     result
   })
-  
+
   return result
 })
 

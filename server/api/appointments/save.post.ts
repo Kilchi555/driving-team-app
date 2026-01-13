@@ -296,13 +296,88 @@ export default defineEventHandler(async (event) => {
             logger.debug('✅ Payment created for appointment:', paymentResult.id)
             result.payment_id = paymentResult.id
             
-            // ✅ NEW: Create pendency if invoice payment without address
+            // ✅ NEW: Save invoice address to company_billing_address if provided
+            if (paymentMethodForPayment === 'invoice' && body.invoiceAddressForPayment) {
+              const invoiceAddr = body.invoiceAddressForPayment
+              
+              // Check if address has required fields
+              const hasRequiredFields = invoiceAddr.contact_person && 
+                invoiceAddr.email && 
+                invoiceAddr.street && 
+                invoiceAddr.street_number && 
+                invoiceAddr.zip && 
+                invoiceAddr.city
+              
+              if (hasRequiredFields) {
+                logger.debug('💾 Saving invoice address to company_billing_address')
+                
+                const { data: addressData, error: addressError } = await supabase
+                  .from('company_billing_address')
+                  .insert({
+                    user_id: result.user_id,
+                    tenant_id: appointmentData.tenant_id,
+                    company_name: invoiceAddr.company_name || '',
+                    contact_person: invoiceAddr.contact_person,
+                    email: invoiceAddr.email,
+                    phone: invoiceAddr.phone || '',
+                    street: invoiceAddr.street,
+                    street_number: invoiceAddr.street_number,
+                    zip: invoiceAddr.zip,
+                    city: invoiceAddr.city,
+                    country: invoiceAddr.country || 'Schweiz',
+                    vat_number: invoiceAddr.vat_number || '',
+                    company_register_number: invoiceAddr.company_register_number || '',
+                    notes: invoiceAddr.notes || '',
+                    is_active: true,
+                    is_verified: false,
+                    created_by: result.staff_id
+                  })
+                  .select()
+                  .single()
+                
+                if (addressError) {
+                  logger.warn('⚠️ Failed to save invoice address to company_billing_address:', addressError)
+                } else {
+                  logger.debug('✅ Invoice address saved to company_billing_address:', addressData.id)
+                  
+                  // Update payment with company_billing_address_id
+                  const { error: updateError } = await supabase
+                    .from('payments')
+                    .update({
+                      company_billing_address_id: addressData.id
+                    })
+                    .eq('id', paymentResult.id)
+                  
+                  if (updateError) {
+                    logger.warn('⚠️ Failed to update payment with company_billing_address_id:', updateError)
+                  } else {
+                    logger.debug('✅ Payment updated with company_billing_address_id')
+                  }
+                }
+              }
+            }
+            
+            // ✅ Create pendency if invoice payment without address
+            logger.debug('🔍 Checking pendency conditions:', {
+              paymentMethod: paymentMethodForPayment,
+              hasInvoiceAddressBody: !!body.invoiceAddressForPayment,
+              hasInvoiceAddressPayment: !!paymentData.invoice_address
+            })
+            
             if (paymentMethodForPayment === 'invoice') {
               const invoiceAddr = body.invoiceAddressForPayment || paymentData.invoice_address
               const hasInvoiceAddress = invoiceAddr && 
                 typeof invoiceAddr === 'object' && 
                 Object.keys(invoiceAddr).length > 0 &&
-                invoiceAddr.company_name
+                (invoiceAddr.company_name || invoiceAddr.street || invoiceAddr.zip || invoiceAddr.city)
+              
+              logger.debug('🔍 Invoice address check:', {
+                hasAddress: !!invoiceAddr,
+                isObject: typeof invoiceAddr === 'object',
+                keysLength: invoiceAddr ? Object.keys(invoiceAddr).length : 0,
+                companyName: invoiceAddr?.company_name,
+                finalDecision: hasInvoiceAddress
+              })
               
               if (!hasInvoiceAddress) {
                 logger.debug('📋 Creating pendency for missing invoice address')
@@ -327,13 +402,12 @@ export default defineEventHandler(async (event) => {
                     description: `${studentName} benötigt eine Rechnungsadresse`,
                     status: 'pendent',
                     priority: 'hoch',
-                    type: 'sonstiges',
+                    category: 'sonstiges', // Changed from 'type' to 'category'
                     due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
                     assigned_to: result.staff_id,
-                    assigned_to_type: 'keine',
-                    tags: ['billing', 'invoice', 'missing-address'],
-                    linked_resources: [],
-                    metadata: `Appointment ID: ${result.id}\nPayment ID: ${paymentResult.id}\nCustomer: ${studentName}`,
+                    recurrence_type: 'keine', // Changed from 'assigned_to_type'
+                    tags: JSON.stringify(['billing', 'invoice', 'missing-address']), // Convert to JSON string
+                    notes: `Appointment ID: ${result.id}\nPayment ID: ${paymentResult.id}\nCustomer: ${studentName}`, // Changed from 'metadata'
                     created_by: result.staff_id
                   })
                 
