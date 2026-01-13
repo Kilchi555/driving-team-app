@@ -375,6 +375,42 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
+    // ============ LAYER 11.1: TOKEN LOOKUP ============
+    // Check if customer already has a stored payment token
+    const customerId = `customer-${userData.id}` // Consistent customer ID format
+    let existingTokenId: number | null = null
+
+    try {
+      const tokenService = new Wallee.api.TokenService(config)
+      const tokenSearchResult = await tokenService.search(spaceId, {
+        filter: {
+          fieldName: 'customerId',
+          value: customerId,
+          operator: Wallee.model.CriteriaOperator.EQUALS
+        }
+      })
+
+      const tokens = tokenSearchResult?.body || []
+      // Filter for active tokens only
+      const activeTokens = tokens.filter((t: any) => t.state === 'ACTIVE')
+      
+      if (activeTokens.length > 0) {
+        // Use the most recent active token
+        existingTokenId = activeTokens[0].id
+        logger.debug('✅ Found existing token for customer:', {
+          customerId,
+          tokenId: existingTokenId,
+          totalTokens: tokens.length,
+          activeTokens: activeTokens.length
+        })
+      } else {
+        logger.debug('ℹ️ No existing token found for customer:', customerId)
+      }
+    } catch (tokenError: any) {
+      logger.warn('⚠️ Token lookup failed (will create new):', tokenError.message)
+      // Continue without token - will create new one
+    }
+
     // ✅ Use FINAL amount (after credit deduction) for Wallee transaction
     const walleeAmount = finalAmountToPay
 
@@ -387,7 +423,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       wallee_amount_chf: (walleeAmount / 100).toFixed(2),
       orderId: body.orderId,
       paymentId: body.paymentId,
-      spaceId: spaceId
+      spaceId: spaceId,
+      existingTokenId: existingTokenId
     })
 
     // Create line items for Wallee (remaining amount after credit)
@@ -412,7 +449,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     logger.debug('📋 Generated merchant reference:', merchantReference)
 
-    // Create transaction (let Wallee show ALL available payment methods)
+    // Create transaction - use existing token OR enable tokenization for new customers
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: lineItems,
       spaceViewId: null,
@@ -420,14 +457,22 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: userData.email,
-      // customerId removed temporarily - was blocking payment methods
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantReference,
-      // tokenizationMode removed - not needed without customerId
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
-      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
+      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`,
+      // TOKEN LOGIC:
+      // - If existing token: use it directly (faster checkout)
+      // - If no token: set customerId + ALLOW mode to create new token
+      ...(existingTokenId 
+        ? { token: existingTokenId } // Use existing token
+        : { 
+            customerId: customerId, // Set for new token creation
+            tokenizationMode: Wallee.model.TokenizationMode.ALLOW // Allow (not force) token creation
+          }
+      )
     }
 
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)
