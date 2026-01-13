@@ -61,9 +61,10 @@
               v-model="newPassword"
               type="password"
               required
+              minlength="12"
               @input="onPasswordChange"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Mindestens 8 Zeichen"
+              placeholder="Mindestens 12 Zeichen"
             />
             <div class="mt-2 text-xs">
               <p class="font-medium mb-2 text-gray-700">Passwort-Anforderungen:</p>
@@ -72,7 +73,7 @@
                   <span v-if="passwordChecks.length" class="text-green-600 font-bold">✓</span>
                   <span v-else class="text-red-500 font-bold">✗</span>
                   <span :class="passwordChecks.length ? 'text-green-600 font-medium' : 'text-red-500'">
-                    Mindestens 8 Zeichen
+                    Mindestens 12 Zeichen
                   </span>
                 </li>
                 <li class="flex items-center gap-2">
@@ -91,13 +92,13 @@
                 </li>
                 <li class="flex items-center gap-2">
                   <span v-if="isCheckingCompromise" class="text-gray-400">⟳</span>
-                  <span v-else-if="newPassword.length >= 8 && !isCompromised" class="text-green-600 font-bold">✓</span>
+                  <span v-else-if="newPassword.length >= 12 && !isCompromised" class="text-green-600 font-bold">✓</span>
                   <span v-else-if="isCompromised" class="text-red-500 font-bold">✗</span>
                   <span v-else class="text-gray-400 font-bold">○</span>
                   <span :class="{
-                    'text-green-600 font-medium': newPassword.length >= 8 && !isCompromised,
+                    'text-green-600 font-medium': newPassword.length >= 12 && !isCompromised,
                     'text-red-500': isCompromised,
-                    'text-gray-400': newPassword.length < 8 && !isCompromised
+                    'text-gray-400': newPassword.length < 12 && !isCompromised
                   }">
                     <span v-if="isCheckingCompromise">Prüfe Sicherheit...</span>
                     <span v-else-if="isCompromised">Passwort wurde {{ compromiseCount.toLocaleString() }}x gestohlen</span>
@@ -190,7 +191,7 @@ const personalInfoError = ref('')
 
 // Computed
 const passwordChecks = computed(() => ({
-  length: newPassword.value.length >= 8,
+  length: newPassword.value.length >= 12,
   uppercase: /[A-Z]/.test(newPassword.value),
   number: /[0-9]/.test(newPassword.value)
 }))
@@ -219,7 +220,7 @@ const canSubmit = computed(() => {
 
 // Debounced compromise check
 const checkCompromiseDebounced = debounce(async () => {
-  if (newPassword.value.length < 8) {
+  if (newPassword.value.length < 12) {
     isCompromised.value = false
     compromiseCount.value = 0
     return
