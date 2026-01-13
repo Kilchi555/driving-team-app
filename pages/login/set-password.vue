@@ -66,6 +66,7 @@
               type="password"
               required
               minlength="8"
+              @input="onPasswordChange"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Mindestens 8 Zeichen"
             />
@@ -118,6 +119,32 @@
                   Passwörter stimmen überein
                 </span>
               </li>
+              <li class="flex items-center gap-2">
+                <span v-if="isCheckingCompromise" class="text-gray-400">⟳</span>
+                <span v-else-if="password.length >= 8 && !isCompromised" class="text-green-600 font-bold">✓</span>
+                <span v-else-if="isCompromised" class="text-red-500 font-bold">✗</span>
+                <span v-else class="text-gray-400 font-bold">○</span>
+                <span :class="{
+                  'text-green-600 font-medium': password.length >= 8 && !isCompromised,
+                  'text-red-500': isCompromised,
+                  'text-gray-400': password.length < 8 && !isCompromised
+                }">
+                  <span v-if="isCheckingCompromise">Prüfe Sicherheit...</span>
+                  <span v-else-if="isCompromised">Passwort wurde {{ compromiseCount.toLocaleString() }}x gestohlen</span>
+                  <span v-else>Nicht in Datenlecks gefunden</span>
+                </span>
+              </li>
+              <li v-if="!personalInfoError" class="flex items-center gap-2">
+                <span v-if="password.length >= 3" class="text-green-600 font-bold">✓</span>
+                <span v-else class="text-gray-400 font-bold">○</span>
+                <span :class="password.length >= 3 ? 'text-green-600 font-medium' : 'text-gray-400'">
+                  Keine persönlichen Daten
+                </span>
+              </li>
+              <li v-else class="flex items-center gap-2">
+                <span class="text-red-500 font-bold">✗</span>
+                <span class="text-red-500">{{ personalInfoError }}</span>
+              </li>
             </ul>
           </div>
 
@@ -153,6 +180,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { checkPasswordCompromised, checkPasswordPersonalInfo, debounce } from '~/utils/passwordSecurity'
+import { logger } from '~/utils/logger'
 
 const route = useRoute()
 const supabase = getSupabase()
@@ -165,6 +194,10 @@ const error = ref('')
 const isSuccess = ref(false)
 const userInfo = ref<any>(null)
 const tenantSlug = ref('')
+const isCheckingCompromise = ref(false)
+const isCompromised = ref(false)
+const compromiseCount = ref(0)
+const personalInfoError = ref('')
 
 // Computed
 const hasUppercase = computed(() => /[A-Z]/.test(password.value))
@@ -175,8 +208,52 @@ const isValidPassword = computed(() => {
   return password.value.length >= 8 && 
          hasUppercase.value && 
          hasNumber.value && 
-         passwordsMatch.value
+         passwordsMatch.value &&
+         !isCompromised.value &&
+         !personalInfoError.value
 })
+
+// Debounced compromise check
+const checkCompromiseDebounced = debounce(async () => {
+  if (password.value.length < 8) {
+    isCompromised.value = false
+    compromiseCount.value = 0
+    return
+  }
+
+  isCheckingCompromise.value = true
+  const result = await checkPasswordCompromised(password.value)
+  isCheckingCompromise.value = false
+  
+  isCompromised.value = result.isCompromised
+  compromiseCount.value = result.count
+  
+  if (result.error) {
+    logger.warn('⚠️ Could not check password compromise:', result.error)
+  }
+}, 800)
+
+// Check personal info
+const checkPersonalInfo = () => {
+  if (password.value.length < 3) {
+    personalInfoError.value = ''
+    return
+  }
+
+  const result = checkPasswordPersonalInfo(password.value, {
+    email: userInfo.value?.email,
+    firstName: userInfo.value?.first_name,
+    lastName: userInfo.value?.last_name
+  })
+
+  personalInfoError.value = result.isValid ? '' : (result.reason || '')
+}
+
+// Watch password changes
+const onPasswordChange = () => {
+  checkPersonalInfo()
+  checkCompromiseDebounced()
+}
 
 // Methods
 const setPassword = async () => {

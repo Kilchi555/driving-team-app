@@ -104,6 +104,7 @@
                   minlength="12"
                   autocomplete="new-password"
                   name="new-password-field"
+                  @input="onPasswordChange"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
                 >
@@ -119,6 +120,7 @@
                   required
                   autocomplete="new-password"
                   name="confirm-password-field"
+                  @input="checkPersonalInfo"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
                 >
@@ -155,6 +157,32 @@
                     <span :class="passwordsMatch && form.password.length > 0 ? 'text-green-600 font-medium' : 'text-red-500'">
                       Passwörter stimmen überein
                     </span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span v-if="isCheckingCompromise" class="text-gray-400">⟳</span>
+                    <span v-else-if="form.password.length >= 12 && !isCompromised" class="text-green-600 font-bold">✓</span>
+                    <span v-else-if="isCompromised" class="text-red-500 font-bold">✗</span>
+                    <span v-else class="text-gray-400 font-bold">○</span>
+                    <span :class="{
+                      'text-green-600 font-medium': form.password.length >= 12 && !isCompromised,
+                      'text-red-500': isCompromised,
+                      'text-gray-400': form.password.length < 12 && !isCompromised
+                    }">
+                      <span v-if="isCheckingCompromise">Prüfe Sicherheit...</span>
+                      <span v-else-if="isCompromised">Passwort wurde {{ compromiseCount.toLocaleString() }}x gestohlen</span>
+                      <span v-else>Nicht in Datenlecks gefunden</span>
+                    </span>
+                  </li>
+                  <li v-if="!personalInfoError" class="flex items-center gap-2">
+                    <span v-if="form.password.length >= 3" class="text-green-600 font-bold">✓</span>
+                    <span v-else class="text-gray-400 font-bold">○</span>
+                    <span :class="form.password.length >= 3 ? 'text-green-600 font-medium' : 'text-gray-400'">
+                      Keine persönlichen Daten
+                    </span>
+                  </li>
+                  <li v-else class="flex items-center gap-2">
+                    <span class="text-red-500 font-bold">✗</span>
+                    <span class="text-red-500">{{ personalInfoError }}</span>
                   </li>
                 </ul>
               </div>
@@ -685,6 +713,7 @@ import { useRoute, navigateTo, useFetch } from '#app'
 import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
+import { checkPasswordCompromised, checkPasswordPersonalInfo, debounce } from '~/utils/passwordSecurity'
 
 const route = useRoute()
 const token = route.params.token as string
@@ -706,11 +735,17 @@ const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.
 const hasUppercase = computed(() => /[A-Z]/.test(form.password))
 const hasNumber = computed(() => /\d/.test(form.password))
 const passwordsMatch = computed(() => form.password === form.confirmPassword && form.password.length > 0)
+const isCheckingCompromise = ref(false)
+const isCompromised = ref(false)
+const compromiseCount = ref(0)
+const personalInfoError = ref('')
 const isPasswordValid = computed(() => {
   return form.password.length >= 12 && 
          hasUppercase.value && 
          hasNumber.value && 
-         passwordsMatch.value
+         passwordsMatch.value &&
+         !isCompromised.value &&
+         !personalInfoError.value
 })
 const categoryError = ref('')
 
@@ -767,6 +802,48 @@ function normalizePhoneNumber() {
   
   form.phone = phone
   validatePhone()
+}
+
+// Debounced compromise check
+const checkCompromiseDebounced = debounce(async () => {
+  if (form.password.length < 12) {
+    isCompromised.value = false
+    compromiseCount.value = 0
+    return
+  }
+
+  isCheckingCompromise.value = true
+  const result = await checkPasswordCompromised(form.password)
+  isCheckingCompromise.value = false
+  
+  isCompromised.value = result.isCompromised
+  compromiseCount.value = result.count
+  
+  if (result.error) {
+    logger.warn('⚠️ Could not check password compromise:', result.error)
+  }
+}, 800)
+
+// Check personal info
+const checkPersonalInfo = () => {
+  if (form.password.length < 3) {
+    personalInfoError.value = ''
+    return
+  }
+
+  const result = checkPasswordPersonalInfo(form.password, {
+    email: form.email || userData.value?.email,
+    firstName: form.firstName || userData.value?.first_name,
+    lastName: form.lastName || userData.value?.last_name
+  })
+
+  personalInfoError.value = result.isValid ? '' : (result.reason || '')
+}
+
+// Watch password changes
+const onPasswordChange = () => {
+  checkPersonalInfo()
+  checkCompromiseDebounced()
 }
 
 // Validate email format
