@@ -774,245 +774,70 @@ const supabase = getSupabase()
 // NEW: Fetch pre-computed availability slots from secure API
 const fetchAvailableSlotsForCombination = async () => {
   try {
-    if (timeSlots.length === 0) return []
-    
-    // Get date range for all slots (extend range to catch timezone differences)
-    const minDate = new Date(Math.min(...timeSlots.map(slot => slot.startTime.getTime())))
-    const maxDate = new Date(Math.max(...timeSlots.map(slot => slot.endTime.getTime())))
-    
-    // Extend range by 24 hours to catch timezone differences
-    minDate.setDate(minDate.getDate() - 1)
-    maxDate.setDate(maxDate.getDate() + 1)
-    
-    logger.debug('🔍 Batch checking availability for staff:', staffId, 'from', minDate.toISOString(), 'to', maxDate.toISOString())
-    
-    // Load all appointments for this staff in the extended date range
-    // Include ALL statuses except those that are logically deleted
-    // Need to check for any overlap: start <= maxDate AND end >= minDate
-    const { data: appointments, error: dbError } = await supabase
-      .from('appointments')
-      .select('id, start_time, end_time, title, status')
-      .eq('staff_id', staffId)
-      .not('status', 'eq', 'deleted')
-      .is('deleted_at', null)
-      .lte('start_time', maxDate.toISOString())  // Appointment starts before or at maxDate
-      .gte('end_time', minDate.toISOString())    // Appointment ends after or at minDate
-    
-    if (dbError) {
-      console.error('❌ Error checking batch availability:', dbError)
-      return timeSlots.map(() => true) // Assume available on error
+    if (!selectedStaff.value || !selectedCategory.value) {
+      logger.debug('⚠️ No staff or category selected yet')
+      return []
     }
     
-    logger.debug('📊 Appointments loaded for batch check (FULL):', appointments?.map(a => ({
-      id: a.id.substring(0, 8),
-      start_time: a.start_time,
-      end_time: a.end_time,
-      status: a.status,
-      title: a.title
-    })) || [])
+    // Get date range for next 30 days
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 30)
     
-    // Load working hours for this staff
-    const { data: workingHours, error: whError } = await supabase
-      .from('staff_working_hours')
-      .select('day_of_week, start_time, end_time, is_active')
-      .eq('staff_id', staffId)
-      .eq('is_active', true)
-    
-    if (whError) {
-      console.error('❌ Error loading working hours:', whError)
-    }
-    
-    // Load availability data for this staff via backend API
-    // This bypasses RLS and allows public access (backend validates tenant_id)
-    let externalBusyTimes: any[] = []
-    let workingHoursFromAPI: any[] = []
-    let appointmentsFromAPI: any[] = []
-    
-    try {
-      const response = await fetch('/api/booking/get-availability-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: currentTenant.value?.id,
-          staff_id: staffId,
-          start_date: minDate.toISOString(),
-          end_date: maxDate.toISOString(),
-          include_working_hours: true,
-          include_busy_times: true,
-          include_appointments: true
-        })
-      })
-      const data = await response.json()
-      if (data.success) {
-        externalBusyTimes = data.external_busy_times || []
-        workingHoursFromAPI = data.working_hours || []
-        appointmentsFromAPI = data.appointments || []
-        logger.debug('✅ Fetched availability data via API:', {
-          external_busy_times: externalBusyTimes.length,
-          working_hours: workingHoursFromAPI.length,
-          appointments: appointmentsFromAPI.length
-        })
-      } else {
-        console.warn('⚠️ Error fetching availability data:', data.message)
-      }
-    } catch (err) {
-      console.error('❌ Error calling get-availability-data API:', err)
-    }
-    
-    // Use API data if available, otherwise use direct queries
-    const finalWorkingHours = (workingHoursFromAPI && workingHoursFromAPI.length > 0) ? workingHoursFromAPI : (workingHours || [])
-    const finalAppointments = (appointmentsFromAPI && appointmentsFromAPI.length > 0) ? appointmentsFromAPI : (appointments || [])
-    
-    logger.debug('📅 Found', finalAppointments.length, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', finalWorkingHours.length, 'working hours')
-    
-    // Check each slot against appointments and working hours
-    const availabilityResults = timeSlots.map(slot => {
-      // Check if slot is within working hours
-      const dayOfWeek = slot.startTime.getDay() // 0=Sunday, 1=Monday, etc.
-      const slotHour = slot.startTime.getHours()
-      const slotMinute = slot.startTime.getMinutes()
-      const slotTimeMinutes = slotHour * 60 + slotMinute
-      
-      // Find working hours for this day
-      const dayWorkingHours = finalWorkingHours.find((wh: any) => wh.day_of_week === dayOfWeek)
-      
-      if (!dayWorkingHours) {
-        logger.debug('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slot.startTime.toLocaleDateString('de-DE'))
-        return false // Not available if no working hours defined
-      }
-      
-      // Parse working hours (format: "HH:MM")
-      const [startHour, startMinute] = dayWorkingHours.start_time.split(':').map(Number)
-      const [endHour, endMinute] = dayWorkingHours.end_time.split(':').map(Number)
-      const startTimeMinutes = startHour * 60 + startMinute
-      const endTimeMinutes = endHour * 60 + endMinute
-      
-      // Check if slot is within working hours
-      // Allow slot if it starts during working hours (includes end time boundary)
-      const withinWorkingHours = slotTimeMinutes >= startTimeMinutes && slotTimeMinutes <= endTimeMinutes
-      
-      // Debug 18:00 slot
-      if (slot.startTime.getHours() === 17 && slot.startTime.getMinutes() === 0) {
-        logger.debug('🔍 DEBUG 17:00 UTC (18:00 CET) working hours check:', {
-          slotHour: slot.startTime.getHours(),
-          slotTimeMinutes,
-          startTimeMinutes,
-          endTimeMinutes,
-          withinWorkingHours,
-          workingHours: `${dayWorkingHours.start_time} - ${dayWorkingHours.end_time}`
-        })
-      }
-      
-      if (!withinWorkingHours) {
-        logger.debug('🚫 Slot outside working hours:', {
-          slot: slot.startTime.toLocaleString('de-DE'),
-          workingHours: `${dayWorkingHours.start_time} - ${dayWorkingHours.end_time}`,
-          dayOfWeek: dayOfWeek,
-          slotTimeMinutes,
-          startTimeMinutes,
-          endTimeMinutes
-        })
-        return false
-      }
-      
-      // Check for conflicts with any appointment OR external busy time
-      const hasConflict = (finalAppointments.some(apt => {
-        // Parse appointment times - DB may return in ISO format (2025-11-20T08:00:00+00:00) or space format (2025-11-20 08:00:00+00)
-        let aptStartISO = apt.start_time
-        let aptEndISO = apt.end_time
-        
-        // Normalize format: convert space format to ISO if needed
-        if (aptStartISO.includes(' ') && !aptStartISO.includes('T')) {
-          aptStartISO = aptStartISO.replace(' ', 'T')
-        }
-        if (aptEndISO.includes(' ') && !aptEndISO.includes('T')) {
-          aptEndISO = aptEndISO.replace(' ', 'T')
-        }
-        // Ensure timezone suffix is properly formatted
-        if (!aptStartISO.includes('+') && !aptStartISO.includes('Z')) {
-          aptStartISO += '+00:00'
-        }
-        if (!aptEndISO.includes('+') && !aptEndISO.includes('Z')) {
-          aptEndISO += '+00:00'
-        }
-        
-        const aptStartDate = new Date(aptStartISO)
-        const aptEndDate = new Date(aptEndISO)
-        
-        // Check for time overlap: slot starts before appointment ends AND slot ends after appointment starts
-        const overlaps = slot.startTime < aptEndDate && slot.endTime > aptStartDate
-        
-        if (overlaps) {
-          logger.debug('⚠️ Time conflict detected (appointment):', {
-            slot: `${slot.startTime.toLocaleString('de-DE')} - ${slot.endTime.toLocaleString('de-DE')}`,
-            appointment: `${aptStartDate.toLocaleString('de-DE')} - ${aptEndDate.toLocaleString('de-DE')}`,
-            appointmentTitle: apt.title,
-            slotISO: `${slot.startTime.toISOString()} - ${slot.endTime.toISOString()}`,
-            appointmentISO: `${apt.start_time} - ${apt.end_time}`
-          })
-        }
-        
-        return overlaps
-      }) || false) || (externalBusyTimes?.some(ebt => {
-        // Parse external busy time - now stored as UTC (same as appointments)
-        // Format: "2025-11-20 12:00:00+00" (space format with UTC indicator)
-        let ebtStartStr = ebt.start_time
-        let ebtEndStr = ebt.end_time
-        
-        // Normalize format: convert space format to ISO if needed
-        if (ebtStartStr.includes(' ') && !ebtStartStr.includes('T')) {
-          ebtStartStr = ebtStartStr.replace(' ', 'T')
-        }
-        if (ebtEndStr.includes(' ') && !ebtEndStr.includes('T')) {
-          ebtEndStr = ebtEndStr.replace(' ', 'T')
-        }
-        // Ensure timezone suffix is properly formatted
-        if (ebtStartStr.includes('+00') && !ebtStartStr.includes('+00:00')) {
-          ebtStartStr = ebtStartStr.replace('+00', '+00:00')
-        }
-        if (ebtEndStr.includes('+00') && !ebtEndStr.includes('+00:00')) {
-          ebtEndStr = ebtEndStr.replace('+00', '+00:00')
-        }
-        if (!ebtStartStr.includes('+') && !ebtStartStr.includes('Z')) {
-          ebtStartStr += '+00:00'
-        }
-        if (!ebtEndStr.includes('+') && !ebtEndStr.includes('Z')) {
-          ebtEndStr += '+00:00'
-        }
-        
-        const ebtStartDate = new Date(ebtStartStr)
-        const ebtEndDate = new Date(ebtEndStr)
-        
-        // Check for time overlap: slot starts before external busy time ends AND slot ends after external busy time starts
-        const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
-        
-        if (overlaps) {
-          logger.debug('⚠️ Time conflict detected (external busy time):', {
-            slot: `${slot.startTime.toLocaleString('de-DE')} - ${slot.endTime.toLocaleString('de-DE')}`,
-            externalBusyTime: `${ebtStartDate.toLocaleString('de-DE')} - ${ebtEndDate.toLocaleString('de-DE')}`,
-            eventTitle: ebt.event_title,
-            syncSource: ebt.sync_source,
-            slotISO: `${slot.startTime.toISOString()} - ${slot.endTime.toISOString()}`,
-            externalBusyTimeISO: `${ebtStartStr} - ${ebtEndStr}`
-          })
-        }
-        
-        return overlaps
-      }) || false)
-      
-      return !hasConflict
+    logger.debug('🔍 Fetching pre-computed slots from API:', {
+      tenantId,
+      staffId: selectedStaff.value.id,
+      categoryCode: selectedCategory.value.code,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     })
     
-    const availableCount = availabilityResults.filter(result => result).length
-    const conflictCount = availabilityResults.filter(result => !result).length
-    logger.debug('✅ Batch availability check complete:', availableCount, 'available,', conflictCount, 'conflicts out of', timeSlots.length, 'total slots')
+    // ✅ Use secure API instead of 22 direct DB queries
+    const response = await $fetch<{ success: boolean; slots?: any[] }>('/api/booking/get-available-slots', {
+      method: 'GET',
+      query: {
+        tenant_id: tenantId,
+        staff_id: selectedStaff.value.id,
+        category_code: selectedCategory.value.code,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        location_id: selectedLocation.value?.id || undefined
+      }
+    })
     
-    return availabilityResults
-  } catch (err) {
-    console.error('❌ Error in checkBatchAvailability:', err)
-    return timeSlots.map(() => true) // Assume available on error
+    if (!response?.success || !response?.slots) {
+      logger.warn('⚠️ No slots returned from API')
+      return []
+    }
+    
+    const apiSlots = response.slots
+    logger.debug(`✅ API returned ${apiSlots.length} pre-computed slots`)
+    
+    // Convert API slots to old format for UI compatibility
+    const convertedSlots = apiSlots.map((slot: any) => ({
+      id: slot.id,
+      startTime: new Date(slot.start_time),
+      endTime: new Date(slot.end_time),
+      duration: slot.duration_minutes,
+      staff_id: slot.staff_id,
+      staff_name: slot.staff_name,
+      location_id: slot.location_id,
+      location_name: slot.location_name,
+      category_code: slot.category_code,
+      is_available: true // API only returns available slots
+    }))
+    
+    logger.debug(`✅ Converted ${convertedSlots.length} slots for UI display`)
+    return convertedSlots
+    
+  } catch (error: any) {
+    console.error('❌ Error fetching availability slots from API:', error)
+    return []
   }
 }
+
+// ❌ REMOVED: Old batch availability check (200+ lines of direct DB queries)
+// Now replaced by fetchAvailableSlotsForCombination which calls secure backend API
 
 // State
 const categories = ref<any[]>([])
@@ -1832,11 +1657,6 @@ const generateTimeSlotsForSpecificCombination = async () => {
     
     logger.debug('🔄 Fetching available slots via secure API...')
     
-    // Calculate date range (next 4 weeks, matching old behavior)
-    const startDate = new Date()
-    const endDate = new Date()
-    endDate.setDate(endDate.getDate() + 28) // 4 weeks
-    
     // Validate required filters
     if (!selectedInstructor.value?.id || !selectedLocation.value?.id || !selectedCategory.value?.code) {
       error.value = 'Bitte wählen Sie zuerst Kategorie, Dauer, und Standort aus.'
@@ -1844,28 +1664,25 @@ const generateTimeSlotsForSpecificCombination = async () => {
       return
     }
     
-    // Get duration (handle array format from old code)
-    const duration = Array.isArray(filters.value.duration_minutes) 
-      ? filters.value.duration_minutes[0] || 45 
-      : filters.value.duration_minutes || 45
+    // ✅ Use new API function (replaces 22+ direct DB queries)
+    const apiSlots = await fetchAvailableSlotsForCombination()
     
-    // Fetch slots from secure API
-    const slots = await fetchAvailableSlots({
-      tenant_id: tenant.value?.id || '',
-      staff_id: selectedInstructor.value.id,
-      location_id: selectedLocation.value.id,
-      category_code: selectedCategory.value.code,
-      duration_minutes: duration,
-      start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
-      end_date: endDate.toISOString().split('T')[0]
-    })
+    if (!apiSlots || apiSlots.length === 0) {
+      logger.warn('⚠️ No slots returned from API')
+      availableSlotsForCalendar.value = []
+      slotsPerWeek.value = [[], [], [], []]
+      isLoadingTimeSlots.value = false
+      return
+    }
     
-    logger.debug('✅ Fetched', slots.length, 'pre-computed slots from API')
+    logger.debug(`✅ Fetched ${apiSlots.length} pre-computed slots from API`)
+    
+    // Calculate date range for week numbering
+    const startDate = new Date()
     
     // Convert to format expected by UI
-    const timeSlots = slots.map(slot => {
-      const slotStartDate = new Date(slot.start_time)
-      const slotEndDate = new Date(slot.end_time)
+    const timeSlots = apiSlots.map((slot: any) => {
+      const slotStartDate = new Date(slot.startTime)
       
       // Calculate week number (1-4)
       const weeksDiff = Math.floor((slotStartDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000))
@@ -1876,9 +1693,9 @@ const generateTimeSlotsForSpecificCombination = async () => {
         staff_name: slot.staff_name,
         location_id: slot.location_id,
         location_name: slot.location_name,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        duration_minutes: slot.duration_minutes,
+        start_time: slotStartDate.toISOString(),
+        end_time: new Date(slot.endTime).toISOString(),
+        duration_minutes: slot.duration,
         is_available: true, // Already filtered by API
         week_number: Math.max(1, Math.min(4, weeksDiff + 1)),
         day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long' }),
