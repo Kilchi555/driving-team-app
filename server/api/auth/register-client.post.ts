@@ -3,8 +3,18 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
+import { logAudit } from '~/server/utils/audit'
+import {
+  validateRequiredString,
+  validatePassword,
+  validateEmail,
+  validateUUID,
+  sanitizeString,
+  throwValidationError
+} from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
   try {
     // Get client IP for rate limiting
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
@@ -13,17 +23,6 @@ export default defineEventHandler(async (event) => {
                       'unknown'
     
     logger.debug('Register', '🔍 Registration attempt from IP:', ipAddress)
-    
-    // Check rate limit
-    const rateLimit = checkRateLimit(ipAddress)
-    if (!rateLimit.allowed) {
-      console.warn('⚠️ Rate limit exceeded for IP:', ipAddress)
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es in einer Minute erneut.'
-      })
-    }
-    logger.debug('Register', '✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     const body = await readBody(event)
     const {
@@ -44,12 +43,41 @@ export default defineEventHandler(async (event) => {
       captchaToken
     } = body
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !password || !tenantId) {
+    // Check rate limit (after body is read so we have email and tenantId)
+    const rateLimit = await checkRateLimit(ipAddress, 'register', undefined, undefined, email, tenantId)
+    if (!rateLimit.allowed) {
+      console.warn('⚠️ Rate limit exceeded for IP:', ipAddress)
       throw createError({
-        statusCode: 400,
-        statusMessage: 'Erforderliche Felder fehlen'
+        statusCode: 429,
+        statusMessage: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es in einer Minute erneut.'
       })
+    }
+    logger.debug('Register', '✅ Rate limit check passed. Remaining:', rateLimit.remaining)
+
+    // Validate required fields with centralized validators
+    const errors: Record<string, string> = {}
+    
+    const firstNameValidation = validateRequiredString(firstName, 'Vorname', 100)
+    if (!firstNameValidation.valid) errors.firstName = firstNameValidation.error!
+    
+    const lastNameValidation = validateRequiredString(lastName, 'Nachname', 100)
+    if (!lastNameValidation.valid) errors.lastName = lastNameValidation.error!
+    
+    if (!validateEmail(email)) {
+      errors.email = 'Ungültige E-Mail-Adresse'
+    }
+    
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.valid) {
+      errors.password = passwordValidation.message!
+    }
+    
+    if (!tenantId || !validateUUID(tenantId)) {
+      errors.tenantId = 'Ungültige Mandanten-ID'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      throwValidationError(errors)
     }
     
     // Debug: Log categories to verify they're being sent correctly
@@ -67,44 +95,41 @@ export default defineEventHandler(async (event) => {
     }
     logger.debug('Register', '✅ Email validation passed')
 
-    // Verify hCaptcha token
-    if (!captchaToken) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Captcha-Verifikation erforderlich'
-      })
-    }
+    // Verify hCaptcha token (only if provided - adaptive captcha)
+    if (captchaToken) {
+      logger.debug('Register', '🔐 Verifying hCaptcha token...')
+      const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
+      if (!hcaptchaSecret) {
+        console.error('❌ HCAPTCHA_SECRET_KEY not configured')
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Server configuration error'
+        })
+      }
 
-    logger.debug('Register', '🔐 Verifying hCaptcha token...')
-    const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
-    if (!hcaptchaSecret) {
-      console.error('❌ HCAPTCHA_SECRET_KEY not configured')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
+      const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          secret: hcaptchaSecret,
+          response: captchaToken
+        }).toString()
       })
-    }
 
-    const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        secret: hcaptchaSecret,
-        response: captchaToken
-      }).toString()
-    })
-
-    const captchaData = await captchaResponse.json()
-    if (!captchaData.success) {
-      console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      })
+      const captchaData = await captchaResponse.json()
+      if (!captchaData.success) {
+        console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
+        })
+      }
+      logger.debug('Register', '✅ hCaptcha verified successfully')
+    } else {
+      logger.debug('Register', 'ℹ️ No captcha token provided (adaptive captcha - first registration from IP)')
     }
-    logger.debug('Register', '✅ hCaptcha verified successfully')
 
     // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
@@ -122,6 +147,56 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
     const supabase = getSupabase()
 
+    // ✅ Sanitize all string inputs to prevent XSS
+    const sanitizedFirstName = sanitizeString(firstName, 100)
+    const sanitizedLastName = sanitizeString(lastName, 100)
+    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+    const sanitizedStreet = street ? sanitizeString(street, 100) : null
+    const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
+    const sanitizedCity = city ? sanitizeString(city, 100) : null
+    const sanitizedLernfahrausweisNr = lernfahrausweisNr ? sanitizeString(lernfahrausweisNr, 50) : null
+
+    // ============ PRE-CHECK: Duplicate Phone & Email ============
+    // Check BEFORE creating auth user to avoid orphaned auth users
+    
+    // Check for existing email in this tenant
+    const { data: existingEmailUser } = await serviceSupabase
+      .from('users')
+      .select('id, first_name, last_name, is_active, onboarding_status')
+      .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', tenantId)
+      .single()
+    
+    if (existingEmailUser) {
+      logger.warn('⚠️ Duplicate email detected:', email.toLowerCase().trim())
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere E-Mail.',
+        data: { code: 'DUPLICATE_EMAIL' }
+      })
+    }
+    
+    // Check for existing phone in this tenant (if phone provided)
+    if (sanitizedPhone) {
+      const { data: existingPhoneUser } = await serviceSupabase
+        .from('users')
+        .select('id, first_name, last_name, is_active, onboarding_status')
+        .eq('phone', sanitizedPhone)
+        .eq('tenant_id', tenantId)
+        .single()
+      
+      if (existingPhoneUser) {
+        logger.warn('⚠️ Duplicate phone detected:', sanitizedPhone)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere Nummer.',
+          data: { code: 'DUPLICATE_PHONE' }
+        })
+      }
+    }
+    
+    logger.debug('Register', '✅ No duplicate email or phone found - proceeding with registration')
+
     // 1. Create auth user
     logger.debug('Register', '🔐 Creating auth user for:', email)
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
@@ -129,8 +204,8 @@ export default defineEventHandler(async (event) => {
       password: password,
       email_confirm: true,
       user_metadata: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim()
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName
       }
     })
 
@@ -166,16 +241,16 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .update({
           auth_user_id: authData.user.id,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone?.trim() || null,
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
+          phone: sanitizedPhone,
           birthdate: birthDate || null,
-          street: street?.trim() || null,
-          street_nr: streetNr?.trim() || null,
+          street: sanitizedStreet,
+          street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
-          city: city?.trim() || null,
+          city: sanitizedCity,
           category: categoryArray,
-          lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
+          lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
           is_active: true
         })
@@ -203,17 +278,17 @@ export default defineEventHandler(async (event) => {
         .insert({
           auth_user_id: authData.user.id,
           tenant_id: tenantId,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
           email: email.toLowerCase().trim(),
-          phone: phone?.trim() || null,
+          phone: sanitizedPhone,
           birthdate: birthDate || null,
-          street: street?.trim() || null,
-          street_nr: streetNr?.trim() || null,
+          street: sanitizedStreet,
+          street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
-          city: city?.trim() || null,
+          city: sanitizedCity,
           category: categoryArray, // Store as array
-          lernfahrausweis_nr: lernfahrausweisNr?.trim() || null,
+          lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
           is_active: true
         })
@@ -274,6 +349,23 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Email send error:', emailErr.message)
     }
 
+    // 5. Audit logging
+    await logAudit({
+      action: 'user_registration',
+      user_id: userProfile.id,
+      tenant_id: tenantId,
+      resource_type: 'user',
+      resource_id: userProfile.id,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        email: email.toLowerCase().trim(),
+        categories: categoryArray,
+        is_admin: isAdmin,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     return {
       success: true,
       userId: userProfile.id,
@@ -282,6 +374,19 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Registration error:', error)
+
+    // Audit log for failed registration
+    await logAudit({
+      action: 'user_registration',
+      tenant_id: (error as any).tenantId,
+      resource_type: 'user',
+      ip_address: getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown',
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     if (error.statusCode) {
       throw error

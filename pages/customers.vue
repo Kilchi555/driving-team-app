@@ -181,12 +181,10 @@
             <div
               v-for="student in filteredStudents"
               :key="student.id"
-              @click="student.auth_user_id ? selectStudent(student) : showPendingActions(student)"
+              @click="selectStudent(student)"
               :class="[
                 'bg-white rounded-lg shadow-sm border p-3 transition-all',
-                student.auth_user_id 
-                  ? 'cursor-pointer hover:shadow-md active:scale-98 hover:border-green-300' 
-                  : 'cursor-pointer hover:shadow-md hover:border-orange-300 opacity-75'
+                'cursor-pointer hover:shadow-md active:scale-98 hover:border-green-300'
               ]"
             >
 
@@ -239,61 +237,13 @@
                     {{ !student.auth_user_id ? 'Pending' : student.is_active ? 'Aktiv' : 'Inaktiv' }}
                   </span>
                   
-                  <!-- Quick Action Button -->
+                  <!-- Quick Action Button (für alle) -->
                   <button 
-                    v-if="student.auth_user_id"
                     @click.stop="quickAction(student)"
                     class="text-xs text-green-600 hover:text-green-800 font-medium py-1 px-2 rounded hover:bg-green-50 transition-colors"
                   >
                     Details →
                   </button>
-                  <span 
-                    v-else
-                    class="text-xs text-gray-400 font-medium py-1 px-2"
-                  >
-                    Warte auf Aktivierung
-                  </span>
-                </div>
-              </div>
-
-              <!-- Additional Info Row (Mobile) -->
-              <div class="mt-2 pt-2 border-t border-gray-100 sm:hidden">
-                <div class="flex items-center justify-between text-xs text-gray-400">
-                  <!-- Left: Additional info -->
-                  <div class="flex items-center gap-3">
-                    <span>
-                      Fahrlehrer: {{ student.assignedInstructor || '-' }}
-                    </span>
-                    <span>
-                      Lektionen: {{ student.completedLessonsCount || '-' }}
-                    </span>
-
-                  </div>
-                  
-                  <!-- Right: Date -->
-                  <span class="text-xs text-gray-400">
-                    Letzter Termin: {{ student.lastLesson ? formatRelativeDate(student.lastLesson) : '-' }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Desktop: Additional Info Row (hidden on mobile) -->
-              <div class="mt-2 pt-2 border-t border-gray-100 hidden sm:block">
-                <div class="flex items-center justify-between text-xs text-gray-400">
-                  <!-- Left: Additional info -->
-                  <div class="flex items-center gap-3">
-                    <span>
-                      Fahrlehrer: {{ student.assignedInstructor || '-' }}
-                    </span>
-                    <span>
-                      Lektionen: {{ student.completedLessonsCount || '-' }}
-                    </span>
-                  </div>
-                  
-                  <!-- Right: Date -->
-                  <span class="text-xs text-gray-400">
-                    Letzter Termin: {{ student.lastLesson ? formatRelativeDate(student.lastLesson) : '-' }}
-                  </span>
                 </div>
               </div>
             </div>
@@ -302,8 +252,9 @@
 
       </div>
     </div>
+  </div>
 
-    <!-- Enhanced Student Detail Modal -->
+  <!-- Enhanced Student Detail Modal -->
      <EnhancedStudentModal
     :selected-student="selectedStudent"
     :current-user="currentUser"
@@ -312,6 +263,7 @@
     @create-appointment="handleCreateAppointment"
     @evaluate-lesson="handleEvaluateLesson"
     @student-updated="handleStudentUpdated"
+    @open-reminder-modal="handleOpenReminderModal"
   />
 
   <!-- Add Student Modal -->
@@ -381,7 +333,51 @@
       </div>
     </div>
   </div>
+
+  <!-- Success/Error Toast Modal -->
+  <transition name="fade">
+    <div v-if="showToast" class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div 
+        class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 pointer-events-auto"
+        :class="{
+          'border-l-4 border-green-500': toastType === 'success',
+          'border-l-4 border-red-500': toastType === 'error',
+          'border-l-4 border-yellow-500': toastType === 'warning',
+          'border-l-4 border-blue-500': toastType === 'info'
+        }"
+      >
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            <!-- Icon -->
+            <div class="flex-shrink-0 text-2xl">
+              <span v-if="toastType === 'success'">✅</span>
+              <span v-else-if="toastType === 'error'">❌</span>
+              <span v-else-if="toastType === 'warning'">⚠️</span>
+              <span v-else>ℹ️</span>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                {{ toastTitle }}
+              </h3>
+              <p v-if="toastMessage" class="text-sm text-gray-600">
+                {{ toastMessage }}
+              </p>
+            </div>
+
+            <!-- Close Button -->
+            <button
+              @click="() => { clearToastTimeout(); showToast = false }"
+              class="flex-shrink-0 text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+  </transition>
 </template>
 
 <script setup lang="ts">
@@ -420,6 +416,14 @@ const showOnlyNoUpcoming = ref(false)
 const showPendingModal = ref(false)
 const pendingStudent = ref<any>(null)
 const isResendingSms = ref(false)
+const showReminderModal = ref(false)
+const currentReminderAppointment = ref<any>(null)
+
+// Toast state
+const showToast = ref(false)
+const toastType = ref<'success' | 'error' | 'warning' | 'info'>('success')
+const toastTitle = ref('')
+const toastMessage = ref('')
 
 // Computed
 const filteredStudents = computed(() => {
@@ -665,157 +669,33 @@ const loadStudents = async (loadAppointments = true) => {
   error.value = null
   
   try {
-    logger.debug('🔄 Loading students from database...', loadAppointments ? 'with appointments' : 'without appointments')
     logger.debug('Current user role:', currentUser.value.role)
     
-    // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
+    // Get auth token
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
     }
 
-    logger.debug('🔍 Customers page - Current tenant_id:', tenantId)
-    
-    // Base query without appointments for faster loading
-    let baseQuery = `
-      id,
-      created_at,
-      email,
-      first_name,
-      last_name,
-      phone,
-      birthdate,
-      street,
-      street_nr,
-      zip,
-      city,
-      invoice_address,
-      is_active,
-      category,
-      assigned_staff_id,
-      payment_provider_customer_id,
-      auth_user_id,
-      onboarding_status,
-      onboarding_token,
-      onboarding_token_expires,
-      student_credits (
-        id,
-        balance_rappen
-      )
-    `
-    
-    // Only add appointments if specifically requested
-    if (loadAppointments) {
-      baseQuery += `,
-        appointments!user_id (
-          id,
-          start_time,
-          status,
-          type,
-          title
-        )`
-    }
-    
-    let query = supabase
-      .from('users')
-      .select(baseQuery)
-      .eq('role', 'client') // Nur Schüler laden
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('first_name', { ascending: true })
-    
-    // FIX: Lade alle Studenten, unabhängig von is_active
-    // Das ermöglicht es, auch inaktive Pending-Users zu sehen
-    
-    // DEBUG: Teste direkte Query
-    logger.debug('🔍 Testing direct query for all students in tenant...')
-    const { data: testData } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-    
-    logger.debug('🔍 Direct query result:', testData)
-    
-    // DEBUG: Teste mit Service Role (ohne RLS)
-    const { data: testDataNoRLS } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, phone, tenant_id, auth_user_id, is_active, assigned_staff_id, assigned_staff_ids')
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-    
-    logger.debug('🔍 Direct query result (no RLS):', testDataNoRLS)
-    
-    // DEBUG: Teste spezifische Query für Max Mustermann
-    logger.debug('🔍 Searching for Max Mustermann by ID...')
-    const { data: maxQuery, error: maxError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', 'b09e0af1-3ded-44e0-a80e-b52b11e630e1')
-    
-    logger.debug('🔍 Max Mustermann by ID result:', maxQuery)
-    logger.debug('🔍 Max Mustermann by ID error:', maxError)
-    
-    
+    // Use the new backend API endpoint that bypasses RLS
+    const response = await $fetch('/api/admin/get-tenant-users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    }) as any
 
-    // ✅ Filterung basierend auf Benutzerrolle
-    if (currentUser.value.role === 'staff' && !showAllStudents.value) {
-      // Staff sieht alle Schüler des Tenants (nicht nur assigned_staff_id)
-      logger.debug('📚 Loading all students for staff (showing all students in tenant):', currentUser.value.id)
-    } else if (currentUser.value.role === 'admin') {
-      // Admin sieht alle Schüler
-      logger.debug('👑 Loading all students for admin')
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load users from API')
     }
 
-    // ✅ FIX: Lade IMMER alle Studenten des Tenants (aktive und inaktive)
-    // Das ermöglicht es, auch inaktive Pending-Users zu sehen
-    logger.debug('📚 Loading ALL students in tenant (active and inactive)')
-
-    // FIX: Verwende die normale users Tabelle, aber ohne appointments
-    // Das umgeht Schema-Cache-Probleme
-    const { data, error: supabaseError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        created_at,
-        email,
-        first_name,
-        last_name,
-        phone,
-        birthdate,
-        street,
-        street_nr,
-        zip,
-        city,
-        is_active,
-        category,
-        assigned_staff_id,
-        assigned_staff_ids,
-        payment_provider_customer_id,
-        auth_user_id,
-        onboarding_status,
-        onboarding_token,
-        onboarding_token_expires,
-        student_credits (
-          id,
-          balance_rappen
-        )
-      `)
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-      .order('first_name', { ascending: true })
+    logger.debug('✅ Users loaded successfully via API:', response.data.length)
     
-
-    if (supabaseError) {
-      throw new Error(`Database error: ${supabaseError.message}`)
-    }
-
+    // Filter for clients only
+    let data = (response.data as any[]).filter((u: any) => u.role === 'client')
+    
+    logger.debug('📚 Filtered to client users:', data.length)
+    
     if (!data) {
       students.value = []
       logger.debug('ℹ️ No students found')
@@ -867,9 +747,10 @@ const loadStudents = async (loadAppointments = true) => {
       
       // ✅ Filter to only students assigned to current user (single or multiple staff)
       studentsToProcess = studentsToProcess.filter((s: any) => {
-        // Check if current user is in assigned_staff_ids array
-        const assignedIds = s.assigned_staff_ids || []
-        return assignedIds.includes(currentUser.value.id)
+        // Check both assigned_staff_id (single) and assigned_staff_ids (array)
+        const isSingleAssigned = s.assigned_staff_id === currentUser.value.id
+        const isArrayAssigned = (s.assigned_staff_ids || []).includes(currentUser.value.id)
+        return isSingleAssigned || isArrayAssigned
       })
       logger.debug(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
     } else {
@@ -960,11 +841,6 @@ const loadStudents = async (loadAppointments = true) => {
         const lastLesson = studentAppointments
           .filter((apt: any) => !apt.deleted_at)
           .sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
-        
-        logger.debug(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments:`, studentAppointments.length)
-
-        // ✅ Alle Berechnungen verwenden jetzt bereits geladene Daten
-        logger.debug(`🔍 Student ${(student as any).first_name} ${(student as any).last_name} - Appointments loaded:`, studentAppointments.length)
 
         return {
           ...(student as any),
@@ -990,7 +866,7 @@ const loadStudents = async (loadAppointments = true) => {
     logger.debug('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
     // Load billing addresses for students
-    logger.debug('📋 Loading billing addresses for tenantId:', tenantId)
+    logger.debug('📋 Loading billing addresses for students')
     const { data: billingAddresses, error: billingError } = await supabase
       .from('company_billing_addresses')
       .select('id, contact_person, email, phone, street, street_number, zip, city, country')
@@ -1001,26 +877,37 @@ const loadStudents = async (loadAppointments = true) => {
     logger.debug('📋 Billing addresses result:', { billingAddresses, billingError })
 
     // Load billing addresses for students
-    logger.debug('📋 Loading billing addresses')
+    logger.debug('📋 Loading billing addresses for each user')
     const { data: companyBillingAddresses, error: billingAddressError } = await supabase
       .from('company_billing_addresses')
       .select('*')
+      .in('user_id', studentIds)
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(1) // Get the most recent one
 
-    logger.debug('📋 Billing addresses result:', { companyBillingAddresses, billingAddressError })
+    logger.debug('📋 Billing addresses result:', { count: companyBillingAddresses?.length, billingAddressError })
 
     if (!billingAddressError && companyBillingAddresses && companyBillingAddresses.length > 0) {
       logger.debug('📋 Found', companyBillingAddresses.length, 'billing addresses')
-      logger.debug('📋 First address:', companyBillingAddresses[0])
       
-      // Add first billing address to each student as invoice_address - formatted nicely
+      // Group addresses by user_id
+      const addressesByUser: Record<string, any[]> = {}
+      companyBillingAddresses.forEach(addr => {
+        if (!addressesByUser[addr.user_id]) {
+          addressesByUser[addr.user_id] = []
+        }
+        addressesByUser[addr.user_id].push(addr)
+      })
+      
+      // Add billing addresses to each student
       enrichedStudents.forEach((student: any) => {
-        if (companyBillingAddresses.length > 0) {
-          const addr = companyBillingAddresses[0]
+        const userAddresses = addressesByUser[student.id] || []
+        if (userAddresses.length > 0) {
+          const addr = userAddresses[0] // Most recent one for this user
           
           // Format as multi-line address
           const addressLines = [
+            addr.company_name,
             addr.contact_person,
             addr.street && addr.street_number ? `${addr.street} ${addr.street_number}` : addr.street,
             addr.zip && addr.city ? `${addr.zip} ${addr.city}` : (addr.zip || addr.city),
@@ -1029,7 +916,7 @@ const loadStudents = async (loadAppointments = true) => {
           
           student.invoice_address = addressLines.join('\n')
           
-          logger.debug('📋 Added invoice address to student:', student.id, '\n', student.invoice_address)
+          logger.debug('📋 Added invoice address to student:', student.id)
         }
       })
       students.value = enrichedStudents
@@ -1078,32 +965,67 @@ const resendOnboardingSms = async () => {
   isResendingSms.value = true
   
   try {
-    const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
-    const message = `Hallo ${pendingStudent.value.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
-    
-    const result = await sendSms(pendingStudent.value.phone, message)
-    
-    if (result.success) {
-      uiStore.addNotification({
-        type: 'success',
-        title: 'SMS erfolgreich gesendet!',
-        message: `Onboarding-Link wurde an ${formatPhone(pendingStudent.value.phone)} gesendet.`
-      })
-      showPendingModal.value = false
-    } else {
-      uiStore.addNotification({
-        type: 'error',
-        title: 'SMS-Versand fehlgeschlagen',
-        message: result.error || 'Bitte versuchen Sie es erneut oder kopieren Sie den Link manuell.'
-      })
-    }
-  } catch (err: any) {
-    console.error('Error resending SMS:', err)
-    uiStore.addNotification({
-      type: 'error',
-      title: 'Fehler',
-      message: 'SMS konnte nicht gesendet werden.'
+    logger.debug('📧 Sending new onboarding reminder...', {
+      studentId: pendingStudent.value.id,
+      email: pendingStudent.value.email,
+      phone: pendingStudent.value.phone,
+      firstName: pendingStudent.value.first_name
     })
+
+    // ============================================
+    // Call new secure API to send onboarding SMS
+    // ============================================
+    logger.debug('📧 Calling secure API to send onboarding SMS...')
+    
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!pendingStudent.value?.id) {
+      logger.error('❌ Student ID missing!', { pendingStudent: pendingStudent.value })
+      throw new Error('Student ID is missing')
+    }
+    
+    logger.debug('📋 Sending SMS for student:', {
+      studentId: pendingStudent.value.id,
+      firstName: pendingStudent.value.first_name,
+      hasSession: !!session?.access_token
+    })
+    
+    const smsResponse = await $fetch('/api/students/resend-onboarding-sms', {
+      method: 'POST',
+      body: {
+        studentId: pendingStudent.value.id
+      },
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`
+      }
+    }) as any
+
+    if (!smsResponse?.success) {
+      throw new Error(smsResponse?.message || 'Failed to send SMS via API')
+    }
+
+    logger.debug('✅ SMS sent via API:', smsResponse)
+    
+    // Show success toast
+    showSuccessToast(
+      'SMS erfolgreich gesendet!',
+      `Onboarding-Link wurde an ${smsResponse.phone} gesendet.`
+    )
+    
+    // ✅ WICHTIG: Verzögere Modal-Close damit Toast sichtbar bleibt (3 Sekunden)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    logger.debug('🚀 Closing pending modal after toast display')
+    showPendingModal.value = false
+  } catch (err: any) {
+    console.error('❌ Error resending reminder:', err)
+    logger.debug('❌ Error details:', err)
+    
+    const errorMsg = err.message || 'Unbekannter Fehler'
+    showErrorToast(
+      'Fehler beim SMS-Versand',
+      errorMsg
+    )
   } finally {
     isResendingSms.value = false
   }
@@ -1113,25 +1035,116 @@ const copyOnboardingLink = async () => {
   if (!pendingStudent.value) return
   
   try {
-    const onboardingLink = `https://simy.ch/onboarding/${pendingStudent.value.onboarding_token}`
+    logger.debug('📋 Fetching onboarding token via secure API...')
     
-    await navigator.clipboard.writeText(onboardingLink)
+    // ============================================
+    // Call secure API to get onboarding token
+    // ============================================
+    const { data: { session } } = await supabase.auth.getSession()
     
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Link kopiert!',
-      message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
+    const tokenResponse = await $fetch('/api/students/get-onboarding-token', {
+      method: 'GET',
+      params: {
+        studentId: pendingStudent.value.id
+      },
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`
+      }
+    }) as any
+
+    if (!tokenResponse?.success || !tokenResponse?.onboarding_token) {
+      throw new Error(tokenResponse?.message || 'Failed to fetch onboarding token')
+    }
+
+    logger.debug('✅ Token retrieved via API:', {
+      studentName: tokenResponse.student_name
     })
+
+    const onboardingLink = `https://simy.ch/onboarding/${tokenResponse.onboarding_token}`
     
-    logger.debug('🔗 Onboarding-Link:', onboardingLink)
-  } catch (err) {
+    try {
+      // Try modern clipboard API first (works on HTTPS + localhost)
+      await navigator.clipboard.writeText(onboardingLink)
+      logger.debug('✅ Link copied via clipboard API')
+    } catch (clipboardError) {
+      // Fallback: Use old-school method for HTTP/HTTPS compatibility
+      logger.debug('⚠️ Clipboard API failed, using fallback method:', clipboardError)
+      
+      // Create temporary input element
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.value = onboardingLink
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+      logger.debug('✅ Link copied via fallback method')
+    }
+    
+    showSuccessToast(
+      'Link kopiert!',
+      'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
+    )
+    
+    logger.debug('🔗 Onboarding-Link copied:', onboardingLink)
+  } catch (err: any) {
     console.error('Error copying link:', err)
-    uiStore.addNotification({
-      type: 'error',
-      title: 'Fehler',
-      message: 'Link konnte nicht kopiert werden. Siehe Konsole für Details.'
-    })
+    logger.debug('❌ Error details:', err)
+    
+    const errorMsg = err.message || 'Link konnte nicht kopiert werden'
+    showErrorToast(
+      'Fehler beim Link-Kopieren',
+      errorMsg
+    )
   }
+}
+
+const handleOpenReminderModal = (student: any) => {
+  pendingStudent.value = student
+  showPendingModal.value = true
+}
+
+// Toast auto-hide timeout
+let toastTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+// Clear existing timeout
+const clearToastTimeout = () => {
+  if (toastTimeoutId) {
+    clearTimeout(toastTimeoutId)
+    toastTimeoutId = null
+  }
+}
+
+// Toast Helper Functions
+const showSuccessToast = (title: string, message: string = '') => {
+  logger.debug('🔔 showSuccessToast called:', { title, message })
+  clearToastTimeout()
+  toastType.value = 'success'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
+  
+  // Auto-hide after 3 seconds
+  toastTimeoutId = setTimeout(() => {
+    showToast.value = false
+    toastTimeoutId = null
+  }, 3000)
+}
+
+const showErrorToast = (title: string, message: string = '') => {
+  logger.debug('🔔 showErrorToast called:', { title, message })
+  clearToastTimeout()
+  toastType.value = 'error'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+  
+  // Auto-hide after 3 seconds
+  toastTimeoutId = setTimeout(() => {
+    showToast.value = false
+    toastTimeoutId = null
+  }, 3000)
 }
 </script>
 

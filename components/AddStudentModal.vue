@@ -34,16 +34,6 @@
       <!-- Content -->
       <div class="p-6 space-y-4">
         <p class="text-gray-700">{{ duplicateInfo.message }}</p>
-        
-        <!-- Existing User Info (nur wenn Daten vorhanden) -->
-        <div v-if="duplicateInfo.existingUser && duplicateInfo.existingUser.first_name" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <p class="text-sm font-medium text-gray-900 mb-2">Bestehender Schüler:</p>
-          <div class="space-y-1 text-sm text-gray-600">
-            <p><strong>Name:</strong> {{ duplicateInfo.existingUser.first_name }} {{ duplicateInfo.existingUser.last_name }}</p>
-            <p v-if="duplicateInfo.existingUser.email"><strong>E-Mail:</strong> {{ duplicateInfo.existingUser.email }}</p>
-            <p v-if="duplicateInfo.existingUser.phone"><strong>Telefon:</strong> {{ duplicateInfo.existingUser.phone }}</p>
-          </div>
-        </div>
 
         <!-- Action Instructions -->
         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -92,7 +82,7 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
             <!-- Info Banner -->
             <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              ℹ️ Mindestens Vor- oder Nachname + Telefon oder E-Mail erforderlich
+              ℹ️ Mindestens Vor- oder Nachname + Telefon erforderlich
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -126,11 +116,10 @@
                 <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
               </div>
 
-
               <!-- Phone -->
               <div class="md:col-span-2">
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer <span class="text-gray-400 text-xs">(oder E-Mail)</span>
+                  Telefonnummer *
                 </label>
                 <input
                   id="phone"
@@ -141,152 +130,6 @@
                   placeholder="+41 79 123 45 67"
                 >
                 <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
-              </div>
-
-              <!-- Email -->
-              <div class="md:col-span-2">
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                  E-Mail Adresse <span class="text-gray-400 text-xs">(oder Telefonnummer)</span>
-                </label>
-                <input
-                  id="email"
-                  v-model="form.email"
-                  type="email"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.email }"
-                  placeholder="max.mustermann@example.com"
-                >
-                <p v-if="errors.email" class="text-red-600 text-xs mt-1">{{ errors.email }}</p>
-              </div>
-
-              <!-- Birthdate (Optional) -->
-              <div>
-                <label for="birthdate" class="block text-sm font-medium text-gray-700 mb-1">
-                  Geburtsdatum <span class="text-gray-400">(optional)</span>
-                </label>
-                <input
-                  id="birthdate"
-                  v-model="form.birthdate"
-                  type="date"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none"
-                  style="min-height: 42px; appearance: none; -webkit-appearance: none; -moz-appearance: none;"
-                >
-              </div>
-
-              <!-- Category (Optional) -->
-              <div>
-                <label for="category" class="block text-sm font-medium text-gray-700 mb-1">
-                  Führerausweis-Kategorie <span class="text-gray-400">(optional)</span>
-                </label>
-                <select
-                  id="category"
-                  v-model="form.category"
-                  :disabled="isLoadingCategories"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  :class="{ 'border-red-300': errors.category }"
-                >
-                  <option value="">
-                    {{ isLoadingCategories ? 'Lade Kategorien...' : 'Kategorie wählen' }}
-                  </option>
-                  <option 
-                    v-for="category in availableCategories" 
-                    :key="category.code" 
-                    :value="category.code"
-                  >
-                    {{ category.name }}
-                  </option>
-                </select>
-                <p v-if="errors.category" class="text-red-600 text-xs mt-1">{{ errors.category }}</p>
-              </div>
-
-              <!-- Assigned Staff (nur für Admin) -->
-              <div v-if="currentUser?.role === 'admin'">
-                <label for="assignedStaff" class="block text-sm font-medium text-gray-700 mb-1">
-                  Zugewiesener Fahrlehrer
-                </label>
-                <select
-                  id="assignedStaff"
-                  v-model="form.assigned_staff_id"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Fahrlehrer wählen</option>
-                  <option v-for="staff in staffMembers" :key="staff.id" :value="staff.id">
-                    {{ staff.first_name }} {{ staff.last_name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Address Information (Optional) -->
-          <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-              Adresse <span class="text-sm font-normal text-gray-500">(optional)</span>
-            </h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <!-- Street (Optional) -->
-              <div class="md:col-span-2">
-                <label for="street" class="block text-sm font-medium text-gray-700 mb-1">
-                  Strasse
-                </label>
-                <input
-                  id="street"
-                  v-model="form.street"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.street }"
-                  placeholder="Musterstrasse"
-                >
-                <p v-if="errors.street" class="text-red-600 text-xs mt-1">{{ errors.street }}</p>
-              </div>
-
-              <!-- Street Number -->
-              <div>
-                <label for="streetNr" class="block text-sm font-medium text-gray-700 mb-1">
-                  Hausnummer
-                </label>
-                <input
-                  id="streetNr"
-                  v-model="form.street_nr"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.street_nr }"
-                  placeholder="123"
-                >
-                <p v-if="errors.street_nr" class="text-red-600 text-xs mt-1">{{ errors.street_nr }}</p>
-              </div>
-
-              <!-- ZIP -->
-              <div>
-                <label for="zip" class="block text-sm font-medium text-gray-700 mb-1">
-                  PLZ
-                </label>
-                <input
-                  id="zip"
-                  v-model="form.zip"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.zip }"
-                  placeholder="8000"
-                >
-                <p v-if="errors.zip" class="text-red-600 text-xs mt-1">{{ errors.zip }}</p>
-              </div>
-
-              <!-- City -->
-              <div class="md:col-span-2">
-                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
-                  Stadt
-                </label>
-                <input
-                  id="city"
-                  v-model="form.city"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.city }"
-                  placeholder="Zürich"
-                >
-                <p v-if="errors.city" class="text-red-600 text-xs mt-1">{{ errors.city }}</p>
               </div>
             </div>
           </div>
@@ -337,6 +180,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useStudents } from '~/composables/useStudents'
 import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
+import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
 
 const uiStore = useUIStore()
@@ -400,7 +244,6 @@ const duplicateInfo = ref({
 const form = ref({
   first_name: '',
   last_name: '',
-  email: '',
   phone: '',
   birthdate: '',
   street: '',
@@ -418,11 +261,10 @@ const isFormValid = computed(() => {
   // Mindestens ein Name (Vor- ODER Nachname)
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   
-  // Mindestens Telefon ODER Email
+  // Telefon ist erforderlich (nur SMS now)
   const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
-  const hasEmail = form.value.email && isValidEmail(form.value.email)
   
-  return hasName && (hasPhone || hasEmail)
+  return hasName && hasPhone
 })
 
 // Methods
@@ -464,18 +306,10 @@ const validateForm = () => {
     errors.value.first_name = 'Mindestens Vor- oder Nachname erforderlich'
   }
 
-  // Mindestens Telefon ODER Email erforderlich
+  // Telefon ist erforderlich (nur SMS)
   const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
-  const hasEmail = form.value.email && isValidEmail(form.value.email)
-  
-  if (!hasPhone && !hasEmail) {
-    errors.value.phone = 'Telefonnummer oder E-Mail erforderlich'
-    errors.value.email = 'Telefonnummer oder E-Mail erforderlich'
-  }
-
-  // E-Mail-Validierung (nur wenn angegeben)
-  if (form.value.email && !isValidEmail(form.value.email)) {
-    errors.value.email = 'Ungültige E-Mail-Adresse'
+  if (!hasPhone) {
+    errors.value.phone = 'Gültige Telefonnummer erforderlich'
   }
 
   return Object.keys(errors.value).length === 0
@@ -485,7 +319,6 @@ const resetForm = () => {
   form.value = {
     first_name: '',
     last_name: '',
-    email: '',
     phone: '',
     birthdate: '',
     street: '',
@@ -576,7 +409,6 @@ const submitForm = async () => {
     const studentData: any = {
       first_name: form.value.first_name.trim() || '',
       last_name: form.value.last_name.trim() || '',
-      email: form.value.email.trim() || '',
       phone: form.value.phone.trim() || ''
     }
     
@@ -602,53 +434,28 @@ const submitForm = async () => {
     logger.debug('📧 Email Success:', newStudent?.emailSuccess)
     logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
-    // ✅ Benachrichtigung basierend auf Versandmethode
-    if (newStudent?.smsSuccess) {
-      logger.debug('📲📲📲 SMS success notification triggered')
-      showSuccessToast(
-        'Einladung versendet!',
-        `Eine SMS mit Onboarding-Link wurde an ${form.value.phone} gesendet.`
-      )
-    } else if (newStudent?.emailSuccess) {
-      logger.debug('📧📧📧 Email success notification triggered')
-      showSuccessToast(
-        'Einladung versendet!',
-        `Eine E-Mail mit Onboarding-Link wurde an ${form.value.email} gesendet.`
-      )
-    } else {
-      // SMS/Email fehlgeschlagen - zeige Link zum manuellen Kopieren
-      const contactInfo = form.value.phone || form.value.email
-      const contactType = form.value.phone ? 'SMS' : 'E-Mail'
-      
-      logger.debug('⚠️⚠️⚠️ Contact method failed:', { contactType, contactInfo, smsSuccess: newStudent?.smsSuccess, emailSuccess: newStudent?.emailSuccess })
-      showWarningToast(
-        `Schüler erstellt, aber ${contactType} fehlgeschlagen`,
-        `Bitte senden Sie den Onboarding-Link manuell an ${contactInfo}`
-      )
-      
-      // Zeige den Link in der Konsole für Copy/Paste
-      logger.debug('🔗 Onboarding-Link:', newStudent?.onboardingLink)
-      
-      // Optional: Kopiere Link in Zwischenablage
-      if (newStudent?.onboardingLink && navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(newStudent.onboardingLink)
-          logger.debug('✅ Link wurde in Zwischenablage kopiert')
-        } catch (e) {
-          logger.debug('⚠️ Konnte Link nicht in Zwischenablage kopieren')
-        }
-      }
-    }
+    // ✅ Benachrichtigung - zeige Erfolg an wenn Schüler erstellt wurde
+    // SMS wird automatisch im Backend versendet
+    const contactInfo = form.value.phone
+    const contactType = 'SMS'
     
-    // Reset form and close modal - mit VIEL längerer Verzögerung damit Toast sichtbar wird
+    logger.debug('✅ Schüler erstellt und Einladung versendet via:', contactType)
+    showSuccessToast(
+      'Schüler erstellt!',
+      `Onboarding-Link wurde via ${contactType} an ${contactInfo} gesendet.`
+    )
+    
+    // ✅ WICHTIG: Verzögere resetForm() damit Toast sichtbar bleibt (3 Sekunden)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    logger.debug('🚀 Resetting form after toast display')
     resetForm()
     emit('added', newStudent)
     
-    // Gebe der Toast-Notification Zeit, angezeigt zu werden (2 Sekunden mindestens)
-    setTimeout(() => {
-      logger.debug('🚀 Closing modal after toast display (2000ms delay)')
-      emit('close')
-    }, 2000)
+    // ✅ Dann nach weiterer Verzögerung Modal schließen (500ms später)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    logger.debug('🚀 Closing modal')
+    emit('close')
 
   } catch (error: any) {
     console.error('❌❌❌ Fehler beim Hinzufügen des Schülers:', error)
@@ -667,66 +474,143 @@ const submitForm = async () => {
     if (error.message === 'DUPLICATE_PHONE' || isDatabaseDuplicatePhone) {
       const existing = error.existingUser
       const hasAccount = existing?.auth_user_id !== null
+      const isActive = existing?.is_active
+      const onboardingStatus = existing?.onboarding_status
       
+      let title = 'Telefonnummer bereits vorhanden'
       let message = `Diese Telefonnummer ist bereits registriert.`
+      let actionTitle = '⚠️ Telefonnummer bereits verwendet'
+      let actions: string[] = []
       
       if (existing?.first_name && existing?.last_name) {
         message = `Diese Telefonnummer ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
       }
       
+      // ✅ Status-basierte Meldungen
+      if (isActive && hasAccount) {
+        // Aktiver Schüler mit Konto
+        title = '✅ Schüler ist bereits aktiv'
+        actionTitle = 'Der Schüler ist bereits registriert und hat ein Konto'
+        actions = [
+          'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
+          'Bei Passwort vergessen: "Passwort vergessen" verwenden'
+        ]
+      } else if (onboardingStatus === 'pending' && !hasAccount) {
+        // Pending - Onboarding noch nicht abgeschlossen
+        title = '⏳ Schüler wartet auf Onboarding'
+        actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
+        actions = [
+          'Schüler:in kann den Link in der Onboarding-SMS/E-Mail noch verwenden',
+          'Falls dieser nicht mehr gültig ist, kannst du ein neues SMS/E-Mail senden. Geh dafür in sein Profil und klick auf "Onboarding-Link erneut senden"',
+        ]
+      } else if (onboardingStatus === 'completed' && !hasAccount) {
+        // Completed aber kein Account - ungewöhnlich
+        title = '⚠️ Onboarding abgeschlossen, aber kein Konto'
+        actionTitle = 'Der Schüler hat Onboarding gemacht, aber hat kein aktives Konto'
+        actions = [
+          'Kontakt mit dem Schüler aufnehmen',
+          'Konto manuell aktivieren oder neu erstellen',
+          'Technischer Support kontaktieren'
+        ]
+      } else if (!isActive && !hasAccount) {
+        // Inaktiver Schüler ohne Konto
+        title = '❌ Schüler ist inaktiv'
+        actionTitle = 'Der Schüler ist inaktiv oder wurde gelöscht'
+        actions = [
+          'Bestehende Telefonnummer in der Schülerliste suchen',
+          'Ggf. inaktiven/alten Schüler aktivieren oder löschen',
+          'Andere Telefonnummer verwenden'
+        ]
+      }
+      
       duplicateInfo.value = {
-        title: 'Telefonnummer bereits vorhanden',
+        title: title,
         message: message,
         existingUser: existing || null,
-        actionTitle: existing 
-          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
-          : '⚠️ Telefonnummer bereits verwendet',
-        actions: existing && hasAccount 
-          ? [
-              'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
-              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
-            ]
-          : [
-              'Bestehende Telefonnummer in der Schülerliste suchen',
-              'Ggf. inaktiven/alten Schüler löschen',
-              'Andere Telefonnummer verwenden'
-            ]
+        actionTitle: actionTitle,
+        actions: actions
       }
       
       errors.value.phone = 'Diese Telefonnummer ist bereits registriert'
       showDuplicateWarning.value = true
       
+      // ✅ AUCH Toast anzeigen
+      uiStore.addNotification({
+        type: 'error',
+        title: title,
+        message: message
+      })
+      
     } else if (error.message === 'DUPLICATE_EMAIL' || isDatabaseDuplicateEmail) {
       const existing = error.existingUser
       const hasAccount = existing?.auth_user_id !== null
+      const isActive = existing?.is_active
+      const onboardingStatus = existing?.onboarding_status
       
+      let title = 'E-Mail bereits vorhanden'
       let message = `Diese E-Mail-Adresse ist bereits registriert.`
+      let actionTitle = '⚠️ E-Mail bereits verwendet'
+      let actions: string[] = []
       
       if (existing?.first_name && existing?.last_name) {
         message = `Diese E-Mail-Adresse ist bereits registriert für ${existing.first_name} ${existing.last_name}.`
       }
       
+      // ✅ Status-basierte Meldungen
+      if (isActive && hasAccount) {
+        // Aktiver Schüler mit Konto
+        title = '✅ Schüler ist bereits aktiv'
+        actionTitle = 'Der Schüler ist bereits registriert und hat ein Konto'
+        actions = [
+          'Schüler anweisen, sich mit E-Mail anzumelden',
+          'Bei Passwort vergessen: "Passwort vergessen" verwenden'
+        ]
+      } else if (onboardingStatus === 'pending' && !hasAccount) {
+        // Pending - Onboarding noch nicht abgeschlossen
+        title = '⏳ Schüler wartet auf Onboarding'
+        actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
+        actions = [
+          'Schüler kann noch die Onboarding-SMS/E-Mail verwenden',
+          'Erneut SMS/E-Mail senden (falls nicht erhalten)',
+          'Konto manuell löschen und neu erstellen falls nötig'
+        ]
+      } else if (onboardingStatus === 'completed' && !hasAccount) {
+        // Completed aber kein Account - ungewöhnlich
+        title = '⚠️ Onboarding abgeschlossen, aber kein Konto'
+        actionTitle = 'Der Schüler hat Onboarding gemacht, aber hat kein aktives Konto'
+        actions = [
+          'Kontakt mit dem Schüler aufnehmen',
+          'Konto manuell aktivieren oder neu erstellen',
+          'Technischer Support kontaktieren'
+        ]
+      } else if (!isActive && !hasAccount) {
+        // Inaktiver Schüler ohne Konto
+        title = '❌ Schüler ist inaktiv'
+        actionTitle = 'Der Schüler ist inaktiv oder wurde gelöscht'
+        actions = [
+          'Bestehende E-Mail in der Schülerliste suchen',
+          'Ggf. inaktiven/alten Schüler aktivieren oder löschen',
+          'Andere E-Mail verwenden'
+        ]
+      }
+      
       duplicateInfo.value = {
-        title: 'E-Mail bereits vorhanden',
+        title: title,
         message: message,
         existingUser: existing || null,
-        actionTitle: existing 
-          ? (hasAccount ? '✅ Dieser Schüler hat bereits ein Konto' : '⚠️ Konto noch nicht aktiviert')
-          : '⚠️ E-Mail bereits verwendet',
-        actions: existing && hasAccount 
-          ? [
-              'Schüler anweisen, sich mit E-Mail anzumelden',
-              'Bei Passwort vergessen: "Passwort vergessen" verwenden'
-            ]
-          : [
-              'Bestehende E-Mail in der Schülerliste suchen',
-              'Ggf. inaktiven/alten Schüler löschen',
-              'Andere E-Mail verwenden'
-            ]
+        actionTitle: actionTitle,
+        actions: actions
       }
       
       errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert'
       showDuplicateWarning.value = true
+      
+      // ✅ AUCH Toast anzeigen
+      uiStore.addNotification({
+        type: 'error',
+        title: title,
+        message: message
+      })
       
     } else if (error.message?.includes('duplicate')) {
       errors.value.email = 'Diese E-Mail-Adresse oder Telefonnummer ist bereits registriert'
@@ -764,12 +648,6 @@ watch(() => props.show, (newValue) => {
 })
 
 // Real-time validation
-watch(() => form.value.email, () => {
-  if (errors.value.email && isValidEmail(form.value.email)) {
-    delete errors.value.email
-  }
-})
-
 watch(() => form.value.first_name, () => {
   if (errors.value.first_name && form.value.first_name.trim()) {
     delete errors.value.first_name

@@ -91,13 +91,19 @@ export default defineEventHandler(async (event) => {
       logger.warn(`❌ Tenant not found for staff: ${staffId}`)
     }
 
-    // 3. Get all appointments for this staff member (next 12 months)
+    // 3. Get all appointments for this staff member (last 6 months + next 12 months)
     const today = new Date()
     today.setUTCHours(0, 0, 0, 0)
 
+    // Start from 6 months ago
+    const sixMonthsAgo = new Date(today)
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+    // End at 12 months from now
     const nextYear = new Date(today)
     nextYear.setFullYear(nextYear.getFullYear() + 1)
 
+    // First, get appointments without locations join
     const { data: appointments, error: appointmentsError } = await serviceSupabase
       .from('appointments')
       .select(`
@@ -106,8 +112,10 @@ export default defineEventHandler(async (event) => {
         start_time,
         end_time,
         status,
+        type,
+        location_id,
         user_id,
-        users!appointments_user_id_fkey (
+        users:users!appointments_user_id_fkey (
           first_name,
           last_name,
           email,
@@ -115,7 +123,7 @@ export default defineEventHandler(async (event) => {
         )
       `)
       .eq('staff_id', resolvedStaffId)
-      .gte('start_time', today.toISOString())
+      .gte('start_time', sixMonthsAgo.toISOString())
       .lte('start_time', nextYear.toISOString())
       .is('deleted_at', null)
       .not('status', 'eq', 'cancelled')
@@ -123,11 +131,36 @@ export default defineEventHandler(async (event) => {
 
     if (appointmentsError) {
       logger.warn(`⚠️ Error fetching appointments: ${appointmentsError.message}`)
+      logger.warn(`⚠️ Full error:`, appointmentsError)
     }
 
     logger.debug(`📅 Found ${appointments?.length || 0} appointments for staff: ${resolvedStaffId}`)
     if (appointments && appointments.length === 0) {
       logger.debug(`ℹ️ No appointments found in range for staff: ${resolvedStaffId}`)
+    }
+    
+    // If we have appointments with location_ids, fetch locations separately
+    let locationsMap: Record<string, { name: string; address: string }> = {}
+    if (appointments && appointments.length > 0) {
+      const locationIds = appointments
+        .map(apt => apt.location_id)
+        .filter(Boolean) as string[]
+      
+      if (locationIds.length > 0) {
+        const { data: locations } = await serviceSupabase
+          .from('locations')
+          .select('id, name, address')
+          .in('id', locationIds)
+        
+        if (locations) {
+          locations.forEach(loc => {
+            locationsMap[loc.id] = { name: loc.name, address: loc.address }
+          })
+        }
+      }
+      
+      logger.debug(`🔍 First appointment structure:`, JSON.stringify(appointments[0], null, 2))
+      logger.debug(`📍 Loaded ${Object.keys(locationsMap).length} locations`)
     }
 
     // 4. Build ICS file
@@ -143,18 +176,31 @@ export default defineEventHandler(async (event) => {
         // Build description with student info
         let description = ''
         let studentFullName = ''
+        let eventLocation = 'Driving Lesson' // Default fallback
+        
         if (apt.users) {
           studentFullName = `${apt.users.first_name} ${apt.users.last_name}`
           description = `Student: ${studentFullName}`
           // Removed: phone and email for privacy
         }
+        
+        // Get location address from map
+        if (apt.location_id && locationsMap[apt.location_id]) {
+          const location = locationsMap[apt.location_id]
+          if (location.address) {
+            eventLocation = location.address
+          } else if (location.name) {
+            eventLocation = location.name
+          }
+        }
 
         // Create unique ID for event (using appointment ID)
         const eventUid = `${apt.id}@${new URL(process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname}`
 
-        // Build title with student name
+        // Build title: "Vorname Name - Kategorie Type"
+        const vehicleType = apt.type || 'Fahrstunde'
         const eventTitle = studentFullName 
-          ? `${apt.title || 'Appointment'} - ${studentFullName}`
+          ? `${studentFullName} - Kategorie ${vehicleType}`
           : apt.title || 'Appointment'
 
         // Build event with proper iOS-compatible formatting
@@ -165,7 +211,7 @@ DTSTART;TZID=Europe/Zurich:${formatICSDateTimeLocal(startTime)}
 DTEND;TZID=Europe/Zurich:${formatICSDateTimeLocal(endTime)}
 SUMMARY:${sanitizeText(eventTitle)}
 DESCRIPTION:${sanitizeText(description)}
-LOCATION:Driving Lesson
+LOCATION:${sanitizeText(eventLocation)}
 TRANSP:OPAQUE
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
@@ -224,10 +270,27 @@ END:VCALENDAR`
       .digest('hex')
       .slice(0, 16)
     
-    setHeader(event, 'ETag', `"${contentHash}"`)
-    setHeader(event, 'Cache-Control', 'public, max-age=300, must-revalidate') // Refresh every 5 minutes
+    // AGGRESSIVE HEADERS TO FORCE APPLE CALENDAR FREQUENT REFRESH
+    // Apple Calendar checks for updates based on these headers
+    
+    // Tell Apple to ALWAYS revalidate (max-age=0) - forces check on every open
+    setHeader(event, 'Cache-Control', 'public, max-age=0, must-revalidate, no-cache, no-store')
+    
+    // Always send new Last-Modified time (triggers Apple to think content changed)
     setHeader(event, 'Last-Modified', new Date().toUTCString())
-    setHeader(event, 'X-Publish-Interval', '300') // Hint to calendar apps: refresh every 5 minutes
+    
+    // Always send new ETag (makes Apple think content changed)
+    setHeader(event, 'ETag', `"${contentHash}-${Date.now()}"`)
+    
+    // Additional headers for maximum compatibility
+    setHeader(event, 'Pragma', 'no-cache')
+    setHeader(event, 'Expires', '0')
+    
+    // Tell clients to refresh every minute
+    setHeader(event, 'X-Publish-Interval', 'PT60S')
+    
+    // Mark as dynamic content (not static)
+    setHeader(event, 'X-Content-Type-Options', 'nosniff')
 
     return icsContent
   } catch (error: any) {
@@ -255,15 +318,32 @@ function formatICSDateTime(date: Date): string {
 
 /**
  * Format date to ICS local time format (YYYYMMDDTHHMMSS) for use with TZID
+ * Converts UTC date to Europe/Zurich timezone
  * iOS Calendar prefers this format when TZID is specified
  */
 function formatICSDateTimeLocal(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
+  // Use Intl.DateTimeFormat to get the correct Zurich time
+  // This works correctly on servers running in UTC (like Vercel)
+  const zurichFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  
+  const parts = zurichFormatter.formatToParts(date)
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || '00'
+  
+  const year = getPart('year')
+  const month = getPart('month')
+  const day = getPart('day')
+  const hours = getPart('hour')
+  const minutes = getPart('minute')
+  const seconds = getPart('second')
 
   return `${year}${month}${day}T${hours}${minutes}${seconds}`
 }

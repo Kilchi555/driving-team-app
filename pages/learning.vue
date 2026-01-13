@@ -55,28 +55,45 @@
           </div>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div
-            v-for="criterion in items"
-            :key="criterion.id"
-            class="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            @click="openDetail(criterion)"
-            tabindex="0"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <h3 class="font-semibold truncate">{{ criterion.name }}</h3>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <span v-if="hasText(criterion)" class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">📄 Text</span>
-                  <span v-if="hasImages(criterion)" class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">🖼️ Bilder</span>
+        <div v-else class="space-y-6">
+          <!-- Group by category -->
+          <div v-for="category in groupedItems" :key="category.id" class="space-y-3">
+            <!-- Category Header -->
+            <div class="flex items-center gap-3">
+              <div 
+                class="w-1 h-8 rounded-full"
+                :style="{ backgroundColor: category.color || '#3B82F6' }"
+              ></div>
+              <h2 class="text-lg font-semibold text-gray-900">{{ category.name }}</h2>
+              <span class="text-sm font-medium text-emerald-600">{{ category.percentage }}%</span>
+            </div>
+            
+            <!-- Category Items -->
+            <div v-if="category.items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-6">
+              <div
+                v-for="criterion in category.items"
+                :key="criterion.id"
+                class="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                @click="openDetail(criterion)"
+                tabindex="0"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <h3 class="font-semibold truncate">{{ criterion.name }}</h3>
+                  </div>
+                  <div class="shrink-0 inline-flex items-center gap-1 text-sm text-emerald-700 group-hover:text-emerald-900">
+                    Ansehen
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  </div>
                 </div>
               </div>
-              <div class="shrink-0 inline-flex items-center gap-1 text-sm text-emerald-700 group-hover:text-emerald-900">
-                Ansehen
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </div>
+            </div>
+            
+            <!-- Empty state for category -->
+            <div v-else class="ml-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <p class="text-sm text-gray-500">Noch keine Lerninhalte in diesem Bereich</p>
             </div>
           </div>
         </div>
@@ -91,10 +108,10 @@
           <button @click="closeDetail" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
         </div>
         <div class="p-5 space-y-6">
-          <div v-if="selectedCriterion.educational_content?.title" class="text-base font-medium">
-            {{ selectedCriterion.educational_content.title }}
+          <div v-if="getContentData(selectedCriterion)?.title" class="text-base font-medium">
+            {{ getContentData(selectedCriterion).title }}
           </div>
-          <div v-for="(sec, idx) in (selectedCriterion.educational_content?.sections || [])" :key="idx" class="space-y-2">
+          <div v-for="(sec, idx) in (getContentData(selectedCriterion)?.sections || [])" :key="idx" class="space-y-2">
             <div v-if="sec.title" class="text-sm font-semibold text-gray-800">{{ sec.title }}</div>
             <div v-if="sec.text" class="text-sm text-gray-800 whitespace-pre-line">{{ sec.text }}</div>
             <div v-if="sec.images && sec.images.length" class="space-y-3">
@@ -118,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
@@ -128,14 +145,80 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const items = ref<any[]>([])
+const allCategoriesWithProgress = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const router = useRouter()
 
-const hasText = (c: any) => !!(c.educational_content?.title || c.educational_content?.sections?.some((s: any) => s.text && s.text.length > 0))
-const hasImages = (c: any) => !!(c.educational_content?.sections?.some((s: any) => s.images && s.images.length > 0))
+// Group items by evaluation category, showing ALL categories (even with 0 items)
+const groupedItems = computed(() => {
+  return allCategoriesWithProgress.value.map(category => {
+    // Find items for this category
+    const categoryItems = items.value.filter(item => 
+      item.evaluation_categories?.id === category.id
+    )
+    
+    return {
+      ...category,
+      items: categoryItems
+    }
+  })
+})
+
+// Helper: Parse educational_content if it's a string
+const parseEducationalContent = (c: any) => {
+  if (!c.educational_content) return null
+  
+  // If it's already an object, return it
+  if (typeof c.educational_content === 'object') {
+    return c.educational_content
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof c.educational_content === 'string') {
+    try {
+      return JSON.parse(c.educational_content)
+    } catch (e) {
+      console.warn('Failed to parse educational_content for', c.name, e)
+      return null
+    }
+  }
+  
+  return null
+}
+
+const hasText = (c: any) => {
+  const content = parseEducationalContent(c)
+  if (!content) return false
+  
+  // Check _default or direct structure
+  const data = content._default || content
+  return !!(data.title || data.sections?.some((s: any) => s.text && s.text.length > 0))
+}
+
+const hasImages = (c: any) => {
+  const content = parseEducationalContent(c)
+  if (!content) return false
+  
+  // Check _default or direct structure
+  const data = content._default || content
+  return !!(data.sections?.some((s: any) => s.images && s.images.length > 0))
+}
+
+// Helper: Get the content data (handles _default structure)
+const getContentData = (c: any) => {
+  if (!c?.educational_content) return null
+  
+  // If there's a _default key, use that, otherwise use the content directly
+  return c.educational_content._default || c.educational_content
+}
 
 const openDetail = (c: any) => {
-  selectedCriterion.value = c
+  // Parse educational_content if it's a string
+  const parsedContent = parseEducationalContent(c)
+  selectedCriterion.value = {
+    ...c,
+    educational_content: parsedContent
+  }
 }
 
 const closeDetail = () => {
@@ -172,48 +255,162 @@ onMounted(async () => {
   try {
     const supabase = getSupabase()
     const auth = useAuthStore()
-    const { user, userProfile } = storeToRefs(auth)
+    const { user } = storeToRefs(auth)
     if (!user.value?.id) throw new Error('Nicht eingeloggt')
-    // appointments.user_id referenziert die interne users.id, daher userProfile.id verwenden
-    const currentUserId = userProfile.value?.id
-    if (!currentUserId) throw new Error('Kein Benutzerprofil gefunden')
+    
+    console.log('🔍 Learning page - Loading via API...')
 
-    // 1) Termine des Schülers laden
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('user_id', currentUserId)
+    // ✅ SECURE API CALL - Get all learning progress data
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      throw new Error('No session available')
+    }
 
-    const aptIds = (appointments || []).map(a => a.id)
-    if (aptIds.length === 0) {
+    const response = await $fetch('/api/customer/get-learning-progress', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+      }
+    }) as any
+
+    if (!response.success) {
+      throw new Error('Failed to load learning progress')
+    }
+
+    // ✅ Extract data from API response
+    const { 
+      studentCategories: studentCategoryCodes, 
+      appointments, 
+      maxRating, 
+      notes, 
+      categories: allCategories, 
+      criteria: allCriteria 
+    } = response.data
+
+    console.log('✅ API Response:', {
+      studentCategories: studentCategoryCodes.length,
+      appointments: appointments.length,
+      maxRating,
+      notes: notes.length,
+      categories: allCategories.length,
+      criteria: allCriteria.length
+    })
+
+    if (appointments.length === 0) {
+      console.log('⚠️ No appointments found')
       items.value = []
       return
     }
 
-    // 2) Notes/Evaluations zu diesen Terminen laden und dabei Kriterien-IDs sammeln
-    const { data: notes } = await supabase
-      .from('notes')
-      .select('evaluation_criteria_id, criteria_rating')
-      .in('appointment_id', aptIds)
+    // Create map: criteria_id -> ratings[]
+    const criteriaRatingsMap = new Map()
+    notes?.forEach((note: any) => {
+      if (!criteriaRatingsMap.has(note.evaluation_criteria_id)) {
+        criteriaRatingsMap.set(note.evaluation_criteria_id, [])
+      }
+      criteriaRatingsMap.get(note.evaluation_criteria_id).push(note.criteria_rating)
+    })
+    
+    console.log('📊 Criteria with ratings:', criteriaRatingsMap.size)
 
-    // Kriterium gilt als "bewertet", wenn es mindestens eine Note mit evaluation_criteria_id gibt
-    const ratedCriteriaIds = [...new Set((notes || [])
-      .filter(n => n.evaluation_criteria_id)
-      .map(n => n.evaluation_criteria_id))]
-
-    if (ratedCriteriaIds.length === 0) {
-      items.value = []
-      return
-    }
-
-    // 3) Kriterien mit Lerninhalt laden
-    const { data: criteria } = await supabase
-      .from('evaluation_criteria')
-      .select('id, name, educational_content')
-      .in('id', ratedCriteriaIds)
-
-    items.value = (criteria || []).filter(c => hasText(c) || hasImages(c))
+    // 8) Filter: Only criteria WITH content AND for student's categories
+    const criteriaWithContent = (allCriteria || []).filter(c => {
+      // Has text or images?
+      const hasContent = hasText(c) || hasImages(c)
+      if (!hasContent) return false
+      
+      // If no driving_categories set, show for all
+      if (!c.driving_categories || c.driving_categories.length === 0) return true
+      
+      // Check if at least one student category is in driving_categories
+      return c.driving_categories.some(dc => studentCategoryCodes.includes(dc))
+    })
+    
+    console.log('✅ Criteria with content for student categories:', criteriaWithContent.length, 'of', allCriteria?.length || 0)
+    
+    // 9) Calculate progress per category (for ALL categories, even with 0%)
+    const categoryProgressMap = new Map()
+    
+    // Initialize all categories with 0 progress
+    allCategories?.forEach(cat => {
+      categoryProgressMap.set(cat.id, {
+        categoryId: cat.id,
+        categoryName: cat.name,
+        categoryColor: cat.color,
+        categoryDisplayOrder: cat.display_order,
+        totalCriteria: 0,
+        totalPossiblePoints: 0,
+        earnedPoints: 0
+      })
+    })
+    
+    allCriteria?.forEach(criterion => {
+      const categoryId = criterion.evaluation_categories?.id
+      if (!categoryId) return
+      
+      // Check if criterion matches student's driving categories
+      const matchesCategory = !criterion.driving_categories || 
+                             criterion.driving_categories.length === 0 ||
+                             criterion.driving_categories.some(dc => studentCategoryCodes.includes(dc))
+      
+      if (!matchesCategory) return
+      
+      const progress = categoryProgressMap.get(categoryId)
+      if (!progress) return
+      
+      progress.totalCriteria++
+      progress.totalPossiblePoints += maxRating
+      
+      // Add earned points if criterion was rated
+      if (criteriaRatingsMap.has(criterion.id)) {
+        const ratings = criteriaRatingsMap.get(criterion.id)
+        // Use the highest rating for this criterion
+        const highestRating = Math.max(...ratings)
+        progress.earnedPoints += highestRating
+      }
+    })
+    
+    console.log('📊 Category progress:', Array.from(categoryProgressMap.entries()).map(([id, p]) => ({
+      category: p.categoryName,
+      criteria: p.totalCriteria,
+      progress: p.totalPossiblePoints > 0 
+        ? `${p.earnedPoints}/${p.totalPossiblePoints} = ${((p.earnedPoints / p.totalPossiblePoints) * 100).toFixed(1)}%`
+        : '0%'
+    })))
+    
+    // 10) Attach progress and category info to criteria, filter to only show evaluated ones
+    const sorted = criteriaWithContent
+      .filter(c => criteriaRatingsMap.has(c.id)) // Only show if evaluated
+      .map(c => {
+        const categoryId = c.evaluation_categories?.id
+        return {
+          ...c,
+          categoryProgress: categoryProgressMap.get(categoryId)
+        }
+      })
+      .sort((a, b) => {
+        const orderA = a.evaluation_categories?.display_order || 999
+        const orderB = b.evaluation_categories?.display_order || 999
+        return orderA - orderB
+      })
+    
+    // 11) Store categories with progress (even if empty)
+    allCategoriesWithProgress.value = Array.from(categoryProgressMap.values())
+      .map(progress => ({
+        id: progress.categoryId,
+        name: progress.categoryName,
+        color: progress.categoryColor,
+        display_order: progress.categoryDisplayOrder,
+        progress: progress,
+        percentage: progress.totalPossiblePoints > 0
+          ? Math.round((progress.earnedPoints / progress.totalPossiblePoints) * 100)
+          : 0
+      }))
+      .sort((a, b) => a.display_order - b.display_order)
+    
+    items.value = sorted
   } catch (e: any) {
+    console.error('❌ Error in learning page:', e)
     error.value = e.message || 'Fehler beim Laden'
   } finally {
     isLoading.value = false

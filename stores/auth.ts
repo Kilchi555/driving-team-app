@@ -5,6 +5,7 @@ import type { User, SupabaseClient } from '@supabase/supabase-js'
 import type { Ref } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 // Types
 interface UserProfile {
@@ -131,28 +132,56 @@ const isAdmin = computed(() => {
       }
     }
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     loading.value = true
     errorMessage.value = null
 
     try {
-      logger.debug('🔑 Attempting login for:', email)
+      logger.debug('🔑 Attempting login for:', email, 'Remember Me:', rememberMe)
       
-      const supabaseClient = getSupabase()
-      if (!supabaseClient) {
-        throw new Error('Failed to get Supabase client')
+      // Call backend endpoint which handles rate limiting, authentication, and MFA
+      const backendResponse = await $fetch('/api/auth/login', {
+        method: 'POST',
+        body: {
+          email: email.toLowerCase().trim(),
+          password,
+          rememberMe
+        }
+      }) as any
+
+      if (!backendResponse?.success) {
+        throw new Error(backendResponse?.message || 'Login fehlgeschlagen')
       }
-      
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password,
-      })
 
-      if (error) throw error
+      // Check if MFA is required
+      if (backendResponse.requiresMFA) {
+        logger.debug('🔐 MFA erforderlich für:', backendResponse.email)
+        return { requiresMFA: true, email: backendResponse.email }
+      }
 
-      if (data.user) {
-        user.value = data.user
-        await fetchUserProfile(data.user.id)
+      // If we have a session from backend, use it to establish auth
+      if (backendResponse.session) {
+        const supabaseClient = getSupabase()
+        if (!supabaseClient) {
+          throw new Error('Failed to get Supabase client')
+        }
+
+        // Set the session from backend response
+        await supabaseClient.auth.setSession({
+          access_token: backendResponse.session.access_token,
+          refresh_token: backendResponse.session.refresh_token
+        })
+
+        // Set user data
+        if (backendResponse.user) {
+          user.value = {
+            id: backendResponse.user.id,
+            email: backendResponse.user.email,
+            user_metadata: backendResponse.user.user_metadata
+          } as any
+          await fetchUserProfile(backendResponse.user.id)
+        }
+
         logger.debug('✅ Login successful')
         return true
       }
@@ -161,7 +190,8 @@ const isAdmin = computed(() => {
     } catch (err: any) {
       console.error('❌ Login error:', err.message)
       errorMessage.value = err.message || 'Login fehlgeschlagen.'
-      return false
+      // Re-throw the error so it can be caught by the page component
+      throw err
     } finally {
       loading.value = false
     }
@@ -219,6 +249,14 @@ const isAdmin = computed(() => {
         } catch (slugError) {
           console.warn('⚠️ Could not fetch tenant slug:', slugError)
         }
+      }
+      
+      // Call backend logout API to clear httpOnly cookies
+      try {
+        await $fetch('/api/auth/logout', { method: 'POST' })
+        logger.debug('✅ Backend logout successful (cookies cleared)')
+      } catch (logoutError) {
+        logger.warn('⚠️ Backend logout failed, continuing with local logout:', logoutError)
       }
       
       const supabaseClient = getSupabase()
@@ -430,14 +468,14 @@ const isAdmin = computed(() => {
 
   const requireAdmin = () => {
     requireAuth()
-    if (!isAdmin.value && !isStaff.value) {
+    if (!isAdmin.value && !isStaff.value && !isSuperAdmin.value) {
       throw new Error('Admin access required')
     }
   }
 
   const requireStaff = () => {
     requireAuth()
-    if (!isStaff.value && !isAdmin.value) {
+    if (!isStaff.value && !isAdmin.value && !isSuperAdmin.value) {
       throw new Error('Staff access required')
     }
   }

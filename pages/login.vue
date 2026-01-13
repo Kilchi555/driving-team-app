@@ -1,125 +1,18 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${(currentTenant?.primary_color || '#2563eb')}15, #64748b15)` }">
+  <div class="min-h-screen flex flex-col items-center justify-center p-4" :style="{ background: 'linear-gradient(to bottom right, #7C3AED15, #64748b15)' }">
     
-    <!-- MFA Modal -->
-    <div v-if="showMFAModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <!-- Header -->
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-2xl font-bold text-gray-900">Zwei-Faktor-Authentifizierung</h2>
-          <p class="text-gray-600 text-sm mt-1">Wählen Sie eine Authentifizierungsmethode</p>
-        </div>
-
-        <!-- MFA Content -->
-        <div class="p-6 space-y-4">
-          <!-- Step 1: Choose Method -->
-          <div v-if="mfaStep === 'method'" class="space-y-3">
-            <!-- Passkey Option -->
-            <button
-              v-if="mfaOptions?.hasPasskeys"
-              @click="verifyPasskey"
-              :disabled="mfaCodeLoading"
-              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
-            >
-              <div class="font-semibold text-gray-900">🔐 Sicherheitsschlüssel</div>
-              <div class="text-sm text-gray-600">Nutze dein Gerät (Face ID, Fingerprint, etc.)</div>
-            </button>
-
-            <!-- SMS Option -->
-            <button
-              v-if="mfaOptions?.canUseSmsCode"
-              @click="mfaSelectedMethod = 'sms'; sendMFACode('sms', mfaEmail)"
-              :disabled="mfaCodeLoading"
-              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
-            >
-              <div class="font-semibold text-gray-900">📱 SMS Code</div>
-              <div class="text-sm text-gray-600">Erhalten Sie einen 6-stelligen Code per SMS</div>
-            </button>
-
-            <!-- Email Option -->
-            <button
-              v-if="mfaOptions?.canUseEmailCode"
-              @click="mfaSelectedMethod = 'email'; sendMFACode('email', mfaEmail)"
-              :disabled="mfaCodeLoading"
-              class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50"
-            >
-              <div class="font-semibold text-gray-900">📧 Email Code</div>
-              <div class="text-sm text-gray-600">Erhalten Sie einen 6-stelligen Code per Email</div>
-            </button>
-          </div>
-
-          <!-- Step 2: Enter Code -->
-          <div v-if="mfaStep === 'code'" class="space-y-3">
-            <p class="text-sm text-gray-600">
-              {{ mfaSelectedMethod === 'sms' ? 'Code wurde per SMS gesendet' : 'Code wurde per Email gesendet' }}
-            </p>
-
-            <input
-              v-model="mfaCodeInput"
-              type="text"
-              inputmode="numeric"
-              placeholder="000000"
-              maxlength="6"
-              class="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-            >
-
-            <!-- Expires in -->
-            <div v-if="mfaCodeSent" class="text-xs text-gray-500 text-center">
-              Code läuft ab in: <span class="font-semibold">{{ formatExpiresIn(mfaCodeExpiresIn) }}</span>
-            </div>
-
-            <!-- Error Message -->
-            <div v-if="mfaCodeError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p class="text-sm text-red-700">{{ mfaCodeError }}</p>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex gap-3 pt-4">
-              <button
-                @click="mfaStep = 'method'"
-                class="flex-1 py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-              >
-                Zurück
-              </button>
-              <button
-                @click="verifyMFACode('sms')"
-                :disabled="mfaCodeLoading || mfaCodeInput.length < 6"
-                class="flex-1 py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {{ mfaCodeLoading ? 'Wird verifiziert...' : 'Verifizieren' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Close Button -->
-          <div v-if="mfaStep === 'method'" class="flex gap-3 pt-4">
-            <button
-              @click="closeMFAFlow"
-              class="w-full py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              Abbrechen
-            </button>
-          </div>
-        </div>
-      </div>
+    <!-- Simy Logo (Oben in der Mitte) -->
+    <div class="mb-8">
+      <img src="/simy-logo.png" alt="Simy" class="h-12">
     </div>
     
     <!-- Login Form -->
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-      <!-- Header mit Tenant-Branding -->
-      <div :style="{ background: currentTenant?.primary_color || '#2563eb' }" class="text-white p-6 rounded-t-xl">
+      <!-- Header mit Simy-Branding -->
+      <div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-xl">
         <div class="text-center">
-          <!-- Tenant Logo -->
-          <div v-if="currentTenant?.logo_url" class="mb-4">
-            <img :src="currentTenant.logo_url" :alt="currentTenant.name" class="w-12 h-12 mx-auto">
-          </div>
-          <div v-else class="mb-4">
-            <div class="w-12 h-12 mx-auto bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-              <span class="text-2xl font-bold">{{ currentTenant?.name?.charAt(0) || 'S' }}</span>
-            </div>
-          </div>
           
-          <h1 class="text-2xl font-bold">{{ currentTenant?.name || 'Willkommen bei Simy' }}</h1>
+          <h1 class="text-2xl font-bold">Willkommen bei Simy</h1>
           <p class="text-white text-opacity-90 mt-1">
             Melden Sie sich in Ihrem Account an
           </p>
@@ -130,12 +23,12 @@
       <div class="p-6">
         <!-- Session Check Loading -->
         <div v-if="isCheckingSession" class="text-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: currentTenant?.primary_color || '#2563eb' }"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style="border-bottom-color: #7C3AED;"></div>
           <p class="text-gray-600">Überprüfe Session...</p>
         </div>
 
-        <!-- Login Form -->
-        <form v-else @submit.prevent="handleLogin" class="space-y-4">
+        <!-- Login Form / MFA Form -->
+        <form v-if="!mfaFlow.state.value.requiresMFA" @submit.prevent="handleLogin" class="space-y-4" novalidate>
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -146,12 +39,15 @@
               v-model="loginForm.email"
               type="email"
               autocomplete="email"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+              :class="[
+                emailError ? 'border-2 border-red-500' : 'border border-gray-300'
+              ]"
+              :style="{ '--tw-ring-color': emailError ? '#ef4444' : '#7C3AED' }"
               placeholder="ihre@email.com"
               :disabled="isLoading"
             >
+            <p v-if="emailError" class="text-sm text-red-600 mt-1">{{ emailError }}</p>
           </div>
 
           <!-- Password Input -->
@@ -165,9 +61,11 @@
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
-                required
-                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+                class="w-full px-3 py-2 pr-10 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
+                :class="[
+                  passwordError ? 'border-2 border-red-500' : 'border border-gray-300'
+                ]"
+                :style="{ '--tw-ring-color': passwordError ? '#ef4444' : '#7C3AED' }"
                 placeholder="Ihr Passwort"
                 :disabled="isLoading"
               >
@@ -186,6 +84,7 @@
                 </svg>
               </button>
             </div>
+            <p v-if="passwordError" class="text-sm text-red-600 mt-1">{{ passwordError }}</p>
           </div>
 
           <!-- Remember Me -->
@@ -203,7 +102,7 @@
             <button
               type="button"
               @click="() => { logger.debug('Button clicked'); showForgotPasswordModal = true; logger.debug('Modal set to:', showForgotPasswordModal); }"
-              class="text-sm text-blue-600 hover:underline hover:text-blue-800 cursor-pointer"
+              class="text-sm text-violet-600 hover:underline hover:text-violet-800 cursor-pointer"
             >
               Passwort vergessen?
             </button>
@@ -214,28 +113,157 @@
             <p class="text-sm text-red-700">{{ loginError }}</p>
           </div>
 
+          <!-- hCaptcha - only show after 3 failed attempts -->
+          <div v-if="requiresCaptcha" class="flex flex-col items-center">
+            <div
+              id="login-hcaptcha"
+              :class="{ 'ring-2 ring-red-500 rounded': captchaError }"
+            ></div>
+            <p v-if="captchaError" class="text-sm text-red-600 mt-2 text-center">
+              Bitte bestätigen Sie, dass Sie kein Roboter sind
+            </p>
+            <p class="text-xs text-gray-500 mt-2 text-center">
+              Sicherheitsüberprüfung erforderlich (mehrere fehlgeschlagene Anmeldeversuche)
+            </p>
+          </div>
+
           <!-- Login Button -->
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="isLoading || rateLimitCountdown > 0"
             class="w-full py-2.5 px-4 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :style="{ 
-              background: currentTenant?.primary_color || '#2563eb',
-              '--hover-color': (currentTenant?.primary_color || '#2563eb') + 'dd'
+              background: '#7C3AED',
+              '--hover-color': '#7C3AED' + 'dd'
             }"
             @mouseenter="($event.target as HTMLElement).style.opacity = '0.9'"
             @mouseleave="($event.target as HTMLElement).style.opacity = '1'"
           >
-            <span v-if="isLoading">Wird angemeldet...</span>
+            <span v-if="rateLimitCountdown > 0">
+              Bitte warten Sie {{ rateLimitCountdown }}s...
+            </span>
+            <span v-else-if="isLoading">Wird angemeldet...</span>
             <span v-else>Anmelden</span>
           </button>
         </form>
+
+
+        <!-- MFA Verification Form -->
+        <div v-else-if="mfaFlow.state.value.requiresMFA" class="space-y-4">
+          <!-- MFA Header -->
+          <div class="text-center mb-6">
+            <h2 class="text-xl font-bold text-gray-900">
+              Multi-Faktor-Authentifizierung
+            </h2>
+            <p class="text-sm text-gray-600 mt-2">
+              Wählen Sie eine Verifizierungsmethode
+            </p>
+          </div>
+
+          <!-- MFA-Methoden Auswahl -->
+          <div v-if="mfaFlow.state.value.availableOptions.length > 0" class="space-y-2">
+            <p class="text-sm font-medium text-gray-700">Authentifizierungsmethode:</p>
+            <div class="flex gap-2 flex-wrap">
+              <button
+                v-for="method in mfaFlow.state.value.availableOptions"
+                :key="method.id"
+                type="button"
+                @click="mfaFlow.selectMFAMethod(method.id)"
+                :class="{
+                  'ring-2': mfaFlow.state.value.selectedOption?.id === method.id,
+                  'ring-offset-0': mfaFlow.state.value.selectedOption?.id === method.id
+                }"
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors hover:border-gray-400"
+                :style="{
+                  background: mfaFlow.state.value.selectedOption?.id === method.id 
+                    ? '#7C3AED10' 
+                    : 'white',
+                  color: mfaFlow.state.value.selectedOption?.id === method.id
+                    ? '#7C3AED'
+                    : '#374151',
+                  borderColor: mfaFlow.state.value.selectedOption?.id === method.id
+                    ? '#7C3AED'
+                    : '#d1d5db'
+                }"
+              >
+                {{ method.name }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Code Input -->
+          <div>
+            <label for="mfa-code" class="block text-sm font-medium text-gray-700 mb-2">
+              Bestätigungscode
+            </label>
+            <input
+              id="mfa-code"
+              :value="mfaFlow.state.value.code"
+              @input="mfaFlow.updateCode(($event.target as HTMLInputElement).value)"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              placeholder="000000"
+              class="w-full px-4 py-2 text-center text-2xl tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+              :style="{ '--tw-ring-color': '#7C3AED' }"
+            >
+            <p class="text-xs text-gray-500 mt-1 text-center">
+              Code an {{ mfaFlow.state.value.email }}
+            </p>
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="mfaFlow.state.value.error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-700">{{ mfaFlow.state.value.error }}</p>
+            <p v-if="mfaFlow.state.value.remainingAttempts > 0 && mfaFlow.state.value.remainingAttempts < 3" class="text-xs text-red-600 mt-1">
+              Noch {{ mfaFlow.state.value.remainingAttempts }} Versuche
+            </p>
+            <p v-if="mfaFlow.state.value.remainingAttempts === 0" class="text-xs text-red-600 mt-2">
+              Passwort vergessen? Bitte benutzen Sie die Passwort zurücksetzen Funktion unten.
+            </p>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-3 pt-2">
+            <!-- Code versenden -->
+            <button
+              type="button"
+              @click="mfaFlow.sendMFACode()"
+              :disabled="mfaFlow.state.value.isVerifying"
+              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span v-if="mfaFlow.state.value.isVerifying">Wird versendet...</span>
+              <span v-else>Erneut versenden</span>
+            </button>
+
+            <!-- Verifizieren -->
+            <button
+              type="button"
+              @click="handleMFAVerify()"
+              :disabled="!mfaFlow.canSubmitCode.value"
+              class="flex-1 px-4 py-2 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              :style="{ background: '#7C3AED' }"
+            >
+              <span v-if="mfaFlow.state.value.isVerifying">Wird überprüft...</span>
+              <span v-else>Verifizieren</span>
+            </button>
+          </div>
+
+          <!-- Zurück Button -->
+          <button
+            type="button"
+            @click="mfaFlow.resetMFAState()"
+            class="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            Zurück
+          </button>
+        </div>
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink :to="tenantParam ? `/register/${tenantParam}` : '/auswahl'" class="font-medium hover:underline" :style="{ color: currentTenant?.primary_color || '#2563eb' }">
+            <NuxtLink :to="'/register'" class="font-medium hover:underline" style="color: #7C3AED;">
               Registrieren
             </NuxtLink>
           </p>
@@ -253,7 +281,7 @@
     <div v-if="showForgotPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
         <!-- Header -->
-        <div :style="{ background: currentTenant?.primary_color || '#2563eb' }" class="text-white p-6 rounded-t-xl">
+        <div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-xl">
           <h2 class="text-2xl font-bold">Passwort zurücksetzen</h2>
         </div>
 
@@ -273,7 +301,7 @@
                   ? 'text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               ]"
-              :style="resetContactMethod === 'email' ? { background: currentTenant?.primary_color || '#2563eb' } : {}"
+              :style="resetContactMethod === 'email' ? { background: '#7C3AED' } : {}"
             >
               E-Mail
             </button>
@@ -285,7 +313,7 @@
                   ? 'text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               ]"
-              :style="resetContactMethod === 'phone' ? { background: currentTenant?.primary_color || '#2563eb' } : {}"
+              :style="resetContactMethod === 'phone' ? { background: '#7C3AED' } : {}"
             >
               Telefon
             </button>
@@ -301,7 +329,7 @@
               type="email"
               placeholder="ihre@email.com"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+              :style="{ '--tw-ring-color': '#7C3AED' }"
               :disabled="resetIsLoading"
             >
           </div>
@@ -316,7 +344,7 @@
               type="tel"
               placeholder="+41 79 123 45 67"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-              :style="{ '--tw-ring-color': currentTenant?.primary_color || '#2563eb' }"
+              :style="{ '--tw-ring-color': '#7C3AED' }"
               :disabled="resetIsLoading"
             >
           </div>
@@ -343,7 +371,7 @@
             <button
               @click="handlePasswordReset"
               class="flex-1 py-2 px-4 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
-              :style="{ background: currentTenant?.primary_color || '#2563eb' }"
+              :style="{ background: '#7C3AED' }"
               :disabled="resetIsLoading"
             >
               <span v-if="resetIsLoading">Wird gesendet...</span>
@@ -379,24 +407,7 @@ const route = useRoute()
 const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
-const { 
-  showMFAModal, 
-  mfaStep, 
-  mfaSelectedMethod, 
-  mfaCodeInput,
-  mfaCodeSent,
-  mfaCodeLoading,
-  mfaCodeError,
-  mfaCodeExpiresIn,
-  mfaOptions,
-  mfaEmail,
-  openMFAFlow,
-  sendMFACode,
-  verifyMFACode,
-  verifyPasskey,
-  closeMFAFlow,
-  formatExpiresIn
-} = useMFAFlow()
+const mfaFlow = useMFAFlow()
 const supabase = getSupabase()
 
 // Get tenant from URL parameter or route params
@@ -429,6 +440,14 @@ const isLoading = ref(false)
 const loginError = ref<string | null>(null)
 const showPassword = ref(false)
 const showForgotPasswordModal = ref(false)
+const rateLimitCountdown = ref<number>(0)
+const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
+
+// Adaptive Captcha State
+const failedLoginAttempts = ref<number>(0)
+const requiresCaptcha = computed(() => failedLoginAttempts.value >= 3)
+const captchaError = ref(false)
+const widgetId = ref<number | null>(null)
 
 // Password Reset State
 const resetContactMethod = ref<'email' | 'phone'>('email')
@@ -447,6 +466,33 @@ const loginForm = ref({
   rememberMe: false
 })
 
+// Inline validation errors
+const emailError = ref<string | null>(null)
+const passwordError = ref<string | null>(null)
+
+// Validate email in real-time
+watch(() => loginForm.value.email, (newEmail) => {
+  if (!newEmail) {
+    emailError.value = null
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newEmail.trim())) {
+    emailError.value = 'Ungültige E-Mail-Adresse'
+  } else {
+    emailError.value = null
+  }
+})
+
+// Validate password length in real-time (only minimum check for login)
+watch(() => loginForm.value.password, (newPassword) => {
+  // No validation on login - accept any password length
+  // (users have different password requirements from different registration times)
+  passwordError.value = null
+})
+
+
 // Methods
 const handleLogin = async () => {
   if (!loginForm.value.email || !loginForm.value.password) {
@@ -456,64 +502,279 @@ const handleLogin = async () => {
 
   isLoading.value = true
   loginError.value = null
+  captchaError.value = false
 
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
-    if (loginForm.value.rememberMe) {
-      logger.debug('✅ "Angemeldet bleiben" aktiviert - Session wird 7 Tage gespeichert')
+    
+    // Get hCaptcha token if required
+    let captchaToken: string | null = null
+    if (requiresCaptcha.value && process.client) {
+      logger.debug('🔐 Captcha required, getting token...')
+      
+      for (let attempt = 0; attempt < 10; attempt++) {
+        if ((window as any).hcaptcha && widgetId.value !== null) {
+          try {
+            const response = (window as any).hcaptcha.getResponse(widgetId.value)
+            if (response && typeof response === 'string' && response.length > 0) {
+              captchaToken = response
+              logger.debug('✅ hCaptcha token received')
+              break
+            } else if (attempt === 0) {
+              logger.debug('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
+            }
+          } catch (error: any) {
+            logger.debug(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error)
+          }
+        }
+        
+        if (attempt < 9 && !captchaToken) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+      }
+      
+      if (!captchaToken) {
+        captchaError.value = true
+        loginError.value = 'Bitte führen Sie die Captcha-Verifikation durch'
+        return
+      }
     }
     
-    // Verwende Server-seitigen Login-Endpoint mit Rate Limiting
-    const loginResponse = await $fetch('/api/auth/login', {
+    // Versuche zu authentifizieren über den neuen Login-Endpoint mit MFA-Support
+    const response = await $fetch('/api/auth/login', {
       method: 'POST',
       body: {
-        email: loginForm.value.email,
-        password: loginForm.value.password
+        email: loginForm.value.email.toLowerCase().trim(),
+        password: loginForm.value.password,
+        tenantId: currentTenant.value?.id || null,
+        rememberMe: loginForm.value.rememberMe, // Send "Remember Me" preference
+        captchaToken // Send captcha token if available
       }
-    }).catch((error: any) => {
-      console.error('❌ Login API error:', error)
-      return null
     }) as any
 
-    if (!loginResponse) {
-      console.error('❌ Login failed - no response from server')
-      loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    logger.debug('📋 Login response:', { requiresMFA: response?.requiresMFA, success: response?.success })
+
+    // ✨ MFA erforderlich?
+    if (response?.requiresMFA) {
+      logger.debug('🔐 MFA erforderlich für:', response.email)
+      await mfaFlow.handleMFARequired(response.email)
+      return // MFA-Screen wird jetzt angezeigt
+    }
+
+    // Fehler beim Login?
+    if (!response?.success || response?.requiresMFA) {
+      const errorMsg = response?.statusMessage || 'Anmeldung fehlgeschlagen'
+      
+      if (errorMsg?.includes('Invalid login credentials')) {
+        loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+      } else if (errorMsg?.includes('Account')) {
+        loginError.value = errorMsg
+      } else if (errorMsg?.includes('too many') || errorMsg?.includes('429')) {
+        loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
+      } else {
+        loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      }
       return
     }
 
-    // ✅ Check if MFA is required
-    if (loginResponse.requiresMfa) {
-      logger.debug('🔐 MFA required for user')
-      openMFAFlow(
-        loginResponse.user.id,
-        loginResponse.tempSessionToken,
-        loginResponse.mfaOptions,
-        loginResponse.user.email
-      )
-      return
-    }
-
-    // ✅ No MFA required - proceed with normal login
-    logger.debug('✅ No MFA required - proceeding with normal login')
-    isLoading.value = false
-
-    // Store session in auth store
-    const authStore = useAuthStore()
-    if (loginResponse.session) {
+    // Normales Login erfolgreich
+    logger.debug('✅ Login successful')
+    
+    // Reset failed login attempts on success
+    failedLoginAttempts.value = 0
+    
+    // Session is now stored in httpOnly cookie (secure, XSS-protected)
+    // No need to store tokens in localStorage/sessionStorage anymore!
+    logger.debug('🔐 Session stored in httpOnly cookie (secure)')
+    
+    // Note: We still call setSession to update Supabase client state
+    const supabase = getSupabase()
+    if (response.session) {
       try {
-        await supabase.auth.setSession(loginResponse.session)
-        await router.push('/dashboard')
-      } catch (error: any) {
-        console.error('❌ Error setting session:', error)
-        loginError.value = 'Fehler beim Speichern der Sitzung'
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: response.session.access_token,
+          refresh_token: response.session.refresh_token
+        })
+        if (sessionError) {
+          logger.debug('⚠️ setSession returned error:', sessionError.message)
+        } else {
+          logger.debug('✅ Supabase client session updated')
+        }
+      } catch (err) {
+        logger.debug('⚠️ setSession threw error:', err)
       }
     }
-    return
+    
+    // Speichere Session und User
+    const authStore = useAuthStore()
+    authStore.user = response.user
+    
+    // Warte kurz für Auth-State Update
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // Lade User-Profil
+    await authStore.fetchUserProfile(response.user.id)
+    
+    const user = authStore.userProfile
+    
+    if (!user) {
+      console.error('❌ User profile not loaded after login!')
+      loginError.value = 'Fehler beim Laden des Benutzerprofils. Bitte erneut einloggen.'
+      await authStore.logout()
+      return
+    }
+    
+    logger.debug('✅ User profile loaded:', user.email)
+
+    // Lade Tenant-Informationen
+    let redirectPath = '/dashboard' // Fallback
+    
+    // Master Admin geht direkt zu /tenant-admin
+    if (user.role === 'super_admin') {
+      logger.debug('👑 Master Admin detected, redirecting to /tenant-admin')
+      redirectPath = '/tenant-admin'
+    } else if (user.tenant_id) {
+      logger.debug('🏢 Loading tenant info for tenant_id:', user.tenant_id)
+      
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', user.tenant_id)
+        .single()
+      
+      if (tenantError) {
+        console.error('❌ Error loading tenant:', tenantError)
+      } else if (tenant?.slug) {
+        logger.debug('✅ Found tenant slug:', tenant.slug)
+        
+        // Weiterleitung basierend auf Rolle
+        if (user.role === 'admin' || user.role === 'tenant_admin') {
+          redirectPath = '/admin'
+        } else if (user.role === 'staff') {
+          redirectPath = '/dashboard'
+        } else {
+          redirectPath = '/customer-dashboard'
+        }
+      }
+    }
+    
+    showSuccess('Erfolgreich angemeldet', 'Willkommen zurück!')
+    logger.debug('🔄 Redirecting to:', redirectPath)
+    router.push(redirectPath)
     
   } catch (error: any) {
     console.error('Login error:', error)
+    
+    // Increment failed login attempts (for adaptive captcha)
+    failedLoginAttempts.value++
+    logger.debug(`❌ Failed login attempt #${failedLoginAttempts.value}`)
+    
+    // Get the status message from multiple possible paths
+    const errorMsg = error?.data?.statusMessage || 
+                     error?.cause?.statusMessage ||
+                     error?.message || 
+                     'Anmeldung fehlgeschlagen'
+    
+    // Check for rate limit error and start countdown - use toLowerCase() for case-insensitive matching
+    const isRateLimitError = errorMsg?.toLowerCase().includes('too many') || 
+                             errorMsg?.includes('429') || 
+                             errorMsg?.toLowerCase().includes('zu viele')
+    
+    if (isRateLimitError) {
+      loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
+      
+      // Get retry-after time from MULTIPLE possible paths
+      let retryAfter = 60000 // fallback to 60 seconds
+      
+      // Try all possible paths - order matters! Most nested first
+      if (error?.cause?.data?.retryAfter !== undefined) {
+        retryAfter = error.cause.data.retryAfter
+      } else if (error?.data?.data?.retryAfter !== undefined) {
+        retryAfter = error.data.data.retryAfter
+      } else if (error?.data?.retryAfter !== undefined) {
+        retryAfter = error.data.retryAfter
+      }
+      
+      const countdown = Math.ceil(retryAfter / 1000) // convert to seconds
+      rateLimitCountdown.value = Math.max(1, countdown) // minimum 1 second
+      console.log('Rate limit countdown set to:', rateLimitCountdown.value, 'seconds')
+      
+      // Start countdown timer
+      if (rateLimitInterval.value) clearInterval(rateLimitInterval.value)
+      rateLimitInterval.value = setInterval(() => {
+        rateLimitCountdown.value--
+        if (rateLimitCountdown.value <= 0) {
+          if (rateLimitInterval.value) clearInterval(rateLimitInterval.value)
+          rateLimitCountdown.value = 0
+        }
+      }, 1000)
+    } else if (errorMsg?.includes('Invalid login credentials')) {
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+    } else if (errorMsg?.includes('Account')) {
+      loginError.value = errorMsg
+    } else if (errorMsg?.includes('Email not confirmed')) {
+      loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst.'
+    } else if (errorMsg?.includes('User not found')) {
+      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+    } else if (errorMsg?.includes('disabled')) {
+      loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
+    } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {
+      loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'
+    } else {
+      loginError.value = errorMsg
+    }
+  } finally {
     isLoading.value = false
-    loginError.value = error?.message || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+  }
+}
+
+const handleMFAVerify = async () => {
+  const result = await mfaFlow.verifyMFACode(loginForm.value.password)
+  
+  if (result && result.success) {
+    logger.debug('✅ MFA verification successful, logging in...')
+    
+    // MFA erfolgreich - führe normales Login-Ende aus
+    const authStore = useAuthStore()
+    authStore.user = result.user
+    
+    await new Promise(resolve => setTimeout(resolve, 200))
+    await authStore.fetchUserProfile(result.user.id)
+    
+    const user = authStore.userProfile
+    
+    if (!user) {
+      loginError.value = 'Fehler beim Laden des Benutzerprofils.'
+      return
+    }
+    
+    let redirectPath = '/dashboard'
+    
+    // Master Admin geht direkt zu /tenant-admin
+    if (user.role === 'super_admin') {
+      logger.debug('👑 Master Admin detected, redirecting to /tenant-admin')
+      redirectPath = '/tenant-admin'
+    } else if (user.tenant_id) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', user.tenant_id)
+        .single()
+      
+      if (tenant?.slug) {
+        if (user.role === 'admin' || user.role === 'tenant_admin') {
+          redirectPath = '/admin'
+        } else if (user.role === 'staff') {
+          redirectPath = '/dashboard'
+        } else {
+          redirectPath = '/customer-dashboard'
+        }
+      }
+    }
+    
+    showSuccess('Erfolgreich angemeldet', 'Willkommen zurück!')
+    logger.debug('🔄 Redirecting to:', redirectPath)
+    router.push(redirectPath)
   }
 }
 
@@ -605,6 +866,12 @@ const handlePasswordReset = async () => {
   }
 }
 
+// ======= Face ID Login =======
+
+/**
+ * Login with Face ID / WebAuthn
+ */
+
 const handleLogout = async () => {
   try {
     await logout()
@@ -619,6 +886,8 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Check WebAuthn support
+
   // Warte kurz damit Auth-State nach Logout vollständig gelöscht ist
   await new Promise(resolve => setTimeout(resolve, 100))
   
@@ -644,12 +913,38 @@ onMounted(async () => {
     }
     
     logger.debug('✅ User profile found, redirecting...')
-    if (user?.role === 'admin' || user?.role === 'tenant_admin') {
+    if (user?.role === 'super_admin') {
+      router.push('/tenant-admin')
+    } else if (user?.role === 'admin' || user?.role === 'tenant_admin') {
       router.push('/admin')
     } else if (user?.role === 'staff') {
       router.push('/dashboard')
     } else {
       router.push('/customer-dashboard')
+    }
+  }
+})
+
+// Watch for captcha requirement and render hCaptcha
+watch(requiresCaptcha, async (required) => {
+  if (required && process.client) {
+    logger.debug('📍 Captcha required, rendering hCaptcha...')
+    
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    const hcaptchaContainer = document.getElementById('login-hcaptcha')
+    if (hcaptchaContainer && (window as any).hcaptcha && widgetId.value === null) {
+      try {
+        const siteKey = '50bb4c3b-c52d-4997-a7ea-64f4e7ab0d86' // Your hCaptcha site key
+        widgetId.value = (window as any).hcaptcha.render('login-hcaptcha', {
+          sitekey: siteKey,
+          theme: 'light'
+        })
+        logger.debug('✅ hCaptcha rendered successfully with widget ID:', widgetId.value)
+      } catch (error: any) {
+        console.error('❌ Error rendering hCaptcha:', error?.message || error)
+      }
     }
   }
 })
@@ -660,6 +955,13 @@ useHead({
   meta: [
     { name: 'description', content: 'Melden Sie sich in Ihrem Simy Account an.' },
     { name: 'robots', content: 'noindex, nofollow' }
+  ],
+  script: [
+    {
+      src: 'https://js.hcaptcha.com/1/api.js',
+      async: true,
+      defer: false
+    }
   ]
 })
 </script>
@@ -671,8 +973,8 @@ input:focus {
 }
 
 input[type="checkbox"]:checked {
-  background-color: #2563eb;
-  border-color: #2563eb;
+  background-color: #7C3AED;
+  border-color: #7C3AED;
 }
 
 /* Smooth transitions */

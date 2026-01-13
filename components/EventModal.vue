@@ -3,33 +3,33 @@
     <!-- Modal Container - Ganzer verfügbarer Raum -->
     <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
 
-      <!-- ✅ FIXED HEADER -->
-      <div class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <!-- ✅ FIXED HEADER (nur im Edit/View mode) -->
+      <div v-if="props.mode === 'edit' || props.mode === 'view'" class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <!-- Links: Staff Selector und Reload Button -->
         <div class="flex items-center space-x-4">        
 
         </div>   
-                  <!-- Action-Buttons (nur bei edit/view mode) -->
-          <div v-if="props.mode !== 'create' && props.eventData?.id" class="flex items-center space-x-2">
-            
-            <!-- Kopieren Button -->
-            <button
-              @click="handleCopy"
-              class="ml-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
-              title="Termin kopieren"
-            >
-              Kopieren
-            </button>
-            
-            <!-- Löschen Button -->
-            <button
-              @click="handleDelete"
-              class="px-3 py-1.5 bg-red-600 text-white hover:bg-red-700 rounded text-sm transition-colors"
-              title="Termin löschen"
-            >
-              Löschen
-            </button>
-          </div>
+        <!-- Action-Buttons (nur bei edit/view mode) -->
+        <div v-if="(props.mode === 'edit' || props.mode === 'view') && props.eventData?.id" class="flex items-center space-x-2">
+          
+          <!-- Kopieren Button -->
+          <button
+            @click="handleCopy"
+            class="ml-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
+            title="Termin kopieren"
+          >
+            Kopieren
+          </button>
+          
+          <!-- Löschen Button -->
+          <button
+            @click="handleDelete"
+            class="px-3 py-1.5 bg-red-600 text-white hover:bg-red-700 rounded text-sm transition-colors"
+            title="Termin löschen"
+          >
+            Löschen
+          </button>
+        </div>
 
         <!-- ✅ Schließen Button entfernt - Abbrechen Button ist ausreichend -->
       </div>
@@ -39,7 +39,7 @@
         <div class="px-4 py-4 space-y-4">
           
           <!-- Student Selector -->
-          <div v-if="showStudentSelector" class="py-2">
+          <div v-if="showStudentSelector" class="py-0">
             <StudentSelector
               ref="studentSelectorRef"
               v-model="selectedStudent"
@@ -49,7 +49,7 @@
               :is-freeslot-mode="isFreeslotMode"
               :allow-student-change="!(props.mode === 'edit' && isPastAppointment)"
               :show-clear-button="!(props.mode === 'edit' && isPastAppointment)"
-              :show-switch-to-other="!(props.mode === 'edit' && isPastAppointment)"
+              :show-switch-to-other="props.mode === 'create'"
               @student-selected="handleStudentSelected"
               @student-cleared="handleStudentCleared"
               @switch-to-other="switchToOtherEventType"
@@ -89,8 +89,8 @@
           </div>
 
           <!-- Typ ändern Button für other event types (nur bei edit mode und zukünftigen Terminen) -->
-          <!-- DISABLED: Temporarily hidden for first phase testing -->
-          <div v-if="false && props.mode !== 'create' && !isLessonType(formData.eventType) && formData.eventType !== 'other' && !isPastAppointment" class="py-2">
+          <!-- ✅ ENABLED: Other Event Types jetzt full supported! -->
+          <div v-if="props.mode !== 'create' && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other'" class="py-2">
             <button
               @click="changeEventType"
               class="w-full px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm transition-colors"
@@ -133,10 +133,14 @@
               :event-type="eventTypeForTitle"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
-              :category-code="formData.type"
+              :category-code="formData.type || undefined"
               :selected-location="selectedLocation"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              :auto-generate="true"
+              :auto-generate="!isOtherEventType"
+              :is-loading-from-database="props.mode === 'edit'"
+              :user-id="formData.user_id"
+              :staff-id="formData.staff_id"
+              :event-type-code="formData.appointment_type"
               @title-generated="handleTitleGenerated"
             />
           </div>
@@ -249,11 +253,6 @@
             />
           </div>
 
-          <!-- Error Display -->
-          <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p class="text-sm text-red-800">❌ {{ error }}</p>
-          </div>
-
           <!-- Loading Display -->
           <div v-if="isLoading" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div class="flex items-center space-x-2">
@@ -274,7 +273,7 @@
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           title="Schüler Fortschritt anzeigen"
         >
-          Fortschritt
+          Profil
         </button>
         <div v-else></div>
         
@@ -357,7 +356,6 @@
         
         <!-- Wer hat abgesagt? -->
         <div v-if="cancellationStep === 0" class="mb-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Wer hat abgesagt?</h3>
           
           <div class="grid grid-cols-2 gap-4">
             <button
@@ -406,71 +404,8 @@
           </div>
         </div>
 
-        <!-- Policy auswählen -->
+        <!-- Bestätigung mit Policy-Berechnung (Step 2) -->
         <div v-if="cancellationStep === 2" class="mb-6">
-          <div v-if="appointmentDataForPolicy" class="space-y-4">
-            <!-- Termin-Info Header -->
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="font-medium text-gray-900">{{ translateEventTypeCode(props.eventData?.event_type_code) }} - {{ selectedStudent?.first_name || 'Kunde' }}</h4>
-                  <p class="text-sm text-gray-600">
-                    {{ formatDateWithTime(props.eventData?.start) }} • 
-                    {{ props.eventData?.duration_minutes || 45 }} Min • 
-                    {{ formatCurrency(appointmentDataForPolicy?.price_rappen || 0) }}
-                  </p>
-                </div>
-                <div class="text-right">
-                  <div class="text-sm text-gray-500">Zeit bis Termin</div>
-                  <div class="font-medium text-gray-900">
-                    {{ timeUntilAppointment?.hours || 0 }}h
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Policy Selection -->
-            <CancellationPolicySelector
-              v-model="selectedCancellationPolicyId"
-              :appointment-data="appointmentDataForPolicy"
-              @policy-changed="onPolicyChanged"
-            />
-
-            <!-- Quick Summary -->
-            <div v-if="cancellationPolicyResult" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="font-medium text-blue-900">Absage-Berechnung</div>
-                    <div class="text-sm text-blue-700">
-                      {{ cancellationPolicyResult.calculation.chargePercentage }}% verrechnen
-                    </div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div v-if="cancellationPolicyResult.calculation.chargePercentage > 0" class="text-lg font-bold text-red-600">
-                    {{ formatCurrency(cancellationPolicyResult.chargeAmountRappen) }}
-                  </div>
-                  <div v-else class="text-lg font-bold text-green-600">
-                    Kostenlos
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="text-center text-gray-500 py-8">
-            <div class="text-4xl mb-2">⚠️</div>
-            <p>Keine Termindaten verfügbar</p>
-          </div>
-        </div>
-
-        <!-- Bestätigung (Step 3) -->
-        <div v-if="cancellationStep === 3" class="mb-6">
           <div v-if="cancellationPolicyResult" class="space-y-4">
             <!-- Termin-Info Header -->
             <div class="bg-gray-50 rounded-lg p-4">
@@ -552,22 +487,7 @@
             ← Zurück
           </button>
           <button
-            v-if="cancellationStep === 3"
-            @click="goBackInCancellationFlow"
-            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            ← Zurück
-          </button>
-          <button
             v-if="cancellationStep === 2"
-            @click="confirmCancellationWithReason"
-            :disabled="isLoading"
-            class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ isLoading ? 'Lösche...' : 'Termin absagen' }}
-          </button>
-          <button
-            v-if="cancellationStep === 3"
             @click="confirmCancellationWithReason"
             :disabled="isLoading"
             class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -586,6 +506,39 @@
       @close="showPostAppointmentModal = false"
       @saved="onPostAppointmentSaved"
     />
+    
+    <!-- No Policy Modal - Staff Decision -->
+    <div v-if="showNoPolicyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          Keine Stornierungsrichtlinie gefunden
+        </h3>
+        <p class="text-gray-600 mb-6">
+          Für diesen Termin wurde keine Stornierungsrichtlinie gefunden. Bitte wähle aus, ob der Termin verrechnet werden soll:
+        </p>
+        
+        <div class="space-y-3">
+          <button
+            @click="handleNoPolicyChoice(0)"
+            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            Kostenlos (0% verrechnen)
+          </button>
+          <button
+            @click="handleNoPolicyChoice(100)"
+            class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+          >
+            Vollständig verrechnen (100%)
+          </button>
+          <button
+            @click="showNoPolicyModal = false"
+            class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </div>
 
 
     <!-- Payment Status Modal für Stornierungs-Rechnungen -->
@@ -640,65 +593,10 @@
       </div>
     </div>
 
-    <!-- Refund Options Modal für bereits bezahlte Termine -->
-    <div v-if="showRefundOptionsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-        <div class="flex items-center mb-4">
-          <div class="text-2xl mr-3">💰</div>
-          <h3 class="text-lg font-semibold text-gray-900">Rückerstattungs-Optionen</h3>
-        </div>
-        
-        <div class="mb-4 space-y-3">
-          <div class="p-3 bg-green-50 border border-green-200 rounded-md">
-            <p class="text-sm text-green-800">
-              <strong>Termin:</strong> {{ props.eventData?.title || 'Unbekannt' }}
-            </p>
-            <p class="text-sm text-green-800">
-              <strong>Datum:</strong> {{ formatDate(props.eventData?.start || props.eventData?.start_time) }}
-            </p>
-            <p class="text-sm text-green-800">
-              <strong>Status:</strong> Bereits bezahlt
-            </p>
-          </div>
-          
-          <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p class="text-sm text-blue-800">
-              <strong>Wichtiger Hinweis:</strong> Da der Termin bereits bezahlt wurde, müssen Sie entscheiden, 
-              wie mit der Zahlung verfahren werden soll.
-            </p>
-          </div>
-        </div>
 
-        <div class="space-y-3">
-          <button
-            @click="handleRefundFull"
-            class="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            💰 Vollständige Rückerstattung
-          </button>
-          
-          <button
-            @click="handleRefundPartial"
-            class="w-full px-4 py-3 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
-          >
-            💸 Teilweise Rückerstattung (Stornogebühr einbehalten)
-          </button>
-          
-          <button
-            @click="handleNoRefund"
-            class="w-full px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            🚫 Keine Rückerstattung (Termin als verfallen markieren)
-          </button>
-        </div>
-        
-        <button
-          @click="showRefundOptionsModal = false"
-          class="mt-4 w-full text-gray-500 hover:text-gray-700 text-sm"
-        >
-          Abbrechen
-        </button>
-      </div>
+    <!-- Refund Options Modal für bereits bezahlte Termine - DEPRECATED: Using cancellation policies instead -->
+    <div v-if="false" class="hidden">
+      <!-- This UI is no longer used -->
     </div>
   </div>
 </template>
@@ -709,6 +607,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
+import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -742,8 +641,7 @@ import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDuratio
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
-import CancellationPolicySelector from '~/components/CancellationPolicySelector.vue'
-import { createCancellationFeeInvoice } from '~/utils/policyCalculations'
+import { calculateCancellationCharges } from '~/utils/policyCalculations'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -839,15 +737,15 @@ const showRefundOptionsModal = ref(false)
 const showCancellationReasonModal = ref(false)
 const selectedCancellationReasonId = ref<string | null>(null)
 const cancellationStep = ref(0) // 0 = Typ auswählen, 1 = Grund auswählen, 2 = Policy auswählen
-const cancellationType = ref<'student' | 'staff' | null>(null)
+const cancellationType = ref<'student' | 'staff' | undefined>(undefined)
 const cancellationInvoiceData = ref<any>(null)
 const pendingCancellationReason = ref<any>(null) // Speichert den ausgewählten Grund für die Bezahlnachfrage
-const selectedCancellationPolicyId = ref<string>('')
 const cancellationPolicyResult = ref<any>(null)
 const timeUntilAppointment = ref({ hours: 0, days: 0, isOverdue: false, description: '' })
-const isResetingPolicy = ref(false) // ✅ NEU: Flag to prevent onPolicyChanged from being called during reset
 const appointmentNumber = ref(1)
 const availableDurations = ref([45] as number[])
+const showNoPolicyModal = ref(false) // ✅ NEW: Modal when no policy found
+const manualChargePercentage = ref<number | null>(null) // ✅ NEW: Staff choice when no policy
 const customerInviteSelectorRef = ref()
 const authStore = useAuthStore()
 // ✅ NEU: Verwende useProductSale Composable für Produktverwaltung
@@ -988,6 +886,12 @@ const isPastAppointment = computed(() => {
   return isPast
 })
 
+// ✅ Check if current event is an "other" event type (VKU, Nothelfer, Meeting, etc.)
+const isOtherEventType = computed(() => {
+  const lessonTypes = ['lesson', 'exam', 'theory']
+  return !lessonTypes.includes(formData.value.eventType || 'lesson')
+})
+
 // Helper function für Lesson Type Text
 const getLessonTypeText = (appointmentType: string): string => {
   logger.debug('🔍 getLessonTypeText called with:', appointmentType)
@@ -1056,6 +960,25 @@ const handleSaveAppointment = async () => {
     isLoading.value = true
     error.value = ''
     
+    // ✅ FRONTEND TIME VALIDATION - Check if start < end BEFORE saving
+    const startTime = new Date(`2000-01-01 ${formData.value.startTime}`)
+    const endTime = new Date(`2000-01-01 ${formData.value.endTime}`)
+    
+    if (startTime >= endTime) {
+      error.value = 'Startzeit muss vor Endzeit liegen'
+      isLoading.value = false
+      logger.warn('⚠️ Time validation failed:', { startTime: formData.value.startTime, endTime: formData.value.endTime })
+      return
+    }
+    
+    // ✅ FRONTEND DURATION VALIDATION - Check if duration is within valid range
+    if (formData.value.duration_minutes < 15 || formData.value.duration_minutes > 600) {
+      error.value = `Dauer muss zwischen 15 und 600 Minuten liegen (aktuell: ${formData.value.duration_minutes} min)`
+      isLoading.value = false
+      logger.warn('⚠️ Duration validation failed:', { duration: formData.value.duration_minutes })
+      return
+    }
+    
     // ✅ NEU: Auto-save billing address before saving appointment
     if (selectedStudent.value && priceDisplayRef.value) {
       try {
@@ -1091,93 +1014,137 @@ const handleSaveAppointment = async () => {
             reduction: durationReduction
           })
           
-          // Load existing payment to calculate credit amount
+          // Load existing payment to adjust price
           const { data: payment } = await supabase
             .from('payments')
-            .select('id, lesson_price_rappen, notes')
+            .select('*')
             .eq('appointment_id', props.eventData.id)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
           
+          // ✅ Always adjust payment amount (for both completed and pending)
           if (payment && payment.lesson_price_rappen > 0) {
             // Calculate price per minute
             const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
             const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
+            const newLessonPriceRappen = payment.lesson_price_rappen - creditAmountRappen
             
-            logger.debug('💰 Credit calculation:', {
+            logger.debug('💰 Price adjustment calculation:', {
+              paymentStatus: payment.payment_status,
               pricePerMinute: (pricePerMinute / 100).toFixed(4),
               creditAmountRappen,
-              creditAmountCHF: (creditAmountRappen / 100).toFixed(2)
+              creditAmountCHF: (creditAmountRappen / 100).toFixed(2),
+              oldLessonPrice: payment.lesson_price_rappen,
+              newLessonPrice: newLessonPriceRappen
             })
             
-            // ✅ Update payment with credit note
-            const creditNote = `Gutschrift CHF ${(creditAmountRappen / 100).toFixed(2)} aufgrund Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min`
+            // Calculate new total
+            const newTotalRappen = newLessonPriceRappen + 
+              (payment.admin_fee_rappen || 0) + 
+              (payment.products_price_rappen || 0) - 
+              (payment.discount_amount_rappen || 0)
+            
+            // ✅ Update payment amount (always)
+            const priceNote = `Preis angepasst aufgrund Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min (-CHF ${(creditAmountRappen / 100).toFixed(2)})`
             const existingNotes = payment.notes || ''
-            const updatedNotes = existingNotes ? `${existingNotes}\n${creditNote}` : creditNote
+            const updatedNotes = existingNotes ? `${existingNotes}\n${priceNote}` : priceNote
             
             const { error: paymentUpdateError } = await supabase
               .from('payments')
               .update({ 
+                lesson_price_rappen: newLessonPriceRappen,
+                total_amount_rappen: newTotalRappen,
                 notes: updatedNotes,
                 updated_at: new Date().toISOString()
               })
               .eq('id', payment.id)
             
             if (paymentUpdateError) {
-              logger.error('Payment', 'Failed to update payment notes:', paymentUpdateError)
+              logger.error('Payment', 'Failed to update payment:', paymentUpdateError)
             } else {
-              logger.debug('✅ Payment notes updated with credit info')
+              logger.debug('✅ Payment updated with new price:', {
+                oldTotal: payment.total_amount_rappen,
+                newTotal: newTotalRappen,
+                adjustment: creditAmountRappen
+              })
             }
             
-            // Add credit to student's balance (WITHOUT tenant_id filter for RLS)
-            const { data: studentCredit } = await supabase
-              .from('student_credits')
-              .select('id, balance_rappen')
-              .eq('user_id', originalAppointment.user_id)
-              .maybeSingle()
-            
-            if (studentCredit) {
-              const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
-              const { error: updateError } = await supabase
+            // ✅ Only credit student balance if payment was already completed
+            if (payment.payment_status === 'completed') {
+              // Add credit to student's balance (WITHOUT tenant_id filter for RLS)
+              const { data: studentCredit } = await supabase
                 .from('student_credits')
-                .update({ balance_rappen: newBalance })
-                .eq('id', studentCredit.id)
+                .select('id, balance_rappen')
+                .eq('user_id', originalAppointment.user_id)
+                .maybeSingle()
               
-              if (updateError) {
-                logger.error('StudentCredit', 'Failed to update balance:', updateError)
+              if (studentCredit) {
+                const newBalance = (studentCredit.balance_rappen || 0) + creditAmountRappen
+                const { error: updateError } = await supabase
+                  .from('student_credits')
+                  .update({ balance_rappen: newBalance })
+                  .eq('id', studentCredit.id)
+                
+                if (updateError) {
+                  logger.error('StudentCredit', 'Failed to update balance:', updateError)
+                } else {
+                  logger.debug('✅ Student credit updated:', {
+                    studentId: originalAppointment.user_id,
+                    oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
+                    newBalance: (newBalance / 100).toFixed(2)
+                  })
+                }
               } else {
-                logger.debug('✅ Student credit updated:', {
-                  studentId: originalAppointment.user_id,
-                  oldBalance: ((studentCredit.balance_rappen || 0) / 100).toFixed(2),
-                  newBalance: (newBalance / 100).toFixed(2)
-                })
+                // Create new credit record
+                const { error: createError } = await supabase
+                  .from('student_credits')
+                  .insert({
+                    user_id: originalAppointment.user_id,
+                    tenant_id: originalAppointment.tenant_id,
+                    balance_rappen: creditAmountRappen
+                  })
+                
+                if (createError) {
+                  logger.error('StudentCredit', 'Failed to create credit:', createError)
+                } else {
+                  logger.debug('✅ New student credit created:', {
+                    studentId: originalAppointment.user_id,
+                    balance: (creditAmountRappen / 100).toFixed(2)
+                  })
+                }
               }
-            } else {
-              // Create new credit record
-              const { error: createError } = await supabase
-                .from('student_credits')
+              
+              // ✅ Create credit transaction for documentation (only for completed payments)
+              const { error: transactionError } = await supabase
+                .from('credit_transactions')
                 .insert({
                   user_id: originalAppointment.user_id,
                   tenant_id: originalAppointment.tenant_id,
-                  balance_rappen: creditAmountRappen
+                  transaction_type: 'refund',
+                  amount_rappen: creditAmountRappen,
+                  description: `Rückerstattung wegen Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min`,
+                  payment_id: payment.id,
+                  refund_source_payment_id: payment.id,
+                  created_at: new Date().toISOString()
                 })
               
-              if (createError) {
-                logger.error('StudentCredit', 'Failed to create credit:', createError)
+              if (transactionError) {
+                logger.error('CreditTransaction', 'Failed to create transaction:', transactionError)
               } else {
-                logger.debug('✅ New student credit created:', {
-                  studentId: originalAppointment.user_id,
-                  balance: (creditAmountRappen / 100).toFixed(2)
-                })
+                logger.debug('✅ Credit transaction created for duration reduction')
               }
+              
+              showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
+            } else {
+              // For pending payments, just notify about price adjustment (no credit transaction)
+              logger.debug('ℹ️ Payment is pending - price adjusted but no credit given')
+              showSuccess('Preis angepasst', `Payment-Betrag wurde um CHF ${(creditAmountRappen / 100).toFixed(2)} reduziert.`)
             }
-            
-            showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
           }
         }
       } catch (creditError: any) {
-        logger.error('EventModal', 'Error processing duration reduction credit:', creditError)
+        logger.error('EventModal', 'Error processing duration reduction:', creditError)
         // Don't block appointment save if credit fails
       }
     }
@@ -1186,6 +1153,15 @@ const handleSaveAppointment = async () => {
     let savedAppointment: any = null
     
     try {
+      // ✅ WICHTIG: Stelle sicher, dass die Preisberechnung vor dem Speichern abgeschlossen ist
+      // Dies verhindert Race Conditions, wo der Fallback-Preis verwendet wird
+      if (formData.value.eventType === 'lesson' && formData.value.type) {
+        logger.debug('⏳ Waiting for price calculation before saving...')
+        await calculatePriceForCurrentData()
+        // Gebe der Preisberechnung ein paar Millisekunden Zeit zum Aktualisieren
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      
       savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)
@@ -1209,50 +1185,54 @@ const handleSaveAppointment = async () => {
       return
     }
     
-    // ✅ NEU: Automatische Guthaben-Verwendung nach dem Speichern
+    // ✅ NEW: Use secure backend API to apply credit to appointment
     if (props.mode === 'create' && selectedStudent.value && studentCredit.value && studentCredit.value.balance_rappen > 0) {
       try {
-        logger.debug('💳 Automatically using credit for new appointment...')
+        logger.debug('💳 Using secure API to apply credit for appointment...')
         
-        // Berechne den Preis für die Lektion
+        // Calculate total price including all components
         const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
-        
-        const creditData = {
-          user_id: selectedStudent.value.id,
-          amount_rappen: Math.min(studentCredit.value.balance_rappen, lessonPrice),
-          appointment_id: savedAppointment.id,
-          notes: `Automatische Guthaben-Verwendung für Lektion: ${formData.value.title || 'Fahrstunde'}`
+        let productsPrice = 0
+        if (selectedProducts.value && selectedProducts.value.length > 0) {
+          productsPrice = selectedProducts.value.reduce((sum: number, p: any) => {
+            return sum + ((p.product?.price || 0) * 100 * p.quantity)
+          }, 0)
         }
+        const adminFee = savedAppointment?.admin_fee_rappen || 0
+        const discountTotal = (formData.value.discount || 0) * 100
+        const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee - discountTotal)
         
-        logger.debug('💳 Using credit for appointment:', creditData)
+        const creditToUse = Math.min(studentCredit.value.balance_rappen, totalPrice)
         
-        const result = await useCreditForAppointment(creditData)
-        
-        if (result.success) {
-          logger.debug('✅ Credit used successfully:', result)
-          
-          // ✅ NEU: Payment mit Guthaben-Info aktualisieren
+        if (creditToUse > 0 && savedAppointment?.id) {
           const supabase = getSupabase()
-          const { error: paymentError } = await supabase
-            .from('payments')
-            .update({
-              credit_used_rappen: creditData.amount_rappen,
-              credit_transaction_id: result.creditTransactionId // Falls verfügbar
-            })
-            .eq('appointment_id', savedAppointment.id)
+          const { data: { session } } = await supabase.auth.getSession()
           
-          if (paymentError) {
-            console.warn('⚠️ Could not update payment with credit info:', paymentError)
+          const response = await $fetch<{ success: boolean; creditTransactionId?: string }>('/api/credit/use-for-appointment', {
+            method: 'POST',
+            headers: session?.access_token ? {
+              'Authorization': `Bearer ${session.access_token}`
+            } : {},
+            body: {
+              appointmentId: savedAppointment.id,
+              amountRappen: creditToUse,
+              notes: `Guthaben für Termin: ${formData.value.title || 'Fahrstunde'}`
+            }
+          })
+          
+          if (response?.success) {
+            logger.debug('✅ Credit applied successfully via API:', response)
+            // Reload student credit
+            if (selectedStudent.value?.id) {
+              await loadStudentCredit(selectedStudent.value.id)
+            }
           } else {
-            logger.debug('✅ Payment updated with credit information')
+            logger.warn('⚠️ Failed to apply credit via API:', response)
           }
-          
-        } else {
-          console.warn('⚠️ Failed to use credit for appointment')
         }
-      } catch (creditError) {
-        console.error('❌ Error using credit for appointment:', creditError)
-        // Nicht den gesamten Speichervorgang abbrechen, nur loggen
+      } catch (creditError: any) {
+        logger.warn('⚠️ Failed to apply credit for appointment:', creditError.message)
+        // Don't fail the entire flow - appointment was saved successfully
       }
     }
     
@@ -1281,7 +1261,60 @@ const handleSaveAppointment = async () => {
     
   } catch (error: any) {
     console.error('❌ Error saving appointment:', error)
-    error.value = error.message || 'Fehler beim Speichern des Termins'
+    
+    // ✅ LAYER 1: Handle duplicate phone/email errors with user-friendly messages
+    const errorMessage = error.message || error.statusMessage || 'Fehler beim Speichern des Termins'
+    const errorCode = error.code || error.statusCode || null
+    
+    // Check for duplicate errors from useStudents composable
+    if (error.duplicateType === 'phone' || errorMessage === 'DUPLICATE_PHONE') {
+      const existing = error.existingUser || {}
+      const userInfo = existing.first_name || existing.email || existing.phone || 'Unbekannter Benutzer'
+      error.value = `Diese Telefonnummer ist bereits registriert (${userInfo}). Bitte verwende eine andere Telefonnummer.`
+      
+      // Show toast notification for better UX
+      const { addNotification } = useUIStore()
+      addNotification({
+        type: 'error',
+        title: 'Telefonnummer bereits vorhanden',
+        message: `Ein Schüler mit dieser Telefonnummer existiert bereits. Bitte verwende eine andere Nummer.`
+      })
+    } else if (error.duplicateType === 'email' || errorMessage === 'DUPLICATE_EMAIL') {
+      const existing = error.existingUser || {}
+      const userInfo = existing.first_name || existing.phone || existing.email || 'Unbekannter Benutzer'
+      error.value = `Diese E-Mail-Adresse ist bereits registriert (${userInfo}). Bitte verwende eine andere E-Mail.`
+      
+      // Show toast notification for better UX
+      const { addNotification } = useUIStore()
+      addNotification({
+        type: 'error',
+        title: 'E-Mail bereits vorhanden',
+        message: `Ein Schüler mit dieser E-Mail existiert bereits. Bitte verwende eine andere E-Mail.`
+      })
+    } else if (errorCode === 409 && (errorMessage.includes('DUPLICATE') || errorMessage.includes('duplicate'))) {
+      // Handle 409 Conflict errors
+      error.value = `Duplikat gefunden: ${errorMessage.replace('DUPLICATE_', '').toLowerCase()}. Bitte überprüfe die Eingaben.`
+      
+      const { addNotification } = useUIStore()
+      addNotification({
+        type: 'error',
+        title: 'Duplikat gefunden',
+        message: 'Ein Schüler mit diesen Daten existiert bereits.'
+      })
+    } else {
+      // Default error message
+      error.value = errorMessage
+      
+      // Show toast for critical errors
+      if (errorCode >= 400) {
+        const { addNotification } = useUIStore()
+        addNotification({
+          type: 'error',
+          title: 'Fehler beim Speichern',
+          message: errorMessage
+        })
+      }
+    }
   } finally {
     isLoading.value = false
   }
@@ -1434,7 +1467,7 @@ const handleSendSmsRequest = async ({
   onError
 }: SmsPayload) => {
   // Rufe die eigentliche Sendelogik auf
-  const result = await sendSms(phoneNumber, message);
+  const result = await sendSms(phoneNumber, message, tenantName.value);
 
   if (result.success) {
     onSuccess('SMS erfolgreich gesendet!'); // Callback an die Child-Komponente
@@ -1902,7 +1935,18 @@ const calculatePriceForCurrentData = async () => {
       logger.debug('✅ Online price calculated:', priceResult)
       
       // Update dynamic pricing
-      const calculatedPricePerMinute = priceResult.base_price_rappen / durationValue / 100
+      // ✅ In Edit-Mode: Berechne pricePerMinute basierend auf ORIGINAL-Duration, nicht aktueller Duration
+      const durationForPricePerMinute = priceResult.original_duration_minutes || durationValue
+      const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
+      
+      logger.debug('💰 Price per minute calculation:', {
+        base_price_rappen: priceResult.base_price_rappen,
+        original_duration: priceResult.original_duration_minutes,
+        current_duration: durationValue,
+        using_duration: durationForPricePerMinute,
+        pricePerMinute: calculatedPricePerMinute
+      })
+      
       dynamicPricing.value = {
         pricePerMinute: calculatedPricePerMinute,
         adminFeeChf: parseFloat(priceResult.admin_fee_chf),
@@ -1966,6 +2010,22 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
     // Load durations directly from categories table
     const supabase = getSupabase()
     
+    // ✅ WICHTIG: Hole tenant_id vom aktuell angemeldeten Benutzer
+    let tenantIdToUse: string | null = null
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', authUser.id)
+          .single()
+        tenantIdToUse = userData?.tenant_id
+      }
+    } catch (err) {
+      logger.debug('⚠️ Could not fetch tenant_id from auth:', err)
+    }
+    
     // ✅ WICHTIG: Auch nach tenant_id filtern
     let query = supabase
       .from('categories')
@@ -1974,8 +2034,8 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
       .eq('is_active', true)
     
     // Add tenant_id filter if available
-    if (currentUser.value?.tenant_id) {
-      query = query.eq('tenant_id', currentUser.value.tenant_id)
+    if (tenantIdToUse) {
+      query = query.eq('tenant_id', tenantIdToUse)
     }
     
     const { data: categoryData, error: categoryError } = await query.maybeSingle()
@@ -2455,9 +2515,10 @@ const handleStudentSelected = async (student: Student | null) => {
           // It's a special event type (nothelfer, vku, etc.)
           formData.value.eventType = 'other'
           formData.value.selectedSpecialType = defaultEventType.code
-          formData.value.appointment_type = defaultEventType.code
+          // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
+          formData.value.appointment_type = defaultEventType.code // e.g., 'vku', 'nothelfer'
           formData.value.title = defaultEventType.name
-          formData.value.type = defaultEventType.code
+          formData.value.type = null as any // ✅ CRITICAL: No driving category for special events!
           formData.value.duration_minutes = defaultEventType.default_duration_minutes || 60
           calculateEndTime()
           
@@ -2811,6 +2872,8 @@ const switchToOtherEventType = () => {
   logger.debug('📍 SWITCH EVENTMODAL STACK:', new Error().stack)
   
   formData.value.eventType = 'other' // Wird später überschrieben wenn User wählt
+  formData.value.type = null as any // ✅ CRITICAL: Set category to null for other event types!
+  // ✅ Don't set appointment_type yet - will be set when user selects specific event type
   showEventTypeSelection.value = true
   selectedStudent.value = null
   formData.value.user_id = ''
@@ -2844,9 +2907,10 @@ const handleEventTypeSelected = (eventType: any) => {
   invitedCustomers.value = []
   
   formData.value.selectedSpecialType = eventType.code
-  formData.value.appointment_type = eventType.code // ✅ WICHTIG: appointment_type für event_type_code setzen
+  // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
+  formData.value.appointment_type = eventType.code // e.g., 'vku', 'nothelfer'
   formData.value.title = eventType.name
-  formData.value.type = eventType.code
+  formData.value.type = null as any // ✅ CRITICAL: No driving category for special events (VKU, Nothelfer, etc.)!
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
   calculateEndTime()
   
@@ -3095,14 +3159,22 @@ const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => 
 // ✅ Simple Toast Functions for user feedback
 const showSuccess = (title: string, message: string = '') => {
   logger.info('Success', title, message)
-  // For now, use alert as fallback. Can be replaced with Toast component later
-  alert(`✅ ${title}\n${message}`)
+  const uiStore = useUIStore()
+  uiStore.addNotification({
+    type: 'success',
+    title,
+    message
+  })
 }
 
 const showError = (title: string, message: string = '') => {
   logger.error('Error', title, message)
-  // For now, use alert as fallback. Can be replaced with Toast component later
-  alert(`❌ ${title}\n${message}`)
+  const uiStore = useUIStore()
+  uiStore.addNotification({
+    type: 'error',
+    title,
+    message
+  })
 }
 
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
@@ -3208,16 +3280,28 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
               .then(priceResult => {
                 logger.debug('✅ Online price calculated:', priceResult.total_chf)
                 
+                // ✅ In Edit-Mode: Berechne pricePerMinute basierend auf ORIGINAL-Duration
+                const durationForPricePerMinute = priceResult.original_duration_minutes || newDurationMinutes
+                const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
+                
+                logger.debug('💰 Price per minute calculation (calculateEndTime):', {
+                  base_price_rappen: priceResult.base_price_rappen,
+                  original_duration: priceResult.original_duration_minutes,
+                  current_duration: newDurationMinutes,
+                  using_duration: durationForPricePerMinute,
+                  pricePerMinute: calculatedPricePerMinute
+                })
+                
                 // Update dynamic pricing mit online Daten
                 dynamicPricing.value = {
-                  pricePerMinute: priceResult.base_price_rappen / newDurationMinutes / 100,
+                  pricePerMinute: calculatedPricePerMinute,
                   adminFeeChf: parseFloat(priceResult.admin_fee_chf),
                   adminFeeRappen: priceResult.admin_fee_rappen || 0, // ✅ NEU: Admin-Fee in Rappen
                   adminFeeAppliesFrom: 2, // ✅ Standard: Admin-Fee ab 2. Termin
                   appointmentNumber: priceResult.appointment_number,
                   hasAdminFee: priceResult.admin_fee_rappen > 0,
                   totalPriceChf: priceResult.total_chf,
-                  category: formData.value.type,
+                  category: formData.value.type || '',
                   duration: newDurationMinutes,
                   isLoading: false,
                   error: ''
@@ -3227,7 +3311,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
               })
               .catch(error => {
                 logger.debug('🔄 Online pricing failed, using offline calculation:', error)
-                calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
+                calculateOfflinePrice(formData.value.type || '', newDurationMinutes, appointmentNum)
               })
           } else {
             // ✅ Offline: Direkte Offline-Berechnung
@@ -3341,7 +3425,6 @@ const resetForm = () => {
   
   // ✅ NEU: Standard-Zahlungsmethode beim Reset setzen
   selectedPaymentMethod.value = 'wallee'
-  logger.debug('💳 Payment method reset to default: wallee')
 }
 
 // Staff Selection Handler
@@ -3503,7 +3586,7 @@ const handleDelete = async () => {
   // ✅ FÜR LEKTIONEN: Erst Absage-Gründe erfragen
   logger.debug('🗑️ Lesson/Exam/Theory - show cancellation reason modal first')
   cancellationStep.value = 0 // Starte mit Schritt 1 (Wer hat abgesagt?)
-  cancellationType.value = null // Benutzer muss wählen
+  cancellationType.value = undefined // Benutzer muss wählen
   await fetchCancellationReasons()
   showCancellationReasonModal.value = true
 }
@@ -3695,7 +3778,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           method: 'POST',
           body: {
             phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
+            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`,
+            senderName: tenantName.value
           }
         })
         logger.debug('✅ SMS sent successfully:', result)
@@ -3754,8 +3838,42 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
 }
 
 // ✅ NEUE SOFT-DELETE FUNKTION mit Absage-Grund
+// ✅ NEW: Handle staff choice when no policy found
+const handleNoPolicyChoice = async (chargePercent: number) => {
+  logger.debug('👤 Staff chose charge percentage:', chargePercent)
+  
+  // Store the manual choice
+  manualChargePercentage.value = chargePercent
+  
+  // Create a policy result manually
+  const price = appointmentPrice.value || 0
+  cancellationPolicyResult.value = {
+    calculation: {
+      chargePercentage: chargePercent
+    },
+    chargeAmountRappen: Math.round(price * chargePercent / 100),
+    shouldCreateInvoice: chargePercent > 0,
+    shouldCreditHours: chargePercent === 0,
+    invoiceDescription: chargePercent === 0 
+      ? 'Kostenlose Stornierung (manuell festgelegt)'
+      : `Stornogebühr ${chargePercent}% (manuell festgelegt)`
+  }
+  
+  // Close modal
+  showNoPolicyModal.value = false
+  
+  logger.debug('✅ Manual policy set:', cancellationPolicyResult.value)
+  
+  // Continue with cancellation
+  if (pendingCancellationReason.value) {
+    await proceedWithCancellation(pendingCancellationReason.value)
+  }
+}
+
 const performSoftDeleteWithReason = async (deletionReason: string, cancellationReasonId: string, status: string = 'cancelled', cancellationType: 'student' | 'staff', withCosts: boolean = true) => {
   if (!props.eventData?.id) return
+  
+  const uiStore = useUIStore() // ✅ For notifications
   
   logger.debug('🗑️ Performing soft delete with reason for appointment:', props.eventData.id)
   logger.debug('🗑️ Deletion reason:', deletionReason)
@@ -3772,322 +3890,164 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     const eventType = props.eventData.event_type_code || props.eventData.type
     const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
     
-    // ✅ STEP 0: Fetch payment info for handle-cancellation endpoint
+    // ✅ SCHRITT 0: SECURE API CALL - Get payment info from backend (NOT direct Supabase query!)
     let lessonPriceRappen = 0
     let adminFeeRappen = 0
     let chargePercentage = 100
     
-    const { data: payments } = await supabase
-      .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
-      .eq('appointment_id', props.eventData.id)
-      .limit(1)
+    // For staff cancellation: call secure API
+    // For customer cancellation: prices are already calculated
+    // This is now handled by the respective cancel APIs
     
-    if (payments && payments.length > 0) {
-      const payment = payments[0]
-      lessonPriceRappen = payment.lesson_price_rappen || 0
-      adminFeeRappen = payment.admin_fee_rappen || 0
-    }
+    logger.debug('🔍 Proceeding with cancellation (using secure cancel API)')
     
-    logger.debug('🔍 DEBUG performSoftDeleteWithReason:', {
-      eventType,
-      isLessonType,
-      withCosts,
-      lessonPriceRappen,
-      adminFeeRappen,
-      chargePercentage
-    })
-    
-    if (isLessonType && withCosts) {
-      logger.debug('💳 Appointment will be charged cancellation fee - keeping all payment data')
-      logger.debug('   - lesson_price_rappen: KEPT (for cancellation fee)')
-      logger.debug('   - products_price_rappen: KEPT (for cancellation fee)')
-      logger.debug('   - product_sales: KEPT (for accounting)')
-      chargePercentage = 100 // Full charge
-    } else if (isLessonType && !withCosts) {
-      logger.debug('💳 Appointment cancelled without charge - processing refund via handle-cancellation')
-      chargePercentage = 0 // No charge
+    if (isLessonType) {
+      // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
+      // Do NOT hardcode 100% - the policy decides based on time until appointment
+      // ✅ CRITICAL FIX: Use ?? to check for null/undefined separately
+      const policyCharge = cancellationPolicyResult.value?.calculation.chargePercentage
       
-      // ✅ NEW: Call handle-cancellation endpoint to process refunds
-      logger.debug('📡 Calling handle-cancellation endpoint for refund processing...')
-      try {
-        const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+      // ✅ NEW: If no policy found, ask staff to decide
+      if (policyCharge === null || policyCharge === undefined) {
+        logger.debug('⚠️ No cancellation policy found - asking staff for decision')
+        
+        // Show modal and wait for staff decision
+        showNoPolicyModal.value = true
+        // Wait for staff to choose (this will be handled by modal buttons)
+        return // Exit here, will continue after staff choice
+      }
+      
+      chargePercentage = policyCharge
+      
+      logger.debug('💳 Using cancellation policy for charge determination:', {
+        policyChargePercentage: policyCharge,
+        withCosts,
+        finalChargePercentage: chargePercentage
+      })
+      
+      // ✅ NEW: Determine if this is staff or customer cancellation
+      const isStaffCancellation = cancellationType === 'staff'
+      
+      // ✅ For staff cancellation: use new secure API
+      if (isStaffCancellation) {
+        logger.debug('🔑 Staff cancellation - using secure cancel-staff API')
+        
+        const { data: sessionData } = await supabase.auth.getSession()
+        const accessToken = sessionData?.session?.access_token
+        
+        if (!accessToken) {
+          throw new Error('No valid session for staff cancellation')
+        }
+        
+        const staffCancellationResult = await $fetch('/api/appointments/cancel-staff', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
           body: {
             appointmentId: props.eventData.id,
+            cancellationReasonId: cancellationReasonId,
             deletionReason,
-            lessonPriceRappen,
-            adminFeeRappen,
-            shouldCreditHours: true,
-            chargePercentage: 0,
-            originalLessonPrice: lessonPriceRappen,
-            originalAdminFee: adminFeeRappen
+            chargePercentage,
+            shouldCreditHours: true
           }
+        }) as any
+        
+        logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
+        
+        // ✅ API handled everything: payments, products, discounts, appointment update
+        // No need to do manual cleanup!
+        
+        // Show success notification
+        uiStore.addNotification({
+          type: 'success',
+          title: 'Termin storniert',
+          message: staffCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
         })
         
-        logger.debug('✅ Cancellation refund processed:', cancellationResult)
-        // @ts-ignore - cancellationResult is of type unknown
-        if (cancellationResult.action === 'refund_processed' || cancellationResult.action === 'credit_created_no_payment') {
-          // @ts-ignore
-          logger.debug(`💰 Refund/Credit applied: CHF ${cancellationResult.details?.refundAmount || cancellationResult.refundAmount}`)
-        }
-      } catch (error: any) {
-        console.error('❌ Error calling handle-cancellation endpoint:', {
-          message: error.message,
-          statusCode: error.statusCode,
-          statusMessage: error.statusMessage,
-          data: error.data,
-          fullError: error
-        })
+        // ✅ After successful staff cancellation, emit close and refresh
+        emit('appointment-deleted', props.eventData.id)
+        emit('save-event', { type: 'deleted', id: props.eventData.id })
+        handleClose()
+        return
       }
       
-      // ✅ 1.0: Prüfe ob Payment autorisiert ist und storniere bei Absage >24h vor Termin
-      const appointmentTime = new Date(props.eventData.start || props.eventData.start_time)
-      const now = new Date()
-      const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+      // ✅ For customer cancellation: call customer cancel API
+      logger.debug('👤 Customer cancellation - calling cancel-customer API')
       
-      if (hoursUntilAppointment > 24) {
-        // ✅ Hole authorized Payments und storniere sie
-        const { data: authorizedPayments } = await supabase
-          .from('payments')
-          .select('id, wallee_transaction_id, payment_status')
-          .eq('appointment_id', props.eventData.id)
-          .eq('payment_status', 'authorized')
-          .not('wallee_transaction_id', 'is', null)
-        
-        if (authorizedPayments && authorizedPayments.length > 0) {
-          logger.debug(`🔙 Voiding ${authorizedPayments.length} authorized payment(s) for cancellation >24h before appointment`)
-          
-          for (const payment of authorizedPayments) {
-            try {
-              await $fetch('/api/wallee/void-payment', {
-                method: 'POST',
-                body: {
-                  paymentId: payment.id,
-                  transactionId: payment.wallee_transaction_id,
-                  reason: `Appointment cancelled more than 24h before start: ${deletionReason}`
-                }
-              })
-              logger.debug(`✅ Payment ${payment.id} voided successfully`)
-            } catch (voidError: any) {
-              console.warn(`⚠️ Could not void payment ${payment.id}:`, voidError.message)
-            }
-          }
-        }
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      
+      if (!accessToken) {
+        throw new Error('No valid session for customer cancellation')
       }
       
-      // ✅ NOTE: Payments are NOT deleted! The handle-cancellation endpoint already:
-      // - Updates payment_status to 'refunded'
-      // - Sets refunded_at timestamp
-      // - Keeps payment record for audit trail and accounting
-      // This allows full tracking of all financial transactions
-      
-      // 1.2 Product sales und items löschen (inklusive Rabatte)
-      logger.debug('🗑️ Deleting product sales and items for appointment:', props.eventData.id)
-      
-      // Zuerst alle product_sale_ids sammeln
-      const { data: productSales } = await supabase
-        .from('product_sales')
-        .select('id')
-        .eq('appointment_id', props.eventData.id)
-      
-      if (productSales && productSales.length > 0) {
-        const productSaleIds = productSales.map(ps => ps.id)
-        logger.debug('🗑️ Found product sales to delete:', productSaleIds)
-        
-        // Product sale items löschen (zuerst)
-        const { error: productSaleItemsError } = await supabase
-          .from('product_sale_items')
-          .delete()
-          .in('product_sale_id', productSaleIds)
-        
-        if (productSaleItemsError) {
-          console.warn('⚠️ Could not delete product sale items:', productSaleItemsError)
-        } else {
-          logger.debug('✅ Product sale items deleted successfully')
+      const customerCancellationResult = await $fetch('/api/appointments/cancel-customer', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: {
+          appointmentId: props.eventData.id,
+          cancellationReasonId: cancellationReasonId,
+          deletionReason
         }
-        
-        // Dann product_sales löschen (inklusive Rabatte)
-        const { error: productSalesError } = await supabase
-          .from('product_sales')
-          .delete()
-          .eq('appointment_id', props.eventData.id)
-        
-        if (productSalesError) {
-          console.warn('⚠️ Could not delete product sales:', productSalesError)
-        } else {
-          logger.debug('✅ Product sales deleted successfully')
-        }
-      }
+      }) as any
+      
+      logger.debug('✅ Customer cancellation via secure API completed:', customerCancellationResult)
+      
+      // ✅ API handled everything: payments, products, discounts, appointment update
+      // No need to do manual cleanup!
+      
+      // Show success notification
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Termin storniert',
+        message: customerCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
+      })
+      
+      // ✅ After successful cancellation, emit close and refresh
+      emit('appointment-deleted', props.eventData.id)
+      emit('save-event', { type: 'deleted', id: props.eventData.id })
+      handleClose()
+      return
     }
     
-    // ✅ SCHRITT 2: Soft Delete des Appointments mit Absage-Grund
-    logger.debug('🗑️ Soft deleting appointment with cancellation reason')
+    // ✅ For non-lesson types (VKU, etc.): Simple soft delete without payment handling
+    logger.debug('ℹ️ Non-lesson type - performing simple soft delete')
     
-    // Get the cancellation reason to check if medical certificate is required and force_charge_percentage
-    const { data: reasonData } = await supabase
-      .from('cancellation_reasons')
-      .select('requires_proof, force_charge_percentage')
-      .eq('id', cancellationReasonId)
-      .single()
-    
-    logger.debug('🔍 Cancellation reason data:', reasonData)
-    
-    // Prepare update data with policy information
     const updateData: any = {
-      status: status,
+      status: 'cancelled',
       deleted_at: new Date().toISOString(),
       deletion_reason: deletionReason,
       cancellation_reason_id: cancellationReasonId,
       cancellation_type: cancellationType,
       deleted_by: props.currentUser?.id
     }
-
-    // ✅ Use force_charge_percentage if available (for staff cancellations = 0%)
-    if (reasonData?.force_charge_percentage !== null && reasonData?.force_charge_percentage !== undefined) {
-      const chargePercentage = reasonData.force_charge_percentage
-      updateData.cancellation_charge_percentage = chargePercentage
-      logger.debug(`💰 Using force_charge_percentage from cancellation reason: ${chargePercentage}%`)
-      
-      // If staff cancels (force_charge_percentage = 0), don't charge customer
-      if (chargePercentage === 0) {
-        logger.debug('✅ Staff cancellation - NO CHARGE for customer')
-      }
-    } else if (cancellationPolicyResult.value) {
-      // Fallback: Use calculated policy if no force_charge_percentage
-      updateData.cancellation_charge_percentage = cancellationPolicyResult.value.calculation.chargePercentage
-      logger.debug(`💳 Using calculated policy charge percentage: ${cancellationPolicyResult.value.calculation.chargePercentage}%`)
-    }
-
-    // ✅ Set medical certificate status if required
-    if (reasonData?.requires_proof) {
-      updateData.medical_certificate_status = 'pending'
-      updateData.original_charge_percentage = updateData.cancellation_charge_percentage || 100
-      logger.debug('📄 Medical certificate required - status set to pending')
-    }
-
-    // Add credit hours information if available
-    if (cancellationPolicyResult.value?.shouldCreditHours) {
-      updateData.cancellation_credit_hours = true
-      if (selectedCancellationPolicyId.value) {
-        updateData.cancellation_policy_applied = selectedCancellationPolicyId.value
-      }
-    }
-
-    const { data, error } = await supabase
+    
+    const { error: updateError } = await supabase
       .from('appointments')
       .update(updateData)
       .eq('id', props.eventData.id)
-      .select()
     
-    if (error) {
-      console.error('❌ Soft delete error:', error)
-      throw error
+    if (updateError) {
+      throw updateError
     }
     
-    logger.debug('✅ Appointment soft deleted successfully with reason:', data)
-    logger.debug('✅ Status set to:', status)
-    logger.debug('✅ Deletion reason:', deletionReason)
-    logger.debug('✅ Cancellation reason ID:', cancellationReasonId)
-    logger.debug('✅ Database response:', data)
+    logger.debug('✅ Non-lesson appointment cancelled successfully')
     
-    // Create cancellation fee invoice if policy charges apply
-    if (cancellationPolicyResult.value?.shouldCreateInvoice && cancellationPolicyResult.value.chargeAmountRappen > 0) {
-      logger.debug('💰 Creating cancellation fee invoice...')
-      
-      const appointmentData = {
-        id: props.eventData.id,
-        start_time: props.eventData.start || props.eventData.start_time,
-        duration_minutes: props.eventData.duration_minutes || 45,
-        price_rappen: props.eventData.price_rappen || 0,
-        user_id: props.eventData.user_id || '',
-        staff_id: props.eventData.staff_id || ''
-      }
-      
-      const invoiceResult = await createCancellationFeeInvoice(
-        appointmentData,
-        cancellationPolicyResult.value,
-        pendingCancellationReason.value?.name_de || 'Unbekannt',
-        props.currentUser?.id || ''
-      )
-      
-      if (invoiceResult.success) {
-        logger.debug('✅ Cancellation fee invoice created:', invoiceResult.invoiceId)
-      } else {
-        console.warn('⚠️ Could not create cancellation fee invoice:', invoiceResult.error)
-      }
-    }
-    
-    // ✅ NEU: SMS und Email versenden bei Löschung
-    const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
-    const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
-    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || 'Fahrschüler')
-    const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || 'dein Fahrlehrer')
-    const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    // Show success notification
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Termin storniert',
+      message: 'Der Termin wurde erfolgreich storniert.'
     })
     
-    // SMS versenden
-    if (phoneNumber) {
-      logger.debug('📱 Sending SMS notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/sms/send', {
-          method: 'POST',
-          body: {
-            phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`
-          }
-        })
-        logger.debug('✅ SMS sent successfully:', result)
-      } catch (smsError: any) {
-        console.error('❌ Failed to send SMS:', smsError)
-      }
-    } else {
-      logger.debug('⚠️ No phone number available for SMS', { 
-        'eventData.phone': props.eventData?.phone,
-        'extendedProps.phone': props.eventData?.extendedProps?.phone 
-      })
-    }
+    // ✅ NOTE: SMS/Email notifications should be sent by the APIs
+    // But as a fallback or for staff workflow, we can optionally send them here
     
-    // Email versenden
-    if (studentEmail) {
-      logger.debug('📧 Sending Email notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: studentEmail,
-            studentName: firstName,
-            appointmentTime: appointmentTime,
-            staffName: instructorName,
-            cancellationReason: deletionReason,
-            type: 'cancelled',
-            tenantName: tenantName.value,
-            tenantId: props.currentUser?.tenant_id
-          }
-        })
-        logger.debug('✅ Email sent successfully:', result)
-      } catch (emailError: any) {
-        console.error('❌ Failed to send Email:', emailError)
-      }
-    } else {
-      logger.debug('⚠️ No email address available for email notification', {
-        'eventData.email': props.eventData?.email,
-        'extendedProps.email': props.eventData?.extendedProps?.email
-      })
-    }
-    
-    // Events emittieren
     emit('appointment-deleted', props.eventData.id)
     emit('save-event', { type: 'deleted', id: props.eventData.id })
-    
-    // Modal schließen
     handleClose()
     
   } catch (err: any) {
@@ -4206,8 +4166,7 @@ const proceedWithCancellation = async (selectedReason: any) => {
     isLoading.value = false
     selectedCancellationReasonId.value = null
     cancellationStep.value = 0
-    cancellationType.value = null
-    selectedCancellationPolicyId.value = ''
+    cancellationType.value = undefined
     cancellationPolicyResult.value = null
   }
 }
@@ -4216,8 +4175,7 @@ const cancelCancellationReason = () => {
   showCancellationReasonModal.value = false
   selectedCancellationReasonId.value = null
   cancellationStep.value = 0
-  cancellationType.value = null
-  selectedCancellationPolicyId.value = ''
+  cancellationType.value = undefined
   cancellationPolicyResult.value = null
   logger.debug('🚫 Cancellation reason selection cancelled by user')
 }
@@ -4232,7 +4190,7 @@ const selectCancellationType = (type: 'student' | 'staff') => {
 
 const goBackToCancellationType = () => {
   cancellationStep.value = 0
-  cancellationType.value = null
+  cancellationType.value = undefined
   selectedCancellationReasonId.value = null
   logger.debug('⬅️ Going back to cancellation type selection')
 }
@@ -4271,8 +4229,19 @@ const goToPolicySelection = async () => {
   // ✅ NEW: Check if selected reason has force_charge_percentage
   const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
   // @ts-ignore - selectedReason may have additional properties from database
-  if (selectedReason && (selectedReason as any).force_charge_percentage !== null && (selectedReason as any).force_charge_percentage !== undefined) {
-    logger.debug('✅ Force charge percentage found:', (selectedReason as any).force_charge_percentage)
+  const forceChargePercentage = (selectedReason as any).force_charge_percentage
+  const cancellationType = (selectedReason as any).cancellation_type
+  
+  // ✅ FIX: Handle both explicit force_charge_percentage and default for staff cancellations
+  // If force_charge_percentage is explicitly set, use it
+  // If it's staff cancellation but force_charge_percentage is null, default to 0 (free)
+  const shouldUseForceCharge = forceChargePercentage !== null && forceChargePercentage !== undefined
+  const chargePercentageToUse = shouldUseForceCharge 
+    ? forceChargePercentage 
+    : (cancellationType === 'staff' ? 0 : null)
+  
+  if (selectedReason && chargePercentageToUse !== null) {
+    logger.debug('✅ Force charge percentage found or defaulted for staff:', chargePercentageToUse, 'cancellationType:', cancellationType)
     // Load appointment price first
     if (props.eventData?.id) {
       const price = await loadAppointmentPrice(props.eventData.id)
@@ -4281,22 +4250,22 @@ const goToPolicySelection = async () => {
     // Directly set the policy result with force_charge_percentage
     cancellationPolicyResult.value = {
       calculation: {
-        chargePercentage: (selectedReason as any).force_charge_percentage
+        chargePercentage: chargePercentageToUse
       },
-      chargeAmountRappen: Math.round((appointmentPrice.value || 0) * (selectedReason as any).force_charge_percentage / 100),
-      shouldCreateInvoice: (selectedReason as any).force_charge_percentage > 0,
-      shouldCreditHours: (selectedReason as any).force_charge_percentage === 0,
-      invoiceDescription: (selectedReason as any).force_charge_percentage === 0 
+      chargeAmountRappen: Math.round((appointmentPrice.value || 0) * chargePercentageToUse / 100),
+      shouldCreateInvoice: chargePercentageToUse > 0,
+      shouldCreditHours: chargePercentageToUse === 0,
+      invoiceDescription: chargePercentageToUse === 0 
         ? 'Kostenlose Stornierung durch Fahrlehrer'
-        : `Stornogebühr für Termin (${(selectedReason as any).force_charge_percentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
+        : `Stornogebühr für Termin (${chargePercentageToUse}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
-    logger.debug('✅ Policy result set with force_charge_percentage:', cancellationPolicyResult.value)
-    // ✅ IMPORTANT: Skip policy selection modal and go directly to confirmation!
-    cancellationStep.value = 3
+    logger.debug('✅ Policy result set with force charge percentage:', cancellationPolicyResult.value)
+    // ✅ Go directly to confirmation (Step 2 - no more separate policy selection)
+    cancellationStep.value = 2
     return
   }
   
-  // Otherwise, show policy selection modal (step 2)
+  // Otherwise, load policies normally and go to confirmation (Step 2)
   cancellationStep.value = 2
   
   // Otherwise, load policies normally
@@ -4314,56 +4283,46 @@ const goToPolicySelection = async () => {
     const price = await loadAppointmentPrice(props.eventData.id)
     appointmentPrice.value = price
   }
+  
+  // ✅ NEW: Calculate the policy charges based on the loaded policy
+  if (defaultPolicy.value && props.eventData) {
+    const appointmentData = {
+      id: props.eventData.id,
+      start_time: props.eventData.start,
+      duration_minutes: props.eventData.duration_minutes || 45,
+      price_rappen: appointmentPrice.value,
+      user_id: props.eventData.user_id,
+      staff_id: props.eventData.staff_id
+    }
+    
+    const result = calculateCancellationCharges(
+      defaultPolicy.value,
+      appointmentData,
+      new Date() // Current time
+    )
+    
+    logger.debug('✅ Policy calculation result:', result)
+    cancellationPolicyResult.value = result
+  } else {
+    logger.warn('⚠️ No default policy or event data available for calculation')
+  }
 }
 
-const goBackInCancellationFlow = () => {
-  if (cancellationStep.value === 3) {
-    // Go back from confirmation to policy selection
-    cancellationStep.value = 2
-  } else if (cancellationStep.value === 2) {
-    // Go back from policy selection to reason selection
-    isResetingPolicy.value = true // ✅ Set flag FIRST
-    cancellationPolicyResult.value = null
-    // ✅ DON'T reset selectedCancellationPolicyId - keep the user's choice
-    // This prevents CancellationPolicySelector from triggering onPolicyChanged
+const goBackInCancellationFlow = async () => {
+  logger.debug('⬅️ Going back in cancellation flow from step:', cancellationStep.value)
+  
+  if (cancellationStep.value === 2) {
+    // Go back from confirmation (Step 2) to reason selection (Step 1)
     cancellationStep.value = 1
-    // ✅ Clear flag immediately (don't wait for nextTick)
-    isResetingPolicy.value = false
+    cancellationPolicyResult.value = null
   } else if (cancellationStep.value === 1) {
-    // Go back from reason selection to type selection
+    // Go back from reason selection (Step 1) to type selection (Step 0)
     cancellationStep.value = 0
     selectedCancellationReasonId.value = null
-  }
-  logger.debug('⬅️ Going back in cancellation flow, step:', cancellationStep.value)
-}
-
-const onPolicyChanged = (result: any) => {
-  // ✅ Skip if we're in the middle of resetting the policy
-  if (isResetingPolicy.value) {
-    logger.debug('⏭️ Skipping onPolicyChanged during policy reset')
-    return
+    cancellationPolicyResult.value = null
   }
   
-  logger.debug('📋 Policy changed:', result)
-  cancellationPolicyResult.value = result
-  
-  // Update time until appointment for display
-  if (result && props.eventData?.start) {
-    const appointmentDate = new Date(props.eventData.start)
-    const currentDate = new Date()
-    const diffMs = appointmentDate.getTime() - currentDate.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffHours / 24)
-    
-    timeUntilAppointment.value = {
-      hours: diffHours,
-      days: diffDays,
-      isOverdue: diffMs < 0,
-      description: diffMs < 0 ? 'Termin bereits vorbei' : 
-                  diffDays > 0 ? `${diffDays} Tag${diffDays > 1 ? 'e' : ''}` :
-                  diffHours > 0 ? `${diffHours} Stunde${diffHours > 1 ? 'n' : ''}` : 'Weniger als 1 Stunde'
-    }
-  }
+  logger.debug('⬅️ New step:', cancellationStep.value)
 }
 
 // Computed: Gefilterte Absage-Gründe basierend auf Typ
@@ -4446,157 +4405,6 @@ const confirmDeleteWithCosts = async (withCosts: boolean) => {
 }
 
 // ✅ Hilfsfunktion für Stornierungs-Rechnung
-const createCancellationInvoice = async (appointment: any) => {
-  try {
-    logger.debug('📄 Creating cancellation invoice for appointment:', appointment.id)
-    
-    // ✅ Hier können Sie die Logik für die Stornierungs-Rechnung implementieren
-    // z.B. 50% der ursprünglichen Kosten als Stornogebühr
-    
-    // Beispiel: Rechnung in der Datenbank speichern
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .insert({
-        appointment_id: appointment.id,
-        user_id: appointment.user_id,
-        staff_id: appointment.staff_id,
-        amount: Math.round((appointment.price_per_minute || 2.5) * (appointment.duration_minutes || 45) * 50) / 100, // 50% der Kosten in CHF
-        description: `Stornogebühr für Termin am ${new Date(appointment.start).toLocaleDateString('de-CH')}`,
-        status: 'pending',
-        invoice_type: 'cancellation_fee'
-      })
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('❌ Error creating cancellation invoice:', error)
-      return
-    }
-    
-    logger.debug('✅ Cancellation invoice created:', invoice.id)
-    
-    // ✅ Speichere die Rechnungsdaten für das Modal
-    cancellationInvoiceData.value = {
-      ...invoice,
-      appointment_title: appointment.title,
-      appointment_date: appointment.start_time
-    }
-    
-  } catch (err: any) {
-    console.error('❌ Error in createCancellationInvoice:', err)
-  }
-}
-
-// ✅ NEUE FUNKTIONEN für Rückerstattungs-Optionen
-const handleRefundFull = async () => {
-  logger.debug('💰 Vollständige Rückerstattung gewählt')
-  showRefundOptionsModal.value = false
-  
-  // ✅ SOFT DELETE mit vollständiger Rückerstattung
-  await confirmDeleteWithRefund('full_refund')
-}
-
-const handleRefundPartial = async () => {
-  logger.debug('💸 Teilweise Rückerstattung gewählt')
-  showRefundOptionsModal.value = false
-  
-  // ✅ SOFT DELETE mit teilweiser Rückerstattung
-  await confirmDeleteWithRefund('partial_refund')
-}
-
-const handleNoRefund = async () => {
-  logger.debug('🚫 Keine Rückerstattung gewählt')
-  showRefundOptionsModal.value = false
-  
-  // ✅ SOFT DELETE ohne Rückerstattung
-  await confirmDeleteWithRefund('no_refund')
-}
-
-const confirmDeleteWithRefund = async (refundType: 'full_refund' | 'partial_refund' | 'no_refund') => {
-  if (!props.eventData?.id) return
-  
-  logger.debug('🗑️ Soft deleting appointment with refund handling:', {
-    appointmentId: props.eventData.id,
-    refundType: refundType
-  })
-  
-  // ✅ Determine who is deleting (student or staff)
-  const deleterName = cancellationType.value === 'student' 
-    ? (selectedStudent.value?.first_name || 'Schüler') 
-    : (props.currentUser?.first_name || 'Benutzer')
-  
-  const deleterEmail = cancellationType.value === 'student' 
-    ? (selectedStudent.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
-    : (props.currentUser?.email || 'unbekannt')
-  
-  const refundReason = getRefundReason(refundType)
-  const deletionReason = `Termin gelöscht durch ${deleterName} (${deleterEmail}) - ${refundReason} - ursprünglicher Status: ${props.eventData.status}`
-  
-  await performSoftDelete(deletionReason, 'cancelled')
-  
-  // ✅ Rückerstattungs-Rechnung erstellen basierend auf Typ
-  if (refundType !== 'no_refund') {
-    logger.debug('💰 Creating refund invoice for cancelled appointment')
-    await createRefundInvoice(props.eventData, refundType)
-  }
-}
-
-// ✅ Hilfsfunktion für Rückerstattungs-Rechnungen
-const createRefundInvoice = async (appointment: any, refundType: 'full_refund' | 'partial_refund') => {
-  try {
-    logger.debug('📄 Creating refund invoice for appointment:', appointment.id, 'Type:', refundType)
-    
-    let amountRappen: number
-    let description: string
-    
-    if (refundType === 'full_refund') {
-      // Vollständige Rückerstattung
-      amountRappen = Math.round((appointment.price_per_minute || 2.5) * (appointment.duration_minutes || 45) * 100)
-      description = `Vollständige Rückerstattung für Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`
-    } else {
-      // Teilweise Rückerstattung (Stornogebühr einbehalten)
-      const fullAmount = Math.round((appointment.price_per_minute || 2.5) * (appointment.duration_minutes || 45) * 100)
-      const cancellationFee = Math.round(fullAmount * 0.5) // 50% Stornogebühr
-      amountRappen = fullAmount - cancellationFee
-      description = `Teilweise Rückerstattung für Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')} (Stornogebühr einbehalten)`
-    }
-    
-    // Rückerstattungs-Rechnung in der Datenbank speichern
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .insert({
-        appointment_id: appointment.id,
-        user_id: appointment.user_id,
-        staff_id: appointment.staff_id,
-        amount_rappen: -amountRappen, // Negativ für Rückerstattungen
-        description: description,
-        status: 'pending',
-        invoice_type: 'refund'
-      })
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('❌ Error creating refund invoice:', error)
-      return
-    }
-    
-    logger.debug('✅ Refund invoice created:', invoice.id)
-    
-  } catch (err: any) {
-    console.error('❌ Error in createRefundInvoice:', err)
-  }
-}
-
-// ✅ Hilfsfunktion für Rückerstattungsgründe
-const getRefundReason = (refundType: 'full_refund' | 'partial_refund' | 'no_refund'): string => {
-  const reasons = {
-    'full_refund': 'Storniert mit vollständiger Rückerstattung',
-    'partial_refund': 'Storniert mit teilweiser Rückerstattung (Stornogebühr einbehalten)',
-    'no_refund': 'Storniert ohne Rückerstattung (Termin als verfallen markiert)'
-  }
-  return reasons[refundType]
-}
 
 // ✅ Hilfsfunktionen für das Payment Status Modal
 const formatDate = (dateString: string) => {
@@ -5024,16 +4832,27 @@ const handleEditModeLessonType = async () => {
     } else {
       // Fallback: Lade aus der users Tabelle
       if (props.eventData.user_id) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('preferred_payment_method')
-          .eq('id', props.eventData.user_id)
-          .single()
-        
-        if (!userError && userData?.preferred_payment_method) {
-          selectedPaymentMethod.value = userData.preferred_payment_method
-          logger.debug('💳 Payment method loaded from user preferences:', userData.preferred_payment_method)
-        } else {
+        // ✅ Use secure API instead of direct Supabase query
+        try {
+          const supabase = getSupabase()
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
+            query: { userId: props.eventData.user_id },
+            headers: session?.access_token ? {
+              'Authorization': `Bearer ${session.access_token}`
+            } : {}
+          }) as { success?: boolean, preferred_payment_method?: string }
+          
+          if (paymentMethodResponse.success) {
+            selectedPaymentMethod.value = paymentMethodResponse.preferred_payment_method || 'wallee'
+            logger.debug('💳 Payment method loaded from secure API:', paymentMethodResponse.preferred_payment_method)
+          } else {
+            logger.debug('ℹ️ No payment preference found, using default: wallee')
+            selectedPaymentMethod.value = 'wallee'
+          }
+        } catch (error: any) {
+          logger.debug('ℹ️ Could not load payment preferences via API, using default: wallee', error.message)
           selectedPaymentMethod.value = 'wallee' // Standard
           logger.debug('💳 Using default payment method: wallee')
         }
@@ -5068,7 +4887,6 @@ const handleCreateMode = async () => {
     
     // ✅ NEU: Standard-Zahlungsmethode für Create-Mode setzen
     selectedPaymentMethod.value = 'wallee'
-    logger.debug('💳 CREATE MODE: Default payment method set to wallee')
     
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen
     formData.value.type = 'B' // Standard-Kategorie
@@ -5169,17 +4987,27 @@ const loadStudentForEdit = async (userId: string) => {
       return
     }
     
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    // ✅ GET AUTH TOKEN FROM SUPABASE SESSION
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
     
-    if (error) throw error
+    if (!token) {
+      console.error('❌ No auth token available')
+      return
+    }
     
-    if (data) {
-      selectedStudent.value = data
-      logger.debug('👤 Student loaded for edit mode:', data.first_name)
+    // ✅ USE BACKEND API WITH AUTH TOKEN
+    // This bypasses the 406 Not Acceptable error from direct users table queries
+    const response = await $fetch('/api/admin/get-user-for-edit', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      query: { user_id: userId }
+    }) as { success?: boolean, user?: any }
+    
+    if (response?.user) {
+      selectedStudent.value = response.user
+      logger.debug('👤 Student loaded for edit mode via API:', response.user.first_name)
     }
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
@@ -5203,127 +5031,55 @@ watch(() => formData.value.title, (newTitle, oldTitle) => {
 logger.debug('💾 SAVING WITH TITLE:', formData.value.title)
 
 const saveStudentPaymentPreferences = async (studentId: string, paymentMode: string, data?: any) => {
- 
- try {
-   const supabase = getSupabase()
-   
-   // ✅ Mapping auf existierende payment_methods Werte
-   const paymentMethodMapping: Record<string, string> = {
-     'cash': 'cash',
-     'invoice': 'invoice',
-     'online': 'wallee',
-     'wallee': 'wallee'        // ✅ Direkte Unterstützung für wallee
-   }
-   
-
-   
-   const actualMethodCode = paymentMethodMapping[paymentMode]
-   
-   if (!actualMethodCode) {
-     console.warn('⚠️ Unknown payment mode:', paymentMode)
-     return // Speichere nichts bei unbekannter Methode
-   }
-   
-   // 🔧 DEBUG: Prüfe zuerst, ob der aktuelle Wert des Users gültig ist
-   try {
-     logger.debug('🔍 Testing if current user payment method is valid...')
-     const { data: testData, error: testError } = await supabase
-       .from('users')
-       .select('preferred_payment_method')
-       .eq('id', studentId)
-       .single()
-     
-     if (!testError && testData?.preferred_payment_method) {
-       logger.debug('🔍 Current user payment method:', testData.preferred_payment_method)
-       
-       // Versuche den aktuellen Wert zu aktualisieren (sollte funktionieren)
-       const { error: updateTestError } = await supabase
-         .from('users')
-         .update({ preferred_payment_method: testData.preferred_payment_method })
-         .eq('id', studentId)
-       
-       if (updateTestError) {
-         console.error('❌ Current value also fails:', updateTestError)
-         console.error('🔍 Error details:', {
-           code: updateTestError.code,
-           message: updateTestError.message,
-           details: updateTestError.details,
-           hint: updateTestError.hint
-         })
-       } else {
-         logger.debug('✅ Current value works, but new value might not')
-       }
-     }
-   } catch (testErr) {
-     logger.debug('⚠️ Could not test current value:', testErr)
-   }
-   
-   const updateData: any = {
-     preferred_payment_method: actualMethodCode  // ← WICHTIG: actualMethodCode statt paymentMode
-   }
-   
-   // Falls Rechnungsadresse gewählt und Adresse gespeichert
-   if (paymentMode === 'invoice' && data?.currentAddress?.id) {
-     updateData.default_company_billing_address_id = data.currentAddress.id
-     logger.debug('📋 Adding billing address ID:', data.currentAddress.id)
-   }
-   
-   logger.debug('💾 Mapping:', paymentMode, '→', actualMethodCode)
-   logger.debug('💾 Updating user with data:', updateData)
-   logger.debug('👤 For student ID:', studentId)
-   
-   const { error, data: result } = await supabase
-     .from('users')
-     .update(updateData)
-     .eq('id', studentId)
-     .select('id, preferred_payment_method') // ← Debug: Zeige was gespeichert wurde
-   
-   if (error) {
-     console.error('❌ Supabase error:', error)
-     console.error('🔍 Error details:', {
-       code: error.code,
-       message: error.message,
-       details: error.details,
-       hint: error.hint
-     })
-     
-     // 🔧 FALLBACK: Versuche es ohne preferred_payment_method
-     if (error.code === '23503' && error.message.includes('payment_methods')) {
-       logger.debug('🔄 Foreign key constraint error - trying without payment method...')
-       
-       const fallbackUpdateData = { ...updateData }
-       delete fallbackUpdateData.preferred_payment_method
-       
-       logger.debug('🔄 Fallback update data:', fallbackUpdateData)
-       
-       const { error: fallbackError, data: fallbackResult } = await supabase
-         .from('users')
-         .update(fallbackUpdateData)
-         .eq('id', studentId)
-         .select('id')
-       
-       if (fallbackError) {
-         console.error('❌ Fallback also failed:', fallbackError)
-         throw fallbackError
-       } else {
-         logger.debug('✅ Fallback update successful (without payment method)')
-         
-         // ✅ NEU: Lokale Speicherung der Zahlungsmethode für diesen Termin
-         logger.debug('💳 Payment method saved locally for this appointment:', paymentMode)
-         
-         return // Erfolgreich, aber ohne payment method in der users Tabelle
-       }
-     }
-     
-     throw error
-   }
-   
-   logger.debug('✅ Update result:', result)
-   logger.debug('✅ Payment preferences saved successfully!')
-   
- } catch (err) {
-   console.error('❌ Error saving payment preferences:', err)
- }
+  try {
+    // ✅ Mapping auf existierende payment_methods Werte
+    const paymentMethodMapping: Record<string, string> = {
+      'cash': 'cash',
+      'invoice': 'invoice',
+      'online': 'wallee',
+      'wallee': 'wallee'
+    }
+    
+    const actualMethodCode = paymentMethodMapping[paymentMode]
+    
+    if (!actualMethodCode) {
+      console.warn('⚠️ Unknown payment mode:', paymentMode)
+      return
+    }
+    
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // ✅ Use secure API instead of direct Supabase query
+    const updateData: any = {
+      userId: studentId,
+      paymentMethod: actualMethodCode
+    }
+    
+    // Falls Rechnungsadresse gespeichert
+    if (paymentMode === 'invoice' && data?.address?.id) {
+      updateData.billingAddressId = data.address.id
+      logger.debug('📋 Adding billing address ID:', data.address.id)
+    }
+    
+    logger.debug('💾 Updating payment preferences via API:', updateData)
+    
+    const result = await $fetch('/api/admin/update-user-payment-method', {
+      method: 'POST',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {},
+      body: updateData
+    }) as { success?: boolean, data?: any }
+    
+    if (result.success) {
+      logger.debug('✅ Payment preferences saved successfully!', result.data)
+    } else {
+      logger.warn('⚠️ Could not save payment preference')
+    }
+  } catch (err: any) {
+    logger.error('❌ Error in saveStudentPaymentPreferences:', err.message)
+  }
 }
 
 const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← string statt 'invoice' | 'cash' | 'online'
@@ -5331,6 +5087,8 @@ const handlePaymentModeChanged = (paymentMode: string, data?: any) => { // ← s
   
   // ✅ Payment Method für späteres Speichern in payments Tabelle
   selectedPaymentMethod.value = paymentMode
+  // @ts-ignore - payment_method ist nicht im formData Type definiert, aber wir speichern es für useEventModalForm
+  formData.value.payment_method = paymentMode // ← FIX: Speichere in formData damit es in useEventModalForm verfügbar ist!
   selectedPaymentData.value = data
   
   // NEU: Wenn Invoice-Mode und wir haben eine Standard-Adresse geladen
@@ -5381,10 +5139,12 @@ const handleInvoiceAddressSaved = (address: any) => {
   // Speichere die Rechnungsadresse für späteres Speichern
   selectedInvoiceAddress.value = address
   
-  // Wenn ein Schüler ausgewählt ist, speichere die Präferenz
+  // ✅ WICHTIG: NUR die Adresse speichern, NICHT die Payment-Method ändern!
+  // Die Payment-Method wird durch handlePaymentModeChanged gesteuert
   if (selectedStudent.value?.id) {
-    logger.debug('🎯 Saving invoice address preference for student')
-    saveStudentPaymentPreferences(selectedStudent.value.id, 'invoice', { address })
+    logger.debug('🎯 Saving invoice address preference for student (NOT changing payment method)')
+    // Rufe API mit default_company_billing_address_id auf, aber behalte die aktuelle payment_method
+    saveStudentPaymentPreferences(selectedStudent.value.id, selectedPaymentMethod.value, { address })
   }
 }
 
@@ -5641,11 +5401,14 @@ watch(() => props.isVisible, async (newVisible) => {
       if (tenantId) {
         const { data: tenantData } = await supabase
           .from('tenants')
-          .select('name')
+          .select('name, twilio_from_sender')
           .eq('id', tenantId)
           .single()
         
-        if (tenantData?.name) {
+        if (tenantData?.twilio_from_sender) {
+          tenantName.value = tenantData.twilio_from_sender
+          logger.debug('🏢 Tenant SMS sender loaded (twilio_from_sender):', tenantName.value)
+        } else if (tenantData?.name) {
           tenantName.value = tenantData.name
           logger.debug('🏢 Tenant name loaded:', tenantName.value)
         }
@@ -5803,7 +5566,6 @@ watch(() => props.isVisible, async (newVisible) => {
         
         // ✅ NEU: Standard-Zahlungsmethode für neue Termine setzen
         selectedPaymentMethod.value = 'wallee'
-        logger.debug('💳 Default payment method for new appointment: wallee')
         
         // ✅ WICHTIG: Nicht initializeFormData aufrufen - wir haben die Zeit schon oben extrahiert!
         // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
@@ -5960,27 +5722,30 @@ const loadUserPaymentPreferences = async (userId: string) => {
   try {
     logger.debug('💳 Loading payment preferences for user:', userId)
     
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('preferred_payment_method')
-      .eq('id', userId)
-      .single()
+    // ✅ Use secure API instead of direct Supabase query
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (!userError && userData?.preferred_payment_method) {
-      // ✅ NEU: Zahlungsmethoden für bessere Benutzerfreundlichkeit mappen
-      let paymentMethod = userData.preferred_payment_method
+    const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
+      query: { userId },
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as { success?: boolean, preferred_payment_method?: string }
+    
+    if (paymentMethodResponse.success) {
+      let paymentMethod = paymentMethodResponse.preferred_payment_method || 'wallee'
       if (paymentMethod === 'twint' || paymentMethod === 'wallee') {
         paymentMethod = 'wallee'
-        logger.debug('💳 Mapped payment method to "wallee" for better UX:', userData.preferred_payment_method)
+        logger.debug('💳 Mapped payment method to "wallee" for better UX:', paymentMethodResponse.preferred_payment_method)
       }
-      
       selectedPaymentMethod.value = paymentMethod
-      logger.debug('💳 Payment method loaded from user preferences:', paymentMethod)
     } else {
-      logger.debug('ℹ️ No user payment preferences found, keeping default: wallee')
+      selectedPaymentMethod.value = 'wallee' // Default
     }
-  } catch (error) {
-    console.error('❌ Error loading user payment preferences:', error)
+  } catch (error: any) {
+    logger.debug('ℹ️ Could not load payment preferences via API, using default: wallee', error.message)
+    selectedPaymentMethod.value = 'wallee'
   }
 }
 

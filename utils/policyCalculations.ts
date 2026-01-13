@@ -1,4 +1,5 @@
 import type { PolicyWithRules, CancellationRule, CancellationCalculation } from '~/composables/useCancellationPolicies'
+import { logger } from '~/utils/logger'
 
 export interface AppointmentData {
   id: string
@@ -55,9 +56,59 @@ const calculateHoursExcludingSundays = (startDate: Date, endDate: Date): number 
 export const calculateCancellationCharges = (
   policy: PolicyWithRules,
   appointmentData: AppointmentData,
-  cancellationDate: Date = new Date()
+  cancellationDate: Date = new Date(),
+  cancellationType?: 'staff' | 'student'
 ): CancellationResult => {
   const appointmentDate = new Date(appointmentData.start_time)
+  
+  // ✅ DEBUG: Log policy details
+  logger.debug('💰 calculateCancellationCharges - Policy details:', {
+    policyId: policy.id,
+    policyName: policy.name,
+    rulesCount: policy.rules?.length || 0,
+    rules: policy.rules || []
+  })
+  
+  // ✅ NEW: Handle appointments in the past
+  // If appointment is in the past, apply fixed rules:
+  // - Staff cancellation (reason): 0% charge (free)
+  // - Student/Client cancellation (reason): 100% charge
+  const isPast = appointmentDate <= cancellationDate
+  
+  if (isPast) {
+    const chargePercentageForPast = cancellationType === 'staff' ? 0 : 100
+    const lastRule = policy.rules[policy.rules.length - 1]
+    
+    const calculation: CancellationCalculation = {
+      applicableRule: lastRule || null,
+      chargePercentage: chargePercentageForPast,
+      creditHours: cancellationType === 'staff',
+      hoursBeforeAppointment: 0,
+      description: cancellationType === 'staff' 
+        ? 'Kostenlose Stornierung durch Fahrlehrer (Termin in der Vergangenheit)' 
+        : 'Volle Gebühr - Termin liegt in der Vergangenheit'
+    }
+    
+    // Calculate charge amount
+    const basePrice = appointmentData.price_rappen || 0
+    const chargeAmountRappen = Math.floor((basePrice * calculation.chargePercentage) / 100)
+    
+    // Determine if invoice should be created
+    const shouldCreateInvoice = calculation.chargePercentage > 0 && chargeAmountRappen > 0
+    
+    // Create invoice description
+    const invoiceDescription = shouldCreateInvoice 
+      ? `Stornogebühr für Termin am ${formatDate(appointmentDate)} (${calculation.chargePercentage}% von ${formatCurrency(basePrice)})`
+      : ''
+    
+    return {
+      calculation,
+      chargeAmountRappen,
+      shouldCreateInvoice,
+      shouldCreditHours: calculation.creditHours,
+      invoiceDescription
+    }
+  }
   
   // Check if any rule has exclude_sundays enabled
   const hasExcludeSundays = policy.rules.some(rule => (rule as any).exclude_sundays === true)

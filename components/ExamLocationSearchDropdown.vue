@@ -415,18 +415,65 @@ const addLocation = async (location: ExamLocation) => {
   try {
     const supabase = getSupabase()
     
-    // Add to staff preferences by creating new location with staff_ids array
-    const { error } = await supabase
+    // Get current user's tenant
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (userError) throw userError
+    const tenantId = userData?.tenant_id
+    
+    // Check if location already exists in this tenant
+    const { data: existingLocation, error: findError } = await supabase
       .from('locations')
-      .insert({
-        staff_ids: [props.currentStaffId],
-        name: location.name,
-        address: location.address,
-        location_type: 'exam',
-        is_active: true
-      })
-
-    if (error) throw error
+      .select('*')
+      .eq('name', location.name)
+      .eq('address', location.address)
+      .eq('location_type', 'exam')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    
+    if (findError) throw findError
+    
+    if (existingLocation) {
+      // Location exists → Add staff_id to staff_ids array
+      const staffIds = Array.isArray(existingLocation.staff_ids) ? [...existingLocation.staff_ids] : []
+      if (!staffIds.includes(props.currentStaffId)) {
+        staffIds.push(props.currentStaffId)
+        
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update({ staff_ids: staffIds })
+          .eq('id', existingLocation.id)
+        
+        if (updateError) throw updateError
+        logger.debug(`✅ Added staff to existing location: ${location.name}`)
+      }
+    } else {
+      // Location doesn't exist → Create new one with tenant_id
+      const { error: insertError } = await supabase
+        .from('locations')
+        .insert({
+          staff_ids: [props.currentStaffId],
+          tenant_id: tenantId,
+          name: location.name,
+          address: location.address,
+          city: location.city,
+          postal_code: location.postal_code,
+          canton: location.canton,
+          location_type: 'exam',
+          is_active: true,
+          google_place_id: location.google_place_id || null
+        })
+      
+      if (insertError) throw insertError
+      logger.debug(`✅ Created new location with tenant: ${location.name}`)
+    }
 
     // Add to local state
     selectedLocations.value.push(location)
@@ -445,17 +492,31 @@ const removeLocation = async (location: ExamLocation) => {
   try {
     const supabase = getSupabase()
     
-    // Find the location and remove staff_id from staff_ids array
+    // Get current user's tenant
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (userError) throw userError
+    const tenantId = userData?.tenant_id
+    
+    // Find the location in this tenant and remove staff_id from staff_ids array
     const { data: locationsToUpdate, error: findError } = await supabase
       .from('locations')
       .select('*')
       .eq('name', location.name)
       .eq('address', location.address)
       .eq('location_type', 'exam')
+      .eq('tenant_id', tenantId)
 
     if (findError) throw findError
 
-    // Update staff_ids array for each location found
+    // Update staff_ids array
     for (const loc of locationsToUpdate || []) {
       const staffIds = (loc.staff_ids || []).filter((id: string) => id !== props.currentStaffId)
       
@@ -465,11 +526,13 @@ const removeLocation = async (location: ExamLocation) => {
           .from('locations')
           .delete()
           .eq('id', loc.id)
+        logger.debug(`✅ Deleted location (no staff left): ${location.name}`)
       } else {
         await supabase
           .from('locations')
           .update({ staff_ids: staffIds })
           .eq('id', loc.id)
+        logger.debug(`✅ Removed staff from location: ${location.name}`)
       }
     }
 

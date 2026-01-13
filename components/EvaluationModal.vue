@@ -1,13 +1,10 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[95vh] overflow-hidden flex flex-col">
-      <div class="bg-green-600 text-white p-4">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
+    <div class="bg-white rounded-lg max-w-4xl w-full h-[95vh] sm:h-[90vh] flex flex-col evaluation-modal-container">
+      <div class="bg-green-600 text-white p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-bold">Lektion bewerten</h2>
-            <p class="text-green-100 text-sm">
-              {{ appointment?.title }} - {{ formatDate(appointment?.start_time) }}
-            </p>
           </div>
           <button @click="closeModal" class="text-white hover:text-green-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,7 +15,7 @@
       </div>
 
       <!-- Sortierungs-Regler -->
-      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 border-b flex-shrink-0">
         <div class="flex items-center space-x-3">
           <span class="text-gray-500 text-xs font-semibold">Sortierung:</span>
           <button
@@ -41,7 +38,7 @@
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-4">
+      <div class="flex-1 overflow-y-auto p-4 evaluation-modal-content">
         <div v-if="isLoading" class="flex items-center justify-center py-4">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
@@ -92,21 +89,17 @@
             </div>
           </div>
 
-          <div class="space-y-3">
+          <div class="space-y-2">
             <div
               v-for="(criteriaId, index) in sortedCriteriaOrder"
               :key="criteriaId"
-              class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+              class="bg-gray-50 rounded-lg p-3 border border-gray-200"
             >
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
                   <h4 class="font-medium text-gray-900">
                     {{ getCriteriaById(criteriaId)?.name }}
-                  </h4>
-                      <!-- NEU: Lektionsdatum hinzufügen -->
-                  <p v-if="criteriaAppointments[criteriaId]?.start_time" class="text-xs text-gray-500 mt-1">
-                    Bewertung vom {{ formatLessonDate(criteriaId) }}
-                  </p>
+                  </h4>         
                 </div>
                 
                 <button
@@ -141,13 +134,12 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Notiz (optional)
-                </label>
                 <textarea
                   v-model="criteriaNotes[criteriaId]"
-                  :placeholder="`Notiz zu ${getCriteriaById(criteriaId)?.name}...`"
-                  class="w-full h-10 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  :placeholder="`Notiz optional...`"
+                  class="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none overflow-y-auto"
+                  style="height: 2.5rem; max-height: 10rem;"
+                  rows="1"
                 ></textarea>
               </div>
             </div>
@@ -165,7 +157,7 @@
 
       
 
-      <div class="bg-gray-50 px-4 py-3 border-t">
+      <div class="bg-gray-50 px-4 py-3 border-t flex-shrink-0 evaluation-modal-footer">
         <div class="flex gap-3">
           <button
             @click="closeModal"
@@ -189,7 +181,7 @@
         
         <div v-if="!isValid && selectedCriteriaOrder.length > 0" class="mt-2 text-xs text-red-600">
           <p v-if="missingRequiredRatings.length > 0">
-            • Folgende Bewertungspunkte müssen noch bewertet werden: {{ missingRequiredRatings.join(', ') }}
+            <strong>Muss noch bewertet werden:</strong> {{ missingRequiredRatings.join(', ') }}
           </p>
         </div>
       </div>
@@ -204,6 +196,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 
@@ -665,19 +658,82 @@ const saveEvaluation = async () => {
   error.value = null
   
   try {
-    // Erstelle ein Array von CriteriaEvaluationData-Objekten
-    // WICHTIG: Speichere NUR die neu bewerteten Kriterien, nicht die historischen!
+    // Load evaluations from the PREVIOUS appointment (not current) to detect what's new/changed
+    // Step 1: Get all appointments for this student in the same category, sorted by date
+    const { data: allAppointments } = await supabase
+      .from('appointments')
+      .select('id, start_time')
+      .eq('user_id', props.appointment.user_id)
+      .eq('type', props.studentCategory)
+      .order('start_time', { ascending: true })
+    
+    // Step 2: Find the current appointment index and get the previous one
+    const currentIndex = allAppointments?.findIndex(a => a.id === props.appointment.id) ?? -1
+    const previousAppointmentId = currentIndex > 0 ? allAppointments?.[currentIndex - 1]?.id : null
+    
+    logger.debug(`📊 Previous appointment ID: ${previousAppointmentId || 'NONE (first appointment)'}`)
+    
+    // Step 3: Load evaluations from previous appointment (if exists)
+    const existingEvalMap: Record<string, any> = {}
+    if (previousAppointmentId) {
+      const { data: previousNotes } = await supabase
+        .from('notes')
+        .select('evaluation_criteria_id, criteria_rating, criteria_note')
+        .eq('appointment_id', previousAppointmentId)
+        .not('evaluation_criteria_id', 'is', null)
+      
+      if (previousNotes) {
+        previousNotes.forEach(note => {
+          existingEvalMap[note.evaluation_criteria_id] = {
+            rating: note.criteria_rating,
+            note: note.criteria_note || ''
+          }
+        })
+      }
+      logger.debug(`📊 Loaded ${Object.keys(existingEvalMap).length} evaluations from previous appointment`)
+    } else {
+      logger.debug(`📊 No previous appointment - all evaluations are NEW`)
+    }
+    
+    // Filter to save only new or changed evaluations
     const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value
-      .filter(criteriaId => newlyRatedCriteria.value.includes(criteriaId)) // Only save newly rated criteria
+      .filter(criteriaId => {
+        const currentRating = criteriaRatings.value[criteriaId]
+        const currentNote = criteriaNotes.value[criteriaId] || ''
+        const existingEval = existingEvalMap[criteriaId]
+        
+        // Save if: no previous eval (new) OR rating/note changed
+        if (!existingEval) {
+          logger.debug(`✨ NEW evaluation for criteria ${criteriaId}: rating=${currentRating}`)
+          return true
+        }
+        
+        const ratingChanged = existingEval.rating !== currentRating
+        const noteChanged = existingEval.note !== currentNote
+        
+        if (ratingChanged || noteChanged) {
+          logger.debug(`🔄 CHANGED evaluation for criteria ${criteriaId}: ${existingEval.rating}→${currentRating}`)
+          return true
+        }
+        
+        logger.debug(`⏭️ UNCHANGED evaluation for criteria ${criteriaId}, skipping save`)
+        return false
+      })
       .map(criteriaId => {
         return {
           criteria_id: criteriaId,
           rating: criteriaRatings.value[criteriaId],
-          note: criteriaNotes.value[criteriaId] || '' // Sicherstellen, dass es ein String ist
+          note: criteriaNotes.value[criteriaId] || ''
         }
       })
     
-    logger.debug(`🔥 Saving only ${evaluationsToSave.length} newly rated criteria (filtered from ${selectedCriteriaOrder.value.length} total)`)
+    logger.debug(`🔥 Saving ${evaluationsToSave.length} changed/new criteria (out of ${selectedCriteriaOrder.value.length} selected)`)
+
+    if (evaluationsToSave.length === 0) {
+      logger.debug('ℹ️ No changes detected, nothing to save')
+      emit('saved', props.appointment.id)
+      return
+    }
 
     logger.debug('🔥 EvaluationModal - calling saveCriteriaEvaluations with:', {
       appointmentId: props.appointment.id,
@@ -693,8 +749,6 @@ const saveEvaluation = async () => {
     )
 
     logger.debug('✅ EvaluationModal - evaluations saved successfully via composable')
-    
-
     
     // Emit saved event
     emit('saved', props.appointment.id)
@@ -959,6 +1013,26 @@ watch(() => props.studentCategory, (newCategory) => {
 </script>
 
 <style scoped>
+/* iOS Safari Fix: Use dynamic viewport height */
+.evaluation-modal-container {
+  max-height: 95vh;
+  max-height: 95dvh; /* Dynamic viewport height for iOS */
+  overflow: hidden;
+}
+
+/* Ensure content area is scrollable */
+.evaluation-modal-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Footer with Safe Area padding for iOS notch/home indicator */
+.evaluation-modal-footer {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(0.75rem + constant(safe-area-inset-bottom)); /* Fallback for older iOS */
+}
+
 /* Custom scrollbar */
 .overflow-y-auto::-webkit-scrollbar {
   width: 4px;
@@ -985,5 +1059,26 @@ watch(() => props.studentCategory, (newCategory) => {
 /* Focus states for accessibility */
 input:focus, textarea:focus {
   outline: none;
+}
+
+/* Mobile optimization for iOS */
+@media (max-width: 640px) {
+  .evaluation-modal-container {
+    max-height: 95vh;
+    max-height: 95dvh; /* Full height on mobile */
+  }
+}
+
+/* Fallback for browsers that don't support dvh */
+@supports not (height: 1dvh) {
+  .evaluation-modal-container {
+    max-height: 95vh;
+  }
+  
+  @media (max-width: 640px) {
+    .evaluation-modal-container {
+      max-height: 95vh; /* Full height on mobile */
+    }
+  }
 }
 </style>

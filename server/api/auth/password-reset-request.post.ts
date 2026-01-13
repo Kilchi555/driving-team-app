@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
+import { sendSMS } from '~/server/utils/sms'
+import { validateRequiredString, throwValidationError } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -14,8 +16,28 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('🔐 Password reset request from IP:', ipAddress)
     
+    // Parse body first for validation and rate limiting
+    const body = await readBody(event)
+    const { contact, method, tenantId } = body
+
+    // Validate input
+    const errors: Record<string, string> = {}
+    
+    const contactValidation = validateRequiredString(contact, 'E-Mail oder Telefonnummer', 255)
+    if (!contactValidation.valid) {
+      errors.contact = contactValidation.error!
+    }
+    
+    if (!method || !['email', 'phone', 'sms'].includes(String(method).toLowerCase())) {
+      errors.method = 'Methode muss "email" oder "phone" sein'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      throwValidationError(errors)
+    }
+    
     // Apply rate limiting (max 5 attempts per 15 minutes)
-    const rateLimit = checkRateLimit(ipAddress, 'password_reset', 5, 15 * 60)
+    const rateLimit = await checkRateLimit(ipAddress, 'password_reset', 5, 15 * 60 * 1000, contact, tenantId)
     if (!rateLimit.allowed) {
       console.warn('⚠️ Password reset rate limit exceeded for IP:', ipAddress)
       throw createError({
@@ -24,16 +46,6 @@ export default defineEventHandler(async (event) => {
       })
     }
     logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
-
-    const body = await readBody(event)
-    const { contact, method } = body
-
-    if (!contact || !method) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'E-Mail-Adresse oder Telefonnummer und Methode erforderlich'
-      })
-    }
 
     // Normalize method: 'phone' -> 'sms'
     const normalizedMethod = method === 'phone' ? 'sms' : method
@@ -67,24 +79,37 @@ export default defineEventHandler(async (event) => {
     // Find user by email or phone
     logger.debug(`🔍 Looking up user by ${method}:`, contact)
     
-    let userQuery
+    let user = null
+    let userError = null
+    
     if (method === 'email') {
-      userQuery = serviceSupabase
+      // Email should be unique - use .single()
+      const { data, error } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
         .eq('email', contact.toLowerCase().trim())
+        .eq('is_active', true)
         .single()
+      
+      user = data
+      userError = error
     } else {
-      // For phone, try multiple formats to handle different formatting
-      // First try exact match
-      userQuery = serviceSupabase
+      // ✅ FIX: Phone might not be unique! Use .limit(1) to get first match
+      const { data, error } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
         .eq('phone', contact)
-        .single()
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })  // Get most recent user
+        .limit(1)
+      
+      if (!error && data && data.length > 0) {
+        user = data[0]
+        userError = null
+      } else {
+        userError = error
+      }
     }
-
-    let { data: user, error: userError } = await userQuery
 
     // If phone number not found, try with different formatting
     if ((userError || !user) && method === 'sms') {
@@ -94,16 +119,20 @@ export default defineEventHandler(async (event) => {
       const normalizedPhone = contact.replace(/[^\d+]/g, '')
       logger.debug(`🔍 Trying normalized phone:`, normalizedPhone)
       
-      const { data: phoneUser, error: phoneError } = await serviceSupabase
+      // ✅ FIX: Use .limit(1) instead of .single() to handle multiple matches gracefully
+      const { data: phoneUsers, error: phoneError } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
-        .or(`phone.eq.${normalizedPhone},phone.ilike.%${normalizedPhone}%`)
-        .single()
+        .eq('phone', normalizedPhone)
+        .eq('is_active', true)
+        .limit(1)
       
-      if (!phoneError && phoneUser) {
-        user = phoneUser
+      if (!phoneError && phoneUsers && phoneUsers.length > 0) {
+        user = phoneUsers[0]
         userError = null
         logger.debug(`✅ Found user with normalized phone format`)
+      } else {
+        logger.debug(`ℹ️ No active user found with phone: ${normalizedPhone}`)
       }
     }
 
@@ -238,41 +267,32 @@ export default defineEventHandler(async (event) => {
       try {
         const smsMessage = `Ihr Passwort-Reset-Link: ${resetLink}. Dieser Link ist 1 Stunde gültig.`
         
-        logger.debug('📱 Invoking send-twilio-sms edge function with phone:', user.phone)
-        
-        // Load tenant name for branded sender
+        // Load tenant SMS sender name
         let tenantName = ''
         try {
           const { data: tenantData } = await serviceSupabase
             .from('tenants')
-            .select('name')
+            .select('name, twilio_from_sender')
             .eq('id', user.tenant_id)
             .single()
           
-          if (tenantData?.name) {
+          if (tenantData?.twilio_from_sender) {
+            tenantName = tenantData.twilio_from_sender
+            logger.debug('📱 Using twilio_from_sender:', tenantName)
+          } else if (tenantData?.name) {
             tenantName = tenantData.name
-            logger.debug('📱 Loaded tenant name for SMS sender:', tenantName)
+            logger.debug('📱 Fallback to tenant name:', tenantName)
           }
         } catch (tenantError) {
           logger.warn('⚠️ Could not load tenant name:', tenantError)
         }
         
-        // Use service role for edge function invocation
-        const { data: smsResult, error: smsError } = await serviceSupabase.functions.invoke('send-twilio-sms', {
-          body: {
-            to: user.phone,
-            message: smsMessage,
-            senderName: tenantName  // Pass tenant name for branded sender
-          },
-          method: 'POST'
+        // Use local sendSMS function with Alphanumeric Sender ID support
+        const smsResult = await sendSMS({
+          to: user.phone!,
+          message: smsMessage,
+          senderName: tenantName
         })
-        
-        logger.debug('📱 SMS edge function response:', { data: smsResult, error: smsError })
-        
-        if (smsError) {
-          console.error('❌ SMS sending via send-twilio-sms failed:', smsError)
-          throw smsError
-        }
         
         logger.debug('✅ Password reset SMS sent successfully:', smsResult)
       } catch (smsError: any) {
@@ -280,8 +300,7 @@ export default defineEventHandler(async (event) => {
         console.error('❌ SMS error details:', {
           message: smsError?.message,
           cause: smsError?.cause,
-          status: smsError?.status,
-          data: smsError?.data
+          status: smsError?.status
         })
         // Don't fail the whole process - token is created, SMS just failed
         logger.debug('⚠️ Continuing despite SMS error - token still valid')

@@ -70,6 +70,7 @@ export class WalleeProvider implements IPaymentProvider {
         autoConfirmationEnabled: true,
         chargeRetryEnabled: false,
         customerId: request.userId,
+        tokenizationMode: Wallee.model.TokenizationMode.ALLOW, // ✅ ALLOW: Tokenisierung wenn möglich, ohne Failure
         merchantReference: merchantReference,
         metaData: {
           ...request.metadata,

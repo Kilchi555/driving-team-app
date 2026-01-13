@@ -194,140 +194,144 @@ export const useStudents = () => {
   // ✅ NEUER WORKFLOW: Schüler hinzufügen mit SMS-Token (OHNE Auth-User)
   const addStudent = async (studentData: Partial<User>) => {
     try {
+      logger.debug('🚀 Adding student via API:', { email: studentData.email, phone: studentData.phone })
+      
+      // Get auth token from Supabase session
       const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
       
-      // Get current user's tenant_id
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', authUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      if (!token) {
+        throw new Error('No authentication token available')
       }
       
-      // ✅ NEU: Prüfe auf Duplikate (phone und email) im gleichen Tenant
-      const duplicateChecks = []
-      
-      if (studentData.phone) {
-        const { data: existingPhone } = await supabase
-          .from('users')
-          .select('id, first_name, last_name, email, auth_user_id, is_active')
-          .eq('tenant_id', tenantId)
-          .eq('phone', studentData.phone)
-          .limit(1)
+      // Call backend API with Authorization header
+      let response: any = null
+      try {
+        response = await $fetch('/api/admin/add-student', {
+          method: 'POST',
+          body: studentData,
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }) as any
+      } catch (fetchError: any) {
+        // ✅ LAYER 1: Handle FetchError with HTTP status codes
+        const statusCode = fetchError.status || fetchError.statusCode
+        const statusMessage = fetchError.data?.statusMessage || fetchError.message || 'Failed to add student'
         
-        if (existingPhone && existingPhone.length > 0) {
-          const existing = existingPhone[0]
+        logger.debug('❌ Fetch Error Details:', { statusCode, statusMessage, data: fetchError.data })
+        
+        // Handle 409 Conflict errors (duplicates)
+        if (statusCode === 409) {
+          if (statusMessage === 'DUPLICATE_PHONE' || statusMessage.includes('DUPLICATE_PHONE')) {
+            const errorObj: any = new Error('DUPLICATE_PHONE')
+            errorObj.duplicateType = 'phone'
+            errorObj.existingUser = fetchError.data?.data?.existingUser
+            throw errorObj
+          }
+          
+          if (statusMessage === 'DUPLICATE_EMAIL' || statusMessage.includes('DUPLICATE_EMAIL')) {
+            const errorObj: any = new Error('DUPLICATE_EMAIL')
+            errorObj.duplicateType = 'email'
+            errorObj.existingUser = fetchError.data?.data?.existingUser
+            throw errorObj
+          }
+        }
+        
+        // Re-throw as generic error
+        throw fetchError
+      }
+
+      if (!response?.success) {
+        // Extract error details
+        const errorMessage = response?.statusMessage || response?.error || 'Failed to add student'
+        
+        // Handle duplicate errors
+        if (errorMessage === 'DUPLICATE_PHONE') {
           const errorObj: any = new Error('DUPLICATE_PHONE')
           errorObj.duplicateType = 'phone'
-          errorObj.existingUser = existing
+          errorObj.existingUser = response?.data?.existingUser
           throw errorObj
         }
-      }
-      
-      if (studentData.email && studentData.email.trim() !== '') {
-        const { data: existingEmail } = await supabase
-          .from('users')
-          .select('id, first_name, last_name, phone, auth_user_id, is_active')
-          .eq('tenant_id', tenantId)
-          .eq('email', studentData.email)
-          .neq('email', '') // Ignoriere leere E-Mails
-          .limit(1)
         
-        if (existingEmail && existingEmail.length > 0) {
-          const existing = existingEmail[0]
+        if (errorMessage === 'DUPLICATE_EMAIL') {
           const errorObj: any = new Error('DUPLICATE_EMAIL')
           errorObj.duplicateType = 'email'
-          errorObj.existingUser = existing
+          errorObj.existingUser = response?.data?.existingUser
           throw errorObj
         }
+        
+        throw new Error(errorMessage)
       }
-      
-      // Generiere UUID und Token
-      const userId = crypto.randomUUID()
-      const onboardingToken = crypto.randomUUID()
-      const tokenExpires = new Date()
-      tokenExpires.setDate(tokenExpires.getDate() + 7) // 7 Tage gültig
-      
-      // 1. Erstelle nur users Eintrag (OHNE auth_user_id)
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert([{
-          ...studentData,
-          id: userId,
-          auth_user_id: null, // Erst nach Onboarding gesetzt
-          tenant_id: tenantId, // ✅ FIX: tenant_id hinzufügen
-          email: studentData.email || '', // ✅ FIX: Leerer String statt null
-          role: 'client',
-          is_active: false, // Inaktiv bis Onboarding abgeschlossen
-          onboarding_status: 'pending',
-          onboarding_token: onboardingToken,
-          onboarding_token_expires: tokenExpires.toISOString()
-        }])
 
-      if (insertError) throw insertError
-      
-      // Daten für Response konstruieren (ohne erneute DB-Abfrage)
-      const data = {
-        ...studentData,
-        id: userId,
-        auth_user_id: null,
-        role: 'client',
-        is_active: false,
-        onboarding_status: 'pending',
-        onboarding_token: onboardingToken,
-        onboarding_token_expires: tokenExpires.toISOString()
-      }
+      const createdStudent = response.data
+      const userId = createdStudent.id
+      const onboardingToken = createdStudent.onboarding_token
+      const onboardingLink = createdStudent.onboardingLink
 
       // 2. Sende SMS oder E-Mail mit Onboarding-Link
       let smsSuccess = false
       let emailSuccess = false
-      let onboardingLink = ''
       
       try {
-        onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
-        
-        // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
-        if (data.phone && data.phone.trim() !== '') {
-          // ✅ SMS-Versand
-        const { sendSms } = useSmsService()
-        const message = `Hallo ${data.first_name}! Willkommen bei der Fahrschule Driving Team. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
-        
-        const smsResult = await sendSms(data.phone, message)
-        
-        if (smsResult.success) {
-          logger.debug('✅ Onboarding SMS sent to:', data.phone, 'SID:', smsResult.data?.sid)
-          smsSuccess = true
-        } else {
-          console.warn('⚠️ SMS sending failed:', smsResult.error)
+        // Get current session for authentication
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          logger.warn('⚠️ No authentication session for sending SMS')
           smsSuccess = false
-        }
-        } else if (data.email && data.email.trim() !== '') {
-          // ✅ E-Mail-Versand
-          logger.debug('📧 Sending onboarding email to:', data.email)
+        } else {
+          // Sanitize phone und email - stelle sicher dass sie Strings sind
+          const cleanPhone = createdStudent.phone ? String(createdStudent.phone).trim() : ''
+          const cleanEmail = createdStudent.email ? String(createdStudent.email).trim() : ''
           
-          const emailResponse = await $fetch('/api/students/send-onboarding-email', {
-            method: 'POST',
-            body: {
-              email: data.email,
-              firstName: data.first_name || 'Kunde',
-              lastName: data.last_name || '',
-              onboardingLink: onboardingLink,
-              tenantId: tenantId
+          // Entscheide: SMS wenn Telefon vorhanden, sonst E-Mail
+          if (cleanPhone !== '') {
+            // ✅ SMS-Versand (secure API with authentication)
+            const smsResponse = await $fetch('/api/students/send-onboarding-sms', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: {
+                phone: cleanPhone,
+                firstName: createdStudent.first_name || 'Kunde',
+                onboardingToken: onboardingToken
+              }
+            }) as any
+            
+            if (smsResponse?.success) {
+              logger.debug('✅ Onboarding SMS sent to:', cleanPhone)
+              smsSuccess = true
+            } else {
+              console.warn('⚠️ SMS sending failed:', smsResponse?.error)
+              smsSuccess = false
             }
-          })
-          
-          if ((emailResponse as any)?.success) {
-            logger.debug('✅ Onboarding email sent to:', data.email)
-            emailSuccess = true
-          } else {
-            console.warn('⚠️ Email sending failed')
-            emailSuccess = false
+          } else if (cleanEmail !== '') {
+            // ✅ E-Mail-Versand
+            logger.debug('📧 Sending onboarding email to:', cleanEmail)
+            
+            const emailResponse = await $fetch('/api/students/send-onboarding-email', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: {
+                email: cleanEmail,
+                firstName: createdStudent.first_name || 'Kunde',
+                lastName: createdStudent.last_name || '',
+                onboardingLink: onboardingLink,
+                tenantId: createdStudent.tenant_id  // ✅ FIX: Added missing tenantId
+              }
+            }) as any
+            
+            if (emailResponse?.success) {
+              logger.debug('✅ Onboarding email sent to:', cleanEmail)
+              emailSuccess = true
+            } else {
+              console.warn('⚠️ Email sending failed')
+              emailSuccess = false
+            }
           }
         }
         
@@ -339,14 +343,14 @@ export const useStudents = () => {
       
       // Return mit Status und Link
       const result = {
-        ...data,
+        ...createdStudent,
         smsSuccess,
         emailSuccess,
         onboardingLink
       }
 
       // Zur lokalen Liste hinzufügen
-      students.value.unshift(data as any)
+      students.value.unshift(createdStudent as any)
 
       return result as any
 

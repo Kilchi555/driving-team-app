@@ -1,12 +1,14 @@
 // server/api/payments/status.post.ts
-// ✅ Payment Status API für Updates und Abfragen
+// ✅ Payment Status API für Updates und Abfragen (mit Auth + Audit Logging)
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { logAudit } from '~/server/utils/audit'
 
 interface PaymentStatusRequest {
-  paymentId: string
+  paymentId?: string
+  transactionId?: string // ✅ SECURITY FIX: Support transactionId lookup
   status?: string
   walleeTransactionId?: string
   walleeTransactionState?: string
@@ -20,23 +22,57 @@ interface PaymentStatusResponse {
 }
 
 export default defineEventHandler(async (event): Promise<PaymentStatusResponse> => {
+  const startTime = Date.now()
+  
   try {
     logger.debug('📊 Payment Status API called')
     
     const body = await readBody(event) as PaymentStatusRequest
     logger.debug('📨 Status request:', JSON.stringify(body, null, 2))
     
-    if (!body.paymentId) {
+    if (!body.paymentId && !body.transactionId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Payment ID is required'
+        statusMessage: 'Payment ID or Transaction ID is required'
       })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
-    // 1. Payment abrufen
-    const { data: payment, error: findError } = await supabase
+    // ✅ SECURITY: Get authenticated user from Bearer token
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized'
+      })
+    }
+
+    const token = authHeader.substring(7)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized'
+      })
+    }
+
+    // ✅ Get user data for tenant isolation
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (userError || !userData) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User data not found'
+      })
+    }
+    
+    // 1. Payment abrufen (mit tenant isolation via RLS)
+    let query = supabase
       .from('payments')
       .select(`
         *,
@@ -54,13 +90,35 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
           email
         )
       `)
-      .eq('id', body.paymentId)
-      .single()
+    
+    // ✅ Support both paymentId and transactionId lookup
+    if (body.paymentId) {
+      query = query.eq('id', body.paymentId)
+    } else if (body.transactionId) {
+      query = query.eq('wallee_transaction_id', body.transactionId)
+    }
+    
+    const { data: payment, error: findError } = await query.maybeSingle()
 
     if (findError || !payment) {
+      logger.warn('⚠️ Payment not found:', body.paymentId || body.transactionId)
       throw createError({
         statusCode: 404,
         statusMessage: 'Payment not found'
+      })
+    }
+
+    // ✅ SECURITY: Verify user owns this payment
+    if (payment.user_id !== userData.id || payment.tenant_id !== userData.tenant_id) {
+      logger.warn('❌ Unauthorized access attempt:', {
+        userId: userData.id,
+        paymentUserId: payment.user_id,
+        tenantId: userData.tenant_id,
+        paymentTenantId: payment.tenant_id
+      })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Access denied'
       })
     }
 
@@ -92,9 +150,32 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
         .update(updateData)
         .eq('id', body.paymentId)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        logger.error('❌ Error updating payment status:', updateError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to update payment status'
+        })
+      }
 
       logger.debug('✅ Payment status updated to:', body.status)
+      
+      // ✅ AUDIT LOG for status change
+      await logAudit({
+        action: 'payment_status_updated',
+        user_id: userData.id,
+        tenant_id: userData.tenant_id,
+        resource_type: 'payment',
+        resource_id: payment.id,
+        status: 'success',
+        details: {
+          previous_status: payment.payment_status,
+          new_status: body.status,
+          transaction_id: body.walleeTransactionId || body.transactionId,
+          transaction_state: body.walleeTransactionState,
+          duration_ms: Date.now() - startTime
+        }
+      })
     }
 
     // 3. Appointment Status aktualisieren falls Payment completed
@@ -170,11 +251,25 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
     }
 
   } catch (error: any) {
-    console.error('❌ Payment status API error:', error)
+    logger.error('❌ Payment status API error:', error)
     
-    return {
-      success: false,
-      error: error.message || 'Payment status could not be updated'
+    // ✅ AUDIT LOG for failure (if we have context)
+    try {
+      await logAudit({
+        action: 'payment_status_update_failed',
+        status: 'failed',
+        error_message: error.statusMessage || error.message,
+        details: {
+          duration_ms: Date.now() - startTime
+        }
+      })
+    } catch (auditError) {
+      logger.error('❌ Audit logging failed:', auditError)
     }
+    
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Payment status could not be updated'
+    })
   }
 })

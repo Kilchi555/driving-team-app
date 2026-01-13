@@ -586,11 +586,12 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
-import { toLocalTimeString, formatDate } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import AdminPendencies from '~/components/admin/AdminPendencies.vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
+import { logger } from '~/utils/logger'
 
 definePageMeta({
   middleware: 'admin',
@@ -600,6 +601,7 @@ definePageMeta({
 // Current User für Tenant-ID
 const { currentUser } = useCurrentUser()
 const authStore = useAuthStore()
+const uiStore = useUIStore()
 
 // Types
 interface DashboardStats {
@@ -649,7 +651,7 @@ interface PendingStudent {
 }
 
 // State
-const isLoading = ref(false) // Start with false for immediate page display
+const isLoading = ref(true) // Start with true, load summary will set to false
 const supabase = getSupabase()
 
 const stats = ref<DashboardStats>({
@@ -717,91 +719,59 @@ const hoursStats = ref({
   thisMonth: 0
 })
 
-// Function to load recent activities including pending payments
-const loadRecentActivities = async () => {
+// Function to load all dashboard data from single API
+const loadDashboardSummary = async () => {
   try {
-    logger.debug('🔄 Loading recent activities...')
-    
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      console.error('❌ User hat keine tenant_id zugewiesen')
-      return
-    }
-    
-    // Get recent pending payments - FILTERED BY TENANT
-    const { data: pendingPayments, error: pendingError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        total_amount_rappen,
-        payment_method,
-        created_at,
-        user_id
-      `)
-      .eq('payment_status', 'pending')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-    
-    if (pendingError) {
-      console.error('❌ Error loading pending payments for activities:', pendingError)
-    }
-    
-    // Get user names for pending payments
-    const userIds = [...new Set((pendingPayments || []).map(p => p.user_id).filter(Boolean))]
-    let userNames: Record<string, string> = {}
-    
-    if (userIds.length > 0) {
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', userIds)
-        .eq('tenant_id', tenantId)
-      
-      if (!usersError && users) {
-        userNames = users.reduce((acc, user) => {
-          acc[user.id] = `${user.first_name || ''} ${user.last_name || ''}`.trim()
-          return acc
-        }, {} as Record<string, string>)
+    isLoading.value = true
+    logger.debug('🔄 Loading dashboard summary from API...')
+
+    const response = await $fetch('/api/admin/dashboard-summary', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.session?.access_token}`
       }
+    }) as any
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to load dashboard summary')
     }
-    
-    // Transform pending payments to activities
-    const pendingActivities = (pendingPayments || []).map((payment, index) => ({
-      id: index + 1,
-      type: 'pending_payment',
-      icon: '⏳',
-      title: 'Ausstehende Zahlung',
-      description: `${userNames[payment.user_id] || 'Unbekannter Benutzer'} - ${payment.payment_method}`,
-      amount: `CHF ${(payment.total_amount_rappen / 100).toFixed(2)}`,
-      time: formatDate(payment.created_at)
-    }))
-    
-    // Add some static activities for now (can be expanded later)
-    const staticActivities: Activity[] = [
-      {
-        id: pendingActivities.length + 1,
-        type: 'info',
-        icon: 'ℹ️',
-        title: 'Dashboard aktualisiert',
-        description: 'Alle Daten wurden erfolgreich geladen',
-        amount: '',
-        time: 'Gerade eben'
-      }
-    ]
-    
-    recentActivities.value = [...pendingActivities, ...staticActivities]
-    logger.debug('✅ Recent activities loaded:', recentActivities.value.length)
-  } catch (error) {
-    console.error('❌ Error loading recent activities:', error)
+
+    const summary = response.data
+
+    // Update revenue months
+    revenueMonths.value = summary.revenueMonths || []
+
+    // Update pending students
+    pendingStudents.value = summary.pendingStudents || []
+
+    // Update invoices
+    recentInvoices.value = summary.recentInvoices || []
+
+    // Update activities
+    recentActivities.value = summary.recentActivities || []
+
+    // Update courses stats
+    coursesStats.value = summary.coursesStats || { active: 0, participants: 0, thisMonth: 0 }
+
+    // Update credits stats
+    creditsStats.value = summary.creditsStats || { studentsWithCredit: 0, totalCredit: 0 }
+
+    // Update cancellations stats
+    cancellationsStats.value = summary.cancellationsStats || { thisWeek: 0, thisMonth: 0, lastMonth: 0 }
+
+    // Update hours stats
+    hoursStats.value = summary.hoursStats || { today: 0, thisWeek: 0, thisMonth: 0 }
+
+    logger.debug('✅ Dashboard summary loaded successfully')
+  } catch (error: any) {
+    logger.error('❌ Error loading dashboard summary:', error)
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: 'Dashboard-Daten konnten nicht geladen werden'
+    })
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -852,319 +822,7 @@ const totalPendingAmount = computed(() =>
 
 // Methods
 const loadDashboardStats = async () => {
-  try {
-    logger.debug('🔄 Loading dashboard statistics...')
-    
-    // Get today's date range
-    const today = new Date()
-    const todayStart = toLocalTimeString(new Date(today.setHours(0, 0, 0, 0)))
-    const todayEnd = toLocalTimeString(new Date(today.setHours(23, 59, 59, 999)))
-    
-    // Get week range
-    const weekStart = toLocalTimeString(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000))
-    
-    // Get current user's tenant_id for filtering
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      console.error('❌ User hat keine tenant_id zugewiesen')
-      return
-    }
-    logger.debug('🔍 Admin Dashboard - Current tenant_id:', tenantId)
-
-    // Load various stats in parallel - FILTERED BY TENANT
-    const [
-      paymentsResponse,
-      usersResponse,
-      appointmentsResponse
-    ] = await Promise.all([
-      // Today's payments - FILTERED BY TENANT
-      supabase
-        .from('payments')
-        .select('total_amount_rappen')
-        .eq('payment_status', 'completed')
-        .eq('tenant_id', tenantId)
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd),
-      
-      // Active users - FILTERED BY TENANT
-      supabase
-        .from('users')
-        .select('id, created_at')
-        .eq('is_active', true)
-        .eq('tenant_id', tenantId),
-      
-      // Today's appointments - FILTERED BY TENANT
-      supabase
-        .from('appointments')
-        .select('id, start_time, type')
-        .eq('tenant_id', tenantId)
-        .gte('start_time', todayStart)
-        .lte('start_time', todayEnd)
-    ])
-
-    // Process results
-    if (paymentsResponse.data) {
-      stats.value.todayRevenue = paymentsResponse.data.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
-      stats.value.todayLessons = paymentsResponse.data.length
-    }
-
-    if (usersResponse.data) {
-      stats.value.activeUsers = usersResponse.data.length
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      stats.value.newUsersThisWeek = usersResponse.data.filter(
-        u => new Date(u.created_at) > weekAgo
-      ).length
-    }
-
-    if (appointmentsResponse.data) {
-      stats.value.todayAppointments = appointmentsResponse.data.length
-      
-      // Count tomorrow's appointments
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      const tomorrowStart = toLocalTimeString(new Date(tomorrow.setHours(0, 0, 0, 0)))
-      const tomorrowEnd = toLocalTimeString(new Date(tomorrow.setHours(23, 59, 59, 999)))
-      
-      const { data: tomorrowAppts } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .gte('start_time', tomorrowStart)
-        .lte('start_time', tomorrowEnd)
-      
-      stats.value.tomorrowAppointments = tomorrowAppts?.length || 0
-      
-      // Top categories from appointments
-      const categoryCount = appointmentsResponse.data.reduce((acc, apt) => {
-        acc[apt.type] = (acc[apt.type] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-      
-      stats.value.topCategories = Object.entries(categoryCount)
-        .map(([code, count]) => ({ 
-          code, 
-          count: count as number, 
-          color: getCategoryColor(code) 
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
-    }
-
-    // Get pending payments - FILTERED BY TENANT
-    const { data: pendingPayments, error: pendingError } = await supabase
-      .from('payments')
-      .select('total_amount_rappen, payment_method, created_at')
-      .eq('payment_status', 'pending')
-      .eq('tenant_id', tenantId)
-
-    if (pendingError) {
-      console.error('❌ Error loading pending payments:', pendingError)
-    } else if (pendingPayments) {
-      stats.value.pendingPayments = pendingPayments.length
-      stats.value.pendingAmount = pendingPayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
-      logger.debug('💰 Pending payments loaded:', pendingPayments.length, 'payments, total amount:', stats.value.pendingAmount)
-    }
-
-    logger.debug('✅ Dashboard stats loaded:', stats.value)
-    
-    // Load recent invoices
-    await loadRecentInvoices()
-    
-    // Load pending students
-    await loadPendingStudents()
-    
-    // Load recent activities
-    await loadRecentActivities()
-
-  } catch (error) {
-    console.error('❌ Error loading dashboard stats:', error)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const loadRecentInvoices = async () => {
-  try {
-    isLoadingInvoices.value = true
-    logger.debug('🔄 Loading recent invoices...')
-    
-    // Get invoices from the last 2 weeks
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-    const twoWeeksAgoStr = toLocalTimeString(twoWeeksAgo)
-    
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      console.error('❌ User hat keine tenant_id zugewiesen')
-      return
-    }
-
-    const { data: invoices, error } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        total_amount_rappen,
-        created_at,
-        payment_status,
-        user_id
-      `)
-      .eq('payment_method', 'invoice')
-      .eq('tenant_id', tenantId)
-      .gte('created_at', twoWeeksAgoStr)
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    
-    // Get user names for the invoices
-    const userIds = [...new Set((invoices || []).map(invoice => invoice.user_id).filter(Boolean))]
-    let userNames: Record<string, string> = {}
-    
-    if (userIds.length > 0) {
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', userIds)
-        .eq('tenant_id', tenantId)
-      
-      if (!usersError && users) {
-        userNames = users.reduce((acc, user) => {
-          acc[user.id] = `${user.first_name || ''} ${user.last_name || ''}`.trim()
-          return acc
-        }, {} as Record<string, string>)
-      }
-    }
-    
-    // Transform the data to match our Invoice interface
-    recentInvoices.value = (invoices || []).map(invoice => ({
-      id: invoice.id,
-      customer_name: userNames[invoice.user_id] || 'Unbekannter Kunde',
-      total_amount_rappen: invoice.total_amount_rappen || 0,
-      created_at: invoice.created_at,
-      status: invoice.payment_status
-    }))
-    
-    logger.debug('✅ Recent invoices loaded:', recentInvoices.value.length)
-  } catch (error) {
-    console.error('❌ Error loading recent invoices:', error)
-  } finally {
-    isLoadingInvoices.value = false
-  }
-}
-
-const loadPendingStudents = async () => {
-  try {
-    isLoadingPendingStudents.value = true
-    logger.debug('🔄 Loading students with pending payments...')
-    
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      console.error('❌ User hat keine tenant_id zugewiesen')
-      return
-    }
-    
-    // Get all pending payments - FILTERED BY TENANT
-    const { data: pendingPayments, error: paymentsError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        user_id,
-        total_amount_rappen,
-        payment_status,
-        payment_method,
-        created_at
-      `)
-      .eq('payment_status', 'pending')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-    
-    if (paymentsError) throw paymentsError
-    
-    logger.debug('💳 Found pending payments:', pendingPayments?.length || 0)
-    
-    if (!pendingPayments || pendingPayments.length === 0) {
-      logger.debug('ℹ️ No pending payments found')
-      pendingStudents.value = []
-      return
-    }
-    
-    // Get user names for the pending payments
-    const userIds = [...new Set(pendingPayments.map(p => p.user_id).filter(Boolean))]
-    let userNames: Record<string, { first_name: string, last_name: string, email: string }> = {}
-    
-    if (userIds.length > 0) {
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email')
-        .in('id', userIds)
-      
-      if (!usersError && users) {
-        userNames = users.reduce((acc, user) => {
-          acc[user.id] = {
-            first_name: user.first_name || '',
-            last_name: user.last_name || '',
-            email: user.email || ''
-          }
-          return acc
-        }, {} as Record<string, { first_name: string, last_name: string, email: string }>)
-      }
-    }
-    
-    // Group by student and calculate totals
-    const studentMap = new Map<string, PendingStudent>()
-    
-    pendingPayments.forEach(payment => {
-      const userId = payment.user_id
-      const existing = studentMap.get(userId)
-      const userInfo = userNames[userId] || { first_name: '', last_name: '', email: '' }
-      
-      if (existing) {
-        existing.pending_payments_count += 1
-        existing.total_pending_amount += payment.total_amount_rappen || 0
-      } else {
-        studentMap.set(userId, {
-          id: userId,
-          first_name: userInfo.first_name,
-          last_name: userInfo.last_name,
-          email: userInfo.email,
-          pending_payments_count: 1,
-          total_pending_amount: payment.total_amount_rappen || 0
-        })
-      }
-    })
-    
-    // Convert to array and sort by pending amount (highest first)
-    pendingStudents.value = Array.from(studentMap.values())
-      .sort((a, b) => b.total_pending_amount - a.total_pending_amount)
-      .slice(0, 10) // Show top 10
-    
-    logger.debug('✅ Pending students loaded:', pendingStudents.value.length, 'students with pending payments')
-    logger.debug('📊 Sample data:', pendingStudents.value.slice(0, 2))
-  } catch (error) {
-    console.error('❌ Error loading pending students:', error)
-  } finally {
-    isLoadingPendingStudents.value = false
-  }
+  // Consolidated into loadDashboardSummary
 }
 
 const getCategoryColor = (categoryCode: string): string => {
@@ -1179,92 +837,6 @@ const getCategoryColor = (categoryCode: string): string => {
   return colors[categoryCode] || '#6B7280'
 }
 
-// Load revenue data for the last 4 months
-const loadRevenueData = async () => {
-  try {
-    const tenantId = authStore.userProfile?.tenant_id || currentUser.value?.tenant_id
-    if (!tenantId) {
-      console.warn('No tenant ID found for revenue data')
-      return
-    }
-    logger.debug('💰 Loading revenue data for tenant:', tenantId)
-    
-    const now = new Date()
-    const months: RevenueMonth[] = []
-
-    // First, let's check what payments exist at all
-    const { data: allPayments, error: allError } = await supabase
-      .from('payments')
-      .select('id, payment_status, payment_method, total_amount_rappen, created_at')
-      .eq('tenant_id', tenantId)
-      .limit(10)
-
-    logger.debug('📊 Sample of all payments in DB:', {
-      total: allPayments?.length || 0,
-      samples: allPayments?.slice(0, 3),
-      statuses: [...new Set(allPayments?.map(p => p.payment_status))]
-    })
-
-    // Get current month and 3 previous months
-    for (let i = 0; i < 4; i++) {
-      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
-      const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999)
-
-      const monthStartStr = toLocalTimeString(monthStart)
-      const monthEndStr = toLocalTimeString(monthEnd)
-
-      // Load completed/paid payments
-      const { data: completedPayments } = await supabase
-        .from('payments')
-        .select('total_amount_rappen, payment_status')
-        .eq('tenant_id', tenantId)
-        .in('payment_status', ['completed', 'paid', 'cash'])
-        .gte('created_at', monthStartStr)
-        .lte('created_at', monthEndStr)
-
-      // Load pending payments
-      const { data: pendingPayments } = await supabase
-        .from('payments')
-        .select('total_amount_rappen, payment_status')
-        .eq('tenant_id', tenantId)
-        .eq('payment_status', 'pending')
-        .gte('created_at', monthStartStr)
-        .lte('created_at', monthEndStr)
-
-      const totalRevenue = completedPayments?.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0) || 0
-      const paymentsCount = completedPayments?.length || 0
-      const pendingCount = pendingPayments?.length || 0
-
-      // Format month name
-      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
-                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
-      const monthName = i === 0 ? 'Aktuell' : monthNames[targetDate.getMonth()]
-
-      months.push({
-        name: monthName,
-        revenue: totalRevenue,
-        paymentsCount,
-        pendingCount,
-        monthKey: `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}`
-      })
-
-      if (i === 0) {
-        logger.debug('💰 Current month data:', {
-          completed: paymentsCount,
-          pending: pendingCount,
-          revenue: totalRevenue
-        })
-      }
-    }
-
-    revenueMonths.value = months
-    logger.debug('✅ Revenue data loaded for 4 months:', months)
-  } catch (error) {
-    console.error('❌ Error loading revenue data:', error)
-  }
-}
-
 // Load 12 months revenue data for modal
 const load12MonthsRevenue = async () => {
   try {
@@ -1273,242 +845,23 @@ const load12MonthsRevenue = async () => {
       return
     }
 
-    const tenantId = currentUser.value.tenant_id
-    const now = new Date()
-    const months: RevenueMonth[] = []
+    logger.debug('🔄 Loading 12 months revenue from API...')
 
-    // Get 12 months
-    for (let i = 0; i < 12; i++) {
-      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
-      const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999)
-
-      const monthStartStr = toLocalTimeString(monthStart)
-      const monthEndStr = toLocalTimeString(monthEnd)
-
-      // Load payments for this month
-      const { data: payments, error } = await supabase
-        .from('payments')
-        .select('total_amount_rappen, payment_status, payment_method')
-        .eq('tenant_id', tenantId)
-        .eq('payment_status', 'completed')
-        .gte('created_at', monthStartStr)
-        .lte('created_at', monthEndStr)
-
-      if (error) {
-        console.error(`Error loading payments for month ${i}:`, error)
-        continue
+    const response = await $fetch('/api/admin/dashboard-revenue-12m', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.session?.access_token}`
       }
+    }) as any
 
-      const totalRevenue = payments?.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0) || 0
-      const paymentsCount = payments?.length || 0
-
-      // Format month name
-      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
-                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
-      const monthName = `${monthNames[targetDate.getMonth()]} ${targetDate.getFullYear()}`
-
-      months.push({
-        name: monthName,
-        revenue: totalRevenue,
-        paymentsCount,
-        pendingCount: 0, // Not used in 12 months view
-        monthKey: `${targetDate.getFullYear()}-${targetDate.getMonth() + 1}`
-      })
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to load revenue data')
     }
 
-    revenue12Months.value = months
-    logger.debug('✅ 12 months revenue data loaded:', months)
-  } catch (error) {
-    console.error('❌ Error loading 12 months revenue data:', error)
-  }
-}
-
-// Load courses stats
-const loadCoursesStats = async () => {
-  try {
-    if (!currentUser.value?.tenant_id) return
-    const tenantId = currentUser.value.tenant_id
-
-    // Active courses
-    const { data: activeCourses } = await supabase
-      .from('course_sessions')
-      .select('id, course_id')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-
-    // Participants
-    const { data: registrations } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-
-    // This month courses
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const monthStartStr = toLocalTimeString(monthStart)
-
-    const { data: thisMonthCourses } = await supabase
-      .from('course_sessions')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .gte('start_date', monthStartStr)
-
-    coursesStats.value = {
-      active: activeCourses?.length || 0,
-      participants: registrations?.length || 0,
-      thisMonth: thisMonthCourses?.length || 0
-    }
-  } catch (error) {
-    console.error('Error loading courses stats:', error)
-  } finally {
-    isLoadingCourses.value = false
-  }
-}
-
-// Load credits stats
-const loadCreditsStats = async () => {
-  try {
-    if (!currentUser.value?.tenant_id) return
-    const tenantId = currentUser.value.tenant_id
-
-    const { data: credits } = await supabase
-      .from('student_credits')
-      .select('user_id, balance_rappen')
-      .eq('tenant_id', tenantId)
-      .gt('balance_rappen', 0)
-
-    const totalCredit = credits?.reduce((sum, c) => sum + (c.balance_rappen || 0), 0) || 0
-
-    creditsStats.value = {
-      studentsWithCredit: credits?.length || 0,
-      totalCredit
-    }
-  } catch (error) {
-    console.error('Error loading credits stats:', error)
-  } finally {
-    isLoadingCredits.value = false
-  }
-}
-
-// Load cancellations stats
-const loadCancellationsStats = async () => {
-  try {
-    if (!currentUser.value?.tenant_id) return
-    const tenantId = currentUser.value.tenant_id
-
-    const now = new Date()
-    
-    // This week
-    const weekStart = new Date(now)
-    weekStart.setDate(now.getDate() - now.getDay())
-    weekStart.setHours(0, 0, 0, 0)
-    const weekStartStr = toLocalTimeString(weekStart)
-
-    const { data: thisWeekCancellations } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .not('deleted_at', 'is', null)
-      .gte('deleted_at', weekStartStr)
-
-    // This month
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const monthStartStr = toLocalTimeString(monthStart)
-
-    const { data: thisMonthCancellations } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .not('deleted_at', 'is', null)
-      .gte('deleted_at', monthStartStr)
-
-    // Last month
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
-    const lastMonthStartStr = toLocalTimeString(lastMonthStart)
-    const lastMonthEndStr = toLocalTimeString(lastMonthEnd)
-
-    const { data: lastMonthCancellations } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .not('deleted_at', 'is', null)
-      .gte('deleted_at', lastMonthStartStr)
-      .lte('deleted_at', lastMonthEndStr)
-
-    cancellationsStats.value = {
-      thisWeek: thisWeekCancellations?.length || 0,
-      thisMonth: thisMonthCancellations?.length || 0,
-      lastMonth: lastMonthCancellations?.length || 0
-    }
-  } catch (error) {
-    console.error('Error loading cancellations stats:', error)
-  } finally {
-    isLoadingCancellations.value = false
-  }
-}
-
-// Load hours stats
-const loadHoursStats = async () => {
-  try {
-    if (!currentUser.value?.tenant_id) return
-    const tenantId = currentUser.value.tenant_id
-
-    const now = new Date()
-    
-    // Today
-    const todayStart = new Date(now.setHours(0, 0, 0, 0))
-    const todayEnd = new Date(now.setHours(23, 59, 59, 999))
-    const todayStartStr = toLocalTimeString(todayStart)
-    const todayEndStr = toLocalTimeString(todayEnd)
-
-    const { data: todayAppts } = await supabase
-      .from('appointments')
-      .select('duration_minutes')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-      .gte('start_time', todayStartStr)
-      .lte('start_time', todayEndStr)
-
-    // This week
-    const weekStart = new Date()
-    weekStart.setDate(now.getDate() - now.getDay())
-    weekStart.setHours(0, 0, 0, 0)
-    const weekStartStr = toLocalTimeString(weekStart)
-
-    const { data: weekAppts } = await supabase
-      .from('appointments')
-      .select('duration_minutes')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-      .gte('start_time', weekStartStr)
-
-    // This month
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const monthStartStr = toLocalTimeString(monthStart)
-
-    const { data: monthAppts } = await supabase
-      .from('appointments')
-      .select('duration_minutes')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-      .gte('start_time', monthStartStr)
-
-    const todayMinutes = todayAppts?.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) || 0
-    const weekMinutes = weekAppts?.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) || 0
-    const monthMinutes = monthAppts?.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) || 0
-
-    hoursStats.value = {
-      today: Math.round((todayMinutes / 60) * 20) / 20,
-      thisWeek: Math.round((weekMinutes / 60) * 20) / 20,
-      thisMonth: Math.round((monthMinutes / 60) * 20) / 20
-    }
-  } catch (error) {
-    console.error('Error loading hours stats:', error)
-  } finally {
-    isLoadingHours.value = false
+    revenue12Months.value = response.data || []
+    logger.debug('✅ 12 months revenue data loaded successfully')
+  } catch (error: any) {
+    logger.error('❌ Error loading 12 months revenue data:', error)
   }
 }
 
@@ -1541,12 +894,7 @@ const loadAllDashboardData = () => {
   
   if (tenantId) {
     logger.debug('✅ Tenant ID available, loading data:', tenantId)
-    loadDashboardStats()
-    loadRevenueData()
-    loadCoursesStats()
-    loadCreditsStats()
-    loadCancellationsStats()
-    loadHoursStats()
+    loadDashboardSummary()
   } else {
     console.warn('⚠️ No tenant_id found, retrying in 500ms...')
     setTimeout(loadAllDashboardData, 500)

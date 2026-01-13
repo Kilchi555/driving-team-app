@@ -30,6 +30,8 @@ import {
 interface Props {
   appointmentData: AppointmentData
   modelValue?: string // Selected policy ID
+  cancellationType?: 'staff' | 'student' // Type of cancellation for past appointment handling
+  appliesTo?: 'appointments' | 'courses' // Filter policies by applies_to field
 }
 
 interface Emits {
@@ -83,11 +85,12 @@ const calculateCharges = () => {
     // Calculate time until appointment
     timeUntilAppointment.value = getTimeUntilAppointment(appointmentDate, currentDate)
     
-    // Calculate cancellation charges
+    // Calculate cancellation charges with cancellation type
     const result = calculateCancellationCharges(
       selectedPolicy.value,
       props.appointmentData,
-      currentDate
+      currentDate,
+      props.cancellationType
     )
     
     cancellationResult.value = result
@@ -101,7 +104,7 @@ const calculateCharges = () => {
 
 // Load data on mount
 onMounted(async () => {
-  await fetchPolicies()
+  await fetchPolicies(props.appliesTo)
   calculateCharges()
 })
 

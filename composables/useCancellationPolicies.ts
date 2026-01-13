@@ -69,26 +69,47 @@ export const useCancellationPolicies = () => {
       logger.debug('🔍 Cancellation Policies - Current tenant_id:', tenantId, 'appliesTo:', appliesTo)
 
       // Build query
+      // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
       let query = supabase
         .from('cancellation_policies')
         .select('*')
-        .eq('is_active', true)
-        .eq('tenant_id', tenantId) // Filter by current tenant
       
       // Filter by applies_to if specified
       if (appliesTo) {
         query = query.eq('applies_to', appliesTo)
       }
       
+      // ✅ IMPORTANT: Don't filter by is_active - load all policies
+      // The is_active column might be stored as text 'true'/'false' instead of boolean
+      // We'll check is_active in the code below
+      
+      // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
+      query = query.order('tenant_id', { ascending: false })
+      
       const { data: policiesData, error: policiesError } = await query
         .order('created_at', { ascending: false })
 
       if (policiesError) {
+        logger.debug('❌ Error fetching policies:', policiesError)
         console.error('Error fetching policies:', policiesError)
         throw policiesError
       }
 
-      policies.value = policiesData || []
+      logger.debug('✅ Raw policies data loaded:', { count: policiesData?.length || 0, policies: policiesData })
+
+      // Filter to get:
+      // 1. Active policies (is_active = true)
+      // 2. Both tenant-specific AND global policies
+      // Tenant-specific policies take precedence over global
+      const filteredPolicies = (policiesData || []).filter(p => {
+        // Check if policy is active (handle both boolean and string 'true'/'false')
+        const isActive = p.is_active === true || p.is_active === 'true'
+        
+        // Include if active AND (tenant-specific OR global)
+        return isActive && (p.tenant_id === null || p.tenant_id === tenantId)
+      })
+      
+      policies.value = filteredPolicies
 
       // Fetch rules for each policy
       const policiesWithRulesData: PolicyWithRules[] = []
@@ -99,10 +120,9 @@ export const useCancellationPolicies = () => {
           .select('*')
           .eq('policy_id', policy.id)
         
-        // Filter by tenant_id if policy has tenant_id (not a template)
-        if (policy.tenant_id) {
-          rulesQuery = rulesQuery.eq('tenant_id', policy.tenant_id)
-        }
+        // ✅ IMPORTANT: Don't filter by tenant_id for rules
+        // Rules always belong to their policy via policy_id
+        // The tenant_id on rules is just metadata
         
         const { data: rulesData, error: rulesError } = await rulesQuery
           .order('hours_before_appointment', { ascending: false })
@@ -126,6 +146,12 @@ export const useCancellationPolicies = () => {
       }
 
       policiesWithRules.value = policiesWithRulesData
+      
+      logger.debug('📋 Policies loaded:', {
+        totalPolicies: policiesWithRulesData.length,
+        defaultPolicy: defaultPolicy.value?.name || 'NOT SET',
+        defaultPolicyRules: defaultPolicy.value?.rules?.length || 0
+      })
     } catch (err) {
       console.error('Error fetching cancellation policies:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation policies'
@@ -162,10 +188,13 @@ export const useCancellationPolicies = () => {
 
       logger.debug('🔍 All Cancellation Policies - Current tenant_id:', userData.tenant_id)
 
+      // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
+      // This allows admins to see and manage both their tenant policies and the global fallback policies
       const { data: policiesData, error: policiesError } = await supabase
         .from('cancellation_policies')
         .select('*')
-        .eq('tenant_id', userData.tenant_id) // Filter by current tenant
+        .or(`tenant_id.eq.${userData.tenant_id},tenant_id.is.null`) // Load tenant-specific OR global policies
+        .order('tenant_id', { ascending: false }) // Tenant-specific policies first
         .order('created_at', { ascending: false })
 
       if (policiesError) {
@@ -183,10 +212,9 @@ export const useCancellationPolicies = () => {
           .select('*')
           .eq('policy_id', policy.id)
         
-        // Filter by tenant_id if policy has tenant_id (not a template)
-        if (policy.tenant_id) {
-          rulesQuery = rulesQuery.eq('tenant_id', policy.tenant_id)
-        }
+        // ✅ IMPORTANT: Don't filter by tenant_id for rules
+        // Rules always belong to their policy via policy_id
+        // The tenant_id on rules is just metadata
         
         const { data: rulesData, error: rulesError } = await rulesQuery
           .order('hours_before_appointment', { ascending: false })
@@ -492,8 +520,36 @@ export const useCancellationPolicies = () => {
   const calculateCancellationCharges = (
     policy: PolicyWithRules,
     appointmentDate: Date,
-    cancellationDate: Date = new Date()
+    cancellationDate: Date = new Date(),
+    cancellationType?: 'staff' | 'student'
   ): CancellationCalculation => {
+    // ✅ NEW: Handle appointments in the past
+    // If appointment is in the past, apply fixed rules:
+    // - Staff cancellation (reason): 0% charge (free)
+    // - Student/Client cancellation (reason): 100% charge
+    const isPast = appointmentDate <= cancellationDate
+    
+    if (isPast) {
+      logger.debug('⏰ Appointment is in the past - applying past appointment rules:', {
+        appointmentDate: appointmentDate.toISOString(),
+        cancellationDate: cancellationDate.toISOString(),
+        cancellationType
+      })
+      
+      const chargePercentageForPast = cancellationType === 'staff' ? 0 : 100
+      const lastRule = policy.rules[policy.rules.length - 1]
+      
+      return {
+        applicableRule: lastRule || null,
+        chargePercentage: chargePercentageForPast,
+        creditHours: cancellationType === 'staff',
+        hoursBeforeAppointment: 0,
+        description: cancellationType === 'staff' 
+          ? 'Kostenlose Stornierung durch Fahrlehrer (Termin in der Vergangenheit)' 
+          : 'Volle Gebühr - Termin liegt in der Vergangenheit'
+      }
+    }
+    
     // Check if any rule has exclude_sundays enabled
     const hasExcludeSundays = policy.rules.some(rule => rule.exclude_sundays === true)
     

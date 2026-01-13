@@ -61,7 +61,7 @@
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
-            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ (studentBalance / 100).toFixed(2) }}</p>
+            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ formatAmount(studentBalance) }}</p>
             <!-- ✅ DISABLED FOR PRODUCTION: Redeem Voucher Button (enable on preview branch) -->
             <!-- <button
               @click="showRedeemVoucherModal = true"
@@ -193,15 +193,24 @@
               
               <!-- Payment Amount -->
               <div class="text-left sm:ml-6">
-                <div class="flex items-center justify-between sm:justify-end space-x-4">
-                  <div class="text-xl sm:text-2xl font-bold text-gray-900">
-                    CHF {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
-                  </div>
-                  <div class="text-xs sm:text-sm text-gray-500">
-                    {{ getPaymentMethodLabel(payment.payment_method) }}
+                <div class="flex flex-col space-between space-y-1">
+                  <div class="flex justify-between space-x-2">
+                    <div class="text-xl sm:text-2xl font-bold text-gray-900">
+                      CHF {{ 
+                        ((roundToNearestFranken(payment.lesson_price_rappen) + 
+                          roundToNearestFranken(payment.admin_fee_rappen || 0) + 
+                          roundToNearestFranken(payment.products_price_rappen || 0) - 
+                          roundToNearestFranken(payment.discount_amount_rappen || 0) - 
+                          roundToNearestFranken(payment.credit_used_rappen || 0)) / 100).toFixed(2) 
+                      }}
+                    </div>
+                    <div class="text-xs sm:text-sm text-gray-500">
+                      {{ getPaymentMethodLabel(payment.payment_method) }}
+                    </div>
                   </div>
                 </div>
               </div>
+          
             </div>
             
             <!-- Payment Details -->
@@ -220,28 +229,40 @@
                 
                 <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Fahrlektion</span>
-                  <span class="font-medium text-gray-600 ml-4">CHF {{ (payment.lesson_price_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-gray-600 ml-4">CHF {{ formatAmount(payment.lesson_price_rappen) }}</span>
                 </div>
                 
                 <div v-if="payment.admin_fee_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Administrationsgebühr</span>
-                  <span class="font-medium text-gray-600">CHF {{ (payment.admin_fee_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.admin_fee_rappen) }}</span>
                 </div>
                 
                 <div v-if="payment.products_price_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">{{ getProductsLabel(payment) }}</span>
-                  <span class="font-medium text-gray-600">CHF {{ (payment.products_price_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.products_price_rappen) }}</span>
                 </div>
                 
                 <div v-if="payment.discount_amount_rappen > 0" class="flex justify-between">
                   <span class="text-gray-600">Rabatt</span>
-                  <span class="font-medium text-green-600">- CHF {{ (payment.discount_amount_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-green-600">- CHF {{ formatAmount(payment.discount_amount_rappen) }}</span>
                 </div>
                 
                 <!-- ✅ NEW: Show credit used -->
                 <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2">
                   <span class="text-green-600 font-medium">Verwendetes Guthaben</span>
-                  <span class="font-medium text-green-600">- CHF {{ (payment.credit_used_rappen / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-green-600">- CHF {{ formatAmount(payment.credit_used_rappen) }}</span>
+                </div>
+                
+                <!-- ✅ NEW: Show total calculation with ROUNDED values -->
+                <div v-if="payment.credit_used_rappen > 0" class="flex justify-between border-t pt-2 mt-2 font-medium">
+                  <span class="text-gray-900">Noch zu zahlen</span>
+                  <span class="text-gray-900">CHF {{ 
+                    ((roundToNearestFranken(payment.lesson_price_rappen) + 
+                      roundToNearestFranken(payment.admin_fee_rappen || 0) + 
+                      roundToNearestFranken(payment.products_price_rappen || 0) - 
+                      roundToNearestFranken(payment.discount_amount_rappen || 0) - 
+                      roundToNearestFranken(payment.credit_used_rappen || 0)) / 100).toFixed(2) 
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -251,9 +272,9 @@
             <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <!-- Jetzt bezahlen Button -->
               <button @click="payIndividual(payment)"
-                      :disabled="isProcessingPayment || isConvertingToOnline"
+                      :disabled="processingPaymentIds.has(payment.id)"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                {{ isProcessingPayment || isConvertingToOnline ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+                {{ processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
               </button>
             </div>
           </div>
@@ -303,6 +324,7 @@ import CustomerCancellationModal from '~/components/customer/CustomerCancellatio
 import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue' // ✅ NEW: Voucher Modal
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
+import { buildMerchantReference } from '~/utils/merchantReference' // ✅ NEW: Merchant Reference
 
 
 // Components (these would need to be created)
@@ -317,7 +339,7 @@ definePageMeta({
 
 // Composables
 const authStore = useAuthStore()
-const { user: currentUser, isClient } = storeToRefs(authStore)
+const { user: currentUser, isClient, userProfile } = storeToRefs(authStore)
 
 // ✅ Verwende das neue useCustomerPayments Composable
 const {
@@ -334,10 +356,23 @@ const error = ref<string | null>(null)
 const isProcessingPayment = ref(false)
 const isProcessingReceipt = ref(false)
 const isConvertingToOnline = ref(false) // Used in payIndividual to show processing state
+const processingPaymentIds = ref<Set<string>>(new Set()) // Track which payments are being processed
 const statusFilter = ref('all')
 const methodFilter = ref('all')
 const showDetailsModal = ref(false)
 const showSettings = ref(false)
+
+// ✅ SWISS ROUNDING: Runde auf nächsten Franken (50 Rappen Grenze)
+const roundToNearestFranken = (rappen: number): number => {
+  const remainder = rappen % 100
+  if (remainder === 0) return rappen
+  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
+  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
+}
+
+const formatAmount = (rappen: number): string => {
+  return (roundToNearestFranken(rappen) / 100).toFixed(2)
+}
 const selectedPayment = ref<any>(null)
 const preferredPaymentMethod = ref<string | null>(null)
 const expandedPaymentId = ref<string | null>(null)
@@ -347,6 +382,7 @@ const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
 const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
 const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
 const showRedeemVoucherModal = ref(false) // ✅ NEW: Voucher Modal
+const currentUserData = ref<any>(null) // ✅ NEW: User data from get-payment-page-data API
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -432,52 +468,63 @@ const retryLoad = async () => {
 }
 
 const loadAllData = async () => {
-  if (!currentUser.value?.id) return
+  if (!userProfile.value?.id) return
 
   try {
     const supabase = getSupabase()
-    
-    // Get user data from users table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, preferred_payment_method')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
-    
-    if (userError) throw userError
-    if (!userData) throw new Error('User nicht in Datenbank gefunden')
+    const { data: { session } } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
 
-    preferredPaymentMethod.value = userData.preferred_payment_method
-
-    logger.debug('🔍 Loading data for user:', userData.id)
-
-    // ✅ Lade Student Credit Balance
-    const { data: creditData, error: creditError } = await supabase
-      .from('student_credits')
-      .select('balance_rappen')
-      .eq('user_id', userData.id)
-      .single()
-    
-    if (creditError && creditError.code !== 'PGRST116') {
-      console.warn('⚠️ Could not load student credit:', creditError)
-    } else if (creditData) {
-      studentBalance.value = creditData.balance_rappen || 0
-      logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+    if (!accessToken) {
+      throw new Error('No authentication token found')
     }
 
-    // ✅ Verwende das neue useCustomerPayments Composable
-    await loadCustomerPayments()
-    
-    // Debug: Log all payments with paid_at field
-    logger.debug('📋 All customer payments after loading:')
-    customerPayments.value.forEach((p, idx) => {
-      logger.debug(`Payment ${idx + 1}:`, {
-        id: p.id,
-        payment_status: p.payment_status,
-        paid_at: p.paid_at,
-        created_at: p.created_at,
-        hasPaymentDate: !!p.paid_at
-      })
+    // ✅ Use SINGLE comprehensive API to fetch ALL payment page data
+    // This replaces THREE separate queries with ONE secure API call:
+    // 1. User payment preferences
+    // 2. Student credit balance
+    // 3. Payments with staff data
+    logger.debug('📄 Loading payment page data via secure API...')
+
+    const response = await $fetch('/api/customer/get-payment-page-data', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load payment page data from API')
+    }
+
+    const { data } = response
+
+    // ✅ Store user data for later use in payIndividual
+    // Only update if user data is present (avoid overwriting with empty object)
+    if (data.user && data.user.id) {
+      currentUserData.value = data.user
+    }
+
+    // Set user preferences
+    preferredPaymentMethod.value = data.user?.preferred_payment_method || 'wallee'
+    logger.debug('💳 Preferred payment method:', preferredPaymentMethod.value)
+
+    // Set student balance
+    // Only update if new balance is available (avoid resetting to 0)
+    if (data.student_balance_rappen !== undefined && data.student_balance_rappen !== null) {
+      studentBalance.value = data.student_balance_rappen
+    }
+    logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+
+    // Load payments directly from API response instead of separate call
+    customerPayments.value = data.payments || []
+    logger.debug('✅ Payments loaded from API:', customerPayments.value.length, 'payments')
+
+    logger.debug('✅ All payment page data loaded via API:', {
+      user: data.user?.id,
+      balance: studentBalance.value / 100,
+      payments: data.payments?.length || 0,
+      stats: data.stats
     })
 
   } catch (err: any) {
@@ -494,12 +541,13 @@ const payAllUnpaid = async () => {
   isProcessingPayment.value = true
   
   try {
-    logger.debug('💳 Processing direct Wallee payment for all unpaid:', unpaidPayments.value.length)
+    logger.debug('💳 Processing secure payment API for all unpaid:', unpaidPayments.value.length)
     
     // Get current user
     const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
+    if (!user || !session) throw new Error('User not authenticated')
     
     // Get user data from users table
     const { data: userData, error: userError } = await supabase
@@ -513,63 +561,51 @@ const payAllUnpaid = async () => {
     // Calculate total amount
     const totalAmount = unpaidPayments.value.reduce((sum, p) => sum + (p.total_amount_rappen / 100), 0)
     
-    // Create Wallee transaction
-    interface WalleeResponse {
+    // Create batch orderId
+    const batchOrderId = `payment-batch-${unpaidPayments.value.map(p => p.id).join('-')}-${Date.now()}`
+    
+    // For batch payments, use first payment ID as reference
+    const firstPaymentId = unpaidPayments.value[0]?.id
+    if (!firstPaymentId) throw new Error('No payments to process')
+    
+    // Initiate Wallee transaction via secure API
+    interface PaymentResponse {
       success: boolean
+      paymentId?: string
       paymentUrl?: string
-      transactionId?: number | string
+      transactionId?: string | number
       error?: string
     }
     
-    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
+    const response = await $fetch<PaymentResponse>('/api/payments/process', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
       body: {
-        orderId: `payment-batch-${unpaidPayments.value.map(p => p.id).join('-')}-${Date.now()}`,
+        userId: userData.id,
         amount: totalAmount,
         currency: 'CHF',
         customerEmail: userData.email,
         customerName: `${userData.first_name} ${userData.last_name}`,
         description: `Zahlung für ${unpaidPayments.value.length} Termin(e)`,
+        paymentMethod: 'wallee',
+        orderId: batchOrderId,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
-        userId: userData.id,
-        tenantId: userData.tenant_id
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
       }
     })
     
-    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
-      // Update all payments with Wallee transaction ID
-      logger.debug('💾 Saving Wallee transaction ID to payments:', walleeResponse.transactionId)
-      
-      for (const paymentId of unpaidPayments.value.map(p => p.id)) {
-        const payment = unpaidPayments.value.find(p => p.id === paymentId)
-        const { error: updateError } = await supabase
-          .from('payments')
-          .update({
-            wallee_transaction_id: walleeResponse.transactionId.toString(),
-            metadata: {
-              ...payment?.metadata,
-              wallee_transaction_id: walleeResponse.transactionId
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', paymentId)
-        
-        if (updateError) {
-          console.error('❌ Error updating payment with transaction ID:', updateError)
-        }
-      }
-      
-      logger.debug('✅ All payments updated with transaction ID')
-      
-      // Redirect directly to Wallee payment page
-      window.location.href = walleeResponse.paymentUrl
+    if (response.success && response.paymentUrl) {
+      logger.debug('✅ Payment processed successfully, redirecting to Wallee')
+      window.location.href = response.paymentUrl
     } else {
-      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+      throw new Error(response.error || 'Payment processing failed')
     }
     
   } catch (err: any) {
     console.error('❌ Error initiating bulk payment:', err)
+    logger.debug('❌ Full error:', err)
     alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
   } finally {
     isProcessingPayment.value = false
@@ -579,110 +615,100 @@ const payAllUnpaid = async () => {
 const payIndividual = async (payment: any) => {
   if (!payment || !payment.id) return
   
-  isProcessingPayment.value = true
+  // Add this payment ID to the processing set
+  processingPaymentIds.value.add(payment.id)
   
   try {
+    // Get session for authentication
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('User session not found')
+    
+    logger.debug('💳 Processing payment via secure API:', payment.id)
+    
     // If payment is not already wallee, convert it first
     if (payment.payment_method !== 'wallee') {
       logger.debug('🔄 Converting payment to online first:', payment.id)
       
-      const result = await $fetch('/api/payments/convert-to-online', {
-        method: 'POST',
-        body: {
-          paymentId: payment.id,
-          customerEmail: currentUser.value?.email
+      try {
+        const userData = currentUserData.value
+        const result = await $fetch('/api/payments/convert-to-online', {
+          method: 'POST',
+          body: {
+            paymentId: payment.id,
+            customerEmail: userData?.email
+          }
+        }) as { success: boolean }
+        
+        if (result.success) {
+          logger.debug('✅ Payment converted to online')
+          payment.payment_method = 'wallee'
         }
-      })
+      } catch (conversionError) {
+        logger.warn('⚠️ Payment conversion failed (not critical):', conversionError)
+        // Continue anyway - payment might already be wallee or conversion not needed
+      }
+    }
+    
+    // ✅ NEW: Use secure API - it handles ALL credit logic internally
+    logger.debug('🚀 Calling /api/payments/process with paymentId:', payment.id)
+    
+    const walleeResponse = await $fetch('/api/payments/process', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: {
+        paymentId: payment.id,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+      }
+    }) as any
+    
+    logger.debug('✅ API response:', walleeResponse)
+    
+    // Check if fully covered by credit (no Wallee needed)
+    if (walleeResponse.paymentStatus === 'completed') {
+      logger.debug('✅ Payment completed with credit only')
       
-      logger.debug('✅ Payment converted to online:', result)
-      
-      // Reload payments to get updated data
+      // Reload data to show updated payment and balance
       await loadAllData()
       
-      // Get the updated payment
-      const updatedPayment = customerPayments.value.find(p => p.id === payment.id)
-      if (updatedPayment) {
-        payment = updatedPayment
-      }
+      // Show success notification
+      const uiStore = useUIStore()
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Zahlung erfolgreich',
+        message: walleeResponse.message || 'Zahlung erfolgreich mit Guthaben abgeschlossen'
+      })
+      
+      return
     }
     
-    // 🚀 Direct Wallee redirect - no intermediate page
-    logger.debug('💳 Processing direct Wallee payment for:', payment.id)
-    
-    // Get current user
-    const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
-    
-    // Get user data from users table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    if (userError || !userData) throw new Error('User data not found')
-    
-    // Create Wallee transaction
-    interface WalleeResponse {
-      success: boolean
-      paymentUrl?: string
-      transactionId?: number | string
-      error?: string
-    }
-    
-    const walleeResponse = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
-      method: 'POST',
-      body: {
-        orderId: `payment-${payment.id}-${Date.now()}`,
-        amount: payment.total_amount_rappen / 100,
-        currency: 'CHF',
-        customerEmail: userData.email,
-        customerName: `${userData.first_name} ${userData.last_name}`,
-        description: `Zahlung für Appointment`,
-        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`,
-        userId: userData.id,
-        tenantId: userData.tenant_id
-      }
-    })
-    
-    if (walleeResponse.success && walleeResponse.paymentUrl && walleeResponse.transactionId) {
-      // Update payment with Wallee transaction ID
-      logger.debug('💾 Saving Wallee transaction ID to payment:', walleeResponse.transactionId)
-      
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          wallee_transaction_id: walleeResponse.transactionId.toString(),
-          metadata: {
-            ...payment.metadata,
-            wallee_transaction_id: walleeResponse.transactionId
-          },
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-      
-      if (updateError) {
-        console.error('❌ Error updating payment with transaction ID:', updateError)
-      }
-      
-      logger.debug('✅ Payment updated with transaction ID')
-      
-      // Redirect directly to Wallee payment page
+    // Otherwise, redirect to Wallee payment page
+    if (walleeResponse.success && walleeResponse.paymentUrl) {
+      logger.debug('💳 Redirecting to Wallee:', walleeResponse.paymentUrl)
       window.location.href = walleeResponse.paymentUrl
     } else {
-      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+      throw new Error(walleeResponse.error || 'Failed to create Wallee payment')
     }
     
   } catch (err: any) {
-    console.error('❌ Error initiating individual payment:', err)
-    alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
+    console.error('❌ Error processing payment:', err)
+    logger.debug('❌ Full error:', err)
+    
+    const uiStore = useUIStore()
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Zahlungsfehler',
+      message: err.data?.statusMessage || err.message || 'Fehler beim Verarbeiten der Zahlung'
+    })
   } finally {
-    isProcessingPayment.value = false
+    // Remove this payment ID from processing set
+    processingPaymentIds.value.delete(payment.id)
   }
 }
-
+  
 const downloadAllReceipts = async () => {
   if (paidPayments.value.length === 0) {
     alert('Keine bezahlten Zahlungen gefunden.')
@@ -781,7 +807,13 @@ const getStatusLabel = (payment: any): string => {
   // Check appointment status first
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (appointment?.status === 'cancelled') {
-    return 'Storniert'
+    // For cancelled appointments, show payment status too
+    const paymentStatusLabel = payment.payment_status === 'completed' 
+      ? 'Bezahlt' 
+      : payment.payment_status === 'refunded'
+      ? 'Rückvergütet'
+      : 'Unbezahlt'
+    return `Storniert • ${paymentStatusLabel}`
   }
   
   // Otherwise use payment status

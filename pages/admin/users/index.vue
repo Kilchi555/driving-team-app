@@ -1118,19 +1118,33 @@ const filteredUsers = computed(() => {
 // Methods
 const loadUsers = async () => {
   try {
-    logger.debug('🔄 Loading users...')
+    logger.debug('🔄 Loading users via API...')
     
-    // Get current user's tenant_id
+    // ✅ Use new secure API instead of direct DB queries
+    // Get auth token for API call
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    const response = await $fetch('/api/admin/get-users-with-stats', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+      }
+    }) as any
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to load users')
+    }
+
+    // Load current tenant info
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
+      .eq('auth_user_id', currentUser?.id)
       .single()
     const tenantId = userProfile?.tenant_id
-    logger.debug('🔍 Admin Users - Current tenant_id:', tenantId)
     
-    // Load current tenant info
     if (tenantId) {
       const { data: tenantData } = await supabase
         .from('tenants')
@@ -1140,83 +1154,10 @@ const loadUsers = async () => {
       currentTenant.value = tenantData
       logger.debug('🔍 Current tenant:', tenantData)
     }
-    
-    // Load users with their appointment statistics (filtered by tenant_id)
-    // Load users excluding soft deleted ones
-    const { data: usersData, error: usersError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        role,
-        admin_level,
-        is_primary_admin,
-        preferred_payment_method,
-        is_active,
-        created_at,
-        tenant_id
-      `)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .is('deleted_at', null) // Exclude soft deleted users
-      .order('last_name', { ascending: true })
 
-    if (usersError) throw usersError
-
-    // Load appointment statistics for each user (filtered by tenant_id)
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        user_id,
-        status
-      `)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .is('deleted_at', null) // Exclude deleted appointments
-
-    if (appointmentsError) {
-      console.warn('Warning loading appointments:', appointmentsError)
-    }
-
-    // Load payment statistics for each user (filtered by tenant_id)
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from('payments')
-      .select(`
-        user_id,
-        payment_status,
-        total_amount_rappen
-      `)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-
-    if (paymentsError) {
-      console.warn('Warning loading payments:', paymentsError)
-    }
-
-    // Process users with statistics
-    const processedUsers = (usersData || []).map(user => {
-      const userAppointments = (appointmentsData || []).filter(apt => apt.user_id === user.id)
-      const completedAppointments = userAppointments.filter(apt => apt.status === 'completed')
-      
-      const userPayments = (paymentsData || []).filter(p => p.user_id === user.id)
-      const pendingPayments = userPayments.filter(p => p.payment_status === 'pending')
-      
-      // Calculate unpaid amount from pending payments
-      const unpaidAmount = pendingPayments.reduce((sum, payment) => {
-        return sum + (payment.total_amount_rappen || 0)
-      }, 0)
-
-      return {
-        ...user,
-        appointment_count: userAppointments.length,
-        completed_appointments: completedAppointments.length,
-        unpaid_count: pendingPayments.length,
-        unpaid_amount: unpaidAmount // Already in Rappen
-      }
-    })
-
-    users.value = processedUsers
-    logger.debug('✅ Users loaded:', users.value.length)
+    // ✅ API already returns users with stats calculated
+    users.value = response.data || []
+    logger.debug('✅ Users loaded from API:', users.value.length)
 
     // Load pending staff invitations
     const { data: invitationsData, error: invitationsError } = await supabase
@@ -1327,7 +1268,7 @@ const getRoleLabel = (user: User): string => {
   const labels: Record<string, string> = {
     'client': 'Kunde',
     'staff': 'Fahrlehrer',
-    'master_admin': 'Masteradmin'
+    'super_admin': 'Superadmin'
   }
   return labels[user.role] || user.role
 }
@@ -1342,7 +1283,7 @@ const getRoleBadgeClass = (user: User): string => {
   const classes: Record<string, string> = {
     'client': 'bg-blue-100 text-blue-800',
     'staff': 'bg-purple-100 text-purple-800',
-    'master_admin': 'bg-purple-100 text-purple-800 border-2 border-purple-400'
+    'super_admin': 'bg-purple-100 text-purple-800 border-2 border-purple-400'
   }
   return classes[user.role] || 'bg-gray-100 text-gray-800'
 }

@@ -95,6 +95,20 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       return navigateTo(`/${slug}`)
     }
     
+    // ✅ Try to get last tenant slug from localStorage
+    let lastTenantSlug: string | null = null
+    if (process.client) {
+      try {
+        lastTenantSlug = localStorage.getItem('last_tenant_slug')
+        if (lastTenantSlug) {
+          logger.debug('Auth middleware: Found last tenant slug in localStorage:', lastTenantSlug)
+          return navigateTo(`/${lastTenantSlug}`)
+        }
+      } catch (e) {
+        logger.warn('Auth middleware: Could not read localStorage:', e)
+      }
+    }
+    
     // Fallback: Leite zum Login weiter
     logger.debug('Auth middleware: No valid slug found, redirecting to login')
     return navigateTo('/login')

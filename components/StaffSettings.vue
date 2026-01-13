@@ -53,8 +53,8 @@
         <!-- Accordion Sections -->
         <div v-if="!isLoading" class="space-y-2">
 
-        <!-- Externe Kalender Einstellungen - Feature Flag: nur für Admin/Beta-Tester -->
-        <div v-if="isCalendarIntegrationEnabled" class="border border-gray-200 rounded-lg">
+        <!-- Externe Kalender Einstellungen -->
+        <div class="border border-gray-200 rounded-lg">
           <button  
             @click="toggleSection('externalCalendars')" 
             class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
@@ -424,62 +424,74 @@
               <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
             </div>
             
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div class="flex items-start space-x-2">
-                <span class="text-green-600 text-lg">✅</span>
-                <div class="text-sm text-green-800">
-                  <strong>Feature aktiv!</strong><br>
-                  Generieren Sie einen sicheren Kalender-Link und abonnieren Sie ihn in Ihrer Kalender-App. 
-                  Ihre Termine werden automatisch synchronisiert.
-                </div>
-              </div>
+            <!-- Loading State -->
+            <div v-if="isLoadingCalendarToken" class="flex items-center space-x-2 text-gray-500">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+              <span class="text-sm">Laden...</span>
             </div>
             
-            <div class="space-y-3">
-              <!-- Generate Token Button -->
+            <!-- No Token Yet -->
+            <div v-else-if="!calendarTokenLink" class="space-y-3">
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start space-x-2">
+                  <span class="text-blue-600 text-lg">ℹ️</span>
+                  <div class="text-sm text-blue-800">
+                    <strong>Kalender-Link erstellen</strong><br>
+                    Generieren Sie einen persönlichen Link um Ihre Termine in Ihrem Handy-Kalender anzuzeigen.
+                  </div>
+                </div>
+              </div>
+              
               <button
                 @click="generateCalendarToken"
                 :disabled="isGeneratingToken"
-                class="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium flex items-center justify-center space-x-2"
+                class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
-                <span v-if="!isGeneratingToken">🔑</span>
-                <span v-else>⏳</span>
-                <span>{{ isGeneratingToken ? 'Wird generiert...' : 'Kalender-Link generieren' }}</span>
+                <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                <span>{{ isGeneratingToken ? 'Generiere...' : 'Kalender-Link generieren' }}</span>
               </button>
-
-              <!-- Display Token Link if Generated -->
-              <div v-if="calendarTokenLink" class="space-y-2">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Dein Kalender-Link:</label>
-                  <div class="flex space-x-2">
-                    <input
-                      :value="calendarTokenLink"
-                      readonly
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-xs"
-                    >
-                    <button
-                      @click="copyToClipboard(calendarTokenLink, 'Kalender-Link')"
-                      class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-                    >
-                      Kopieren
-                    </button>
-                  </div>
+            </div>
+            
+            <!-- Has Token -->
+            <div v-else class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Ihr Kalender-Link:</label>
+                <div class="flex space-x-2">
+                  <input
+                    :value="calendarTokenLink"
+                    readonly
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-600"
+                  >
+                  <button
+                    @click="copyCalendarLink"
+                    class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+                  >
+                    Kopieren
+                  </button>
                 </div>
-                
-                <div class="bg-blue-50 p-3 rounded-lg">
-                  <div class="flex items-start space-x-2">
-                    <span class="text-blue-600 text-sm">💡</span>
-                    <div class="text-sm text-blue-800">
-                      <strong>Anleitung:</strong>
-                      <ul class="list-disc list-inside mt-2 space-y-1">
-                        <li><strong>Google Calendar:</strong> Einstellungen → Andere Kalender → URL hinzufügen</li>
-                        <li><strong>Apple Calendar:</strong> Datei → Kalender abonnieren</li>
-                        <li><strong>Outlook:</strong> Kalender → Kalender hinzufügen → Aus dem Internet</li>
-                      </ul>
-                    </div>
+              </div>
+              
+              <div class="bg-green-50 p-3 rounded-lg">
+                <div class="flex items-start space-x-2">
+                  <span class="text-green-600 text-sm">✅</span>
+                  <div class="text-sm text-green-800">
+                    <strong>Anleitung iPhone:</strong><br>
+                    1. Kopieren Sie den Link<br>
+                    2. Öffnen Sie Einstellungen → Kalender → Accounts<br>
+                    3. Tippen Sie auf "Account hinzufügen" → "Kalenderabo hinzufügen"<br>
+                    4. Fügen Sie den Link ein und bestätigen Sie
                   </div>
                 </div>
               </div>
+              
+              <button
+                @click="generateCalendarToken"
+                :disabled="isGeneratingToken"
+                class="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></span>
+                <span>{{ isGeneratingToken ? 'Generiere...' : 'Neuen Link generieren (alter wird ungültig)' }}</span>
+              </button>
             </div>
           </div>
 
@@ -625,7 +637,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 import { getSupabase } from '~/utils/supabase'
@@ -794,39 +806,32 @@ const availableLocationsForSignup = computed(() => {
   )
 })
 
-// Calendar Integration
-const isGeneratingToken = ref(false)
+// Calendar Integration Links
 const calendarTokenLink = ref<string | null>(null)
+const isGeneratingToken = ref(false)
+const isLoadingCalendarToken = ref(false)
 
+// Legacy computed (fallback)
+const calendarLink = computed(() => {
+  if (calendarTokenLink.value) return calendarTokenLink.value
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+  const staffId = props.currentUser?.id
+  return `${baseUrl}/api/calendar/ics?staff_id=${staffId}`
+})
+
+// Load existing calendar token on mount
 const loadCalendarToken = async () => {
+  if (!props.currentUser?.id) return
+  
+  isLoadingCalendarToken.value = true
   try {
     logger.debug('📅 Loading existing calendar token...')
-    
     const supabase = getSupabase()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !user) {
-      logger.warn('⚠️ Could not get current user for calendar token')
-      return
-    }
-    
-    // Get user profile to find their user_id
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    if (profileError || !userProfile) {
-      logger.warn('⚠️ Could not get user profile for calendar token')
-      return
-    }
-    
-    // Load active calendar token from database
     const { data: tokenData, error: tokenError } = await supabase
       .from('calendar_tokens')
       .select('token')
-      .eq('staff_id', userProfile.id)
+      .eq('staff_id', props.currentUser.id)
       .eq('is_active', true)
       .maybeSingle()
     
@@ -836,73 +841,67 @@ const loadCalendarToken = async () => {
     }
     
     if (tokenData?.token) {
-      const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
-      // Convert to webcals:// for iOS Calendar compatibility
-      const domain = baseUrl.replace('https://', '').replace('http://', '')
-      const calendarLink = `webcals://${domain}/api/calendar/ics?token=${tokenData.token}`
-      calendarTokenLink.value = calendarLink
-      logger.debug('✅ Calendar token loaded:', calendarLink)
+      calendarTokenLink.value = `https://simy.ch/api/calendar/ics?token=${tokenData.token}`
+      logger.debug('✅ Calendar token loaded:', calendarTokenLink.value)
     } else {
       logger.debug('ℹ️ No active calendar token found')
       calendarTokenLink.value = null
     }
   } catch (error: any) {
     logger.error('❌ Error loading calendar token:', error)
+  } finally {
+    isLoadingCalendarToken.value = false
   }
 }
 
+// Generate new calendar token (invalidates old one)
 const generateCalendarToken = async () => {
+  if (!props.currentUser?.id) return
+  
   isGeneratingToken.value = true
   try {
-    // Get Supabase session for auth header
     const supabase = getSupabase()
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError || !session?.access_token) {
       throw new Error('Nicht authentifiziert')
     }
-
+    
     const response: any = await $fetch('/api/calendar/generate-token', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${session.access_token}`
       }
     })
-
+    
     if (response?.success && response?.calendarLink) {
       calendarTokenLink.value = response.calendarLink
       logger.debug('✅ Calendar token generated:', response.calendarLink)
-      // Show success message
-      toastType.value = 'success'
-      toastTitle.value = 'Erfolg'
-      toastMessage.value = 'Kalender-Link wurde generiert'
-      showToast.value = true
+      showSuccessToast('Kalender-Link generiert', 'Neuer Link wurde erstellt. Der alte Link ist nun ungültig.')
     } else {
       throw new Error(response?.message || 'Token generation failed')
     }
   } catch (error: any) {
     logger.error('❌ Error generating calendar token:', error)
-    toastType.value = 'error'
-    toastTitle.value = 'Fehler'
-    toastMessage.value = error?.message || 'Kalender-Link konnte nicht generiert werden'
-    showToast.value = true
+    showErrorToast('Fehler', error?.message || 'Kalender-Link konnte nicht generiert werden')
   } finally {
     isGeneratingToken.value = false
   }
+}
+
+// Copy calendar link to clipboard
+const copyCalendarLink = async () => {
+  if (!calendarTokenLink.value) {
+    showErrorToast('Fehler', 'Bitte generieren Sie zuerst einen Kalender-Link')
+    return
+  }
+  await copyToClipboard(calendarTokenLink.value, 'Kalender-Link')
 }
 
 const registrationLink = computed(() => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
   // Use the service selection page first
   return `${baseUrl}/services/driving-team`
-})
-
-// Feature Flag: Calendar Integration (Beta)
-// Set to true to enable, false to hide from users
-const isCalendarIntegrationEnabled = computed(() => {
-  // Enable for admin/staff users only (for now)
-  // Will be removed when feature is fully tested and stable
-  return true // Change to false to hide from all users
 })
 
 const activeExamLocations = computed(() => {
@@ -992,19 +991,30 @@ const loadExamLocations = async () => {
     availableExamLocations.value = allLocations || [];
 
     // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
-    const { data: allExamLocations, error: allExamError } = await supabase
+    // ✅ WICHTIG: Mit Tenant-Filter UND Staff-Filter
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('id', staffId)
+      .single();
+    
+    if (userError) throw userError;
+    const userTenantId = userProfile?.tenant_id;
+
+    const { data: staffExamLocationsData, error: allExamError } = await supabase
       .from('locations')
       .select('*')
       .eq('location_type', 'exam')
       .eq('is_active', true)
+      .eq('tenant_id', userTenantId) // ✅ TENANT FILTER
       .order('name');
 
     if (allExamError) throw allExamError;
     
-    // Filter: nur die, wo staffId im staff_ids Array ist
-    staffExamLocations.value = (allExamLocations || []).filter((loc: any) => {
-      const staffIds = loc.staff_ids || []
-      return Array.isArray(staffIds) && staffIds.includes(staffId)
+    // ✅ Filter im Frontend: Nur Locations wo dieser Staff in staff_ids drin ist
+    staffExamLocations.value = (staffExamLocationsData || []).filter(loc => {
+      const staffIds = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
+      return staffIds.includes(staffId)
     });
 
       logger.debug('✅ Prüfungsstandorte geladen:', {
@@ -1336,7 +1346,7 @@ const resetLocationForm = () => {
   }
 }
 
-// Toggle Location Assignment (Hinzufügen/Entfernen)
+// Toggle Location Assignment (Hinzufügen/Entfernen) - für Standard Locations
 const toggleLocationAssignment = async (locationId: string) => {
   try {
     const supabase = getSupabase()
@@ -1380,6 +1390,85 @@ const toggleLocationAssignment = async (locationId: string) => {
 
   } catch (err: any) {
     console.error('❌ Error in toggleLocationAssignment:', err)
+    error.value = `Fehler: ${err.message}`
+  }
+}
+
+// Toggle Exam Location Assignment - für Prüfungsstandorte
+// Automatisches Erstellen wenn nicht vorhanden, oder Update von staff_ids
+const toggleExamLocationAssignment = async (sourceLocation: any) => {
+  try {
+    const supabase = getSupabase()
+    const staffId = props.currentUser?.id
+    const tenantId = props.currentUser?.tenant_id
+
+    if (!staffId || !tenantId) {
+      throw new Error('Staff ID oder Tenant ID fehlt')
+    }
+
+    logger.debug(`🔍 Toggling exam location: ${sourceLocation.name} for staff ${staffId} in tenant ${tenantId}`)
+
+    // Step 1: Prüfe ob diese Location bereits im Tenant existiert
+    const { data: existingLocation, error: findError } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('name', sourceLocation.name)
+      .eq('address', sourceLocation.address)
+      .eq('location_type', 'exam')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (findError) throw findError
+
+    if (existingLocation) {
+      // Step 2a: Location existiert bereits → Update staff_ids
+      logger.debug(`📍 Location exists, updating staff_ids`)
+      let currentStaffIds = Array.isArray(existingLocation.staff_ids) ? [...existingLocation.staff_ids] : []
+
+      if (currentStaffIds.includes(staffId)) {
+        // Entfernen
+        currentStaffIds = currentStaffIds.filter(id => id !== staffId)
+        logger.debug(`➖ Removing staff from location`)
+      } else {
+        // Hinzufügen
+        currentStaffIds.push(staffId)
+        logger.debug(`➕ Adding staff to location`)
+      }
+
+      const { error: updateError } = await supabase
+        .from('locations')
+        .update({ staff_ids: currentStaffIds })
+        .eq('id', existingLocation.id)
+
+      if (updateError) throw updateError
+      logger.debug(`✅ Updated staff_ids: ${currentStaffIds.join(', ')}`)
+    } else {
+      // Step 2b: Location existiert nicht → Neuen Eintrag erstellen
+      logger.debug(`📍 Location doesn't exist, creating new one`)
+      const { error: insertError } = await supabase
+        .from('locations')
+        .insert({
+          name: sourceLocation.name,
+          address: sourceLocation.address,
+          city: sourceLocation.city,
+          postal_code: sourceLocation.postal_code,
+          canton: sourceLocation.canton,
+          location_type: 'exam',
+          is_active: true,
+          tenant_id: tenantId,
+          staff_ids: [staffId],
+          google_place_id: sourceLocation.google_place_id || null
+        })
+
+      if (insertError) throw insertError
+      logger.debug(`✅ Created new exam location with staff ${staffId}`)
+    }
+
+    // Reload exam locations
+    await loadExamLocations()
+
+  } catch (err: any) {
+    console.error('❌ Error in toggleExamLocationAssignment:', err)
     error.value = `Fehler: ${err.message}`
   }
 }
@@ -1789,40 +1878,16 @@ const handleLogout = async () => {
 }
 
 // Helper function to extract HH:MM from working hours data
-// Working hours are stored as UTC in DB, need to convert to Zurich local time
+// NOTE: UTC conversion is now done in useStaffWorkingHours.ts composable
+// This function only normalizes the format (e.g. "07:00:00" → "07:00")
 const formatWorkingTime = (timeValue: any): string => {
   if (!timeValue) return '08:00'
   
   // Parse the time string (format: HH:MM:SS or HH:MM)
   if (typeof timeValue === 'string' && timeValue.includes(':')) {
     const [hours, minutes] = timeValue.split(':')
-    const utcHours = parseInt(hours)
-    const utcMinutes = parseInt(minutes)
-    
-    // Create a fake date to calculate Zurich offset
-    // Use a winter date (no DST) for consistent offset calculation
-    const fakeDate = new Date('2025-01-15T00:00:00Z')
-    const zurichFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Europe/Zurich',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
-    
-    // Get Zurich time for midnight UTC
-    const zurichMidnight = zurichFormatter.format(fakeDate)
-    const [zurichHourStr, zurichMinuteStr] = zurichMidnight.split(':')
-    const zurichOffsetHours = parseInt(zurichHourStr)
-    
-    // Apply offset to get local time from UTC
-    let localHours = utcHours + zurichOffsetHours
-    const localMinutes = utcMinutes
-    
-    // Handle day wraparound
-    if (localHours >= 24) localHours -= 24
-    if (localHours < 0) localHours += 24
-    
-    return `${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}`
+    // Just normalize to HH:MM format - no UTC conversion needed anymore
+    return `${String(parseInt(hours)).padStart(2, '0')}:${String(parseInt(minutes)).padStart(2, '0')}`
   }
   
   return '08:00'
@@ -1910,33 +1975,60 @@ const autoSaveWorkingHour = async (dayOfWeek: number) => {
 }
 
 // Auto-Save für Working Day mit mehreren Blöcken
+// Debounce-Timeout-IDs pro Tag
+const autoSaveTimeouts = ref<Record<number, NodeJS.Timeout>>({})
+// Flag um Race Conditions zu verhindern
+const isAutoSaveInProgress = ref(false)
+
 const autoSaveWorkingDay = async (dayOfWeek: number) => {
   if (!props.currentUser?.id) return
   
-  isSavingWorkingHours.value = true
-  try {
-    const dayData = workingDayForm.value[dayOfWeek]
-    logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
-    
-    await saveWorkingDay(props.currentUser.id, dayData)
-    
-    logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
-    
-    // Reload working hours to update calendar
-    await loadWorkingHours(props.currentUser.id)
-    logger.debug('🔄 Working hours reloaded after save')
-    
-    // Emit event to notify parent (calendar needs to reload)
-    emit('settings-updated')
-    
-  } catch (err: any) {
-    console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
-    error.value = `Fehler beim Speichern: ${err.message}`
-  } finally {
-    setTimeout(() => {
-      isSavingWorkingHours.value = false
-    }, 500) // Kurz anzeigen, dann ausblenden
+  // Verhindere mehrfache gleichzeitige Saves
+  if (isAutoSaveInProgress.value) {
+    logger.debug(`⏳ Auto-save already in progress, skipping day ${dayOfWeek}`)
+    return
   }
+  
+  // Debounce: Vorheriges Timeout für diesen Tag löschen
+  if (autoSaveTimeouts.value[dayOfWeek]) {
+    clearTimeout(autoSaveTimeouts.value[dayOfWeek])
+  }
+  
+  // Debounce: Speichern nach 500ms Inaktivität
+  autoSaveTimeouts.value[dayOfWeek] = setTimeout(async () => {
+    if (isAutoSaveInProgress.value) {
+      logger.debug(`⏳ Auto-save already in progress (debounced), skipping day ${dayOfWeek}`)
+      return
+    }
+    
+    isAutoSaveInProgress.value = true
+    isSavingWorkingHours.value = true
+    
+    try {
+      const dayData = workingDayForm.value[dayOfWeek]
+      logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
+      
+      await saveWorkingDay(props.currentUser!.id, dayData)
+      
+      logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
+      
+      // Reload working hours to update calendar (NICHT die Form!)
+      await loadWorkingHours(props.currentUser!.id)
+      logger.debug('🔄 Working hours reloaded after save')
+      
+      // Emit event to notify parent (calendar needs to reload)
+      emit('settings-updated')
+      
+    } catch (err: any) {
+      console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
+      error.value = `Fehler beim Speichern: ${err.message}`
+    } finally {
+      setTimeout(() => {
+        isSavingWorkingHours.value = false
+        isAutoSaveInProgress.value = false
+      }, 500) // Kurz anzeigen, dann ausblenden
+    }
+  }, 500) // 500ms Debounce
 }
 
 // Arbeitszeit-Block hinzufügen
@@ -2055,7 +2147,6 @@ onMounted(async () => {
   await loadData()
   await loadWorkingHoursData()
   await loadExamLocations()
-  await loadCalendarToken() // Load existing calendar token
   
   // Load working hours from composable
   if (props.currentUser?.id) {
@@ -2064,6 +2155,17 @@ onMounted(async () => {
   
   // Initialize working hours form after data is loaded
   initializeWorkingHoursForm()
+  
+  // Load calendar token for calendar integration
+  await loadCalendarToken()
+})
+
+// Cleanup - Auto-Save Timeouts löschen
+onBeforeUnmount(() => {
+  Object.values(autoSaveTimeouts.value).forEach(timeout => {
+    clearTimeout(timeout)
+  })
+  autoSaveTimeouts.value = {}
 })
 </script>
 

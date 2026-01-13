@@ -5,6 +5,7 @@ import type { IPaymentProvider, PaymentProviderConfig } from './types'
 import { WalleeProvider } from './wallee-provider'
 import { StripeProvider } from './stripe-provider'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { logger } from '~/utils/logger'
 
 /**
  * Lädt die Payment Provider Konfiguration für einen Tenant aus der Datenbank
@@ -12,44 +13,28 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 export async function getPaymentProviderConfig(tenantId: string): Promise<PaymentProviderConfig> {
   const supabase = getSupabaseAdmin()
 
-  const { data: settings, error } = await supabase
-    .from('tenant_settings')
-    .select('payment_provider, wallee_space_id, wallee_user_id, wallee_secret_key, stripe_api_key, stripe_webhook_secret')
-    .eq('tenant_id', tenantId)
+  const { data: tenant, error } = await supabase
+    .from('tenants')
+    .select('wallee_space_id, wallee_user_id, wallee_secret_key')
+    .eq('id', tenantId)
     .single()
 
-  if (error || !settings) {
+  if (error || !tenant) {
     throw new Error(`Failed to load payment provider config for tenant ${tenantId}: ${error?.message}`)
   }
 
-  // Default zu Wallee falls nicht gesetzt
-  const provider = settings.payment_provider || 'wallee'
+  // Default zu Wallee
+  if (!tenant.wallee_space_id || !tenant.wallee_user_id || !tenant.wallee_secret_key) {
+    throw new Error('Wallee credentials not configured for tenant')
+  }
 
-  if (provider === 'stripe') {
-    if (!settings.stripe_api_key) {
-      throw new Error('Stripe API key not configured for tenant')
-    }
-
-    return {
-      provider: 'stripe',
-      apiKey: settings.stripe_api_key,
-      webhookSecret: settings.stripe_webhook_secret,
-      isActive: true
-    }
-  } else {
-    // Wallee
-    if (!settings.wallee_space_id || !settings.wallee_user_id || !settings.wallee_secret_key) {
-      throw new Error('Wallee credentials not configured for tenant')
-    }
-
-    return {
-      provider: 'wallee',
-      apiKey: '', // Nicht verwendet für Wallee
-      spaceId: settings.wallee_space_id,
-      userId: settings.wallee_user_id,
-      apiSecret: settings.wallee_secret_key,
-      isActive: true
-    }
+  return {
+    provider: 'wallee',
+    apiKey: '', // Nicht verwendet für Wallee
+    spaceId: tenant.wallee_space_id,
+    userId: tenant.wallee_user_id,
+    apiSecret: tenant.wallee_secret_key,
+    isActive: true
   }
 }
 

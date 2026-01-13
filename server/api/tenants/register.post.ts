@@ -1,6 +1,10 @@
 // server/api/tenants/register.post.ts
+// ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { logAudit } from '~/server/utils/audit'
+import { sanitizeString, validateEmail } from '~/server/utils/validators'
 
 interface TenantRegistrationData {
   name: string
@@ -27,7 +31,14 @@ interface RegistrationResponse {
 }
 
 export default defineEventHandler(async (event): Promise<RegistrationResponse> => {
+  const startTime = Date.now()
   try {
+    // ✅ LAYER 1: Get client IP for rate limiting
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
+                      getHeader(event, 'x-real-ip') || 
+                      event.node.req.socket.remoteAddress || 
+                      'unknown'
+
     // Nur POST erlaubt
     if (event.method !== 'POST') {
       throw createError({
@@ -35,6 +46,17 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         statusMessage: 'Method Not Allowed'
       })
     }
+
+    // ✅ LAYER 2: Rate limiting (3 tenant registrations per hour per IP)
+    const rateLimit = await checkRateLimit(ipAddress, 'tenant_register', 3, 3600)
+    if (!rateLimit.allowed) {
+      logger.warn('⚠️ Rate limit exceeded for tenant registration:', ipAddress)
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Zu viele Registrierungen. Bitte warten Sie ${rateLimit.retryAfter} Sekunden.`
+      })
+    }
+    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     // Multipart Form Data parsen
     const formData = await readMultipartFormData(event)
@@ -94,6 +116,25 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     logger.debug('🏢 Starting tenant registration for:', data.name)
     logger.debug('📊 Final data object:', JSON.stringify(data, null, 2))
 
+    // ✅ LAYER 3: Email validation (format + disposable check)
+    if (!validateEmail(data.contact_email)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige E-Mail-Adresse'
+      })
+    }
+
+    const { validateRegistrationEmail } = await import('~/server/utils/email-validator')
+    const emailValidation = validateRegistrationEmail(data.contact_email)
+    if (!emailValidation.valid) {
+      logger.warn('⚠️ Email validation failed for tenant registration:', emailValidation.reason)
+      throw createError({
+        statusCode: 400,
+        statusMessage: emailValidation.reason || 'Ungültige E-Mail-Adresse'
+      })
+    }
+    logger.debug('✅ Disposable email check passed')
+
     // Validierung
     const validationError = validateTenantData(data)
     if (validationError) {
@@ -102,6 +143,16 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         statusMessage: validationError
       })
     }
+
+    // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
+    const sanitizedName = sanitizeString(data.name, 100)
+    const sanitizedLegalName = sanitizeString(data.legal_company_name || data.name, 100)
+    const sanitizedFirstName = sanitizeString(data.contact_person_first_name, 100)
+    const sanitizedLastName = sanitizeString(data.contact_person_last_name, 100)
+    const sanitizedPhone = sanitizeString(data.contact_phone, 20)
+    const sanitizedStreet = sanitizeString(data.street, 100)
+    const sanitizedStreetNr = sanitizeString(data.streetNr, 10)
+    const sanitizedCity = sanitizeString(data.city, 100)
 
     const supabase = getSupabaseAdmin()
 
@@ -119,19 +170,35 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       })
     }
 
-    // 2. Prüfen ob E-Mail bereits existiert
+    // 2. Prüfen ob E-Mail bereits existiert (für Tenant contact_email)
     const { data: existingEmail } = await supabase
       .from('tenants')
       .select('id')
-      .eq('contact_email', data.contact_email)
+      .eq('contact_email', data.contact_email.toLowerCase().trim())
       .single()
 
     if (existingEmail) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'Diese E-Mail-Adresse ist bereits registriert.'
+        statusMessage: 'Diese E-Mail-Adresse ist bereits als Tenant-Kontakt registriert.'
       })
     }
+
+    // 2b. Prüfen ob Admin-Email bereits als User existiert (über alle Tenants)
+    const { data: existingAdmin } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('email', data.contact_email.toLowerCase().trim())
+      .maybeSingle()
+
+    if (existingAdmin) {
+      logger.warn('⚠️ Duplicate admin email detected:', data.contact_email)
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese E-Mail-Adresse ist bereits als Benutzer registriert. Bitte verwenden Sie eine andere E-Mail.'
+      })
+    }
+    logger.debug('✅ No duplicate email found for admin')
 
     // 3. Logo hochladen (falls vorhanden)
     let logoUrl: string | null = null
@@ -158,16 +225,16 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       .from('tenants')
       .insert({
         id: tenantId,
-        name: data.name,
-        legal_company_name: data.legal_company_name || data.name,
-        slug: data.slug,
+        name: sanitizedName,
+        legal_company_name: sanitizedLegalName,
+        slug: data.slug, // Already validated with regex
         domain: `simy.ch/${data.slug}`, // Automatische Domain
         customer_number: customerNumber,
-        contact_person_first_name: data.contact_person_first_name,
-        contact_person_last_name: data.contact_person_last_name,
-        contact_email: data.contact_email,
-        contact_phone: data.contact_phone,
-        address: `${data.street} ${data.streetNr}, ${data.zip} ${data.city}`,
+        contact_person_first_name: sanitizedFirstName,
+        contact_person_last_name: sanitizedLastName,
+        contact_email: data.contact_email.toLowerCase().trim(),
+        contact_phone: sanitizedPhone,
+        address: `${sanitizedStreet} ${sanitizedStreetNr}, ${data.zip} ${sanitizedCity}`,
         business_type: data.business_type,
         primary_color: data.primary_color,
         secondary_color: data.secondary_color,
@@ -230,6 +297,42 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     logger.debug('📊 New tenant data:', newTenant)
     logger.debug('🔢 Customer number in response:', newTenant.customer_number)
 
+    // ✅ LAYER 6: Notify super admins about new tenant registration
+    try {
+      await $fetch('/api/admin/notify-new-tenant', {
+        method: 'POST',
+        body: {
+          tenantId: newTenant.id,
+          tenantName: newTenant.name,
+          contactEmail: newTenant.contact_email,
+          customerNumber: newTenant.customer_number
+        }
+      })
+      logger.debug('✅ Super admins notified about new tenant')
+    } catch (notifyError) {
+      // Non-critical - don't fail registration if notification fails
+      logger.warn('⚠️ Failed to notify super admins (non-critical):', notifyError)
+    }
+
+    // ✅ LAYER 5: Audit logging - Success
+    await logAudit({
+      action: 'tenant_registration',
+      tenant_id: newTenant.id,
+      resource_type: 'tenant',
+      resource_id: newTenant.id,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        tenant_name: newTenant.name,
+        slug: newTenant.slug,
+        customer_number: newTenant.customer_number,
+        contact_email: newTenant.contact_email,
+        business_type: newTenant.business_type,
+        has_logo: !!logoUrl,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
     const response = {
       success: true,
       tenant: {
@@ -249,6 +352,21 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 
   } catch (error: any) {
     console.error('❌ Tenant registration error:', error)
+
+    // ✅ LAYER 5: Audit logging - Failure
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+    await logAudit({
+      action: 'tenant_registration',
+      resource_type: 'tenant',
+      ip_address: ipAddress,
+      status: 'failed',
+      error_message: error.statusMessage || error.message,
+      details: {
+        slug: (error as any).slug,
+        contact_email: (error as any).contact_email,
+        duration_ms: Date.now() - startTime
+      }
+    }).catch(err => logger.warn('⚠️ Could not log audit:', err))
     
     return {
       success: false,
@@ -339,14 +457,35 @@ function validateTenantData(data: TenantRegistrationData): string | null {
 }
 
 /**
- * Lädt ein Tenant-Logo hoch
+ * Lädt ein Tenant-Logo hoch mit File Type & Size Validation
  */
 async function uploadTenantLogo(file: File, tenantSlug: string): Promise<string> {
   const supabase = getSupabaseAdmin()
   
-  // Dateiname generieren
-  const timestamp = Date.now()
+  // ✅ LAYER 1: File type validation
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Ungültiger Dateityp. Nur JPG, PNG und WebP erlaubt.')
+  }
+  
+  // ✅ LAYER 2: File size validation (2MB max)
+  const maxSize = 2 * 1024 * 1024 // 2MB
+  if (file.size > maxSize) {
+    throw new Error('Logo ist zu gross. Maximum 2MB erlaubt.')
+  }
+  
+  // ✅ LAYER 3: Map content type based on extension (don't trust client)
   const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const contentTypeMap: Record<string, string> = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp'
+  }
+  const contentType = contentTypeMap[fileExtension] || 'image/jpeg'
+  
+  // ✅ LAYER 4: Timestamped filename (no user input)
+  const timestamp = Date.now()
   const fileName = `${tenantSlug}-logo-${timestamp}.${fileExtension}`
   const filePath = `tenant-logos/${fileName}`
 
@@ -360,7 +499,7 @@ async function uploadTenantLogo(file: File, tenantSlug: string): Promise<string>
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from('public')
     .upload(filePath, fileBuffer, {
-      contentType: file.type,
+      contentType: contentType, // Use mapped type, not client type
       cacheControl: '3600',
       upsert: false
     })

@@ -716,7 +716,7 @@
 
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { logger } from '~/utils/logger'
-import { useAvailabilitySystem } from '~/composables/useAvailabilitySystem'
+import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { getSupabase } from '~/utils/supabase'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
@@ -733,21 +733,28 @@ definePageMeta({
   layout: 'default'
 })
 
-// Composables
-const { 
-  isLoading, 
-  error, 
-  availableSlots, 
-  staffLocationCategories,
-  getAvailableSlots,
-  getAllAvailableSlots,
-  getStaffLocationCategories,
-  getAvailableSlotsForCombination,
-  loadBaseData,
-  activeStaff,
-  validateSlotsWithTravelTime,
-  loadAppointments
-} = useAvailabilitySystem()
+// Composables - NEW: Secure Availability API
+const {
+  isLoading: isLoadingSlots,
+  error: slotsError,
+  availableSlots,
+  fetchAvailableSlots,
+  reserveSlot,
+  createAppointment,
+  groupSlotsByDate,
+  generateSessionId
+} = useSecureAvailability()
+
+// Keep for UI compatibility
+const isLoading = ref(false)
+const error = ref<string | null>(null)
+
+// Session management for slot reservation
+const sessionId = ref(generateSessionId())
+const reservedSlotId = ref<string | null>(null)
+const reservationExpiry = ref<Date | null>(null)
+const reservationCountdown = ref(600) // 10 minutes in seconds
+let countdownInterval: any = null
 
 const { autoSyncCalendars } = useExternalCalendarSync()
 
@@ -761,8 +768,11 @@ const isOnlineBookingEnabled = computed(() => {
 const route = useRoute()
 const supabase = getSupabase()
 
-// Optimized batch availability check function with local time handling and working hours
-const checkBatchAvailability = async (staffId: string, timeSlots: { startTime: Date, endTime: Date }[]): Promise<boolean[]> => {
+// ❌ REMOVED: checkBatchAvailability (replaced by backend API)
+// Old function did 22+ direct DB queries - now handled by availability-calculator service
+
+// NEW: Fetch pre-computed availability slots from secure API
+const fetchAvailableSlotsForCombination = async () => {
   try {
     if (timeSlots.length === 0) return []
     
@@ -1045,9 +1055,6 @@ const stepsContainerRef = ref<HTMLDivElement | null>(null)
 
 // Reservation state
 const currentReservationId = ref<string | null>(null)
-const reservedUntil = ref<Date | null>(null)
-const remainingSeconds = ref(0)
-const countdownInterval = ref<NodeJS.Timeout | null>(null)
 
 // Pickup state
 const pickupPLZ = ref('')
@@ -1815,317 +1822,89 @@ const selectInstructor = async (instructor: any) => {
   await generateTimeSlotsForSpecificCombination()
 }
 
+// ❌ REMOVED: Old generateTimeSlotsForSpecificCombination (replaced with secure API)
+// New implementation uses pre-computed slots from availability_slots table
+
 const generateTimeSlotsForSpecificCombination = async () => {
   try {
     isLoadingTimeSlots.value = true
+    error.value = null
     
-    // Clear appointments cache before generating new slots
-    // This prevents accumulation when switching between instructors/locations
-    const { clearAppointmentsCache } = useAvailabilitySystem()
-    clearAppointmentsCache()
+    logger.debug('🔄 Fetching available slots via secure API...')
     
-    const startTime = Date.now()
-    logger.debug('🕒 Generating time slots for specific combination...')
+    // Calculate date range (next 4 weeks, matching old behavior)
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 28) // 4 weeks
     
-    const timeSlots: any[] = []
-    const slotTimes: { startTime: Date, endTime: Date }[] = []
-    
-    // Working hours are now in UTC in the database
-    // We need to generate slots in UTC for proper comparison with appointments
-    const today = new Date()
-    // Get UTC start of today (00:00 UTC)
-    const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
-    
-    logger.debug('📅 Generating slots starting from:', todayUTC.toISOString(), '(UTC)')
-    
-    // Generate slots for the next 4 weeks starting from today
-    for (let week = 0; week < 4; week++) {
-      for (let day = 0; day < 7; day++) {
-        // Calculate the target date in UTC
-        const targetDateUTC = new Date(todayUTC)
-        targetDateUTC.setUTCDate(todayUTC.getUTCDate() + (week * 7) + day)
-        
-        // Skip past dates (only include today and future dates)
-        if (targetDateUTC < todayUTC) continue
-        
-        // Generate time slots for this day in UTC (Working hours are now in UTC: 06:00-18:00 UTC = 07:00-19:00 CET)
-        for (let hour = 6; hour < 18; hour++) {
-          try {
-            // Create slot time in UTC
-            const slotTime = new Date(Date.UTC(targetDateUTC.getUTCFullYear(), targetDateUTC.getUTCMonth(), targetDateUTC.getUTCDate(), hour, 0, 0, 0))
-            
-            // Skip if slot is in the past (more than 30 minutes ago for realistic booking)
-            const thirtyMinutesAgo = new Date()
-            thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30)
-            if (slotTime < thirtyMinutesAgo) {
-              logger.debug('⏰ Skipping past slot (UTC):', slotTime.toISOString(), '(30+ minutes ago)')
-              continue
-            }
-            
-            // Double-check the date is valid
-            if (isNaN(slotTime.getTime())) {
-              console.warn('⚠️ Invalid date created:', { week, day, hour, targetDateUTC, slotTime })
-              continue
-            }
-            
-            // Calculate end time safely - ensure duration is a number
-            const duration = Array.isArray(filters.value.duration_minutes) 
-              ? filters.value.duration_minutes[0] || 45 
-              : filters.value.duration_minutes || 45
-            
-            const endTime = new Date(slotTime.getTime() + duration * 60000)
-            
-            // Validate end time too
-            if (isNaN(endTime.getTime())) {
-              console.warn('⚠️ Invalid end time created:', { slotTime, duration, originalDuration: filters.value.duration_minutes })
-              continue
-            }
-            
-            // Store slot info for batch availability check
-            slotTimes.push({ startTime: slotTime, endTime })
-            
-            // Debug: Log slot creation for today
-            if (targetDateUTC.toUTCString().split(' ').slice(0, 4).join(' ') === todayUTC.toUTCString().split(' ').slice(0, 4).join(' ')) {
-              logger.debug('📅 Creating slot for today (UTC):', slotTime.toISOString(), 'Local display:', new Date(slotTime).toLocaleString('de-DE'))
-            }
-            
-            // Convert UTC slot time to local Date for display
-            const slotTimeLocal = new Date(slotTime)
-            const endTimeLocal = new Date(endTime)
-            
-            timeSlots.push({
-              id: `${selectedInstructor.value.id}-${selectedLocation.value.id}-${slotTime.getTime()}`,
-              staff_id: selectedInstructor.value.id,
-              staff_name: `${selectedInstructor.value.first_name} ${selectedInstructor.value.last_name}`,
-              location_id: selectedLocation.value.id,
-              location_name: selectedLocation.value.name,
-              start_time: slotTime.toISOString(),
-              end_time: endTime.toISOString(),
-              duration_minutes: duration,
-              is_available: true, // Will be updated after batch check
-              week_number: week + 1,
-              day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long' }),
-              date_formatted: slotTimeLocal.toLocaleDateString('de-DE'),
-              time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-            })
-          } catch (dateErr) {
-            console.warn('⚠️ Error creating date for slot:', { week, day, hour, error: dateErr })
-            continue
-          }
-        }
-      }
+    // Validate required filters
+    if (!selectedInstructor.value?.id || !selectedLocation.value?.id || !selectedCategory.value?.code) {
+      error.value = 'Bitte wählen Sie zuerst Kategorie, Dauer, und Standort aus.'
+      isLoadingTimeSlots.value = false
+      return
     }
     
-    logger.debug('📊 Generated', timeSlots.length, 'time slots for availability check')
+    // Get duration (handle array format from old code)
+    const duration = Array.isArray(filters.value.duration_minutes) 
+      ? filters.value.duration_minutes[0] || 45 
+      : filters.value.duration_minutes || 45
     
-    // Debug: Check if 14:00 slots were generated
-    const slotsWith14 = timeSlots.filter(s => s.time_formatted === '14:00' || s.time_formatted === '13:00')
-    if (slotsWith14.length > 0) {
-      logger.debug('🔍 Found', slotsWith14.length, '13:00/14:00 slots:', slotsWith14.map(s => ({ date: s.date_formatted, time: s.time_formatted, id: s.id })))
-    }
-    
-    // Batch check availability for all slots
-    if (slotTimes.length > 0) {
-      const availabilityResults = await checkBatchAvailability(selectedInstructor.value.id, slotTimes)
-      
-      // Update availability for each slot
-      timeSlots.forEach((slot, index) => {
-        slot.is_available = availabilityResults[index] || false
-      })
-      
-      // Debug: Check if 14:00 slots are marked as available after batch check
-      const slotsWith14After = timeSlots.filter(s => s.time_formatted === '14:00' || s.time_formatted === '13:00')
-      if (slotsWith14After.length > 0) {
-        logger.debug('🔍 After availability check, 13:00/14:00 slots:', slotsWith14After.map(s => ({ date: s.date_formatted, time: s.time_formatted, is_available: s.is_available })))
-      }
-    }
-    
-    let filteredSlots = timeSlots.filter(slot => slot.is_available)
-    logger.debug(`✅ Generated ${filteredSlots.length} available time slots (before time windows & travel time validation)`)
-    
-    // Debug: Check if 18:00 slots exist and their availability
-    const slots18 = timeSlots.filter(s => s.time_formatted === '18:00')
-    if (slots18.length > 0) {
-      logger.debug('🔍 18:00 slots found:', slots18.map(s => ({
-        date: s.date_formatted,
-        is_available: s.is_available,
-        full: s
-      })))
-    }
-    
-    // Debug: Check time windows
-    logger.debug('🔍 Checking time windows:', {
-      hasLocation: !!selectedLocation.value,
-      locationName: selectedLocation.value?.name,
-      timeWindows: selectedLocation.value?.time_windows,
-      timeWindowsLength: selectedLocation.value?.time_windows?.length
+    // Fetch slots from secure API
+    const slots = await fetchAvailableSlots({
+      tenant_id: tenant.value?.id || '',
+      staff_id: selectedInstructor.value.id,
+      location_id: selectedLocation.value.id,
+      category_code: selectedCategory.value.code,
+      duration_minutes: duration,
+      start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+      end_date: endDate.toISOString().split('T')[0]
     })
     
-    // Apply Time Windows Validation if location has time windows defined
-    if (selectedLocation.value && selectedLocation.value.time_windows && selectedLocation.value.time_windows.length > 0) {
-      const { isWithinTimeWindows } = await import('~/utils/travelTimeValidation')
-      const beforeTimeWindows = filteredSlots.length
-      
-      filteredSlots = filteredSlots.filter(slot => {
-        // Parse the ISO time string to Date
-        if (!slot.start_time) {
-          console.warn('⚠️ Slot has no start_time:', slot)
-          return false
-        }
-        const slotDate = new Date(slot.start_time)
-        
-        const isValid = isWithinTimeWindows(slotDate, selectedLocation.value.time_windows)
-        
-        if (!isValid) {
-          logger.debug(`❌ Slot outside time windows: ${slot.start_time}`)
-        }
-        
-        return isValid
-      })
-      
-      const blockedByTimeWindows = beforeTimeWindows - filteredSlots.length
-      logger.debug(`🕒 Time windows validation: ${blockedByTimeWindows} slots blocked, ${filteredSlots.length} remaining`)
-    }
+    logger.debug('✅ Fetched', slots.length, 'pre-computed slots from API')
     
-    // Apply Minimum Lead Time Validation
-    if (selectedInstructor.value && selectedInstructor.value.minimum_booking_lead_time_hours) {
-      const beforeLeadTime = filteredSlots.length
-      const minimumLeadTimeHours = selectedInstructor.value.minimum_booking_lead_time_hours
-      const now = new Date()
-      const minimumBookingTime = new Date(now.getTime() + minimumLeadTimeHours * 60 * 60 * 1000)
+    // Convert to format expected by UI
+    const timeSlots = slots.map(slot => {
+      const slotStartDate = new Date(slot.start_time)
+      const slotEndDate = new Date(slot.end_time)
       
-      logger.debug(`⏰ Applying minimum lead time validation: ${minimumLeadTimeHours} hours`)
-      logger.debug(`⏰ Current time: ${now.toLocaleString('de-CH')}`)
-      logger.debug(`⏰ Minimum booking time: ${minimumBookingTime.toLocaleString('de-CH')}`)
+      // Calculate week number (1-4)
+      const weeksDiff = Math.floor((slotStartDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000))
       
-      filteredSlots = filteredSlots.filter(slot => {
-        // Parse the ISO time string to Date
-        if (!slot.start_time) {
-          console.warn('⚠️ Slot has no start_time:', slot)
-          return false
-        }
-        const slotDate = new Date(slot.start_time)
-        
-        const isValid = slotDate >= minimumBookingTime
-        
-        if (!isValid) {
-          logger.debug(`❌ Slot too soon (minimum ${minimumLeadTimeHours}h lead time): ${slot.start_time}`)
-        }
-        
-        return isValid
-      })
-      
-      const blockedByLeadTime = beforeLeadTime - filteredSlots.length
-      logger.debug(`⏰ Lead time validation: ${blockedByLeadTime} slots blocked, ${filteredSlots.length} remaining`)
-    }
-    
-    // Apply Travel-Time Validation if location has pickup settings
-    if (selectedLocation.value && selectedInstructor.value && selectedCategory.value) {
-      try {
-        // Get location PLZ
-        const locationPLZ = extractPLZFromAddress(selectedLocation.value.address)
-        
-        if (locationPLZ) {
-          // Get max travel time from category pickup settings for this location
-          let maxTravelTime = 15 // Default fallback
-          
-          if (selectedLocation.value.category_pickup_settings) {
-            const categorySettings = selectedLocation.value.category_pickup_settings[selectedCategory.value.code]
-            if (categorySettings && categorySettings.pickup_radius_minutes) {
-              maxTravelTime = categorySettings.pickup_radius_minutes
-              logger.debug(`📍 Using pickup radius for category ${selectedCategory.value.code}: ${maxTravelTime} min`)
-            }
-          }
-          
-          // Get Google API key from runtime config
-          const config = useRuntimeConfig()
-          const googleApiKey = (config.public?.googleMapsApiKey || config.googleMapsApiKey) as string | undefined
-          
-          // Travel-time validation with proper request batching
-          if (googleApiKey && typeof googleApiKey === 'string') {
-            logger.debug('🚗 Applying travel-time validation...')
-            
-            // Load appointments for all dates in the current view
-            // This populates the appointmentsCache needed for travel time validation
-            const uniqueDates = new Set<string>()
-            logger.debug('📅 Total filteredSlots before date extraction:', filteredSlots.length)
-            filteredSlots.forEach(slot => {
-              // Extract YYYY-MM-DD from either ISO format (2025-11-11T09:00:00.000Z) or local format (2025-11-11 09:00:00)
-              const date = slot.start_time.split(/[T ]/)[0] // Split by T or space
-              logger.debug('📅 Extracting date from slot:', slot.start_time, '→', date)
-              uniqueDates.add(date)
-            })
-            
-            const datesArray = Array.from(uniqueDates)
-            logger.debug('📅 Unique dates extracted:', datesArray)
-            logger.debug('📅 Loading appointments for dates:', datesArray)
-            logger.debug('📅 Sample slots:', filteredSlots.slice(0, 3).map(s => ({ start: s.start_time, staff: s.staff_id })))
-            for (const date of datesArray) {
-              // skipFutureFilter = true to load ALL appointments for travel-time validation
-              await loadAppointments(date, currentTenant.value?.id, true)
-            }
-            
-            // Validate slots with travel time (with timeout)
-            try {
-              const validationPromise = validateSlotsWithTravelTime(
-                filteredSlots,
-                selectedInstructor.value.id,
-                locationPLZ as string, // Already checked to be non-null in outer if
-                maxTravelTime,
-                googleApiKey as string // Already checked in outer if
-              )
-              
-              // Add a 15 second timeout
-              const timeoutPromise = new Promise<any[]>((_, reject) => 
-                setTimeout(() => reject(new Error('Travel-time validation timeout')), 15000)
-              )
-              
-              const validatedSlots = await Promise.race([validationPromise, timeoutPromise])
-              logger.debug(`✅ After travel-time validation: ${validatedSlots.length} slots remaining (was ${filteredSlots.length})`)
-              filteredSlots = validatedSlots
-            } catch (timeoutErr) {
-              console.warn('⚠️ Travel-time validation timed out, showing all slots:', timeoutErr)
-              // Continue with unvalidated slots
-            }
-          } else {
-            console.warn('⚠️ Google API key not found, skipping travel-time validation')
-          }
-        }
-      } catch (validationErr) {
-        console.error('❌ Error during travel-time validation:', validationErr)
-        // Continue with unvalidated slots
+      return {
+        id: slot.id,
+        staff_id: slot.staff_id,
+        staff_name: slot.staff_name,
+        location_id: slot.location_id,
+        location_name: slot.location_name,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        duration_minutes: slot.duration_minutes,
+        is_available: true, // Already filtered by API
+        week_number: Math.max(1, Math.min(4, weeksDiff + 1)),
+        day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long' }),
+        date_formatted: slotStartDate.toLocaleDateString('de-DE'),
+        time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+        category_code: slot.category_code
       }
+    })
+    
+    logger.debug(`✅ Converted ${timeSlots.length} slots for UI display`)
+    
+    // Store globally for UI
+    availableSlotsForCalendar.value = timeSlots
+    
+    // Update per-week slots (for UI compatibility)
+    if (Array.isArray(slotsPerWeek.value)) {
+      slotsPerWeek.value = [1, 2, 3, 4].map(weekNum => 
+        timeSlots.filter(slot => slot.week_number === weekNum)
+      )
     }
     
-    availableTimeSlots.value = filteredSlots
-    logger.debug(`✅ Final available slots: ${availableTimeSlots.value.length}`)
-  } catch (err) {
-    console.error('❌ Error generating time slots:', err)
+  } catch (err: any) {
+    logger.error('❌ Error fetching slots:', err)
+    error.value = err.message || 'Fehler beim Laden der Verfügbarkeit'
   } finally {
     isLoadingTimeSlots.value = false
-  }
-}
-
-const selectTimeSlot = async (slot: any) => {
-  selectedSlot.value = slot
-  logger.debug('✅ Time slot selected:', slot)
-  
-  // Reserve the slot for 5 minutes
-  const reserved = await reserveSlot()
-  if (!reserved) {
-    selectedSlot.value = null
-    return
-  }
-  
-  // Go to final confirmation step (Pickup-Adresse oder Zusammenfassung)
-  await waitForPressEffect()
-  currentStep.value = 6
-  
-  // Initialize Google Places Autocomplete for pickup address
-  if (selectedLocation.value?.isPickup) {
-    nextTick(() => {
-      initializeAddressAutocomplete()
-    })
   }
 }
 
@@ -2357,8 +2136,16 @@ const confirmBooking = async () => {
       }
     }
     
-    // Step 4: Create appointment
-    await createAppointment(userData)
+    // Step 4: Create appointment via secure API
+    const appointmentResult = await createAppointmentSecure(userData)
+    
+    if (appointmentResult.payment_required) {
+      // Handle payment flow if needed
+      logger.debug('💳 Payment required for appointment:', appointmentResult.appointment_id)
+    } else {
+      // Show success
+      logger.debug('✅ Appointment booked successfully (no payment required)')
+    }
     
   } catch (error: any) {
     console.error('Error confirming booking:', error)
@@ -2368,212 +2155,70 @@ const confirmBooking = async () => {
 }
 
 // Create appointment in database
-const createAppointment = async (userData: any) => {
+const createAppointmentSecure = async (userData: any) => {
   isCreatingBooking.value = true
   
   try {
-    logger.debug('🔄 Creating appointment...')
+    logger.debug('📅 Creating appointment via secure API...')
     
-    // Check for collision one more time before creating
+    // Get auth token
     const supabase = getSupabase()
-    const startTime = new Date(selectedSlot.value.start_time).toISOString()
-    const endTime = new Date(selectedSlot.value.end_time).toISOString()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    logger.debug('🔍 Final collision check:', {
-      staff_id: selectedInstructor.value.id,
-      start_time: startTime,
-      end_time: endTime
-    })
-    
-    // Query for conflicts - check all non-deleted appointments
-    // Overlap condition: apt.start < slot.end AND apt.end > slot.start
-    const { data: conflictingAppointments, error: collisionError } = await supabase
-      .from('appointments')
-      .select('id, status, start_time, end_time')
-      .eq('staff_id', selectedInstructor.value.id)
-      .is('deleted_at', null) // Not deleted
-      .not('status', 'eq', 'deleted') // All statuses except logically deleted
-      .lt('start_time', endTime) // apt.start < slot.end
-      .gt('end_time', startTime) // apt.end > slot.start
-    
-    logger.debug('📋 Collision check result:', {
-      conflicting_count: conflictingAppointments?.length || 0,
-      conflicts: conflictingAppointments,
-      error: collisionError
-    })
-    
-    if (conflictingAppointments && conflictingAppointments.length > 0) {
-      throw new Error(`Der Termin wurde leider soeben vergeben (${conflictingAppointments.length} Konflikt(e)). Versuchen Sie es mit einem anderen Termin.`)
+    if (!session) {
+      throw new Error('Bitte melden Sie sich an um fortzufahren.')
     }
     
-    const appointmentData = {
-      user_id: userData.id,
-      staff_id: selectedInstructor.value.id,
-      location_id: selectedLocation.value.isPickup ? null : selectedLocation.value.id,
-      custom_location_address: selectedLocation.value.isPickup ? pickupAddressDetails.value?.formatted : null,
-      custom_location_name: selectedLocation.value.isPickup ? (pickupAddressDetails.value?.name || 'Pickup') : null,
-      start_time: selectedSlot.value.start_time,
-      end_time: selectedSlot.value.end_time,
-      duration_minutes: selectedSlot.value.duration_minutes,
-      type: selectedCategory.value.code,
-      event_type_code: 'lesson',
-      // All bookings from this flow are directly confirmed
-      // - Authenticated users: self-booking, no approval needed
-      // - Unauthenticated users: will pay via Wallee, then register
-      status: 'confirmed',
-      tenant_id: currentTenant.value.id
+    if (!reservedSlotId.value) {
+      throw new Error('Slot-Reservierung abgelaufen. Bitte wählen Sie erneut einen Zeitslot.')
     }
     
-    logger.debug('📝 Appointment data:', appointmentData)
+    // Use the new composable's createAppointment method
+    const response = await createAppointment(
+      {
+        slot_id: reservedSlotId.value,
+        session_id: sessionId.value,
+        appointment_type: 'lesson',
+        category_code: selectedCategory.value?.code || '',
+        notes: bookingNotes.value || undefined
+      },
+      session.access_token
+    )
     
-    // Call API to create appointment
-    const response = await $fetch<{
-      success: boolean
-      appointment_id: string
-      payment_id: string | null
-      confirmation_token: string
-    }>('/api/booking/create-appointment', {
-      method: 'POST',
-      body: appointmentData
-    })
+    logger.debug('✅ Appointment created:', response.appointment.id)
     
-    logger.debug('✅ Appointment created:', response)
+    // Clear reservation
+    reservedSlotId.value = null
+    reservationExpiry.value = null
+    if (countdownInterval) {
+      clearInterval(countdownInterval)
+    }
     
-    // If payment was created, check if automatic authorization is possible
-    if (response.payment_id) {
-      logger.debug('💳 Payment created, checking payment details...')
-      
-      // Get payment and user details
-      const supabase = getSupabase()
-      const { data: paymentData } = await supabase
-        .from('payments')
-        .select('payment_method, payment_status, payment_method_id')
-        .eq('id', response.payment_id)
-        .single()
-      
-      let hasToken = paymentData?.payment_method_id ? true : false
-      const isWallee = paymentData?.payment_method === 'wallee'
-      
-      // If no payment_method_id on payment, check if user has a saved token
-      if (!hasToken && isWallee) {
-        logger.debug('ℹ️ No payment_method_id on payment, checking for user tokens...')
-        
-        // Use backend API to find token (server-side bypass for RLS)
-        try {
-          const tokenResponse = await $fetch<{id: string | null}>('/api/booking/get-user-payment-token', {
-            method: 'POST',
-            body: {
-              userId: userData.id,
-              tenantId: currentTenant.value.id
-            }
-          })
-          
-          if (tokenResponse?.id) {
-            logger.debug('✅ Found user token:', tokenResponse.id)
-            // Link the token to the payment
-            await supabase
-              .from('payments')
-              .update({ payment_method_id: tokenResponse.id })
-              .eq('id', response.payment_id)
-            hasToken = true
-          } else {
-            logger.debug('⚠️ No user token found')
-          }
-        } catch (err) {
-          console.warn('⚠️ Error fetching user token:', err)
-        }
-      }
-      
-      logger.debug('🔍 Payment check:', {
-        payment_method: paymentData?.payment_method,
-        payment_status: paymentData?.payment_status,
-        payment_method_id: paymentData?.payment_method_id,
-        hasToken,
-        isWallee
-      })
-      
-      if (isWallee && paymentData?.payment_status === 'pending' && hasToken) {
-        logger.debug('✅ Token available, attempting automatic authorization & capture...')
-        
-        // Try automatic authorization and capture
-        try {
-          const authResponse = await $fetch<{success: boolean}>(`/api/wallee/authorize-payment`, {
-            method: 'POST',
-            body: {
-              paymentId: response.payment_id,
-              userId: userData.id,
-              tenantId: currentTenant.value.id
-            }
-          })
-          
-          if (authResponse?.success) {
-            logger.debug('✅ Payment authorized')
-            
-            // Try capture immediately if within capture window
-            const captureResponse = await $fetch<{success: boolean}>(`/api/wallee/capture-payment`, {
-              method: 'POST',
-              body: {
-                paymentId: response.payment_id,
-                userId: userData.id,
-                tenantId: currentTenant.value.id
-              }
-            })
-            
-            if (captureResponse?.success) {
-              logger.debug('✅ Payment captured successfully!')
-              successMessage.value = {
-                title: 'Termin erfolgreich gebucht!',
-                description: 'Dein Termin wurde bestätigt und die Zahlung verarbeitet.'
-              }
-              showSuccessModal.value = true
-              await new Promise(resolve => setTimeout(resolve, 3000))
-              await navigateTo(route.query.referrer as string || '/customer-dashboard')
-              return
-            }
-          }
-        } catch (err) {
-          console.warn('⚠️ Automatic payment failed, redirecting to payment page:', err)
-          // Fall back to payment process page
-        }
-      }
-      
-      // If no token or automatic payment failed, redirect to payment page
-      if (isWallee && paymentData?.payment_status === 'pending') {
-        logger.debug('🔄 Redirecting to payment process page...')
-        await navigateTo(`/customer/payment-process?payments=${response.payment_id}`)
-      } else {
-        logger.debug('✅ Payment already processed or no payment needed')
-        successMessage.value = {
-          title: 'Termin erfolgreich gebucht!',
-          description: 'Dein Termin wurde bestätigt.'
-        }
-        showSuccessModal.value = true
-        await new Promise(resolve => setTimeout(resolve, 3000))
-        await navigateTo(route.query.referrer as string || '/customer-dashboard')
-      }
+    // Return appointment ID for further processing
+    return {
+      success: true,
+      appointment_id: response.appointment.id,
+      payment_required: response.payment_required
+    }
+    
+  } catch (err: any) {
+    logger.error('❌ Appointment creation failed:', err)
+    
+    if (err.statusCode === 409) {
+      // Reservation expired
+      error.value = 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie erneut einen Zeitslot.'
+      // Go back to slot selection
+      currentStep.value = 4
     } else {
-      successMessage.value = {
-        title: 'Termin erfolgreich gebucht!',
-        description: 'Dein Termin wurde bestätigt.'
-      }
-      showSuccessModal.value = true
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      await navigateTo(route.query.referrer as string || '/customer-dashboard')
+      error.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
     
-  } catch (error: any) {
-    console.error('❌ Error creating appointment:', error)
-    console.error('❌ Error details:', {
-      message: error?.message,
-      data: error?.data,
-      statusCode: error?.statusCode,
-      cause: error?.cause
-    })
-    alert(`Fehler bei der Buchung: ${error?.data?.message || error?.message || 'Bitte versuchen Sie es erneut.'}`)
+    throw err
   } finally {
     isCreatingBooking.value = false
   }
 }
+
 
 // Handle successful login/registration
 const handleAuthSuccess = () => {
@@ -2673,38 +2318,27 @@ watch(() => currentStep.value, (newStep: number) => {
   }
 })
 
-// Reservation functions
-const reserveSlot = async (userId?: string) => {
-  if (!selectedSlot.value || !selectedInstructor.value || !currentTenant.value) {
-    console.warn('⚠️ Missing required data for reservation')
+// Reservation functions - UPDATED to use new secure API
+const reserveSlotSecure = async (userId?: string) => {
+  if (!selectedSlot.value) {
+    console.warn('⚠️ No slot selected')
     return false
   }
   
   try {
-    logger.debug('🔄 Reserving slot...')
+    isLoading.value = true
+    logger.debug('🔒 Reserving slot via secure API...', selectedSlot.value.id)
     
-    // Server will determine user_id from auth token or generate session ID
-    const response = await $fetch<{
-      success: boolean
-      reservation_id: string
-      reserved_until: string
-    }>('/api/booking/reserve-slot', {
-      method: 'POST',
-      body: {
-        staff_id: selectedInstructor.value.id,
-        start_time: selectedSlot.value.start_time,
-        end_time: selectedSlot.value.end_time,
-        duration_minutes: selectedSlot.value.duration_minutes || selectedDuration.value,
-        category_code: selectedCategory.value?.code,
-        location_id: selectedLocation.value?.id,
-        tenant_id: currentTenant.value.id
-      }
+    // Use the new composable's reserveSlot method
+    const reservation = await reserveSlot({
+      slot_id: selectedSlot.value.id,
+      session_id: sessionId.value
     })
-
-    if (response.success) {
-      logger.debug('✅ Slot reserved:', response.reservation_id)
-      currentReservationId.value = response.reservation_id
-      reservedUntil.value = new Date(response.reserved_until)
+    
+    if (reservation.success) {
+      logger.debug('✅ Slot reserved:', reservation.slot.reserved_until)
+      reservedSlotId.value = selectedSlot.value.id
+      reservationExpiry.value = new Date(reservation.slot.reserved_until)
       startCountdown()
       return true
     } else {
@@ -2713,10 +2347,23 @@ const reserveSlot = async (userId?: string) => {
     }
   } catch (error: any) {
     console.error('❌ Error reserving slot:', error)
-    alert(`Fehler bei der Reservierung: ${error?.data?.message || error?.message}`)
+    
+    if (error.statusCode === 409) {
+      // Slot already taken
+      error.value = 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wählen Sie einen anderen.'
+      // Refresh slots
+      await generateTimeSlotsForSpecificCombination()
+    } else {
+      error.value = error.statusMessage || 'Reservierung fehlgeschlagen'
+    }
     return false
+  } finally {
+    isLoading.value = false
   }
 }
+
+// Keep old function name for backwards compatibility
+const reserveSlot_OLD = reserveSlotSecure
 
 const cancelReservation = async (silent: boolean = false) => {
   if (!currentReservationId.value) return

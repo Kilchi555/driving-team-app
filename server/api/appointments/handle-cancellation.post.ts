@@ -1,23 +1,31 @@
 // server/api/appointments/handle-cancellation.post.ts
-// Handles appointment cancellation with automatic refund processing
+// INTERNAL ONLY: Handles appointment cancellation with automatic refund processing
+// ⚠️ SECURITY: Only called from cancel-customer.post.ts or cancel-staff.post.ts
+// ⚠️ SECURITY: These callers must verify auth + authorization + tenant before calling
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { logAudit } from '~/server/utils/audit'
 
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
     const { 
       appointmentId, 
+      cancellationReasonId,
       deletionReason, 
       lessonPriceRappen, 
       adminFeeRappen,
-      // ✅ NEW: Cancellation policy info
       shouldCreditHours,
       chargePercentage,
       originalLessonPrice,
-      originalAdminFee
+      originalAdminFee,
+      staffId, // ✅ NEW: For audit logging
+      cancelledBy // ✅ NEW: 'customer' or 'staff'
     } = await readBody(event)
+
+    // ⚠️ SECURITY: Verify this is called from authorized callers only
+    // In production, should verify caller context
 
     logger.debug('🗑️ Processing appointment cancellation:', {
       appointmentId,
@@ -38,7 +46,7 @@ export default defineEventHandler(async (event) => {
     // 1. Fetch the appointment and its payment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select('user_id, duration_minutes, type, tenant_id')
+      .select('user_id, duration_minutes, type, tenant_id, status')
       .eq('id', appointmentId)
       .single()
 
@@ -97,106 +105,43 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!payment) {
-      logger.debug('⚠️ No payment found for appointment - check if shouldCreditHours is true')
+      logger.debug('⚠️ No payment found for appointment')
       
-      // ✅ NEW: If shouldCreditHours is true but no payment found, still create credit!
-      // This happens when appointment has no associated payment (e.g., free lessons)
-      if (shouldCreditHours && chargePercentage === 0) {
-        const refundAmount = (originalLessonPrice || 0) + (originalAdminFee || 0)
-        
-        if (refundAmount > 0) {
-          logger.debug('💚 No payment but shouldCreditHours=true, creating credit anyway:', {
-            refundAmount: (refundAmount / 100).toFixed(2)
-          })
-          
-          // Fetch appointment for user_id
-          const { data: apt } = await supabase
-            .from('appointments')
-            .select('user_id')
-            .eq('id', appointmentId)
-            .single()
-          
-          if (apt) {
-            // Create credit directly
-            const { data: { user: authUser } } = await supabase.auth.getUser()
-            const { data: currentUser } = await supabase
-              .from('users')
-              .select('id')
-              .eq('auth_user_id', authUser?.id)
-              .single()
-            
-            if (currentUser) {
-              // Load current balance
-              const { data: studentCredit } = await supabase
-                .from('student_credits')
-                .select('id, balance_rappen')
-                .eq('user_id', apt.user_id)
-                .single()
-              
-              if (studentCredit) {
-                const oldBalance = studentCredit.balance_rappen || 0
-                const newBalance = oldBalance + refundAmount
-                
-                await supabase
-                  .from('student_credits')
-                  .update({
-                    balance_rappen: newBalance,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', studentCredit.id)
-                
-                await supabase
-                  .from('credit_transactions')
-                  .insert([{
-                    user_id: apt.user_id,
-                    transaction_type: 'cancellation',
-                    amount_rappen: refundAmount,
-                    balance_before_rappen: oldBalance,
-                    balance_after_rappen: newBalance,
-                    payment_method: 'refund',
-                    reference_id: appointmentId,
-                    reference_type: 'appointment',
-                    created_by: currentUser.id,
-                    notes: `Rückerstattung für Terminabsage: ${deletionReason} (CHF ${(refundAmount / 100).toFixed(2)})`
-                  }])
-                
-                logger.debug('✅ Credit created despite no payment:', {
-                  oldBalance: (oldBalance / 100).toFixed(2),
-                  newBalance: (newBalance / 100).toFixed(2),
-                  refund: (refundAmount / 100).toFixed(2)
-                })
-                
-                // ✅ NEW: Update appointment to mark credit_created as true
-                const { error: updateAptError } = await supabase
-                  .from('appointments')
-                  .update({ credit_created: true })
-                  .eq('id', appointmentId)
-                
-                if (updateAptError) {
-                  console.warn('⚠️ Could not update appointment credit_created flag:', updateAptError)
-                } else {
-                  logger.debug('✅ Appointment marked as credit_created (no payment case)')
-                }
-                
-                return {
-                  success: true,
-                  message: 'Appointment cancelled - credit applied to student balance (no payment found)',
-                  refundAmount: (refundAmount / 100),
-                  action: 'credit_created_no_payment',
-                  details: {
-                    oldBalance: (oldBalance / 100).toFixed(2),
-                    newBalance: (newBalance / 100).toFixed(2),
-                    refundAmount: (refundAmount / 100).toFixed(2),
-                    deletionReason
-                  }
-                }
-              }
-            }
+      // ✅ UPDATED LOGIC: When appointment is unpaid (no payment found)
+      // - Staff cancellation (chargePercentage = 0): Do nothing, just delete
+      // - Client cancellation (chargePercentage = 100): Payment stays pending for next appointment
+      
+      if (chargePercentage === 0 && shouldCreditHours) {
+        // Staff cancellation without charge - no need to create credit or do anything
+        logger.debug('✅ Staff cancellation with no charge on unpaid appointment - no action needed')
+        return {
+          success: true,
+          message: 'Appointment cancelled - no payment to process (staff cancellation)',
+          action: 'no_payment_staff_cancel',
+          details: {
+            deletionReason
+          }
+        }
+      } else if (chargePercentage > 0) {
+        // Client cancellation with charge on unpaid appointment
+        // Payment will remain pending and be charged with next appointment
+        logger.debug('✅ Client cancellation with charge on unpaid appointment - payment stays pending', {
+          chargePercentage,
+          chargeAmount: Math.round((lessonPriceRappen + adminFeeRappen) * chargePercentage / 100)
+        })
+        return {
+          success: true,
+          message: 'Appointment cancelled - pending charge will be applied to next payment',
+          action: 'pending_charge_no_payment',
+          details: {
+            chargePercentage,
+            chargeAmountRappen: Math.round((lessonPriceRappen + adminFeeRappen) * chargePercentage / 100),
+            deletionReason
           }
         }
       }
       
-      return { success: false, message: 'No payment found for this appointment' }
+      return { success: true, message: 'No payment found for this appointment' }
     }
 
     // 3. Check if payment was completed/authorized
@@ -204,7 +149,7 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ Payment was completed - processing refund')
 
       if (refundableAmount > 0) {
-        return await processRefund(
+        const refundResult = await processRefund(
           supabase,
           appointmentId,
           appointment.user_id,
@@ -212,18 +157,65 @@ export default defineEventHandler(async (event) => {
           refundableAmount,
           deletionReason
         )
+        
+        // ✅ NEW: Mark appointment as cancelled
+        await markAppointmentCancelled(supabase, appointmentId, deletionReason)
+        
+        return refundResult
       } else {
         // ✅ FREE CANCELLATION: Update payment status based on current status
         // completed → refunded (money was returned)
         // authorized/pending → cancelled (never paid)
         logger.debug('ℹ️ Free cancellation - updating payment status')
         
+        // ✅ NEW: If credit was used, refund it back to student credit
+        let creditRefundNeeded = false
+        if (payment.credit_used_rappen > 0) {
+          creditRefundNeeded = true
+          logger.debug('💳 Credit was used for this payment - will refund:', {
+            creditUsed: (payment.credit_used_rappen / 100).toFixed(2),
+            userId: appointment.user_id
+          })
+          
+          // Load current student credit balance
+          const { data: studentCredit, error: creditError } = await supabase
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', appointment.user_id)
+            .single()
+          
+          if (!creditError && studentCredit) {
+            const oldBalance = studentCredit.balance_rappen || 0
+            const newBalance = oldBalance + payment.credit_used_rappen
+            
+            // Refund the credit
+            const { error: updateCreditError } = await supabase
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', studentCredit.id)
+            
+            if (updateCreditError) {
+              console.warn('⚠️ Could not refund credit to student balance:', updateCreditError)
+            } else {
+              logger.debug('✅ Credit refunded to student balance:', {
+                oldBalance: (oldBalance / 100).toFixed(2),
+                refund: (payment.credit_used_rappen / 100).toFixed(2),
+                newBalance: (newBalance / 100).toFixed(2)
+              })
+            }
+          }
+        }
+        
         const newStatus = payment.payment_status === 'completed' ? 'refunded' : 'cancelled'
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
             payment_status: newStatus,
-            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
+            credit_used_rappen: 0, // ✅ NEW: Clear credit used since it's being refunded
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}${creditRefundNeeded ? ' (credit refunded)' : ''}`
           })
           .eq('id', payment.id)
         
@@ -238,6 +230,9 @@ export default defineEventHandler(async (event) => {
           })
         }
         
+        // ✅ NEW: Mark appointment as cancelled
+        await markAppointmentCancelled(supabase, appointmentId, deletionReason)
+        
         return {
           success: true,
           message: 'Appointment cancelled - no refund applicable',
@@ -246,16 +241,59 @@ export default defineEventHandler(async (event) => {
         }
       }
     } else {
-      logger.debug('ℹ️ Payment was not completed - no refund needed')
+      logger.debug('ℹ️ Payment was not completed (pending/pending_approval)')
       
-      // ✅ FREE CANCELLATION: Update payment status to cancelled
-      if (refundableAmount === 0) {
+      // ✅ Case 1: FREE CANCELLATION (refundableAmount === 0 AND chargePercentage === 0)
+      if (refundableAmount === 0 && chargePercentage === 0) {
         logger.debug('ℹ️ Free cancellation - updating payment status to cancelled')
+        
+        // ✅ NEW: If credit was used, refund it back to student credit
+        let creditRefundNeeded = false
+        if (payment.credit_used_rappen > 0) {
+          creditRefundNeeded = true
+          logger.debug('💳 Credit was used for this payment - will refund:', {
+            creditUsed: (payment.credit_used_rappen / 100).toFixed(2),
+            userId: appointment.user_id
+          })
+          
+          // Load current student credit balance
+          const { data: studentCredit, error: creditError } = await supabase
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', appointment.user_id)
+            .single()
+          
+          if (!creditError && studentCredit) {
+            const oldBalance = studentCredit.balance_rappen || 0
+            const newBalance = oldBalance + payment.credit_used_rappen
+            
+            // Refund the credit
+            const { error: updateCreditError } = await supabase
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', studentCredit.id)
+            
+            if (updateCreditError) {
+              console.warn('⚠️ Could not refund credit to student balance:', updateCreditError)
+            } else {
+              logger.debug('✅ Credit refunded to student balance:', {
+                oldBalance: (oldBalance / 100).toFixed(2),
+                refund: (payment.credit_used_rappen / 100).toFixed(2),
+                newBalance: (newBalance / 100).toFixed(2)
+              })
+            }
+          }
+        }
+        
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
             payment_status: 'cancelled',
-            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}`
+            credit_used_rappen: 0, // ✅ NEW: Clear credit used since it's being refunded
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Free cancellation: ${deletionReason}${creditRefundNeeded ? ' (credit refunded)' : ''}`
           })
           .eq('id', payment.id)
         
@@ -267,11 +305,53 @@ export default defineEventHandler(async (event) => {
             reason: deletionReason
           })
         }
+      } else if (chargePercentage > 0) {
+        // ✅ Case 2: PAID CANCELLATION on UNPAID appointment (chargePercentage > 0, refundableAmount > 0)
+        logger.debug('🔴 Paid cancellation on unpaid appointment - updating total_amount_rappen with charge fee')
+        
+        // Calculate the new charge amount (what customer now owes)
+        const chargeAmountRappen = Math.round(refundableAmount * chargePercentage / 100)
+        
+        logger.debug('💰 Calculating new charge amount:', {
+          originalTotal: (refundableAmount / 100).toFixed(2),
+          chargePercentage,
+          chargeAmount: (chargeAmountRappen / 100).toFixed(2)
+        })
+        
+        // Update payment: keep status as 'pending', but update total_amount_rappen to the charge
+        const { error: updatePaymentError } = await supabase
+          .from('payments')
+          .update({
+            // ✅ KEY FIX: Keep payment_status as 'pending' (NOT cancelled!)
+            // and update total_amount_rappen to the charge amount
+            total_amount_rappen: chargeAmountRappen,
+            lesson_price_rappen: Math.round(lessonPriceRappen * chargePercentage / 100),
+            admin_fee_rappen: Math.round(adminFeeRappen * chargePercentage / 100),
+            products_price_rappen: 0, // Products are cancelled
+            discount_amount_rappen: 0, // Discounts are not applied to charges
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Paid cancellation (${chargePercentage}% charge): ${deletionReason}`
+          })
+          .eq('id', payment.id)
+        
+        if (updatePaymentError) {
+          console.warn('⚠️ Could not update payment with charge:', updatePaymentError)
+          throw new Error(`Failed to update payment: ${updatePaymentError.message}`)
+        } else {
+          logger.debug('✅ Payment updated with cancellation charge:', {
+            paymentId: payment.id,
+            oldTotal: (payment.total_amount_rappen / 100).toFixed(2),
+            newTotal: (chargeAmountRappen / 100).toFixed(2),
+            chargePercentage
+          })
+        }
       }
+      
+      // ✅ NEW: Mark appointment as cancelled
+      await markAppointmentCancelled(supabase, appointmentId, deletionReason)
       
       return {
         success: true,
-        message: 'Appointment cancelled - payment was not completed or no refund applicable',
+        message: 'Appointment cancelled - payment was not completed',
         refundAmount: 0,
         action: 'cancelled_no_refund'
       }
@@ -281,6 +361,35 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: error.message }
   }
 })
+
+// Mark appointment as cancelled in the database
+async function markAppointmentCancelled(
+  supabase: any,
+  appointmentId: string,
+  deletionReason: string
+) {
+  try {
+    const { error: updateError } = await supabase
+      .from('appointments')
+      .update({
+        status: 'cancelled',
+        deleted_at: new Date().toISOString(),
+        deletion_reason: deletionReason
+      })
+      .eq('id', appointmentId)
+    
+    if (updateError) {
+      console.warn('⚠️ Could not mark appointment as cancelled:', updateError)
+    } else {
+      logger.debug('✅ Appointment marked as cancelled:', {
+        appointmentId,
+        deletionReason
+      })
+    }
+  } catch (error: any) {
+    console.warn('⚠️ Error marking appointment as cancelled:', error)
+  }
+}
 
 // Process refund to student credit
 async function processRefund(

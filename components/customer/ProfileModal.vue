@@ -163,6 +163,60 @@
               </div>
             </div>
           </div>
+
+          <!-- Face ID / WebAuthn Section -->
+          <div class="border-t pt-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Biometrische Authentifizierung</h3>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="space-y-4">
+                <!-- Info -->
+                <p class="text-sm text-gray-700">
+                  Face ID und Touch ID bieten eine sichere und komfortable Methode, um sich anzumelden.
+                </p>
+
+                <!-- Registered Devices -->
+                <div v-if="webAuthnCredentials.length > 0" class="space-y-3">
+                  <p class="text-sm font-medium text-gray-900">Registrierte Geräte:</p>
+                  <div v-for="cred in webAuthnCredentials" :key="cred.id" class="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                    <div>
+                      <p class="font-medium text-gray-900">{{ cred.deviceName || 'Mein Gerät' }}</p>
+                      <p class="text-xs text-gray-500">
+                        Hinzugefügt: {{ new Date(cred.created_at).toLocaleDateString('de-CH') }}
+                      </p>
+                    </div>
+                    <button
+                      @click="deleteWebAuthnCredential(cred.id)"
+                      :disabled="isWebAuthnLoading"
+                      class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                    >
+                      Entfernen
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Add New Device -->
+                <button
+                  @click="registerFaceID"
+                  :disabled="isWebAuthnLoading"
+                  class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors font-medium text-sm"
+                >
+                  <span v-if="isWebAuthnLoading">Wird registriert...</span>
+                  <span v-else>Face ID / Touch ID hinzufügen</span>
+                </button>
+
+                <!-- Error Message -->
+                <div v-if="webAuthnError" class="bg-red-50 border border-red-200 rounded p-3">
+                  <p class="text-sm text-red-700">{{ webAuthnError }}</p>
+                </div>
+
+                <!-- Success Message -->
+                <div v-if="webAuthnSuccess" class="bg-green-50 border border-green-200 rounded p-3">
+                  <p class="text-sm text-green-700">{{ webAuthnSuccess }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- EDIT MODE - Full Form -->
@@ -424,6 +478,7 @@ const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
 const { uploadFile } = useUserDocuments()
 const { primaryColor } = useTenantBranding()
+const supabase = getSupabase()
 
 // Computed style for header background
 const headerStyle = computed(() => ({
@@ -480,6 +535,12 @@ const successMessage = ref('')
 const categories = ref<any[]>([])
 const fileInputRefs = ref<Record<string, HTMLInputElement>>({})
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+// WebAuthn / Face ID State
+const isWebAuthnLoading = ref(false)
+const webAuthnError = ref('')
+const webAuthnSuccess = ref('')
+const webAuthnCredentials = ref<any[]>([])
 
 const scheduleAutoSave = () => {
   // Clear existing timer
@@ -708,4 +769,247 @@ watch(() => props.categories, (newVal) => {
     logger.debug('📂 Categories updated from props:', newVal.length)
   }
 }, { deep: true })
+
+// ======= WebAuthn / Face ID Functions =======
+
+/**
+ * Load user's registered WebAuthn credentials
+ */
+const loadWebAuthnCredentials = async () => {
+  try {
+    // Get Supabase session token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.access_token) {
+      logger.debug('⚠️ No session for loading credentials')
+      webAuthnCredentials.value = []
+      return
+    }
+
+    const response = await fetch('/api/auth/webauthn-credentials', {
+      method: 'GET',
+      headers: { 
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Fehler beim Laden der Credentials')
+    }
+
+    const { credentials, error } = await response.json()
+
+    if (error) {
+      logger.debug('⚠️ Error loading credentials:', error)
+      webAuthnCredentials.value = []
+      return
+    }
+
+    webAuthnCredentials.value = credentials || []
+    logger.debug('✅ Loaded WebAuthn credentials:', webAuthnCredentials.value.length)
+  } catch (error: any) {
+    logger.debug('❌ Failed to load credentials:', error.message)
+    webAuthnCredentials.value = []
+  }
+}
+
+/**
+ * Register new Face ID / Touch ID
+ */
+const registerFaceID = async () => {
+  if (!window.PublicKeyCredential) {
+    webAuthnError.value = 'WebAuthn wird von deinem Browser nicht unterstützt'
+    return
+  }
+
+  isWebAuthnLoading.value = true
+  webAuthnError.value = ''
+  webAuthnSuccess.value = ''
+
+  try {
+    logger.debug('🔐 Starting WebAuthn registration...')
+
+    // Get Supabase session token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentifizierung erforderlich')
+    }
+
+    // Get registration options from server
+    const response = await fetch('/api/auth/webauthn-registration-options', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ 
+        deviceName: `${navigator.userAgentData?.platform || 'Device'} - ${new Date().toLocaleDateString('de-CH')}` 
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Fehler beim Abrufen der Registrierungsoptionen')
+    }
+
+    const { options, error } = await response.json()
+
+    if (error) {
+      throw new Error(error)
+    }
+
+    logger.debug('📋 Received registration options')
+
+    // Convert strings back to ArrayBuffers
+    options.challenge = Uint8Array.from(atob(options.challenge), c => c.charCodeAt(0))
+    if (options.user.id) {
+      options.user.id = Uint8Array.from(atob(options.user.id), c => c.charCodeAt(0))
+    }
+
+    // Show browser's biometric prompt
+    logger.debug('👆 Zeige biometrische Aufforderung...')
+    const credential = await navigator.credentials.create({ publicKey: options })
+
+    if (!credential) {
+      throw new Error('WebAuthn-Registrierung abgebrochen')
+    }
+
+    logger.debug('✅ Credential erstellt, wird verifiziert...')
+
+    // Send credential to server for verification
+    const verifyResponse = await fetch('/api/auth/webauthn-register', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        credential: {
+          id: credential.id,
+          rawId: arrayBufferToBase64(credential.rawId),
+          type: credential.type,
+          response: {
+            clientDataJSON: arrayBufferToBase64(credential.response.clientDataJSON),
+            attestationObject: arrayBufferToBase64(credential.response.attestationObject)
+          }
+        },
+        deviceName: `${navigator.userAgentData?.platform || 'Device'} - ${new Date().toLocaleDateString('de-CH')}`
+      })
+    })
+
+    if (!verifyResponse.ok) {
+      const errorData = await verifyResponse.json()
+      const statusMessage = errorData.statusMessage || 'Registrierung fehlgeschlagen'
+      
+      // Bessere Error Messages
+      if (statusMessage.includes('Authentifizierung')) {
+        throw new Error('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.')
+      } else if (statusMessage.includes('User nicht gefunden')) {
+        throw new Error('Benutzerkonto nicht gefunden. Bitte kontaktieren Sie den Support.')
+      } else if (statusMessage.includes('Fehler beim Speichern')) {
+        throw new Error('Face ID konnte nicht gespeichert werden. Bitte versuchen Sie es später erneut.')
+      }
+      
+      throw new Error(statusMessage)
+    }
+
+    const verifyData = await verifyResponse.json()
+
+    if (!verifyData.success) {
+      throw new Error(verifyData.message || 'Face ID Registrierung fehlgeschlagen')
+    }
+
+    webAuthnSuccess.value = 'Face ID erfolgreich aktiviert!'
+    logger.debug('✅ WebAuthn Registrierung erfolgreich')
+    showSuccess('Face ID aktiviert', 'Sie können sich jetzt mit Face ID anmelden')
+
+    // Reload credentials
+    await loadWebAuthnCredentials()
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      webAuthnSuccess.value = ''
+    }, 3000)
+  } catch (error: any) {
+    logger.debug('❌ WebAuthn registration error:', error.message)
+    
+    // Bessere Error Messages für den User
+    let userMessage = error.message || 'Face ID Registrierung fehlgeschlagen'
+    
+    if (userMessage.includes('WebAuthn nicht vom Browser unterstützt')) {
+      userMessage = 'Ihr Browser unterstützt Face ID nicht. Bitte verwenden Sie einen modernen Browser (Chrome, Safari, Firefox).'
+    } else if (userMessage.includes('abgebrochen')) {
+      userMessage = 'Face ID Registrierung abgebrochen. Bitte versuchen Sie es erneut.'
+    } else if (userMessage.includes('Authentifizierung erforderlich')) {
+      userMessage = 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.'
+    } else if (userMessage.includes('Abrufen der Registrierungsoptionen')) {
+      userMessage = 'Verbindungsfehler. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.'
+    }
+    
+    webAuthnError.value = userMessage
+  } finally {
+    isWebAuthnLoading.value = false
+  }
+}
+
+/**
+ * Delete a WebAuthn credential
+ */
+const deleteWebAuthnCredential = async (credentialId: string) => {
+  if (!confirm('Möchten Sie dieses Gerät wirklich entfernen?')) {
+    return
+  }
+
+  isWebAuthnLoading.value = true
+  webAuthnError.value = ''
+
+  try {
+    // Get Supabase session token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentifizierung erforderlich')
+    }
+
+    const response = await fetch(`/api/auth/webauthn-credential/${credentialId}`, {
+      method: 'DELETE',
+      headers: { 
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Löschen fehlgeschlagen')
+    }
+
+    webAuthnSuccess.value = 'Face ID entfernt'
+    logger.debug('✅ Credential gelöscht')
+    showSuccess('Face ID entfernt', 'Das Gerät wurde entfernt')
+
+    // Reload credentials
+    await loadWebAuthnCredentials()
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      webAuthnSuccess.value = ''
+    }, 3000)
+  } catch (error: any) {
+    logger.debug('❌ Delete credential error:', error.message)
+    webAuthnError.value = error.message || 'Löschen fehlgeschlagen'
+  } finally {
+    isWebAuthnLoading.value = false
+  }
+}
+
+/**
+ * Helper: Convert ArrayBuffer to Base64
+ */
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
 </script>

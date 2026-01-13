@@ -140,7 +140,8 @@
         </div>
         
         <!-- Progress Tab -->
-        <div v-if="activeTab === 'progress'" class="p-4">
+        <div v-if="activeTab === 'progress'" class="px-2"
+>
           <!-- Sub-Tab Navigation -->
           <div class="flex gap-2 mb-4 border-b border-gray-200">
             <button
@@ -148,9 +149,13 @@
               :class="[
                 'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
                 progressSubTab === 'lektionen'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'text-white'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
               ]"
+              :style="progressSubTab === 'lektionen' ? { 
+                borderBottomColor: primaryColor,
+                color: primaryColor
+              } : {}"
             >
               Lektionen
             </button>
@@ -159,9 +164,13 @@
               :class="[
                 'px-4 py-2 font-medium text-sm border-b-2 transition-colors',
                 progressSubTab === 'prüfungen'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'text-white'
                   : 'border-transparent text-gray-600 hover:text-gray-800'
               ]"
+              :style="progressSubTab === 'prüfungen' ? { 
+                borderBottomColor: primaryColor,
+                color: primaryColor
+              } : {}"
             >
               Prüfungen
             </button>
@@ -193,14 +202,14 @@
             
             <!-- Filter und Sortierung auf separater Zeile -->
             <div 
-              class="flex items-center justify-between gap-4 py-3 px-4 rounded-lg"
+              class="flex items-center justify-between gap-2 py-2 px-4 rounded-lg"
               :style="{ backgroundColor: primaryColor + '20' }"
             >
               <!-- Kategorie Filter -->
               <div class="flex items-center gap-2">
                 <select
                   v-model="selectedCategoryFilter"
-                  class="text-sm border border-gray-300 rounded px-3 py-1 text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-1"
+                  class="h-8 text-xs border border-gray-300 rounded px-2 py-0 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 leading-8"
                   :style="{ 
                     backgroundColor: primaryColor,
                     '--tw-ring-color': primaryColor
@@ -312,7 +321,6 @@
                 
                 <!-- Evaluationen -->
                 <div v-if="lesson.evaluations && lesson.evaluations.length > 0" class="mt-3 pt-3 border-t border-gray-300">
-                  <h6 class="text-xs font-semibold text-gray-700 mb-2">Bewertungen:</h6>
                   <div class="space-y-2">
                     <div 
                       v-for="evaluation in lesson.evaluations" 
@@ -593,7 +601,7 @@
                 <div class="p-4">
                   <!-- Main Content -->
                   <div class="flex-1 min-w-0">
-                    <!-- Amount + Category + Status Row -->
+                    <!-- Amount + Status Row -->
                     <div class="flex items-center justify-between gap-3 mb-2">
                       <div class="flex items-center gap-2">
                         <span :class="[
@@ -603,37 +611,38 @@
                           {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
                         </span>
                         <span class="text-xs font-semibold text-gray-500">CHF</span>
-                        
-                        <span v-if="payment.appointments?.type" :class="[
-                          'px-2.5 py-0.5 text-xs font-bold rounded-full ml-2',
-                          payment.appointments?.status === 'cancelled' ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-800'
-                        ]">
-                          {{ payment.appointments.type }}
-                        </span>
                       </div>
                       
                       <!-- Status Badges on Right -->
-                      <div class="flex items-center gap-2">
-                        <span v-if="payment.appointments?.status === 'cancelled'" class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">
-                          Abgesagt
+                      <!-- Combined Status Badge -->
+                      <div :class="[
+                        'px-3 py-1 text-xs font-semibold rounded-full flex flex-col items-end',
+                        payment.appointments?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
+                        payment.appointments?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
+                        payment.appointments?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                        payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
+                        payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
+                        payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      ]">
+                        <span>
+                          {{ payment.appointments?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'Abgesagt • Rückvergütet' :
+                             payment.appointments?.status === 'cancelled' && payment.payment_status === 'completed' ? 'Abgesagt • Bezahlt' :
+                             payment.appointments?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt • Unbezahlt' :
+                             payment.appointments?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt • Fehlgeschlagen' :
+                             payment.payment_status === 'completed' ? 'Bezahlt' :
+                             payment.payment_status === 'pending' ? 'Unbezahlt' :
+                             payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                             payment.payment_status === 'refunded' ? 'Rückvergütet' :
+                             payment.payment_status }}
                         </span>
-                        <div :class="[
-                          'px-3 py-1 text-xs font-semibold rounded-full flex flex-col items-end',
-                          payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
-                          payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
-                        ]">
-                          <span>
-                            {{ payment.payment_status === 'completed' ? 'Bezahlt' :
-                               payment.payment_status === 'pending' ? 'Unbezahlt' :
-                               payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
-                               payment.payment_status }}
-                          </span>
-                          <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="text-xs font-normal opacity-90 whitespace-nowrap">
-                            {{ formatLocalDate(payment.paid_at) }} {{ formatLocalTime(payment.paid_at) }}
-                          </span>
-                        </div>
+                        <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="text-xs font-normal opacity-90 whitespace-nowrap">
+                          {{ formatLocalDate(payment.paid_at) }} {{ formatLocalTime(payment.paid_at) }}
+                        </span>
+                        <span v-if="payment.payment_status === 'refunded' && payment.refunded_at" class="text-xs font-normal opacity-90 whitespace-nowrap">
+                          {{ formatLocalDate(payment.refunded_at) }} {{ formatLocalTime(payment.refunded_at) }}
+                        </span>
                       </div>
                     </div>
                     
@@ -649,6 +658,9 @@
                     <!-- Service Description (on new line) -->
                     <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
                       {{ payment.appointments.event_types?.name || payment.appointments.event_type_code || 'Termin' }}
+                      <span v-if="payment.appointments?.type" class="font-normal">
+                        Kat. {{ payment.appointments.type }}
+                      </span>
                       <span v-if="payment.appointments.staff" class="font-normal text-gray-600">
                         mit {{ payment.appointments.staff.first_name }}
                       </span>
@@ -788,6 +800,28 @@
         
         <!-- Details Tab -->
         <div v-if="activeTab === 'details'" class="space-y-6 p-2">
+          <!-- Pending Student Actions - MOVED TO TOP -->
+          <div v-if="!selectedStudent.auth_user_id" class="bg-orange-50 rounded-lg border border-orange-200 p-6">
+            <h4 class="text-lg font-semibold text-orange-900 mb-4 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M6.343 3.665c.886-.887 2.318-.887 3.03 0l9.718 9.718c.887.887.887 2.326 0 3.213l-9.718 9.718c-.712.712-2.144.712-3.03 0L3.313 15.9c-.887-.887-.887-2.326 0-3.213L6.343 3.665z"></path>
+              </svg>
+              Onboarding Status: Ausstehend
+            </h4>
+            <p class="text-sm text-orange-800 mb-4">
+              Dieser Schüler hat sein Konto noch nicht aktiviert. Hier können Sie Erinnerungen versenden:
+            </p>
+            <button
+              @click="openReminderModal"
+              class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+              Erinnerung versenden
+            </button>
+          </div>
+
           <!-- Persönliche Informationen -->
           <div class="bg-white rounded-lg border p-6">
             <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -886,6 +920,22 @@
                   </div>
                 </div>
 
+                <!-- Ausweisnummer (SARI) -->
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-900">Ausweisnummer</div>
+                    <div v-if="selectedStudent.faberid" class="mt-1 text-sm text-gray-700 font-mono">
+                      {{ selectedStudent.faberid }}
+                    </div>
+                    <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben (für VKU/PGS)</div>
+                  </div>
+                </div>
+
                 <!-- Adresse -->
                 <div class="flex items-start space-x-3">
                   <div class="flex-shrink-0 w-5 h-5 mt-0.5">
@@ -920,6 +970,35 @@
               {{ selectedStudent.invoice_address }}
             </div>
             <div v-else class="text-sm text-gray-500 italic">Keine Rechnungsadresse vorhanden</div>
+          </div>
+
+          <!-- Firmen-Rechnungsadressen -->
+          <div v-if="userBillingAddresses.length > 0" class="bg-white rounded-lg border p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+              Firmen-Rechnungsadressen
+            </h4>
+            
+            <div class="space-y-3">
+              <div 
+                v-for="address in userBillingAddresses" 
+                :key="address.id" 
+                class="p-3 bg-gray-50 rounded border border-gray-200 text-sm"
+              >
+                <div class="font-semibold text-gray-900">{{ address.company_name }}</div>
+                <div v-if="address.contact_person" class="text-gray-600">{{ address.contact_person }}</div>
+                <div v-if="address.street && address.street_number" class="text-gray-600">
+                  {{ address.street }} {{ address.street_number }}
+                </div>
+                <div v-if="address.zip && address.city" class="text-gray-600">
+                  {{ address.zip }} {{ address.city }}
+                </div>
+                <div v-if="address.email" class="text-gray-600">{{ address.email }}</div>
+                <div v-if="address.phone" class="text-gray-600">{{ address.phone }}</div>
+              </div>
+            </div>
           </div>
 
           <!-- Andere Details... -->
@@ -993,6 +1072,7 @@ interface Student {
   email: string | null
   phone: string | null
   birthdate: string | null
+  faberid: string | null
   street: string | null
   street_nr: string | null
   zip: string | null
@@ -1018,6 +1098,7 @@ interface Props {
 interface Emits {
   (e: 'close'): void
   (e: 'studentUpdated', data: { id: string, [key: string]: any }): void
+  (e: 'open-reminder-modal', student: any): void
 }
 
 const props = defineProps<Props>()
@@ -1227,6 +1308,7 @@ const studentDocuments = ref<any[]>([])
 const examResults = ref<any[]>([])
 const cancellationPolicies = ref<any[]>([])
 const studentBalance = ref<number | undefined>(undefined) // ✅ NEU: Student credit balance
+const userBillingAddresses = ref<any[]>([]) // ✅ NEU: Firmen-Rechnungsadressen für diesen User
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
@@ -1489,10 +1571,24 @@ const togglePaymentSelection = (paymentId: string) => {
 
 // Toggle all payments
 const toggleAllPayments = () => {
-  // Nur auswählbar: offene Zahlungen (nicht bezahlt und nicht storniert)
-  const selectablePayments = filteredPayments.value.filter(p => 
-    p.payment_status !== 'completed' && !p.deleted_at
-  )
+  // Nur auswählbar: offene Zahlungen (nicht bezahlt und nicht gelöscht)
+  // Für abgesagte Termine: nur wenn Gebühr verrechnet wird (chargePercentage > 0)
+  const selectablePayments = filteredPayments.value.filter(p => {
+    // Skip deleted payments
+    if (p.deleted_at) return false
+    
+    // Skip already completed payments
+    if (p.payment_status === 'completed') return false
+    
+    // For cancelled appointments: only if there's a charge to collect
+    if (p.appointments?.status === 'cancelled') {
+      const chargePercentage = p.appointments.cancellation_charge_percentage ?? 100
+      return chargePercentage > 0
+    }
+    
+    // For non-cancelled appointments: always selectable if pending
+    return true
+  })
   
   if (selectedPayments.value.length === selectablePayments.length) {
     selectedPayments.value = []
@@ -1522,10 +1618,16 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     
     // Update payment_method for all selected payments
     for (const paymentId of selectedPayments.value) {
-      // Get the payment to find the associated appointment
+      // Get the full payment to check if cancelled
       const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
-        .select('appointment_id')
+        .select(`
+          id,
+          appointment_id,
+          total_amount_rappen,
+          admin_fee_rappen,
+          appointments(id, status, cancellation_charge_percentage)
+        `)
         .eq('id', paymentId)
         .single()
       
@@ -1534,13 +1636,39 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
         continue
       }
       
+      logger.debug(`📊 Payment data loaded:`, {
+        paymentId,
+        total_amount_rappen: paymentData.total_amount_rappen,
+        admin_fee_rappen: paymentData.admin_fee_rappen,
+        appointments: paymentData.appointments
+      })
+      
+      // ✅ NEW: For cancelled appointments, calculate actual charge to collect
+      let amountToMarkAsPaid = paymentData.total_amount_rappen
+      
+      if (paymentData.appointments?.status === 'cancelled') {
+        const chargePercentage = paymentData.appointments.cancellation_charge_percentage ?? 100
+        const appointmentCost = (paymentData.total_amount_rappen || 0) - (paymentData.admin_fee_rappen || 0)
+        const chargeAmount = Math.round(appointmentCost * chargePercentage / 100)
+        amountToMarkAsPaid = chargeAmount
+        
+        logger.debug(`💰 Cancelled payment - calculating charge:`, {
+          chargePercentage,
+          originalAmount: paymentData.total_amount_rappen,
+          chargeAmount,
+          appointmentCost
+        })
+      }
+      
       // Update payment
       const { error: updatePaymentError } = await supabase
         .from('payments')
         .update({ 
           payment_method: method === 'cash' ? 'cash' : 'wallee',
           payment_status: method === 'cash' ? 'completed' : 'pending',
-          paid_at: method === 'cash' ? new Date().toISOString() : null
+          paid_at: method === 'cash' ? new Date().toISOString() : null,
+          // ✅ NEW: Set total_amount_rappen to actual charge for cancelled appointments
+          total_amount_rappen: amountToMarkAsPaid
         })
         .eq('id', paymentId)
       
@@ -1568,13 +1696,14 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     }
     
     // Reload payments and lessons to reflect changes
+    const processedCount = selectedPayments.value.length
     await loadPayments()
     await loadLessons()
     
     // Clear selection after processing
     selectedPayments.value = []
     
-    logger.debug(`✅ Successfully processed ${selectedPayments.value.length} payments as ${method}`)
+    logger.debug(`✅ Successfully processed ${processedCount} payments as ${method}`)
   } catch (error) {
     console.error('❌ Error processing bulk payment:', error)
   } finally {
@@ -1598,13 +1727,24 @@ const totalSelectedAmount = computed(() => {
 
 // Handle click on payment card
 const handlePaymentCardClick = (payment: any) => {
-  // If cancelled, toggle expansion to show/hide details
+  // If cancelled, allow selection if there's a charge to collect
   if (payment.appointments?.status === 'cancelled') {
     logger.debug('📋 Toggling cancelled payment details:', payment.id)
+    // Toggle expansion to show/hide details
     if (expandedCancelledPayments.value.has(payment.id)) {
       expandedCancelledPayments.value.delete(payment.id)
     } else {
       expandedCancelledPayments.value.add(payment.id)
+    }
+    
+    // ✅ NEW: Also allow selection if there's a charge (chargePercentage > 0)
+    const chargePercentage = payment.appointments.cancellation_charge_percentage ?? 100
+    if (chargePercentage > 0 && payment.payment_status === 'pending') {
+      logger.debug('💳 Cancelled payment with charge can be selected - toggling selection', {
+        chargePercentage,
+        paymentStatus: payment.payment_status
+      })
+      togglePaymentSelection(payment.id)
     }
   }
   // If completed, ignore click
@@ -1652,6 +1792,11 @@ const closeModal = () => {
   emit('close')
 }
 
+// Open Reminder Modal for Pending Student
+const openReminderModal = () => {
+  emit('open-reminder-modal', selectedStudent.value)
+}
+
 // Check if current user can evaluate this lesson
 const canEvaluateLesson = (lesson: any): boolean => {
   // Admins können alle Lektionen bewerten
@@ -1688,9 +1833,46 @@ const closeEvaluationModal = () => {
 }
 
 const onEvaluationSaved = async () => {
-  logger.debug('✅ Evaluation saved, reloading lessons')
-  // Lade Lektionen neu um die aktualisierten Bewertungen zu sehen
-  await loadLessons()
+  logger.debug('✅ Evaluation saved, updating lesson')
+  
+  if (selectedAppointmentForEvaluation.value && lessons.value) {
+    // Find the updated appointment in the list
+    const aptIndex = lessons.value.findIndex(l => l.id === selectedAppointmentForEvaluation.value.id)
+    
+    if (aptIndex >= 0) {
+      logger.debug('Reloading evaluations for appointment:', selectedAppointmentForEvaluation.value.id)
+      
+      // Reload notes/evaluations for just this appointment
+      const supabase = getSupabase()
+      const { data: notesData } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('appointment_id', selectedAppointmentForEvaluation.value.id)
+      
+      if (notesData) {
+        // Get all evaluations (with criteria_rating)
+        const allEvaluations = notesData.filter(n => n.evaluation_criteria_id && n.criteria_rating)
+        
+        // ✅ CREATE A NEW OBJECT to trigger Vue's reactivity
+        const updatedLesson = {
+          ...lessons.value[aptIndex],
+          notes: notesData,
+          evaluations: allEvaluations,
+          allEvaluations: allEvaluations
+        }
+        
+        // ✅ Replace the entire lessons array to trigger reactivity
+        lessons.value = [
+          ...lessons.value.slice(0, aptIndex),
+          updatedLesson,
+          ...lessons.value.slice(aptIndex + 1)
+        ]
+        
+        logger.debug('✅ Updated lesson with', allEvaluations.length, 'evaluations')
+      }
+    }
+  }
+  
   closeEvaluationModal()
 }
 
@@ -2000,13 +2182,42 @@ const loadLessons = async () => {
       }
     }
     
+    // Build a map of previous evaluations to detect changes
+    const previousEvaluationsMap: Record<string, Record<string, any>> = {}
+    
     // Füge Evaluationen und Instructor-Namen zu Appointments hinzu
-    const lessonsWithEvaluations = (appointmentsData || []).map(apt => ({
-      ...apt,
-      notes: evaluationsMap[apt.id] || [],
-      evaluations: (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating),
-      instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
-    }))
+    const lessonsWithEvaluations = (appointmentsData || []).map((apt, index) => {
+      const aptEvaluations = (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating)
+      
+      // Filter to show only new or changed evaluations
+      let displayEvaluations = aptEvaluations
+      
+      // If this is not the first appointment, filter to show only new/changed evaluations
+      if (index > 0) {
+        // Get previous appointment's evaluations
+        const previousApt = appointmentsData[index - 1]
+        const previousEvals = (evaluationsMap[previousApt?.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating) || []
+        const prevEvalsMap: Record<string, any> = {}
+        previousEvals.forEach(e => {
+          prevEvalsMap[e.evaluation_criteria_id] = e
+        })
+        
+        // Show only evaluations that are new or have changed rating
+        displayEvaluations = aptEvaluations.filter(currentEval => {
+          const prevEval = prevEvalsMap[currentEval.evaluation_criteria_id]
+          // Show if: no previous eval (new) OR rating changed
+          return !prevEval || prevEval.criteria_rating !== currentEval.criteria_rating
+        })
+      }
+      
+      return {
+        ...apt,
+        notes: evaluationsMap[apt.id] || [],
+        evaluations: displayEvaluations,
+        allEvaluations: aptEvaluations, // Keep all for reference if needed
+        instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
+      }
+    })
     
     lessons.value = lessonsWithEvaluations
     
@@ -2604,10 +2815,42 @@ const loadStudentDocuments = async () => {
   }
 }
 
+// ===== USER BILLING ADDRESSES =====
+const loadUserBillingAddresses = async () => {
+  if (!props.selectedStudent) {
+    logger.debug('⚠️ No student selected')
+    return
+  }
+  
+  try {
+    logger.debug('🏢 Loading billing addresses for user:', props.selectedStudent.id)
+    
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('company_billing_addresses')
+      .select('*')
+      .eq('user_id', props.selectedStudent.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('❌ Error loading billing addresses:', error)
+      return
+    }
+    
+    userBillingAddresses.value = data || []
+    logger.debug('✅ Loaded', userBillingAddresses.value.length, 'billing addresses for user')
+  } catch (err: any) {
+    console.error('❌ Error in loadUserBillingAddresses:', err)
+  }
+}
+
 // Watch for tab changes to load documents when Documents tab is opened
 watch(() => activeTab.value, (newTab) => {
   if (newTab === 'documents') {
     loadStudentDocuments()
+  } else if (newTab === 'details') {
+    loadUserBillingAddresses()
   }
 })
 
@@ -2615,6 +2858,10 @@ watch(() => activeTab.value, (newTab) => {
 watch(() => props.selectedStudent, async () => {
   if (props.selectedStudent) {
     await loadStudentDocuments()
+    // Load billing addresses if details tab is currently active
+    if (activeTab.value === 'details') {
+      await loadUserBillingAddresses()
+    }
   }
 }, { immediate: true })
 

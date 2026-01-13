@@ -10,12 +10,12 @@
           <button
             v-if="activeTab === 'courses'"
             @click="openCreateCourseModal"
-            class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+            class="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
-            Kurs
+            Neuer Kurs erstellen
           </button>
           <button
             v-if="activeTab === 'categories'"
@@ -156,7 +156,11 @@
                 class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Alle Kursarten</option>
-                <option v-for="category in activeCategories" :key="category.id" :value="category.code">
+                <!-- SARI course types -->
+                <option value="VKU">📚 VKU (Verkehrskunde)</option>
+                <option value="PGS">🏍️ PGS (Motorrad)</option>
+                <!-- Custom categories -->
+                <option v-for="category in activeCategories" :key="category.id" :value="category.name">
                   {{ category.icon }} {{ category.name }}
                 </option>
               </select>
@@ -281,7 +285,19 @@
                 </tr>
                 
                 <!-- Courses List -->
-                <tr v-else v-for="course in filteredCourses" :key="course.id" class="hover:bg-gray-50 transition-colors cursor-pointer" @click="editCourse(course)">
+                <tr 
+                  v-else 
+                  v-for="course in filteredCourses" 
+                  :key="course.id" 
+                  :class="[
+                    'transition-colors cursor-pointer',
+                    course.sari_managed 
+                      ? 'bg-orange-50 hover:bg-orange-100' 
+                      : 'hover:bg-gray-50'
+                  ]"
+                  @click="editCourse(course)"
+                  :title="course.sari_managed ? 'SARI-verwalteter Kurs (Grunddaten nicht bearbeitbar)' : 'Kurs bearbeiten'"
+                >
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-start">
                       <div class="flex-shrink-0">
@@ -297,8 +313,10 @@
                   </td>
                   
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span :class="getCategoryBadgeClass(course.course_category?.name)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                      {{ course.course_category?.icon }} {{ course.course_category?.name || 'Unbekannt' }}
+                    <span :class="getCategoryBadgeClass(course.course_category?.name || course.category)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {{ course.course_category?.icon || (course.category === 'VKU' ? '📚' : course.category === 'PGS' ? '🏍️' : '📋') }} 
+                      {{ course.course_category?.name || course.category || 'Unbekannt' }}
+                      <span v-if="course.sari_managed" class="ml-1 text-orange-500" title="SARI verwaltet">⚡</span>
                     </span>
                   </td>
                   
@@ -329,6 +347,7 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-900">
                       {{ course.current_participants || 0 }} / {{ course.max_participants }}
+                      <span class="text-gray-500 ml-1">({{ Math.max(0, (course.max_participants || 0) - (course.current_participants || 0)) }} frei)</span>
                     </div>
                     <div v-if="course.waitlist_count > 0" class="text-xs text-yellow-600 mt-1">
                       +{{ course.waitlist_count }} Warteliste
@@ -348,10 +367,10 @@
                     <div v-else class="text-sm text-gray-500">Keine Sessions</div>
                   </td>
                   
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <td class="px-6 py-4 whitespace-nowrap" @click.stop>
                     <select 
                       :value="getCourseStatus(course)" 
-                      @change="handleStatusChange($event, course)"
+                      @change.stop="handleStatusChange($event, course)"
                       @click.stop
                       :class="getStatusBadgeClass(course)"
                       class="px-2 py-1 text-xs font-medium rounded-full border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -370,7 +389,7 @@
                       <button
                         @click.stop="manageEnrollments(course)"
                         class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Teilnehmer verwalten"
+                        :title="course.sari_managed ? 'SARI-Teilnehmer verwalten' : 'Teilnehmer verwalten'"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -379,13 +398,14 @@
                       <button
                         @click.stop="editCourse(course)"
                         class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
-                        title="Kurs bearbeiten"
+                        :title="course.sari_managed ? 'Kurs bearbeiten (SARI-Grunddaten geschützt)' : 'Kurs bearbeiten'"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                         </svg>
                       </button>
                       <button
+                        v-if="!course.sari_managed"
                         @click.stop="cancelCourse(course)"
                         class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                         title="Kurs absagen"
@@ -732,7 +752,7 @@
     </div>
 
     <!-- Create Course Modal -->
-    <div v-if="showCreateCourseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeCreateCourseModal">
+    <div v-if="showCreateCourseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeCreateCourseModal">
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-6xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div class="flex items-center justify-between">
@@ -748,18 +768,47 @@
           </div>
         </div>
         
+        <!-- SARI Warning Banner -->
+        <div v-if="editingCourse && editingCourse.sari_managed" class="mx-6 mt-4 p-4 bg-orange-100 border-l-4 border-orange-500 rounded">
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-orange-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-orange-800">
+                ⚡ SARI-verwalteter Kurs
+              </h3>
+              <div class="mt-2 text-sm text-orange-700">
+                <p>
+                  Dieser Kurs wird von SARI verwaltet. Kursname, Beschreibung und Sessions werden von SARI gesteuert und sind nicht bearbeitbar.
+                  Andere Einstellungen wie Preis und Anmeldefrist können Sie hier anpassen.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div class="px-6 py-6 space-y-6">
           <!-- Basic Course Info -->
           <div class="space-y-4">
             <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Grunddaten</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Kursname *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Kursname *
+                  <span v-if="editingCourse && editingCourse.sari_managed" class="text-xs text-orange-600 ml-2">(SARI-verwaltet)</span>
+                </label>
               <input
                 v-model="newCourse.name"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :readonly="editingCourse && editingCourse.sari_managed"
+                :class="[
+                  'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                  editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                ]"
                 placeholder="z.B. Verkehrskunde VKU"
               />
             </div>
@@ -807,11 +856,18 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Beschreibung</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Beschreibung
+              <span v-if="editingCourse && editingCourse.sari_managed" class="text-xs text-orange-600 ml-2">(SARI-verwaltet)</span>
+            </label>
             <textarea
               v-model="newCourse.description"
               rows="3"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :readonly="editingCourse && editingCourse.sari_managed"
+              :class="[
+                'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+              ]"
               placeholder="Kursbeschreibung..."
             ></textarea>
           </div>
@@ -857,9 +913,13 @@
           <!-- Course Sessions -->
           <div class="space-y-4">
             <div class="flex justify-between items-center border-b border-gray-200 pb-4">
-              <h3 class="text-lg font-medium text-gray-900">Kurs-Sessions</h3>
+              <h3 class="text-lg font-medium text-gray-900">
+                Kurs-Sessions
+                <span v-if="editingCourse && editingCourse.sari_managed" class="text-xs text-orange-600 ml-2">(SARI-verwaltet)</span>
+              </h3>
               <div class="flex gap-2">
                 <button
+                  v-if="!(editingCourse && editingCourse.sari_managed)"
                   @click="addSession"
                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2"
                 >
@@ -869,7 +929,7 @@
                   Session hinzufügen
                 </button>
                 <button
-                  v-if="selectedCategoryInfo && selectedCategoryInfo.session_count > 0"
+                  v-if="!(editingCourse && editingCourse.sari_managed) && selectedCategoryInfo && selectedCategoryInfo.session_count > 0"
                   @click="generateSessionsFromCategory"
                   type="button"
                   class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
@@ -907,6 +967,7 @@
                 <div class="flex justify-between items-center mb-4">
                   <h4 class="text-lg font-semibold text-gray-900">Session {{ index + 1 }}</h4>
                   <button
+                    v-if="!(editingCourse && editingCourse.sari_managed)"
                     @click="removeSession(index)"
                     type="button"
                     class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
@@ -929,7 +990,11 @@
                         v-model="session.date"
                         type="date"
                         required
-                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :readonly="editingCourse && editingCourse.sari_managed"
+                        :class="[
+                          'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                          editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                        ]"
                       />
                     </div>
                   </div>
@@ -939,7 +1004,11 @@
                       v-model="session.start_time"
                       type="time"
                       required
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      :readonly="editingCourse && editingCourse.sari_managed"
+                      :class="[
+                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                      ]"
                     />
                   </div>
                   <div>
@@ -948,14 +1017,22 @@
                       v-model="session.end_time"
                       type="time"
                       required
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      :readonly="editingCourse && editingCourse.sari_managed"
+                      :class="[
+                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                      ]"
                     />
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Instruktor-Typ</label>
                     <select
                       v-model="session.instructor_type"
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      :disabled="editingCourse && editingCourse.sari_managed"
+                      :class="[
+                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                      ]"
                     >
                       <option value="">Kein Instruktor</option>
                       <option value="internal">Interner Staff</option>
@@ -1187,7 +1264,7 @@
     </div>
 
     <!-- External Instructor Modal -->
-    <div v-if="showExternalInstructorModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeExternalInstructorModal">
+    <div v-if="showExternalInstructorModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeExternalInstructorModal">
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] overflow-y-auto admin-modal" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-xl font-bold text-gray-900">Externer Instruktor erstellen</h2>
@@ -1308,7 +1385,7 @@
     </div>
 
     <!-- Cancel Course Modal -->
-    <div v-if="showCancelCourseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="showCancelCourseModal = false; cancelingCourse = null; courseParticipants = []">
+    <div v-if="showCancelCourseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showCancelCourseModal = false; cancelingCourse = null; courseParticipants = []">
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] overflow-y-auto admin-modal" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-xl font-bold text-gray-900">Kurs absagen</h2>
@@ -1336,13 +1413,13 @@
                 <div class="flex justify-between items-center">
                   <div>
                     <div class="font-medium text-gray-900">
-                      {{ participant.user.first_name }} {{ participant.user.last_name }}
+                      {{ participant.participant.first_name }} {{ participant.participant.last_name }}
                     </div>
                     <div class="text-sm text-gray-600">
-                      {{ participant.user.email }}
+                      {{ participant.participant.email }}
                     </div>
-                    <div v-if="participant.user.phone" class="text-sm text-gray-600">
-                      {{ participant.user.phone }}
+                    <div v-if="participant.participant.phone" class="text-sm text-gray-600">
+                      {{ participant.participant.phone }}
                     </div>
                   </div>
                 </div>
@@ -1406,11 +1483,34 @@
       </div>
     </div>
 
-    <!-- Status Change Modal -->
-    <div v-if="showStatusChangeModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeStatusChangeModal">
-      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
-        <div class="px-6 py-4 border-b border-gray-200">
+    <!-- Status Change Modal - Using Teleport for reliable rendering -->
+    <Teleport to="body">
+      <!-- DEBUG: Check if modal renders -->
+      <div v-if="showStatusChangeModal" data-status-modal class="fixed top-0 right-0 bg-green-600 text-white p-4 z-[10000] text-sm font-bold shadow-lg">
+        ✅ MODAL IS RENDERING!
+      </div>
+      
+      <div 
+        v-if="showStatusChangeModal" 
+        class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[9999] p-4" 
+        @click.self="closeStatusChangeModal"
+      >
+        <div 
+          class="bg-white rounded-lg border border-gray-200 shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" 
+          @click.stop
+        >
+        <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
           <h2 class="text-xl font-bold text-gray-900">Kurs-Status ändern</h2>
+          <!-- DEBUG: Show modal state with visual indicator -->
+          <div class="mt-3 p-3 bg-white rounded border-2 border-blue-300">
+            <div class="text-xs font-mono space-y-1 text-gray-700">
+              <div>🔸 Modal Sichtbar: {{ showStatusChangeModal ? '✅ JA' : '❌ NEIN' }}</div>
+              <div>📍 Kurs ID: {{ statusChangeCourse?.id?.substring(0, 12) }}...</div>
+              <div>📝 Name: {{ statusChangeCourse?.name }}</div>
+              <div>🔄 Status: {{ oldStatus }} → {{ newStatus }}</div>
+              <div>🎯 isCanceling: {{ isCanceling }}</div>
+            </div>
+          </div>
         </div>
         
         <div class="px-6 py-4 space-y-6">
@@ -1512,14 +1612,16 @@
             <button
               @click="closeStatusChangeModal"
               :disabled="isCanceling"
-              class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors disabled:opacity-50 pointer-events-auto"
             >
               Abbrechen
             </button>
             <button
-              @click="confirmStatusChange"
+              @click.prevent.stop="() => { logger.debug('🎯 Status ändern Button clicked'); confirmStatusChange() }"
               :disabled="isCanceling"
-              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium pointer-events-auto"
+              style="pointer-events: auto !important"
+              type="button"
             >
               {{ isCanceling ? 'Ändere Status...' : 'Status ändern' }}
             </button>
@@ -1527,9 +1629,10 @@
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Create Category Modal -->
-    <div v-if="showCreateCategoryModal || showEditCategoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeCreateCategoryModal">
+    <div v-if="showCreateCategoryModal || showEditCategoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeCreateCategoryModal">
       <!-- Debug Info -->
       <div v-if="showEditCategoryModal" class="fixed top-4 left-4 bg-red-500 text-white p-2 rounded z-[9999] text-xs">
         DEBUG: Category Modal ist sichtbar! showEditCategoryModal = {{ showEditCategoryModal }}
@@ -1788,7 +1891,7 @@
     </div>
 
     <!-- Create Vehicle Modal -->
-    <div v-if="showCreateVehicleModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="showCreateVehicleModal = false; resetVehicleForm()">
+    <div v-if="showCreateVehicleModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showCreateVehicleModal = false; resetVehicleForm()">
       <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col admin-modal" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h2 class="text-xl font-bold text-gray-900">Neues Fahrzeug hinzufügen</h2>
@@ -1906,7 +2009,7 @@
     </div>
 
     <!-- Edit Vehicle Modal -->
-    <div v-if="showEditVehicleModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="cancelEditVehicle">
+    <div v-if="showEditVehicleModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="cancelEditVehicle">
       <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto admin-modal" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-xl font-bold text-gray-900">Fahrzeug bearbeiten</h2>
@@ -2023,7 +2126,7 @@
     </div>
 
     <!-- Create Room Modal -->
-    <div v-if="showCreateRoomModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="showCreateRoomModal = false; resetRoomForm()">
+    <div v-if="showCreateRoomModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showCreateRoomModal = false; resetRoomForm()">
       <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto admin-modal" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-xl font-bold text-gray-900">Neuen Raum hinzufügen</h2>
@@ -2338,11 +2441,19 @@
     </div>
 
     <!-- Enrollment Management Modal - SIMPLE -->
-    <div v-if="showEnrollmentModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeEnrollmentModal">
+    <div v-if="showEnrollmentModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeEnrollmentModal">
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-bold text-gray-900">Teilnehmer verwalten - {{ selectedCourse?.name }}</h2>
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">Teilnehmer verwalten - {{ selectedCourse?.name }}</h2>
+              <!-- DEBUG INFO -->
+              <div class="mt-2 text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded">
+                DEBUG: sari_managed = {{ selectedCourse?.sari_managed }} | 
+                sari_course_id = {{ selectedCourse?.sari_course_id }} |
+                category = {{ selectedCourse?.category }}
+              </div>
+            </div>
             <button
               @click="closeEnrollmentModal"
               class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -2373,6 +2484,48 @@
                 <span class="ml-2 text-blue-600">{{ (selectedCourse?.max_participants || 0) - currentEnrollments.length }}</span>
               </div>
             </div>
+            
+            <!-- SARI Import Button -->
+            <div v-if="selectedCourse?.sari_managed" class="mt-4 pt-4 border-t border-gray-200">
+              <div class="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <p class="text-sm text-purple-800">
+                  ⚡ Dieser Kurs wird von SARI verwaltet. 
+                  SARI Course ID: <code class="bg-purple-100 px-2 py-1 rounded">{{ selectedCourse.sari_course_id }}</code>
+                </p>
+              </div>
+              <button
+                @click="syncSARIParticipants"
+                :disabled="isSyncingSARIParticipants"
+                class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
+              >
+                <svg v-if="isSyncingSARIParticipants" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                {{ isSyncingSARIParticipants ? 'Importiere...' : 'SARI Teilnehmer importieren' }}
+              </button>
+              <p v-if="sariParticipantsSyncMessage" :class="sariParticipantsSyncSuccess ? 'text-green-600' : 'text-red-600'" class="mt-2 text-sm">
+                {{ sariParticipantsSyncMessage }}
+              </p>
+            </div>
+            
+            <!-- DEBUG: Show if course is NOT SARI managed -->
+            <div v-else class="mt-4 pt-4 border-t border-gray-200">
+              <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p class="text-sm text-gray-600">
+                  ℹ️ Dieser Kurs wird <strong>nicht</strong> von SARI verwaltet.
+                  <span v-if="selectedCourse?.sari_managed === false">
+                    (sari_managed: false)
+                  </span>
+                  <span v-else-if="selectedCourse?.sari_managed === undefined">
+                    (sari_managed: undefined)
+                  </span>
+                </p>
+              </div>
+            </div>
           </div>
 
           <!-- Current Participants -->
@@ -2395,15 +2548,15 @@
                 <div class="flex items-center space-x-4">
                   <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <span class="text-blue-600 font-medium text-sm">
-                      {{ enrollment.user?.first_name?.charAt(0) }}{{ enrollment.user?.last_name?.charAt(0) }}
+                      {{ enrollment.participant.first_name?.charAt(0) }}{{ enrollment.participant.last_name?.charAt(0) }}
                     </span>
                   </div>
                   <div>
                     <div class="font-medium text-gray-900">
-                      {{ enrollment.user?.first_name }} {{ enrollment.user?.last_name }}
+                      {{ enrollment.participant.first_name }} {{ enrollment.participant.last_name }}
                     </div>
-                    <div class="text-sm text-gray-500">{{ enrollment.user?.email }}</div>
-                    <div v-if="enrollment.user?.phone" class="text-sm text-gray-500">{{ enrollment.user?.phone }}</div>
+                    <div class="text-sm text-gray-500">{{ enrollment.participant.email }}</div>
+                    <div v-if="enrollment.participant.phone" class="text-sm text-gray-500">{{ enrollment.participant.phone }}</div>
                   </div>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -2545,8 +2698,8 @@
             <!-- Add Participant Form -->
             <div v-if="showAddParticipantForm" class="bg-gray-50 rounded-lg p-6">
               
-              <!-- Mode Toggle -->
-              <div class="flex space-x-1 bg-gray-200 rounded-lg p-1 mb-6">
+              <!-- Mode Toggle (hide "Neuer Kunde" for SARI courses) -->
+              <div v-if="!selectedCourse?.sari_managed" class="flex space-x-1 bg-gray-200 rounded-lg p-1 mb-6">
                 <button
                   @click="enrollmentMode = 'search'"
                   :class="[
@@ -2570,9 +2723,17 @@
                   ➕ Neuer Kunde
                 </button>
               </div>
+              
+              <!-- SARI Info for SARI Courses -->
+              <div v-if="selectedCourse?.sari_managed" class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                <h3 class="text-sm font-medium text-purple-900 mb-2">⚡ SARI-verwalteter Kurs</h3>
+                <p class="text-sm text-purple-800 mb-3">
+                  Teilnehmer können nur über SARI hinzugefügt werden. Verwende die SARI Daten laden Funktion unten.
+                </p>
+              </div>
 
-              <!-- Search Existing User Mode -->
-              <div v-if="enrollmentMode === 'search'">
+              <!-- Search Existing User Mode (hide for SARI courses) -->
+              <div v-if="enrollmentMode === 'search' && !selectedCourse?.sari_managed">
                 <div class="mb-4">
                   <label class="block text-sm font-medium text-gray-500 mb-2">Kunde suchen</label>
                   <div class="flex space-x-2">
@@ -2613,7 +2774,7 @@
               </div>
 
               <!-- New User Mode -->
-              <div v-if="enrollmentMode === 'new'">
+              <div v-if="enrollmentMode === 'new' && !selectedCourse?.sari_managed">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-500 mb-2">Vorname *</label>
@@ -2747,10 +2908,10 @@
               >
                 <div class="flex-1">
                   <div class="font-semibold text-gray-900 text-lg">
-                    {{ enrollment.user?.first_name || enrollment.first_name }} {{ enrollment.user?.last_name || enrollment.last_name }}
+                    {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
                   </div>
-                  <div class="text-sm text-gray-600">{{ enrollment.user?.email || enrollment.email }}</div>
-                  <div v-if="enrollment.user?.phone || enrollment.phone" class="text-sm text-gray-500">📞 {{ enrollment.user?.phone || enrollment.phone }}</div>
+                  <div class="text-sm text-gray-600">{{ enrollment.participant.email || enrollment.email }}</div>
+                  <div v-if="enrollment.participant.phone || enrollment.phone" class="text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
                 </div>
                 <div class="flex items-center space-x-3">
                   <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-3 py-1 text-xs font-medium rounded-full">
@@ -2780,10 +2941,10 @@
                 >
                   <div class="flex-1">
                     <div class="font-semibold text-gray-900 text-lg">
-                      {{ enrollment.user?.first_name || enrollment.first_name }} {{ enrollment.user?.last_name || enrollment.last_name }}
+                      {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
                     </div>
-                    <div class="text-sm text-gray-600">{{ enrollment.user?.email || enrollment.email }}</div>
-                    <div v-if="enrollment.user?.phone || enrollment.phone" class="text-sm text-gray-500">📞 {{ enrollment.user?.phone || enrollment.phone }}</div>
+                    <div class="text-sm text-gray-600">{{ enrollment.participant.email || enrollment.email }}</div>
+                    <div v-if="enrollment.participant.phone || enrollment.phone" class="text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
                     <div class="text-xs text-red-600 mt-1">
                       Gelöscht am: {{ formatDateTime(enrollment.deleted_at) }}
                       <span v-if="enrollment.deleted_by_user">
@@ -3093,10 +3254,10 @@
             >
               <div class="flex-1 min-w-0">
                 <div class="font-semibold text-gray-900 text-base sm:text-lg truncate">
-                  {{ enrollment.user?.first_name || enrollment.first_name }} {{ enrollment.user?.last_name || enrollment.last_name }}
+                  {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
                 </div>
-                <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.user?.email || enrollment.email }}</div>
-                <div v-if="enrollment.user?.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.user?.phone || enrollment.phone }}</div>
+                <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.participant.email || enrollment.email }}</div>
+                <div v-if="enrollment.participant.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
               </div>
               <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
                 <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-2 sm:px-3 py-1 text-xs font-medium rounded-full">
@@ -3126,10 +3287,10 @@
               >
                 <div class="flex-1 min-w-0">
                   <div class="font-semibold text-gray-900 text-base sm:text-lg truncate">
-                    {{ enrollment.user?.first_name || enrollment.first_name }} {{ enrollment.user?.last_name || enrollment.last_name }}
+                    {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
                   </div>
-                  <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.user?.email || enrollment.email }}</div>
-                  <div v-if="enrollment.user?.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.user?.phone || enrollment.phone }}</div>
+                  <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.participant.email || enrollment.email }}</div>
+                  <div v-if="enrollment.participant.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
                   <div class="text-xs text-red-600 mt-1">
                     Gelöscht am: {{ formatDateTime(enrollment.deleted_at) }}
                     <span v-if="enrollment.deleted_by_user" class="block sm:inline">
@@ -3813,52 +3974,28 @@ import { useRoomReservations } from '~/composables/useRoomReservations'
 import { useVehicleReservations } from '~/composables/useVehicleReservations'
 import { useModal } from '~/composables/useModal'
 import { useGeneralResources } from '~/composables/useGeneralResources'
-import { formatDateTime } from '~/utils/dateUtils'
-
-const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'Kein Datum'
-
-  try {
-    // Sehr flexibler Regex für verschiedene Formate
-    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2}).*?(\d{2}):(\d{2})/)
-
-    if (!match) {
-      console.warn('No regex match for dateString:', dateString)
-      return 'Ungültiges Datum'
-    }
-
-    const [, year, month, day, hour, minute] = match
-
-    // Format als de-CH: DD.MM.YYYY
-    return `${day}.${month}.${year}`
-  } catch (error) {
-    console.warn('Error formatting date:', dateString, error)
-    return 'Datum Fehler'
-  }
-}
-
-const formatTime = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'Keine Zeit'
-
-  try {
-    // Sehr flexibler Regex für verschiedene Formate
-    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2}).*?(\d{2}):(\d{2})/)
-
-    if (!match) {
-      console.warn('No regex match for dateString:', dateString)
-      return 'Ungültige Zeit'
-    }
-
-    const [, year, month, day, hour, minute] = match
-
-    // Format als de-CH: HH:MM
-    return `${hour}:${minute}`
-  } catch (error) {
-    console.warn('Error formatting time:', dateString, error)
-    return 'Zeit Fehler'
-  }
-}
+import { formatDateTime, formatDate, formatTime } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
+
+// Simple toast notification functions
+const showSuccessToast = (title: string, message: string = '') => {
+  console.log('✅ SUCCESS:', title, message)
+  // TODO: Implement proper toast UI
+  alert(`✅ ${title}\n${message}`)
+}
+
+const showWarningToast = (title: string, message: string = '') => {
+  console.warn('⚠️ WARNING:', title, message)
+  // TODO: Implement proper toast UI
+  alert(`⚠️ ${title}\n${message}`)
+}
+
+const showErrorToast = (title: string, message: string = '') => {
+  console.error('❌ ERROR:', title, message)
+  // TODO: Implement proper toast UI
+  alert(`❌ ${title}\n${message}`)
+}
 
 definePageMeta({
   layout: 'admin'
@@ -3974,6 +4111,61 @@ const showStatusChangeModal = ref(false)
 const statusChangeCourse = ref<any>(null)
 const oldStatus = ref('')
 const newStatus = ref('')
+
+// DEBUG: Watch for showStatusChangeModal changes - BRUTE FORCE DOM INJECTION
+watch(showStatusChangeModal, (newVal, oldVal) => {
+  console.log('🔴🔴🔴 WATCH: showStatusChangeModal changed!', { oldVal, newVal })
+  
+  // Remove any existing brute-force modal
+  const existingModal = document.getElementById('brute-force-status-modal')
+  if (existingModal) {
+    existingModal.remove()
+  }
+  
+  if (newVal && statusChangeCourse.value) {
+    console.log('🔴🔴🔴 CREATING BRUTE FORCE MODAL!')
+    
+    // Create modal backdrop
+    const modalBackdrop = document.createElement('div')
+    modalBackdrop.id = 'brute-force-status-modal'
+    modalBackdrop.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 99999;'
+    
+    // Create modal content
+    const modalContent = document.createElement('div')
+    modalContent.style.cssText = 'background: white; padding: 24px; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);'
+    modalContent.innerHTML = `
+      <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 16px;">🔄 Kurs-Status ändern</h2>
+      <p style="margin-bottom: 8px;"><strong>Kurs:</strong> ${statusChangeCourse.value?.name || 'Unbekannt'}</p>
+      <p style="margin-bottom: 16px;"><strong>Status:</strong> ${oldStatus.value} → ${newStatus.value}</p>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="bf-cancel-btn" style="padding: 8px 16px; background: #e5e7eb; border-radius: 6px; cursor: pointer;">Abbrechen</button>
+        <button id="bf-confirm-btn" style="padding: 8px 16px; background: #2563eb; color: white; border-radius: 6px; cursor: pointer;">Status ändern</button>
+      </div>
+    `
+    
+    modalBackdrop.appendChild(modalContent)
+    document.body.appendChild(modalBackdrop)
+    
+    // Add event listeners
+    document.getElementById('bf-cancel-btn')?.addEventListener('click', () => {
+      showStatusChangeModal.value = false
+    })
+    
+    document.getElementById('bf-confirm-btn')?.addEventListener('click', () => {
+      // Call the actual confirm function
+      confirmStatusChange()
+    })
+    
+    // Close on backdrop click
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) {
+        showStatusChangeModal.value = false
+      }
+    })
+    
+    console.log('🔴🔴🔴 BRUTE FORCE MODAL CREATED!')
+  }
+}, { immediate: false })
 const statusChangeOptions = ref({
   notifyParticipants: true,
   updateLandingPage: true,
@@ -4008,6 +4200,11 @@ const selectedCourse = ref<any>(null)
 const currentEnrollments = ref<any[]>([])
 const deletedEnrollments = ref<any[]>([])
 const showDeletedParticipants = ref(false)
+
+// SARI Participants Sync
+const isSyncingSARIParticipants = ref(false)
+const sariParticipantsSyncMessage = ref('')
+const sariParticipantsSyncSuccess = ref(false)
 const isAddingParticipant = ref(false)
 const showAddParticipantForm = ref(false)
 const enrollmentMode = ref('search') // 'search' or 'new'
@@ -4278,7 +4475,11 @@ const filteredCourses = computed(() => {
   }
 
   if (selectedCategory.value) {
-    filtered = filtered.filter(course => course.course_category?.name === selectedCategory.value)
+    // Filter by course_category.name OR category field (for SARI courses)
+    filtered = filtered.filter(course => 
+      course.course_category?.name === selectedCategory.value ||
+      course.category === selectedCategory.value
+    )
   }
 
   if (selectedStatus.value) {
@@ -4334,16 +4535,33 @@ const loadCourses = async () => {
       `)
       .eq('tenant_id', currentUser.value.tenant_id)
       .eq('is_active', true)
-      .order('created_at', { ascending: false })
 
     if (coursesError) throw coursesError
+
+    // Sort sessions within each course and sort courses by earliest session start_time
+    if (coursesData) {
+      // First, sort sessions within each course
+      coursesData.forEach((course: any) => {
+        if (course.sessions?.length > 0) {
+          course.sessions.sort((a: any, b: any) => 
+            new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+          )
+        }
+      })
+      // Then sort courses by their first session's start_time (ascending = upcoming first)
+      coursesData.sort((a: any, b: any) => {
+        const aStart = a.sessions?.[0]?.start_time ? new Date(a.sessions[0].start_time).getTime() : Infinity
+        const bStart = b.sessions?.[0]?.start_time ? new Date(b.sessions[0].start_time).getTime() : Infinity
+        return aStart - bStart
+      })
+    }
 
     // Process courses data
     courses.value = (coursesData || []).map(course => ({
       ...course,
       next_session: course.sessions?.find((s: any) => new Date(s.start_time) > new Date()),
-      waitlist_count: course.waitlist?.length || 0,
-      current_participants: course.registrations?.filter((r: any) => r.status === 'confirmed' && r.deleted_at === null).length || 0
+      waitlist_count: course.waitlist?.length || 0
+      // Use current_participants from DB directly (already maintained there)
     }))
 
     // Calculate stats
@@ -4708,17 +4926,40 @@ const loadCourseSessions = async (courseId: string) => {
 
     if (error) throw error
 
-      courseSessions.value = (sessions || []).map(session => ({
-        date: session.start_time.split('T')[0],
-        start_time: session.start_time.split('T')[1].slice(0, 5),
-        end_time: session.end_time.split('T')[1].slice(0, 5),
-        description: session.description || '',
-        instructor_type: session.instructor_type || null,
-        staff_id: session.staff_id || null,
-        external_instructor_name: session.external_instructor_name || null,
-        external_instructor_email: session.external_instructor_email || null,
-        external_instructor_phone: session.external_instructor_phone || null
-      }))
+      courseSessions.value = (sessions || []).map(session => {
+        // Convert UTC times to local time (Europe/Zurich)
+        const startDate = new Date(session.start_time)
+        const endDate = new Date(session.end_time)
+        
+        // Format date as YYYY-MM-DD in local timezone
+        const localDate = startDate.toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' }) // sv-SE gives YYYY-MM-DD format
+        
+        // Format time as HH:MM in local timezone
+        const localStartTime = startDate.toLocaleTimeString('de-CH', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: false,
+          timeZone: 'Europe/Zurich'
+        })
+        const localEndTime = endDate.toLocaleTimeString('de-CH', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: false,
+          timeZone: 'Europe/Zurich'
+        })
+        
+        return {
+          date: localDate,
+          start_time: localStartTime,
+          end_time: localEndTime,
+          description: session.description || '',
+          instructor_type: session.instructor_type || null,
+          staff_id: session.staff_id || null,
+          external_instructor_name: session.external_instructor_name || null,
+          external_instructor_email: session.external_instructor_email || null,
+          external_instructor_phone: session.external_instructor_phone || null
+        }
+      })
 
     logger.debug(`✅ Loaded ${courseSessions.value.length} sessions for course ${courseId}`)
   } catch (error) {
@@ -4752,12 +4993,12 @@ const closeCreateCategoryModal = () => {
 
 // Helper functions
 const getCourseStatus = (course: any) => {
-  // Use manual status if set, otherwise calculate automatically
-  if (course.status && course.status !== 'draft') {
+  // Always use the database status if it's set
+  if (course.status) {
     return course.status
   }
   
-  // Automatic status calculation for draft courses
+  // Fallback: Automatic status calculation if no status is set
   if (course.current_participants >= course.max_participants) return 'full'
   if (!course.sessions || course.sessions.length === 0) return 'draft'
   
@@ -4778,7 +5019,7 @@ const getCourseStatus = (course: any) => {
   const firstSession = course.sessions?.[0]
   if (firstSession && new Date(firstSession.start_time) > now) return 'upcoming'
   
-  return 'active'
+  return 'draft'
 }
 
 const getStatusText = (course: any) => {
@@ -4798,25 +5039,25 @@ const getStatusText = (course: any) => {
 const getStatusBadgeClass = (course: any) => {
   const status = getCourseStatus(course)
   switch (status) {
-    case 'draft': return 'bg-gray-100 text-gray-800'
-    case 'active': return 'bg-green-100 text-green-800'
-    case 'full': return 'bg-red-100 text-red-800'
-    case 'running': return 'bg-blue-100 text-blue-800'
-    case 'completed': return 'bg-green-200 text-green-900'
-    case 'cancelled': return 'bg-red-200 text-red-900'
-    case 'upcoming': return 'bg-yellow-100 text-yellow-800'
-    default: return 'bg-gray-100 text-gray-800'
+    case 'draft': return 'bg-gray-500 text-white'
+    case 'active': return 'bg-green-600 text-white'
+    case 'full': return 'bg-red-600 text-white'
+    case 'running': return 'bg-blue-600 text-white'
+    case 'completed': return 'bg-green-700 text-white'
+    case 'cancelled': return 'bg-red-700 text-white'
+    case 'upcoming': return 'bg-yellow-500 text-white'
+    default: return 'bg-gray-500 text-white'
   }
 }
 
 const getCategoryBadgeClass = (category: string) => {
   switch (category) {
-    case 'VKU': return 'bg-blue-100 text-blue-800'
-    case 'PGS': return 'bg-purple-100 text-purple-800'
-    case 'CZV': return 'bg-orange-100 text-orange-800'
-    case 'Fahrlehrer': return 'bg-indigo-100 text-indigo-800'
-    case 'Privat': return 'bg-gray-100 text-gray-800'
-    default: return 'bg-gray-100 text-gray-800'
+    case 'VKU': return 'bg-blue-600 text-white'
+    case 'PGS': return 'bg-purple-600 text-white'
+    case 'CZV': return 'bg-orange-600 text-white'
+    case 'Fahrlehrer': return 'bg-indigo-600 text-white'
+    case 'Privat': return 'bg-gray-600 text-white'
+    default: return 'bg-gray-600 text-white'
   }
 }
 
@@ -5254,7 +5495,15 @@ const openCreateCourseModal = async () => {
 
 // Edit Course Function
 const editCourse = (course: any) => {
+  // DEBUG: Log call stack to find who is calling this
+  console.trace('🔴 editCourse CALLED - STACK TRACE:')
   logger.debug('Edit course:', course.id)
+  
+  // TEMPORARY: If status modal is open, don't open edit modal
+  if (showStatusChangeModal.value) {
+    logger.debug('❌ Edit blocked - status modal is open')
+    return
+  }
   
   // Populate form with course data
   newCourse.value = {
@@ -5290,107 +5539,346 @@ const editCourse = (course: any) => {
 }
 
 const handleStatusChange = (event: Event, course: any) => {
+  logger.debug('═══════════════════════════════════════════')
+  logger.debug('🔄 handleStatusChange STARTED')
+  logger.debug('═══════════════════════════════════════════')
+  
   const target = event.target as HTMLSelectElement
-  const newStatusValue = target.value
+  const newStatusValue = target?.value || ''
+  
+  logger.debug('📥 Event details:', {
+    eventType: event.type,
+    targetTagName: target?.tagName,
+    targetValue: newStatusValue,
+    hasTarget: !!target
+  })
+  
+  logger.debug('📊 Course details:', { 
+    courseId: course?.id,
+    courseName: course?.name,
+    currentStatus: course?.status
+  })
   
   logger.debug('🔄 Status change triggered:', { 
     oldStatus: course.status, 
     newStatus: newStatusValue,
-    courseName: course.name 
+    courseName: course.name,
+    isSameStatus: newStatusValue === course.status
   })
   
   // If same status, do nothing
   if (newStatusValue === course.status) {
     logger.debug('⚠️ Same status selected, ignoring')
+    logger.debug('═══════════════════════════════════════════')
     return
   }
   
   // Reset dropdown to old value immediately (will be updated after confirmation)
-  target.value = course.status
-  
-  // Open modal
-  updateCourseStatus(course, newStatusValue)
-}
-
-const updateCourseStatus = async (course: any, newStatusValue: string) => {
-  logger.debug('📋 Opening status change modal...')
-  
-  // Open modal for confirmation and options
-  statusChangeCourse.value = course
-  oldStatus.value = course.status
-  newStatus.value = newStatusValue
-  
-  // Reset options
-  statusChangeOptions.value = {
-    notifyParticipants: true,
-    updateLandingPage: true,
-    cancellationReasonId: null,
-    customMessage: ''
+  if (target) {
+    target.value = course.status
+    logger.debug('✅ Dropdown reset to:', course.status)
   }
   
-  showStatusChangeModal.value = true
+  // Open modal
+  logger.debug('📋 Calling updateCourseStatus...')
+  updateCourseStatus(course, newStatusValue)
+  logger.debug('═══════════════════════════════════════════')
+}
+
+const updateCourseStatus = (course: any, newStatusValue: string) => {
+  logger.debug('═══════════════════════════════════════════')
+  logger.debug('📋 updateCourseStatus STARTED')
+  logger.debug('═══════════════════════════════════════════')
   
-  logger.debug('✅ Modal state set:', {
-    showStatusChangeModal: showStatusChangeModal.value,
-    oldStatus: oldStatus.value,
-    newStatus: newStatus.value
-  })
+  try {
+    if (!course || !course.id) {
+      throw new Error('❌ Invalid course object!')
+    }
+    
+    if (!newStatusValue) {
+      throw new Error('❌ No status value provided!')
+    }
+    
+    logger.debug('✅ Validation passed, setting up modal...')
+    
+    // Close any open edit modals to prevent z-index conflicts
+    logger.debug('🔒 Closing edit modal if open...')
+    editingCourse.value = null
+    // NOT: showCreateCourseModal.value = false  ← Das war der Fehler!
+    
+    // Open modal for confirmation and options
+    statusChangeCourse.value = course
+    oldStatus.value = course.status
+    newStatus.value = newStatusValue
+    
+    logger.debug('📦 Modal state (before modal open):', {
+      statusChangeCourse: statusChangeCourse.value?.id,
+      oldStatus: oldStatus.value,
+      newStatus: newStatus.value
+    })
+    
+    // Reset options
+    statusChangeOptions.value = {
+      notifyParticipants: true,
+      updateLandingPage: true,
+      cancellationReasonId: null,
+      customMessage: ''
+    }
+    
+    logger.debug('🎨 Setting showStatusChangeModal to true...')
+    showStatusChangeModal.value = true
+    
+    logger.debug('✅ Modal state set:', {
+      showStatusChangeModal: showStatusChangeModal.value,
+      oldStatus: oldStatus.value,
+      newStatus: newStatus.value,
+      courseName: statusChangeCourse.value?.name,
+      courseId: statusChangeCourse.value?.id
+    })
+  } catch (err: any) {
+    logger.error('❌ Error in updateCourseStatus:', {
+      message: err.message,
+      stack: err.stack
+    })
+  }
+  
+  logger.debug('═══════════════════════════════════════════')
 }
 
 const confirmStatusChange = async () => {
-  if (!statusChangeCourse.value) return
+  logger.debug('🔘 confirmStatusChange clicked!')
+  logger.debug('📋 Current state before update:', {
+    statusChangeCourse: statusChangeCourse.value?.id,
+    oldStatus: oldStatus.value,
+    newStatus: newStatus.value,
+    showStatusChangeModal: showStatusChangeModal.value
+  })
+  
+  if (!statusChangeCourse.value) {
+    logger.error('❌ statusChangeCourse is null!')
+    return
+  }
   
   try {
     isCanceling.value = true
     
+    const courseId = statusChangeCourse.value.id
+    const tenantId = statusChangeCourse.value.tenant_id
+    const oldStatusForLogging = oldStatus.value
+    const newStatusForLogging = newStatus.value
+    
+    logger.debug('📊 Update Details:', {
+      courseId,
+      tenantId,
+      oldStatusForLogging,
+      newStatusForLogging,
+      currentUser: currentUser.value?.id,
+      userRole: currentUser.value?.role,
+      userTenantId: currentUser.value?.tenant_id
+    })
+    
+    // Verify we have valid data
+    if (!courseId) {
+      throw new Error('❌ Course ID is missing!')
+    }
+    
+    if (!newStatusForLogging) {
+      throw new Error('❌ New status is not selected!')
+    }
+    
+    if (newStatusForLogging === oldStatusForLogging) {
+      throw new Error('❌ New status is the same as old status!')
+    }
+    
     const updateData: any = {
-      status: newStatus.value,
-        status_changed_at: new Date().toISOString(),
-        status_changed_by: currentUser.value.id
+      status: newStatusForLogging,
+      status_changed_at: new Date().toISOString(),
+      status_changed_by: currentUser.value.id
     }
     
     // If changing to cancelled, add cancellation fields
-    if (newStatus.value === 'cancelled') {
+    if (newStatusForLogging === 'cancelled') {
       updateData.cancelled_at = new Date().toISOString()
       updateData.cancelled_by = currentUser.value.id
-      
-      // TODO: Cancel all course appointments
-      // TODO: Refund/credit payments
     }
     
-    const { error: updateError } = await getSupabase()
+    logger.debug('📝 Preparing update:', {
+      courseId,
+      updateData,
+      updateKeys: Object.keys(updateData)
+    })
+    
+    const supabase = getSupabase()
+    
+    // Step 1: Verify read access
+    logger.debug('🔍 Step 1: Testing read access...')
+    const { data: readTest, error: readError } = await supabase
+      .from('courses')
+      .select('id, status, tenant_id, name')
+      .eq('id', courseId)
+      .single()
+    
+    logger.debug('📖 Read test result:', { 
+      success: !readError,
+      courseId: readTest?.id,
+      currentStatus: readTest?.status,
+      courseName: readTest?.name,
+      readError: readError ? {
+        code: readError.code,
+        message: readError.message
+      } : null
+    })
+    
+    if (readError) {
+      logger.error('❌ Cannot read course:', readError)
+      throw new Error(`Cannot read course: ${readError.message}`)
+    }
+    
+    // Step 2: Execute update
+    logger.debug('✏️ Step 2: Executing update...')
+    logger.debug('📊 Update payload:', updateData)
+    
+    const { data: updateResult, error: updateError } = await supabase
       .from('courses')
       .update(updateData)
-      .eq('id', statusChangeCourse.value.id)
+      .eq('id', courseId)
+      .select()
+      .single()
 
-    if (updateError) throw updateError
+    logger.debug('📤 Update response (raw):', { 
+      success: !updateError,
+      data: updateResult,
+      error: updateError ? {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint
+      } : null
+    })
 
-    // Update local course object
-    statusChangeCourse.value.status = newStatus.value
+    if (updateError) {
+      logger.error('❌ Update error:', {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint
+      })
+      throw updateError
+    }
     
-    // TODO: If notifyParticipants is true, send emails
-    // TODO: If updateLandingPage is true, update visibility
+    if (!updateResult) {
+      throw new Error('Update returned no data - possibly blocked by RLS policy')
+    }
     
-    success.value = `Kurs-Status auf "${getStatusText({ status: newStatus.value })}" geändert!`
+    // Step 2b: Verify the update actually changed the status in the DB
+    logger.debug('✔️ Step 2b: Verifying update was written to DB...')
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('courses')
+      .select('id, status, status_changed_at, status_changed_by')
+      .eq('id', courseId)
+      .single()
+    
+    logger.debug('🔍 Verify result:', {
+      id: verifyData?.id,
+      statusInDB: verifyData?.status,
+      expectedStatus: newStatusForLogging,
+      statusMatches: verifyData?.status === newStatusForLogging,
+      verifyError: verifyError ? {
+        code: verifyError.code,
+        message: verifyError.message
+      } : null
+    })
+    
+    if (verifyError) {
+      logger.error('❌ Verify error:', verifyError)
+      throw verifyError
+    }
+    
+    if (verifyData?.status !== newStatusForLogging) {
+      logger.error('❌ CRITICAL: Update failed silently!', {
+        expectedStatus: newStatusForLogging,
+        actualStatusInDB: verifyData?.status,
+        possibleCause: 'RLS Policy blocked the update but didnt report error'
+      })
+      throw new Error(`Status in DB is still "${verifyData?.status}" - RLS policy may be blocking the update`)
+    }
+    
+    const updatedCourse = verifyData
+    
+    logger.debug('✅ Course status updated in DB:', {
+      id: updatedCourse.id,
+      oldStatus: oldStatusForLogging,
+      newStatus: updatedCourse.status,
+      timestamp: updatedCourse.status_changed_at
+    })
+
+    // Step 3: Update local course object
+    logger.debug('🔄 Step 3: Updating local course object...')
+    const courseIndex = courses.value.findIndex(c => c.id === courseId)
+    logger.debug(`🔎 Found course at index: ${courseIndex}`)
+    
+    if (courseIndex !== -1) {
+      const oldLocalStatus = courses.value[courseIndex].status
+      
+      // Use Vue's reactivity with Object.assign to ensure proper tracking
+      courses.value[courseIndex] = Object.assign({}, courses.value[courseIndex], {
+        status: updatedCourse.status,
+        status_changed_at: updatedCourse.status_changed_at,
+        status_changed_by: updatedCourse.status_changed_by
+      })
+      
+      logger.debug('✅ Local course updated:', { 
+        courseIndex,
+        oldStatus: oldLocalStatus,
+        newStatus: courses.value[courseIndex].status,
+        name: courses.value[courseIndex].name,
+        verifyStatus: courses.value[courseIndex].status === updatedCourse.status
+      })
+    } else {
+      logger.warn('⚠️ Course not found in local array for index update!')
+    }
+    
+    // Step 4: Update UI state
+    logger.debug('🎨 Step 4: Updating UI state...')
+    success.value = `Kurs-Status auf "${getStatusText({ status: updatedCourse.status })}" geändert!`
     showStatusChangeModal.value = false
     statusChangeCourse.value = null
+    oldStatus.value = ''
+    newStatus.value = ''
     
-    // Reload courses to refresh data
-    await loadCourses()
+    logger.debug('✅ Final state:', {
+      successMessage: success.value,
+      modalVisible: showStatusChangeModal.value,
+      statusChangeCourse: statusChangeCourse.value
+    })
+    
+    // Step 5: Reload courses in background
+    logger.debug('🔄 Step 5: Reloading courses in background...')
+    loadCourses().catch(err => {
+      logger.error('⚠️ Error reloading courses:', err)
+    })
     
   } catch (err: any) {
-    console.error('Error updating course status:', err)
+    logger.error('❌ Error updating course status:', {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      stack: err.stack
+    })
     error.value = `Fehler beim Status-Update: ${err.message}`
   } finally {
     isCanceling.value = false
+    logger.debug('✅ confirmStatusChange completed')
   }
 }
 
 const closeStatusChangeModal = () => {
+  logger.debug('🔐 Closing status change modal...')
   showStatusChangeModal.value = false
   statusChangeCourse.value = null
   oldStatus.value = ''
   newStatus.value = ''
+  logger.debug('✅ Modal closed, reopening edit modal if needed...')
 }
 
 const cancelCourse = (course: any) => {
@@ -5407,7 +5895,14 @@ const loadCourseParticipants = async (courseId: string) => {
       .from('course_registrations')
       .select(`
         *,
-        user:users!course_registrations_user_id_fkey(first_name, last_name, email, phone)
+        participant:course_participants!course_registrations_participant_id_fkey(
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          user_id
+        )
       `)
       .eq('course_id', courseId)
       .eq('status', 'confirmed')
@@ -5666,6 +6161,16 @@ const testOpenModal = () => {
 }
 
 const manageEnrollments = (course: any) => {
+  // DEBUG: Log course details
+  console.log('🔍 manageEnrollments called with course:', {
+    id: course.id,
+    name: course.name,
+    sari_managed: course.sari_managed,
+    sari_course_id: course.sari_course_id,
+    category: course.category,
+    fullCourse: course
+  })
+  
   // Set course and open modal immediately
   selectedCourse.value = course
   showEnrollmentModal.value = true
@@ -5683,8 +6188,103 @@ const manageEnrollments = (course: any) => {
   })
 }
 
+// Sync SARI participants for the current course
+const syncSARIParticipants = async () => {
+  if (!selectedCourse.value || !selectedCourse.value.sari_managed) {
+    sariParticipantsSyncMessage.value = 'Kurs ist nicht SARI-verwaltet'
+    sariParticipantsSyncSuccess.value = false
+    return
+  }
+
+  isSyncingSARIParticipants.value = true
+  sariParticipantsSyncMessage.value = ''
+  sariParticipantsSyncSuccess.value = false
+
+  try {
+    const { data: session } = await getSupabase().auth.getSession()
+    
+    const response = await fetch('/api/sari/sync-participants', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.session?.access_token}`
+      },
+      body: JSON.stringify({
+        courseId: selectedCourse.value.id
+      })
+    })
+
+    const data = await response.json()
+
+    if (data.success || data.imported > 0 || data.registrationsCreated > 0) {
+      sariParticipantsSyncSuccess.value = true
+      sariParticipantsSyncMessage.value = `✅ ${data.imported || 0} neue User importiert, ${data.registrationsCreated || 0} Anmeldungen erstellt`
+      
+      // Reload enrollments to show new participants
+      await loadCourseEnrollments(selectedCourse.value.id)
+    } else {
+      sariParticipantsSyncSuccess.value = false
+      sariParticipantsSyncMessage.value = data.message || 'Keine neuen Teilnehmer gefunden'
+    }
+  } catch (error: any) {
+    console.error('Error syncing SARI participants:', error)
+    sariParticipantsSyncSuccess.value = false
+    sariParticipantsSyncMessage.value = `❌ Fehler: ${error.message}`
+  } finally {
+    isSyncingSARIParticipants.value = false
+  }
+}
+
 const closeEnrollmentModal = () => {
   showEnrollmentModal.value = false
+  
+  // Reload just the selected course to update participant count
+  if (selectedCourse.value) {
+    const courseIdToReload = selectedCourse.value.id
+    
+    // Use nextTick to ensure state updates are processed
+    nextTick(async () => {
+      try {
+        console.log('🔄 Reloading course after enrollment modal close:', courseIdToReload)
+        const { data: updatedCourse, error } = await getSupabase()
+          .from('courses')
+          .select(`
+            *,
+            instructor:users!courses_instructor_id_fkey(first_name, last_name),
+            registrations:course_registrations(id, status, deleted_at)
+          `)
+          .eq('id', courseIdToReload)
+          .single()
+
+        if (!error && updatedCourse) {
+          const participantCount = updatedCourse.registrations?.length || 0
+          
+          // Update in database
+          const { error: updateError } = await getSupabase()
+            .from('courses')
+            .update({ current_participants: participantCount })
+            .eq('id', courseIdToReload)
+          
+          if (!updateError) {
+            console.log(`✅ Updated course participant count in DB to ${participantCount}`)
+          }
+          
+          // Update the course in the local array
+          const courseIndex = courses.value.findIndex(c => c.id === courseIdToReload)
+          if (courseIndex !== -1) {
+            courses.value[courseIndex] = {
+              ...courses.value[courseIndex],
+              current_participants: participantCount
+            }
+            console.log(`✅ Updated course participant count in UI to ${participantCount}`)
+          }
+        }
+      } catch (err) {
+        console.error('Error reloading course:', err)
+      }
+    })
+  }
+  
   selectedCourse.value = null
   currentEnrollments.value = []
   deletedEnrollments.value = []
@@ -5693,6 +6293,8 @@ const closeEnrollmentModal = () => {
   enrollmentMode.value = 'search'
   userSearchQuery.value = ''
   searchResults.value = []
+  sariParticipantsSyncMessage.value = ''
+  sariParticipantsSyncSuccess.value = false
   newParticipant.value = {
     first_name: '',
     last_name: '',
@@ -5815,12 +6417,14 @@ const loadCourseEnrollments = async (courseId: string) => {
       .from('course_registrations')
       .select(`
         *,
-        user:users!course_registrations_user_id_fkey(
+        participant:course_participants!course_registrations_participant_id_fkey(
           id,
           first_name,
           last_name,
           email,
-          phone
+          phone,
+          faberid,
+          user_id
         ),
         deleted_by_user:users!course_registrations_deleted_by_fkey(
           id,
@@ -5849,12 +6453,13 @@ const loadDeletedEnrollments = async (courseId: string) => {
       .from('course_registrations')
       .select(`
         *,
-        user:users!course_registrations_user_id_fkey(
+        participant:course_participants!course_registrations_participant_id_fkey(
           id,
           first_name,
           last_name,
           email,
-          phone
+          phone,
+          user_id
         ),
         deleted_by_user:users!course_registrations_deleted_by_fkey(
           id,

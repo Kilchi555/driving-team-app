@@ -476,7 +476,7 @@
         <div class="p-6 overflow-y-auto flex-1">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
-              @click="showReglementeModal = false; navigateToReglement('')"
+              @click="navigateToReglement('datenschutz'); showReglementeModal = false"
               class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
             >
               <div class="flex items-center space-x-3">
@@ -496,7 +496,7 @@
             </button>
 
             <button
-              @click="showReglementeModal = false; navigateToReglement('')"
+              @click="navigateToReglement('nutzungsbedingungen'); showReglementeModal = false"
               class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
             >
               <div class="flex items-center space-x-3">
@@ -516,7 +516,7 @@
             </button>
 
             <button
-              @click="showReglementeModal = false; navigateToReglement('')"
+              @click="navigateToReglement('agb'); showReglementeModal = false"
               class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
             >
               <div class="flex items-center space-x-3">
@@ -575,6 +575,39 @@
               </div>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ MODAL: Reglement Detail-Ansicht (IN MODAL, nicht als separate Seite!) -->
+    <div v-if="showReglementDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 flex-shrink-0 flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-gray-900">{{ showReglementTitle }}</h2>
+          <button 
+            @click="showReglementDetailModal = false"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto flex-1 prose prose-lg max-w-none">
+          <div v-html="showReglementContent"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-6 border-t border-gray-200 flex-shrink-0">
+          <button 
+            @click="showReglementDetailModal = false; showReglementeModal = true"
+            class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Zurück zur Übersicht
+          </button>
         </div>
       </div>
     </div>
@@ -638,13 +671,21 @@
                 <!-- Details Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
 
-                  <!-- Fahrlehrer & Kategorie -->
+                  <!-- Event Type Code + "mit" + Staff Name -->
+                  <div class="flex items-center gap-2 text-gray-600">
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">
+                      {{ getEventTypeLabel(appointment.event_type_code) }}
+                    </span>
+                    <span class="font-medium">mit {{ getInstructorName(appointment) }}</span>
+                  </div>
+
+                  <!-- Zahlungsart & Kategorie -->
                   <div class="flex items-center justify-between text-gray-600">
                     <div class="flex items-center">
                       <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4 4 0 018 17h8a4 4 0 012.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v4a1 1 0 001 1h4a1 1 0 001-1V7m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v2m0 0h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V7m0 0V5a2 2 0 012-2h2a2 2 0 012 2v2" />
                       </svg>
-                      <span class="font-medium">Mit {{ getInstructorName(appointment) }}</span>
+                      <span class="font-medium">{{ getPaymentMethodLabel(appointment.payment?.payment_method) }}</span>
                     </div>
                     <div class="flex items-center">
                       <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -702,7 +743,17 @@
                     <!-- Total -->
                     <div class="flex justify-between items-center">
                       <span class="font-semibold text-gray-900 text-xs">Total</span>
-                      <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice(appointment.total_amount_rappen || 0) }}</span>
+                      <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice((appointment.payment?.total_amount_rappen || appointment.total_amount_rappen) || 0) }}</span>
+                    </div>
+                    <!-- Credit Used -->
+                    <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center">
+                      <span class="text-gray-600 text-xs">Verwendetes Guthaben</span>
+                      <span class="text-green-600 font-medium text-xs">-CHF {{ formatPrice(appointment.payment.credit_used_rappen) }}</span>
+                    </div>
+                    <!-- Still to Pay (if credit was used) -->
+                    <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center border-t border-gray-200 pt-2">
+                      <span class="font-semibold text-gray-900 text-xs">Noch zu zahlen</span>
+                      <span class="font-bold text-blue-600 text-sm">CHF {{ formatPrice(Math.max(0, (appointment.payment?.total_amount_rappen || 0) - (appointment.payment?.credit_used_rappen || 0))) }}</span>
                     </div>
                     <!-- Payment Method -->
                     <div v-if="getPaymentMethod(appointment)" class="flex items-center justify-between text-xs">
@@ -884,6 +935,63 @@
     @document-uploaded="loadUserDocuments"
   />
   
+  <!-- 💳 Payment Confirmation Dialog -->
+  <Teleport to="body">
+    <div v-if="showPaymentConfirmDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full animate-in fade-in relative">
+        <!-- Close Button (top right) -->
+        <button
+          @click="handlePayLater"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Schließen"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <!-- Header -->
+        <div class="flex items-center justify-center mb-6">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0zM7 15a1 1 0 11-2 0 1 1 0 012 0z" />
+            </svg>
+          </div>
+        </div>
+        
+        <!-- Content -->
+        <h2 class="text-2xl font-bold text-gray-900 mb-3 text-center">Zahlung erforderlich</h2>
+        <p class="text-gray-600 text-center mb-8">
+          Dein Termin wurde erfolgreich bestätigt! Möchtest du jetzt bezahlen oder später?
+        </p>
+        
+        <!-- Buttons -->
+        <div class="flex gap-3">
+          <!-- Später Button -->
+          <button
+            @click="handlePayLater"
+            :disabled="isProcessingPayment"
+            class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Später
+          </button>
+          
+          <!-- Jetzt Bezahlen Button -->
+          <button
+            @click="handlePayNow"
+            :disabled="isProcessingPayment"
+            class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            <svg v-if="isProcessingPayment" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {{ isProcessingPayment ? 'Wird...' : 'Jetzt' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+  
 </template>
 
 <script setup lang="ts">
@@ -933,13 +1041,22 @@ const selectedInstructor = ref<any>(null)
 const pendingConfirmations = ref<any[]>([])
 const showConfirmationModal = ref(false)
 const showReglementeModal = ref(false)
-const hasPaymentMethod = ref(false)
+const showReglementDetailModal = ref(false)
+const showReglementContent = ref('')
+const showReglementTitle = ref('')
 // Hardcoded payment thresholds
 const HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE = 24  // Capture exactly 24h before
 const HOURS_BEFORE_APPOINTMENT_FOR_IMMEDIATE = 24 // Charge immediately if < 24h away
 const automaticPaymentHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE)
 const automaticAuthorizationHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE) // Same as capture time
 const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per appointment ID
+
+// Payment Confirmation Dialog State
+const showPaymentConfirmDialog = ref(false)
+const pendingPaymentUrl = ref<string | null>(null)
+const isProcessingPayment = ref(false)
+const currentPaymentAppointment = ref<any>(null)
+const currentPayment = ref<any>(null)
 
 // Profile Modal State
 const showProfileModal = ref(false)
@@ -1172,8 +1289,7 @@ const refreshData = async () => {
     const results = await Promise.allSettled([
       loadAllData(),
       loadPayments(),
-      loadPendingConfirmations(),
-      checkPaymentMethod()
+      loadPendingConfirmations()
     ])
     
     // Check results for errors
@@ -1202,8 +1318,8 @@ const processPendingPayments = async () => {
   if (pendingPayments.value.length === 0) return
   
   try {
-    const paymentIds = pendingPayments.value.map(p => p.id).join(',')
-    await navigateTo(`/customer/payment-process?payments=${paymentIds}`)
+    // Redirect to payments page where user can select and pay
+    await navigateTo('/customer/payments')
   } catch (err) {
     console.error('❌ Error processing pending payments:', err)
     displayToast('error', 'Fehler', 'Fehler beim Weiterleiten zur Zahlung.')
@@ -1238,14 +1354,27 @@ const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return 'Kein Datum/Zeit'
   
   try {
-    // Parse UTC datetime and convert to Zurich timezone
-    const date = new Date(dateString)
+    // ✅ FIX: Parse as LOCAL time (not UTC)
+    // Database stores timestamps as 'Europe/Zurich' time without timezone
+    // We need to parse it as-is, not convert from UTC
+    const cleanDate = dateString.replace('T', ' ').replace('Z', '').replace('+00', '')
+    const parts = cleanDate.split(/[-: ]/)
+    const date = new Date(
+      parseInt(parts[0]), // year
+      parseInt(parts[1]) - 1, // month (0-indexed)
+      parseInt(parts[2]), // day
+      parseInt(parts[3] || '0'), // hour
+      parseInt(parts[4] || '0'), // minute
+      parseInt(parts[5] || '0')  // second
+    )
+    
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum/Zeit'
     }
-    const weekday = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'short' }) // z.B. "Mo."
-    const datePart = date.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' })
-    const timePart = date.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })
+    
+    const weekday = date.toLocaleDateString('de-CH', { weekday: 'short' }) // z.B. "Mo."
+    const datePart = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const timePart = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
     return `${weekday} ${datePart} ${timePart}`
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
@@ -1362,7 +1491,34 @@ const navigateToShop = async () => {
 }
 
 const navigateToReglement = async (type: string) => {
-  await navigateTo('/customer/reglemente')
+  // ✅ CHANGED: Don't navigate away, instead load and show reglement in modal
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      console.error('No auth token')
+      return
+    }
+
+    // Load reglement content via API
+    const response = await $fetch<any>('/api/customer/reglements', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      query: { type }
+    })
+
+    if (response?.success && response?.data) {
+      // Show in modal with content
+      showReglementContent.value = response.data.content || ''
+      showReglementTitle.value = response.data.title || type
+      showReglementDetailModal.value = true
+    }
+  } catch (err) {
+    console.error('Error loading reglement:', err)
+  }
 }
 
 const navigateToMyCourses = async () => {
@@ -1389,8 +1545,7 @@ const loadAllData = async () => {
       loadAppointments(),
       loadLocations(),
       loadStaff(),
-      loadPendingConfirmations(),
-      checkPaymentMethod()
+      loadPendingConfirmations()
     ])
 
     // Load instructors after appointments are loaded
@@ -1408,213 +1563,48 @@ const loadAllData = async () => {
 // ✅ Load pending confirmation appointments
 const loadPendingConfirmations = async () => {
   if (!currentUser.value?.id) {
-    logger.debug('⚠️ No current user ID for loadPendingConfirmations')
     return
   }
 
   try {
+    // ✅ Use backend API to fetch pending confirmations with ALL data
+    // (staff, payments, categories, payment_items - all in ONE call!)
     const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    const { data: userDataFromDb, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
+    const response = await $fetch('/api/customer/get-pending-confirmations', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
     
-    if (userError || !userDataFromDb) return
-    
-    // Store user data for ProfileModal
-    userData.value = userDataFromDb
-
-
-
-    // ✅ Load appointments with pending_confirmation status
-    const { data: confirmationsData, error: confirmationsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        status,
-        confirmation_token,
-        type,
-        event_type_code,
-        staff:users!appointments_staff_id_fkey (
-          first_name,
-          last_name
-        )
-      `)
-      .eq('user_id', userDataFromDb.id)
-      .eq('status', 'pending_confirmation')
-      .eq('tenant_id', userDataFromDb.tenant_id)
-      .not('confirmation_token', 'is', null)
-      .order('start_time', { ascending: true })
-
-    if (confirmationsError) {
-      console.warn('⚠️ Error loading pending confirmations:', confirmationsError)
-      return
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load pending confirmations from API')
     }
+
+    const confirmationsData = response.data
 
     if (!confirmationsData || confirmationsData.length === 0) {
       pendingConfirmations.value = []
-      logger.debug('✅ No pending confirmations found')
       return
     }
 
-    // ✅ Lade Kategorien separat basierend auf type (z.B. "B")
-    const categoryCodes = [...new Set(confirmationsData.map(apt => apt.type).filter(Boolean))]
-    let categoriesMap = new Map()
-    if (categoryCodes.length > 0) {
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('code, name')
-        .in('code', categoryCodes)
-        .eq('tenant_id', userDataFromDb.tenant_id)
-      
-      if (!categoriesError && categoriesData) {
-        categoriesData.forEach(cat => {
-          categoriesMap.set(cat.code, cat)
-        })
-      }
-    }
+    // ✅ Data already enriched by API - just set it directly!
+    // No need for separate queries:
+    // - Payments: already loaded
+    // - Categories: already loaded
+    // - Payment items: already loaded
+    // - Staff: already loaded
+    pendingConfirmations.value = confirmationsData.map((apt: any) => ({
+      ...apt,
+      // These are already in the response from the API
+      payment_items: apt.payment_items || [],
+    }))
 
-    // Merge categories into appointments
-    confirmationsData.forEach(apt => {
-      if (apt.type && categoriesMap.has(apt.type)) {
-        (apt as any).categories = categoriesMap.get(apt.type)
-      }
-    })
-
-    // ✅ DANACH: Lade Payments für diese Appointments separat
-    const appointmentIds = confirmationsData.map(apt => apt.id)
-    let paymentsData = null
-    
-    // Nur Query ausführen wenn Appointment IDs vorhanden
-    if (appointmentIds.length > 0) {
-      const { data, error: paymentsError } = await supabase
-        .from('payments')
-        .select('id, appointment_id, total_amount_rappen, payment_method, payment_status, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen')
-        .in('appointment_id', appointmentIds)
-      
-      if (paymentsError) {
-        console.warn('⚠️ Error loading payments for confirmations:', paymentsError)
-      } else {
-        paymentsData = data
-      }
-    }
-
-    // Erstelle Map für schnellen Zugriff
-    const paymentsMap = new Map()
-    if (paymentsData) {
-      paymentsData.forEach(payment => {
-        if (!paymentsMap.has(payment.appointment_id)) {
-          paymentsMap.set(payment.appointment_id, [])
-        }
-        paymentsMap.get(payment.appointment_id).push(payment)
-      })
-    }
-
-    // ✅ Lade payment_items für alle payments
-    const paymentItemsMap = new Map()
-    if (paymentsData && paymentsData.length > 0) {
-      const paymentIds = paymentsData.map(p => p.id)
-      const { data: itemsData } = await supabase
-        .from('payment_items')
-        .select('*')
-        .in('payment_id', paymentIds)
-        .order('created_at', { ascending: true })
-      
-      if (itemsData) {
-        itemsData.forEach(item => {
-          if (!paymentItemsMap.has(item.payment_id)) {
-            paymentItemsMap.set(item.payment_id, [])
-          }
-          paymentItemsMap.get(item.payment_id).push(item)
-        })
-      }
-    }
-
-    // Load tenant payment settings for automatic payment hours (from payment_settings JSON)
-    if (userData.value?.tenant_id) {
-      try {
-        const { data: paymentSettings } = await supabase
-          .from('tenant_settings')
-          .select('setting_value')
-          .eq('tenant_id', userData.value.tenant_id)
-          .eq('category', 'payment')
-          .eq('setting_key', 'payment_settings')
-          .maybeSingle()
-        
-        if (paymentSettings?.setting_value) {
-          const settings = typeof paymentSettings.setting_value === 'string' 
-            ? JSON.parse(paymentSettings.setting_value) 
-            : paymentSettings.setting_value
-          automaticPaymentHoursBefore.value = Number(settings?.automatic_payment_hours_before) || 24
-          // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
-          const authHours = Number(settings?.automatic_authorization_hours_before) || 120
-          automaticAuthorizationHoursBefore.value = Math.min(authHours, 120)
-        }
-      } catch (e) {
-        console.warn('⚠️ Konnte Payment Settings nicht laden für Stunden:', e)
-      }
-    }
-
-    // Calculate total amount for each appointment (from payment)
-    pendingConfirmations.value = confirmationsData.map(apt => {
-      const payments = paymentsMap.get(apt.id) || []
-      const payment = payments.length > 0 ? payments[0] : null
-      const items = payment ? paymentItemsMap.get(payment.id) || [] : []
-      
-      return {
-        ...apt,
-        total_amount_rappen: payment?.total_amount_rappen || 0,
-        payments: payments, // Include for compatibility
-        payment_items: items, // ✅ Neu: Payment items hinzufügen
-        // ✅ Direkte Payment-Felder für Fallback
-        lesson_price_rappen: payment?.lesson_price_rappen || 0,
-        admin_fee_rappen: payment?.admin_fee_rappen || 0,
-        products_price_rappen: payment?.products_price_rappen || 0,
-        discount_amount_rappen: payment?.discount_amount_rappen || 0
-      }
-    })
-
-    logger.debug('✅ Loaded pending confirmations:', pendingConfirmations.value.length)
+    logger.debug('✅ Pending confirmations loaded with full data from API')
   } catch (err: any) {
     console.error('❌ Error loading pending confirmations:', err)
-  }
-}
-
-// ✅ Check if user has payment method
-const checkPaymentMethod = async () => {
-  if (!currentUser.value?.id) return
-
-  try {
-    const supabase = getSupabase()
-    
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
-    
-    if (userError || !userData) return
-
-    const { data, error } = await supabase
-      .from('customer_payment_methods')
-      .select('id')
-      .eq('user_id', userData.id)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle()
-    
-    hasPaymentMethod.value = !!data && !error
-    
-    logger.debug('✅ Payment method check:', hasPaymentMethod.value ? 'Has payment method' : 'No payment method')
-  } catch (err: any) {
-    console.error('❌ Error checking payment method:', err)
-    hasPaymentMethod.value = false
   }
 }
 
@@ -1654,7 +1644,18 @@ const hasPaymentDetails = (appointment: any) => {
     return true
   }
   
-  // Methode 2: Direkte Payment-Felder existieren (Fallback)
+  // Methode 2: Payment-Objekt existiert mit Werten
+  if (appointment.payment) {
+    if (appointment.payment.lesson_price_rappen > 0 ||
+        appointment.payment.admin_fee_rappen > 0 ||
+        appointment.payment.products_price_rappen > 0 ||
+        appointment.payment.discount_amount_rappen > 0 ||
+        appointment.payment.total_amount_rappen > 0) {
+      return true
+    }
+  }
+  
+  // Methode 3: Direkte Payment-Felder existieren (alter Fallback)
   if (appointment.lesson_price_rappen > 0 ||
       appointment.admin_fee_rappen > 0 ||
       appointment.products_price_rappen > 0 ||
@@ -1667,6 +1668,11 @@ const hasPaymentDetails = (appointment: any) => {
 
 // Helper: Get payment field value
 const getPaymentField = (appointment: any, fieldName: string) => {
+  // Try payment object first (primary source)
+  if (appointment.payment && appointment.payment[fieldName]) {
+    return appointment.payment[fieldName]
+  }
+  // Fallback to appointment object (legacy)
   return appointment[fieldName] || 0
 }
 
@@ -1705,58 +1711,58 @@ const confirmAppointment = async (appointment: any) => {
       return
     }
 
-    const supabase = getSupabase()
-
-    // Hole aktuellen User (DB) inkl. tenant
-    const { data: userDb } = await supabase
-      .from('users')
-      .select('id, tenant_id, email')
-      .eq('auth_user_id', currentUser.value?.id)
-      .single()
-
-    if (!userDb) {
-      displayToast('error', 'Fehler', 'Benutzer nicht gefunden')
+    // ✅ Payment ist bereits von der API geladen (in appointment.payment)!
+    // Keine separate Query nötig - das würde RLS-Fehler verursachen
+    const payment = appointment.payment
+    
+    if (!payment) {
+      displayToast('error', 'Fehler', 'Zahlungsdaten für den Termin nicht gefunden')
       confirmingAppointments.value.delete(appointment.id)
       return
     }
-
-    // ✅ SCHRITT 1: Setze Termin SOFORT auf 'confirmed' - BEVOR Zahlung starten!
-    logger.debug('🔄 Setting appointment to confirmed immediately...')
-    try {
-      const confirmResult = await $fetch('/api/appointments/confirm', {
-        method: 'POST',
-        body: {
-          appointmentId: appointment.id
-        }
-      }) as { success?: boolean; error?: string }
-      
-      if (!confirmResult.success) {
-        console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-        throw new Error(confirmResult.error || 'Could not confirm appointment')
-      } else {
-        logger.debug('✅ Appointment confirmed immediately')
-      }
-    } catch (err) {
-      console.error('❌ Error confirming appointment:', err)
-      displayToast('error', 'Fehler', 'Termin konnte nicht bestätigt werden')
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
-    // Hole Payment für diesen Termin (Betrag)
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, total_amount_rappen, payment_method')
-      .eq('appointment_id', appointment.id)
-      .order('created_at', { ascending: false })
-      .maybeSingle()
 
     // ✅ NEU: Wenn payment_method 'cash', 'invoice' oder 'credit' ist, NICHT zu Wallee weiterleiten!
     if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice' || payment?.payment_method === 'credit') {
       logger.debug('✅ Payment method is', payment.payment_method, '- no online payment needed')
+      
+      // ✅ WICHTIG: Confirm the appointment via secure API auch für non-Wallee payments!
+      try {
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        const confirmResult = await $fetch('/api/appointments/confirm', {
+          method: 'POST',
+          headers: session?.access_token ? {
+            'Authorization': `Bearer ${session.access_token}`
+          } : {},
+          body: {
+            appointmentId: appointment.id
+          }
+        }) as { 
+          success?: boolean
+          appointment?: any
+          error?: string 
+        }
+        
+        if (!confirmResult.success) {
+          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+          displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
+          confirmingAppointments.value.delete(appointment.id)
+          return
+        }
+        
+        logger.debug('✅ Appointment confirmed via secure API:', {
+          appointmentId: appointment.id
+        })
+      } catch (err: any) {
+        console.error('⚠️ Error confirming appointment via API:', err)
+        displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
+        confirmingAppointments.value.delete(appointment.id)
+        return
+      }
+      
       displayToast('success', 'Termin bestätigt!', `Zahlungsart: ${getPaymentMethodLabel(payment.payment_method)}`)
       
-      // Termin ist bereits bestätigt (siehe weiter oben)
       confirmingAppointments.value.delete(appointment.id)
       
       // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
@@ -1777,274 +1783,80 @@ const confirmAppointment = async (appointment: any) => {
     }
 
     const amountRappen = payment?.total_amount_rappen || 0
-    if (!amountRappen || amountRappen <= 0) {
-      displayToast('error', 'Fehler', 'Betrag für den Termin nicht gefunden')
+    
+    // ✅ NEW: If amount is 0 (fully covered by credit or discounts), just show success
+    if (amountRappen <= 0) {
+      logger.debug('✅ Payment fully covered by credit or discounts - no online payment needed')
+      displayToast('success', 'Termin bestätigt!', 'Zahlung wurde durch Guthaben oder Gutscheine gedeckt')
       confirmingAppointments.value.delete(appointment.id)
-      return
+      
+      // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
+      const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
+      if (index !== -1) {
+        pendingConfirmations.value.splice(index, 1)
+        logger.debug('✅ Removed confirmed appointment from pending list')
+      }
+      
+      // ✅ Schließe das Modal
+      showConfirmationModal.value = false
+      
+      // ✅ Refresh pending confirmations
+      await loadPendingConfirmations()
+      
+      return // Fertig!
     }
 
-    // Lade Tenant Payment Settings (für automatische Zahlung)
-    let automaticPaymentEnabledLocal = false
-    let automaticPaymentHoursBeforeLocal = 24
-    let automaticAuthorizationHoursBeforeLocal = 168
+    // ✅ Confirm appointment via secure API
     try {
-      const { data: paymentSettings } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', userDb.tenant_id)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      if (paymentSettings?.setting_value) {
-        const settings = typeof paymentSettings.setting_value === 'string' 
-          ? JSON.parse(paymentSettings.setting_value) 
-          : paymentSettings.setting_value
-        automaticPaymentEnabledLocal = !!settings?.automatic_payment_enabled
-        automaticPaymentHoursBeforeLocal = Number(settings?.automatic_payment_hours_before) || 24
-        // Wallee akzeptiert maximal 120 Stunden (5 Tage) Authorization Hold
-        const authHours = Number(settings?.automatic_authorization_hours_before) || 120
-        automaticAuthorizationHoursBeforeLocal = Math.min(authHours, 120)
-        
-        logger.debug('✅ Payment settings loaded:', {
-          automatic_payment_enabled: automaticPaymentEnabledLocal,
-          automatic_payment_hours_before: automaticPaymentHoursBeforeLocal,
-          automatic_authorization_hours_before: automaticAuthorizationHoursBeforeLocal,
-          rawSettings: settings
-        })
-      }
-    } catch (e) {
-      console.warn('⚠️ Konnte Payment Settings nicht laden:', e)
-    }
-
-    // ✅ OPTION 1: Hole Default-Zahlungsmittel (falls vorhanden)
-    // Beim ersten Termin: Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)
-    // Bei weiteren Terminen: Token vorhanden → Automatische Zahlung möglich
-    let defaultMethodId: string | null = null
-    if (automaticPaymentEnabledLocal) {
-      const { data: method } = await supabase
-        .from('customer_payment_methods')
-        .select('id')
-        .eq('user_id', userDb.id)
-        .eq('is_active', true)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
       
-      defaultMethodId = method?.id || null
-      
-      logger.debug('💳 Payment method check:', {
-        hasMethod: !!defaultMethodId,
-        automaticPaymentEnabled: automaticPaymentEnabledLocal,
-        note: defaultMethodId 
-          ? 'Token vorhanden → Automatische Zahlung möglich' 
-          : 'Kein Token → Weiterleitung zu Wallee (Token wird erstellt)'
-      })
-    }
-
-    // ✅ Entscheide: automatische Zahlung planen oder sofortige Zahlung
-    // Regel: Automatische Zahlung mit Token wenn:
-    // 1. Automatische Zahlung aktiviert ist
-    // 2. Ein gespeichertes Zahlungsmittel (Token) vorhanden ist
-    // → ENTWEDER: Genug Zeit → Schedule für später
-    // → ODER: Zu wenig Zeit → Sofort authorize + capture
-    // SONST: Weiterleitung zu Wallee (Token wird erstellt/gespeichert)
-    const startDate = new Date(appointment.start_time)
-    const now = new Date()
-    const diffHours = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60))
-    
-    // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten (entweder scheduled oder immediate)
-    const hasToken = automaticPaymentEnabledLocal && !!defaultMethodId
-    const shouldProcessImmediately = hasToken && diffHours < automaticPaymentHoursBeforeLocal
-    const canScheduleAutomatic = hasToken && diffHours >= automaticPaymentHoursBeforeLocal
-    
-    logger.debug('🔍 Automatic payment decision:', {
-      automaticPaymentEnabled: automaticPaymentEnabledLocal,
-      hasDefaultMethod: !!defaultMethodId,
-      diffHours: diffHours,
-      requiredHours: automaticPaymentHoursBeforeLocal,
-      hasToken: hasToken,
-      shouldProcessImmediately: shouldProcessImmediately,
-      canScheduleAutomatic: canScheduleAutomatic,
-      appointmentStart: appointment.start_time,
-      decision: shouldProcessImmediately
-        ? '⚡ Token vorhanden + zu wenig Zeit → Sofort authorize + capture'
-        : canScheduleAutomatic 
-          ? '✅ Token vorhanden + genug Zeit → Automatische Zahlung geplant' 
-          : '💳 Kein Token vorhanden → Weiterleitung zu Wallee (Token wird erstellt)'
-    })
-
-    // ℹ️ NICHT den Status zu 'scheduled' setzen - das erfolgt erst nach erfolgreicher Zahlung via Webhook
-    // Der Termin bleibt auf 'pending_confirmation' bis der Webhook von Wallee kommt
-
-    // ✅ NEU: Wenn Token vorhanden, IMMER mit Token verarbeiten
-    if (hasToken && payment?.id) {
-      // ✅ Plane automatische Zahlung 24h (oder konfiguriert) vor Termin
-      const scheduledPayDate = new Date(startDate.getTime() - automaticPaymentHoursBeforeLocal * 60 * 60 * 1000)
-      // ✅ Bestimme frühesten Autorisierungszeitpunkt (z. B. 1 Woche vorher)
-      const authDueDate = new Date(startDate.getTime() - automaticAuthorizationHoursBeforeLocal * 60 * 60 * 1000)
-      
-      // Runde auf die nächste volle Stunde auf (Cron läuft zur vollen Stunde)
-      const roundToNextFullHour = (date: Date) => {
-        const rounded = new Date(date)
-        if (rounded.getMinutes() > 0 || rounded.getSeconds() > 0) {
-          rounded.setHours(rounded.getHours() + 1)
+      const confirmResult = await $fetch('/api/appointments/confirm', {
+        method: 'POST',
+        headers: session?.access_token ? {
+          'Authorization': `Bearer ${session.access_token}`
+        } : {},
+        body: {
+          appointmentId: appointment.id
         }
-        rounded.setMinutes(0)
-        rounded.setSeconds(0)
-        rounded.setMilliseconds(0)
-        return rounded
+      }) as { 
+        success?: boolean
+        appointment?: any
+        error?: string 
       }
       
-      const roundedPayDate = roundToNextFullHour(scheduledPayDate)
-      const roundedAuthDate = roundToNextFullHour(authDueDate)
-      
-      // ✅ NEU: Bei Immediate Processing IMMER sofort authorize
-      const shouldAuthorizeNow = shouldProcessImmediately || now >= roundedAuthDate
-
-      await supabase
-        .from('payments')
-        .update({
-          automatic_payment_consent: true,
-          automatic_payment_consent_at: new Date().toISOString(),
-          // ✅ Nur scheduled_payment_date setzen, wenn >= 24h entfernt (nicht für sofortige Zahlungen)
-          scheduled_payment_date: shouldProcessImmediately ? null : roundedPayDate.toISOString(),
-          // speichere geplanten Autorisierungszeitpunkt, wenn noch nicht fällig
-          scheduled_authorization_date: shouldAuthorizeNow ? new Date().toISOString() : roundedAuthDate.toISOString(),
-          payment_method_id: defaultMethodId,
-          payment_method: 'wallee',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-
-      // ✅ NEU: Termin sofort auf 'confirmed' setzen, wenn der Kunde bestätigt
-      try {
-        const confirmResult = await $fetch('/api/appointments/confirm', {
-          method: 'POST',
-          body: {
-            appointmentId: appointment.id
-          }
-        }) as { success?: boolean; error?: string }
-        
-        if (!confirmResult.success) {
-          console.error('⚠️ Could not confirm appointment immediately:', confirmResult.error)
-          displayToast('error', 'Fehler', `Termin konnte nicht sofort bestätigt werden: ${confirmResult.error}`)
-          confirmingAppointments.value.delete(appointment.id)
-          return
-        } else {
-          logger.debug('✅ Appointment confirmed immediately after customer click')
-        }
-      } catch (err: any) {
-        console.error('⚠️ Error confirming appointment immediately:', err)
-        displayToast('error', 'Fehler', `Fehler beim sofortigen Bestätigen des Termins: ${err.message}`)
+      if (!confirmResult.success) {
+        console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+        displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
         confirmingAppointments.value.delete(appointment.id)
         return
       }
       
-      logger.debug('⏳ Authorization scheduled at', authDueDate.toISOString(), '; capture scheduled at', scheduledPayDate.toISOString())
-    }
-
-    // Erstelle Wallee-Transaktion über Backend
-    // Beschriftung für Wallee-Zusammenfassung: Lesson-Type + Datum/Zeit
-    const mapLessonType = (code: string | null | undefined) => {
-      if (!code) return 'Fahrlektion'
-      const c = String(code).toLowerCase()
-      if (c.includes('exam') || c === 'prüfung' || c === 'exam') return 'Prüfung'
-      if (c.includes('theor')) return 'Theorielektion'
-      if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
-      return 'Fahrlektion'
-    }
-    const formatSummaryDate = (dateStr: string) => {
-      // Parse als lokale Zeit (nicht UTC)
-      const parts = dateStr.replace('T', ' ').replace('Z', '').split(/[-: ]/)
-      const d = new Date(
-        parseInt(parts[0]), // year
-        parseInt(parts[1]) - 1, // month (0-indexed)
-        parseInt(parts[2]), // day
-        parseInt(parts[3] || '0'), // hour
-        parseInt(parts[4] || '0'), // minute
-        parseInt(parts[5] || '0')  // second
-      )
-      return `${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
-    }
-    const summaryLabel = `${mapLessonType(appointment.event_type_code || appointment.type)} • ${formatSummaryDate(appointment.start_time)}`
-    const staffName = appointment.staff
-      ? `${appointment.staff.first_name || ''} ${appointment.staff.last_name || ''}`.trim()
-      : appointment.staff_name || ''
-    const merchantReferenceDetails = {
-      appointmentId: appointment.id,
-      eventTypeCode: appointment.event_type_code || appointment.appointment_type || appointment.type,
-      categoryCode: appointment.type,
-      categoryName: appointment.category_name,
-      staffName,
-      startTime: appointment.start_time,
-      durationMinutes: appointment.duration_minutes
-    }
-    type WalleeResponse = { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
-    const orderId = buildMerchantReference(merchantReferenceDetails)
-
-    const response = await $fetch<WalleeResponse>('/api/wallee/create-transaction', {
-      method: 'POST',
-      body: {
-        orderId,
-        amount: amountRappen / 100, // Wallee erwartet Betrag in CHF
-        currency: 'CHF',
-        customerEmail: userDb.email,
-        userId: userDb.id,
-        tenantId: userDb.tenant_id,
-        description: summaryLabel,
-        successUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
-        failedUrl: `${window.location.origin}/payment/success?paymentId=${payment?.id}`,
-        merchantReferenceDetails
-      }
-    })
-
-    if (!response?.success || !response.paymentUrl) {
-      console.error('Create transaction failed:', response)
-      displayToast('error', 'Fehler', 'Zahlung konnte nicht gestartet werden. Bitte später erneut versuchen.')
+      logger.debug('✅ Appointment confirmed via secure API:', {
+        appointmentId: appointment.id
+      })
+    } catch (err: any) {
+      console.error('⚠️ Error confirming appointment via API:', err)
+      displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
       confirmingAppointments.value.delete(appointment.id)
       return
     }
 
-    logger.debug('✅ Wallee transaction created:', {
-      transactionId: response.transactionId,
-      paymentId: payment?.id,
-      paymentUrl: response.paymentUrl
-    })
-
-    // Verknüpfe Payment mit der Wallee-Transaktion, falls Payment existiert
-    if (payment?.id && response.transactionId) {
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          payment_method: 'wallee',
-          wallee_transaction_id: String(response.transactionId),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-      
-      if (updateError) {
-        console.error('❌ Failed to update payment with transaction ID:', updateError)
-      } else {
-        logger.debug('✅ Payment updated with transaction ID:', response.transactionId)
-      }
-    } else {
-      console.warn('⚠️ Cannot update payment - missing payment ID or transaction ID:', {
-        paymentId: payment?.id,
-        transactionId: response.transactionId
-      })
-    }
-
-    // ✅ Der Termin ist bereits bestätigt (siehe oben)
-    // Wir aktualisieren den Status NICHT mehr hier, da er bereits auf 'confirmed' gesetzt wurde!
-
-    // Direkt zu Wallee weiterleiten
-    logger.debug('🔄 Redirecting to Wallee payment page...')
-    window.location.href = response.paymentUrl
+    // ✅ ONLINE PAYMENT: Zeige "Jetzt oder Später bezahlen" Dialog
+    // Speichere Appointment und Payment für handlePayNow
+    currentPaymentAppointment.value = appointment
+    currentPayment.value = payment
+    confirmingAppointments.value.delete(appointment.id)
+    
+    // Zeige den Dialog
+    showPaymentConfirmDialog.value = true
+    logger.debug('💳 Showing payment confirmation dialog for online payment')
+    // Benutzer entscheidet im Dialog ob jetzt oder später bezahlt wird
+    // handlePayNow() oder handlePayLater() wird aufgerufen
+    
   } catch (err: any) {
-    console.error('❌ Fehler beim Starten der Zahlung:', err)
-    displayToast('error', 'Fehler beim Starten der Zahlung', err?.message || 'Unbekannter Fehler')
-  } finally {
+    console.error('❌ Fehler beim Bestätigen des Termins:', err)
+    displayToast('error', 'Fehler', err?.message || 'Unbekannter Fehler')
     confirmingAppointments.value.delete(appointment.id)
   }
 }
@@ -2053,62 +1865,28 @@ const loadAppointments = async () => {
   if (!currentUser.value?.id) return
 
   try {
+    // ✅ Use backend API to fetch appointments with staff data (bypasses RLS)
+    // Get auth token first
     const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', currentUser.value.id)
-      .single()
+    const response = await $fetch('/api/customer/get-appointments', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
     
-    if (userError) throw userError
-    if (!userData) throw new Error('User nicht in Datenbank gefunden')
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load appointments from API')
+    }
 
-    logger.debug('🔍 Loading appointments for user:', userData.id)
+    const appointmentsData = response.data
+    logger.debug('🔍 Loading appointments for user:', currentUser.value.id)
 
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        status,
-        location_id,
-        type,
-        event_type_code,
-        user_id,
-        staff_id,
-        staff:users!staff_id (
-          id,
-          first_name,
-          last_name,
-          email,
-          phone
-        ),
-
-        notes (
-          id,
-          staff_rating,
-          staff_note
-        ),
-        exam_results (
-          id,
-          passed,
-          exam_date,
-          examiner_behavior_rating,
-          examiner_behavior_notes
-        )
-      `)
-      .eq('user_id', userData.id)
-      .is('deleted_at', null)  // ✅ NEU: Nur nicht gelöschte Termine anzeigen
-      .order('start_time', { ascending: false })
-
-    if (appointmentsError) throw appointmentsError
     logger.debug('✅ Appointments loaded:', appointmentsData?.length || 0)
 
-    const locationIds = [...new Set(appointmentsData?.map(a => a.location_id).filter(Boolean))]
+    const locationIds = [...new Set(appointmentsData?.map((a: any) => a.location_id).filter(Boolean))]
     logger.debug('🔍 Location IDs found:', locationIds)
     
     let locationsMap: Record<string, { name: string; address?: string; formatted_address?: string }> = {}
@@ -2141,27 +1919,36 @@ const loadAppointments = async () => {
       logger.debug('⚠️ No location IDs found in appointments')
     }
 
-    const appointmentIds = appointmentsData?.map(a => a.id) || []
-    logger.debug('🔍 Searching evaluations for appointments:', appointmentIds.length)
+    const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
+    logger.debug('🔍 Extracting evaluations from API response for appointments:', appointmentIds.length)
 
-    const { data: notes, error: notesError } = await supabase
-      .from('notes')
-      .select(`
-        appointment_id,
-        evaluation_criteria_id,
-        criteria_rating,
-        criteria_note
-      `)
-      .in('appointment_id', appointmentIds)
-      .not('evaluation_criteria_id', 'is', null)
-      .not('criteria_rating', 'is', null)
-
-    if (notesError) {
-      console.error('❌ Notes error:', notesError)
-      throw notesError
+    // Skip if no appointments
+    if (appointmentIds.length === 0) {
+      logger.debug('⚠️ No appointments found')
+      appointments.value = []
+      return
     }
 
-    logger.debug('✅ Evaluations loaded:', notes?.length || 0)
+    // ✅ Extract notes from API response (already loaded with appointments)
+    const notes: any[] = []
+    appointmentsData.forEach((apt: any) => {
+      if (apt.notes && Array.isArray(apt.notes)) {
+        apt.notes.forEach((note: any) => {
+          // Only include evaluations (notes with criteria + rating)
+          if (note.evaluation_criteria_id && note.criteria_rating !== null) {
+            notes.push({
+              appointment_id: apt.id,
+              evaluation_criteria_id: note.evaluation_criteria_id,
+              criteria_rating: note.criteria_rating,
+              criteria_note: note.criteria_note,
+              created_at: note.created_at
+            })
+          }
+        })
+      }
+    })
+
+    logger.debug('✅ Evaluations extracted from API:', notes.length)
 
     const criteriaIds = [...new Set(notes?.map(n => n.evaluation_criteria_id).filter(Boolean))]
     let criteriaMap: Record<string, any> = {}
@@ -2197,28 +1984,105 @@ const loadAppointments = async () => {
       }
     }
 
-    const notesByAppointment = (notes || []).reduce((acc: Record<string, any[]>, note: any) => {
-      if (!acc[note.appointment_id]) {
-        acc[note.appointment_id] = []
+    // ✅ Sort notes by created_at DESC to get newest evaluations first
+    const sortedNotes = [...(notes || [])].sort((a, b) => {
+      // Both have created_at in notes table
+      const dateA = new Date(a.created_at || 0).getTime()
+      const dateB = new Date(b.created_at || 0).getTime()
+      return dateB - dateA // Neueste zuerst
+    })
+
+    // ✅ Group notes by appointment and keep only LATEST evaluation per criteria
+    // This ensures we show "new/changed" evaluations by appointment
+    const latestEvaluationsMap: Record<string, Record<string, any>> = {}
+
+    sortedNotes.forEach(note => {
+      const aptId = note.appointment_id
+      const criteriaId = note.evaluation_criteria_id
+
+      if (!latestEvaluationsMap[aptId]) {
+        latestEvaluationsMap[aptId] = {}
       }
+
+      // Only keep the first (newest) evaluation for each criteria per appointment
+      if (!latestEvaluationsMap[aptId][criteriaId]) {
+        latestEvaluationsMap[aptId][criteriaId] = note
+      }
+    })
+
+    // ✅ Now build the evaluations by appointment, filtering to new/changed ones
+    const notesByAppointment: Record<string, any[]> = {}
+    const appointmentIds_sorted = (appointmentsData || []).map((a: any) => a.id)
+
+    appointmentIds_sorted.forEach((aptId: any, index: any) => {
+      notesByAppointment[aptId] = []
       
-      const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
-      
-      if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
-        acc[note.appointment_id].push({
-          criteria_id: note.evaluation_criteria_id,
-          criteria_name: criteriaDetails.name || 'Unbekannt',
-          criteria_short_code: null,
-          criteria_rating: note.criteria_rating,
-          criteria_note: note.criteria_note || '',
-          criteria_category_name: criteriaDetails.category_name || null
+      const aptEvaluations = latestEvaluationsMap[aptId]
+      if (!aptEvaluations) return
+
+      // Get evaluations for this appointment
+      const currentEvals = Object.values(aptEvaluations)
+
+      // If not the first appointment, filter to show only new/changed evaluations
+      if (index > 0) {
+        const previousAptId = appointmentIds_sorted[index - 1]
+        const previousEvals = latestEvaluationsMap[previousAptId] || {}
+        const previousEvalsMap: Record<string, any> = {}
+
+        Object.entries(previousEvals).forEach(([criteriaId, evaluation]) => {
+          previousEvalsMap[criteriaId] = {
+            rating: (evaluation as any).criteria_rating,
+            note: (evaluation as any).criteria_note || ''
+          }
+        })
+
+        // Filter to show only evaluations that are new or have changed rating/note
+        const displayEvaluations = currentEvals.filter((currentEval: any) => {
+          const previousEval = previousEvalsMap[currentEval.evaluation_criteria_id]
+          // Show if: no previous eval (new) OR rating changed OR note changed
+          if (!previousEval) return true // NEW evaluation
+          
+          const ratingChanged = previousEval.rating !== currentEval.criteria_rating
+          const noteChanged = previousEval.note !== (currentEval.criteria_note || '')
+          
+          return ratingChanged || noteChanged // CHANGED evaluation
+        })
+
+        // Build the final evaluations list with only new/changed ones
+        displayEvaluations.forEach((note: any) => {
+          const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
+          if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
+            notesByAppointment[aptId].push({
+              criteria_id: note.evaluation_criteria_id,
+              criteria_name: criteriaDetails.name || 'Unbekannt',
+              criteria_short_code: null,
+              criteria_rating: note.criteria_rating,
+              criteria_note: note.criteria_note || '',
+              criteria_category_name: criteriaDetails.category_name || null
+            })
+          }
+        })
+      } else {
+        // First appointment: show all evaluations
+        currentEvals.forEach((note: any) => {
+          const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
+          if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
+            notesByAppointment[aptId].push({
+              criteria_id: note.evaluation_criteria_id,
+              criteria_name: criteriaDetails.name || 'Unbekannt',
+              criteria_short_code: null,
+              criteria_rating: note.criteria_rating,
+              criteria_note: note.criteria_note || '',
+              criteria_category_name: criteriaDetails.category_name || null
+            })
+          }
         })
       }
-      
-      return acc
-    }, {} as Record<string, any[]>)
+    })
 
-    const lessonsWithEvaluations = (appointmentsData || []).map(appointment => ({
+    logger.debug('✅ Evaluations grouped by appointment with new/changed filter applied')
+
+    const lessonsWithEvaluations = (appointmentsData || []).map((appointment: any) => ({
       ...appointment,
       location_name: locationsMap[appointment.location_id]?.name || null,
       location_details: locationsMap[appointment.location_id] || null,
@@ -2226,7 +2090,7 @@ const loadAppointments = async () => {
     }))
 
     // Debug: Zeige location_details für die ersten paar Termine
-    logger.debug('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map(lesson => ({
+    logger.debug('🔍 Sample location_details:', lessonsWithEvaluations.slice(0, 3).map((lesson: any) => ({
       id: lesson.id,
       location_id: lesson.location_id,
       location_name: lesson.location_name,
@@ -2261,17 +2125,28 @@ const loadLocations = async () => {
 
 const loadStaff = async () => {
   try {
+    // ✅ Use backend API to fetch staff (bypasses RLS)
+    // Get auth token first
     const supabase = getSupabase()
-    const { data, error: fetchError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('role', 'staff')
-      .eq('is_active', true)
-
-    if (fetchError) throw fetchError
-    staff.value = data || []
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    const response = await $fetch('/api/customer/get-staff-names', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
+    
+    if (response?.success && response?.data) {
+      staff.value = response.data
+      logger.debug('✅ Staff loaded via API:', staff.value.length)
+    } else {
+      throw new Error('Invalid API response')
+    }
   } catch (err: any) {
     console.error('❌ Error loading staff:', err)
+    // Fallback: continue without staff data
+    staff.value = []
   }
 }
 
@@ -2279,9 +2154,13 @@ const loadInstructors = () => {
   // Group appointments by instructor and count lessons
   const instructorMap = new Map()
   
+  // ✅ DEBUG: Check first appointment structure
+  logger.debug('🔍 DEBUG loadInstructors - First appointment:', appointments.value?.[0])
+  
   // Ensure appointments.value is an array
   if (appointments.value && Array.isArray(appointments.value)) {
-    appointments.value.forEach(appointment => {
+    appointments.value.forEach((appointment, idx) => {
+      logger.debug(`🔍 DEBUG appointment[${idx}]: staff field exists?`, !!appointment.staff)
       if (appointment && appointment.staff) {
         const instructorId = appointment.staff.id
         const instructorName = `${appointment.staff.first_name || ''} ${appointment.staff.last_name || ''}`.trim()
@@ -2441,6 +2320,15 @@ onMounted(async () => {
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
     
+    // ✅ Reset payment modal if user navigates back from Wallee
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        logger.debug('📱 User returned to page (browser back)')
+        showPaymentConfirmDialog.value = false
+        isProcessingPayment.value = false
+      }
+    })
+    
     // Einfacher: Warte auf Auth-Store Initialisierung
     let attempts = 0
     while (!authStore.isInitialized && attempts < 50) {
@@ -2477,24 +2365,14 @@ onMounted(async () => {
     if (userData.value?.tenant_id) {
       logger.debug('🎨 Loading tenant data for:', userData.value.tenant_id)
       
-      // Load tenant info from database using tenant_id
-      const supabase = getSupabase()
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', userData.value.tenant_id)
-        .single()
-      
-      if (!tenantError && tenantData) {
-        logger.debug('✅ Tenant loaded:', tenantData.name)
-        // Update the useTenant composable with the loaded tenant
-        setTenant(tenantData)
-      } else {
-        console.warn('⚠️ Error loading tenant:', tenantError?.message)
-      }
-      
-      // Also load branding
+      // Load tenant branding via secure API (replaces direct DB query)
       await loadTenantBrandingById(userData.value.tenant_id)
+      
+      // Set tenant in useTenant composable from branding data
+      if (currentTenantBranding.value) {
+        setTenant(currentTenantBranding.value as any)
+        logger.debug('✅ Tenant loaded via secure API:', currentTenantBranding.value.name)
+      }
     }
     
     await loadAllData()
@@ -2516,6 +2394,99 @@ onMounted(async () => {
     await navigateTo('/')
   }
 })
+
+// Payment Confirmation Dialog Functions
+const handlePayNow = async () => {
+  if (!currentPayment.value || !currentPaymentAppointment.value) {
+    displayToast('error', 'Fehler', 'Zahlungsdaten fehlen')
+    return
+  }
+  
+  isProcessingPayment.value = true
+  logger.debug('💳 Starting secure payment process...')
+  
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      displayToast('error', 'Fehler', 'Bitte melde dich erneut an')
+      isProcessingPayment.value = false
+      return
+    }
+    
+    const payment = currentPayment.value
+    const appointment = currentPaymentAppointment.value
+    
+    // Build merchant reference
+    const customerName = currentUser.value
+      ? `${currentUser.value.user_metadata?.first_name || ''} ${currentUser.value.user_metadata?.last_name || ''}`.trim()
+      : ''
+    
+    const merchantReferenceDetails = {
+      appointmentId: appointment.id,
+      eventTypeCode: appointment.event_type_code || appointment.type,
+      categoryCode: appointment.type,
+      categoryName: appointment.category_name,
+      staffName: customerName,
+      startTime: appointment.start_time,
+      durationMinutes: appointment.duration_minutes
+    }
+    
+    const orderId = buildMerchantReference(merchantReferenceDetails)
+    logger.debug('📌 Generated merchant reference:', orderId)
+    
+    // ✅ Call secure payment API (same as /customer/payments page)
+    const walleeResponse = await $fetch('/api/payments/process', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: {
+        paymentId: payment.id,
+        orderId,
+        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+      }
+    }) as { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
+    
+    if (walleeResponse.success && walleeResponse.paymentUrl) {
+      logger.debug('✅ Wallee transaction created:', walleeResponse.transactionId)
+      
+      // Redirect to Wallee payment page
+      window.location.href = walleeResponse.paymentUrl
+    } else {
+      throw new Error(walleeResponse.error || 'Wallee transaction failed')
+    }
+    
+  } catch (err: any) {
+    console.error('❌ Error initiating payment:', err)
+    displayToast('error', 'Fehler', `Zahlung konnte nicht gestartet werden: ${err?.data?.message || err?.message || 'Unbekannter Fehler'}`)
+    isProcessingPayment.value = false
+  }
+}
+
+const handlePayLater = async () => {
+  showPaymentConfirmDialog.value = false
+  showConfirmationModal.value = false  // ← Close confirmation modal too!
+  pendingPaymentUrl.value = null
+  isProcessingPayment.value = false
+  currentPaymentAppointment.value = null
+  currentPayment.value = null
+  
+  displayToast('success', 'Erfolg', 'Dein Termin ist bestätigt! Du kannst später von deinem Dashboard bezahlen.')
+  logger.debug('✅ Payment postponed')
+  
+  // Reload the dashboard data so "pending confirmations" disappears
+  logger.debug('🔄 Reloading dashboard data...')
+  try {
+    await loadAllData()
+    await loadPayments()
+    logger.debug('✅ Dashboard data reloaded')
+  } catch (err) {
+    logger.error('❌ Error reloading dashboard:', err)
+  }
+}
 </script>
 
 <style scoped>

@@ -73,37 +73,11 @@ CREATE POLICY "Admins can manage cancellation rules" ON cancellation_rules
     )
   );
 
--- 6. Standard Policy erstellen
-INSERT INTO cancellation_policies (name, description, is_active, is_default) 
-VALUES (
-  'Standard Policy 2024', 
-  'Standard-Absage-Policy mit gestaffelten Verrechnungsregeln',
-  true, 
-  true
-) ON CONFLICT DO NOTHING;
+-- 6. REMOVED: Hardcoded standard policies
+-- All policies must be configured via the Admin UI or API
+-- No default policies are inserted here to ensure complete flexibility
 
--- 7. Standard Rules erstellen (nur wenn noch keine existieren)
-INSERT INTO cancellation_rules (policy_id, hours_before_appointment, charge_percentage, credit_hours_to_instructor, description)
-SELECT 
-  cp.id,
-  rule_data.hours_before,
-  rule_data.charge_percentage,
-  rule_data.credit_hours,
-  rule_data.description
-FROM cancellation_policies cp
-CROSS JOIN (
-  VALUES 
-    (72, 0, true, 'Mehr als 3 Tage: Kostenlos, Stunden gutschreiben'),
-    (24, 50, true, '1-3 Tage: 50% verrechnen, Stunden gutschreiben'),
-    (0, 100, false, 'Weniger als 24h: 100% verrechnen, keine Stunden gutschreiben')
-) AS rule_data(hours_before, charge_percentage, credit_hours, description)
-WHERE cp.is_default = true
-AND NOT EXISTS (
-  SELECT 1 FROM cancellation_rules cr 
-  WHERE cr.policy_id = cp.id
-);
-
--- 8. Trigger für updated_at
+-- 7. Trigger für updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN

@@ -811,6 +811,9 @@ watch(() => studentBillingAddress.value, (newAddress: any) => {
 }, { immediate: false })
 
 // ✅ NEU: Auto-save Watcher - speichere Rechnungsadresse bei Änderungen
+// ⚠️ DISABLED: This causes an endless loop when invoice address is edited
+// The address will be saved explicitly when the user clicks save, not automatically
+/*
 let autoSaveTimeout: NodeJS.Timeout | null = null
 watch(() => invoiceData.value, (newData: any) => {
   try {
@@ -839,6 +842,7 @@ watch(() => invoiceData.value, (newData: any) => {
     // Don't break the app if watcher fails
   }
 }, { deep: true })
+*/
 
 // ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
 watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
@@ -1029,12 +1033,8 @@ const getDiscountReason = () => {
 
 // ✅ NEU: Products aus bestehender Payment oder Props
 const getProducts = () => {
-  // Im Edit-Modus: verwende ausschließlich die geladenen Produkte der Payment
-  if (props.isEditMode) {
-    return (existingPayment.value && (existingPayment.value as any).products) ? (existingPayment.value as any).products : []
-  }
-  
-  // Im Create-Modus: Verwende Props
+  // ✅ FIXED: Auch im Edit-Modus props.products verwenden (aus selectedProducts)
+  // Products werden jetzt direkt aus appointment geladen, nicht aus payment
   return props.products || []
 }
 
@@ -1190,7 +1190,12 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
       .single()
 
     if (userError) {
-      console.warn('⚠️ Error loading user data:', userError)
+      if (userError.code === 'PGRST116') {
+        // Expected: No billing address found, this is fine
+        logger.debug('ℹ️ No billing address found for student:', studentId)
+      } else {
+        console.warn('⚠️ Error loading user data:', userError)
+      }
       return null
     }
 

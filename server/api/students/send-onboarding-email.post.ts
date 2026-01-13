@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
               </p>
 
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                ⏰ Dieser Link ist 7 Tage gültig.
+                ⏰ Dieser Link ist 14 Tage gültig.
               </p>
             </td>
           </tr>

@@ -163,8 +163,13 @@
                 v-model="formData.birthDate"
                 type="date"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                @blur="validateBirthDate"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                  fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                ]"
               />
+              <p v-if="fieldErrors.birthDate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthDate }}</p>
             </div>
 
             <!-- Phone -->
@@ -177,10 +182,14 @@
                 type="tel"
                 required
                 @blur="normalizePhone"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                  fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                ]"
                 placeholder="079 123 45 67"
               />
-              <p class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
+              <p v-if="fieldErrors.phone" class="mt-1 text-sm text-red-600">{{ fieldErrors.phone }}</p>
+              <p v-else class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
             </div>
 
             <!-- Email (for Admin Registration) -->
@@ -235,9 +244,14 @@
                 type="text"
                 required
                 pattern="[0-9]{4}"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                @blur="validateZip"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                  fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                ]"
                 placeholder="8000"
               />
+              <p v-if="fieldErrors.zip" class="mt-1 text-sm text-red-600">{{ fieldErrors.zip }}</p>
             </div>
 
             <!-- City -->
@@ -261,7 +275,7 @@
               Führerschein-Kategorien *
             </label>
             <div class="space-y-3">
-              <div v-for="category in availableCategories" :key="category.code" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+              <label v-for="category in availableCategories" :key="category.code" :for="`cat-${category.code}`" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-300 transition-colors">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center space-x-3">
                     <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
@@ -272,7 +286,7 @@
                     <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px] whitespace-nowrap">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
                   </div>
                 </div>
-                <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0">
+                <div class="relative inline-flex items-start ml-4 flex-shrink-0">
                   <input
                     :id="`cat-${category.code}`"
                     v-model="formData.categories"
@@ -280,9 +294,9 @@
                     type="checkbox"
                     class="sr-only peer"
                   />
-                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 pointer-events-none"></div>
+                </div>
+              </label>
             </div>
           </div>
         </div>
@@ -401,9 +415,14 @@
                 type="email"
                 autocomplete="email"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                @blur="validateEmail"
+                :class="[
+                  'w-full px-4 py-3 border rounded-lg focus:ring-2',
+                  fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                ]"
                 placeholder="ihre.email@beispiel.ch"
               />
+              <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
             </div>
 
             <!-- Passwort -->
@@ -433,12 +452,17 @@
               <div class="mt-2 space-y-1">
                 <div class="flex items-center space-x-2">
                   <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                    {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
+                    {{ passwordChecks.length ? '✓' : '○' }} Mindestens 12 Zeichen
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
                   <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
                     {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.lowercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.lowercase ? '✓' : '○' }} Kleinbuchstabe
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -497,14 +521,17 @@
               </label>
             </div>
 
-            <!-- hCaptcha -->
-            <div class="flex flex-col items-center">
+            <!-- hCaptcha - only show if required -->
+            <div v-if="requiresCaptcha" class="flex flex-col items-center">
               <div
                 id="hcaptcha"
                 :class="{ 'ring-2 ring-red-500 rounded': captchaError }"
               ></div>
               <p v-if="captchaError" class="text-sm text-red-600 mt-2 text-center">
                 Bitte bestätigen Sie, dass Sie kein Roboter sind
+              </p>
+              <p class="text-xs text-gray-500 mt-2 text-center">
+                Sicherheitsüberprüfung erforderlich (mehrere Registrierungen erkannt)
               </p>
             </div>
           </form>
@@ -647,6 +674,7 @@ const prefilledData = ref({
 const currentStep = ref(1)
 const isSubmitting = ref(false)
 const captchaError = ref(false) // Track captcha errors
+const requiresCaptcha = ref(false) // Adaptive captcha flag
 const uploadedImage = ref<string | null>(null)
 const uploadedFileType = ref<string | null>(null)
 // Camera toggle state
@@ -764,16 +792,96 @@ const canSubmit = computed(() => {
 })
 
 const passwordChecks = computed(() => ({
-  length: formData.value.password.length >= 8,
+  length: formData.value.password.length >= 12,
   uppercase: /[A-Z]/.test(formData.value.password),
+  lowercase: /[a-z]/.test(formData.value.password),
   number: /[0-9]/.test(formData.value.password)
 }))
 
 const passwordIsValid = computed(() => {
   return passwordChecks.value.length && 
          passwordChecks.value.uppercase && 
+         passwordChecks.value.lowercase &&
          passwordChecks.value.number
 })
+
+// Field-specific errors
+const fieldErrors = ref<Record<string, string>>({
+  email: '',
+  phone: '',
+  birthDate: '',
+  firstName: '',
+  lastName: '',
+  zip: ''
+})
+
+// Validation functions
+const validateEmail = () => {
+  if (!formData.value.email) {
+    fieldErrors.value.email = ''
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.value.email)) {
+    fieldErrors.value.email = 'Ungültige E-Mail-Adresse'
+  } else {
+    fieldErrors.value.email = ''
+  }
+}
+
+const validatePhone = () => {
+  if (!formData.value.phone) {
+    fieldErrors.value.phone = ''
+    return
+  }
+  
+  const phoneRegex = /^\+41[0-9]{9}$/
+  if (!phoneRegex.test(formData.value.phone.replace(/\s/g, ''))) {
+    fieldErrors.value.phone = 'Format: +41791234567'
+  } else {
+    fieldErrors.value.phone = ''
+  }
+}
+
+const validateBirthDate = () => {
+  if (!formData.value.birthDate) {
+    fieldErrors.value.birthDate = ''
+    return
+  }
+  
+  const birthDate = new Date(formData.value.birthDate)
+  const today = new Date()
+  
+  if (birthDate > today) {
+    fieldErrors.value.birthDate = 'Geburtsdatum darf nicht in der Zukunft liegen'
+    return
+  }
+  
+  const age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  const dayDiff = today.getDate() - birthDate.getDate()
+  const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0)
+  
+  if (actualAge < 16) {
+    fieldErrors.value.birthDate = 'Mindestalter: 16 Jahre'
+  } else {
+    fieldErrors.value.birthDate = ''
+  }
+}
+
+const validateZip = () => {
+  if (!formData.value.zip) {
+    fieldErrors.value.zip = ''
+    return
+  }
+  
+  if (!/^[0-9]{4}$/.test(formData.value.zip)) {
+    fieldErrors.value.zip = 'PLZ muss 4 Ziffern haben (z.B. 8000)'
+  } else {
+    fieldErrors.value.zip = ''
+  }
+}
 
 // Methods
 const normalizePhone = () => {
@@ -786,6 +894,7 @@ const normalizePhone = () => {
   }
   
   formData.value.phone = phone
+  validatePhone()
 }
 
 const nextStep = () => {
@@ -868,36 +977,73 @@ const triggerCategoryUpload = (category: string) => {
 const handleCategoryFileUpload = (event: Event, category: string) => {
   logger.debug('📤 Category file upload started for:', category)
   const file = (event.target as HTMLInputElement).files?.[0]
+  const input = categoryFileInputs.value[category]
+  
+  if (!file) return
+  
   logger.debug('📄 File selected:', file?.name, 'Size:', file?.size, 'Type:', file?.type)
   
-  if (file) {
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      console.error('❌ File too large:', file.size, 'bytes')
-      showError(
-        'Datei zu groß', 
-        `Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.`
-      )
-      // Clear the file input to prevent accidental submission
-      const input = categoryFileInputs.value[category]
-      if (input) {
-        input.value = ''
+  // ✅ Check file type (JPG, PNG, PDF only)
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+  if (!allowedTypes.includes(file.type)) {
+    console.error('❌ Invalid file type:', file.type)
+    showError(
+      'Ungültiger Dateityp',
+      `Nur JPG, PNG und PDF-Dateien sind erlaubt. Ihre Datei ist vom Typ: ${file.type || 'unbekannt'}`
+    )
+    if (input) input.value = ''
+    return
+  }
+  
+  // ✅ Check file size (5MB limit)
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    console.error('❌ File too large:', file.size, 'bytes')
+    showError(
+      'Datei zu groß',
+      `Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 5 MB. Bitte komprimieren Sie das Bild oder wählen Sie eine kleinere Datei.`
+    )
+    if (input) input.value = ''
+    return
+  }
+  
+  const reader = new FileReader()
+  
+  // ✅ Error handling for FileReader
+  reader.onerror = (error) => {
+    console.error('❌ FileReader error for category:', category, error)
+    showError(
+      'Lesefehler',
+      'Die Datei konnte nicht gelesen werden. Bitte versuchen Sie eine andere Datei oder ein anderes Format.'
+    )
+    if (input) input.value = ''
+  }
+  
+  reader.onload = (e) => {
+    try {
+      const result = e.target?.result as string
+      if (!result) {
+        throw new Error('Leere Datei')
       }
-      return
-    }
-    
-    const reader = new FileReader()
-    reader.onload = (e) => {
+      
       logger.debug('✅ File read complete for category:', category)
       uploadedDocuments.value[category] = {
-        data: e.target?.result as string,
+        data: result,
         type: file.type,
         fileName: file.name
       }
       logger.debug('✅ uploadedDocuments updated:', Object.keys(uploadedDocuments.value))
+    } catch (err: any) {
+      console.error('❌ Error processing file:', err)
+      showError(
+        'Fehler beim Verarbeiten',
+        'Die Datei konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.'
+      )
+      if (input) input.value = ''
     }
-    reader.readAsDataURL(file)
   }
+  
+  reader.readAsDataURL(file)
 }
 
 // Clear image for specific category
@@ -928,61 +1074,65 @@ const submitRegistration = async () => {
     const hcaptchaElement = document.getElementById('hcaptcha')
     logger.debug('🔍 hCaptcha element exists:', !!hcaptchaElement)
     logger.debug('🔍 window.hcaptcha exists:', !!(window as any).hcaptcha)
-    logger.debug('🔍 window.hcaptcha object:', (window as any).hcaptcha)
+    logger.debug('🔍 Requires captcha:', requiresCaptcha.value)
     
-    // Get hCaptcha token - wait for it to be available
+    // Get hCaptcha token - only if captcha is required
     let captchaToken: string | null = null
     
-    // Try to get token with retries
-    const widgetId = hcaptchaWidgetId.value
-    logger.debug('🔍 Using hCaptcha widget ID:', widgetId)
-    
-    for (let attempt = 0; attempt < 10; attempt++) {
-      logger.debug(`🔄 Attempt ${attempt + 1}: checking for hcaptcha.getResponse`)
+    if (requiresCaptcha.value) {
+      // Try to get token with retries
+      const widgetId = hcaptchaWidgetId.value
+      logger.debug('🔍 Using hCaptcha widget ID:', widgetId)
       
-      if ((window as any).hcaptcha?.getResponse) {
-        try {
-          // Try to get response using widget ID
-          let response: string
-          if (widgetId !== null) {
-            response = (window as any).hcaptcha.getResponse(widgetId)
-          } else {
-            // Fallback to container ID if widget ID not available
-            response = (window as any).hcaptcha.getResponse('hcaptcha')
+      for (let attempt = 0; attempt < 10; attempt++) {
+        logger.debug(`🔄 Attempt ${attempt + 1}: checking for hcaptcha.getResponse`)
+        
+        if ((window as any).hcaptcha?.getResponse) {
+          try {
+            // Try to get response using widget ID
+            let response: string
+            if (widgetId !== null) {
+              response = (window as any).hcaptcha.getResponse(widgetId)
+            } else {
+              // Fallback to container ID if widget ID not available
+              response = (window as any).hcaptcha.getResponse('hcaptcha')
+            }
+            logger.debug(`✅ Got captcha response on attempt ${attempt + 1}:`, !!response, 'First 20 chars:', response?.substring(0, 20))
+            
+            // If we got a token, use it
+            if (response && typeof response === 'string' && response.length > 0) {
+              captchaToken = response
+              break
+            } else if (attempt === 0) {
+              logger.debug('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
+            }
+          } catch (error: any) {
+            logger.debug(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error?.cause || error)
+            if (attempt === 0) {
+              logger.debug('🔍 Full error object:', error)
+            }
           }
-          logger.debug(`✅ Got captcha response on attempt ${attempt + 1}:`, !!response, 'First 20 chars:', response?.substring(0, 20))
-          
-          // If we got a token, use it
-          if (response && typeof response === 'string' && response.length > 0) {
-            captchaToken = response
-            break
-          } else if (attempt === 0) {
-            logger.debug('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
-          }
-        } catch (error: any) {
-          logger.debug(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error?.cause || error)
-          if (attempt === 0) {
-            logger.debug('🔍 Full error object:', error)
-          }
+        } else {
+          logger.debug(`❌ hcaptcha.getResponse not available on attempt ${attempt + 1}`)
         }
-      } else {
-        logger.debug(`❌ hcaptcha.getResponse not available on attempt ${attempt + 1}`)
+        
+        // Wait 200ms before retrying
+        if (attempt < 9 && !captchaToken) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
       }
       
-      // Wait 200ms before retrying
-      if (attempt < 9 && !captchaToken) {
-        await new Promise(resolve => setTimeout(resolve, 200))
+      if (!captchaToken) {
+        console.error('❌ Failed to get hCaptcha token after retries')
+        console.error('❌ window.hcaptcha:', (window as any).hcaptcha)
+        console.error('❌ hcaptcha element:', hcaptchaElement)
+        throw new Error('Bitte führen Sie die Captcha-Verifikation durch')
       }
+      
+      logger.debug('✅ hCaptcha token received')
+    } else {
+      logger.debug('ℹ️ Captcha not required for this registration')
     }
-    
-    if (!captchaToken) {
-      console.error('❌ Failed to get hCaptcha token after retries')
-      console.error('❌ window.hcaptcha:', (window as any).hcaptcha)
-      console.error('❌ hcaptcha element:', hcaptchaElement)
-      throw new Error('Bitte führen Sie die Captcha-Verifikation durch')
-    }
-    
-    logger.debug('✅ hCaptcha token received')
     
     logger.debug('🚀 Starting registration via backend API...')
     
@@ -1102,7 +1252,7 @@ const submitRegistration = async () => {
     } else if (errorMessage.includes('Invalid email')) {
       errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
     } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
-      errorMessage = 'Passwort zu schwach. Mindestens 8 Zeichen, 1 Großbuchstabe und 1 Zahl erforderlich.'
+      errorMessage = 'Passwort zu schwach. Mindestens 12 Zeichen, 1 Großbuchstabe, 1 Kleinbuchstabe und 1 Zahl erforderlich.'
     } else if (errorMessage.includes('Captcha') || errorMessage.includes('captcha') || errorMessage.includes('hCaptcha')) {
       errorTitle = 'Captcha-Verifizierung fehlgeschlagen'
       errorMessage = 'Die Captcha-Verifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut und stellen Sie sicher, dass Sie das Captcha korrekt ausgefüllt haben.'
@@ -1291,6 +1441,25 @@ const openRegulationModal = async (type: string) => {
 
 // Initialize
 onMounted(async () => {
+  // Check registration risk first
+  try {
+    const riskCheck = await $fetch('/api/auth/check-registration-risk', {
+      method: 'POST'
+    }) as any
+    
+    requiresCaptcha.value = riskCheck.requiresCaptcha || false
+    logger.debug('🔍 Registration risk check:', riskCheck)
+    
+    if (requiresCaptcha.value) {
+      logger.debug('⚠️ Multiple registrations detected from this IP - captcha required')
+    } else {
+      logger.debug('✅ First registration from this IP - no captcha needed')
+    }
+  } catch (err) {
+    logger.warn('⚠️ Risk check failed, defaulting to require captcha:', err)
+    requiresCaptcha.value = true // On error, require captcha to be safe
+  }
+  
   // Restore form data from localStorage if available
   if (process.client) {
     const savedData = localStorage.getItem(FORM_DATA_KEY)
@@ -1347,10 +1516,10 @@ watch(serviceType, (newValue, oldValue) => {
   }
 })
 
-// Watch for step changes and render hCaptcha when on last step
+// Watch for step changes and render hCaptcha when on last step AND captcha is required
 watch(currentStep, async (newStep) => {
-  if (newStep === maxSteps.value) {
-    logger.debug('📍 Reached final step, rendering hCaptcha...')
+  if (newStep === maxSteps.value && requiresCaptcha.value) {
+    logger.debug('📍 Reached final step with captcha required, rendering hCaptcha...')
     
     // Wait for DOM to update
     await new Promise(resolve => setTimeout(resolve, 300))

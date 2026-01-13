@@ -1,56 +1,36 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 
-/**
- * Generate a calendar subscription token for the current staff member
- * Returns a token that can be used to access their calendar feed privately
- */
 export default defineEventHandler(async (event) => {
   const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Server configuration error'
-    })
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('❌ SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured')
+    throw createError({ statusCode: 500, statusMessage: 'Server configuration error' })
   }
 
   try {
     // Get auth token from header
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized'
-      })
+    const authHeader = getHeader(event, 'Authorization')
+    const accessToken = authHeader?.split(' ')[1]
+
+    if (!accessToken) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized: No access token provided' })
     }
-
-    const token = authHeader.substring(7)
-    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-
-    // Get current user
-    const { data: { user }, error: userError } = await userSupabase.auth.getUser()
-    if (userError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Could not verify user'
-      })
-    }
-
-    logger.debug(`🔑 Generating calendar token for user: ${user.id}`)
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Get user profile to verify they're staff
+    // Verify access token and get user from Supabase Auth
+    const { data: { user }, error: authError } = await serviceSupabase.auth.getUser(accessToken)
+
+    if (authError || !user) {
+      logger.warn('🚫 Calendar token generation: Invalid access token or user not found', authError?.message)
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized: Invalid access token' })
+    }
+
+    // Get user profile from public.users table
     const { data: userProfile, error: profileError } = await serviceSupabase
       .from('users')
       .select('id, email, role')
@@ -58,42 +38,42 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (profileError || !userProfile) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'User profile not found'
-      })
+      logger.error('❌ Calendar token generation: User profile not found for auth_user_id:', user.id, profileError?.message)
+      throw createError({ statusCode: 404, statusMessage: 'User profile not found' })
     }
 
-    // Check if user is staff (only staff can have calendar tokens)
-    if (!['admin', 'staff'].includes(userProfile.role)) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Only staff members can generate calendar tokens'
-      })
+    // Only staff and admin can generate calendar tokens
+    if (!['staff', 'admin', 'super_admin'].includes(userProfile.role)) {
+      logger.warn('🚫 Calendar token generation: User is not staff/admin', userProfile.role)
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden: Only staff can generate calendar tokens' })
     }
 
-    logger.debug(`✅ User is staff: ${userProfile.role}`)
+    logger.debug('🔐 Generating calendar token for staff:', userProfile.email)
 
     // Invalidate old token (if exists)
     try {
-      await serviceSupabase
+      const { error: invalidateError } = await serviceSupabase
         .from('calendar_tokens')
         .update({ is_active: false })
         .eq('staff_id', userProfile.id)
         .eq('is_active', true)
-      
-      logger.debug(`ℹ️ Old calendar token invalidated for staff: ${userProfile.email}`)
+
+      if (invalidateError) {
+        logger.warn('⚠️ Failed to invalidate old token:', invalidateError.message)
+      } else {
+        logger.debug(`ℹ️ Old calendar token invalidated for staff: ${userProfile.email}`)
+      }
     } catch (invalidateErr) {
       console.warn('⚠️ Failed to invalidate old token (continuing):', invalidateErr)
     }
 
-    // Generate random token (32 chars, alphanumeric)
+    // Generate random token (26 chars, alphanumeric)
     const calendarToken = Math.random()
       .toString(36)
-      .substring(2, 15) + 
+      .substring(2, 15) +
       Math.random()
-        .toString(36)
-        .substring(2, 15)
+      .toString(36)
+      .substring(2, 15)
 
     // Store new token in database
     const { error: insertError } = await serviceSupabase
@@ -115,9 +95,7 @@ export default defineEventHandler(async (event) => {
     logger.info(`✅ New calendar token generated for staff: ${userProfile.email}`)
 
     const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
-    // Convert to webcals:// for iOS Calendar compatibility
-    const domain = baseUrl.replace('https://', '').replace('http://', '')
-    const calendarLink = `webcals://${domain}/api/calendar/ics?token=${calendarToken}`
+    const calendarLink = `${baseUrl}/api/calendar/ics?token=${calendarToken}`
 
     return {
       success: true,
@@ -125,16 +103,12 @@ export default defineEventHandler(async (event) => {
       calendarLink: calendarLink,
       message: 'New calendar token generated and previous token invalidated'
     }
+
   } catch (error: any) {
-    console.error('Error generating calendar token:', error)
-
-    if (error.statusCode) {
-      throw error
-    }
-
+    console.error('❌ Calendar token generation error:', error)
     throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to generate calendar token'
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'An unexpected error occurred'
     })
   }
 })

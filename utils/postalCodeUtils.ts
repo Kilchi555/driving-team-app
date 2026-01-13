@@ -3,6 +3,9 @@
  * Swiss format: "Hauptstrasse 5, 8610 Uster" or "Bahnhof, 8048 Zürich"
  * Returns: "8610" or null if not found
  */
+
+import { logger } from '~/utils/logger'
+
 export function extractPLZFromAddress(address: string | null): string | null {
   if (!address) return null
 

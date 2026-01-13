@@ -73,6 +73,23 @@
                     <div v-if="lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address)" class="mt-1 text-xs text-gray-500">
                         Treffpunkt: {{ formatLocationAddress(lesson.location_details) }}
                     </div>
+                    
+                    <!-- Kommentare / Bewertungen -->
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <p class="text-xs font-semibold text-gray-700 mb-2">Bewertung:</p>
+                        <div v-if="lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0" class="space-y-1">
+                            <div v-for="evaluation in lesson.criteria_evaluations" :key="evaluation.criteria_id" class="text-xs">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-gray-600">{{ evaluation.criteria_name || evaluation.criteria_category_name }}</span>
+                                    <span class="font-semibold text-blue-600">{{ evaluation.criteria_rating }}/5</span>
+                                </div>
+                                <p v-if="evaluation.criteria_note" class="text-gray-500 italic">{{ evaluation.criteria_note }}</p>
+                            </div>
+                        </div>
+                        <div v-else class="text-xs text-gray-500 italic">
+                            Nicht bewertet
+                        </div>
+                    </div>
                 </div>
           </div>
         </div>

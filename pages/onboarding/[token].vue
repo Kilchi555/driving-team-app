@@ -102,14 +102,14 @@
                   type="password"
                   required
                   minlength="12"
-                  autocomplete="off"
+                  autocomplete="new-password"
                   name="new-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
                 >
                 <div class="mt-1 text-xs">
                   <p :class="passwordTooShort ? 'text-red-600' : 'text-gray-500'">
-                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, empfohlen: Gross-/Kleinbuchstaben, Zahlen & Sonderzeichen' }}
+                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, Gross-/Kleinbuchstaben, Zahlen' }}
                   </p>
                 </div>
               </div>
@@ -122,7 +122,7 @@
                   v-model="form.confirmPassword"
                   type="password"
                   required
-                  autocomplete="off"
+                  autocomplete="new-password"
                   name="confirm-password-field"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
@@ -178,10 +178,16 @@
                 <input
                   v-model="form.email"
                   type="email"
+                  autocomplete="username email"
                   required
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  @blur="validateEmail"
+                  :class="[
+                    'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                    fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                  ]"
                   placeholder="max.mustermann@example.com"
                 >
+                <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
               </div>
 
               <!-- Phone -->
@@ -193,9 +199,13 @@
                   v-model="form.phone"
                   type="tel"
                   @blur="normalizePhoneNumber"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  :class="[
+                    'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                    fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                  ]"
                   placeholder="+41 79 123 45 67"
                 >
+                <p v-if="fieldErrors.phone" class="mt-1 text-sm text-red-600">{{ fieldErrors.phone }}</p>
               </div>
 
               <!-- Birthdate -->
@@ -207,8 +217,13 @@
                   v-model="form.birthdate"
                   type="date"
                   required
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  @blur="validateBirthdate"
+                  :class="[
+                    'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                    fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                  ]"
                 >
+                <p v-if="fieldErrors.birthdate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthdate }}</p>
               </div>
 
               <!-- Address -->
@@ -249,9 +264,14 @@
                     v-model="form.zip"
                     type="text"
                     required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    @blur="validateZip"
+                    :class="[
+                      'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                      fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                    ]"
                     placeholder="8000"
                   >
+                  <p v-if="fieldErrors.zip" class="mt-1 text-sm text-red-600">{{ fieldErrors.zip }}</p>
                 </div>
 
                 <div class="col-span-2">
@@ -270,27 +290,59 @@
 
               <!-- Category Selection -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-3">
-                  Führerausweis-Kategorien *
-                </label>
+                <div class="flex items-center justify-between mb-3">
+                  <label class="block text-sm font-medium text-gray-700">
+                    Führerausweis-Kategorien *
+                  </label>
+                  <!-- Back Button for easy navigation -->
+                  <button
+                    type="button"
+                    @click="step--"
+                    class="text-xs text-gray-600 hover:text-gray-900 font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                    title="Zurück zum Passwort"
+                  >
+                    ← Zurück
+                  </button>
+                </div>
+
+                <!-- Error Message (inline, not modal) -->
+                <div v-if="categoryError" class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p class="text-red-700 text-sm font-medium">{{ categoryError }}</p>
+                </div>
+
                 <div class="space-y-3">
-                  <div v-for="cat in categories" :key="cat.code || cat.id" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div 
+                    v-for="cat in categories" 
+                    :key="cat.code || cat.id" 
+                    class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-colors cursor-pointer"
+                    @click="toggleCategory(cat.code || cat.id)"
+                  >
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center space-x-3">
                         <span class="text-lg font-bold text-gray-800">{{ cat.code || cat.id }}</span>
                         <span class="text-sm text-gray-600">{{ cat.name }}</span>
                       </div>
                     </div>
-                    <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0">
+                    <label class="relative inline-flex items-start cursor-pointer ml-4 flex-shrink-0" @click.stop>
                       <input
                         v-model="form.categories"
                         :value="cat.code || cat.id"
                         type="checkbox"
                         class="sr-only peer"
+                        @click.stop
+                        @change="clearCategoryError"
                       />
                       <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                     </label>
                   </div>
+                </div>
+
+                <!-- Selected Categories Summary -->
+                <div v-if="form.categories.length > 0" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p class="text-sm font-medium text-green-900">
+                    ✅ {{ form.categories.length }} Kategorie{{ form.categories.length !== 1 ? 'n' : '' }} ausgewählt: 
+                    <span class="font-bold">{{ form.categories.join(', ') }}</span>
+                  </p>
                 </div>
               </div>
 
@@ -334,7 +386,8 @@
                   @dragleave="handleDragLeave($event, category)"
                   :class="[
                     'border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200',
-                    dragOver[category] ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400'
+                    dragOver[category] ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400',
+                    fileErrors[category] ? 'border-red-400 bg-red-50' : ''
                   ]"
                 >
                   <div v-if="!uploadedFiles[category]">
@@ -363,7 +416,7 @@
                   </div>
                   
                   <!-- File Preview -->
-                  <div v-else class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div v-else-if="uploadedFiles[category]" class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex items-center space-x-3 min-w-0 flex-1">
                       <div class="flex-shrink-0">
                         <svg v-if="uploadedFiles[category].type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -391,6 +444,19 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
                     </button>
+                  </div>
+                </div>
+                
+                <!-- Error Message -->
+                <div v-if="fileErrors[category]" class="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div class="flex items-start">
+                    <svg class="h-5 w-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                      <p class="text-sm font-medium text-red-800">{{ fileErrors[category] }}</p>
+                      <p class="text-xs text-red-600 mt-1">Bitte wähle eine andere Datei aus</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -576,6 +642,8 @@
 
 <script setup lang="ts">
 
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, navigateTo, useFetch } from '#app'
 import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
@@ -597,6 +665,20 @@ const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
+const categoryError = ref('')
+
+// Field-specific errors
+const fieldErrors = ref<Record<string, string>>({
+  email: '',
+  phone: '',
+  birthdate: '',
+  firstName: '',
+  lastName: '',
+  street: '',
+  street_nr: '',
+  zip: '',
+  city: ''
+})
 
 const tenantName = ref('Deiner Fahrschule')
 const userData = ref<any>(null)
@@ -621,6 +703,7 @@ const form = reactive({
 
 const uploadedFiles = reactive<Record<string, File>>({})
 const dragOver = reactive<Record<string, boolean>>({})
+const fileErrors = reactive<Record<string, string>>({}) // Track file validation errors
 
 // Normalize phone number to +41 79... format
 function normalizePhoneNumber() {
@@ -636,6 +719,92 @@ function normalizePhoneNumber() {
   }
   
   form.phone = phone
+  validatePhone()
+}
+
+// Validate email format
+function validateEmail() {
+  if (!form.email) {
+    fieldErrors.value.email = ''
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.email)) {
+    fieldErrors.value.email = 'Ungültige E-Mail-Adresse'
+  } else {
+    fieldErrors.value.email = ''
+  }
+}
+
+// Validate phone format
+function validatePhone() {
+  if (!form.phone) {
+    fieldErrors.value.phone = ''
+    return
+  }
+  
+  // Swiss phone number: +41 followed by 9 digits
+  const phoneRegex = /^\+41[0-9]{9}$/
+  if (!phoneRegex.test(form.phone.replace(/\s/g, ''))) {
+    fieldErrors.value.phone = 'Format: +41791234567'
+  } else {
+    fieldErrors.value.phone = ''
+  }
+}
+
+// Validate birthdate
+function validateBirthdate() {
+  if (!form.birthdate) {
+    fieldErrors.value.birthdate = ''
+    return
+  }
+  
+  const birthDate = new Date(form.birthdate)
+  const today = new Date()
+  
+  // Check if date is in the future
+  if (birthDate > today) {
+    fieldErrors.value.birthdate = 'Geburtsdatum darf nicht in der Zukunft liegen'
+    return
+  }
+  
+  // Check minimum age (16 years)
+  const age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  const dayDiff = today.getDate() - birthDate.getDate()
+  
+  const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0)
+  
+  if (actualAge < 16) {
+    fieldErrors.value.birthdate = 'Mindestalter: 16 Jahre'
+  } else {
+    fieldErrors.value.birthdate = ''
+  }
+}
+
+// Validate required string fields
+function validateRequiredField(fieldName: keyof typeof fieldErrors.value, value: string, label: string) {
+  if (!value || !value.trim()) {
+    fieldErrors.value[fieldName] = `${label} ist erforderlich`
+  } else {
+    fieldErrors.value[fieldName] = ''
+  }
+}
+
+// Validate ZIP code
+function validateZip() {
+  if (!form.zip) {
+    fieldErrors.value.zip = ''
+    return
+  }
+  
+  // Swiss ZIP: 4 digits
+  if (!/^[0-9]{4}$/.test(form.zip)) {
+    fieldErrors.value.zip = 'PLZ muss 4 Ziffern haben (z.B. 8000)'
+  } else {
+    fieldErrors.value.zip = ''
+  }
 }
 
 // Load user data by token
@@ -678,7 +847,7 @@ onMounted(async () => {
     const { data, error: fetchError } = await useFetch('/api/students/verify-onboarding-token', {
       method: 'POST',
       body: { token }
-    })
+    }) as any
 
     if (fetchError.value || !data.value?.success) {
       error.value = 'Ungültiger oder abgelaufener Link. Bitte kontaktiere deine Fahrschule.'
@@ -688,15 +857,26 @@ onMounted(async () => {
     userData.value = data.value.user
     tenantName.value = data.value.tenantName || 'Deiner Fahrschule'
     
-    // Pre-fill known data
+    // ✅ FIX: Pre-fill ALL known data from the database
     if (userData.value.email) form.email = userData.value.email
+    if (userData.value.first_name) form.firstName = userData.value.first_name
+    if (userData.value.last_name) form.lastName = userData.value.last_name
+    if (userData.value.phone) form.phone = userData.value.phone
+    if (userData.value.birthdate) form.birthdate = userData.value.birthdate?.split('T')[0] // Format as YYYY-MM-DD
+    if (userData.value.street) form.street = userData.value.street
+    if (userData.value.street_nr) form.street_nr = userData.value.street_nr
+    if (userData.value.zip) form.zip = userData.value.zip
+    if (userData.value.city) form.city = userData.value.city
+    if (userData.value.category && Array.isArray(userData.value.category)) {
+      form.categories = userData.value.category
+    }
 
     // Load dynamic categories
     try {
       const { data: catData } = await useFetch(`/api/onboarding/categories`, {
         method: 'GET',
         query: { token }
-      })
+      }) as any
       categories.value = catData.value?.categories || []
     } catch {}
 
@@ -705,7 +885,7 @@ onMounted(async () => {
       const { data: termsData } = await useFetch(`/api/onboarding/terms`, {
         method: 'GET',
         query: { token }
-      })
+      }) as any
       termsText.value = (termsData.value?.terms || 'AGB aktuell nicht verfügbar').trim()
     } catch {
       termsText.value = 'AGB aktuell nicht verfügbar'
@@ -718,12 +898,47 @@ onMounted(async () => {
   }
 })
 
-// Handle file uploads
+// Validate file before upload
+const validateFile = (file: File): string | null => {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
+  
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return `Datei ist zu gross. Maximal 10MB erlaubt (aktuell: ${formatFileSize(file.size)})`
+  }
+  
+  // Check file type
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return `Dateiformat nicht erlaubt. Nur PNG, JPG, PDF erlaubt (aktuell: ${file.type || 'unbekannt'})`
+  }
+  
+  // Check file name for suspicious content
+  const fileName = file.name.toLowerCase()
+  if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+    return 'Ungültiger Dateiname'
+  }
+  
+  return null // No error
+}
+
+// Handle file uploads with validation
 const handleFileUpload = (event: Event, type: string) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (file) {
-    uploadedFiles[type] = file
+    // Validate file immediately
+    const validationError = validateFile(file)
+    if (validationError) {
+      fileErrors[type] = validationError
+      // Clear the input so they can try again
+      target.value = ''
+      delete uploadedFiles[type]
+    } else {
+      uploadedFiles[type] = file
+      fileErrors[type] = '' // Clear any previous errors
+      logger.debug(`✅ File validated for ${type}: ${file.name} (${formatFileSize(file.size)})`)
+    }
   }
 }
 
@@ -735,8 +950,16 @@ const handleDrop = (event: DragEvent, type: string) => {
   const files = event.dataTransfer?.files
   if (files && files.length > 0) {
     const file = files[0]
-    if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+    
+    // Validate file
+    const validationError = validateFile(file)
+    if (validationError) {
+      fileErrors[type] = validationError
+      delete uploadedFiles[type]
+    } else if (file.type.startsWith('image/') || file.type === 'application/pdf') {
       uploadedFiles[type] = file
+      fileErrors[type] = ''
+      logger.debug(`✅ File dragged and validated for ${type}: ${file.name}`)
     }
   }
 }
@@ -756,6 +979,7 @@ const handleDragLeave = (event: DragEvent, type: string) => {
 // Remove file
 const removeFile = (type: string) => {
   delete uploadedFiles[type]
+  fileErrors[type] = '' // Clear error when removing file
 }
 
 // Format file size
@@ -792,56 +1016,67 @@ const goToLogin = async () => {
 // Load and display regulations
 const openRegulationModal = async (type: string) => {
   try {
-    const supabase = getSupabase()
     const activeTenantId = userData.value?.tenant_id
+    const onboardingToken = route.params.token as string
     
     const typeLabel = type === 'nutzungsbedingungen' ? 'Nutzungsbedingungen' : 'Datenschutzerklärung'
-    logger.debug('📋 Loading regulation:', type, 'for tenant:', activeTenantId)
+    logger.debug('📋 Loading regulation via API:', { type, tenantId: activeTenantId, token: onboardingToken })
     
     if (!activeTenantId) {
       console.error('❌ No tenant_id available')
       showErrorMessage(`Fehler: Die Tenant-Informationen fehlen. Bitte kontaktiere die Fahrschule.`)
       return
     }
-    
-    // Try to load tenant-specific reglement first, then fall back to global
-    const { data: regulations, error } = await supabase
-      .from('tenant_reglements')
-      .select('*')
-      .eq('type', type)
-      .eq('is_active', true)
-      .or(`tenant_id.eq.${activeTenantId},tenant_id.is.null`)
-      .order('tenant_id', { ascending: false })
-      .limit(1)
-    
-    logger.debug('📋 Query result:', { regulations, error })
-    
-    if (error) {
-      console.error('❌ Error loading reglement:', error)
-      showErrorMessage(`Fehler beim Laden der ${typeLabel}. Bitte versuche es später erneut oder kontaktiere die Fahrschule.`)
+
+    if (!onboardingToken) {
+      console.error('❌ No onboarding token available')
+      showErrorMessage(`Fehler: Token fehlt. Bitte versuche es später erneut.`)
       return
     }
     
-    if (regulations && regulations.length > 0) {
+    // ✅ Call secure API endpoint instead of direct DB query
+    const regulation = await $fetch<any>('/api/onboarding/reglements', {
+      method: 'GET',
+      query: {
+        type,
+        tenantId: activeTenantId,
+        token: onboardingToken
+      }
+    }).catch((err: any) => {
+      logger.error('❌ API Error:', err)
+      throw err
+    })
+    
+    if (regulation?.data) {
       // Load tenant data for placeholder replacement
       const tenantData = await loadTenantData(activeTenantId)
       
       // Replace placeholders in content
       const processedRegulation = {
-        ...regulations[0],
-        content: replacePlaceholders(regulations[0].content, tenantData)
+        ...regulation.data,
+        content: replacePlaceholders(regulation.data.content, tenantData)
       }
       
       currentRegulation.value = processedRegulation
       showRegulationModal.value = true
-      logger.debug('✅ Opened reglement modal:', type, regulations[0].title)
+      logger.debug('✅ Opened reglement modal:', type, regulation.data.title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
       showErrorMessage(`${typeLabel} sind noch nicht verfügbar. Bitte kontaktiere die Fahrschule.`)
     }
   } catch (err: any) {
-    console.error('❌ Error opening reglement modal:', err)
-    showErrorMessage('Fehler beim Laden der Dokumente. Bitte versuche es später erneut.')
+    logger.error('❌ Error opening reglement modal:', err)
+    const errorMessage = err?.data?.statusMessage || err?.message || 'Fehler beim Laden der Dokumente'
+    
+    if (errorMessage.includes('Too many requests')) {
+      showErrorMessage('Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.')
+    } else if (errorMessage.includes('expired')) {
+      showErrorMessage('Dein Onboarding-Link ist abgelaufen. Bitte fordere einen neuen an.')
+    } else if (errorMessage.includes('not found')) {
+      showErrorMessage(`${err?.data?.statusMessage?.split(' ')[0] || 'Reglement'} sind noch nicht verfügbar.`)
+    } else {
+      showErrorMessage(errorMessage)
+    }
   }
 }
 
@@ -863,9 +1098,10 @@ const handleNextStep = async () => {
   } else if (step.value === 1) {
     // Step 2 validation: Check that at least one category is selected
     if (form.categories.length === 0) {
-      showErrorMessage('Bitte wähle mindestens eine Kategorie aus')
+      categoryError.value = 'Bitte wähle mindestens eine Kategorie aus'
       return
     }
+    categoryError.value = ''
     step.value++
   } else if (step.value === 2) {
     // Step 3 validation: Check that all categories have uploaded documents
@@ -883,9 +1119,26 @@ const handleNextStep = async () => {
   }
 }
 
+// Helper function: Toggle category selection
+const toggleCategory = (categoryCode: string) => {
+  const index = form.categories.indexOf(categoryCode)
+  if (index > -1) {
+    form.categories.splice(index, 1)
+  } else {
+    form.categories.push(categoryCode)
+  }
+  clearCategoryError()
+}
+
+// Helper function: Clear category error when user makes a selection
+const clearCategoryError = () => {
+  categoryError.value = ''
+}
+
 // Complete onboarding
 const completeOnboarding = async () => {
   isSubmitting.value = true
+  const documentUploadErrors: Record<string, string> = {} // Track upload errors
 
   try {
     // Upload documents first
@@ -896,26 +1149,53 @@ const completeOnboarding = async () => {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('type', type)
-        formData.append('userId', userData.value.id)
+        formData.append('token', token)
 
         try {
           const { data: uploadData, error: uploadError } = await useFetch('/api/students/upload-document', {
           method: 'POST',
           body: formData
-        })
+        }) as any
 
           if (uploadError.value) {
             console.error('❌ Document upload error:', uploadError.value)
-            throw new Error(`Dokument-Upload fehlgeschlagen: ${uploadError.value.message || 'Unbekannter Fehler'}`)
+            // Store error but don't stop registration - user can continue
+            const errorMsg = uploadError.value.data?.message || uploadError.value.message || 'Unbekannter Fehler'
+            documentUploadErrors[type] = errorMsg
+            logger.warn(`⚠️ Document upload failed for ${type}: ${errorMsg}`)
+            continue // Continue with next file instead of throwing
           }
 
-        if (uploadData.value?.url) {
-          documentUrls[type] = uploadData.value.url
+          if (uploadData.value?.url) {
+            documentUrls[type] = uploadData.value.url
+            logger.debug(`✅ Document uploaded for ${type}`)
           }
         } catch (uploadErr: any) {
           console.error('❌ Error uploading document for category', type, ':', uploadErr)
-          throw new Error(`Fehler beim Upload der Dokumente (${type}): ${uploadErr.message}`)
+          documentUploadErrors[type] = uploadErr.message || 'Upload fehlgeschlagen'
+          logger.warn(`⚠️ Exception uploading document for ${type}: ${uploadErr.message}`)
+          // Continue instead of throwing - registration should not fail due to document upload
+          continue
         }
+      }
+    }
+    
+    // Show document upload errors as warnings, not blockers
+    if (Object.keys(documentUploadErrors).length > 0) {
+      const errorList = Object.entries(documentUploadErrors)
+        .map(([type, msg]) => `• ${type}: ${msg}`)
+        .join('\n')
+      
+      logger.warn('⚠️ Document upload errors:', documentUploadErrors)
+      
+      // Show warning to user but allow them to continue
+      const userConfirmed = confirm(
+        `Einige Dokumente konnten nicht hochgeladen werden:\n\n${errorList}\n\nDu kannst die Registrierung fortsetzen und die Dokumente später hochladen.`
+      )
+      
+      if (!userConfirmed) {
+        isSubmitting.value = false
+        return // User chose to cancel
       }
     }
 
@@ -941,7 +1221,7 @@ const completeOnboarding = async () => {
     const { data, error: completeError } = await useFetch('/api/students/complete-onboarding', {
       method: 'POST',
       body: requestBody
-    })
+    }) as any
     
     logger.debug('📥 Onboarding completion response:', { data: data.value, error: completeError.value })
 
@@ -952,8 +1232,8 @@ const completeOnboarding = async () => {
       // Provide more helpful error messages
       if (errorMessage.includes('duplicate') || errorMessage.includes('Email')) {
         errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder kontaktiere die Fahrschule.'
-      } else if (errorMessage.includes('password')) {
-        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 8 Zeichen, groß- und kleinbuchstaben, zahlen)'
+      } else if (errorMessage.includes('password') || errorMessage.includes('Passwort')) {
+        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 12 Zeichen, Gross- und Kleinbuchstaben, Zahlen)'
       } else if (errorMessage.includes('Token')) {
         errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
       }
@@ -971,7 +1251,7 @@ const completeOnboarding = async () => {
     // Auto-redirect to login after 2 seconds
     setTimeout(async () => {
       // Get tenant slug from userData or extract from token API response
-      const tenantSlug = userData.value?.tenant_slug || data.value?.tenant_slug
+      const tenantSlug = userData.value?.tenant_slug || (data.value as any)?.tenant_slug
       
       if (tenantSlug) {
         logger.debug('✅ Redirecting to tenant login:', `/${tenantSlug}`)
@@ -995,4 +1275,5 @@ const completeOnboarding = async () => {
   }
 }
 </script>
+
 

@@ -441,29 +441,19 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     // Wenn TZID vorhanden, konvertiere von lokaler Zeit in dieser Zone nach UTC
     if (opts?.tzid) {
       try {
-        // Für Europe/Zurich: Die Zeit ist bereits lokal, wir müssen sie zu UTC konvertieren
-        // Erstelle ein Date-Objekt das die lokale Zeit als UTC interpretiert
-        const localAsUTC = new Date(`${localTimeString}Z`)
+        // ✅ FIX: Interpretiere die Zeit als UTC, dann berechne den Offset für die angegebene Zone
+        // und addiere ihn, um die korrekte UTC-Zeit zu erhalten
+        const dateAsUTC = new Date(`${localTimeString}Z`)
         
-        // Hole die UTC-Repräsentation dieser Zeit wenn sie in der angegebenen Zone ist
-        const formatter = new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'UTC',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-          timeZoneName: 'short'
-        })
+        // Berechne den Offset der angegebenen Zone für diesen Zeitpunkt
+        const utcOffset = getUTCOffsetForTimezone(opts.tzid, dateAsUTC)
         
-        // Berechne den Offset zwischen der angegebenen Zone und UTC
-        const dateInZone = new Date(localTimeString)
-        const utcOffset = getUTCOffsetForTimezone(opts.tzid, dateInZone)
-        
-        // Ziehe den Offset ab um von lokaler Zeit zu UTC zu kommen
-        const utcTime = dateInZone.getTime() - utcOffset
+        // Die lokale Zeit in der Zone ist 'localTimeString'. Um UTC zu bekommen,
+        // müssen wir den Offset SUBTRAHIEREN (nicht von einem bereits konvertierten Wert)
+        // Da wir die Zeit als UTC interpretiert haben, ist dateAsUTC.getTime() = Millisekunden seit Epoch für diese "falsche" UTC-Zeit
+        // Die echte UTC-Zeit ist: lokale Zeit - offset
+        // Also: dateAsUTC.getTime() - utcOffset
+        const utcTime = dateAsUTC.getTime() - utcOffset
         const utcDate = new Date(utcTime)
         
         return utcDate.toISOString()

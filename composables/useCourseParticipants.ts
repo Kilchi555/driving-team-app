@@ -314,7 +314,23 @@ export const useCourseParticipants = () => {
     const message = `Hallo ${registration.first_name}! Ihre Anmeldung für "${course.name}" wurde bestätigt. Details folgen per E-Mail.`
     
     try {
-      await sendSms(registration.phone, message)
+      // Get tenant sender name
+      let senderName = 'Fahrschule'
+      if (currentUser.value?.tenant_id) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name, twilio_from_sender')
+          .eq('id', currentUser.value.tenant_id)
+          .single()
+        
+        if (tenantData?.twilio_from_sender) {
+          senderName = tenantData.twilio_from_sender
+        } else if (tenantData?.name) {
+          senderName = tenantData.name
+        }
+      }
+      
+      await sendSms(registration.phone, message, senderName)
     } catch (err) {
       console.warn('Could not send confirmation SMS:', err)
     }
@@ -324,7 +340,23 @@ export const useCourseParticipants = () => {
     const message = `Hallo ${waitlistEntry.first_name}! Der gewünschte Kurs ist ausgebucht. Sie stehen auf Position ${waitlistEntry.position} der Warteliste.`
     
     try {
-      await sendSms(waitlistEntry.phone, message)
+      // Get tenant sender name
+      let senderName = 'Fahrschule'
+      if (currentUser.value?.tenant_id) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('name, twilio_from_sender')
+          .eq('id', currentUser.value.tenant_id)
+          .single()
+        
+        if (tenantData?.twilio_from_sender) {
+          senderName = tenantData.twilio_from_sender
+        } else if (tenantData?.name) {
+          senderName = tenantData.name
+        }
+      }
+      
+      await sendSms(waitlistEntry.phone, message, senderName)
     } catch (err) {
       console.warn('Could not send waitlist SMS:', err)
     }

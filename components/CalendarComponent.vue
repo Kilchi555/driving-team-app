@@ -351,6 +351,9 @@ const currentYear = ref(new Date().getFullYear())
 const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
 let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 
+// ✅ NEW: Event types color map (loaded from DB)
+const eventTypeColorsMap = ref<Record<string, string>>({})
+
 // Working Hours Management
 const { 
   loadWorkingHours, 
@@ -360,6 +363,35 @@ const {
 } = useStaffWorkingHours()
 
 const emit = defineEmits(['view-updated', 'appointment-changed'])
+
+// ✅ NEW FUNCTION: Load event types and their colors from DB
+const loadEventTypeColors = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data: eventTypes, error } = await supabase
+      .from('event_types')
+      .select('code, default_color')
+      .eq('is_active', true)
+    
+    if (error) {
+      logger.warn('⚠️ Failed to load event type colors:', error)
+      return
+    }
+    
+    if (eventTypes && eventTypes.length > 0) {
+      const colorsMap: Record<string, string> = {}
+      eventTypes.forEach(et => {
+        if (et.code && et.default_color) {
+          colorsMap[et.code] = et.default_color
+        }
+      })
+      eventTypeColorsMap.value = colorsMap
+      logger.debug('✅ Event type colors loaded:', colorsMap)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Error loading event type colors:', err)
+  }
+}
 
 // NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
 const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
@@ -774,86 +806,49 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   }
 }
 
-const loadRegularAppointments = async () => {
-  logger.debug('🔥 NEW loadRegularAppointments function is running!')
+const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date) => {
+  logger.debug('🔥 loadRegularAppointments using backend API!')
   isLoadingEvents.value = true
   try {
-    logger.debug('🔄 Loading appointments from Supabase...')
-    logger.debug('👤 Current user from props:', props.currentUser?.id)
+    logger.debug('🔄 Loading appointments via backend API...')
     
-    // ✅ Fallback: useCurrentUser direkt verwenden falls props falsch sind
-    const { currentUser: composableCurrentUser } = useCurrentUser()
-    let actualUserId = props.currentUser?.id || composableCurrentUser.value?.id
-    
-    logger.debug('👤 Actual user ID to use:', actualUserId)
-    
-    // Get user's tenant_id for filtering
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', actualUserId)
-      .single()
-    
-    if (userError) throw userError
-    if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
-    
-    logger.debug('🏢 User tenant_id:', userData.tenant_id)
+    // Get auth session for API call
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
+    }
 
-    // ✅ Optimierte Abfrage mit weniger JOINs für bessere Performance
-    let query = supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        type,
-        event_type_code,
-        status,
-        duration_minutes,
-        location_id,
-        user_id,
-        staff_id,
-        created_by,
-        description,
-        user:users!appointments_user_id_fkey(first_name, last_name, category, phone, email),
-        staff:users!appointments_staff_id_fkey(first_name, last_name),
-        created_by_user:users!appointments_created_by_fkey(first_name, last_name)
-      `)
-      .is('deleted_at', null) // ✅ Soft Delete Filter
-      .eq('tenant_id', userData.tenant_id) // ✅ Tenant Filter
-      .order('start_time')
-      .limit(1000) // ✅ Limit für bessere Performance
-    
-    // ✅ Admin vs Staff Logic: Admins sehen alle Termine, Staff nur eigene
-    const userRole = props.currentUser?.role || composableCurrentUser.value?.role
-    if (userRole === 'admin') {
-      logger.debug('🔥 Admin detected - loading appointments for tenant:', userData.tenant_id)
-      // Admin Staff Filter: Wenn ein spezifischer Staff ausgewählt ist
-      if (props.adminStaffFilter) {
-        logger.debug('🔥 Admin filtering by staff:', props.adminStaffFilter)
-        query = query.eq('staff_id', props.adminStaffFilter)
-      } else {
-        logger.debug('🔥 Admin loading ALL appointments for tenant')
-        // Alle Termine des Tenants (kein zusätzlicher Filter)
-      }
-    } else {
-      logger.debug('🔥 Staff detected - loading own appointments only for tenant:', userData.tenant_id)
-      query = query.eq('staff_id', actualUserId) // Nur eigene Termine
-    }
-    
-    const { data: appointments, error } = await query
-    logger.debug('📊 Raw appointments from DB:', appointments?.length || 0)
-    logger.debug('🔍 Query details:', {
-      staff_id: actualUserId,
-      tenant_id: userData.tenant_id,
-      deleted_at: 'null',
-      order: 'start_time'
+    // Build query parameters
+    const params = new URLSearchParams()
+    if (viewStartDate) params.append('viewStart', viewStartDate.toISOString())
+    if (viewEndDate) params.append('viewEnd', viewEndDate.toISOString())
+    if (props.adminStaffFilter) params.append('adminStaffFilter', props.adminStaffFilter)
+
+    logger.debug('📡 Calling API with params:', {
+      viewStart: viewStartDate?.toISOString(),
+      viewEnd: viewEndDate?.toISOString(),
+      adminStaffFilter: props.adminStaffFilter
     })
-    logger.debug('🔍 Full query:', query)
-    if (error) {
-      console.error('❌ Supabase query error:', error)
+
+    // Call backend API
+    const response = await $fetch(`/api/calendar/get-appointments?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load appointments from API')
     }
+
+    const appointments = response.data
+
+    logger.debug('📊 Raw appointments from API:', appointments?.length || 0)
+    logger.debug('🔍 Query details:', {
+      viewportDates: viewStartDate && viewEndDate ? 'YES' : 'NO',
+      count: appointments.length
+    })
 
     // ✅ DEBUG: Erste Appointment prüfen
     if (appointments && appointments.length > 0) {
@@ -862,38 +857,17 @@ const loadRegularAppointments = async () => {
         title: appointments[0].title,
         type: appointments[0].type,
         event_type_code: appointments[0].event_type_code,
-        appointment_type: appointments[0].event_type_code || 'lesson', // Verwende event_type_code als appointment_type
+        user: appointments[0].user,
+        staff: appointments[0].staff,
         start_time: appointments[0].start_time,
         duration_minutes: appointments[0].duration_minutes
       })
     } else {
-      logger.debug('❌ NO APPOINTMENTS FOUND!')
-      logger.debug('🔍 Debug info:', {
-        actualUserId,
-        tenant_id: userData.tenant_id,
-        userRole: props.currentUser?.role || composableCurrentUser.value?.role
-      })
+      logger.debug('ℹ️ No appointments found')
     }
     
-    if (error) throw error
-    
-    // Filtern: Admins sehen alle Termine (oder gefilterte), Staff nur eigene
-    const filteredAppointments = (appointments || []).filter((apt) => {
-      if (userRole === 'admin') {
-        if (props.adminStaffFilter) {
-          const isSelectedStaff = apt.staff_id === props.adminStaffFilter
-          logger.debug('🔍 Admin staff filter check:', { aptStaffId: apt.staff_id, selectedStaff: props.adminStaffFilter, isSelectedStaff })
-          return isSelectedStaff // Admin sieht nur Termine des ausgewählten Staff
-        } else {
-          logger.debug('🔍 Admin filter: showing all appointments')
-          return true // Admin sieht alle Termine
-        }
-      } else {
-        const isOwnAppointment = apt.staff_id === actualUserId
-        logger.debug('🔍 Staff filter check:', { aptStaffId: apt.staff_id, actualUserId, isOwnAppointment })
-        return isOwnAppointment // Staff nur eigene Termine
-      }
-    })
+    // Use appointments directly (authorization handled by backend)
+    const filteredAppointments = appointments || []
     
     logger.debug('✅ Filtered appointments:', filteredAppointments.length)
     
@@ -923,51 +897,84 @@ const loadRegularAppointments = async () => {
     const convertedEvents = filteredAppointments.map((apt) => {
       const isTeamInvite = apt.type === 'team_invite'
       
+      // ✅ Handle both array and object formats for user data
+      const userObj = Array.isArray(apt.user) ? apt.user?.[0] : apt.user
+      const studentName = `${userObj?.first_name || ''} ${userObj?.last_name || ''}`.trim() || 'Fahrlektion'
+      
       // ✅ Event-Titel bestimmen
       let eventTitle = ''
-      if (apt.type === 'lesson' || !apt.type) {
-        // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
-        const locationText = (apt as any).location_address || 
-            (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
-            (apt as any).location_name || 
-            (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
+      
+      // ✅ PRIORITY 1: Use title from DB if available (user may have customized it!)
+      if (apt.title && apt.title.trim() !== '') {
+        eventTitle = apt.title
+        // ✅ No event type code prefix anymore - keep title clean
+      }
+      // ✅ FALLBACK: Generate title if none in DB
+      else {
+        // Determine if this is an "other event type" (not lesson/exam/theory)
+        const isOtherEventType = apt.event_type_code && !['lesson', 'exam', 'theory'].includes(apt.event_type_code)
         
-        const studentName = `${apt.user?.[0]?.first_name || ''} ${apt.user?.[0]?.last_name || ''}`.trim() || 'Fahrlektion'
-        
-        // ✅ Debug: Location-Daten loggen
-        logger.debug('🔍 Location debug for appointment:', apt.id, {
-          location_id: apt.location_id,
-          location_name: (apt as any).location_name,
-          location_address: (apt as any).location_address,
-          locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
-          final_locationText: locationText
-        })
-        
-        // ✅ Titel mit Location kombinieren falls vorhanden
-        if (locationText) {
-          eventTitle = `${studentName} - ${locationText}`
+        if (isOtherEventType) {
+          // ✅ For other event types (VKU, Nothelfer, etc.), just use location (no student name)
+          const locationText = (apt as any).location_address || 
+              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              (apt as any).location_name || 
+              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 'Termin'
+          eventTitle = locationText
         } else {
-          eventTitle = studentName
+          // ✅ For lessons/exams, use student name + location
+          // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
+          const locationText = (apt as any).location_address || 
+              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              (apt as any).location_name || 
+              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
+          
+          // ✅ Debug: Location-Daten loggen
+          logger.debug('🔍 Location debug for appointment:', apt.id, {
+            location_id: apt.location_id,
+            location_name: (apt as any).location_name,
+            location_address: (apt as any).location_address,
+            locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
+            final_locationText: locationText,
+            userObj: userObj,
+            studentName: studentName
+          })
+          
+          // ✅ Titel mit Location kombinieren falls vorhanden
+          if (locationText) {
+            eventTitle = `${studentName} - ${locationText}`
+          } else {
+            eventTitle = studentName
+          }
         }
-      } else {
-        eventTitle = apt.title || apt.type || 'Termin'
       }
       
       // ✅ Kategorie vom Appointment type Feld nehmen
       const category = apt.type || 'B'
-      // ✅ Type korrekt setzen: Wenn type eine Kategorie ist, dann ist es eine Fahrstunde
-      const eventType = (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson')
-      const eventColor = getEventColor(eventType, apt.status, category)
       
-      // ✅ DEBUG: Event-Transformation
-      logger.debug('🔄 Converting appointment to event:', {
-        id: apt.id,
-        type: apt.type,
-        event_type_code: apt.event_type_code,
-        category: category,
-        eventType: eventType,
-        title: eventTitle
-      })
+      // ✅ FIXED: event_type_code has PRIORITY over type
+      // If event_type_code is NOT a standard lesson type (lesson/exam/theory), use it
+      // Otherwise, determine from type field
+      let eventType = 'lesson' // default
+      if (apt.event_type_code && !['lesson', 'exam', 'theory'].includes(apt.event_type_code)) {
+        // Non-standard event type (vku, nothelfer, meeting, etc.)
+        eventType = apt.event_type_code
+      } else if (apt.event_type_code) {
+        // Standard event type explicitly set
+        eventType = apt.event_type_code
+      } else if (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) {
+        // Has a driving category, so it's a lesson
+        eventType = 'lesson'
+      }
+      
+      const eventColor = getEventColor(eventType, apt.status, category, apt.payment_status, apt.user_id)
+      
+      // ✅ Roter Rahmen für unbezahlte Termine mit echten Kunden
+      // Nur wenn user_id != staff_id (echte Kundentermine, keine internen Blöcke)
+      const hasRealCustomer = apt.user_id && apt.user_id !== '' && apt.user_id !== apt.staff_id
+      const isUnpaid = !apt.payment_status || apt.payment_status !== 'completed'
+      const borderColor = (hasRealCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
+      const unpaidClass = (hasRealCustomer && isUnpaid) ? 'unpaid-appointment' : ''
       
       // Convert UTC appointment times to local time for display
       // Appointments are stored in UTC, calendar expects local time
@@ -999,7 +1006,7 @@ const loadRegularAppointments = async () => {
         end: parseUTCTime(apt.end_time),
         allDay: false,
         backgroundColor: eventColor,
-        borderColor: eventColor,
+        borderColor: borderColor, // ✅ Roter Rahmen für unbezahlt
         textColor: '#ffffff',
         // ✅ DEBUG: Zusätzliche Event-Daten direkt am Event-Objekt
         event_type_code: apt.event_type_code || 'lesson', // ✅ NEU: event_type_code direkt am Event
@@ -1010,7 +1017,7 @@ const loadRegularAppointments = async () => {
         duration_minutes: apt.duration_minutes,
         status: apt.status,
         // ✅ Debug: Event-Farben direkt setzen
-        classNames: [`category-${category}`],
+        classNames: [`category-${category}`, unpaidClass].filter(Boolean),
         extendedProps: {
           // ✅ Location für 'other' Events wieder hinzufügen - gleiche Priorität wie im Titel
           location: (apt.location_id ? locationsMap[apt.location_id]?.address : '') || '',
@@ -1018,11 +1025,11 @@ const loadRegularAppointments = async () => {
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
           client_note: '',
-          category: (apt as any).user?.category || apt.type || 'B',
+          category: userObj?.category || apt.type || 'B',
           instructor: `${(apt as any).staff?.first_name || ''} ${(apt as any).staff?.last_name || ''}`.trim(),
-          student: `${(apt as any).user?.first_name || ''} ${(apt as any).user?.last_name || ''}`.trim(),
-          phone: (apt as any).user?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
-          email: (apt as any).user?.email || '', // ✅ NEU: Email für Email-Benachrichtigungen
+          student: studentName,
+          phone: userObj?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
+          email: userObj?.email || '', // ✅ NEU: Email für Email-Benachrichtigungen
           created_by: `${(apt as any).created_by_user?.first_name || ''} ${(apt as any).created_by_user?.last_name || ''}`.trim() || 'Unbekannt',
           price: 0, // Preis wird nicht mehr in appointments gespeichert
           user_id: apt.user_id,
@@ -1033,7 +1040,11 @@ const loadRegularAppointments = async () => {
           appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
           is_team_invite: isTeamInvite,
           original_type: (apt as any).user?.category || apt.type || 'B',
-          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson') // ✅ KORRIGIERT: event_type_code für eventType verwenden
+          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson'), // ✅ KORRIGIERT: event_type_code für eventType verwenden
+          // ✅ NEW: Payment status for color indication
+          payment_status: apt.payment_status || null,
+          paid_at: apt.paid_at || null,
+          is_paid: apt.payment_status === 'completed' && apt.paid_at ? true : false
         }
       }
       
@@ -1052,15 +1063,44 @@ const loadRegularAppointments = async () => {
   }
 }
 
-// 2. Die ursprüngliche loadAppointments Funktion (unverändert):
-// ✅ Caching für bessere Performance
+// ✅ IMPROVED CACHING: Viewport-spezifische Caches statt globaler Cache
 const lastLoadTime = ref<number>(0)
-const CACHE_DURATION = 30000 // 30 Sekunden Cache
+const CACHE_DURATION = 60000 // 60 Sekunden (erhöht von 30s, da viewport-spezifisch)
+const viewportCache = ref<Map<string, { data: any; timestamp: number }>>(new Map())
 
-// ✅ Cache-Invalidierung für bessere Performance
-const invalidateCache = () => {
+// ✅ Cache Key basierend auf Viewport-Daten
+const getCacheKey = (viewStart: Date, viewEnd: Date): string => {
+  // Runde auf Tagesgenauigkeit um Cache-Hits zu maximieren
+  const startDay = new Date(viewStart).toISOString().split('T')[0]
+  const endDay = new Date(viewEnd).toISOString().split('T')[0]
+  return `${startDay}_${endDay}`
+}
+
+// ✅ Cache-Check für spezifischen Viewport
+const getCachedData = (cacheKey: string): any | null => {
+  const cached = viewportCache.value.get(cacheKey)
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    logger.debug('💾 Cache HIT for viewport:', cacheKey, `(${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`)
+    return cached.data
+  }
+  logger.debug('💾 Cache MISS for viewport:', cacheKey)
+  return null
+}
+
+// ✅ Cache speichern
+const setCacheData = (cacheKey: string, data: any) => {
+  viewportCache.value.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  })
+  logger.debug('💾 Cache SET for viewport:', cacheKey)
+}
+
+// ✅ Alte globale Cache-Invalidierung (nur für kritische Änderungen)
+const invalidateCache = (reason: string = 'unknown') => {
   lastLoadTime.value = 0
-  logger.debug('🔄 Calendar cache invalidated')
+  viewportCache.value.clear() // Clear all viewport caches
+  logger.debug('🔄 Calendar cache invalidated:', reason)
 }
 
 const loadAppointments = async (forceReload = false) => {
@@ -1076,48 +1116,47 @@ const loadAppointments = async (forceReload = false) => {
     return
   }
 
-  // ✅ Cache-Check: Nur neu laden wenn nötig
-  const now = Date.now()
-  if (!forceReload && (now - lastLoadTime.value) < CACHE_DURATION) {
-    logger.debug('⚡ Using cached calendar data (last load:', Math.round((now - lastLoadTime.value) / 1000), 'seconds ago)')
-    return
+  // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
+  const calendarApi = calendar.value?.getApi()
+  const currentView = calendarApi?.view
+  const viewStart = currentView?.activeStart || new Date()
+  const viewEnd = currentView?.activeEnd || new Date()
+  
+  // ✅ VIEWPORT-SPEZIFISCHER CACHE CHECK
+  const cacheKey = getCacheKey(viewStart, viewEnd)
+  if (!forceReload) {
+    const cachedData = getCachedData(cacheKey)
+    if (cachedData) {
+      logger.debug('⚡ Using cached calendar data for this viewport')
+      calendarEvents.value = cachedData
+      return
+    }
   }
   
   isLoadingEvents.value = true
   isUpdating.value = true
   
   try {
-    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cached check)')
+    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cache miss)')
     
-    // ✅ Externe Kalender synchronisieren BEVOR Termine geladen werden
-    logger.debug('🔄 Syncing external calendars before loading appointments...')
-    try {
-      const { autoSyncCalendars } = useExternalCalendarSync()
-      const syncResult = await autoSyncCalendars(props.currentUser?.id)
-      if (syncResult.success && !syncResult.skipped) {
-        logger.debug('✅ External calendars synced successfully')
-      } else if (syncResult.skipped) {
-        logger.debug('⏭️ External calendar sync skipped (cooldown or already running)')
-      }
-    } catch (syncError) {
-      console.warn('⚠️ External calendar sync failed (non-fatal):', syncError)
-      // Sync-Fehler sind nicht fatal, wir laden trotzdem die Termine
-    }
-    
-    // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
-    const calendarApi = calendar.value?.getApi()
-    const currentView = calendarApi?.view
-    const viewStart = currentView?.activeStart || new Date()
-    const viewEnd = currentView?.activeEnd || new Date()
+    // ✅ External Calendar Sync - aber NOT bei jedem Load (führe nur auf Demand auf)
+    // Removed automatic sync here to save 50-100ms per viewport load
     
     logger.debug('📅 Loading events for view range:', viewStart, 'to', viewEnd)
     
+    // ✅ VIEWPORT-BASED: Pass date range to appointments loader
+    logger.debug('⏱️ Performance: Starting parallel loads with viewport dates')
+    const startTime = performance.now()
+    
     // Parallel laden (mit aktuellen View-Daten)
     const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
-      loadRegularAppointments(),
+      loadRegularAppointments(viewStart, viewEnd), // ← Pass viewport dates
       loadExternalBusyTimes(),
       loadNonWorkingHoursBlocks(props.currentUser?.id || '', viewStart, viewEnd),
     ])
+    
+    const loadDuration = (performance.now() - startTime).toFixed(0)
+    logger.debug(`⏱️ Performance: All loads completed in ${loadDuration}ms`)
     
     // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
     if (!calendar.value) {
@@ -1130,7 +1169,9 @@ const loadAppointments = async (forceReload = false) => {
     // Kombinieren
     const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
     calendarEvents.value = allEvents
-    lastLoadTime.value = now // ✅ Cache-Zeit aktualisieren
+    
+    // ✅ SAVE TO VIEWPORT CACHE
+    setCacheData(cacheKey, allEvents)
     
     logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
@@ -1177,7 +1218,7 @@ const loadAppointments = async (forceReload = false) => {
 }
 
 // ✅ Helper-Funktion für Event-Farben
-const getEventColor = (type: string, status?: string, category?: string): string => {
+const getEventColor = (type: string, status?: string, category?: string, paymentStatus?: string | null, userId?: string | null): string => {
   // ✅ Kategorie-basierte Farben für Fahrstunden
   const categoryColors = {
     'B': '#10b981',      // Grün für Auto
@@ -1194,8 +1235,8 @@ const getEventColor = (type: string, status?: string, category?: string): string
     'BPT': '#10b981'     // Grün für BPT
   }
   
-  // ✅ Typ-basierte Farben für andere Termine (dunklere Farben für bessere Sichtbarkeit)
-  const typeColors = {
+  // ✅ Typ-basierte Farben für andere Termine (Fallback wenn nicht in DB)
+  const typeColorsFallback = {
     'lesson': '#10b981',      // Grün für Fahrstunden
     'exam': '#f59e0b',        // Orange für Prüfungen  
     'theory': '#3b82f6',      // Blau für Theorie
@@ -1205,8 +1246,8 @@ const getEventColor = (type: string, status?: string, category?: string): string
     'maintenance': '#dc2626', // Dunkel-Rot für Wartung
     'admin': '#0891b2',       // Dunkel-Cyan für Admin
     'team_invite': '#0284c7', // Blau für Team-Einladungen
-    'vku': '#059669',         // Grün für VKU
-    'nothelfer': '#d97706',   // Bernstein für Nothelfer
+    'vku': '#059669',         // Grün für VKU (Fallback)
+    'nothelfer': '#d97706',   // Bernstein für Nothelfer (Fallback)
     'other': '#374151'        // Dunkelgrau für Sonstiges
   }
   
@@ -1215,22 +1256,41 @@ const getEventColor = (type: string, status?: string, category?: string): string
   
   let baseColor = defaultColor
   
-  // ✅ Priorität 1: Typ-basierte Farbe (für other event types)
-  if (type && typeColors[type as keyof typeof typeColors]) {
-    baseColor = typeColors[type as keyof typeof typeColors]
-  }
-  // ✅ Priorität 2: Kategorie-basierte Farbe (für Fahrstunden) - überschreibt Typ-Farbe
-  else if (category && categoryColors[category as keyof typeof categoryColors]) {
+  // ✅ PRIORITÄT 1: Kategorie-basierte Farbe für Lessons/Exams/Theory
+  // Diese Events nutzen die Farben aus driving_categories, nicht aus event_types!
+  if (category && categoryColors[category as keyof typeof categoryColors] && 
+      (!type || ['lesson', 'exam', 'theory'].includes(type))) {
     baseColor = categoryColors[category as keyof typeof categoryColors]
   }
-  
-  // ✅ Status-basierte Anpassungen (überschreibt alles)
-  if (status === 'completed') {
-    baseColor = '#22c55e' // Helles Grün für abgeschlossene Termine
+  // ✅ PRIORITÄT 2: Event type colors from DB (für VKU, Nothelfer, etc.)
+  else if (type && eventTypeColorsMap.value[type]) {
+    baseColor = eventTypeColorsMap.value[type]
   }
-  // ✅ cancelled Events behalten ihre normale Farbe
+  // ✅ PRIORITÄT 3: Fallback to hardcoded type colors
+  else if (type && typeColorsFallback[type as keyof typeof typeColorsFallback]) {
+    baseColor = typeColorsFallback[type as keyof typeof typeColorsFallback]
+  }
+  
+  // ✅ NO MORE COLOR LIGHTENING - we use red border instead!
+  // Border is set in the event creation above
   
   return baseColor
+}
+
+// ✅ Helper function: Lighten a hex color by a percentage
+const lightenColor = (hex: string, percent: number): string => {
+  // Convert hex to RGB
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  
+  // Lighten by moving towards white (255)
+  const newR = Math.round(r + (255 - r) * percent)
+  const newG = Math.round(g + (255 - g) * percent)
+  const newB = Math.round(b + (255 - b) * percent)
+  
+  // Convert back to hex
+  return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`
 }
     
 const handleMoveError = (error: string) => {
@@ -1246,19 +1306,11 @@ const editAppointment = (appointment: CalendarAppointment) => {
 }
 
 const handleSaveEvent = async (eventData: CalendarEvent) => {
-  logger.debug('💾 Event saved, refreshing calendar...')
+  logger.debug('💾 Event saved, refreshing calendar...', eventData)
   
-  // View-Position speichern
-  const currentDate = calendar.value?.getApi()?.getDate()
-  
-  // Daten neu laden
-  await loadAppointments()
-  
-  // View-Position wiederherstellen falls nötig
-  if (currentDate && calendar.value?.getApi) {
-    calendar.value.getApi().gotoDate(currentDate)
-    logger.debug('✅ View position preserved:', currentDate)
-  }
+  // ✅ EINFACH: Kompletter Reload der Calendar-Daten aus DB
+  // Dies stellt sicher, dass alle Änderungen (inkl. manuell editierter Titel) korrekt angezeigt werden
+  await loadAppointments(true)
   
   emit('appointment-changed', { type: 'saved', data: eventData })
   isModalVisible.value = false
@@ -1408,7 +1460,7 @@ const handleEventDrop = async (dropInfo: any) => {
       // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
       // Stattdessen: Kalender neu laden um frische Daten zu bekommen
       logger.debug('🔄 Invalidating cache and reloading appointments...')
-      invalidateCache()
+      invalidateCache('appointment-moved')
       isUpdating.value = true
       await loadAppointments()
       isUpdating.value = false
@@ -1651,8 +1703,9 @@ showConfirmDialog({
         logger.debug('📅 Initial load, skipping datesSet reload')
         return
       }
-      logger.debug('📅 Week changed, reloading events (auto-sync every 5min)')
-      invalidateCache()
+      logger.debug('📅 Week changed, loading events for new viewport')
+      // ✅ Don't invalidate cache here - let loadAppointments handle it
+      // This is where viewport caching should shine!
       refreshCalendar()
     },
   // Klick auf leeren Zeitslot
@@ -1824,16 +1877,26 @@ const refreshCalendar = async () => {
       return
     }
     
-    // 0. Cache invalidieren
-    invalidateCache()
-    logger.debug('🔄 Cache invalidated for refresh')
+    // ✅ FIX: Invalidate ONLY the current viewport cache so new appointments show up
+    // This allows cache to work for navigation, but refreshes when appointments are saved
+    const currentDate = calendar.value?.getApi()?.getDate()
+    if (currentDate) {
+      const currentStart = new Date(currentDate)
+      currentStart.setDate(currentStart.getDate() - 7) // Assume week view
+      const currentEnd = new Date(currentDate)
+      currentEnd.setDate(currentEnd.getDate() + 7)
+      
+      const cacheKey = getCacheKey(currentStart, currentEnd)
+      viewportCache.value.delete(cacheKey) // ✅ Use .value!
+      logger.debug('🗑️ Invalidated current viewport cache:', cacheKey)
+    }
     
     // 1. Aktuelle View-Position speichern
-    const currentDate = calendar.value?.getApi()?.getDate()
+    const refreshStart = currentDate
     
-    // 2. Daten neu laden mit forceReload = true (Cache umgehen)
+    // 2. Daten neu laden - FORCE reload to get fresh data!
     await Promise.all([
-      loadAppointments(true),
+      loadAppointments(true), // ← Force reload to get new appointments from DB!
     ])
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
@@ -1849,7 +1912,7 @@ const refreshCalendar = async () => {
     logger.debug('✅ Calendar data refreshed')
     
     // 5. View-Position wiederherstellen falls nötig
-    if (currentDate && calendar.value?.getApi) {
+    if (refreshStart && calendar.value?.getApi) {
       try {
         const api = calendar.value.getApi()
         
@@ -2415,6 +2478,9 @@ onMounted(async () => {
     isCalendarReady.value = true
     attachSwipe()
     
+    // ✅ Load event type colors from DB
+    await loadEventTypeColors()
+    
     // ✅ Load tenant name for SMS/Email
     try {
       const tenantId = props.currentUser?.tenant_id
@@ -2609,7 +2675,7 @@ defineExpose({
   @delete-event="handleEventDeleted"
   @copy-appointment="handleCopyAppointment"
   @open-student-progress="handleOpenStudentProgress"
-  @refresh-calendar="() => { invalidateCache(); loadAppointments(true); }"
+  @refresh-calendar="refreshCalendar"
   @appointment-saved="refreshCalendar"    
   @appointment-updated="refreshCalendar"   
   @appointment-deleted="refreshCalendar"
@@ -3317,6 +3383,12 @@ defineExpose({
   background-color: white !important;
   background: white !important;
 } */
+
+/* ✅ Roter Rahmen für unbezahlte Termine */
+.fc-event.unpaid-appointment {
+  border: 1px solid #ef4444 !important;
+  border-left: 2px solid #ef4444 !important;
+}
 
 /* Tailwind CSS ::selection Duplikate bereinigen */
 ::selection {

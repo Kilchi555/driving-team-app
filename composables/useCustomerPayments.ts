@@ -44,109 +44,29 @@ export const useCustomerPayments = () => {
     try {
       isLoading.value = true
       
-      // Get user data from users table with tenant_id
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, auth_user_id, tenant_id')
-        .eq('auth_user_id', currentUser.value.id)
-        .single()
-      
-      if (userError) throw userError
-      if (!userData) throw new Error('User nicht in Datenbank gefunden')
-      if (!userData.tenant_id) throw new Error('User has no tenant assigned')
-
-      logger.debug('🔍 Loading payments for user:', userData.id, 'tenant:', userData.tenant_id)
-      logger.debug('🔍 Current auth user ID:', currentUser.value?.id)
-      logger.debug('🔍 User table auth_user_id:', userData.auth_user_id)
-
-      // ✅ Lade nur echte payments aus der payments Tabelle
-      let allPayments: any[] = []
-
-      // 1. Lade alle payments für diesen User (nur für nicht gelöschte Termine)
-      try {
-        // ✅ Lade alle payments für den User mit Tenant-Filter + Appointments für Überfälligkeitsprüfung
-        const { data: paymentsData, error: paymentsError } = await supabase
-          .from('payments')
-          .select(`
-            id,
-            created_at,
-            updated_at,
-            appointment_id,
-            user_id,
-            staff_id,
-            lesson_price_rappen,
-            admin_fee_rappen,
-            products_price_rappen,
-            discount_amount_rappen,
-            total_amount_rappen,
-            payment_method,
-            payment_status,
-            paid_at,
-            description,
-            metadata,
-            tenant_id,
-            automatic_payment_consent,
-            automatic_payment_consent_at,
-            scheduled_payment_date,
-            scheduled_authorization_date,
-            payment_method_id,
-            automatic_payment_processed,
-            automatic_payment_processed_at,
-            appointments (
-              id,
-              start_time,
-              end_time,
-              duration_minutes,
-              status,
-              confirmation_token,
-              staff_id,
-              deleted_at,
-              cancellation_type,
-              cancellation_charge_percentage,
-              medical_certificate_status,
-              medical_certificate_url,
-              staff:users!staff_id (
-                id,
-                first_name,
-                last_name
-              )
-            )
-          `)
-          .eq('tenant_id', userData.tenant_id) // Filter by tenant
-          .or(`user_id.eq.${userData.id},user_id.eq.${currentUser.value.id}`)
-          .order('created_at', { ascending: false })
-
-        logger.debug('🔍 Searching payments with user_id:', userData.id, 'tenant:', userData.tenant_id)
-
-        if (paymentsError) {
-          console.warn('⚠️ Error loading payments:', paymentsError)
-          console.error('⚠️ Full error details:', paymentsError)
-        } else {
-          logger.debug('✅ Payments loaded:', paymentsData?.length || 0)
-          logger.debug('📊 Payments details:', paymentsData?.map(p => ({
-            id: p.id,
-            appointment_id: p.appointment_id,
-            lesson_price: p.lesson_price_rappen / 100,
-            total: p.total_amount_rappen / 100,
-            status: p.payment_status
-          })))
-          allPayments = paymentsData || []
-        }
-      } catch (error: any) {
-        console.warn('⚠️ Could not load payments table:', error.message)
+      // ✅ Use backend API to fetch payments with staff data (bypasses RLS)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('No authentication token found')
       }
 
-      // ✅ Verwende nur echte Payments aus der Datenbank - keine Appointment-Konvertierung mehr
+      logger.debug('🔍 Loading payments via API for user:', currentUser.value.id)
 
-      // ✅ Sortiere payments nach Datum (neueste zuerst)
-      allPayments.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0)
-        const dateB = new Date(b.created_at || 0)
-        return dateB.getTime() - dateA.getTime()
-      })
+      const response = await $fetch('/api/customer/get-payments', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      }) as any
+
+      if (!response?.success || !response?.data) {
+        throw new Error('Failed to load payments from API')
+      }
+
+      const allPayments = response.data || []
 
       logger.debug('✅ Total payments loaded:', allPayments.length)
-      logger.debug('📊 Payments summary:', allPayments.map(p => ({
+      logger.debug('📊 Payments summary:', allPayments.map((p: any) => ({
         id: p.id,
         appointment_id: p.appointment_id,
         lesson_price: p.lesson_price_rappen / 100,
@@ -154,12 +74,6 @@ export const useCustomerPayments = () => {
         total: p.total_amount_rappen / 100,
         status: p.payment_status,
         paid_at: p.paid_at
-      })))
-      logger.debug('📋 Full payment details with paid_at:', allPayments.map(p => ({
-        id: p.id,
-        payment_status: p.payment_status,
-        paid_at: p.paid_at,
-        created_at: p.created_at
       })))
       payments.value = allPayments
 

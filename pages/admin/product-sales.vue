@@ -541,214 +541,48 @@ const anonymousSales = computed(() => sales.value.filter(sale => sale.sale_type 
 const loadSales = async () => {
   isLoading.value = true
   try {
+    logger.debug('🔄 Loading product sales via API...')
+    
+    // ✅ Use new secure API instead of direct DB queries
+    // Get auth token for API call
     const supabase = getSupabase()
-    const allSales: ProductSale[] = []
-
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    logger.debug('🔍 Admin Product Sales - Current tenant_id:', tenantId)
+    const { data: { session } } = await supabase.auth.getSession()
     
-    // Load current tenant info
-    if (tenantId) {
-      const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('name, slug')
-        .eq('id', tenantId)
-        .single()
-      currentTenant.value = tenantData
-      logger.debug('🔍 Current tenant:', tenantData)
+    const response = await $fetch('/api/admin/get-product-sales', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`
+      },
+      query: { limit: 1000, offset: 0 }
+    }) as any
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to load product sales')
     }
 
-    // 1. Lade direkte Verkäufe (aus payments mit product items) - gefiltert nach tenant_id
-    logger.debug('🔄 Lade direkte Verkäufe...')
-    const { data: directSalesData, error: directSalesError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        user_id,
-        staff_id,
-        total_amount_rappen,
-        payment_status,
-        payment_method,
-        created_at,
-        updated_at,
-        description,
-        metadata
-      `)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('created_at', { ascending: false })
-
-    if (directSalesError) throw directSalesError
-
-    // Lade Kundeninformationen für direkte Verkäufe (nur die mit user_id)
-    const directSalesWithUsers = directSalesData?.filter(sale => sale.user_id) || []
-    const directUserIds = [...new Set(directSalesWithUsers.map(sale => sale.user_id).filter(Boolean) || [])]
-    
-    let directUsersData: any[] = []
-    if (directUserIds.length > 0) {
-      const { data, error: directUsersError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, phone')
-        .in('id', directUserIds)
-      
-      if (directUsersError) throw directUsersError
-      directUsersData = data || []
+    // ✅ Set tenant info from API response
+    if (response.tenant) {
+      currentTenant.value = response.tenant
+      logger.debug('🔍 Current tenant:', response.tenant)
     }
 
-    // Lade Produktinformationen für direkte Verkäufe (aus payment_items)
-    const directPaymentIds = directSalesWithUsers.map(sale => sale.id)
-    const { data: directItemsData, error: directItemsError } = await supabase
-      .from('payment_items')
-      .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
-      .in('payment_id', directPaymentIds)
-      .eq('item_type', 'product')
+    // ✅ All sales data from API (direct, anonymous, shop)
+    sales.value = response.data || []
 
-    if (directItemsError) throw directItemsError
-
-    // Erstelle Lookup-Maps für direkte Verkäufe
-    const directUsersMap = new Map(directUsersData.map(user => [user.id, user]))
-    const directItemsMap = new Map()
-
-    directItemsData?.forEach((item: any) => {
-      if (!directItemsMap.has(item.payment_id)) {
-        directItemsMap.set(item.payment_id, [])
-      }
-      directItemsMap.get(item.payment_id).push(item)
-    })
-
-    // Transformiere direkte Verkäufe (nur die mit user_id)
-    directSalesWithUsers.forEach(sale => {
-      const user = directUsersMap.get(sale.user_id)
-      const items = directItemsMap.get(sale.id) || []
-
-      allSales.push({
-        id: sale.id,
-        customer_name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Unbekannt',
-        customer_email: user?.email,
-        customer_phone: user?.phone,
-        product_count: items.length,
-        product_names: items.length > 0 ? items.map((item: any) => item.item_name).filter(Boolean).join(', ') : 'Keine Produkte',
-        total_amount_rappen: sale.total_amount_rappen || 0,
-        status: sale.payment_status || 'pending',
-        created_at: sale.created_at || new Date().toISOString(),
-        sale_type: 'direct' as const
-      })
-    })
-
-    // 1b. Lade anonyme Verkäufe (aus payments ohne user_id) - gefiltert nach tenant_id
-    logger.debug('🔄 Lade anonyme Verkäufe...')
-    const { data: anonymousSalesData, error: anonymousSalesError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        user_id,
-        staff_id,
-        total_amount_rappen,
-        payment_status,
-        payment_method,
-        created_at,
-        updated_at,
-        description,
-        metadata
-      `)
-      .is('user_id', null) // Nur anonyme Verkäufe
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('created_at', { ascending: false })
-
-    if (anonymousSalesError) throw anonymousSalesError
-
-    // Lade Produktinformationen für anonyme Verkäufe (aus payment_items)
-    const anonymousPaymentIds = anonymousSalesData?.map(sale => sale.id) || []
-    const { data: anonymousItemsData, error: anonymousItemsError } = await supabase
-      .from('payment_items')
-      .select('payment_id, item_name, quantity, unit_price_rappen, total_price_rappen')
-      .in('payment_id', anonymousPaymentIds)
-      .eq('item_type', 'product')
-
-    if (anonymousItemsError) throw anonymousItemsError
-
-    // Erstelle Lookup-Map für anonyme Verkäufe
-    const anonymousItemsMap = new Map()
-    anonymousItemsData?.forEach((item: any) => {
-      if (!anonymousItemsMap.has(item.payment_id)) {
-        anonymousItemsMap.set(item.payment_id, [])
-      }
-      anonymousItemsMap.get(item.payment_id).push(item)
-    })
-
-    // Transformiere anonyme Verkäufe
-    anonymousSalesData?.forEach(sale => {
-      const items = anonymousItemsMap.get(sale.id) || []
-      const metadata = sale.metadata || {}
-      
-      allSales.push({
-        id: sale.id,
-        customer_name: metadata.customer_name || 'Anonymer Kunde',
-        customer_email: metadata.customer_email || null,
-        customer_phone: metadata.customer_phone || null,
-        product_count: items.length,
-        product_names: items.length > 0 ? items.map((item: any) => item.item_name).filter(Boolean).join(', ') : 'Keine Produkte',
-        total_amount_rappen: sale.total_amount_rappen || 0,
-        status: sale.payment_status || 'completed',
-        created_at: sale.created_at || new Date().toISOString(),
-        sale_type: 'anonymous' as const
-      })
-    })
-
-    // 2. Lade Shop-Verkäufe (aus invited_customers) - gefiltert nach tenant_id
-    logger.debug('🔄 Lade Shop-Verkäufe...')
-    const { data: shopSalesData, error: shopSalesError } = await supabase
-      .from('invited_customers')
-      .select('*')
-      .not('metadata->products', 'is', null) // Nur Kunden mit Produkten
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('created_at', { ascending: false })
-
-    if (shopSalesError) throw shopSalesError
-
-    // Transformiere Shop-Verkäufe
-    shopSalesData?.forEach(customer => {
-      const products = customer.metadata?.products || []
-      if (products.length > 0) {
-        const totalAmount = products.reduce((sum: number, product: any) => sum + (product.total_price_rappen || 0), 0)
-        
-        allSales.push({
-          id: customer.id,
-          customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
-          customer_email: customer.email,
-          customer_phone: customer.phone,
-          product_count: products.length,
-          product_names: products.map((product: any) => product.product_name).filter(Boolean).join(', '),
-          total_amount_rappen: totalAmount,
-          status: 'completed', // Shop-Verkäufe sind standardmäßig abgeschlossen
-          created_at: customer.created_at,
-          sale_type: 'shop' as const
-        })
-      }
-    })
-
-    // Sortiere alle Verkäufe nach Datum (neueste zuerst)
-    sales.value = allSales.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-    logger.debug('✅ Alle Verkäufe geladen:', {
+    logger.debug('✅ All sales loaded from API:', {
       total: sales.value.length,
       direct: sales.value.filter(s => s.sale_type === 'direct').length,
+      anonymous: sales.value.filter(s => s.sale_type === 'anonymous').length,
       shop: sales.value.filter(s => s.sale_type === 'shop').length
     })
 
   } catch (error: any) {
     console.error('❌ Error loading sales:', error)
     if (error.code === 'PGRST200') {
-      logger.debug('ℹ️ Keine Verkäufe vorhanden oder Datenbankstruktur unterscheidet sich')
+      logger.debug('ℹ️ No sales available or database structure differs')
       sales.value = []
     } else {
-      alert(`❌ Fehler beim Laden der Verkäufe: ${error.message}`)
+      alert(`❌ Error loading sales: ${error.message}`)
     }
   } finally {
     isLoading.value = false
