@@ -259,7 +259,6 @@ const onPasswordChange = () => {
   checkPersonalInfo()
   checkCompromiseDebounced()
 }
-})
 
 // Methods
 const updatePassword = async () => {
