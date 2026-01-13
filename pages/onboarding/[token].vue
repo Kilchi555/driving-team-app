@@ -276,7 +276,7 @@
                   required
                   @blur="validateBirthdate"
                   :class="[
-                    'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                    'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ios-date-input',
                     fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
                   ]"
                 >
@@ -1401,3 +1401,30 @@ const completeOnboarding = async () => {
 </script>
 
 
+<style scoped>
+/* iOS Safari Date Input Fix */
+.ios-date-input {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 42px; /* Match other inputs */
+  line-height: normal;
+}
+
+/* Ensure date input has same height on all platforms */
+input[type="date"] {
+  min-height: 42px;
+  line-height: 1.5;
+}
+
+/* Fix for iOS Safari date picker icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* Ensure consistent padding */
+input[type="date"] {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+</style>
