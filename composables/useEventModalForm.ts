@@ -493,9 +493,25 @@ const useEventModalForm = (currentUser?: any, refs?: {
         })
         
         // Update selectedPaymentMethod ref if available
+        // ✅ SMART LOGIC: Don't override user preference if existing payment was 'wallee' (likely a bug)
+        // Only use existing payment method if it's NOT wallee OR if user has no preference
         if (refs?.selectedPaymentMethod) {
-          refs.selectedPaymentMethod.value = paymentData.payment_method
-          logger.debug('💳 Payment method set from existing payment:', paymentData.payment_method)
+          const existingMethod = paymentData.payment_method
+          const currentPreference = refs.selectedPaymentMethod.value
+          
+          // If existing payment is 'wallee' but user has a different preference (invoice/cash/credit),
+          // keep the user preference - 'wallee' was likely saved by mistake
+          if (existingMethod === 'wallee' && currentPreference && currentPreference !== 'wallee') {
+            logger.debug('💳 Keeping user preference over existing wallee payment:', {
+              existingMethod,
+              keepingPreference: currentPreference
+            })
+            // Don't override - keep current preference
+          } else {
+            // Use existing payment method if it's not wallee, or if user preference is also wallee
+            refs.selectedPaymentMethod.value = existingMethod
+            logger.debug('💳 Payment method set from existing payment:', existingMethod)
+          }
         }
         
         return paymentData
