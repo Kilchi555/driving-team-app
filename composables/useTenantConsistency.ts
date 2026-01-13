@@ -102,30 +102,35 @@ export const useTenantConsistency = () => {
     try {
       logger.debug('🔄 Attempting to restore correct tenant for:', userEmail)
       
-      // Get the user's actual tenant_id from database
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('id, tenant_id, email, role')
-        .eq('email', userEmail)
-        .eq('is_active', true)
-        .single()
-
-      if (error) {
-        console.error('❌ Failed to fetch user data for tenant restore:', error)
+      // Get session for API call
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        console.error('❌ No session for tenant restore')
         return false
       }
 
-      if (!userData.tenant_id) {
-        console.error('❌ User has no tenant_id in database')
+      // ✅ Use secure API instead of direct DB query
+      const response = await $fetch<{ success: boolean; tenant_id?: string | null }>('/api/user/tenant', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        query: {
+          email: userEmail
+        }
+      })
+
+      if (!response?.success || !response.tenant_id) {
+        console.error('❌ Failed to fetch tenant or user has no tenant_id')
         return false
       }
 
-      logger.debug('✅ Correct tenant_id found:', userData.tenant_id)
+      logger.debug('✅ Correct tenant_id found:', response.tenant_id)
       
       // Force refresh of user profile
       await authStore.fetchUserProfile(authStore.user?.id || '')
       
-      logTenantEvent('tenant_restore_attempt', currentTenantId.value, userData.tenant_id, userEmail)
+      logTenantEvent('tenant_restore_attempt', currentTenantId.value, response.tenant_id, userEmail)
       
       return true
 
@@ -142,31 +147,30 @@ export const useTenantConsistency = () => {
     }
 
     try {
-      // Skip validation if user is not authenticated or if we can't access the database
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        logger.debug('⚠️ No authenticated user, skipping tenant consistency check')
+      // Skip validation if user is not authenticated
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        logger.debug('⚠️ No authenticated session, skipping tenant consistency check')
         return true
       }
 
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('email', authStore.userProfile.email)
-        .eq('is_active', true)
-        .single()
-
-      if (error) {
-        // If it's a 406 or RLS error, skip validation rather than failing
-        if (error.code === 'PGRST116' || error.message?.includes('406')) {
-          logger.debug('⚠️ RLS policy blocking tenant consistency check, skipping validation')
-          return true
+      // ✅ Use secure API instead of direct DB query
+      const response = await $fetch<{ success: boolean; tenant_id?: string | null }>('/api/user/tenant', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        query: {
+          email: authStore.userProfile.email
         }
-        console.error('❌ Failed to validate tenant consistency:', error)
-        return false
+      })
+
+      if (!response?.success) {
+        logger.debug('⚠️ Failed to fetch tenant from API, skipping validation')
+        return true
       }
 
-      const dbTenantId = userData.tenant_id
+      const dbTenantId = response.tenant_id
       const storeTenantId = authStore.userProfile.tenant_id
 
       if (dbTenantId !== storeTenantId) {

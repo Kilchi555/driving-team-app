@@ -1966,14 +1966,37 @@ const loadAppointments = async () => {
     let criteriaMap: Record<string, any> = {}
 
     if (criteriaIds.length > 0) {
-      logger.debug('🔍 Loading criteria details for:', criteriaIds.length, 'criteria')
+      logger.debug('🔍 Loading criteria details via API for:', criteriaIds.length, 'criteria')
       
-      const { data: criteria, error: criteriaError } = await supabase
-        .from('evaluation_criteria')
-        .select('id, name')
-        .in('id', criteriaIds)
-
-      if (criteriaError) {
+      try {
+        // ✅ Use secure API instead of direct DB query
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.access_token) {
+          const response = await $fetch<{ success: boolean; criteria?: any[] }>('/api/evaluation/criteria', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            query: {
+              ids: criteriaIds.join(',')
+            }
+          })
+          
+          if (response?.success && response?.criteria) {
+            logger.debug('✅ Criteria loaded via API:', response.criteria.length)
+            
+            criteriaMap = response.criteria.reduce((acc, crit) => {
+              acc[crit.id] = {
+                name: crit.name || 'Unbekanntes Kriterium',
+                short_code: null,
+                category_name: null
+              }
+              return acc
+            }, {} as Record<string, any>)
+          }
+        }
+      } catch (criteriaError: any) {
         console.error('❌ Criteria error:', criteriaError)
         criteriaIds.forEach(id => {
           criteriaMap[id] = {
@@ -1982,17 +2005,6 @@ const loadAppointments = async () => {
             category_name: null
           }
         })
-      } else if (criteria) {
-        logger.debug('✅ Criteria loaded:', criteria.length)
-        
-        criteriaMap = criteria.reduce((acc, crit) => {
-          acc[crit.id] = {
-            name: crit.name || 'Unbekanntes Kriterium',
-            short_code: null,
-            category_name: null
-          }
-          return acc
-        }, {} as Record<string, any>)
       }
     }
 
