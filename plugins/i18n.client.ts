@@ -38,37 +38,42 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
     
-    // Try to load user language from database first
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    // Try to load user language via secure API
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (authUser) {
-      // Load user profile with language
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('language')
-        .eq('auth_user_id', authUser.id)
-        .eq('is_active', true)
-        .single()
-      
-      if (userProfile?.language && $i18n.locale.value !== userProfile.language) {
-        // Check if language is supported
-        const supportedLocales = $i18n.locales.value.map((l: any) => l.code)
-        if (supportedLocales.includes(userProfile.language)) {
-          $i18n.setLocale(userProfile.language)
-          logger.debug('i18n', `User language set to: ${userProfile.language}`)
-          return
+    if (session?.access_token) {
+      // ✅ Use secure API instead of direct DB query
+      try {
+        const response = await $fetch<{ success: boolean; user?: any }>('/api/user/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
+        
+        if (response?.success && response?.user?.language) {
+          const userLanguage = response.user.language
+          // Check if language is supported
+          const supportedLocales = $i18n.locales.value.map((l: any) => l.code)
+          if (supportedLocales.includes(userLanguage) && $i18n.locale.value !== userLanguage) {
+            $i18n.setLocale(userLanguage)
+            logger.debug('i18n', `User language set to: ${userLanguage}`)
+            return
+          }
         }
+      } catch (apiError) {
+        logger.debug('i18n', 'API call failed, falling back to device language')
       }
     }
     
-    // If not logged in, detect device language
+    // If not logged in or no language set, detect device language
     const deviceLang = getDeviceLanguage()
     if ($i18n.locale.value !== deviceLang) {
       $i18n.setLocale(deviceLang)
       logger.debug('i18n', `Device language detected: ${deviceLang}`)
     }
   } catch (error) {
-    // Fallback to device language if DB query fails
+    // Fallback to device language if anything fails
     const deviceLang = getDeviceLanguage()
     if ($i18n.locale.value !== deviceLang) {
       $i18n.setLocale(deviceLang)

@@ -76,7 +76,8 @@ export default defineEventHandler(async (event): Promise<UserProfileResponse> =>
         assigned_staff_id,
         onboarding_status,
         mfa_enabled,
-        mfa_required
+        mfa_required,
+        preferred_payment_method
       `)
       .eq('auth_user_id', authenticatedUserId)
       .eq('is_active', true)

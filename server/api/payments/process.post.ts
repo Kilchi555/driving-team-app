@@ -375,11 +375,14 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
-    // ============ TOKEN STORAGE WITH ALLOW MODE ============
-    // Use ALLOW (not FORCE) to match Wallee Payment Method Config "Allow Storage"
-    // - FORCE would block payment if tokenization fails
-    // - ALLOW lets customer decide + works with all payment methods
-    const customerId = `customer-${userData.id}`
+    // ============ TOKEN STORAGE DISABLED FOR NOW ============
+    // TWINT blocks payments when customerId is set, even with ALLOW mode
+    // Error: "Registering the user at merchant side (user on file) is not allowed"
+    // 
+    // TODO: Implement post-payment token storage via webhook instead:
+    // 1. Create transaction WITHOUT customerId/tokenizationMode
+    // 2. After successful payment, webhook saves token if payment method supports it
+    // 3. This way TWINT works AND card tokens can still be saved
 
     // ✅ Use FINAL amount (after credit deduction) for Wallee transaction
     const walleeAmount = finalAmountToPay
@@ -418,7 +421,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     logger.debug('📋 Generated merchant reference:', merchantReference)
 
-    // Create transaction with ALLOW tokenization (matches Wallee "Allow Storage" config)
+    // Create transaction WITHOUT token storage (TWINT doesn't support it)
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: lineItems,
       spaceViewId: null,
@@ -431,12 +434,10 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       deviceSessionIdentifier: null,
       merchantReference: merchantReference,
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
-      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`,
-      // Token storage with ALLOW mode (not FORCE!)
-      // - ALLOW = Customer can choose to save, payment works even if they don't
-      // - FORCE = Would block payment if tokenization not possible (breaks TWINT)
-      customerId: customerId,
-      tokenizationMode: Wallee.model.TokenizationMode.ALLOW
+      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
+      // NOTE: customerId and tokenizationMode REMOVED
+      // TWINT blocks all payments when these are set, even with ALLOW mode
+      // Token storage must be implemented via post-payment webhook instead
     }
 
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)

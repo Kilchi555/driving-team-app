@@ -319,7 +319,7 @@ const isAdmin = computed(() => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      logger.debug('👤 Fetching user profile for:', userId)
+      logger.debug('👤 Fetching user profile via API for:', userId)
       
       const supabaseClient = getSupabase()
       if (!supabaseClient) {
@@ -327,42 +327,45 @@ const isAdmin = computed(() => {
         return
       }
       
-      const { data, error } = await supabaseClient
-        .from('users')
-        .select(`
-          id,
-          auth_user_id,
-          email,
-          role,
-          first_name,
-          last_name,
-          phone,
-          tenant_id,
-          is_active,
-          preferred_payment_method
-        `)
-        .eq('auth_user_id', userId) 
-        .eq('is_active', true)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          logger.debug('📝 No user profile found, needs setup')
-          userProfile.value = null
-          userRole.value = ''
-          return
+      // Get session for API auth
+      const { data: { session } } = await supabaseClient.auth.getSession()
+      if (!session?.access_token) {
+        logger.debug('📝 No session, cannot fetch profile')
+        userProfile.value = null
+        userRole.value = ''
+        return
+      }
+      
+      // ✅ Use secure API instead of direct DB query
+      const response = await $fetch<{ success: boolean; user?: any; error?: string }>('/api/user/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
-        throw error
+      })
+
+      if (!response.success || !response.user) {
+        logger.debug('📝 No user profile found, needs setup')
+        userProfile.value = null
+        userRole.value = ''
+        return
       }
 
-      userProfile.value = data
-      userRole.value = data.role || ''
+      if (!response.user.profile_exists) {
+        logger.debug('📝 User authenticated but no profile yet')
+        userProfile.value = null
+        userRole.value = ''
+        return
+      }
+
+      userProfile.value = response.user
+      userRole.value = response.user.role || ''
       
-      logger.debug('✅ User profile loaded:', {
-        role: data.role,
-        tenant_id: data.tenant_id,
-        email: data.email,
-        user_id: data.id
+      logger.debug('✅ User profile loaded via API:', {
+        role: response.user.role,
+        tenant_id: response.user.tenant_id,
+        email: response.user.email,
+        user_id: response.user.id
       })
     } catch (err: any) {
       console.error('❌ Error fetching user profile:', err.message)
