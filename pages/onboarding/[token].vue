@@ -87,11 +87,17 @@
             </p>
 
             <div class="space-y-4">
-              <!-- Hidden dummy fields to prevent password suggestions -->
-              <div style="position: absolute; left: -9999px; opacity: 0;">
-                <input type="text" name="username" autocomplete="username">
-                <input type="password" name="password" autocomplete="current-password">
-              </div>
+              <!-- Hidden email field for iOS password manager -->
+              <input
+                v-if="userData?.email"
+                type="email"
+                :value="userData.email"
+                autocomplete="username email"
+                readonly
+                style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;"
+                tabindex="-1"
+                aria-hidden="true"
+              />
               
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
