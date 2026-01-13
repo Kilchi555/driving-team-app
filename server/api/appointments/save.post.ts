@@ -272,6 +272,7 @@ export default defineEventHandler(async (event) => {
             // ✅ FIX: total_amount_rappen is the REMAINING amount after credit is deducted
             total_amount_rappen: remainingAmountRappen,
             payment_method: paymentMethodForPayment || 'wallee',
+            invoice_address: body.invoiceAddressForPayment || null, // ✅ NEW: Store invoice address
             // ✅ CRITICAL FIX: Check REMAINING amount (after credit), not finalTotalAmount!
             payment_status: remainingAmountRappen === 0 ? 'completed' : 'pending',
             // ✅ FIX: Set paid_at ONLY if remaining amount is 0 (nothing left to pay)
@@ -294,6 +295,55 @@ export default defineEventHandler(async (event) => {
           } else {
             logger.debug('✅ Payment created for appointment:', paymentResult.id)
             result.payment_id = paymentResult.id
+            
+            // ✅ NEW: Create pendency if invoice payment without address
+            if (paymentMethodForPayment === 'invoice') {
+              const invoiceAddr = body.invoiceAddressForPayment || paymentData.invoice_address
+              const hasInvoiceAddress = invoiceAddr && 
+                typeof invoiceAddr === 'object' && 
+                Object.keys(invoiceAddr).length > 0 &&
+                invoiceAddr.company_name
+              
+              if (!hasInvoiceAddress) {
+                logger.debug('📋 Creating pendency for missing invoice address')
+                
+                // Get student name
+                const { data: student } = await supabase
+                  .from('users')
+                  .select('first_name, last_name')
+                  .eq('id', result.user_id)
+                  .single()
+                
+                const studentName = student 
+                  ? `${student.first_name} ${student.last_name}`.trim() 
+                  : 'Unbekannt'
+                
+                // Create pendency
+                const { error: pendencyError } = await supabase
+                  .from('pendencies')
+                  .insert({
+                    tenant_id: appointmentData.tenant_id,
+                    title: 'Rechnungsadresse erforderlich',
+                    description: `${studentName} benötigt eine Rechnungsadresse`,
+                    status: 'pendent',
+                    priority: 'hoch',
+                    type: 'sonstiges',
+                    due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
+                    assigned_to: result.staff_id,
+                    assigned_to_type: 'keine',
+                    tags: ['billing', 'invoice', 'missing-address'],
+                    linked_resources: [],
+                    metadata: `Appointment ID: ${result.id}\nPayment ID: ${paymentResult.id}\nCustomer: ${studentName}`,
+                    created_by: result.staff_id
+                  })
+                
+                if (pendencyError) {
+                  logger.warn('⚠️ Failed to create invoice address pendency:', pendencyError)
+                } else {
+                  logger.debug('✅ Invoice address pendency created')
+                }
+              }
+            }
           }
         } catch (paymentErr: any) {
           logger.warn('⚠️ Payment creation exception (non-critical):', paymentErr.message)
