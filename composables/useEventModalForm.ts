@@ -1007,6 +1007,32 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('💾 Saving appointment data:', appointmentData)
       
+      // ✅ Extract invoice address if payment method is invoice
+      let invoiceAddressForBackend: any = null
+      const selectedPaymentMethodValue = refs?.selectedPaymentMethod?.value
+      
+      if (selectedPaymentMethodValue === 'invoice' && refs?.priceDisplayRef?.value) {
+        const priceDisplay = refs.priceDisplayRef.value
+        
+        // Copy invoice data as JSONB if available
+        if (priceDisplay && priceDisplay.invoiceData) {
+          invoiceAddressForBackend = {
+            company_name: priceDisplay.invoiceData.company_name || '',
+            contact_person: priceDisplay.invoiceData.contact_person || '',
+            email: priceDisplay.invoiceData.email || '',
+            phone: priceDisplay.invoiceData.phone || '',
+            street: priceDisplay.invoiceData.street || '',
+            street_number: priceDisplay.invoiceData.street_number || '',
+            zip: priceDisplay.invoiceData.zip || '',
+            city: priceDisplay.invoiceData.city || '',
+            country: priceDisplay.invoiceData.country || 'Schweiz',
+            vat_number: priceDisplay.invoiceData.vat_number || '',
+            notes: priceDisplay.invoiceData.notes || ''
+          }
+          logger.debug('📋 Extracted invoice address for backend:', invoiceAddressForBackend)
+        }
+      }
+      
       // Use API endpoint with admin privileges to bypass RLS foreign key issues
       let response
       try {
@@ -1017,7 +1043,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
             eventId,
             appointmentData,
             totalAmountRappenForPayment,
-            paymentMethodForPayment: formData.value.payment_method || 'wallee',
+            paymentMethodForPayment: selectedPaymentMethodValue || 'wallee',
+            invoiceAddressForPayment: invoiceAddressForBackend, // ✅ Pass invoice address to backend
             // ✅ Send price breakdown components
             basePriceRappen,
             adminFeeRappen,
