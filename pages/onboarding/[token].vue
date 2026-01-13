@@ -107,11 +107,6 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
                 >
-                <div class="mt-1 text-xs">
-                  <p :class="passwordTooShort ? 'text-red-600' : 'text-gray-500'">
-                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, Gross-/Kleinbuchstaben, Zahlen' }}
-                  </p>
-                </div>
               </div>
 
               <div>
@@ -127,7 +122,41 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
                 >
-                <p v-if="passwordMismatch" class="mt-1 text-xs text-red-600">Passwörter stimmen nicht überein.</p>
+              </div>
+
+              <!-- Password Requirements -->
+              <div class="text-xs">
+                <p class="font-medium mb-2 text-gray-700">Passwort-Anforderungen:</p>
+                <ul class="space-y-2">
+                  <li class="flex items-center gap-2">
+                    <span v-if="form.password.length >= 12" class="text-green-600 font-bold">✓</span>
+                    <span v-else class="text-red-500 font-bold">✗</span>
+                    <span :class="form.password.length >= 12 ? 'text-green-600 font-medium' : 'text-red-500'">
+                      Mindestens 12 Zeichen
+                    </span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span v-if="hasUppercase" class="text-green-600 font-bold">✓</span>
+                    <span v-else class="text-red-500 font-bold">✗</span>
+                    <span :class="hasUppercase ? 'text-green-600 font-medium' : 'text-red-500'">
+                      Mindestens ein Großbuchstabe
+                    </span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span v-if="hasNumber" class="text-green-600 font-bold">✓</span>
+                    <span v-else class="text-red-500 font-bold">✗</span>
+                    <span :class="hasNumber ? 'text-green-600 font-medium' : 'text-red-500'">
+                      Mindestens eine Zahl
+                    </span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span v-if="passwordsMatch && form.password.length > 0" class="text-green-600 font-bold">✓</span>
+                    <span v-else class="text-red-500 font-bold">✗</span>
+                    <span :class="passwordsMatch && form.password.length > 0 ? 'text-green-600 font-medium' : 'text-red-500'">
+                      Passwörter stimmen überein
+                    </span>
+                  </li>
+                </ul>
               </div>
 
               <p v-if="passwordError" class="text-red-600 text-sm">{{ passwordError }}</p>
@@ -523,7 +552,7 @@
 
             <button
               type="submit"
-              :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))"
+              :disabled="isSubmitting || (step === 0 && !isPasswordValid)"
               class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
               <span v-if="isSubmitting" class="flex items-center justify-center">
@@ -533,11 +562,20 @@
                 </svg>
                 Wird verarbeitet...
               </span>
+              <span v-else-if="step === 0 && !isPasswordValid">
+                ⚠️ Bitte erfüllen Sie alle Anforderungen
+              </span>
               <span v-else>
                 {{ step === 3 ? 'Registrierung abschliessen' : 'Weiter →' }}
               </span>
             </button>
           </div>
+          
+          <!-- Helper text when password requirements not met -->
+          <p v-if="step === 0 && !isPasswordValid && (form.password.length > 0 || form.confirmPassword.length > 0)" 
+             class="text-xs text-center text-red-600 mt-2">
+            Sie können erst fortfahren, wenn alle Passwort-Anforderungen erfüllt sind
+          </p>
         </form>
 
       </div>
@@ -665,6 +703,15 @@ const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
+const hasUppercase = computed(() => /[A-Z]/.test(form.password))
+const hasNumber = computed(() => /\d/.test(form.password))
+const passwordsMatch = computed(() => form.password === form.confirmPassword && form.password.length > 0)
+const isPasswordValid = computed(() => {
+  return form.password.length >= 12 && 
+         hasUppercase.value && 
+         hasNumber.value && 
+         passwordsMatch.value
+})
 const categoryError = ref('')
 
 // Field-specific errors
