@@ -1354,27 +1354,18 @@ const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return 'Kein Datum/Zeit'
   
   try {
-    // ✅ FIX: Parse as LOCAL time (not UTC)
-    // Database stores timestamps as 'Europe/Zurich' time without timezone
-    // We need to parse it as-is, not convert from UTC
-    const cleanDate = dateString.replace('T', ' ').replace('Z', '').replace('+00', '')
-    const parts = cleanDate.split(/[-: ]/)
-    const date = new Date(
-      parseInt(parts[0]), // year
-      parseInt(parts[1]) - 1, // month (0-indexed)
-      parseInt(parts[2]), // day
-      parseInt(parts[3] || '0'), // hour
-      parseInt(parts[4] || '0'), // minute
-      parseInt(parts[5] || '0')  // second
-    )
+    // ✅ Parse UTC string and convert to local timezone (Europe/Zurich)
+    const date = new Date(dateString)
     
     if (isNaN(date.getTime())) {
-      return 'Ungültiges Datum/Zeit'
+      console.warn('Invalid date string:', dateString)
+      return 'Ungültiges Datum'
     }
     
-    const weekday = date.toLocaleDateString('de-CH', { weekday: 'short' }) // z.B. "Mo."
-    const datePart = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const timePart = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    const weekday = date.toLocaleDateString('de-CH', { weekday: 'short', timeZone: 'Europe/Zurich' })
+    const datePart = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich' })
+    const timePart = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+    
     return `${weekday} ${datePart} ${timePart}`
   } catch (error) {
     console.warn('Error formatting dateTime:', dateString, error)
