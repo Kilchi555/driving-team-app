@@ -375,41 +375,12 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
-    // ============ LAYER 11.1: TOKEN LOOKUP ============
-    // Check if customer already has a stored payment token
-    const customerId = `customer-${userData.id}` // Consistent customer ID format
-    let existingTokenId: number | null = null
-
-    try {
-      const tokenService = new Wallee.api.TokenService(config)
-      const tokenSearchResult = await tokenService.search(spaceId, {
-        filter: {
-          fieldName: 'customerId',
-          value: customerId,
-          operator: Wallee.model.CriteriaOperator.EQUALS
-        }
-      })
-
-      const tokens = tokenSearchResult?.body || []
-      // Filter for active tokens only
-      const activeTokens = tokens.filter((t: any) => t.state === 'ACTIVE')
-      
-      if (activeTokens.length > 0) {
-        // Use the most recent active token
-        existingTokenId = activeTokens[0].id
-        logger.debug('✅ Found existing token for customer:', {
-          customerId,
-          tokenId: existingTokenId,
-          totalTokens: tokens.length,
-          activeTokens: activeTokens.length
-        })
-      } else {
-        logger.debug('ℹ️ No existing token found for customer:', customerId)
-      }
-    } catch (tokenError: any) {
-      logger.warn('⚠️ Token lookup failed (will create new):', tokenError.message)
-      // Continue without token - will create new one
-    }
+    // ============ TOKEN STORAGE DISABLED ============
+    // Token storage temporarily disabled because:
+    // - TWINT does not support tokenization ("Registering user at merchant side not allowed")
+    // - Setting customerId + tokenizationMode blocks payment methods that don't support it
+    // - TODO: Re-enable with payment-method-specific logic (only for cards, not TWINT)
+    // See memory for correct implementation flow
 
     // ✅ Use FINAL amount (after credit deduction) for Wallee transaction
     const walleeAmount = finalAmountToPay
@@ -423,8 +394,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       wallee_amount_chf: (walleeAmount / 100).toFixed(2),
       orderId: body.orderId,
       paymentId: body.paymentId,
-      spaceId: spaceId,
-      existingTokenId: existingTokenId
+      spaceId: spaceId
     })
 
     // Create line items for Wallee (remaining amount after credit)
@@ -449,7 +419,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     logger.debug('📋 Generated merchant reference:', merchantReference)
 
-    // Create transaction - use existing token OR enable tokenization for new customers
+    // Create transaction (token storage disabled - see comment above)
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: lineItems,
       spaceViewId: null,
@@ -462,17 +432,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       deviceSessionIdentifier: null,
       merchantReference: merchantReference,
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
-      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`,
-      // TOKEN LOGIC:
-      // - If existing token: use it directly (faster checkout)
-      // - If no token: set customerId + ALLOW mode to create new token
-      ...(existingTokenId 
-        ? { token: existingTokenId } // Use existing token
-        : { 
-            customerId: customerId, // Set for new token creation
-            tokenizationMode: Wallee.model.TokenizationMode.ALLOW // Allow (not force) token creation
-          }
-      )
+      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
+      // NOTE: customerId and tokenizationMode removed - TWINT doesn't support it
     }
 
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)
