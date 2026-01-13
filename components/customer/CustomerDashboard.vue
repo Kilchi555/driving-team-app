@@ -1892,28 +1892,40 @@ const loadAppointments = async () => {
     let locationsMap: Record<string, { name: string; address?: string; formatted_address?: string }> = {}
     
     if (locationIds.length > 0) {
-      logger.debug('🔍 Loading locations for IDs:', locationIds)
+      logger.debug('🔍 Loading locations for IDs via API:', locationIds)
       
-      const { data: locations, error: locationsError } = await supabase
-        .from('locations')
-        .select('id, name, address, formatted_address')
-        .in('id', locationIds)
-
-      if (locationsError) {
-        console.error('❌ Error loading locations:', locationsError)
-      } else if (locations) {
-        logger.debug('✅ Locations loaded:', locations)
+      try {
+        // ✅ Use secure API instead of direct DB query
+        const { data: { session } } = await supabase.auth.getSession()
         
-        locationsMap = locations.reduce((acc, loc) => {
-          acc[loc.id] = {
-            name: loc.name,
-            address: loc.address,
-            formatted_address: loc.formatted_address
+        if (session?.access_token) {
+          const response = await $fetch<{ success: boolean; locations?: any[] }>('/api/locations/list', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            query: {
+              ids: locationIds.join(',')
+            }
+          })
+          
+          if (response?.success && response?.locations) {
+            logger.debug('✅ Locations loaded via API:', response.locations)
+            
+            locationsMap = response.locations.reduce((acc, loc) => {
+              acc[loc.id] = {
+                name: loc.name,
+                address: loc.address,
+                formatted_address: loc.formatted_address
+              }
+              return acc
+            }, {} as Record<string, any>)
+            
+            logger.debug('✅ LocationsMap created:', locationsMap)
           }
-          return acc
-        }, {} as Record<string, any>)
-        
-        logger.debug('✅ LocationsMap created:', locationsMap)
+        }
+      } catch (locationsError: any) {
+        console.error('❌ Error loading locations:', locationsError)
       }
     } else {
       logger.debug('⚠️ No location IDs found in appointments')
@@ -2110,16 +2122,31 @@ const loadAppointments = async () => {
 
 const loadLocations = async () => {
   try {
+    // ✅ Use secure API instead of direct DB query
     const supabase = getSupabase()
-    const { data, error: fetchError } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name')
-
-    if (fetchError) throw fetchError
-    locations.value = data || []
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      console.warn('⚠️ No session for loading locations')
+      return
+    }
+    
+    const response = await $fetch<{ success: boolean; locations?: any[] }>('/api/locations/list', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
+    
+    if (response?.success && response?.locations) {
+      locations.value = response.locations
+      logger.debug('✅ Locations loaded via API:', locations.value.length)
+    } else {
+      throw new Error('Invalid API response')
+    }
   } catch (err: any) {
     console.error('❌ Error loading locations:', err)
+    locations.value = []
   }
 }
 

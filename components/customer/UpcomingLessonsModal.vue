@@ -202,40 +202,51 @@ const loadLocations = async () => {
     
     // Sammle alle location_ids aus den lessons
     const locationIds = [...new Set(props.lessons.map(lesson => lesson.location_id).filter(Boolean))]
-    logger.debug('🔍 Modal: Loading locations for IDs:', locationIds)
+    logger.debug('🔍 Modal: Loading locations for IDs via API:', locationIds)
     
     if (locationIds.length === 0) {
       logger.debug('⚠️ Modal: No location IDs found')
       return
     }
     
+    // ✅ Use secure API instead of direct DB query
     const supabase = getSupabase()
-    const { data: locations, error } = await supabase
-      .from('locations')
-      .select('id, name, address, formatted_address')
-      .in('id', locationIds)
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (error) {
-      console.error('❌ Modal: Error loading locations:', error)
+    if (!session?.access_token) {
+      console.warn('⚠️ Modal: No session for loading locations')
       return
     }
     
-    if (locations) {
-      logger.debug('✅ Modal: Locations loaded:', locations)
-      
-      locationsMap.value = locations.reduce((acc: Record<string, any>, loc: any) => {
-        acc[loc.id] = {
-          name: loc.name,
-          street: loc.street,
-          street_number: loc.street_number,
-          zip: loc.zip,
-          city: loc.city
-        }
-        return acc
-      }, {} as Record<string, any>)
-      
-      logger.debug('✅ Modal: LocationsMap created:', locationsMap.value)
+    const response = await $fetch<{ success: boolean; locations?: any[] }>('/api/locations/list', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      query: {
+        ids: locationIds.join(',')
+      }
+    })
+    
+    if (!response?.success || !response?.locations) {
+      console.error('❌ Modal: Error loading locations from API')
+      return
     }
+    
+    logger.debug('✅ Modal: Locations loaded via API:', response.locations)
+    
+    locationsMap.value = response.locations.reduce((acc: Record<string, any>, loc: any) => {
+      acc[loc.id] = {
+        name: loc.name,
+        street: loc.street,
+        street_number: loc.street_number,
+        zip: loc.zip,
+        city: loc.city
+      }
+      return acc
+    }, {} as Record<string, any>)
+    
+    logger.debug('✅ Modal: LocationsMap created:', locationsMap.value)
   } catch (error) {
     console.error('❌ Modal: Error in loadLocations:', error)
   } finally {

@@ -1,13 +1,26 @@
 // composables/useCurrentUser.ts
+// Secure user profile loading via API (10-Layer Protection)
 import { ref, computed } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export const useCurrentUser = () => {
   const currentUser = ref<any>(null)
   const isLoading = ref(false)
   const userError = ref<string | null>(null)
-  const profileExists = ref(false) // 🆕 NEU: Profil-Status
+  const profileExists = ref(false)
+
+  // Helper to get auth token
+  const getAuthToken = async (): Promise<string | null> => {
+    try {
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      return session?.access_token || null
+    } catch {
+      return null
+    }
+  }
 
   const fetchCurrentUser = async () => {
     // Skip auf Login-Seite
@@ -18,61 +31,51 @@ export const useCurrentUser = () => {
     isLoading.value = true
     userError.value = null
     currentUser.value = null
-    profileExists.value = false // 🆕 Reset
+    profileExists.value = false
 
     try {
-      // Nutze Supabase-Modul Client
-      const supabase = getSupabase()
+      const token = await getAuthToken()
       
-      // 1. Auth-User holen
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      const user = authData?.user
-
-      if (authError || !user?.email) {
+      if (!token) {
         userError.value = 'Nicht eingeloggt'
         return
       }
 
-      logger.debug('Auth-User gefunden:', user.email)
+      // Use secure API instead of direct DB query
+      const response = await $fetch<{ success: boolean; user?: any; error?: string }>('/api/user/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
 
-      // 2. Database-User per E-Mail suchen
-      const { data: usersData, error: dbError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', user.email)
-        .eq('is_active', true)
-
-      if (dbError) {
-        console.error('Database Error:', dbError)
-        userError.value = `Database-Fehler: ${dbError.message}`
+      if (!response.success || !response.user) {
+        userError.value = response.error || 'Profil nicht gefunden'
         return
       }
 
-      if (!usersData || usersData.length === 0) {
-        logger.debug('Business-User nicht gefunden für:', user.email)
+      const userData = response.user
+
+      if (!userData.profile_exists) {
+        // User authenticated but no profile yet
+        logger.debug('Business-User nicht gefunden für:', userData.email)
         profileExists.value = false
         currentUser.value = {
-          email: user.email,
-          auth_user_id: user.id
+          email: userData.email,
+          auth_user_id: userData.auth_user_id
         }
         return
       }
 
-      // ✅ User gefunden
-      const userData = usersData[0]
-      logger.debug('✅ Business-User geladen:', userData)
-      
       if (!userData.tenant_id) {
         console.warn('⚠️ User nicht zugewiesen:', userData.email)
         userError.value = 'Benutzer nicht zugewiesen'
         return
       }
-      
-      currentUser.value = {
-        ...userData,
-        auth_user_id: user.id
-      }
-      profileExists.value = true // 🆕 Profil existiert
+
+      logger.debug('✅ Business-User geladen via API:', userData.email)
+      currentUser.value = userData
+      profileExists.value = true
 
     } catch (err: any) {
       console.error('Unerwarteter Fehler:', err)
@@ -82,7 +85,8 @@ export const useCurrentUser = () => {
     }
   }
 
-  // 🆕 NEU: Funktion zum Erstellen des User-Profils
+  // Funktion zum Erstellen des User-Profils (bleibt mit direkter DB-Interaktion für jetzt)
+  // TODO: Migrate to API in future
   const createUserProfile = async (profileData: { company_name: string, role: string }) => {
     isLoading.value = true
     userError.value = null
@@ -143,11 +147,11 @@ export const useCurrentUser = () => {
     currentUser,
     isLoading,
     userError,
-    profileExists, // 🆕 NEU exportiert
+    profileExists,
     isClient,
     isAdmin,
     isStaff,
     fetchCurrentUser,
-    createUserProfile // 🆕 NEU exportiert
+    createUserProfile
   }
 }
