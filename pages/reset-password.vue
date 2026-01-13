@@ -61,25 +61,61 @@
               v-model="newPassword"
               type="password"
               required
+              @input="onPasswordChange"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Mindestens 8 Zeichen"
             />
-            <div class="mt-2 space-y-1">
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
-                </span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
-                </span>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span :class="passwordChecks.number ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.number ? '✓' : '○' }} Zahl
-                </span>
-              </div>
+            <div class="mt-2 text-xs">
+              <p class="font-medium mb-2 text-gray-700">Passwort-Anforderungen:</p>
+              <ul class="space-y-2">
+                <li class="flex items-center gap-2">
+                  <span v-if="passwordChecks.length" class="text-green-600 font-bold">✓</span>
+                  <span v-else class="text-red-500 font-bold">✗</span>
+                  <span :class="passwordChecks.length ? 'text-green-600 font-medium' : 'text-red-500'">
+                    Mindestens 8 Zeichen
+                  </span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span v-if="passwordChecks.uppercase" class="text-green-600 font-bold">✓</span>
+                  <span v-else class="text-red-500 font-bold">✗</span>
+                  <span :class="passwordChecks.uppercase ? 'text-green-600 font-medium' : 'text-red-500'">
+                    Mindestens ein Großbuchstabe
+                  </span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span v-if="passwordChecks.number" class="text-green-600 font-bold">✓</span>
+                  <span v-else class="text-red-500 font-bold">✗</span>
+                  <span :class="passwordChecks.number ? 'text-green-600 font-medium' : 'text-red-500'">
+                    Mindestens eine Zahl
+                  </span>
+                </li>
+                <li class="flex items-center gap-2">
+                  <span v-if="isCheckingCompromise" class="text-gray-400">⟳</span>
+                  <span v-else-if="newPassword.length >= 8 && !isCompromised" class="text-green-600 font-bold">✓</span>
+                  <span v-else-if="isCompromised" class="text-red-500 font-bold">✗</span>
+                  <span v-else class="text-gray-400 font-bold">○</span>
+                  <span :class="{
+                    'text-green-600 font-medium': newPassword.length >= 8 && !isCompromised,
+                    'text-red-500': isCompromised,
+                    'text-gray-400': newPassword.length < 8 && !isCompromised
+                  }">
+                    <span v-if="isCheckingCompromise">Prüfe Sicherheit...</span>
+                    <span v-else-if="isCompromised">Passwort wurde {{ compromiseCount.toLocaleString() }}x gestohlen</span>
+                    <span v-else>Nicht in Datenlecks gefunden</span>
+                  </span>
+                </li>
+                <li v-if="!personalInfoError" class="flex items-center gap-2">
+                  <span v-if="newPassword.length >= 3" class="text-green-600 font-bold">✓</span>
+                  <span v-else class="text-gray-400 font-bold">○</span>
+                  <span :class="newPassword.length >= 3 ? 'text-green-600 font-medium' : 'text-gray-400'">
+                    Keine persönlichen Daten
+                  </span>
+                </li>
+                <li v-else class="flex items-center gap-2">
+                  <span class="text-red-500 font-bold">✗</span>
+                  <span class="text-red-500">{{ personalInfoError }}</span>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -92,24 +128,38 @@
               v-model="confirmPassword"
               type="password"
               required
+              @input="checkPersonalInfo"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Passwort wiederholen"
             />
             <p v-if="confirmPassword && newPassword !== confirmPassword" 
-               class="text-red-600 text-sm mt-1">
+               class="text-red-600 text-sm mt-1 flex items-center gap-2">
+              <span class="text-red-500 font-bold">✗</span>
               Passwörter stimmen nicht überein
+            </p>
+            <p v-else-if="confirmPassword && newPassword === confirmPassword"
+               class="text-green-600 text-sm mt-1 flex items-center gap-2">
+              <span class="text-green-600 font-bold">✓</span>
+              Passwörter stimmen überein
             </p>
           </div>
 
           <!-- Submit Button -->
           <button
             type="submit"
-            :disabled="!canSubmit || isSubmitting"
+            :disabled="!isPasswordValid || isSubmitting"
             class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
             <span v-if="isSubmitting">⏳ Passwort wird gesetzt...</span>
+            <span v-else-if="!isPasswordValid">⚠️ Bitte erfüllen Sie alle Anforderungen</span>
             <span v-else>🔒 Passwort speichern</span>
           </button>
+          
+          <!-- Helper text when requirements not met -->
+          <p v-if="!isPasswordValid && !isSubmitting && (newPassword.length > 0 || confirmPassword.length > 0)" 
+             class="text-xs text-center text-red-600 mt-2">
+            Sie können erst fortfahren, wenn alle Passwort-Anforderungen erfüllt sind
+          </p>
         </form>
       </div>
     </div>
@@ -121,6 +171,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { checkPasswordCompromised, checkPasswordPersonalInfo, debounce } from '~/utils/passwordSecurity'
+import { logger } from '~/utils/logger'
 
 const supabase = getSupabase()
 
@@ -131,6 +183,10 @@ const error = ref('')
 const success = ref(false)
 const newPassword = ref('')
 const confirmPassword = ref('')
+const isCheckingCompromise = ref(false)
+const isCompromised = ref(false)
+const compromiseCount = ref(0)
+const personalInfoError = ref('')
 
 // Computed
 const passwordChecks = computed(() => ({
@@ -145,11 +201,63 @@ const passwordIsValid = computed(() => {
          passwordChecks.value.number
 })
 
+const isPasswordValid = computed(() => {
+  return passwordIsValid.value &&
+         newPassword.value === confirmPassword.value &&
+         !isCompromised.value &&
+         !personalInfoError.value
+})
+
 const canSubmit = computed(() => {
   return newPassword.value && 
          confirmPassword.value && 
          newPassword.value === confirmPassword.value && 
-         passwordIsValid.value
+         passwordIsValid.value &&
+         !isCompromised.value &&
+         !personalInfoError.value
+})
+
+// Debounced compromise check
+const checkCompromiseDebounced = debounce(async () => {
+  if (newPassword.value.length < 8) {
+    isCompromised.value = false
+    compromiseCount.value = 0
+    return
+  }
+
+  isCheckingCompromise.value = true
+  const result = await checkPasswordCompromised(newPassword.value)
+  isCheckingCompromise.value = false
+  
+  isCompromised.value = result.isCompromised
+  compromiseCount.value = result.count
+  
+  if (result.error) {
+    logger.warn('⚠️ Could not check password compromise:', result.error)
+  }
+}, 800)
+
+// Check personal info
+const checkPersonalInfo = () => {
+  if (newPassword.value.length < 3) {
+    personalInfoError.value = ''
+    return
+  }
+
+  const result = checkPasswordPersonalInfo(newPassword.value, {
+    email: undefined, // No email context in reset flow
+    firstName: undefined,
+    lastName: undefined
+  })
+
+  personalInfoError.value = result.isValid ? '' : (result.reason || '')
+}
+
+// Watch password changes
+const onPasswordChange = () => {
+  checkPersonalInfo()
+  checkCompromiseDebounced()
+}
 })
 
 // Methods
