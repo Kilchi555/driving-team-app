@@ -2759,17 +2759,18 @@ onMounted(async () => {
       logger.debug('⚠️ No referrer parameter found')
     }
     
-    // Lade Features um Prüfung durchführen zu können
-    await loadFeatures()
-    
     // Nur Tenant laden wenn Online-Buchung aktiviert ist
     if (isOnlineBookingEnabled.value) {
       const slug = route.params.slug as string
       
       if (slug) {
-        // Set the tenant from slug
+        // Set the tenant from slug FIRST (needed for loadFeatures and loadCategories)
         await setTenantFromSlug(slug)
         logger.debug('✅ Tenant set from slug:', slug)
+        
+        // THEN load features (needs currentTenant to be set)
+        await loadFeatures()
+        logger.debug('✅ Features loaded')
         
         // Load categories for all visitors (not just prefill)
         await loadCategories()
