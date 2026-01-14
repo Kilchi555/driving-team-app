@@ -2771,6 +2771,10 @@ onMounted(async () => {
         await setTenantFromSlug(slug)
         logger.debug('✅ Tenant set from slug:', slug)
         
+        // Load categories for all visitors (not just prefill)
+        await loadCategories()
+        logger.debug('✅ Categories loaded:', categories.value.length)
+        
         // Check for pre-fill parameters (from returning customer)
         const prefill = route.query.prefill as string
         if (prefill === 'true' && route.query.category && route.query.staff && route.query.location && route.query.duration) {
@@ -2781,8 +2785,7 @@ onMounted(async () => {
             duration: route.query.duration
           })
           
-          // Load categories and find the one to pre-select
-          await loadCategories()
+          // Categories are already loaded above
           const categoryToSelect = categories.value.find(c => c.code === route.query.category)
           
           if (categoryToSelect) {
@@ -2826,8 +2829,7 @@ onMounted(async () => {
         } else if (prefill === 'partial' && route.query.category) {
           logger.debug('🎯 Partial pre-fill: category and/or staff')
           
-          // Load categories and find the one to pre-select
-          await loadCategories()
+          // Categories are already loaded above
           const categoryToSelect = categories.value.find(c => c.code === route.query.category)
           
           if (categoryToSelect) {
