@@ -2356,13 +2356,6 @@ const loadCategories = async () => {
       return
     }
 
-    // Only load categories if business_type is driving_school
-    if (currentTenant.value.business_type !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', currentTenant.value.business_type)
-      categories.value = []
-      return
-    }
-
     const { data, error } = await supabase
       .from('categories')
       .select('id, code, name, description, lesson_duration_minutes, tenant_id')
