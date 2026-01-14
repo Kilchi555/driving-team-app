@@ -2769,7 +2769,7 @@ onMounted(async () => {
         logger.debug('✅ Tenant set from slug:', slug)
         
         // THEN load features (needs currentTenant to be set)
-        await loadFeatures()
+        await loadFeatures(currentTenant.value?.id)
         logger.debug('✅ Features loaded')
         
         // Load categories for all visitors (not just prefill)
