@@ -176,7 +176,9 @@ export default defineEventHandler(async (event) => {
         sku: courseId,
         quantity: 1,
         amountIncludingTax: amount / 100, // Convert from rappen to CHF
-        type: Wallee.model.LineItemType.PRODUCT
+        type: Wallee.model.LineItemType.PRODUCT,
+        uniqueId: 'item-1',
+        taxRate: 0
       }
     ]
     transactionCreate.autoConfirmEnabled = true
