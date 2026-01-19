@@ -1212,6 +1212,14 @@ watch([currentUser], ([newUser]) => {
   }
 }, { immediate: true })
 
+// Watch for userProfile to become available (fixes client-side navigation issue)
+watch(() => userProfile.value?.id, async (newId, oldId) => {
+  if (newId && !oldId && !isLoading.value) {
+    logger.debug('🔄 UserProfile became available, loading data...')
+    await loadAllData()
+  }
+}, { immediate: true })
+
 // Lifecycle
 onMounted(async () => {
   logger.debug('🔥 Customer Payments mounted')
@@ -1222,7 +1230,11 @@ onMounted(async () => {
     return
   }
 
-  await loadAllData()
+  // Only load if userProfile is already available
+  if (userProfile.value?.id) {
+    await loadAllData()
+  }
+  // Otherwise, the watcher above will trigger loadAllData when userProfile becomes available
 })
 </script>
 
