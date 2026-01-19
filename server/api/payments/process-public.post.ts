@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
     // 2. Verify enrollment exists and is pending
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('course_registrations')
-      .select('*, courses(*), tenants(id)')
+      .select('id, course_id, tenant_id, status, payment_status, first_name, last_name, email, phone, courses!inner(*)')
       .eq('id', enrollmentId)
       .eq('tenant_id', tenantId)
       .eq('status', 'pending')
