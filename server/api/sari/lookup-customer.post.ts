@@ -67,15 +67,16 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      data: {
-        first_name: customer.firstname || '',
-        last_name: customer.lastname || '',
+      customer: {
+        firstname: customer.firstname || '',
+        lastname: customer.lastname || '',
         email: customer.email || '',
         phone: customer.phone || '',
         birthdate: customer.birthdate || birthdate,
-        street: customer.address || '',
+        address: customer.address || '',
         zip: customer.zip || '',
-        city: customer.city || ''
+        city: customer.city || '',
+        licenses: customer.licenses || []
       }
     }
   } catch (error: any) {
