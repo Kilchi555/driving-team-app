@@ -102,15 +102,21 @@
           </div>
           
           <!-- Footer -->
-          <div class="px-5 py-4 bg-slate-50 flex items-center justify-between">
-            <div>
+          <div class="px-5 py-4 bg-slate-50 flex items-center justify-between gap-4">
+            <div class="flex-1">
               <p class="text-sm text-slate-500">Preis</p>
               <p class="font-bold text-lg text-slate-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
             </div>
-            <div class="text-right">
+            <div class="text-right flex-1">
               <p class="text-sm text-slate-500">Freie Plätze</p>
               <p class="font-semibold text-green-600">{{ course.free_slots || '?' }}</p>
             </div>
+            <button 
+              @click.stop="openEnrollmentModal(course)"
+              class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            >
+              Anmelden
+            </button>
           </div>
         </div>
       </div>
