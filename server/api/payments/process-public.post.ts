@@ -151,12 +151,30 @@ export default defineEventHandler(async (event) => {
     const lastName = customerName.split(' ').slice(1).join(' ') || customerName
     const course = enrollment.courses
     
-    let merchantRef = `${firstName} ${lastName}`
+    let merchantRef = `${firstName.charAt(0)}. ${lastName}`
     if (course?.name) {
-      merchantRef += ` | ${course.name.replace(/[^\x20-\x7E]/g, '')}`
+      merchantRef += ` | ${course.name.replace(/[^\x20-\x7E]/g, '')}`  // Remove non-ASCII (Umlaute, etc)
+    }
+    if (course?.description) {
+      // Extract location from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
+      const locationMatch = course.description.match(/(\b[A-Z][a-z]+\b)(?:\s|,|$)/)
+      if (locationMatch) {
+        merchantRef += ` | ${locationMatch[1]}`
+      }
     }
     
-    const maxRefLength = 100 - 39 // 36 for UUID + 3 for " []"
+    // Add first session date if available
+    if (course?.course_sessions && course.course_sessions.length > 0) {
+      const firstSessionDate = course.course_sessions[0].start_time
+      if (firstSessionDate) {
+        const dateObj = new Date(firstSessionDate)
+        const dateStr = dateObj.toLocaleDateString('de-CH').replace(/\./g, '-') // "20-01-2026" format
+        merchantRef += ` | ${dateStr}`
+      }
+    }
+    
+    // Enforce max length (Wallee limit is typically 100-200 chars, be safe with 80)
+    const maxRefLength = 80 - 39 // Leave room for " [UUID]"
     if (merchantRef.length > maxRefLength) {
       merchantRef = merchantRef.substring(0, maxRefLength - 3) + '...'
     }
