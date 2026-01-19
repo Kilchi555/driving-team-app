@@ -70,7 +70,7 @@
                     {{ lesson.type }}
                   </span>
                 </div>
-                <p v-if="lesson.staff?.first_name" class="text-sm font-medium text-gray-600"">
+                <p v-if="lesson.staff?.first_name" class="text-sm font-medium text-gray-600">
                   mit {{ lesson.staff.first_name }} {{ lesson.staff.last_name }}
                 </p>
               </div>
@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { logger } from '~/utils/logger'
 
@@ -290,8 +290,6 @@ const getTimeUntil = (startTime: string) => {
 }
 
 // Watcher für das Modal
-import { watch } from 'vue'
-
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen && props.lessons.length > 0) {
     logger.debug('🔍 Modal opened, loading locations...')
