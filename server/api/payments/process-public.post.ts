@@ -18,6 +18,8 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { Wallee } from 'wallee'
+import { getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -126,30 +128,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 5. Initialize Wallee SDK
-    let Wallee: any
-    try {
-      Wallee = await import('wallee')
-      Wallee = Wallee.default || Wallee
-    } catch (error) {
-      logger.error('❌ Wallee SDK import failed:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Payment service unavailable'
-      })
-    }
-
-    // 6. Create Wallee API client
-    const config = new Wallee.ApiClient({
-      userId: walleeConfig.userId,
-      authentications: {
-        'oauth2': {
-          accessToken: apiSecret
-        }
-      }
-    })
-
-    // 7. Build merchant reference with enrollment ID
+    // 5. Create Wallee API client config (same as process.post.ts)
+    const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, apiSecret)
+    const transactionService = new Wallee.api.TransactionService(config)
     const firstName = customerName.split(' ')[0]
     const lastName = customerName.split(' ').slice(1).join(' ') || customerName
     const course = enrollment.courses
@@ -225,8 +206,7 @@ export default defineEventHandler(async (event) => {
       merchant: merchantRef
     })
 
-    // Create transaction service
-    const transactionService = new Wallee.api.TransactionService(config)
+    // Create transaction
     const transaction = await transactionService.create(
       walleeConfig.spaceId,
       transactionCreate
