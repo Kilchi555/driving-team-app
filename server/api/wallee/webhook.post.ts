@@ -5,7 +5,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
-import { Wallee } from 'wallee'
+// Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
 // ============ TYPES ============
 interface WalleeWebhookPayload {
@@ -338,6 +338,20 @@ export default defineEventHandler(async (event) => {
 
 async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: number): Promise<any> {
   try {
+    // Import Wallee SDK dynamically FIRST
+    let WalleeSDK
+    try {
+      const WalleeModule = await import('wallee')
+      WalleeSDK = WalleeModule.Wallee || WalleeModule.default
+      
+      if (!WalleeSDK?.api?.TransactionService) {
+        throw new Error('Wallee TransactionService not available in import')
+      }
+    } catch (importError: any) {
+      logger.error('❌ Failed to import Wallee SDK:', importError.message)
+      return null
+    }
+    
     // Try to get tenant-specific config first
     const supabase = getSupabaseAdmin()
     const { data: paymentForConfig } = await supabase
@@ -367,21 +381,7 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     
     const config = getWalleeSDKConfig(spaceId, userId, apiSecret)
     
-    // Dynamisch Wallee importieren falls nicht vorhanden
-    let transactionService
-    try {
-      transactionService = new Wallee.api.TransactionService(config)
-    } catch (e: any) {
-      logger.warn('⚠️ Wallee SDK not available, trying dynamic import:', e.message)
-      // Fallback: Try dynamic import
-      const WalleeModule = await import('wallee')
-      const WalleeSDK = WalleeModule.Wallee || WalleeModule.default
-      if (!WalleeSDK?.api?.TransactionService) {
-        throw new Error('Failed to initialize Wallee TransactionService')
-      }
-      transactionService = new WalleeSDK.api.TransactionService(config)
-    }
-    
+    const transactionService = new WalleeSDK.api.TransactionService(config)
     const response = await transactionService.read(spaceId, parseInt(transactionId))
     return response.body
   } catch (error: any) {

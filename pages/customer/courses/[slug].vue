@@ -29,6 +29,24 @@
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
     </div>
 
+    <!-- Success State -->
+    <div v-if="showSuccess" class="max-w-6xl mx-auto px-4 py-4">
+      <div class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-4">
+        <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <p class="text-green-800 font-medium">Anmeldung erfolgreich!</p>
+          <p class="text-green-700 text-sm">Deine Zahlung wurde verarbeitet. Wir senden dir in Kürze eine Bestätigung per E-Mail.</p>
+        </div>
+        <button @click="showSuccess = false" class="text-green-600 hover:text-green-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Error State -->
     <div v-else-if="error" class="max-w-6xl mx-auto px-4 py-12">
       <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -179,6 +197,7 @@ const selectedCategory = ref('')
 const selectedLocation = ref('')
 const selectedCourse = ref<any>(null)
 const showEnrollmentModal = ref(false)
+const showSuccess = ref(false)
 
 // Computed
 const tenantId = computed(() => tenant.value?.id || '')
@@ -433,6 +452,18 @@ const handleEnrolled = () => {
 
 // Apply query params to filters
 watch(() => route.query, (query) => {
+  // Handle success parameter
+  if (query.success === 'true' && query.enrollmentId) {
+    showSuccess.value = true
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      showSuccess.value = false
+    }, 5000)
+    // Clean up the URL but don't reload
+    window.history.replaceState({}, '', route.path)
+  }
+  
+  // Apply filter params
   if (query.category) selectedCategory.value = query.category as string
   if (query.location) selectedLocation.value = query.location as string
 }, { immediate: true })
