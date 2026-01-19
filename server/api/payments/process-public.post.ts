@@ -43,9 +43,9 @@ export default defineEventHandler(async (event) => {
       tenantId
     })
 
-    // Get base URL for redirects
+    // Get base URL for redirects (will be set after enrollment is loaded)
     const baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000'
-    const tenantSlug = enrollment.tenants?.slug || 'driving-team'
+    let tenantSlug = 'driving-team' // Default
 
     // 1. Validate inputs
     if (!enrollmentId || !amount || !currency || !customerEmail || !customerName || !tenantId) {
@@ -80,6 +80,9 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Enrollment not found or not in pending status'
       })
     }
+
+    // Now that enrollment is loaded, set tenantSlug
+    tenantSlug = enrollment.tenants?.slug || 'driving-team'
 
     // 3. Get Wallee config for tenant
     let walleeConfig: any
