@@ -121,7 +121,9 @@
               </div>
               <div class="text-right">
                 <p class="text-sm text-slate-500">Freie Plätze</p>
-                <p class="font-semibold" :style="{'color': tenantBranding?.primary_color || '#10B981'}">{{ course.free_slots || '?' }}</p>
+                <p class="font-semibold" :style="{'color': tenantBranding?.primary_color || '#10B981'}">
+                  {{ course.free_slots && course.free_slots > 3 ? 'mehr als 3' : course.free_slots || '?' }}
+                </p>
               </div>
             </div>
             
