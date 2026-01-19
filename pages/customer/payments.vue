@@ -1232,7 +1232,7 @@ onMounted(async () => {
 
   // Only load if userProfile is already available
   if (userProfile.value?.id) {
-    await loadAllData()
+  await loadAllData()
   }
   // Otherwise, the watcher above will trigger loadAllData when userProfile becomes available
 })

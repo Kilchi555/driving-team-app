@@ -1,0 +1,373 @@
+<template>
+  <Teleport to="body">
+    <div 
+      v-if="isOpen" 
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      @click.self="$emit('close')"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+          <h2 class="text-xl font-semibold text-slate-800">Kursanmeldung</h2>
+          <button 
+            @click="$emit('close')" 
+            class="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+          <!-- Course Info -->
+          <div class="bg-blue-50 rounded-lg p-4 mb-6">
+            <h3 class="font-semibold text-blue-900">{{ course.name }}</h3>
+            <p class="text-sm text-blue-700 mt-1">{{ course.location }}</p>
+            <p class="text-lg font-bold text-blue-900 mt-2">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+            
+            <!-- Sessions -->
+            <div class="mt-3 space-y-1">
+              <div v-for="(session, idx) in groupedSessions" :key="idx" class="text-sm text-blue-700">
+                {{ formatSessionDate(session.date) }}: {{ session.timeRange }}
+                <span v-if="session.parts > 1" class="text-blue-500">({{ session.parts }} Teile)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 1: SARI Lookup -->
+          <div v-if="step === 'lookup'">
+            <h4 class="font-medium text-slate-800 mb-4">Schritt 1: Identifikation</h4>
+            
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">FABERID (Führerausweisberechtigungs-ID)</label>
+                <input 
+                  v-model="formData.faberid"
+                  type="text"
+                  placeholder="z.B. 69197806"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p class="text-xs text-slate-500 mt-1">Die Nummer findest du auf deinem Lernfahrausweis</p>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Geburtsdatum</label>
+                <input 
+                  v-model="formData.birthdate"
+                  type="date"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div v-if="lookupError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {{ lookupError }}
+            </div>
+
+            <button 
+              @click="lookupSARI"
+              :disabled="!canLookup || isLoading"
+              class="mt-6 w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+            >
+              <span v-if="isLoading" class="flex items-center justify-center gap-2">
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Wird geprüft...
+              </span>
+              <span v-else>Weiter</span>
+            </button>
+          </div>
+
+          <!-- Step 2: Contact & Payment -->
+          <div v-else-if="step === 'contact'">
+            <h4 class="font-medium text-slate-800 mb-4">Schritt 2: Kontaktdaten & Zahlung</h4>
+            
+            <!-- SARI Data Display -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div class="flex items-center gap-2 text-green-700 mb-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="font-medium">Daten verifiziert</span>
+              </div>
+              <p class="text-sm text-green-800">{{ sariData?.firstname }} {{ sariData?.lastname }}</p>
+              <p class="text-sm text-green-700">{{ sariData?.address }}, {{ sariData?.zip }} {{ sariData?.city }}</p>
+            </div>
+
+            <!-- Contact Details -->
+            <div class="space-y-4 mb-6">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">E-Mail *</label>
+                <input 
+                  v-model="formData.email"
+                  type="email"
+                  placeholder="deine@email.ch"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  :class="{ 'border-red-300': formData.email && !isValidEmail }"
+                />
+                <p v-if="formData.email && !isValidEmail" class="text-xs text-red-500 mt-1">Bitte gib eine gültige E-Mail ein</p>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Telefon *</label>
+                <input 
+                  v-model="formData.phone"
+                  type="tel"
+                  placeholder="+41 79 123 45 67"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  :class="{ 'border-red-300': formData.phone && !isValidPhone }"
+                />
+                <p v-if="formData.phone && !isValidPhone" class="text-xs text-red-500 mt-1">Bitte gib eine gültige Telefonnummer ein</p>
+              </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="border-t pt-4">
+              <p class="text-sm font-medium text-slate-700 mb-2">Zahlungsart</p>
+              <p class="text-slate-600">{{ paymentMethodLabel }}</p>
+            </div>
+
+            <div v-if="enrollmentError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {{ enrollmentError }}
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button 
+                @click="step = 'lookup'"
+                class="flex-1 py-3 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Zurück
+              </button>
+              <button 
+                @click="submitEnrollment"
+                :disabled="!canSubmit || isLoading"
+                class="flex-1 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+              >
+                <span v-if="isLoading" class="flex items-center justify-center gap-2">
+                  <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Wird verarbeitet...
+                </span>
+                <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { logger } from '~/utils/logger'
+import { extractCityFromCourseDescription, determinePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+
+interface Props {
+  isOpen: boolean
+  course: any
+  tenantId: string
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits(['close', 'enrolled'])
+
+// State
+const step = ref<'lookup' | 'contact'>('lookup')
+const isLoading = ref(false)
+const lookupError = ref<string | null>(null)
+const enrollmentError = ref<string | null>(null)
+const sariData = ref<any>(null)
+
+const formData = ref({
+  faberid: '',
+  birthdate: '',
+  email: '',
+  phone: ''
+})
+
+// Computed
+const paymentMethod = computed(() => {
+  const city = extractCityFromCourseDescription(props.course?.location || props.course?.name || '')
+  return determinePaymentMethod(city)
+})
+
+const paymentMethodLabel = computed(() => getPaymentMethodLabel(paymentMethod.value))
+
+const canLookup = computed(() => {
+  return formData.value.faberid.length >= 6 && formData.value.birthdate
+})
+
+const isValidEmail = computed(() => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(formData.value.email)
+})
+
+const isValidPhone = computed(() => {
+  const phoneClean = formData.value.phone.replace(/\s/g, '')
+  return phoneClean.length >= 10
+})
+
+const canSubmit = computed(() => {
+  return isValidEmail.value && isValidPhone.value && sariData.value
+})
+
+const groupedSessions = computed(() => {
+  if (!props.course?.course_sessions?.length) return []
+  
+  const sorted = [...props.course.course_sessions].sort((a: any, b: any) => 
+    a.start_time.localeCompare(b.start_time)
+  )
+  
+  const grouped: { date: string; timeRange: string; parts: number }[] = []
+  let currentDate = ''
+  let currentGroup: any = null
+  
+  for (const session of sorted) {
+    const date = session.start_time.split('T')[0]
+    
+    if (date !== currentDate) {
+      if (currentGroup) grouped.push(currentGroup)
+      currentDate = date
+      currentGroup = {
+        date,
+        startTime: session.start_time,
+        endTime: session.end_time,
+        parts: 1
+      }
+    } else {
+      currentGroup.endTime = session.end_time
+      currentGroup.parts++
+    }
+  }
+  
+  if (currentGroup) grouped.push(currentGroup)
+  
+  return grouped.map(g => ({
+    date: g.date,
+    timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
+    parts: g.parts
+  }))
+})
+
+// Methods
+const formatPrice = (rappen: number) => (rappen / 100).toFixed(2)
+
+const formatSessionDate = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr + 'T00:00:00')
+    return new Intl.DateTimeFormat('de-CH', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit'
+    }).format(date)
+  } catch {
+    return dateStr
+  }
+}
+
+const formatTime = (isoString: string) => {
+  try {
+    let hours, minutes
+    if (isoString.includes('T')) {
+      const timePart = isoString.split('T')[1]
+      ;[hours, minutes] = timePart.split(':')
+    } else {
+      const timePart = isoString.split(' ')[1]
+      ;[hours, minutes] = timePart.split(':')
+    }
+    return `${hours}:${minutes}`
+  } catch {
+    return ''
+  }
+}
+
+const lookupSARI = async () => {
+  isLoading.value = true
+  lookupError.value = null
+  
+  try {
+    const faberidClean = formData.value.faberid.replace(/\./g, '')
+    
+    const response = await $fetch('/api/sari/lookup-customer', {
+      method: 'POST',
+      body: {
+        faberid: faberidClean,
+        birthdate: formData.value.birthdate,
+        tenantId: props.tenantId
+      }
+    }) as any
+    
+    if (response.success && response.customer) {
+      sariData.value = response.customer
+      formData.value.email = response.customer.email || ''
+      formData.value.phone = response.customer.phone || ''
+      step.value = 'contact'
+    } else {
+      lookupError.value = response.message || 'Daten konnten nicht verifiziert werden'
+    }
+  } catch (error: any) {
+    logger.error('SARI lookup error:', error)
+    lookupError.value = error.data?.message || error.message || 'Fehler bei der Datenprüfung'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const submitEnrollment = async () => {
+  isLoading.value = true
+  enrollmentError.value = null
+  
+  try {
+    const faberidClean = formData.value.faberid.replace(/\./g, '')
+    const endpoint = paymentMethod.value === 'WALLEE' 
+      ? '/api/courses/enroll-wallee'
+      : '/api/courses/enroll-cash'
+    
+    const response = await $fetch(endpoint, {
+      method: 'POST',
+      body: {
+        courseId: props.course.id,
+        faberid: faberidClean,
+        birthdate: formData.value.birthdate,
+        tenantId: props.tenantId,
+        email: formData.value.email,
+        phone: formData.value.phone
+      }
+    }) as any
+    
+    if (response.success) {
+      if (response.paymentUrl) {
+        window.location.href = response.paymentUrl
+      } else {
+        emit('enrolled')
+      }
+    } else {
+      enrollmentError.value = response.message || 'Anmeldung fehlgeschlagen'
+    }
+  } catch (error: any) {
+    logger.error('Enrollment error:', error)
+    enrollmentError.value = error.data?.message || error.message || 'Fehler bei der Anmeldung'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Reset on close
+watch(() => props.isOpen, (isOpen) => {
+  if (!isOpen) {
+    step.value = 'lookup'
+    lookupError.value = null
+    enrollmentError.value = null
+    sariData.value = null
+    formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
+  }
+})
+</script>
+
