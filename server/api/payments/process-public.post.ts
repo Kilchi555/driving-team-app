@@ -43,6 +43,9 @@ export default defineEventHandler(async (event) => {
       tenantId
     })
 
+    // Get base URL for redirects
+    const baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000'
+
     // 1. Validate inputs
     if (!enrollmentId || !amount || !currency || !customerEmail || !customerName || !tenantId) {
       throw createError({
@@ -183,9 +186,9 @@ export default defineEventHandler(async (event) => {
     ]
     transactionCreate.autoConfirmEnabled = true
     transactionCreate.deviceSessionIdentifier = metadata.device_fingerprint || null
-    transactionCreate.successUrl = `${process.env.PUBLIC_URL || 'http://localhost:3000'}/customer/courses/enrollment-success?enrollmentId=${enrollmentId}`
-    transactionCreate.failedUrl = `${process.env.PUBLIC_URL || 'http://localhost:3000'}/customer/courses/enrollment-failed?enrollmentId=${enrollmentId}`
-    transactionCreate.cancelledUrl = `${process.env.PUBLIC_URL || 'http://localhost:3000'}/customer/courses/enrollment-cancelled?enrollmentId=${enrollmentId}`
+    transactionCreate.successUrl = `${baseUrl}/customer/courses/enrollment-success?enrollmentId=${enrollmentId}`
+    transactionCreate.failedUrl = `${baseUrl}/customer/courses/enrollment-failed?enrollmentId=${enrollmentId}`
+    transactionCreate.cancelledUrl = `${baseUrl}/customer/courses/enrollment-cancelled?enrollmentId=${enrollmentId}`
     transactionCreate.invoiceMerchantReference = merchantRef
     transactionCreate.shippingAddress = null
     transactionCreate.billingAddress = null
@@ -271,15 +274,12 @@ export default defineEventHandler(async (event) => {
 
     logger.info('✅ Payment page URL generated')
 
-    // 10. Update enrollment with transaction ID in metadata
+    // 10. Update enrollment with payment info
     const { error: updateError } = await supabase
       .from('course_registrations')
       .update({
-        metadata: {
-          ...enrollment.metadata,
-          wallee_transaction_id: transactionId,
-          payment_initiated_at: new Date().toISOString()
-        }
+        payment_status: 'pending',
+        payment_id: transactionId.toString() // Store transaction ID in notes since no metadata column
       })
       .eq('id', enrollmentId)
 
