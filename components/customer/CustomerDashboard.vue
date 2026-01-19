@@ -1775,9 +1775,46 @@ const confirmAppointment = async (appointment: any) => {
 
     const amountRappen = payment?.total_amount_rappen || 0
     
-    // ✅ NEW: If amount is 0 (fully covered by credit or discounts), just show success
+    // ✅ NEW: If amount is 0 (fully covered by credit or discounts), confirm and show success
     if (amountRappen <= 0) {
       logger.debug('✅ Payment fully covered by credit or discounts - no online payment needed')
+      
+      // ✅ WICHTIG: Confirm the appointment via secure API!
+      try {
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        const confirmResult = await $fetch('/api/appointments/confirm', {
+          method: 'POST',
+          headers: session?.access_token ? {
+            'Authorization': `Bearer ${session.access_token}`
+          } : {},
+          body: {
+            appointmentId: appointment.id
+          }
+        }) as { 
+          success?: boolean
+          appointment?: any
+          error?: string 
+        }
+        
+        if (!confirmResult.success) {
+          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
+          displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
+          confirmingAppointments.value.delete(appointment.id)
+          return
+        }
+        
+        logger.debug('✅ Appointment confirmed via secure API (credit-covered):', {
+          appointmentId: appointment.id
+        })
+      } catch (err: any) {
+        console.error('⚠️ Error confirming appointment via API:', err)
+        displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
+        confirmingAppointments.value.delete(appointment.id)
+        return
+      }
+      
       displayToast('success', 'Termin bestätigt!', 'Zahlung wurde durch Guthaben oder Gutscheine gedeckt')
       confirmingAppointments.value.delete(appointment.id)
       
