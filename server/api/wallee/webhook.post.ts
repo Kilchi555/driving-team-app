@@ -299,13 +299,12 @@ export default defineEventHandler(async (event) => {
       await handleCreditRefund(paymentsToUpdate)
     }
     
-    // ============ LAYER 10: CONFIRM CREDIT DEDUCTION FOR COMPLETED ============
+    // ============ LAYER 11: SEND COURSE ENROLLMENT CONFIRMATION EMAILS ============
     if (paymentStatus === 'completed') {
-      await confirmCreditDeduction(paymentsToUpdate)
-      await processVouchersAndCredits(payments)
+      await sendCourseEnrollmentEmails(paymentsToUpdate)
     }
     
-    // ============ LAYER 11: SAVE PAYMENT TOKEN (if applicable) ============
+    // ============ LAYER 12: SAVE PAYMENT TOKEN (if applicable) ============
     if ((paymentStatus === 'completed' || paymentStatus === 'authorized') && payments.length > 0) {
       await savePaymentToken(payments[0], transactionId)
     }
@@ -648,5 +647,117 @@ async function savePaymentToken(payment: any, transactionId: string) {
   } catch (err: any) {
     // Non-critical - token can be saved later
     logger.warn('⚠️ Payment token save failed (non-critical):', err.message)
+  }
+}
+
+async function sendCourseEnrollmentEmails(payments: any[]) {
+  const supabase = getSupabaseAdmin()
+  
+  for (const payment of payments) {
+    try {
+      // Check if this payment is for a course enrollment
+      const { data: courseReg } = await supabase
+        .from('course_registrations')
+        .select(`
+          id,
+          email,
+          first_name,
+          last_name,
+          course_id,
+          courses!inner(
+            id,
+            name,
+            description,
+            price_per_participant_rappen,
+            course_sessions(start_time)
+          ),
+          tenants!inner(
+            id,
+            name,
+            slug,
+            contact_email,
+            primary_color
+          )
+        `)
+        .eq('payment_id', payment.id)
+        .single()
+      
+      if (!courseReg?.email) {
+        logger.debug('⏭️ No course enrollment email found for payment:', payment.id)
+        continue
+      }
+      
+      const course = courseReg.courses
+      const tenant = courseReg.tenants
+      const courseDate = course?.course_sessions?.[0]?.start_time
+        ? new Date(course.course_sessions[0].start_time).toLocaleDateString('de-CH')
+        : 'TBD'
+      
+      const enrollmentEmail = {
+        to: courseReg.email,
+        subject: `Anmeldebestätigung: ${course?.name}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, rgba(16, 185, 129, 0.8) 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; font-size: 24px;">Anmeldebestätigung</h1>
+              <p style="margin: 5px 0 0 0; opacity: 0.9;">${tenant?.name}</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+              <p>Hallo ${courseReg.first_name},</p>
+              
+              <p>vielen Dank für deine Anmeldung! Deine Zahlung wurde erfolgreich verarbeitet.</p>
+              
+              <!-- Course Details -->
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: ${tenant?.primary_color || '#10B981'};">Kursdetails</h3>
+                <p><strong>Kurs:</strong> ${course?.name}</p>
+                <p><strong>Standort:</strong> ${course?.description}</p>
+                <p><strong>Startdatum:</strong> ${courseDate}</p>
+                <p><strong>Kursbeitrag:</strong> CHF ${(course?.price_per_participant_rappen ? course.price_per_participant_rappen / 100 : 0).toFixed(2)}</p>
+              </div>
+              
+              <!-- Next Steps -->
+              <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${tenant?.primary_color || '#10B981'};">
+                <h3 style="margin-top: 0;">Nächste Schritte</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>Dein Platz im Kurs ist reserviert</li>
+                  <li>Du erhältst weitere Infos per E-Mail</li>
+                  <li>Bei Fragen: ${tenant?.contact_email}</li>
+                </ul>
+              </div>
+              
+              <p style="margin-bottom: 0;">Viel Erfolg und Freude beim Kurs!</p>
+              <p style="color: #666; font-size: 12px; margin-top: 20px;">
+                ${tenant?.name}<br>
+                ${tenant?.contact_email}
+              </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px;">
+              <p style="margin: 0;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+            </div>
+          </div>
+        `
+      }
+      
+      // Send email using Resend
+      try {
+        const { Resend } = await import('resend')
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        
+        await resend.emails.send(enrollmentEmail)
+        logger.info('✅ Course enrollment confirmation email sent to:', courseReg.email)
+      } catch (resendErr: any) {
+        logger.warn('⚠️ Resend email service failed:', resendErr.message)
+        // Try alternative: log for manual sending
+        logger.debug('📧 Email to be sent manually:', enrollmentEmail.to, enrollmentEmail.subject)
+      }
+    } catch (err: any) {
+      logger.warn('⚠️ Course enrollment email processing failed:', err.message)
+    }
   }
 }
