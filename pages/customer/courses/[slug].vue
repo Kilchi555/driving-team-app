@@ -81,7 +81,7 @@
           <!-- Course Header -->
           <div class="p-5 border-b border-slate-100">
             <h3 class="font-semibold text-lg text-slate-800 mb-1">{{ course.name }}</h3>
-            <p class="text-sm text-slate-500">{{ course.location || 'Standort wird noch bekannt gegeben' }}</p>
+            <p class="text-sm text-slate-500">{{ course.description || 'Standort wird noch bekannt gegeben' }}</p>
           </div>
           
           <!-- Sessions -->
@@ -162,7 +162,7 @@ const categories = computed(() => {
 })
 
 const locations = computed(() => {
-  const locs = new Set(courses.value.map(c => c.location).filter(Boolean))
+  const locs = new Set(courses.value.map(c => c.description).filter(Boolean))
   return Array.from(locs).sort()
 })
 
@@ -174,7 +174,7 @@ const filteredCourses = computed(() => {
   }
   
   if (selectedLocation.value) {
-    result = result.filter(c => c.location === selectedLocation.value)
+    result = result.filter(c => c.description === selectedLocation.value)
   }
   
   // Sort by first session date
@@ -217,7 +217,7 @@ const loadCourses = async () => {
       id,
       name,
       category,
-      location,
+      description,
       price_per_participant_rappen,
       max_participants,
       current_participants,
