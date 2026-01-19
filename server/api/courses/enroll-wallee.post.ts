@@ -156,15 +156,8 @@ export default defineEventHandler(async (event) => {
         last_name: customerData.lastname,
         email: finalEmail,
         phone: finalPhone,
-        sari_faberid: faberidClean,
-        street: customerData.address || '',
-        zip: customerData.zip || '',
-        city: customerData.city || '',
         status: 'pending',
-        payment_method: 'online',
-        enrolled_at: new Date().toISOString(),
-        sari_data: customerData,
-        sari_licenses: customerData.licenses || []
+        payment_status: 'pending'
       })
       .select('id')
       .single()
