@@ -1,7 +1,7 @@
 <!-- components/UpcomingLessonsModal.vue -->
 <template>
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg w-full max-w-full sm:max-w-2xl md:max-w-4xl h-[90vh] sm:h-[85vh] overflow-hidden flex flex-col">
+    <div class="bg-white rounded-lg w-full max-w-full sm:max-w-2xl md:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
       
       <!-- Header -->
       <div class="sticky top-0" :style="{ backgroundColor: primaryColor }">
