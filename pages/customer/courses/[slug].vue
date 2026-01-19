@@ -271,9 +271,16 @@ const getGroupedSessions = (course: any) => {
   )
   
   // Group by date
-  const grouped: { date: string; timeRange: string; parts: number }[] = []
+  interface GroupedSession {
+    date: string
+    startTime: string
+    endTime: string
+    parts: number
+  }
+  
+  const grouped: GroupedSession[] = []
   let currentDate = ''
-  let currentGroup: any = null
+  let currentGroup: GroupedSession | null = null
   
   for (const session of sorted) {
     const date = session.start_time.split('T')[0]
@@ -290,8 +297,10 @@ const getGroupedSessions = (course: any) => {
         parts: 1
       }
     } else {
-      currentGroup.endTime = session.end_time
-      currentGroup.parts++
+      if (currentGroup) {
+        currentGroup.endTime = session.end_time
+        currentGroup.parts++
+      }
     }
   }
   
