@@ -8,8 +8,9 @@
  * tenant isolation, rate limiting on success
  */
 
-import { defineEventHandler, createError, readBody, getHeader } from 'h3'
+import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
 // Configuration
@@ -149,43 +150,15 @@ export default defineEventHandler(async (event) => {
   
   try {
     // ========== LAYER 1: AUTH & INPUT VALIDATION ==========
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await verifyAuth(event)
+    if (!auth) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const token = authHeader.slice(7)
-    const supabase = getSupabaseAdmin()
-    
-    // Verify auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user?.id) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
-
-    // Get user from DB
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (userError || !userData?.id) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'User not found'
-      })
-    }
-
-    const userId = userData.id
-    const tenantId = userData.tenant_id
+    const { userId, tenantId } = auth
 
     // Parse request body
     const body = await readBody(event)

@@ -9,8 +9,9 @@
  * Security: Session-based auth, RLS enforcement, field sanitization
  */
 
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
 // Cache configuration
@@ -137,55 +138,15 @@ export default defineEventHandler(async (event) => {
   
   try {
     // ========== LAYER 1: AUTH & VALIDATION ==========
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Missing or invalid authorization header'
-      })
-    }
-
-    const token = authHeader.slice(7)
-    const supabase = getSupabaseAdmin()
-    
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user?.id) {
-      logger.warn('❌ Invalid authentication token')
+    const auth = await verifyAuth(event)
+    if (!auth) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const authUserId = user.id
-    
-    // Get user ID from database
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', authUserId)
-      .single()
-
-    if (userError || !userData?.id) {
-      logger.warn(`❌ User not found for auth_user_id: ${authUserId}`)
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'User profile not found'
-      })
-    }
-
-    const userId = userData.id
-
-    // Validate request
-    if (!validateRequest(userId, authUserId)) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Forbidden'
-      })
-    }
-
+    const { userId, authUserId, tenantId } = auth
     logger.debug(`🔐 Request authenticated for user: ${userId}`)
 
     // ========== LAYER 2+3: CACHE CHECK & DB FETCH ==========

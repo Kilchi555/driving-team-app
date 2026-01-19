@@ -7,8 +7,9 @@
  * Security: Session auth, tenant isolation, rate limiting
  */
 
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
 const CACHE_DURATION = 30 * 60 * 1000 // 30 minutes (locations rarely change)
@@ -95,42 +96,15 @@ export default defineEventHandler(async (event) => {
   
   try {
     // ========== LAYER 1: AUTH & VALIDATION ==========
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await verifyAuth(event)
+    if (!auth) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const token = authHeader.slice(7)
-    const supabase = getSupabaseAdmin()
-    
-    // Verify token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user?.id) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
-
-    // Get tenant ID
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (userError || !userData?.tenant_id) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Tenant not found'
-      })
-    }
-
-    const tenantId = userData.tenant_id
+    const { tenantId } = auth
     logger.debug(`🔐 Locations request for tenant: ${tenantId}`)
 
     // ========== LAYER 2+3: CACHE CHECK & DB FETCH ==========
