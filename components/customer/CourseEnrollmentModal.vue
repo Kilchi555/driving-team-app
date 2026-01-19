@@ -295,11 +295,22 @@ const lookupSARI = async () => {
   try {
     const faberidClean = formData.value.faberid.replace(/\./g, '')
     
+    // Ensure birthdate is in YYYY-MM-DD format
+    // HTML5 date input gives us YYYY-MM-DD, but just to be safe
+    let birthdate = formData.value.birthdate
+    if (!birthdate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Try to parse and reformat if needed
+      const parts = birthdate.split('.')
+      if (parts.length === 3) {
+        birthdate = `${parts[2]}-${parts[1]}-${parts[0]}`
+      }
+    }
+    
     const response = await $fetch('/api/sari/lookup-customer', {
       method: 'POST',
       body: {
         faberid: faberidClean,
-        birthdate: formData.value.birthdate,
+        birthdate: birthdate,
         tenantId: props.tenantId
       }
     }) as any
@@ -326,6 +337,16 @@ const submitEnrollment = async () => {
   
   try {
     const faberidClean = formData.value.faberid.replace(/\./g, '')
+    
+    // Ensure birthdate is in YYYY-MM-DD format
+    let birthdate = formData.value.birthdate
+    if (!birthdate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const parts = birthdate.split('.')
+      if (parts.length === 3) {
+        birthdate = `${parts[2]}-${parts[1]}-${parts[0]}`
+      }
+    }
+    
     const endpoint = paymentMethod.value === 'WALLEE' 
       ? '/api/courses/enroll-wallee'
       : '/api/courses/enroll-cash'
@@ -335,7 +356,7 @@ const submitEnrollment = async () => {
       body: {
         courseId: props.course.id,
         faberid: faberidClean,
-        birthdate: formData.value.birthdate,
+        birthdate: birthdate,
         tenantId: props.tenantId,
         email: formData.value.email,
         phone: formData.value.phone
