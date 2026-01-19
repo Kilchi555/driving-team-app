@@ -108,7 +108,6 @@
 <script setup lang="ts">
 
 import { computed, ref, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { logger } from '~/utils/logger'
 
@@ -228,40 +227,30 @@ const loadLocations = async () => {
     
     // Sammle alle location_ids aus den lessons
     const locationIds = [...new Set(props.lessons.map(lesson => lesson.location_id).filter(Boolean))]
-    logger.debug('🔍 Modal: Loading locations for IDs via API:', locationIds)
+    logger.debug('🔍 Modal: Loading locations from lessons data:', locationIds)
     
     if (locationIds.length === 0) {
       logger.debug('⚠️ Modal: No location IDs found')
       return
     }
     
-    // ✅ Use secure API instead of direct DB query
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
+    // ✅ Extract location data directly from lessons (already loaded)
+    // This avoids an extra API call since locations are embedded in the appointments
+    const locations = props.lessons
+      .filter(lesson => lesson.location_id)
+      .map(lesson => ({
+        id: lesson.location_id,
+        name: lesson.location_name || 'Unbekannter Ort',
+        street: lesson.location_details?.address || lesson.location_details?.formatted_address || '',
+        street_number: '',
+        zip: '',
+        city: ''
+      }))
+      .filter((loc, idx, arr) => arr.findIndex(l => l.id === loc.id) === idx) // Deduplicate
     
-    if (!session?.access_token) {
-      console.warn('⚠️ Modal: No session for loading locations')
-      return
-    }
+    logger.debug('✅ Modal: Locations extracted from lessons:', locations)
     
-    const response = await $fetch<{ success: boolean; locations?: any[] }>('/api/locations/list', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      query: {
-        ids: locationIds.join(',')
-      }
-    })
-    
-    if (!response?.success || !response?.locations) {
-      console.error('❌ Modal: Error loading locations from API')
-      return
-    }
-    
-    logger.debug('✅ Modal: Locations loaded via API:', response.locations)
-    
-    locationsMap.value = response.locations.reduce((acc: Record<string, any>, loc: any) => {
+    locationsMap.value = locations.reduce((acc: Record<string, any>, loc: any) => {
       acc[loc.id] = {
         name: loc.name,
         street: loc.street,
