@@ -4,16 +4,14 @@
     <!-- Header -->
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="py-6 space-y-4">
+        <div class="py-6 flex items-center justify-between">
           <button
             @click="navigateToDashboard"
             class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
           >
             Zurück
           </button>
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">Unsere Kurse</h1>
-          </div>
+          <h1 class="text-3xl font-bold text-gray-900">Unsere Kurse</h1>
         </div>
       </div>
     </div>
@@ -48,8 +46,8 @@
       
       <!-- Filter Section -->
       <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
-        <div class="flex flex-col sm:flex-row gap-4">
-          <div class="flex-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Kategorie</label>
             <select
               v-model="selectedCategory"
@@ -61,7 +59,18 @@
               </option>
             </select>
           </div>
-
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Ort</label>
+            <select
+              v-model="selectedLocation"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Alle Orte</option>
+              <option v-for="location in locations" :key="location" :value="location">
+                {{ location }}
+              </option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -76,79 +85,34 @@
           <div class="p-6 border-b border-gray-200">
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ course.name }}</h3>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ removeDateFromTitle(course.name) }}</h3>
                 <p class="text-gray-600 text-sm">{{ course.description }}</p>
               </div>
               <span
                 :class="[
-                  'px-3 py-1 rounded-full text-xs font-medium',
+                  'px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ml-2',
                   getStatusClass(course.status)
                 ]"
               >
                 {{ getStatusText(course.status) }}
               </span>
             </div>
-            
-            <!-- Course Category -->
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-sm text-gray-500">Kategorie:</span>
-              <span class="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                {{ course.category_name }}
-              </span>
-            </div>
           </div>
 
           <!-- Course Details -->
-          <div class="p-6">
-            <div class="space-y-3 mb-6">
-              <!-- Price -->
-              <div class="flex items-center gap-3">
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-                <span class="text-sm text-gray-600">CHF {{ (course.price_per_participant_rappen / 100).toFixed(2) }}</span>
-              </div>
-
-              <!-- Max Participants -->
-              <div class="flex items-center gap-3">
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span class="text-sm text-gray-600">
-                  {{ course.current_participants || 0 }} / {{ course.max_participants }} Teilnehmer
-                </span>
-              </div>
-
+          <div class="p-6 flex flex-col h-full">
+            <!-- Sessions and Info (grows) -->
+            <div class="space-y-4 flex-1">
               <!-- Course Sessions -->
-              <div v-if="course.sessions && course.sessions.length > 0" class="space-y-2">
-                <div class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-sm font-medium text-gray-700">Termine:</span>
-                </div>
-                <div class="ml-8 space-y-1">
+              <div v-if="course.sessions && course.sessions.length > 0" class="space-y-1">
+                <div class="text-sm font-medium text-gray-700 mb-2">Termine:</div>
+                <div class="space-y-1">
                   <div 
                     v-for="session in course.sessions" 
                     :key="session.id"
                     class="text-sm text-gray-600"
                   >
-                    <div class="flex items-center gap-2">
-                      <span class="text-gray-500">
-                        {{ session.description || `Teil ${session.session_number}` }} {{ formatDate(session.start_time) }} {{ formatTime(session.start_time) }} - {{ formatTime(session.end_time) }}
-                      </span>
-                      <span v-if="showInstructorInfo">
-                        <span v-if="session.instructor_type === 'internal' && session.staff" class="text-blue-600">
-                          : {{ session.staff.first_name }} {{ session.staff.last_name.charAt(0) }}.
-                        </span>
-                        <span v-else-if="session.instructor_type === 'external' && session.external_instructor_name" class="text-green-600">
-                          : {{ session.external_instructor_name.split(' ')[0] }} {{ session.external_instructor_name.split(' ')[1]?.charAt(0) || '' }}.
-                        </span>
-                        <span v-else class="text-gray-400">
-                          : Kein Instruktor
-                        </span>
-                      </span>
-                    </div>
+                    {{ formatDate(session.start_time) }} {{ formatTime(session.start_time) }} - {{ formatTime(session.end_time) }}
                   </div>
                 </div>
               </div>
@@ -164,12 +128,33 @@
               </div>
             </div>
 
-            <!-- Action Button -->
+            <!-- Price and Participants -->
+            <div class="grid grid-cols-2 gap-4 py-4 border-t border-gray-200 mt-4">
+              <!-- Price -->
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                <span class="text-sm text-gray-600 font-semibold">CHF {{ (course.price_per_participant_rappen / 100).toFixed(2) }}</span>
+              </div>
+
+              <!-- Max Participants -->
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span class="text-sm text-gray-600 font-semibold">
+                  {{ course.max_participants - (course.current_participants || 0) }} frei
+                </span>
+              </div>
+            </div>
+
+            <!-- Action Button - full width, next line -->
             <button
               @click="enrollInCourse(course)"
               :disabled="!canEnroll(course)"
               :class="[
-                'w-full py-3 px-4 rounded-lg font-medium transition-colors',
+                'w-full mt-4 py-3 px-4 rounded-lg font-medium transition-colors',
                 canEnroll(course)
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -268,6 +253,7 @@ const courses = ref<any[]>([])
 const categories = ref<any[]>([])
 const searchQuery = ref('')
 const selectedCategory = ref('')
+const selectedLocation = ref('')
 const selectedStatus = ref('')
 const showEnrollmentModal = ref(false)
 const selectedCourse = ref<any>(null)
@@ -292,6 +278,14 @@ const filteredCourses = computed(() => {
   // Filter by category
   if (selectedCategory?.value) {
     filtered = filtered.filter(course => course.course_category_id === selectedCategory.value)
+  }
+
+  // Filter by location (from description)
+  if (selectedLocation?.value) {
+    filtered = filtered.filter(course => {
+      const location = extractCityFromDescription(course.description || '')
+      return location === selectedLocation.value
+    })
   }
 
   // Filter by status
@@ -321,6 +315,18 @@ const filteredCourses = computed(() => {
   }
 
   return filtered
+})
+
+// Computed property for locations
+const locations = computed(() => {
+  const locationSet = new Set<string>()
+  courses?.value?.forEach(course => {
+    const location = extractCityFromDescription(course.description || '')
+    if (location) {
+      locationSet.add(location)
+    }
+  })
+  return Array.from(locationSet).sort()
 })
 
 // Methods
@@ -556,6 +562,19 @@ const formatTime = (dateString: string) => {
     console.warn('Error formatting time:', dateString, error)
     return 'Zeit Fehler'
   }
+}
+
+// Helper function to extract city from course description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
+const extractCityFromDescription = (description: string): string => {
+  if (!description) return ''
+  const match = description.match(/(\b[A-Z][a-z]+\b)(?:\s|,|$)/)
+  return match ? match[1] : ''
+}
+
+// Helper function to remove date from course title (e.g., "Motorrad Grundkurs Lachen - 25.04.2026" → "Motorrad Grundkurs Lachen")
+const removeDateFromTitle = (title: string): string => {
+  if (!title) return ''
+  return title.replace(/\s*-\s*\d{2}\.\d{2}\.\d{4}$/, '')
 }
 
 // Lifecycle
