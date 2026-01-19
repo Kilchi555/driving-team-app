@@ -77,53 +77,34 @@ export default defineEventHandler(async (event) => {
 
     // 3. Get Wallee config for tenant
     let walleeConfig: any
+    let apiSecret: string | null = null
+    
     try {
-      // Try to get from tenants table first (might be stored there)
+      // Load from tenants table (where they're currently stored)
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('wallee_space_id, wallee_account_id')
+        .select('wallee_space_id, wallee_user_id, wallee_secret_key')
         .eq('id', tenantId)
         .single()
 
-      // If we have wallee_space_id, use it
-      if (tenant?.wallee_space_id) {
-        walleeConfig = {
-          spaceId: parseInt(tenant.wallee_space_id),
-          userId: parseInt(tenant.wallee_account_id || '1')
-        }
-        logger.debug('✅ Wallee config loaded from tenants table')
-      } else {
-        // Fallback: Check tenant_secrets
-        const { data: secrets } = await supabase
-          .from('tenant_secrets')
-          .select('secret_type, secret_value')
-          .eq('tenant_id', tenantId)
-          .in('secret_type', ['WALLEE_SPACE_ID', 'WALLEE_ACCOUNT_ID'])
-
-        if (secrets && secrets.length > 0) {
-          let spaceId = '0'
-          let accountId = '1'
-          
-          for (const secret of secrets) {
-            if (secret.secret_type === 'WALLEE_SPACE_ID') spaceId = secret.secret_value
-            if (secret.secret_type === 'WALLEE_ACCOUNT_ID') accountId = secret.secret_value
-          }
-          
-          walleeConfig = {
-            spaceId: parseInt(spaceId),
-            userId: parseInt(accountId)
-          }
-          logger.debug('✅ Wallee config loaded from tenant_secrets')
-        }
-      }
-
-      if (!walleeConfig?.spaceId) {
-        logger.error('❌ Wallee spaceId not found in tenants or tenant_secrets')
+      if (!tenant?.wallee_space_id) {
+        logger.error('❌ Wallee configuration not found for tenant:', tenantId)
         throw createError({
           statusCode: 500,
           statusMessage: 'Wallee not configured for this tenant'
         })
       }
+
+      walleeConfig = {
+        spaceId: parseInt(tenant.wallee_space_id),
+        userId: parseInt(tenant.wallee_user_id || '1')
+      }
+      apiSecret = tenant.wallee_secret_key
+      
+      logger.debug('✅ Wallee config loaded from tenants table:', { 
+        spaceId: walleeConfig.spaceId,
+        userId: walleeConfig.userId
+      })
     } catch (error: any) {
       if (error.statusCode) throw error
       logger.error('❌ Failed to load Wallee config:', error)
@@ -133,17 +114,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. Get API secret from environment (fallback) or tenant_secrets
-    let apiSecret = process.env.WALLEE_API_KEY
+    // 4. Ensure we have API secret
     if (!apiSecret) {
-      const { data: secrets } = await supabase
-        .from('tenant_secrets')
-        .select('secret_value')
-        .eq('tenant_id', tenantId)
-        .eq('secret_type', 'WALLEE_API_KEY')
-        .single()
-      
-      apiSecret = secrets?.secret_value
+      apiSecret = process.env.WALLEE_API_KEY
     }
 
     if (!apiSecret) {
