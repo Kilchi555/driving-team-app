@@ -24,7 +24,7 @@
           <!-- Course Info -->
           <div class="bg-blue-50 rounded-lg p-4 mb-6">
             <h3 class="font-semibold text-blue-900">{{ course.name }}</h3>
-            <p class="text-sm text-blue-700 mt-1">{{ course.location }}</p>
+            <p class="text-sm text-blue-700 mt-1">{{ course.description }}</p>
             <p class="text-lg font-bold text-blue-900 mt-2">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
             
             <!-- Sessions -->
@@ -194,7 +194,7 @@ const formData = ref({
 
 // Computed
 const paymentMethod = computed(() => {
-  const city = extractCityFromCourseDescription(props.course?.location || props.course?.name || '')
+  const city = extractCityFromCourseDescription(props.course?.description || props.course?.name || '')
   return determinePaymentMethod(city)
 })
 
