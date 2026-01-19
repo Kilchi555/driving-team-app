@@ -226,9 +226,22 @@ export default defineEventHandler(async (event) => {
       throw walleeError
     }
 
-    if (!transaction || !transaction.id) {
+    // Extract the actual transaction from the SDK response wrapper
+    // The SDK returns { response, body } where body is the Transaction object
+    const actualTransaction = transaction?.body || transaction
+    const transactionId = actualTransaction?.id
+
+    logger.debug('🔍 Wallee response - extracted transaction:', {
+      transactionId: transactionId,
+      state: actualTransaction?.state,
+      hasBody: !!transaction?.body,
+      allKeys: actualTransaction ? Object.keys(actualTransaction).slice(0, 20) : 'null'
+    })
+
+    if (!transactionId) {
       logger.error('❌ Invalid transaction response from Wallee:', {
-        transaction: JSON.stringify(transaction, null, 2).substring(0, 500)
+        transaction: JSON.stringify(actualTransaction, null, 2).substring(0, 500),
+        hasBody: !!transaction?.body
       })
       throw createError({
         statusCode: 500,
@@ -236,14 +249,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.info('✅ Wallee transaction created:', transaction.id)
+    logger.info('✅ Wallee transaction created:', transactionId)
 
     // 9. Get payment page URL
     const paymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-    const pageUrl = await paymentPageService.paymentPageUrl(
+    const pageUrlResponse = await paymentPageService.paymentPageUrl(
       walleeConfig.spaceId,
-      transaction.id
+      transactionId
     )
+
+    // Extract the URL from the SDK response wrapper
+    // The SDK returns { response, body } where body is the URL string
+    const pageUrl = pageUrlResponse?.body || pageUrlResponse
 
     if (!pageUrl) {
       throw createError({
@@ -260,7 +277,7 @@ export default defineEventHandler(async (event) => {
       .update({
         metadata: {
           ...enrollment.metadata,
-          wallee_transaction_id: transaction.id,
+          wallee_transaction_id: transactionId,
           payment_initiated_at: new Date().toISOString()
         }
       })
@@ -273,7 +290,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      transactionId: transaction.id,
+      transactionId: transactionId,
       paymentUrl: pageUrl,
       enrollmentId: enrollmentId
     }
