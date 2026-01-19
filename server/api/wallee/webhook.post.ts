@@ -5,6 +5,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { Wallee } from 'wallee'
 
 // ============ TYPES ============
 interface WalleeWebhookPayload {
@@ -365,9 +366,7 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     }
     
     const config = getWalleeSDKConfig(spaceId, userId, apiSecret)
-    const WalleeModule = await import('wallee')
-    const Wallee = WalleeModule.default || WalleeModule.Wallee || WalleeModule
-    const transactionService = new (Wallee as any).api.TransactionService(config)
+    const transactionService = new Wallee.api.TransactionService(config)
     
     const response = await transactionService.read(spaceId, parseInt(transactionId))
     return response.body
