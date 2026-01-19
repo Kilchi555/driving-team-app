@@ -4,93 +4,100 @@
     <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
       
       <!-- Header -->
-      <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
-        <div class="flex justify-between items-center">
-          <div>
-            <h3 class="text-xl font-semibold text-gray-900">
-              Kommende Lektionen
-            </h3>
-            <p class="text-sm text-gray-600 mt-1">
-              {{ upcomingLessons.length }} geplante Termine
-            </p>
+      <div class="sticky top-0" :style="{ backgroundColor: primaryColor }">
+        <div class="px-6 py-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-2xl font-bold text-white">
+                Kommende Lektionen
+              </h3>
+          
+            </div>
+            <button @click="$emit('close')" class="text-white hover:opacity-80 text-2xl transition-opacity">
+              ✕
+            </button>
           </div>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">
-            ✕
-          </button>
         </div>
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-6">
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
 
         <!-- Empty State -->
-        <div v-if="filteredLessons.length === 0" class="text-center py-12">
-          <div class="text-4xl mb-4">📅</div>
+        <div v-if="filteredLessons.length === 0" class="text-center py-16">
+          <div class="text-6xl mb-4">📅</div>
           <h3 class="text-lg font-medium text-gray-900 mb-2">Keine kommenden Termine</h3>
           <p class="text-gray-500">{{ getEmptyStateMessage() }}</p>
         </div>
 
         <!-- Lektionsliste -->
-        <div v-else class="space-y-3">
+        <div v-else class="space-y-4">
           <div 
             v-for="lesson in filteredLessons" 
             :key="lesson.id"
-            class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow"
+            class="rounded-xl shadow-md hover:shadow-xl transition-all duration-200 overflow-hidden"
+            :style="{ borderLeft: `6px solid ${primaryColor}` }"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-2">
-                  <h4 class="text-xs font-semibold text-gray-900">
-                    {{ formatLessonDate(lesson.start_time) }}
-                  </h4>
-                  <span 
-                    v-if="lesson.type" 
-                    class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
-                  >
-                    Kategorie {{ lesson.type }}
-                  </span>
-                </div>
-                
-                <!-- Lektionstyp basierend auf event_type_code -->
-                <div v-if="lesson.event_type_code" class="mb-2">
-                  <span class="text-sm text-gray-700 font-medium">
-                    {{ getLessonTypeTitle(lesson.event_type_code) }}
-                    <span v-if="lesson.staff?.first_name" class="text-gray-600">
-                      mit {{ lesson.staff.first_name }}
+            <!-- Termin Karte Background Gradient -->
+            <div class="bg-gradient-to-br from-white to-gray-50 p-4">
+              
+              <!-- Top Row: Datum und Status Badge -->
+              <div class="flex items-start justify-between mb-3">
+                <div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold px-3 py-1 rounded-full text-white" :style="{ backgroundColor: primaryColor }">
+                      {{ formatLessonDate(lesson.start_time) }}
                     </span>
+                    <span v-if="getStatusText(lesson) !== 'Geplant'" class="text-xs font-semibold px-3 py-1 rounded-full" :style="{ backgroundColor: primaryColor + '20', color: primaryColor }">
+                      {{ getStatusText(lesson) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-bold" :style="{ color: primaryColor }">
+                    {{ getTimeUntil(lesson.start_time) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lesson Type with Category Badge -->
+              <div v-if="lesson.event_type_code" class="mb-3 pb-3 border-b border-gray-200">
+                <div class="flex items-center gap-2 mb-1">
+                  <h4 class="text-lg font-bold text-gray-900">
+                    {{ getLessonTypeTitle(lesson.event_type_code) }}
+                  </h4>
+                  <span v-if="lesson.type" class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full text-white" :style="{ backgroundColor: primaryColor }">
+                    {{ lesson.type }}
                   </span>
                 </div>
-                
-                <div class="flex items-center gap-4 text-sm text-gray-600">
-                  <span>🕐 {{ formatTimeRange(lesson.start_time, lesson.end_time) }}</span>
-                  <span v-if="lesson.duration_minutes">⏱️ {{ lesson.duration_minutes }} Min.</span>
-                  <div class="font-semibold">                  <span>{{ getTimeUntil(lesson.start_time) }}</span>
-                    </div>
+                <p v-if="lesson.staff?.first_name" class="text-sm font-medium text-gray-600"">
+                  mit {{ lesson.staff.first_name }} {{ lesson.staff.last_name }}
+                </p>
+              </div>
+
+              <!-- Time and Duration -->
+              <div class="mb-3 flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">🕐</span>
+                  <span class="font-semibold text-gray-700">{{ formatTimeRange(lesson.start_time, lesson.end_time) }}</span>
+                </div>
+                <div v-if="lesson.duration_minutes" class="flex items-center gap-2">
+                  <span class="text-xl">⏱️</span>
+                  <span class="font-semibold text-gray-700">{{ lesson.duration_minutes }} Min.</span>
+                </div>
+              </div>
+
+              <!-- Location -->
+              <div v-if="lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address)" class="mb-3">
+                <div class="flex items-start gap-2">
+                  <span class="text-lg mt-0.5">📍</span>
+                  <div>
+                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Treffpunkt</p>
+                    <p class="text-xs text-gray-900">{{ formatLocationAddress(lesson.location_details) }}</p>
+                  </div>
                 </div>
               </div>
             </div>
-                <div class="mt-2 text-sm text-gray-600">
-                    <div v-if="lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address)" class="mt-1 text-xs text-gray-500">
-                        Treffpunkt: {{ formatLocationAddress(lesson.location_details) }}
-                    </div>
-                    
-                    <!-- Kommentare / Bewertungen -->
-                    <div class="mt-3 pt-3 border-t border-gray-200">
-                        <p class="text-xs font-semibold text-gray-700 mb-2">Bewertung:</p>
-                        <div v-if="lesson.criteria_evaluations && lesson.criteria_evaluations.length > 0" class="space-y-1">
-                            <div v-for="evaluation in lesson.criteria_evaluations" :key="evaluation.criteria_id" class="text-xs">
-                                <div class="flex justify-between items-start">
-                                    <span class="text-gray-600">{{ evaluation.criteria_name || evaluation.criteria_category_name }}</span>
-                                    <span class="font-semibold text-blue-600">{{ evaluation.criteria_rating }}/5</span>
-                                </div>
-                                <p v-if="evaluation.criteria_note" class="text-gray-500 italic">{{ evaluation.criteria_note }}</p>
-                            </div>
-                        </div>
-                        <div v-else class="text-xs text-gray-500 italic">
-                            Nicht bewertet
-                        </div>
-                    </div>
-                </div>
           </div>
         </div>
       </div>
@@ -100,8 +107,10 @@
 
 <script setup lang="ts">
 
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+import { logger } from '~/utils/logger'
 
 // Props & Emits
 interface Props {
@@ -111,6 +120,23 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits(['close'])
+
+// Tenant branding colors
+const { currentTenantBranding } = useTenantBranding()
+const primaryColor = computed(() => {
+  try {
+    return currentTenantBranding?.value?.primaryColor || '#019ee5'
+  } catch {
+    return '#019ee5'
+  }
+})
+const secondaryColor = computed(() => {
+  try {
+    return currentTenantBranding?.value?.secondaryColor || '#62b22f'
+  } catch {
+    return '#62b22f'
+  }
+})
 
 // State
 const filterStatus = ref('all')
@@ -202,40 +228,51 @@ const loadLocations = async () => {
     
     // Sammle alle location_ids aus den lessons
     const locationIds = [...new Set(props.lessons.map(lesson => lesson.location_id).filter(Boolean))]
-    logger.debug('🔍 Modal: Loading locations for IDs:', locationIds)
+    logger.debug('🔍 Modal: Loading locations for IDs via API:', locationIds)
     
     if (locationIds.length === 0) {
       logger.debug('⚠️ Modal: No location IDs found')
       return
     }
     
+    // ✅ Use secure API instead of direct DB query
     const supabase = getSupabase()
-    const { data: locations, error } = await supabase
-      .from('locations')
-      .select('id, name, address, formatted_address')
-      .in('id', locationIds)
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (error) {
-      console.error('❌ Modal: Error loading locations:', error)
+    if (!session?.access_token) {
+      console.warn('⚠️ Modal: No session for loading locations')
       return
     }
     
-    if (locations) {
-      logger.debug('✅ Modal: Locations loaded:', locations)
-      
-      locationsMap.value = locations.reduce((acc: Record<string, any>, loc: any) => {
-        acc[loc.id] = {
-          name: loc.name,
-          street: loc.street,
-          street_number: loc.street_number,
-          zip: loc.zip,
-          city: loc.city
-        }
-        return acc
-      }, {} as Record<string, any>)
-      
-      logger.debug('✅ Modal: LocationsMap created:', locationsMap.value)
+    const response = await $fetch<{ success: boolean; locations?: any[] }>('/api/locations/list', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      query: {
+        ids: locationIds.join(',')
+      }
+    })
+    
+    if (!response?.success || !response?.locations) {
+      console.error('❌ Modal: Error loading locations from API')
+      return
     }
+    
+    logger.debug('✅ Modal: Locations loaded via API:', response.locations)
+    
+    locationsMap.value = response.locations.reduce((acc: Record<string, any>, loc: any) => {
+      acc[loc.id] = {
+        name: loc.name,
+        street: loc.street,
+        street_number: loc.street_number,
+        zip: loc.zip,
+        city: loc.city
+      }
+      return acc
+    }, {} as Record<string, any>)
+    
+    logger.debug('✅ Modal: LocationsMap created:', locationsMap.value)
   } catch (error) {
     console.error('❌ Modal: Error in loadLocations:', error)
   } finally {
