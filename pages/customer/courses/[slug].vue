@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+  <div 
+    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100"
+    :style="{'--primary-color': tenantBranding?.primary_color || '#10B981'} as any"
+  >
     <!-- Header -->
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-6xl mx-auto px-4 py-4">
@@ -13,8 +16,7 @@
             </svg>
             <span>Zurück</span>
           </NuxtLink>
-          <h1 class="text-xl font-semibold text-slate-800">Unsere Kurse</h1>
-          <div class="w-20"></div>
+          <h1 class="text-xl font-semibold text-slate-800 text-right">Unsere Kurse</h1>
         </div>
       </div>
     </div>
@@ -35,7 +37,7 @@
     <div v-else class="max-w-6xl mx-auto px-4 py-8">
       <!-- Filters -->
       <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-4 max-w-md">
           <!-- Category Filter -->
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Kategorie</label>
@@ -75,12 +77,12 @@
         <div 
           v-for="course in filteredCourses" 
           :key="course.id"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer border-2 border-slate-200"
           @click="openEnrollmentModal(course)"
         >
           <!-- Course Header -->
           <div class="p-5 border-b border-slate-100">
-            <h3 class="font-semibold text-lg text-slate-800 mb-1">{{ course.name }}</h3>
+            <h3 class="font-semibold text-lg text-slate-800 mb-1">{{ removeDateFromTitle(course.name) }}</h3>
             <p class="text-sm text-slate-500">{{ course.description || 'Standort wird noch bekannt gegeben' }}</p>
           </div>
           
@@ -91,29 +93,42 @@
               :key="idx"
               class="flex items-center gap-3 text-sm"
             >
-              <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-medium">
+              <div 
+                class="w-8 h-8 rounded-full flex items-center justify-center font-medium text-white"
+                :style="{'backgroundColor': tenantBranding?.primary_color || '#10B981'}"
+              >
                 {{ idx + 1 }}
               </div>
               <div>
-                <p class="font-medium text-slate-700">{{ formatSessionDate(session.date) }}</p>
-                <p class="text-slate-500">{{ session.timeRange }}{{ session.parts > 1 ? ` (${session.parts} Teile)` : '' }}</p>
+                <p class="font-medium text-slate-700">
+                  {{ formatSessionDate(session.date) }} 
+                  <span class="font-normal text-slate-600">{{ session.timeRange }}</span>
+                </p>
               </div>
             </div>
           </div>
           
           <!-- Footer -->
-          <div class="px-5 py-4 bg-slate-50 flex items-center justify-between gap-4">
-            <div class="flex-1">
-              <p class="text-sm text-slate-500">Preis</p>
-              <p class="font-bold text-lg text-slate-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+          <div class="px-5 py-4 bg-slate-50 space-y-4">
+            <!-- Price and Free Slots -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-sm text-slate-500">Preis</p>
+                <p class="font-bold text-lg text-slate-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm text-slate-500">Freie Plätze</p>
+                <p class="font-semibold" :style="{'color': tenantBranding?.primary_color || '#10B981'}">{{ course.free_slots || '?' }}</p>
+              </div>
             </div>
-            <div class="text-right flex-1">
-              <p class="text-sm text-slate-500">Freie Plätze</p>
-              <p class="font-semibold text-green-600">{{ course.free_slots || '?' }}</p>
-            </div>
+            
+            <!-- Button Full Width -->
             <button 
               @click.stop="openEnrollmentModal(course)"
-              class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90"
+              :style="{
+                'backgroundColor': tenantBranding?.primary_color || '#10B981'
+              }"
             >
               Anmelden
             </button>
@@ -153,6 +168,7 @@ const slug = computed(() => route.params.slug as string)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const tenant = ref<any>(null)
+const tenantBranding = ref<any>(null)
 const courses = ref<any[]>([])
 const selectedCategory = ref('')
 const selectedLocation = ref('')
@@ -199,13 +215,20 @@ const loadTenant = async () => {
   
   const { data, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, slug')
+    .select('id, name, slug, primary_color, secondary_color, accent_color')
     .eq('slug', slug.value)
     .single()
   
   if (tenantError || !data) {
     error.value = 'Fahrschule nicht gefunden'
     return null
+  }
+  
+  // Load branding
+  tenantBranding.value = {
+    primary_color: data.primary_color || '#10B981',
+    secondary_color: data.secondary_color,
+    accent_color: data.accent_color
   }
   
   return data
@@ -319,12 +342,14 @@ const getGroupedSessions = (course: any) => {
 const formatSessionDate = (dateStr: string) => {
   try {
     const date = new Date(dateStr + 'T00:00:00')
-    return new Intl.DateTimeFormat('de-CH', {
+    const formatted = new Intl.DateTimeFormat('de-CH', {
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).format(date)
+    // Remove comma after weekday: "Mo, 20.01.2026" → "Mo 20.01.2026"
+    return formatted.replace(/, /, ' ')
   } catch {
     return dateStr
   }
@@ -351,6 +376,11 @@ const formatTime = (isoString: string) => {
 
 const formatPrice = (rappen: number) => {
   return (rappen / 100).toFixed(2)
+}
+
+const removeDateFromTitle = (title: string): string => {
+  if (!title) return ''
+  return title.replace(/\s*-\s*\d{2}\.\d{2}\.\d{4}$/, '')
 }
 
 const openEnrollmentModal = (course: any) => {
