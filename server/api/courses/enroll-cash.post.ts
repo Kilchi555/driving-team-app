@@ -124,14 +124,30 @@ export default defineEventHandler(async (event) => {
     if (existingEnrollment) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'You are already enrolled in this course'
+        statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
+      })
+    }
+
+    // 7b. Also check by email to give clear feedback
+    const finalEmail = email || customerData.email
+    const finalPhone = phone || customerData.phone || ''
+
+    const { data: existingByEmail } = await supabase
+      .from('course_registrations')
+      .select('id')
+      .eq('course_id', courseId)
+      .eq('email', finalEmail)
+      .in('status', ['confirmed', 'pending'])
+      .maybeSingle()
+
+    if (existingByEmail) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
       })
     }
 
     // 8. Create CONFIRMED enrollment (no payment needed)
-    const finalEmail = email || customerData.email
-    const finalPhone = phone || customerData.phone || ''
-
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('course_registrations')
       .insert({
@@ -157,9 +173,26 @@ export default defineEventHandler(async (event) => {
 
     if (enrollmentError || !enrollment) {
       logger.error('❌ Failed to create enrollment:', enrollmentError)
+      
+      // Provide clearer error messages
+      if (enrollmentError?.message?.includes('duplicate key')) {
+        if (enrollmentError.message.includes('course_id_email_key')) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
+          })
+        }
+        if (enrollmentError.message.includes('course_id_sari_faberid')) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
+          })
+        }
+      }
+      
       throw createError({
         statusCode: 500,
-        statusMessage: 'Failed to create enrollment'
+        statusMessage: 'Anmeldung konnte nicht erstellt werden. Bitte versuchen Sie es später erneut.'
       })
     }
 
