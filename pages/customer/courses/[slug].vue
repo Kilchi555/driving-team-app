@@ -186,8 +186,27 @@ const categories = computed(() => {
   return Array.from(cats).sort()
 })
 
+// Extract city from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
+const extractCity = (description: string): string => {
+  if (!description) return ''
+  // Pattern: "... PLZ City ..." - extract the city after the PLZ
+  const match = description.match(/\d{4}\s+([A-Z][a-z\-]+)/)
+  if (match) return match[1]
+  // Fallback: extract first capitalized word after comma
+  const fallback = description.match(/,\s+([A-Z][a-z\-]+)/)
+  return fallback ? fallback[1] : ''
+}
+
 const locations = computed(() => {
-  const locs = new Set(courses.value.map(c => c.description).filter(Boolean))
+  let coursesToUse = courses.value
+  
+  // If category is selected, only show locations of courses in that category
+  if (selectedCategory.value) {
+    coursesToUse = coursesToUse.filter(c => c.category === selectedCategory.value)
+  }
+  
+  // Extract unique cities (without street addresses)
+  const locs = new Set(coursesToUse.map(c => extractCity(c.description)).filter(Boolean))
   return Array.from(locs).sort()
 })
 
@@ -199,7 +218,8 @@ const filteredCourses = computed(() => {
   }
   
   if (selectedLocation.value) {
-    result = result.filter(c => c.description === selectedLocation.value)
+    // Filter by extracted city name, not full description
+    result = result.filter(c => extractCity(c.description) === selectedLocation.value)
   }
   
   // Sort by first session date
