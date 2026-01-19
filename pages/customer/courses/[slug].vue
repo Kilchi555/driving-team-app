@@ -4,19 +4,22 @@
     :style="{'--primary-color': tenantBranding?.primary_color || '#10B981'} as any"
   >
     <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
+    <div 
+      class="sticky top-0 z-50 shadow-sm border-b"
+      :style="{'backgroundColor': tenantBranding?.primary_color || '#10B981'}"
+    >
       <div class="max-w-6xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <NuxtLink 
             to="/" 
-            class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
+            class="flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
             <span>Zurück</span>
           </NuxtLink>
-          <h1 class="text-xl font-semibold text-slate-800 text-right">Unsere Kurse</h1>
+          <h1 class="text-xl font-semibold text-white text-right">Unsere Kurse</h1>
         </div>
       </div>
     </div>
