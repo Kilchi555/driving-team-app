@@ -205,16 +205,31 @@ export default defineEventHandler(async (event) => {
       spaceId: walleeConfig.spaceId,
       amount: amount / 100,
       currency,
-      merchant: merchantRef
+      merchant: merchantRef,
+      lineItems: transactionCreate.lineItems
     })
 
     // Create transaction
-    const transaction = await transactionService.create(
-      walleeConfig.spaceId,
-      transactionCreate
-    )
+    let transaction
+    try {
+      transaction = await transactionService.create(
+        walleeConfig.spaceId,
+        transactionCreate
+      )
+    } catch (walleeError: any) {
+      logger.error('❌ Wallee API error creating transaction:', {
+        message: walleeError?.message,
+        body: walleeError?.body,
+        statusCode: walleeError?.statusCode,
+        fullError: JSON.stringify(walleeError, null, 2).substring(0, 500)
+      })
+      throw walleeError
+    }
 
     if (!transaction || !transaction.id) {
+      logger.error('❌ Invalid transaction response from Wallee:', {
+        transaction: JSON.stringify(transaction, null, 2).substring(0, 500)
+      })
       throw createError({
         statusCode: 500,
         statusMessage: 'Failed to create Wallee transaction'
