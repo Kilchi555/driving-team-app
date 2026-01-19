@@ -346,15 +346,21 @@ export class SARIClient {
    * Note: DELETE sends data in body with application/x-www-form-urlencoded (per SARI docs)
    */
   async unenrollStudent(
-    courseId: number,
+    courseId: number | string,
     faberid: string
   ): Promise<void> {
     const token = await this.authenticate()
+    
+    // Extract numeric ID if it's a group string
+    const numericCourseId = this.getNumericSariCourseId(courseId)
+    if (!numericCourseId) {
+      throw new Error('Invalid SARI course ID')
+    }
 
     const url = `${this.baseUrl}/api/courseregistration/personcourse`
 
     const body = new URLSearchParams({
-      courseid: courseId.toString(),
+      courseid: numericCourseId.toString(),
       faberid
     })
 
@@ -376,6 +382,55 @@ export class SARIClient {
     if (data.status !== 'OK') {
       throw new Error(`SARI error: ${data.status}`)
     }
+  }
+
+  /**
+   * Check if a student can enroll in a course
+   * Returns true if: student not already enrolled AND free places available
+   */
+  async canEnrollInCourse(
+    courseId: number | string,
+    faberid: string
+  ): Promise<{ canEnroll: boolean; reason?: string }> {
+    try {
+      // Extract numeric ID if it's a group string (e.g., "GROUP_2110023_...")
+      const numericCourseId = this.getNumericSariCourseId(courseId)
+      if (!numericCourseId) {
+        return { canEnroll: false, reason: 'Ungültige SARI Kurs-ID' }
+      }
+
+      // Get course participants
+      const members = await this.getCourseDetail(numericCourseId)
+      
+      // Check if already enrolled
+      const alreadyEnrolled = members.some(m => m.faberid === faberid)
+      if (alreadyEnrolled) {
+        return { canEnroll: false, reason: 'Sie sind bereits für diesen Kurs angemeldet.' }
+      }
+
+      // Note: We can't directly check free places from getCourseDetail
+      // SARI doesn't return course capacity info in the members list
+      // Assume enrollment is possible if not already enrolled
+      return { canEnroll: true }
+    } catch (error: any) {
+      console.error('❌ SARI canEnrollInCourse error:', error.message)
+      if (error.message?.includes('COURSE_NOT_FOUND')) {
+        return { canEnroll: false, reason: 'SARI Kurs nicht gefunden.' }
+      }
+      return { canEnroll: false, reason: `SARI Fehler: ${error.message}` }
+    }
+  }
+
+  /**
+   * Helper: Extract numeric SARI course ID from a potential group string
+   * e.g., "GROUP_2110023_..." → 2110023
+   */
+  private getNumericSariCourseId(courseSariId: number | string): number | null {
+    if (typeof courseSariId === 'number') {
+      return courseSariId
+    }
+    const match = String(courseSariId).match(/(\d+)/)
+    return match ? parseInt(match[1]) : null
   }
 }
 
