@@ -45,6 +45,7 @@ export default defineEventHandler(async (event) => {
 
     // Get base URL for redirects
     const baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000'
+    const tenantSlug = enrollment.tenants?.slug || 'driving-team'
 
     // 1. Validate inputs
     if (!enrollmentId || !amount || !currency || !customerEmail || !customerName || !tenantId) {
@@ -66,7 +67,7 @@ export default defineEventHandler(async (event) => {
     // 2. Verify enrollment exists and is pending
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('course_registrations')
-      .select('id, course_id, tenant_id, status, payment_status, first_name, last_name, email, phone, courses!inner(*)')
+      .select('id, course_id, tenant_id, status, payment_status, first_name, last_name, email, phone, courses!inner(*), tenants(slug)')
       .eq('id', enrollmentId)
       .eq('tenant_id', tenantId)
       .eq('status', 'pending')
@@ -186,9 +187,9 @@ export default defineEventHandler(async (event) => {
     ]
     transactionCreate.autoConfirmEnabled = true
     transactionCreate.deviceSessionIdentifier = metadata.device_fingerprint || null
-    transactionCreate.successUrl = `${baseUrl}/customer/courses/enrollment-success?enrollmentId=${enrollmentId}`
-    transactionCreate.failedUrl = `${baseUrl}/customer/courses/enrollment-failed?enrollmentId=${enrollmentId}`
-    transactionCreate.cancelledUrl = `${baseUrl}/customer/courses/enrollment-cancelled?enrollmentId=${enrollmentId}`
+    transactionCreate.successUrl = `${baseUrl}/customer/courses/${tenantSlug}?success=true&enrollmentId=${enrollmentId}`
+    transactionCreate.failedUrl = `${baseUrl}/customer/courses/${tenantSlug}?failed=true&enrollmentId=${enrollmentId}`
+    transactionCreate.cancelledUrl = `${baseUrl}/customer/courses/${tenantSlug}?cancelled=true&enrollmentId=${enrollmentId}`
     transactionCreate.invoiceMerchantReference = merchantRef
     transactionCreate.shippingAddress = null
     transactionCreate.billingAddress = null
