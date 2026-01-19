@@ -78,24 +78,54 @@ export default defineEventHandler(async (event) => {
     // 3. Get Wallee config for tenant
     let walleeConfig: any
     try {
+      // Try to get from tenants table first (might be stored there)
       const { data: tenant } = await supabase
         .from('tenants')
         .select('wallee_space_id, wallee_account_id')
         .eq('id', tenantId)
         .single()
 
-      if (!tenant?.wallee_space_id) {
+      // If we have wallee_space_id, use it
+      if (tenant?.wallee_space_id) {
+        walleeConfig = {
+          spaceId: parseInt(tenant.wallee_space_id),
+          userId: parseInt(tenant.wallee_account_id || '1')
+        }
+        logger.debug('✅ Wallee config loaded from tenants table')
+      } else {
+        // Fallback: Check tenant_secrets
+        const { data: secrets } = await supabase
+          .from('tenant_secrets')
+          .select('secret_type, secret_value')
+          .eq('tenant_id', tenantId)
+          .in('secret_type', ['WALLEE_SPACE_ID', 'WALLEE_ACCOUNT_ID'])
+
+        if (secrets && secrets.length > 0) {
+          let spaceId = '0'
+          let accountId = '1'
+          
+          for (const secret of secrets) {
+            if (secret.secret_type === 'WALLEE_SPACE_ID') spaceId = secret.secret_value
+            if (secret.secret_type === 'WALLEE_ACCOUNT_ID') accountId = secret.secret_value
+          }
+          
+          walleeConfig = {
+            spaceId: parseInt(spaceId),
+            userId: parseInt(accountId)
+          }
+          logger.debug('✅ Wallee config loaded from tenant_secrets')
+        }
+      }
+
+      if (!walleeConfig?.spaceId) {
+        logger.error('❌ Wallee spaceId not found in tenants or tenant_secrets')
         throw createError({
           statusCode: 500,
           statusMessage: 'Wallee not configured for this tenant'
         })
       }
-
-      walleeConfig = {
-        spaceId: parseInt(tenant.wallee_space_id),
-        userId: parseInt(tenant.wallee_account_id || '0')
-      }
     } catch (error: any) {
+      if (error.statusCode) throw error
       logger.error('❌ Failed to load Wallee config:', error)
       throw createError({
         statusCode: 500,
