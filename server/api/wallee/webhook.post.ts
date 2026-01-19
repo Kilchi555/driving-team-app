@@ -337,15 +337,29 @@ export default defineEventHandler(async (event) => {
 
 async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: number): Promise<any> {
   try {
-    // Import Wallee SDK dynamically FIRST
-    let WalleeSDK
+    // Import Wallee SDK dynamically FIRST - more defensive
+    let WalleeSDK: any = null
+    let transactionService: any = null
+    
     try {
       const WalleeModule = await import('wallee')
-      WalleeSDK = WalleeModule.Wallee || WalleeModule.default
+      
+      // Try multiple ways to access the SDK
+      if (WalleeModule.Wallee?.api?.TransactionService) {
+        WalleeSDK = WalleeModule.Wallee
+      } else if (WalleeModule.default?.api?.TransactionService) {
+        WalleeSDK = WalleeModule.default
+      } else if (WalleeModule.api?.TransactionService) {
+        // If api is directly on module
+        WalleeSDK = WalleeModule
+      }
       
       if (!WalleeSDK?.api?.TransactionService) {
-        throw new Error('Wallee TransactionService not available in import')
+        logger.error('❌ Wallee SDK structure not recognized. Module keys:', Object.keys(WalleeModule))
+        return null
       }
+      
+      logger.debug('✅ Wallee SDK loaded successfully')
     } catch (importError: any) {
       logger.error('❌ Failed to import Wallee SDK:', importError.message)
       return null
@@ -380,7 +394,7 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     
     const config = getWalleeSDKConfig(spaceId, userId, apiSecret)
     
-    const transactionService = new WalleeSDK.api.TransactionService(config)
+    transactionService = new WalleeSDK.api.TransactionService(config)
     const response = await transactionService.read(spaceId, parseInt(transactionId))
     return response.body
   } catch (error: any) {
