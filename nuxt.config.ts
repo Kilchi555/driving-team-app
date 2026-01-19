@@ -51,6 +51,20 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       wasm: true
+    },
+    headers: {
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' https://maps.googleapis.com https://js.hcaptcha.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://hcaptcha.com https://api.resend.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "frame-src 'self' https://js.hcaptcha.com",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'"
+      ].join('; ')
     }
   },
   
