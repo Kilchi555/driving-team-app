@@ -182,19 +182,27 @@ const showEnrollmentModal = ref(false)
 const tenantId = computed(() => tenant.value?.id || '')
 
 const categories = computed(() => {
-  const cats = new Set(courses.value.map(c => c.category).filter(Boolean))
+  let coursesToUse = courses.value
+  
+  // If location is selected, only show categories of courses in that location
+  if (selectedLocation.value) {
+    coursesToUse = coursesToUse.filter(c => extractCity(c.description) === selectedLocation.value)
+  }
+  
+  const cats = new Set(coursesToUse.map(c => c.category).filter(Boolean))
   return Array.from(cats).sort()
 })
 
-// Extract city from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
+// Extract city from description (e.g., "Herrengasse 17, 8853 Zürich SZ" → "Zürich")
 const extractCity = (description: string): string => {
   if (!description) return ''
-  // Pattern: "... PLZ City ..." - extract the city after the PLZ
-  const match = description.match(/\d{4}\s+([A-Z][a-z\-]+)/)
-  if (match) return match[1]
-  // Fallback: extract first capitalized word after comma
-  const fallback = description.match(/,\s+([A-Z][a-z\-]+)/)
-  return fallback ? fallback[1] : ''
+  // Pattern: extract city after PLZ (4 digits)
+  // Handles: "Herrengasse 17, 8853 Zürich SZ" → "Zürich"
+  const match = description.match(/,\s*\d{4}\s+([A-Za-zäöüÄÖÜ\-\s]+?)(?:\s+[A-Z]{2})?$/)
+  if (match) {
+    return match[1].trim()
+  }
+  return ''
 }
 
 const locations = computed(() => {
