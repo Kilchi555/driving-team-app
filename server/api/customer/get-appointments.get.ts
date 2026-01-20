@@ -74,6 +74,7 @@ export default defineEventHandler(async (event) => {
         event_type_code,
         user_id,
         staff_id,
+        tenant_id,
         confirmation_token,
         staff:users!staff_id (
           id,
@@ -89,7 +90,8 @@ export default defineEventHandler(async (event) => {
           evaluation_criteria_id,
           criteria_rating,
           criteria_note,
-          created_at
+          created_at,
+          tenant_id
         ),
         exam_results (
           id,
@@ -141,8 +143,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // ✅ Filter notes to only include those for the user's tenant
+    const appointmentsWithFilteredNotes = (appointmentsData || []).map(appointment => ({
+      ...appointment,
+      notes: (appointment.notes || []).filter((note: any) => 
+        note.tenant_id === userProfile.tenant_id || note.tenant_id === null
+      )
+    }))
+
     // ✅ Merge payments into appointments
-    const appointmentsWithPayments = (appointmentsData || []).map(appointment => ({
+    const appointmentsWithPayments = (appointmentsWithFilteredNotes || []).map(appointment => ({
       ...appointment,
       payment: paymentsMap[appointment.id] || null
     }))
