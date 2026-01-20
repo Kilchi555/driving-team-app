@@ -299,6 +299,12 @@ export default defineEventHandler(async (event) => {
       await handleCreditRefund(paymentsToUpdate)
     }
     
+    // ============ LAYER 10: CONFIRM CREDIT DEDUCTION FOR COMPLETED ============
+    if (paymentStatus === 'completed') {
+      await confirmCreditDeduction(paymentsToUpdate)
+      await processVouchersAndCredits(payments)
+    }
+    
     // ============ LAYER 11: SEND COURSE ENROLLMENT CONFIRMATION EMAILS ============
     if (paymentStatus === 'completed') {
       await sendCourseEnrollmentEmails(paymentsToUpdate)
