@@ -2131,8 +2131,15 @@ const loadAppointments = async () => {
     lessons.value = lessonsWithEvaluations
 
   } catch (err: any) {
-    console.error('❌ Error loading appointments:', err)
-    error.value = err.message
+    logger.error('❌ Error loading appointments:', {
+      message: err.message,
+      status: err.status,
+      statusCode: err.statusCode,
+      data: err.data,
+      fullError: err.toString()
+    })
+    error.value = err.message || 'Fehler beim Laden der Termine'
+    throw err // Re-throw to be caught by loadAllData
   }
 }
 
