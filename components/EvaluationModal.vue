@@ -611,7 +611,14 @@ const getCriteriaById = (criteriaId: string) => {
 }
 
 const setCriteriaRating = (criteriaId: string, rating: number) => {
+  const oldRating = criteriaRatings.value[criteriaId]
   criteriaRatings.value[criteriaId] = rating
+  
+  // Track this criteria as "edited this session" if rating changed
+  if (oldRating !== rating && !newlyRatedCriteria.value.includes(criteriaId)) {
+    newlyRatedCriteria.value.push(criteriaId)
+    logger.debug(`📝 Criteria ${criteriaId} marked as edited (rating: ${oldRating} → ${rating})`)
+  }
 }
 
 const getCriteriaRating = (criteriaId: string) => {
@@ -695,12 +702,31 @@ const saveEvaluation = async () => {
       logger.debug(`📊 No previous appointment - all evaluations are NEW`)
     }
     
-    // Filter to save only new or changed evaluations
+    // Filter to save only criteria that were ACTIVELY added/changed in this session
+    // This prevents re-saving old evaluations from history when opening a new appointment
     const evaluationsToSave: CriteriaEvaluationData[] = selectedCriteriaOrder.value
       .filter(criteriaId => {
         const currentRating = criteriaRatings.value[criteriaId]
         const currentNote = criteriaNotes.value[criteriaId] || ''
         const existingEval = existingEvalMap[criteriaId]
+        
+        // IMPORTANT: Only save if the criteria was actively selected in this session
+        // This is tracked in newlyRatedCriteria when user clicks on a criteria
+        const wasNewlyRatedThisSession = newlyRatedCriteria.value.includes(criteriaId)
+        
+        // If not newly rated this session, check if it was changed from its current value
+        // (in case user is editing an existing evaluation for this appointment)
+        if (!wasNewlyRatedThisSession) {
+          // Check if this criteria already has a saved evaluation for THIS appointment
+          // If so, we should save changes. If not, skip (it's from history).
+          const criteriaAppointment = criteriaAppointments.value[criteriaId]
+          const isFromCurrentAppointment = criteriaAppointment?.appointment_id === props.appointment?.id
+          
+          if (!isFromCurrentAppointment) {
+            logger.debug(`⏭️ SKIPPING criteria ${criteriaId} - from history, not edited this session`)
+            return false
+          }
+        }
         
         // Save if: no previous eval (new) OR rating/note changed
         if (!existingEval) {
@@ -789,10 +815,18 @@ const loadCurrentAppointmentEvaluations = async () => {
 
     if (currentNotes && currentNotes.length > 0) {
       // Fülle die Ratings und Notes mit den vorhandenen Bewertungen
+      originalNotes.value = {} // Reset original notes for change tracking
       currentNotes.forEach(note => {
         const criteriaId = note.evaluation_criteria_id
         criteriaRatings.value[criteriaId] = note.criteria_rating || 0
         criteriaNotes.value[criteriaId] = note.criteria_note || ''
+        originalNotes.value[criteriaId] = note.criteria_note || '' // Store original for change detection
+        
+        // Setze appointment_id auf aktuellen Termin (damit es als "von diesem Termin" erkannt wird)
+        criteriaAppointments.value[criteriaId] = {
+          appointment_id: props.appointment?.id,
+          start_time: props.appointment?.start_time
+        }
         
         // Füge zur selectedCriteriaOrder hinzu, wenn noch nicht vorhanden
         if (!selectedCriteriaOrder.value.includes(criteriaId)) {
@@ -897,9 +931,11 @@ const loadStudentEvaluationHistory = async () => {
 
     // Speichere Appointment-Daten für Sortierung
     criteriaAppointments.value = {}
+    originalNotes.value = {} // Reset original notes for change tracking
     latestByCriteria.forEach((note, criteriaId) => {
       criteriaRatings.value[criteriaId] = note.criteria_rating || 0
       criteriaNotes.value[criteriaId] = note.criteria_note || ''
+      originalNotes.value[criteriaId] = note.criteria_note || '' // Store original for change detection
       // Speichere Lektionsdatum für Sortierung
       criteriaAppointments.value[criteriaId] = {
         appointment_id: note.appointment_id,
@@ -949,6 +985,23 @@ const handleEscapeKey = (event: KeyboardEvent) => {
   }
 }
 
+// Track note changes to mark criteria as edited
+const originalNotes = ref<Record<string, string>>({})
+
+watch(criteriaNotes, (newNotes) => {
+  // Check each note for changes
+  Object.keys(newNotes).forEach(criteriaId => {
+    const originalNote = originalNotes.value[criteriaId] || ''
+    const currentNote = newNotes[criteriaId] || ''
+    
+    // If note changed and not already tracked
+    if (originalNote !== currentNote && !newlyRatedCriteria.value.includes(criteriaId)) {
+      newlyRatedCriteria.value.push(criteriaId)
+      logger.debug(`📝 Criteria ${criteriaId} marked as edited (note changed)`)
+    }
+  })
+}, { deep: true })
+
 // Watchers
 watch(showDropdown, (isOpen) => {
   if (isOpen) {
@@ -988,6 +1041,7 @@ watch(() => props.isOpen, (isOpen) => {
     selectedCriteriaOrder.value = []
     criteriaRatings.value = {}
     criteriaNotes.value = {}
+    originalNotes.value = {} // Reset original notes tracking
     error.value = null
     criteriaTimestamps.value = {}
     newlyRatedCriteria.value = [] // Clear tracking
