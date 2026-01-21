@@ -133,12 +133,12 @@ export default defineEventHandler(async (event) => {
     logger.debug('📋 Reason ID:', cancellationReasonId)
 
     // ============ LAYER 6: AUTHORIZATION CHECK ============
-    // Get appointment with payment
+    // Get appointment with payment (including credit_used_rappen for refund handling)
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .select(`
         *,
-        payments (id, payment_status, total_amount_rappen, wallee_transaction_id)
+        payments (id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id)
       `)
       .eq('id', appointmentId)
       .single()
@@ -339,22 +339,22 @@ export default defineEventHandler(async (event) => {
     if (payment && hoursUntilAppointment >= hoursBeforeCancellationFree) {
       // ✅ FREE CANCELLATION: Handle based on payment status
       
-      if (payment.payment_status === 'completed') {
-        // ✅ Payment was completed → Refund to student credit
-        logger.debug('💳 Payment was completed - refunding to student credit:', {
+      // ✅ ALWAYS refund credit_used_rappen if any credit was used (regardless of payment_status)
+      if (payment.credit_used_rappen && payment.credit_used_rappen > 0) {
+        logger.debug('💳 Refunding used credit:', {
           paymentId: payment.id,
-          amount: (payment.total_amount_rappen / 100).toFixed(2)
+          creditUsed: (payment.credit_used_rappen / 100).toFixed(2)
         })
         
         // Load or create student credit
-        let { data: studentCredit, error: creditError } = await supabaseAdmin
+        let { data: studentCreditForRefund, error: creditErrorForRefund } = await supabaseAdmin
           .from('student_credits')
           .select('id, balance_rappen')
           .eq('user_id', appointment.user_id)
           .single()
         
-        // Create if doesn't exist
-        if (creditError && creditError.code === 'PGRST116') {
+        // Create if doesn't exist (shouldn't happen if they had credit, but safety)
+        if (creditErrorForRefund && creditErrorForRefund.code === 'PGRST116') {
           const { data: newCredit, error: createError } = await supabaseAdmin
             .from('student_credits')
             .insert([{
@@ -365,54 +365,135 @@ export default defineEventHandler(async (event) => {
             .select('id, balance_rappen')
             .single()
           
-          if (createError) {
-            console.error('❌ Failed to create student credit:', createError)
-          } else {
-            studentCredit = newCredit
-            logger.debug('✅ Created new student credit record:', newCredit.id)
+          if (!createError) {
+            studentCreditForRefund = newCredit
           }
         }
         
-        if (studentCredit) {
-          const oldBalance = studentCredit.balance_rappen || 0
-          const refundAmount = payment.total_amount_rappen
-          const newBalance = oldBalance + refundAmount
+        if (studentCreditForRefund) {
+          const oldCreditBalance = studentCreditForRefund.balance_rappen || 0
+          const creditRefundAmount = payment.credit_used_rappen
+          const newCreditBalance = oldCreditBalance + creditRefundAmount
           
           // Update credit balance
-          const { error: updateCreditError } = await supabaseAdmin
+          const { error: updateCreditRefundError } = await supabaseAdmin
             .from('student_credits')
             .update({
-              balance_rappen: newBalance,
+              balance_rappen: newCreditBalance,
               updated_at: new Date().toISOString()
             })
-            .eq('id', studentCredit.id)
+            .eq('id', studentCreditForRefund.id)
           
-          if (updateCreditError) {
-            console.error('❌ Failed to update student credit:', updateCreditError)
-          } else {
-            logger.debug('✅ Student credit updated:', {
-              oldBalance: (oldBalance / 100).toFixed(2),
-              refund: (refundAmount / 100).toFixed(2),
-              newBalance: (newBalance / 100).toFixed(2)
+          if (!updateCreditRefundError) {
+            logger.debug('✅ Credit refunded:', {
+              oldBalance: (oldCreditBalance / 100).toFixed(2),
+              refund: (creditRefundAmount / 100).toFixed(2),
+              newBalance: (newCreditBalance / 100).toFixed(2)
             })
             
-            // Create credit transaction
+            // Create credit transaction for the refund
             await supabaseAdmin
               .from('credit_transactions')
               .insert([{
                 user_id: appointment.user_id,
-                transaction_type: 'cancellation',
-                amount_rappen: refundAmount,
-                balance_before_rappen: oldBalance,
-                balance_after_rappen: newBalance,
-                payment_method: 'refund',
-                reference_id: appointmentId,
-                reference_type: 'appointment',
+                transaction_type: 'cancellation_credit_refund',
+                amount_rappen: creditRefundAmount,
+                balance_before_rappen: oldCreditBalance,
+                balance_after_rappen: newCreditBalance,
+                payment_method: 'credit_refund',
+                reference_id: payment.id,
+                reference_type: 'payment',
                 created_by: userProfile.id,
-                notes: `Kostenlose Stornierung: ${reason.name_de} (CHF ${(refundAmount / 100).toFixed(2)})`
+                notes: `Guthaben-Rückerstattung bei kostenloser Stornierung: ${reason.name_de} (CHF ${(creditRefundAmount / 100).toFixed(2)})`
               }])
             
-            logger.debug('✅ Credit transaction created')
+            logger.debug('✅ Credit refund transaction created')
+          } else {
+            logger.error('❌ Failed to refund credit:', updateCreditRefundError)
+          }
+        }
+      }
+      
+      if (payment.payment_status === 'completed') {
+        // ✅ Payment was completed → Refund the WALLEE portion to student credit (not the credit portion, that was already refunded above)
+        const creditAlreadyUsed = payment.credit_used_rappen || 0
+        const walleePortionToRefund = payment.total_amount_rappen - creditAlreadyUsed
+        
+        if (walleePortionToRefund > 0) {
+          logger.debug('💳 Refunding Wallee payment portion to student credit:', {
+            paymentId: payment.id,
+            totalAmount: (payment.total_amount_rappen / 100).toFixed(2),
+            creditUsed: (creditAlreadyUsed / 100).toFixed(2),
+            walleeRefund: (walleePortionToRefund / 100).toFixed(2)
+          })
+          
+          // Load or create student credit
+          let { data: studentCredit, error: creditError } = await supabaseAdmin
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', appointment.user_id)
+            .single()
+          
+          // Create if doesn't exist
+          if (creditError && creditError.code === 'PGRST116') {
+            const { data: newCredit, error: createError } = await supabaseAdmin
+              .from('student_credits')
+              .insert([{
+                user_id: appointment.user_id,
+                balance_rappen: 0,
+                tenant_id: userProfile.tenant_id
+              }])
+              .select('id, balance_rappen')
+              .single()
+            
+            if (createError) {
+              console.error('❌ Failed to create student credit:', createError)
+            } else {
+              studentCredit = newCredit
+              logger.debug('✅ Created new student credit record:', newCredit.id)
+            }
+          }
+          
+          if (studentCredit) {
+            const oldBalance = studentCredit.balance_rappen || 0
+            const newBalance = oldBalance + walleePortionToRefund
+            
+            // Update credit balance
+            const { error: updateCreditError } = await supabaseAdmin
+              .from('student_credits')
+              .update({
+                balance_rappen: newBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', studentCredit.id)
+            
+            if (updateCreditError) {
+              console.error('❌ Failed to update student credit:', updateCreditError)
+            } else {
+              logger.debug('✅ Student credit updated (Wallee refund):', {
+                oldBalance: (oldBalance / 100).toFixed(2),
+                refund: (walleePortionToRefund / 100).toFixed(2),
+                newBalance: (newBalance / 100).toFixed(2)
+              })
+              
+              // Create credit transaction
+              await supabaseAdmin
+                .from('credit_transactions')
+                .insert([{
+                  user_id: appointment.user_id,
+                  transaction_type: 'cancellation',
+                  amount_rappen: walleePortionToRefund,
+                  balance_before_rappen: oldBalance,
+                  balance_after_rappen: newBalance,
+                  payment_method: 'refund',
+                  reference_id: appointmentId,
+                  reference_type: 'appointment',
+                  created_by: userProfile.id,
+                  notes: `Kostenlose Stornierung (Wallee-Rückerstattung): ${reason.name_de} (CHF ${(walleePortionToRefund / 100).toFixed(2)})`
+                }])
+              
+              logger.debug('✅ Wallee refund credit transaction created')
+            }
           }
         }
         

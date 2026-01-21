@@ -100,7 +100,7 @@ interface Emits {
   (e: 'uploaded'): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const fileInput = ref<HTMLInputElement>()
@@ -163,36 +163,45 @@ const upload = async () => {
       throw new Error('Termin nicht gefunden')
     }
     
-    // Generate filename
-    const timestamp = new Date().getTime()
-    const filename = `medical-cert-${appointment.id}-${timestamp}.${selectedFile.value.name.split('.').pop()}`
-    const storagePath = `user-documents/medical-certificates/${appointment.user_id}/${filename}`
+    // Get auth token
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('Nicht angemeldet')
+    }
     
-    logger.debug('📤 Uploading medical certificate:', storagePath)
+    // Use secure API for upload instead of direct storage access
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    formData.append('documentType', 'medical_certificate')
+    formData.append('appointmentId', appointment.id)
     
-    // Upload file
-    const { error: uploadError } = await supabase.storage
-      .from('user-documents')
-      .upload(storagePath, selectedFile.value, {
-        cacheControl: '3600',
-        upsert: false
-      })
+    const response = await $fetch('/api/customer/upload-document', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: formData
+    })
     
-    if (uploadError) throw uploadError
+    if (!response.success) {
+      throw new Error('Upload fehlgeschlagen')
+    }
     
-    // Update appointment with certificate metadata
-    const { error: updateError } = await supabase
-      .from('appointments')
-      .update({
+    // Update appointment status via secure API
+    await $fetch('/api/customer/update-medical-certificate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: {
+        appointmentId: appointment.id,
         medical_certificate_status: 'uploaded',
-        medical_certificate_url: storagePath,
+        medical_certificate_url: response.document?.path,
         medical_certificate_uploaded_at: new Date().toISOString()
-      })
-      .eq('id', appointment.id)
+      }
+    })
     
-    if (updateError) throw updateError
-    
-    logger.debug('✅ Medical certificate uploaded successfully')
+    console.log('✅ Medical certificate uploaded successfully')
     
     // Notify parent
     emit('uploaded')

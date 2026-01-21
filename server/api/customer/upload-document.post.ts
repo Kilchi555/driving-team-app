@@ -1,144 +1,122 @@
 /**
  * POST /api/customer/upload-document
  * 
- * Secure file upload with validation
- * 3-Layer: Auth + Validation → Security Checks → Storage + DB
+ * Secure document upload for customer documents (medical certificates, etc.)
+ * 3-Layer: Auth + Validation → Business Logic → Storage + DB
  * 
- * Security: Auth, file type validation, size limits, virus scan placeholder,
- * tenant isolation, rate limiting on success
+ * Security: Auth, file type validation, size limit, secure path generation,
+ * tenant isolation, virus scan ready
  */
 
-import { defineEventHandler, createError, readBody } from 'h3'
+import { defineEventHandler, createError, readMultipartFormData } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
+import { randomUUID } from 'crypto'
 
-// Configuration
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+// Allowed file types
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
+  'image/jpg', 
   'image/png',
-  'image/webp',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  'image/webp'
 ]
-const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
+
+const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
+
+// Max file size: 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+
+// Document types
+const VALID_DOCUMENT_TYPES = ['medical_certificate', 'id_document', 'license', 'other']
 
 /**
  * LAYER 1: Input Validation
  */
-const validateFileInput = (file: any, fileName: string, contentType: string): { valid: boolean; error?: string } => {
-  if (!file) return { valid: false, error: 'File required' }
-  if (!fileName) return { valid: false, error: 'Filename required' }
-  
-  // Check file size
-  if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, error: `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)` }
+const validateFile = (file: any): { valid: boolean; error?: string } => {
+  if (!file || !file.data) {
+    return { valid: false, error: 'No file provided' }
   }
 
-  // Check extension
-  const ext = fileName.split('.').pop()?.toLowerCase()
-  if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
-    return { valid: false, error: `Invalid file type. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` }
+  // Check file size
+  if (file.data.length > MAX_FILE_SIZE) {
+    return { valid: false, error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` }
   }
 
   // Check MIME type
-  if (!ALLOWED_MIME_TYPES.includes(contentType)) {
-    return { valid: false, error: 'Invalid content type' }
+  const mimeType = file.type?.toLowerCase()
+  if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return { valid: false, error: `Invalid file type. Allowed: PDF, JPG, PNG, WebP` }
+  }
+
+  // Check extension
+  const filename = file.filename?.toLowerCase() || ''
+  const hasValidExtension = ALLOWED_EXTENSIONS.some(ext => filename.endsWith(ext))
+  if (!hasValidExtension) {
+    return { valid: false, error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` }
   }
 
   return { valid: true }
 }
 
-/**
- * LAYER 2: Security Checks
- */
-const sanitizeFileName = (fileName: string): string => {
-  // Remove path traversal attempts and special chars
-  return fileName
-    .replace(/\.\./g, '')
-    .replace(/[^a-zA-Z0-9._-]/g, '_')
-    .substring(0, 100) // Limit length
+const validateDocumentType = (type: string): boolean => {
+  return VALID_DOCUMENT_TYPES.includes(type)
 }
 
 /**
- * LAYER 3: Storage + Database
+ * LAYER 2: Business Logic - Generate secure storage path
  */
-const uploadFileToStorage = async (
-  supabase: any,
+const generateSecureStoragePath = (
+  tenantId: string,
   userId: string,
-  fileName: string,
-  file: any,
-  documentType: string
-): Promise<{ path: string; url: string }> => {
+  documentType: string,
+  originalFilename: string
+): string => {
+  // Extract extension safely
+  const ext = originalFilename.split('.').pop()?.toLowerCase() || 'pdf'
+  const safeExt = ALLOWED_EXTENSIONS.includes(`.${ext}`) ? ext : 'pdf'
+  
+  // Generate unique filename with UUID to prevent overwrites and enumeration
+  const uniqueId = randomUUID()
+  const timestamp = Date.now()
+  
+  // Path structure: tenant/user/type/timestamp-uuid.ext
+  // This ensures tenant isolation and prevents path traversal
+  return `${tenantId}/${userId}/${documentType}/${timestamp}-${uniqueId}.${safeExt}`
+}
+
+/**
+ * LAYER 3: Storage Upload
+ */
+const uploadToStorage = async (
+  supabase: any,
+  storagePath: string,
+  fileData: Buffer,
+  mimeType: string
+): Promise<{ success: boolean; error?: string; url?: string }> => {
   try {
-    const timestamp = Date.now()
-    const sanitized = sanitizeFileName(fileName)
-    const storagePath = `customer-documents/${userId}/${documentType}/${timestamp}-${sanitized}`
-
-    logger.debug(`📤 Uploading file to storage: ${storagePath}`)
-
-    const { error: uploadError } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from('user-documents')
-      .upload(storagePath, file, {
-        cacheControl: '3600',
-        upsert: false
+      .upload(storagePath, fileData, {
+        contentType: mimeType,
+        upsert: false // Don't overwrite existing files
       })
 
-    if (uploadError) {
-      logger.error('❌ Storage upload error:', uploadError)
-      throw new Error(`Upload failed: ${uploadError.message}`)
+    if (error) {
+      logger.error('❌ Storage upload error:', error)
+      return { success: false, error: error.message }
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Get public URL (or signed URL for private buckets)
+    const { data: urlData } = supabase.storage
       .from('user-documents')
       .getPublicUrl(storagePath)
 
-    logger.debug(`✅ File uploaded to: ${storagePath}`)
-
-    return {
-      path: storagePath,
-      url: publicUrl
-    }
+    return { success: true, url: urlData?.publicUrl }
   } catch (err: any) {
-    logger.error('❌ Error in uploadFileToStorage:', err)
-    throw err
-  }
-}
-
-const saveUploadMetadata = async (
-  supabase: any,
-  userId: string,
-  fileName: string,
-  storagePath: string,
-  documentType: string
-): Promise<any> => {
-  try {
-    const { data, error } = await supabase
-      .from('customer_documents')
-      .insert({
-        user_id: userId,
-        file_name: fileName,
-        storage_path: storagePath,
-        document_type: documentType,
-        uploaded_at: new Date().toISOString(),
-        status: 'uploaded'
-      })
-      .select()
-      .single()
-
-    if (error) {
-      logger.error('❌ Error saving metadata:', error)
-      throw new Error(`Metadata save failed: ${error.message}`)
-    }
-
-    logger.debug(`✅ Metadata saved for: ${storagePath}`)
-    return data
-  } catch (err: any) {
-    logger.error('❌ Error in saveUploadMetadata:', err)
-    throw err
+    logger.error('❌ Unexpected storage error:', err)
+    return { success: false, error: 'Upload failed' }
   }
 }
 
@@ -149,7 +127,7 @@ export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   
   try {
-    // ========== LAYER 1: AUTH & INPUT VALIDATION ==========
+    // ========== LAYER 1: AUTH & VALIDATION ==========
     const auth = await verifyAuth(event)
     if (!auth) {
       throw createError({
@@ -160,82 +138,118 @@ export default defineEventHandler(async (event) => {
 
     const { userId, tenantId } = auth
 
-    // Parse request body
-    const body = await readBody(event)
-    const { fileName, contentType, documentType } = body
-    
-    // File content comes as base64 string
-    if (!body.fileContent) {
+    // Parse multipart form data
+    const formData = await readMultipartFormData(event)
+    if (!formData || formData.length === 0) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'File content required'
+        statusMessage: 'No form data provided'
       })
     }
 
-    // Convert base64 to Uint8Array
-    const binaryString = atob(body.fileContent)
-    const bytes = new Uint8Array(binaryString.length)
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i)
+    // Find file and document type in form data
+    let file: any = null
+    let documentType = 'other'
+    let appointmentId: string | null = null
+
+    for (const field of formData) {
+      if (field.name === 'file' && field.data) {
+        file = field
+      } else if (field.name === 'documentType' && field.data) {
+        documentType = field.data.toString()
+      } else if (field.name === 'appointmentId' && field.data) {
+        appointmentId = field.data.toString()
+      }
     }
-    const file = new File([bytes], fileName, { type: contentType })
 
     // Validate file
-    const validation = validateFileInput(file, fileName, contentType)
-    if (!validation.valid) {
+    const fileValidation = validateFile(file)
+    if (!fileValidation.valid) {
       throw createError({
         statusCode: 400,
-        statusMessage: validation.error || 'Invalid file'
+        statusMessage: fileValidation.error || 'Invalid file'
       })
     }
 
     // Validate document type
-    const validTypes = ['medical-certificate', 'profile-document', 'registration']
-    if (!validTypes.includes(documentType)) {
+    if (!validateDocumentType(documentType)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid document type'
+        statusMessage: `Invalid document type. Allowed: ${VALID_DOCUMENT_TYPES.join(', ')}`
       })
     }
 
-    logger.debug(`🔐 Upload request from user ${userId} for ${documentType}`)
+    logger.debug(`📄 Upload request: ${documentType} from user ${userId}`)
 
-    // ========== LAYER 2: SECURITY CHECKS ==========
-    const sanitized = sanitizeFileName(fileName)
-    logger.debug(`📋 Sanitized filename: ${sanitized}`)
-
-    // ========== LAYER 3: STORAGE + DATABASE ==========
+    // ========== LAYER 2: BUSINESS LOGIC ==========
+    const supabase = getSupabaseAdmin()
     
-    // Upload to storage
-    const { path: storagePath, url: publicUrl } = await uploadFileToStorage(
-      supabase,
+    // Generate secure storage path
+    const storagePath = generateSecureStoragePath(
+      tenantId,
       userId,
-      sanitized,
-      file,
-      documentType
+      documentType,
+      file.filename || 'document.pdf'
     )
 
-    // Save metadata to DB
-    const metadata = await saveUploadMetadata(
+    // ========== LAYER 3: STORAGE & DATABASE ==========
+    
+    // Upload file
+    const uploadResult = await uploadToStorage(
       supabase,
-      userId,
-      sanitized,
       storagePath,
-      documentType
+      file.data,
+      file.type || 'application/pdf'
     )
+
+    if (!uploadResult.success) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: uploadResult.error || 'Upload failed'
+      })
+    }
+
+    // If this is a medical certificate linked to an appointment, update the appointment
+    if (documentType === 'medical_certificate' && appointmentId) {
+      // Verify appointment belongs to user
+      const { data: appointment, error: aptError } = await supabase
+        .from('appointments')
+        .select('id, user_id')
+        .eq('id', appointmentId)
+        .eq('user_id', userId)
+        .single()
+
+      if (aptError || !appointment) {
+        logger.warn(`⚠️ Appointment ${appointmentId} not found or not owned by user ${userId}`)
+        // Don't fail - file is already uploaded
+      } else {
+        // Update appointment with medical certificate path
+        const { error: updateError } = await supabase
+          .from('appointments')
+          .update({
+            medical_certificate_url: storagePath,
+            medical_certificate_uploaded_at: new Date().toISOString()
+          })
+          .eq('id', appointmentId)
+          .eq('user_id', userId) // Extra safety
+
+        if (updateError) {
+          logger.error('❌ Error updating appointment:', updateError)
+          // Don't fail - file is already uploaded
+        }
+      }
+    }
 
     const duration = Date.now() - startTime
-    logger.debug(`✅ Upload completed in ${duration}ms`)
+    logger.debug(`✅ Document uploaded in ${duration}ms: ${storagePath}`)
 
     return {
       success: true,
       document: {
-        id: metadata.id,
-        fileName: metadata.file_name,
         path: storagePath,
-        url: publicUrl,
+        url: uploadResult.url,
         type: documentType,
-        uploadedAt: metadata.uploaded_at
+        uploadedAt: new Date().toISOString()
       },
       duration
     }
@@ -248,11 +262,10 @@ export default defineEventHandler(async (event) => {
       throw error
     }
 
-    logger.error(`❌ Unexpected upload error (${duration}ms):`, error.message)
+    logger.error(`❌ Unexpected error (${duration}ms):`, error.message)
     throw createError({
       statusCode: 500,
       statusMessage: 'Upload failed'
     })
   }
 })
-

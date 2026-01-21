@@ -182,6 +182,7 @@ export default defineEventHandler(async (event) => {
     logger.debug(`🔐 Enrollment request from user ${userId} for course ${courseId}`)
 
     // ========== LAYER 2: BUSINESS LOGIC ==========
+    const supabase = getSupabaseAdmin()
     
     // Check course availability
     const availability = await checkCourseAvailability(supabase, courseId, tenantId)

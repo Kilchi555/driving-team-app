@@ -18,7 +18,7 @@ SELECT
   -- Calculate amount based on appointment type
   CASE
     WHEN a.type = 'B' THEN 9500      -- CHF 95.00
-    WHEN a.type = 'BE' THEN 12000    -- CHF 110.00
+    WHEN a.type = 'BE' THEN 12000    -- CHF 120.00
     ELSE 9500                        -- Default CHF 95.00
   END as total_amount_rappen,
   'wallee' as payment_method,
