@@ -818,11 +818,16 @@ const roundToNearestFranken = (rappen: number): number => {
   const durationValue = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
   const cacheKey = generatePriceKey(categoryCode, durationValue, userId)
     
-    // Prüfe Cache
+    // ✅ WICHTIG: Cache NICHT verwenden im Edit-Mode (wenn appointmentId vorhanden)
+    // weil sich originalDuration ändern kann und dann falscher Preis berechnet wird
     const cachedPrice = priceCalculationCache.value.get(cacheKey)
-    if (cachedPrice && isCacheValid(cachedPrice.timestamp, PRICE_CALCULATION_CACHE_DURATION)) {
+    if (cachedPrice && isCacheValid(cachedPrice.timestamp, PRICE_CALCULATION_CACHE_DURATION) && !appointmentId) {
       logger.debug('📦 Using cached price calculation:', cachedPrice.data.total_chf)
       return cachedPrice.data
+    }
+    
+    if (appointmentId) {
+      logger.debug('🔄 Skipping cache in Edit-Mode to ensure fresh calculation')
     }
 
     // ✅ Lade Pricing Rules (für beide Modi, da wir den Preis auch im Edit-Mode neu berechnen müssen
@@ -881,22 +886,31 @@ const roundToNearestFranken = (rappen: number): number => {
       appointment_number: appointmentNumber
     }
 
-    // Cache speichern
-    priceCalculationCache.value.set(cacheKey, {
-      data: result,
-      timestamp: Date.now()
-    })
-    
-    logger.debug('✅ Price calculated and cached:', {
-      category: categoryCode,
-      duration: Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes,
-      originalDuration: durationMinutes,
-      appointmentNumber: appointmentNumber,
-      isMotorcycle: motorcycleCategories.includes(categoryCode),
-      adminFee: adminFeeRappen > 0 ? `${(adminFeeRappen / 100).toFixed(2)} CHF` : 'Keine',
-      total: result.total_chf,
-      note: appointmentNumber === 2 && !motorcycleCategories.includes(categoryCode) ? 'Admin-Fee verrechnet (2. Termin dieser Kategorie)' : 'Keine Admin-Fee'
-    })
+    // ✅ Cache NUR speichern wenn KEIN appointmentId (nicht im Edit-Mode)
+    if (!appointmentId) {
+      priceCalculationCache.value.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+      })
+      
+      logger.debug('✅ Price calculated and cached:', {
+        category: categoryCode,
+        duration: Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes,
+        originalDuration: durationMinutes,
+        appointmentNumber: appointmentNumber,
+        isMotorcycle: motorcycleCategories.includes(categoryCode),
+        adminFee: adminFeeRappen > 0 ? `${(adminFeeRappen / 100).toFixed(2)} CHF` : 'Keine',
+        total: result.total_chf,
+        note: appointmentNumber === 2 && !motorcycleCategories.includes(categoryCode) ? 'Admin-Fee verrechnet (2. Termin dieser Kategorie)' : 'Keine Admin-Fee'
+      })
+    } else {
+      logger.debug('✅ Price calculated (NOT cached in Edit-Mode):', {
+        category: categoryCode,
+        duration: Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes,
+        appointmentId,
+        total: result.total_chf
+      })
+    }
 
     return result
   }
