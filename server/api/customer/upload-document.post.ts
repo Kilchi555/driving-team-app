@@ -12,7 +12,6 @@ import { defineEventHandler, createError, readMultipartFormData } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
-import { randomUUID } from 'crypto'
 
 // Allowed file types
 const ALLOWED_MIME_TYPES = [
@@ -25,8 +24,8 @@ const ALLOWED_MIME_TYPES = [
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
 
-// Max file size: 5MB
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+// Max file size: 10MB (matches frontend limit)
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 // Document types
 const VALID_DOCUMENT_TYPES = ['medical_certificate', 'id_document', 'license', 'other']
@@ -77,13 +76,18 @@ const generateSecureStoragePath = (
   const ext = originalFilename.split('.').pop()?.toLowerCase() || 'pdf'
   const safeExt = ALLOWED_EXTENSIONS.includes(`.${ext}`) ? ext : 'pdf'
   
-  // Generate unique filename with UUID to prevent overwrites and enumeration
-  const uniqueId = randomUUID()
+  // Generate unique filename with timestamp to prevent overwrites
   const timestamp = Date.now()
   
-  // Path structure: tenant/user/type/timestamp-uuid.ext
-  // This ensures tenant isolation and prevents path traversal
-  return `${tenantId}/${userId}/${documentType}/${timestamp}-${uniqueId}.${safeExt}`
+  // Path structure: userId/TYPE-timestamp.ext
+  // This matches the existing structure that list-user-documents expects
+  // Type prefix helps identify document purpose
+  const typePrefix = documentType === 'medical_certificate' ? 'MED' 
+    : documentType === 'id_document' ? 'ID' 
+    : documentType === 'license' ? 'LIC' 
+    : 'DOC'
+  
+  return `${userId}/${typePrefix}-${timestamp}.${safeExt}`
 }
 
 /**

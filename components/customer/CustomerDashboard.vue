@@ -2379,20 +2379,26 @@ onMounted(async () => {
     
     logger.debug('✅ Auth verified, loading data...')
     
-    // First, load user data from database
+    // First, load user data via secure API
     if (!userData.value && currentUser.value?.id) {
-      const supabase = getSupabase()
-      const { data: userDataFromDb, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', currentUser.value.id)
-        .single()
-      
-      if (!userError && userDataFromDb) {
-        userData.value = userDataFromDb
-        logger.debug('✅ User data loaded:', userDataFromDb.id)
-      } else {
-        console.warn('⚠️ Error loading user data:', userError?.message)
+      try {
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.access_token) {
+          const response = await $fetch('/api/customer/get-user-profile', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          })
+          
+          if (response.success && response.data) {
+            userData.value = response.data
+            logger.debug('✅ User data loaded via API:', response.data.id)
+          }
+        }
+      } catch (err: any) {
+        console.warn('⚠️ Error loading user data:', err.message)
       }
     }
     
