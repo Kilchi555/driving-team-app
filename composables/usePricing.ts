@@ -644,6 +644,16 @@ const roundToNearestFranken = (rappen: number): number => {
     tenantId?: string // ✅ NEU: Tenant ID für Event-Type lookup
   ): Promise<CalculatedPrice> => {
     
+    // ✅ DEBUG: Log parameters to trace caching issue
+    logger.debug('🔍 calculatePrice called with:', {
+      categoryCode,
+      durationMinutes,
+      userId: userId || 'none',
+      appointmentType: appointmentType || 'none',
+      isEditMode: isEditMode || false,
+      appointmentId: appointmentId || 'none'
+    })
+    
     // ✅ NEU: Bei Edit-Mode den bestehenden Preis aus dem Payment laden
     if (isEditMode && appointmentId) {
       logger.debug(`📝 Edit-Mode: Loading existing price from payment for appointment ${appointmentId}`)
