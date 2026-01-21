@@ -1635,6 +1635,7 @@ import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
@@ -2586,8 +2587,51 @@ const applySelectedFont = () => {
 }
 
 const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
-  // Logo upload logic here
-  logger.debug('Logo upload:', logoType)
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  
+  if (!file) return
+  
+  // Validate file
+  const validation = validateImageFile(file, 5)
+  if (!validation.valid) {
+    showError(validation.error || 'Fehler bei der Validierung')
+    return
+  }
+  
+  try {
+    logger.debug('🖼️ Starting logo upload:', { logoType, fileName: file.name, fileSize: file.size })
+    
+    // Show loading state
+    const wasLoading = isLoading.value
+    isLoading.value = true
+    
+    // Compress and resize image using global utility
+    const compressedBase64 = await compressImage(file, logoType)
+    
+    // Update form with compressed image
+    if (logoType === 'square') {
+      brandingForm.value.logos.square = compressedBase64
+    } else {
+      brandingForm.value.logos.wide = compressedBase64
+    }
+    
+    // Auto-save to database
+    await autoSaveBranding()
+    
+    // Show success with size info
+    showSuccess(
+      `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo gespeichert ` +
+      `(${getFileSizeKB(compressedBase64)})`
+    )
+    
+    isLoading.value = wasLoading
+    
+  } catch (error) {
+    console.error('❌ Logo upload error:', error)
+    showError('Fehler beim Hochladen des Logos')
+    isLoading.value = false
+  }
 }
 
 const removeLogo = (logoType: 'square' | 'wide') => {
