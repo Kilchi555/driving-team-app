@@ -595,9 +595,9 @@
           </button>
         </div>
 
-        <!-- Content -->
+        <!-- Content - XSS Protected via DOMPurify -->
         <div class="p-6 overflow-y-auto flex-1 prose prose-lg max-w-none">
-          <div v-html="showReglementContent"></div>
+          <div v-html="sanitizedReglementContent"></div>
         </div>
 
         <!-- Footer -->
@@ -997,6 +997,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
+import DOMPurify from 'isomorphic-dompurify'
 
 // In CustomerDashboard.vue - ganz oben im script setup:
 logger.debug('🔍 CustomerDashboard Script loaded')
@@ -1044,6 +1045,15 @@ const showReglementeModal = ref(false)
 const showReglementDetailModal = ref(false)
 const showReglementContent = ref('')
 const showReglementTitle = ref('')
+
+// XSS Protection: Sanitize HTML content before rendering
+const sanitizedReglementContent = computed(() => {
+  if (!showReglementContent.value) return ''
+  return DOMPurify.sanitize(showReglementContent.value, {
+    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'ul', 'ol', 'li', 'a', 'strong', 'em', 'b', 'i', 'u', 'span', 'div', 'table', 'tr', 'td', 'th', 'thead', 'tbody'],
+    ALLOWED_ATTR: ['href', 'target', 'class', 'id', 'style']
+  })
+})
 // Hardcoded payment thresholds
 const HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE = 24  // Capture exactly 24h before
 const HOURS_BEFORE_APPOINTMENT_FOR_IMMEDIATE = 24 // Charge immediately if < 24h away

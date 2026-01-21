@@ -43,7 +43,8 @@
         </div>
 
         <div v-else class="prose prose-lg max-w-none">
-          <div v-html="reglementContent"></div>
+          <!-- XSS Protected: Content sanitized via DOMPurify -->
+          <div v-html="sanitizedContent"></div>
         </div>
       </div>
     </div>
@@ -55,6 +56,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
+import DOMPurify from 'isomorphic-dompurify'
 
 // Meta
 definePageMeta({
@@ -69,6 +71,15 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const reglementContent = ref('')
 const lastUpdated = ref('')
+
+// XSS Protection: Sanitize HTML content before rendering
+const sanitizedContent = computed(() => {
+  if (!reglementContent.value) return ''
+  return DOMPurify.sanitize(reglementContent.value, {
+    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'ul', 'ol', 'li', 'a', 'strong', 'em', 'b', 'i', 'u', 'span', 'div', 'table', 'tr', 'td', 'th', 'thead', 'tbody'],
+    ALLOWED_ATTR: ['href', 'target', 'class', 'id', 'style']
+  })
+})
 
 // Reglement titles mapping
 const reglementTitles: Record<string, string> = {

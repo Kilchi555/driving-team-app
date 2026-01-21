@@ -175,7 +175,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getSupabase } from '~/utils/supabase'
+// Removed: import { getSupabase } - now using secure API
 import { logger } from '~/utils/logger'
 import CourseEnrollmentModal from '~/components/customer/CourseEnrollmentModal.vue'
 
@@ -262,79 +262,46 @@ const filteredCourses = computed(() => {
 })
 
 // Methods
-const loadTenant = async () => {
-  const supabase = getSupabase()
-  
-  const { data, error: tenantError } = await supabase
-    .from('tenants')
-    .select('id, name, slug, primary_color, secondary_color, accent_color')
-    .eq('slug', slug.value)
-    .single()
-  
-  if (tenantError || !data) {
-    error.value = 'Fahrschule nicht gefunden'
-    return null
-  }
-  
-  // Load branding
-  tenantBranding.value = {
-    primary_color: data.primary_color || '#10B981',
-    secondary_color: data.secondary_color,
-    accent_color: data.accent_color
-  }
-  
-  return data
-}
+const loadData = async () => {
+  try {
+    // Use secure public API instead of direct DB queries
+    const response = await $fetch('/api/courses/public', {
+      query: { slug: slug.value }
+    }) as any
 
-const loadCourses = async () => {
-  if (!tenant.value?.id) return
-  
-  const supabase = getSupabase()
-  const now = new Date().toISOString()
-  
-  const { data, error: coursesError } = await supabase
-    .from('courses')
-    .select(`
-      id,
-      name,
-      category,
-      description,
-      price_per_participant_rappen,
-      max_participants,
-      current_participants,
-      is_public,
-      status,
-      course_sessions (
-        id,
-        start_time,
-        end_time,
-        session_number
-      )
-    `)
-    .eq('tenant_id', tenant.value.id)
-    .eq('is_public', true)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-  
-  if (coursesError) {
-    logger.error('Error loading courses:', coursesError)
-    error.value = 'Fehler beim Laden der Kurse'
-    return
+    if (!response.success) {
+      error.value = 'Fehler beim Laden der Kurse'
+      return
+    }
+
+    // Set tenant data
+    tenant.value = response.tenant
+    
+    // Load branding
+    tenantBranding.value = {
+      primary_color: response.tenant.primary_color || '#10B981',
+      secondary_color: response.tenant.secondary_color,
+      accent_color: response.tenant.accent_color
+    }
+    
+    // Filter courses where ALL sessions are in the future
+    const now = new Date().toISOString()
+    const futureCourses = (response.courses || []).filter((course: any) => {
+      if (!course.course_sessions || course.course_sessions.length === 0) return false
+      return course.course_sessions.every((s: any) => s.start_time > now)
+    })
+    
+    // Calculate free slots
+    courses.value = futureCourses.map((course: any) => ({
+      ...course,
+      free_slots: (course.max_participants || 0) - (course.current_participants || 0)
+    }))
+    
+    logger.debug(`Loaded ${courses.value.length} future courses`)
+  } catch (err: any) {
+    logger.error('Error loading data:', err)
+    error.value = err.data?.statusMessage || 'Fahrschule nicht gefunden'
   }
-  
-  // Filter courses where ALL sessions are in the future
-  const futureCourses = (data || []).filter(course => {
-    if (!course.course_sessions || course.course_sessions.length === 0) return false
-    return course.course_sessions.every((s: any) => s.start_time > now)
-  })
-  
-  // Calculate free slots
-  courses.value = futureCourses.map(course => ({
-    ...course,
-    free_slots: (course.max_participants || 0) - (course.current_participants || 0)
-  }))
-  
-  logger.debug(`Loaded ${courses.value.length} future courses`)
 }
 
 const getGroupedSessions = (course: any) => {
@@ -447,7 +414,7 @@ const closeEnrollmentModal = () => {
 
 const handleEnrolled = () => {
   closeEnrollmentModal()
-  loadCourses() // Refresh to update free slots
+  loadData() // Refresh to update free slots
 }
 
 // Apply query params to filters
@@ -473,10 +440,7 @@ onMounted(async () => {
   logger.debug('Loading courses for slug:', slug.value)
   
   try {
-    tenant.value = await loadTenant()
-    if (tenant.value) {
-      await loadCourses()
-    }
+    await loadData()
   } catch (e: any) {
     logger.error('Error:', e)
     error.value = 'Ein Fehler ist aufgetreten'
