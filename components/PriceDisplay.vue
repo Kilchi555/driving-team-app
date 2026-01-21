@@ -1178,49 +1178,36 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
   if (!studentId) return null
   
   try {
-    logger.debug('🔍 Loading customer data from users table for student:', studentId)
+    logger.debug('🔍 Loading billing address via API for student:', studentId)
     
-    const supabase = getSupabase()
+    // ✅ Use secure API instead of direct DB query
+    const { data: { session } } = await getSupabase().auth.getSession()
     
-    // Load user data to use as billing address
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', studentId)
-      .single()
-
-    if (userError) {
-      if (userError.code === 'PGRST116') {
-        // Expected: No billing address found, this is fine
-        logger.debug('ℹ️ No billing address found for student:', studentId)
-      } else {
-        console.warn('⚠️ Error loading user data:', userError)
+    const response = await $fetch('/api/staff/get-billing-address', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      },
+      query: {
+        user_id: studentId
       }
+    })
+
+    if (!response.success || !response.data) {
+      logger.debug('ℹ️ No billing address found for student:', studentId)
       return null
     }
-
-    if (userData) {
-      // Map user data to billing address format
-      const billingAddress = {
-        company_name: userData.company_name || '',
-        contact_person: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
-        email: userData.email || '',
-        phone: userData.phone || '',
-        street: userData.street || '',
-        street_number: userData.street_nr || '',
-        zip: userData.zip || '',
-        city: userData.city || '',
-        country: userData.country || 'Schweiz',
-        vat_number: userData.vat_number || '',
-        notes: ''
-      }
-      
-      studentBillingAddress.value = billingAddress
-      logger.debug('✅ Billing address loaded from user data:', billingAddress)
-      return billingAddress
+    
+    // ✅ API already returns properly formatted billing address
+    const billingAddress = {
+      ...response.data,
+      country: 'Schweiz', // Default country
+      vat_number: '',
+      notes: ''
     }
     
-    return null
+    studentBillingAddress.value = billingAddress
+    logger.debug('✅ Billing address loaded from API:', billingAddress)
+    return billingAddress
   } catch (error) {
     console.error('❌ Error loading customer data:', error)
     return null
