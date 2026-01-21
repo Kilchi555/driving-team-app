@@ -6,10 +6,12 @@
 export default defineNuxtPlugin((nuxtApp) => {
   const authStore = useAuthStore()
 
-  // Intercept all $fetch calls
-  $fetch.create({
-    onError: async (error) => {
-      const status = error.response?.status
+  // Hook into $fetch to intercept responses
+  nuxtApp.$fetch = $fetch.create({
+    onError: async (error: any) => {
+      const status = error.response?.status || error.status
+      
+      console.log('🔍 Fetch error intercepted:', { status, message: error.message })
 
       // Handle 401 - Session expired or invalid token
       if (status === 401) {
@@ -19,8 +21,12 @@ export default defineNuxtPlugin((nuxtApp) => {
         authStore.logout()
         
         // Clear any stored session data
-        const supabase = getSupabase()
-        await supabase.auth.signOut()
+        try {
+          const supabase = getSupabase()
+          await supabase.auth.signOut()
+        } catch (err) {
+          console.error('Error signing out from Supabase:', err)
+        }
         
         // Redirect to login
         await navigateTo('/login')
@@ -28,4 +34,5 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   })
 })
+
 
