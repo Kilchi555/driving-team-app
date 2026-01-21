@@ -83,16 +83,6 @@ export default defineEventHandler(async (event) => {
           email,
           phone
         ),
-        notes (
-          id,
-          staff_rating,
-          staff_note,
-          evaluation_criteria_id,
-          criteria_rating,
-          criteria_note,
-          created_at,
-          tenant_id
-        ),
         exam_results (
           id,
           passed,
@@ -110,8 +100,55 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to fetch appointments' })
     }
 
-    // ✅ Load payments for all appointments
+    // ✅ Load notes SEPARATELY to avoid RLS issues with JOINs
     const appointmentIds = (appointmentsData || []).map(a => a.id)
+    let notesMap: Record<string, any[]> = {}
+    
+    if (appointmentIds.length > 0) {
+      const { data: notesData, error: notesError } = await serviceSupabase
+        .from('notes')
+        .select(`
+          id,
+          appointment_id,
+          staff_rating,
+          staff_note,
+          evaluation_criteria_id,
+          criteria_rating,
+          criteria_note,
+          created_at,
+          tenant_id
+        `)
+        .in('appointment_id', appointmentIds)
+      
+      logger.debug('📝 Notes query result:', { notesDataCount: notesData?.length || 0, notesError: notesError?.message })
+      
+      if (notesError) {
+        logger.warn('⚠️ Error fetching notes:', notesError)
+      } else if (notesData) {
+        // Filter notes by tenant_id (keep only notes for this tenant or with NULL tenant_id)
+        const filteredNotes = notesData.filter((note: any) => 
+          note.tenant_id === userProfile.tenant_id || note.tenant_id === null
+        )
+        
+        // Group notes by appointment_id
+        notesMap = filteredNotes.reduce((acc, note) => {
+          if (!acc[note.appointment_id]) {
+            acc[note.appointment_id] = []
+          }
+          acc[note.appointment_id].push(note)
+          return acc
+        }, {} as Record<string, any[]>)
+        logger.debug('✅ Loaded', filteredNotes.length, 'notes for', Object.keys(notesMap).length, 'appointments')
+      }
+    }
+
+    // ✅ Merge notes into appointments
+    const appointmentsWithNotes = (appointmentsData || []).map(appointment => ({
+      ...appointment,
+      notes: notesMap[appointment.id] || []
+    }))
+
+    // ✅ Load payments for all appointments
     let paymentsMap: Record<string, any> = {}
     
     if (appointmentIds.length > 0) {
@@ -143,16 +180,8 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ Filter notes to only include those for the user's tenant
-    const appointmentsWithFilteredNotes = (appointmentsData || []).map(appointment => ({
-      ...appointment,
-      notes: (appointment.notes || []).filter((note: any) => 
-        note.tenant_id === userProfile.tenant_id || note.tenant_id === null
-      )
-    }))
-
-    // ✅ Merge payments into appointments
-    const appointmentsWithPayments = (appointmentsWithFilteredNotes || []).map(appointment => ({
+    // ✅ Load payments for all appointments
+    const appointmentsWithPayments = (appointmentsWithNotes || []).map(appointment => ({
       ...appointment,
       payment: paymentsMap[appointment.id] || null
     }))
