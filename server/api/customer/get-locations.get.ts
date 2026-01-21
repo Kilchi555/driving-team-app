@@ -70,8 +70,13 @@ export default defineEventHandler(async (event) => {
 
     if (query.ids) {
       try {
-        const idsParam = Array.isArray(query.ids) ? query.ids : [query.ids]
+        // Handle both array and comma-separated string
+        const idsParam = Array.isArray(query.ids) 
+          ? query.ids 
+          : String(query.ids).split(',').map(id => id.trim())
+        
         locationIds = idsParam
+          .filter(Boolean) // Remove empty strings
           .map((id: string) => {
             // Validate UUID format
             if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {

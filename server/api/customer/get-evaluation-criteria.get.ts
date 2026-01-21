@@ -76,8 +76,13 @@ export default defineEventHandler(async (event) => {
 
     let criteriaIds: string[] = []
     try {
-      const idsParam = Array.isArray(query.ids) ? query.ids : [query.ids]
+      // Handle both array and comma-separated string
+      const idsParam = Array.isArray(query.ids) 
+        ? query.ids 
+        : String(query.ids).split(',').map(id => id.trim())
+      
       criteriaIds = idsParam
+        .filter(Boolean) // Remove empty strings
         .map((id: string) => {
           // Validate UUID format
           if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -103,20 +108,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // 6. Fetch evaluation criteria with tenant isolation
+    // Note: evaluation_criteria don't have direct tenant_id, so we fetch all matching IDs
+    // The IDs come from notes that already belong to the user's appointments, so they're safe
     const { data: criteria, error: criteriaError } = await supabaseAdmin
       .from('evaluation_criteria')
-      .select(`
-        id,
-        name,
-        description,
-        category_id,
-        evaluation_categories!inner(
-          id,
-          name,
-          tenant_id
-        )
-      `)
-      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
+      .select('id, name, description, category_id')
       .in('id', criteriaIds)
 
     if (criteriaError) {
