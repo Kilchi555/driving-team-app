@@ -1922,26 +1922,39 @@ const loadAppointments = async () => {
     if (locationIds.length > 0) {
       logger.debug('🔍 Loading locations for IDs:', locationIds)
       
-      const { data: locations, error: locationsError } = await supabase
-        .from('locations')
-        .select('id, name, address, formatted_address')
-        .in('id', locationIds)
-
-      if (locationsError) {
-        console.error('❌ Error loading locations:', locationsError)
-      } else if (locations) {
-        logger.debug('✅ Locations loaded:', locations)
+      try {
+        // ✅ Use secure API instead of direct DB query
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
         
-        locationsMap = locations.reduce((acc, loc) => {
-          acc[loc.id] = {
-            name: loc.name,
-            address: loc.address,
-            formatted_address: loc.formatted_address
+        const response = await $fetch('/api/customer/get-locations', {
+          method: 'GET',
+          headers: session?.access_token ? {
+            'Authorization': `Bearer ${session.access_token}`
+          } : {},
+          query: {
+            ids: locationIds.join(',')
           }
-          return acc
-        }, {} as Record<string, any>)
+        }) as any
+
+        const locations = response?.data || response?.locations || []
         
-        logger.debug('✅ LocationsMap created:', locationsMap)
+        if (locations && locations.length > 0) {
+          logger.debug('✅ Locations loaded:', locations)
+          
+          locationsMap = locations.reduce((acc: any, loc: any) => {
+            acc[loc.id] = {
+              name: loc.name,
+              address: loc.address,
+              formatted_address: loc.formatted_address
+            }
+            return acc
+          }, {} as Record<string, any>)
+          
+          logger.debug('✅ LocationsMap created:', locationsMap)
+        }
+      } catch (error: any) {
+        console.error('❌ Error loading locations:', error)
       }
     } else {
       logger.debug('⚠️ No location IDs found in appointments')
@@ -1984,13 +1997,46 @@ const loadAppointments = async () => {
     if (criteriaIds.length > 0) {
       logger.debug('🔍 Loading criteria details for:', criteriaIds.length, 'criteria')
       
-      const { data: criteria, error: criteriaError } = await supabase
-        .from('evaluation_criteria')
-        .select('id, name')
-        .in('id', criteriaIds)
+      try {
+        // ✅ Use secure API instead of direct DB query
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        const response = await $fetch('/api/customer/get-evaluation-criteria', {
+          method: 'GET',
+          headers: session?.access_token ? {
+            'Authorization': `Bearer ${session.access_token}`
+          } : {},
+          query: {
+            ids: criteriaIds.join(',')
+          }
+        }) as any
 
-      if (criteriaError) {
-        console.error('❌ Criteria error:', criteriaError)
+        const criteria = response?.data || response?.criteria || []
+        
+        if (criteria && criteria.length > 0) {
+          logger.debug('✅ Criteria loaded:', criteria.length)
+          
+          criteriaMap = criteria.reduce((acc: any, crit: any) => {
+            acc[crit.id] = {
+              name: crit.name || 'Unbekanntes Kriterium',
+              short_code: null,
+              category_name: null
+            }
+            return acc
+          }, {} as Record<string, any>)
+        } else {
+          // Fallback for missing criteria
+          criteriaIds.forEach(id => {
+            criteriaMap[id] = {
+              name: 'Bewertungskriterium',
+              short_code: null,
+              category_name: null
+            }
+          })
+        }
+      } catch (error: any) {
+        console.error('❌ Criteria error:', error)
         criteriaIds.forEach(id => {
           criteriaMap[id] = {
             name: 'Bewertungskriterium',
@@ -1998,17 +2044,6 @@ const loadAppointments = async () => {
             category_name: null
           }
         })
-      } else if (criteria) {
-        logger.debug('✅ Criteria loaded:', criteria.length)
-        
-        criteriaMap = criteria.reduce((acc, crit) => {
-          acc[crit.id] = {
-            name: crit.name || 'Unbekanntes Kriterium',
-            short_code: null,
-            category_name: null
-          }
-          return acc
-        }, {} as Record<string, any>)
       }
     }
 
@@ -2145,14 +2180,18 @@ const loadAppointments = async () => {
 
 const loadLocations = async () => {
   try {
+    // ✅ Use secure API instead of direct DB query
     const supabase = getSupabase()
-    const { data, error: fetchError } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name')
-
-    if (fetchError) throw fetchError
-    locations.value = data || []
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    const response = await $fetch('/api/customer/get-locations', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
+    
+    locations.value = response?.data || response?.locations || []
   } catch (err: any) {
     console.error('❌ Error loading locations:', err)
   }
