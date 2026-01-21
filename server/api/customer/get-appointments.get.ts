@@ -105,6 +105,8 @@ export default defineEventHandler(async (event) => {
     let notesMap: Record<string, any[]> = {}
     
     if (appointmentIds.length > 0) {
+      logger.debug('📝 Searching notes for appointment IDs:', appointmentIds.slice(0, 5), '... (total:', appointmentIds.length, ')')
+      
       const { data: notesData, error: notesError } = await serviceSupabase
         .from('notes')
         .select(`
@@ -120,7 +122,17 @@ export default defineEventHandler(async (event) => {
         `)
         .in('appointment_id', appointmentIds)
       
-      logger.debug('📝 Notes query result:', { notesDataCount: notesData?.length || 0, notesError: notesError?.message })
+      logger.debug('📝 Notes query result:', { 
+        notesDataCount: notesData?.length || 0, 
+        notesError: notesError?.message,
+        sampleNotes: notesData?.slice(0, 3)?.map(n => ({
+          id: n.id,
+          apt_id: n.appointment_id,
+          criteria_id: n.evaluation_criteria_id,
+          rating: n.criteria_rating,
+          tenant_id: n.tenant_id
+        }))
+      })
       
       if (notesError) {
         logger.warn('⚠️ Error fetching notes:', notesError)
@@ -129,6 +141,13 @@ export default defineEventHandler(async (event) => {
         const filteredNotes = notesData.filter((note: any) => 
           note.tenant_id === userProfile.tenant_id || note.tenant_id === null
         )
+        
+        logger.debug('📝 Notes after tenant filter:', {
+          before: notesData.length,
+          after: filteredNotes.length,
+          userTenantId: userProfile.tenant_id,
+          noteTenantIds: [...new Set(notesData.map((n: any) => n.tenant_id))]
+        })
         
         // Group notes by appointment_id
         notesMap = filteredNotes.reduce((acc, note) => {

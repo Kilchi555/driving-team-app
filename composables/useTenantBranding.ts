@@ -462,22 +462,37 @@ export const useTenantBranding = () => {
 
   // Logo für bestimmten Kontext abrufen
   const getLogo = (context: 'header' | 'favicon' | 'square' | 'dark' = 'header') => {
-    if (!currentTenantBranding.value) return null
+    if (!currentTenantBranding.value) {
+      logger.debug('⚠️ Logo requested before branding loaded, returning null')
+      return null
+    }
 
     const logos = currentTenantBranding.value.logos
-
+    
+    let logoUrl: string | undefined = undefined
     switch (context) {
       case 'header':
-        return logos.wide || logos.standard
+        logoUrl = logos.wide || logos.standard
+        break
       case 'favicon':
-        return logos.favicon || logos.square || logos.standard
+        logoUrl = logos.favicon || logos.square || logos.standard
+        break
       case 'square':
-        return logos.square || logos.standard
+        logoUrl = logos.square || logos.standard
+        break
       case 'dark':
-        return logos.dark || logos.wide || logos.standard
+        logoUrl = logos.dark || logos.wide || logos.standard
+        break
       default:
-        return logos.standard
+        logoUrl = logos.standard
     }
+    
+    logger.debug(`🖼️ getLogo('${context}') called:`, {
+      logos,
+      selectedUrl: logoUrl
+    })
+    
+    return logoUrl
   }
 
   // Branding explizit neu laden (für manuelle Aktualisierung)

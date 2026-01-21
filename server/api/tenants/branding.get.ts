@@ -273,6 +273,14 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
       durationMs: Date.now() - startTime
     })
 
+    logger.debug('🖼️ Logos in response:', {
+      logo_url: tenant.logo_url,
+      logo_square_url: tenant.logo_square_url,
+      logo_wide_url: tenant.logo_wide_url,
+      logo_dark_url: tenant.logo_dark_url,
+      favicon_url: tenant.favicon_url
+    })
+
     return {
       success: true,
       data: tenant
