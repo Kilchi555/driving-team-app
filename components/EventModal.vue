@@ -2008,9 +2008,19 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
   
   try {
     // ✅ NEW: Use secure API instead of direct DB query
+    // Get session token for API authentication
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      console.error('❌ No session found')
+      availableDurations.value = [45] // Fallback
+      return
+    }
+    
     const { data: categories } = await $fetch('/api/staff/get-categories', {
-      query: {
-        // We need to filter by category code client-side since API doesn't support it yet
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
       }
     })
     
@@ -2111,7 +2121,22 @@ const loadTheoryDurations = async (categoryCode: string) => {
   
   try {
     // ✅ NEW: Use secure API instead of direct DB query
-    const { data: categories } = await $fetch('/api/staff/get-categories')
+    // Get session token for API authentication
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      console.error('❌ No session found')
+      formData.value.duration_minutes = 45
+      availableDurations.value = [45]
+      return
+    }
+    
+    const { data: categories } = await $fetch('/api/staff/get-categories', {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
     
     // Find the category by code
     const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
