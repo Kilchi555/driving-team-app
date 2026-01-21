@@ -1016,6 +1016,7 @@ import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTenant } from '~/composables/useTenant'
+import { replacePlaceholders } from '~/utils/reglementPlaceholders'
 import ProfileModal from './ProfileModal.vue'
 
 // Composables
@@ -1512,8 +1513,19 @@ const navigateToReglement = async (type: string) => {
     })
 
     if (response?.success && response?.data) {
+      // Replace placeholders with tenant data from API response
+      let content = response.data.content || ''
+      if (response.tenant) {
+        content = replacePlaceholders(content, {
+          name: response.tenant.name,
+          address: response.tenant.address,
+          email: response.tenant.email,
+          phone: response.tenant.phone,
+          website: response.tenant.website
+        })
+      }
       // Show in modal with content
-      showReglementContent.value = response.data.content || ''
+      showReglementContent.value = content
       showReglementTitle.value = response.data.title || type
       showReglementDetailModal.value = true
     }

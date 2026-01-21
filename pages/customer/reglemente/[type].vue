@@ -125,9 +125,16 @@ const loadReglement = async () => {
     // Build content
     let content = regulation.content || getDefaultContent(type.value)
     
-    // Load tenant data for placeholder replacement
-    // Note: tenantData would need to be loaded based on regulation data
-    // For now, we'll just use the content as-is with placeholder replacement
+    // Replace placeholders with tenant data from API response
+    if (response.tenant) {
+      content = replacePlaceholders(content, {
+        name: response.tenant.name,
+        address: response.tenant.address,
+        email: response.tenant.email,
+        phone: response.tenant.phone,
+        website: response.tenant.website
+      })
+    }
     
     reglementContent.value = content
     lastUpdated.value = regulation.updated_at ? new Date(regulation.updated_at).toLocaleDateString('de-CH') : new Date().toLocaleDateString('de-CH')

@@ -113,7 +113,14 @@ export default defineEventHandler(async (event) => {
       sections = sectionsData || []
     }
 
-    // ✅ LAYER 7: Audit Logging
+    // ✅ LAYER 7: Load Tenant Data for Placeholder Replacement
+    const { data: tenantData } = await supabaseAdmin
+      .from('tenants')
+      .select('name, address, contact_email, contact_phone, website_url')
+      .eq('id', tenantId)
+      .single()
+
+    // ✅ LAYER 8: Audit Logging
     logger.debug('✅ Reglement fetched successfully:', {
       userId: userProfile.id,
       tenantId: tenantId,
@@ -126,6 +133,13 @@ export default defineEventHandler(async (event) => {
       data: {
         ...regulation,
         sections: sections
+      },
+      tenant: {
+        name: tenantData?.name || '',
+        address: tenantData?.address || '',
+        email: tenantData?.contact_email || '',
+        phone: tenantData?.contact_phone || '',
+        website: tenantData?.website_url || ''
       }
     }
   } catch (error: any) {
