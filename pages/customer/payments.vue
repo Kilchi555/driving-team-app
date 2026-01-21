@@ -538,37 +538,27 @@ const loadAllData = async () => {
 const payAllUnpaid = async () => {
   if (unpaidPayments.value.length === 0) return
 
+  // Note: Wallee only supports single payment redirects
+  // If multiple payments, process only the first one
+  if (unpaidPayments.value.length > 1) {
+    alert(`Sie haben ${unpaidPayments.value.length} offene Zahlungen. Bitte bezahlen Sie diese einzeln.`)
+    return
+  }
+
   isProcessingPayment.value = true
   
   try {
-    logger.debug('💳 Processing secure payment API for all unpaid:', unpaidPayments.value.length)
+    const firstPayment = unpaidPayments.value[0]
+    if (!firstPayment?.id) throw new Error('No payment to process')
     
-    // Get current user
+    logger.debug('💳 Processing payment via secure API:', firstPayment.id)
+    
+    // Get session for auth header
     const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || !session) throw new Error('User not authenticated')
+    if (!session) throw new Error('User not authenticated')
     
-    // Get user data from users table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    if (userError || !userData) throw new Error('User data not found')
-    
-    // Calculate total amount
-    const totalAmount = unpaidPayments.value.reduce((sum, p) => sum + (p.total_amount_rappen / 100), 0)
-    
-    // Create batch orderId
-    const batchOrderId = `payment-batch-${unpaidPayments.value.map(p => p.id).join('-')}-${Date.now()}`
-    
-    // For batch payments, use first payment ID as reference
-    const firstPaymentId = unpaidPayments.value[0]?.id
-    if (!firstPaymentId) throw new Error('No payments to process')
-    
-    // Initiate Wallee transaction via secure API
+    // API only needs paymentId - it fetches user data from auth token
     interface PaymentResponse {
       success: boolean
       paymentId?: string
@@ -583,14 +573,7 @@ const payAllUnpaid = async () => {
         Authorization: `Bearer ${session.access_token}`
       },
       body: {
-        userId: userData.id,
-        amount: totalAmount,
-        currency: 'CHF',
-        customerEmail: userData.email,
-        customerName: `${userData.first_name} ${userData.last_name}`,
-        description: `Zahlung für ${unpaidPayments.value.length} Termin(e)`,
-        paymentMethod: 'wallee',
-        orderId: batchOrderId,
+        paymentId: firstPayment.id,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
         failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
       }
@@ -604,7 +587,7 @@ const payAllUnpaid = async () => {
     }
     
   } catch (err: any) {
-    console.error('❌ Error initiating bulk payment:', err)
+    console.error('❌ Error initiating payment:', err)
     logger.debug('❌ Full error:', err)
     alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
   } finally {
