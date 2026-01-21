@@ -164,8 +164,8 @@
             </div>
           </div>
 
-          <!-- Face ID / WebAuthn Section -->
-          <div class="border-t pt-4">
+          <!-- Face ID / WebAuthn Section - Hidden for now, set v-if="true" to enable -->
+          <div v-if="false" class="border-t pt-4">
             <h3 class="text-lg font-semibold text-gray-900 mb-3">Biometrische Authentifizierung</h3>
             
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -705,12 +705,8 @@ const formatDate = (dateString: string) => {
 }
 
 const getDocumentUrl = (doc: any) => {
-  logger.debug('🔍 getDocumentUrl called with doc:', doc)
-  logger.debug('🔍 doc keys:', Object.keys(doc))
-  
   // Documents from Storage API already have publicUrl!
   if (doc.publicUrl) {
-    logger.debug('✅ Using publicUrl directly:', doc.publicUrl)
     return doc.publicUrl
   }
   

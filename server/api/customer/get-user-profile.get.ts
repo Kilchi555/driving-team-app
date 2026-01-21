@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. Fetch user profile from users table
+    // 4. Fetch user profile from users table (all needed fields for customer dashboard)
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
       .select(`
@@ -60,8 +60,24 @@ export default defineEventHandler(async (event) => {
         last_name,
         email,
         phone,
+        birthdate,
+        street,
+        street_nr,
+        zip,
+        city,
         category,
         role,
+        preferred_payment_method,
+        preferred_duration,
+        preferred_location_id,
+        assigned_staff_id,
+        assigned_staff_ids,
+        lernfahrausweis_nr,
+        faberid,
+        sari_faberid,
+        sari_birthdate,
+        language,
+        onboarding_status,
         created_at
       `)
       .eq('auth_user_id', user.id)
