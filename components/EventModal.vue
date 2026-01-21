@@ -2007,52 +2007,29 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
   logger.debug('🔄 Loading durations from categories table:', { staffId, categoryCode })
   
   try {
-    // Load durations directly from categories table
-    const supabase = getSupabase()
-    
-    // ✅ WICHTIG: Hole tenant_id vom aktuell angemeldeten Benutzer
-    let tenantIdToUse: string | null = null
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('tenant_id')
-          .eq('auth_user_id', authUser.id)
-          .single()
-        tenantIdToUse = userData?.tenant_id
+    // ✅ NEW: Use secure API instead of direct DB query
+    const { data: categories } = await $fetch('/api/staff/get-categories', {
+      query: {
+        // We need to filter by category code client-side since API doesn't support it yet
       }
-    } catch (err) {
-      logger.debug('⚠️ Could not fetch tenant_id from auth:', err)
-    }
+    })
     
-    // ✅ WICHTIG: Auch nach tenant_id filtern
-    let query = supabase
-      .from('categories')
-      .select('lesson_duration_minutes, theory_durations')
-      .eq('code', categoryCode)
-      .eq('is_active', true)
+    // Find the category by code
+    const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
     
-    // Add tenant_id filter if available
-    if (tenantIdToUse) {
-      query = query.eq('tenant_id', tenantIdToUse)
-    }
-    
-    const { data: categoryData, error: categoryError } = await query.maybeSingle()
-    
-    if (categoryError) {
-      console.error('❌ Error loading category durations:', categoryError)
+    if (!categoryData) {
+      console.error('❌ Category not found:', categoryCode)
       availableDurations.value = [45] // Fallback
       return
     }
     
-                    if (categoryData && categoryData.lesson_duration_minutes) {
-              // ✅ ROBUSTE BEHANDLUNG: Stelle sicher, dass wir immer ein Array von Zahlen haben
-              let durations: number[] = []
-              
-              if (Array.isArray(categoryData.lesson_duration_minutes)) {
-                // Falls es bereits ein Array ist
-                durations = categoryData.lesson_duration_minutes.map(d => parseInt(d.toString(), 10)).filter(d => !isNaN(d))
+    if (categoryData && categoryData.lesson_duration_minutes) {
+      // ✅ ROBUSTE BEHANDLUNG: Stelle sicher, dass wir immer ein Array von Zahlen haben
+      let durations: number[] = []
+      
+      if (Array.isArray(categoryData.lesson_duration_minutes)) {
+        // Falls es bereits ein Array ist
+        durations = categoryData.lesson_duration_minutes.map(d => parseInt(d.toString(), 10)).filter(d => !isNaN(d))
               } else if (typeof categoryData.lesson_duration_minutes === 'string') {
                 // Falls es ein String ist, versuche es zu parsen
                 try {
@@ -2133,17 +2110,14 @@ const loadTheoryDurations = async (categoryCode: string) => {
   logger.debug('🔄 Loading theory durations for category:', categoryCode)
   
   try {
-    const supabase = getSupabase()
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('categories')
-      .select('theory_durations')
-      .eq('code', categoryCode)
-      .eq('is_active', true)
-      .single()
+    // ✅ NEW: Use secure API instead of direct DB query
+    const { data: categories } = await $fetch('/api/staff/get-categories')
     
-    if (categoryError) {
-      console.error('❌ Error loading theory durations:', categoryError)
-      // Fallback: Standard 45 Minuten
+    // Find the category by code
+    const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
+    
+    if (!categoryData) {
+      console.error('❌ Category not found:', categoryCode)
       formData.value.duration_minutes = 45
       availableDurations.value = [45]
       return

@@ -52,6 +52,39 @@ export const getAuthToken = (event: any): string | null => {
 }
 
 /**
+ * Get authenticated user from request (for new APIs)
+ * Returns the Supabase auth user object
+ */
+export const getAuthUserFromRequest = async (event: any): Promise<{ id: string; email?: string } | null> => {
+  try {
+    const token = getAuthToken(event)
+    if (!token) {
+      logger.warn('❌ No token provided')
+      return null
+    }
+
+    const supabase = getSupabaseAdmin()
+    
+    // Verify token and get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user?.id) {
+      logger.warn('❌ Invalid token:', authError?.message)
+      return null
+    }
+
+    logger.debug(`✅ Token verified for auth user: ${user.id}`)
+    return {
+      id: user.id,
+      email: user.email
+    }
+  } catch (err: any) {
+    logger.error('❌ Unexpected error in getAuthUserFromRequest:', err)
+    return null
+  }
+}
+
+/**
  * Verify auth token and get authenticated user
  */
 export const verifyAuth = async (event: any): Promise<{ userId: string; authUserId: string; tenantId: string } | null> => {
