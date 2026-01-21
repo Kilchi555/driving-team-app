@@ -30,6 +30,7 @@
     "@sparticuz/chromium": "^141.0.0",
     "@stripe/stripe-js": "^7.9.0",
     "@supabase/supabase-js": "^2.76.1",
+    "isomorphic-dompurify": "^2.35.0",
     "jspdf": "^3.0.1",
     "nuxt": "^3.17.7",
     "pinia": "^2.2.6",
