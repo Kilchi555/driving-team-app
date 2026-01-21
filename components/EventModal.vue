@@ -3272,9 +3272,9 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
               formData.value.type, 
               newDurationMinutes, 
               formData.value.user_id || undefined,
-              formData.value.appointment_type,
-              props.mode === 'edit',
-              props.eventData?.id
+              formData.value.appointment_type || 'lesson', // ✅ Default to 'lesson'
+              props.mode === 'edit', // ✅ Edit-Mode flag
+              props.eventData?.id || undefined // ✅ Appointment ID (undefined if not edit mode)
             )
               .then(priceResult => {
                 logger.debug('✅ Online price calculated:', priceResult.total_chf)
