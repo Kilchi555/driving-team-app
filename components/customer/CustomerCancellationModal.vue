@@ -59,8 +59,8 @@
           </p>
         </div>
 
-        <!-- Medical Certificate Upload Section -->
-        <div v-if="selectedReason && selectedReason.requires_proof" class="mb-4">
+        <!-- Medical Certificate Upload Section - only show when there's a penalty (less than 24h before) -->
+        <div v-if="selectedReason && selectedReason.requires_proof && hoursUntilAppointment !== null && hoursUntilAppointment < 24" class="mb-4">
           <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
             <div class="flex">
               <div class="flex-shrink-0">
@@ -207,15 +207,27 @@ const hoursUntilAppointment = computed(() => {
 // Methods
 const loadCancellationReasons = async () => {
   try {
-    const { data, error } = await supabase
-      .from('cancellation_reasons')
-      .select('*')
-      .eq('cancellation_type', 'student')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
+    // Get auth token
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('Nicht angemeldet')
+    }
 
-    if (error) throw error
-    studentReasons.value = data || []
+    // Use secure API instead of direct DB query
+    const response = await $fetch('/api/customer/get-cancellation-reasons', {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
+
+    if (!response.success) {
+      throw new Error('Failed to load cancellation reasons')
+    }
+
+    // Filter for student reasons (API returns all tenant reasons)
+    studentReasons.value = (response.reasons || []).filter(
+      (r: any) => r.cancellation_type === 'student' || !r.cancellation_type
+    )
   } catch (err: any) {
     console.error('Error loading cancellation reasons:', err)
     errorMessage.value = 'Fehler beim Laden der Absage-Gründe'

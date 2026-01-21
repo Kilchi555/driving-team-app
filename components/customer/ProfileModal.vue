@@ -591,26 +591,33 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
       throw new Error(`Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 10 MB.`)
     }
     
-    // Upload file directly to storage with simple naming
-    // Format: ausweis_{timestamp}.{ext}
-    const timestamp = Date.now()
-    const fileExtension = file.name.split('.').pop()
-    const fileName = `ausweis_${timestamp}.${fileExtension}`
-    
+    // Use secure API for upload instead of direct storage access
     const supabase = getSupabase()
-    const storagePath = `${userId}/${fileName}`
+    const { data: { session } } = await supabase.auth.getSession()
     
-    logger.debug('📤 Uploading file to storage path:', storagePath)
+    if (!session?.access_token) {
+      throw new Error('Nicht angemeldet')
+    }
     
-    const { data, error: uploadError } = await supabase.storage
-      .from('user-documents')
-      .upload(storagePath, file)
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('documentType', 'id_document')
+    
+    logger.debug('📤 Uploading file via secure API')
+    
+    const response = await $fetch('/api/customer/upload-document', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: formData
+    })
 
-    if (uploadError) {
-      throw new Error(`Upload fehlgeschlagen: ${uploadError.message}`)
+    if (!response.success) {
+      throw new Error('Upload fehlgeschlagen')
     }
 
-    logger.debug('✅ File uploaded to storage:', storagePath)
+    logger.debug('✅ File uploaded via secure API:', response.document?.path)
     
     successMessage.value = `${file.name} erfolgreich hochgeladen`
     showSuccess('Erfolg', `${file.name} erfolgreich hochgeladen`)
