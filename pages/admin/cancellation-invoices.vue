@@ -307,89 +307,43 @@ const stats = computed(() => {
   return { total, pending, paid, totalAmount }
 })
 
-// Load cancellation invoices
+// ✅ Load cancellation invoices via secure API
 const loadCancellationInvoices = async () => {
   try {
     isLoading.value = true
     const supabase = getSupabase()
-
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    logger.debug('🔍 Admin Cancellation Invoices - Current tenant_id:', tenantId)
+    const { data: { session } } = await supabase.auth.getSession()
     
-    // Load current tenant info
-    if (tenantId) {
-      const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('name, slug')
-        .eq('id', tenantId)
-        .single()
-      currentTenant.value = tenantData
-      logger.debug('🔍 Current tenant:', tenantData)
+    if (!session?.access_token) {
+      console.error('No session found')
+      return
     }
 
-    let query = supabase
-      .from('invoices')
-      .select(`
-        *,
-        appointments!inner(
-          title,
-          start_time,
-          user_id,
-          students!inner(first_name, last_name)
-        )
-      `)
-      .in('invoice_type', ['cancellation_fee', 'refund'])
-      .eq('tenant_id', tenantId) // Filter by current tenant
-
-    // Apply status filter
-    if (filters.value.status) {
-      query = query.eq('status', filters.value.status)
-    }
-
-    // Apply time range filter
-    if (filters.value.timeRange !== 'all') {
-      const now = new Date()
-      let startDate: Date
-
-      switch (filters.value.timeRange) {
-        case 'today':
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-          break
-        case 'week':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          break
-        case 'month':
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-          break
-        default:
-          startDate = new Date(0)
+    const response = await $fetch('/api/admin/cancellation-invoices', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      query: {
+        status: filters.value.status || undefined,
+        search: filters.value.search || undefined
       }
+    }) as any
 
-      query = query.gte('created_at', startDate.toISOString())
+    if (response?.tenant) {
+      currentTenant.value = response.tenant
+      logger.debug('🔍 Current tenant:', response.tenant)
     }
-
-    const { data, error } = await query.order('created_at', { ascending: false })
-
-    if (error) throw error
 
     // Transform data
-    cancellationInvoices.value = (data || []).map(invoice => ({
+    cancellationInvoices.value = (response?.invoices || []).map((invoice: any) => ({
       ...invoice,
       appointment_title: invoice.appointments?.title,
       appointment_date: invoice.appointments?.start_time,
-      student_name: invoice.appointments?.students 
-        ? `${invoice.appointments.students.first_name} ${invoice.appointments.students.last_name}`
+      student_name: invoice.appointments?.users 
+        ? `${invoice.appointments.users.first_name} ${invoice.appointments.users.last_name}`
         : 'Unbekannt'
     }))
 
-    logger.debug('✅ Cancellation invoices loaded:', cancellationInvoices.value.length)
+    logger.debug('✅ Cancellation invoices loaded via API:', cancellationInvoices.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading cancellation invoices:', err)
@@ -398,34 +352,26 @@ const loadCancellationInvoices = async () => {
   }
 }
 
-// Mark invoice as paid
+// ✅ Mark invoice as paid via secure API
 const markInvoiceAsPaid = async (invoiceId: string) => {
   try {
     const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    // Get current user's tenant_id for security
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
+    if (!session?.access_token) {
+      console.error('No session found')
+      return
+    }
     
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString()
-      })
-      .eq('id', invoiceId)
-      .eq('tenant_id', tenantId) // Ensure user can only update their tenant's invoices
-      .select()
-      .single()
+    const response = await $fetch('/api/admin/invoice-update-status', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { invoice_id: invoiceId, action: 'paid' }
+    }) as any
+    
+    if (!data) throw new Error('Failed to update invoice')
 
-    if (error) throw error
-
-    logger.debug('✅ Invoice marked as paid:', data)
+    logger.debug('✅ Invoice marked as paid via API:', data)
 
     // Reload invoices
     await loadCancellationInvoices()
