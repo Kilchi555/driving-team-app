@@ -107,6 +107,23 @@ export default defineEventHandler(async (event) => {
       appointmentData.custom_location_address = sanitizeString(appointmentData.custom_location_address, 500)
     }
 
+    // ✅ Validate location_id - reject temporary location IDs
+    if (appointmentData.location_id) {
+      if (typeof appointmentData.location_id === 'string' && appointmentData.location_id.startsWith('temp_')) {
+        // Temporary location ID - set to null instead of saving invalid UUID
+        logger.warn('⚠️ Temporary location ID detected, setting to null:', appointmentData.location_id)
+        appointmentData.location_id = null
+        
+        // Store custom location info if available
+        if (!appointmentData.custom_location_name && !appointmentData.custom_location_address) {
+          logger.warn('⚠️ No custom location data available for temporary location')
+        }
+      } else if (!validateUUID(appointmentData.location_id)) {
+        // Invalid UUID format
+        throwValidationError({ location_id: 'Ungültiges Location ID Format' })
+      }
+    }
+
     const supabase = getSupabaseAdmin()
 
     logger.debug('📋 Saving appointment via API:', { mode, eventId, appointmentData })

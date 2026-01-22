@@ -3,6 +3,7 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 interface Category {
   id: number
