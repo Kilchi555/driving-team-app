@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ 3. TENANT ISOLATION: Verify user is in same tenant
-    const { data: targetUser, error: userError } = await supabase
+    const { data: targetUser, error: targetUserError } = await supabase
       .from('users')
       .select('id, tenant_id, role')
       .eq('id', targetUserId)
@@ -60,8 +60,8 @@ export default defineEventHandler(async (event) => {
       .eq('is_active', true)
       .single()
 
-    if (userError || !targetUser) {
-      console.error('❌ User not found or unauthorized:', { targetUserId, userTenantId: user.tenant_id, error: userError })
+    if (targetUserError || !targetUser) {
+      console.error('❌ User not found or unauthorized:', { targetUserId, userTenantId: user.tenant_id, error: targetUserError })
       throw createError({ statusCode: 403, message: 'User not found or unauthorized' })
     }
 
