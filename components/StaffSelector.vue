@@ -272,7 +272,8 @@ const loadStaff = async () => {
   try {
     logger.debug('👥 StaffSelector: Loading staff members via API...')
     
-    // ✅ Get auth token
+    // ✅ Get Supabase instance and auth token
+    const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
     
     if (!session?.access_token) {
