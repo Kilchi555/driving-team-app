@@ -23,8 +23,15 @@ export default defineEventHandler(async (event) => {
       basePriceRappen = 0,
       adminFeeRappen = 0,
       productsPriceRappen = 0,
-      discountAmountRappen = 0
+      discountAmountRappen = 0,
+      // ✅ NEW: Company billing address ID for invoice payments
+      companyBillingAddressId = null
     } = body
+
+    // ✅ DEBUG: Log company billing address ID
+    if (paymentMethodForPayment === 'invoice') {
+      logger.debug('🏢 API received companyBillingAddressId:', companyBillingAddressId)
+    }
 
     if (!appointmentData) {
       throw createError({
@@ -282,6 +289,8 @@ export default defineEventHandler(async (event) => {
             ...(remainingAmountRappen === 0 ? { paid_at: new Date().toISOString() } : {}),
             // ✅ NEW: Store credit used in payment record
             credit_used_rappen: creditUsedRappen || 0,
+            // ✅ NEW: Company billing address ID for invoice payments
+            ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
             description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,
             created_at: new Date().toISOString()
           }

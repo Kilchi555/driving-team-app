@@ -69,22 +69,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 4: DATABASE QUERY - Get user data as billing address
-    const { data: userData, error } = await supabaseAdmin
-      .from('users')
-      .select('id, first_name, last_name, email, phone, street, street_nr, zip, city, company_name')
-      .eq('id', userId)
+    // ✅ LAYER 4: DATABASE QUERY - Get billing address from company_billing_addresses
+    const { data: billingData, error } = await supabaseAdmin
+      .from('company_billing_addresses')
+      .select('id, company_name, contact_person, email, phone, street, street_number, zip, city, country')
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId)
-      .single()
+      .eq('is_active', true)
+      .maybeSingle()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        logger.debug('ℹ️ No billing address found for user:', userId)
-        return {
-          success: true,
-          data: null
-        }
-      }
       logger.error('❌ Error fetching billing address:', error)
       throw createError({
         statusCode: 500,
@@ -92,16 +86,25 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // If no billing address found, return null (not an error)
+    if (!billingData) {
+      logger.debug('ℹ️ No billing address found for user:', userId)
+      return {
+        success: true,
+        data: null
+      }
+    }
+
     // ✅ LAYER 5: Map to billing address format
     const billingAddress = {
-      company_name: userData.company_name || '',
-      contact_person: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
-      email: userData.email || '',
-      phone: userData.phone || '',
-      street: userData.street || '',
-      street_number: userData.street_nr || '',
-      zip: userData.zip || '',
-      city: userData.city || ''
+      company_name: billingData.company_name || '',
+      contact_person: billingData.contact_person || '',
+      email: billingData.email || '',
+      phone: billingData.phone || '',
+      street: billingData.street || '',
+      street_number: billingData.street_number || '',
+      zip: billingData.zip || '',
+      city: billingData.city || ''
     }
 
     // ✅ LAYER 6: AUDIT LOGGING

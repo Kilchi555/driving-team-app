@@ -59,6 +59,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   selectedPaymentData?: any,
   selectedProducts?: any, // ✅ Selected products from useProductSale
   dynamicPricing?: any, // ✅ Dynamic pricing for admin fee
+  savedCompanyBillingAddressId?: any, // ✅ Company Billing Address ID from EventModal
 }) => {
   
   // ============ STATE ============
@@ -1017,14 +1018,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
             eventId,
             appointmentData,
             totalAmountRappenForPayment,
-            paymentMethodForPayment: formData.value.payment_method || 'wallee',
+            paymentMethodForPayment: refs?.selectedPaymentMethod?.value || formData.value.payment_method || 'wallee',
             // ✅ Send price breakdown components
             basePriceRappen,
             adminFeeRappen,
             productsPriceRappen,
             discountAmountRappen,
             // ✅ Send credit used (if any)
-            creditUsedRappen: creditUsedRappenForPayment
+            creditUsedRappen: creditUsedRappenForPayment,
+            // ✅ Send company billing address ID for invoice payments
+            companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null
           }
         })
       } catch (fetchError: any) {
@@ -1355,35 +1358,34 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let companyBillingAddressId: string | null = null
       let invoiceAddress: any = null
       
-      // ✅ IMPORTANT: We no longer use globalThis for the billing address ID
-      // globalThis is unreliable and causes phantom ID references
-      // Instead, we simply don't include company_billing_address_id in the payment
-      // This triggers automatic creation of a Pendenz for missing billing address
-      
-      if (paymentMethod === 'invoice' && refs?.priceDisplayRef?.value) {
-        const priceDisplay = refs.priceDisplayRef.value
-        
-        // Copy invoice data as JSONB if available
-        if (priceDisplay && priceDisplay.invoiceData) {
-          invoiceAddress = {
-            company_name: priceDisplay.invoiceData.company_name || '',
-            contact_person: priceDisplay.invoiceData.contact_person || '',
-            email: priceDisplay.invoiceData.email || '',
-            phone: priceDisplay.invoiceData.phone || '',
-            street: priceDisplay.invoiceData.street || '',
-            street_number: priceDisplay.invoiceData.street_number || '',
-            zip: priceDisplay.invoiceData.zip || '',
-            city: priceDisplay.invoiceData.city || '',
-            country: priceDisplay.invoiceData.country || 'Schweiz',
-            vat_number: priceDisplay.invoiceData.vat_number || '',
-            notes: priceDisplay.invoiceData.notes || ''
-          }
-          logger.debug('📋 Using invoice address as JSONB for display')
+      // ✅ Use the savedCompanyBillingAddressId ref from EventModal if available
+      if (paymentMethod === 'invoice') {
+        // ✅ First try to get the ID from the ref passed from EventModal
+        if (refs?.savedCompanyBillingAddressId?.value) {
+          companyBillingAddressId = refs.savedCompanyBillingAddressId.value
+          logger.debug('🏢 Using company billing address ID from ref:', companyBillingAddressId)
         }
         
-        // company_billing_address_id will NOT be set (remains null)
-        // This allows the payment to be created and triggers a Pendenz
-        companyBillingAddressId = null
+        // ✅ Also copy invoice data as JSONB for display purposes
+        if (refs?.priceDisplayRef?.value) {
+          const priceDisplay = refs.priceDisplayRef.value
+          if (priceDisplay && priceDisplay.invoiceData) {
+            invoiceAddress = {
+              company_name: priceDisplay.invoiceData.company_name || '',
+              contact_person: priceDisplay.invoiceData.contact_person || '',
+              email: priceDisplay.invoiceData.email || '',
+              phone: priceDisplay.invoiceData.phone || '',
+              street: priceDisplay.invoiceData.street || '',
+              street_number: priceDisplay.invoiceData.street_number || '',
+              zip: priceDisplay.invoiceData.zip || '',
+              city: priceDisplay.invoiceData.city || '',
+              country: priceDisplay.invoiceData.country || 'Schweiz',
+              vat_number: priceDisplay.invoiceData.vat_number || '',
+              notes: priceDisplay.invoiceData.notes || ''
+            }
+            logger.debug('📋 Using invoice address as JSONB for display')
+          }
+        }
       }
 
       // ✅ WICHTIG: tenant_id für Payments hinzufügen
@@ -1637,15 +1639,27 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let invoiceAddress: any = null
       
       if (paymentMethod === 'invoice') {
-        const invoiceAddressData = (refs as any)?.companyBillingAddress?.value
-        if (invoiceAddressData) {
-          companyBillingAddressId = invoiceAddressData.id
-          invoiceAddress = {
-            company_name: invoiceAddressData.company_name,
-            address: invoiceAddressData.address,
-            city: invoiceAddressData.city,
-            postal_code: invoiceAddressData.postal_code,
-            country: invoiceAddressData.country
+        // ✅ First try to get the ID from the ref passed from EventModal
+        if (refs?.savedCompanyBillingAddressId?.value) {
+          companyBillingAddressId = refs.savedCompanyBillingAddressId.value
+          logger.debug('🏢 Update: Using company billing address ID from ref:', companyBillingAddressId)
+        }
+        
+        // ✅ Also get invoice data for JSONB
+        if (refs?.priceDisplayRef?.value) {
+          const priceDisplay = refs.priceDisplayRef.value
+          if (priceDisplay && priceDisplay.invoiceData) {
+            invoiceAddress = {
+              company_name: priceDisplay.invoiceData.company_name || '',
+              contact_person: priceDisplay.invoiceData.contact_person || '',
+              email: priceDisplay.invoiceData.email || '',
+              phone: priceDisplay.invoiceData.phone || '',
+              street: priceDisplay.invoiceData.street || '',
+              street_number: priceDisplay.invoiceData.street_number || '',
+              zip: priceDisplay.invoiceData.zip || '',
+              city: priceDisplay.invoiceData.city || '',
+              country: priceDisplay.invoiceData.country || 'Schweiz'
+            }
           }
         }
       }

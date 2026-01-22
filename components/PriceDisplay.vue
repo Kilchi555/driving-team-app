@@ -289,7 +289,16 @@
             <!-- Rechnungsadresse für Invoice -->
             <div v-if="existingPayment?.payment_method === 'invoice' && hasInvoiceAddress" 
                  class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <div class="text-sm font-medium text-gray-700 mb-2">Rechnungsadresse</div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700">Rechnungsadresse</span>
+                <button 
+                  v-if="!props.isPastAppointment"
+                  @click="startEditingBillingAddress"
+                  class="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Bearbeiten
+                </button>
+              </div>
               <div class="text-sm text-gray-600 whitespace-pre-line">{{ formatInvoiceAddress() }}</div>
             </div>
           </div>
@@ -346,7 +355,9 @@
         <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
         <div v-if="shouldShowBillingAddressForm" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
-              <h5 class="text-sm font-medium text-gray-700">Rechnungsadresse</h5>
+              <h5 class="text-sm font-medium text-gray-700">
+                {{ isEditingBillingAddress ? 'Rechnungsadresse bearbeiten' : 'Rechnungsadresse' }}
+              </h5>
               
               <!-- Toggle: Gleich wie Kundenadresse (mobil unterhalb, desktop rechts) -->
               <div class="flex items-center space-x-2">
@@ -497,14 +508,21 @@
                 ></textarea>
               </div>
               
+              <!-- Abbrechen-Button wenn im Edit-Modus -->
+              <div v-if="isEditingBillingAddress" class="flex justify-end">
+                <button
+                  @click="cancelEditingBillingAddress"
+                  type="button"
+                  class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  Abbrechen
+                </button>
+              </div>
+              
               <!-- Auto-save indicator -->
               <div v-if="isSavingInvoice" class="text-sm text-center text-blue-600">
                 💾 Speichere automatisch...
               </div>
-              <div v-if="invoiceSaveMessage" class="text-sm text-center p-2 rounded-md" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                {{ invoiceSaveMessage.text }}
-              </div>
-              
               <div v-if="invoiceSaveMessage" class="text-sm text-center p-2 rounded-md" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
                 {{ invoiceSaveMessage.text }}
               </div>
@@ -1249,6 +1267,12 @@ const startEditingBillingAddress = () => {
   if (existingAddress) {
     logger.debug('✏️ Loading existing address data for editing:', existingAddress.id || 'no-id')
     
+    // ✅ WICHTIG: Setze studentBillingAddress damit saveInvoiceAddress() UPDATE macht statt INSERT!
+    if (!studentBillingAddress.value && existingPayment.value?.company_billing_address) {
+      studentBillingAddress.value = existingPayment.value.company_billing_address
+      logger.debug('✅ Set studentBillingAddress from payment for UPDATE:', existingPayment.value.company_billing_address.id)
+    }
+    
     invoiceData.value = {
       company_name: existingAddress.company_name || '',
       contact_person: existingAddress.contact_person || '',
@@ -1496,13 +1520,17 @@ const showExistingPaymentInfo = computed(() => {
 const shouldShowBillingAddressForm = computed(() => {
   const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
   const hasPaymentSelection = showPaymentSelection.value
+  const isEditing = isEditingBillingAddress.value
   
-  // Formular soll IMMER angezeigt werden wenn Rechnung ausgewählt ist
-  const result = isInvoiceSelected && hasPaymentSelection
+  // Formular soll angezeigt werden wenn:
+  // 1. Rechnung ausgewählt UND Payment-Auswahl sichtbar (neuer Termin)
+  // 2. ODER wenn gerade die Rechnungsadresse bearbeitet wird (Edit-Modus)
+  const result = isInvoiceSelected && (hasPaymentSelection || isEditing)
   
   logger.debug('📝 shouldShowBillingAddressForm check:', {
     isInvoiceSelected,
     hasPaymentSelection,
+    isEditing,
     result
   })
   
@@ -1565,8 +1593,8 @@ const isInvoiceFormValid = computed(() => {
 })
 
 // Rechnungsadresse speichern
-const saveInvoiceAddress = async () => {
-  if (!isInvoiceFormValid.value) return
+const saveInvoiceAddress = async (): Promise<string | null> => {
+  if (!isInvoiceFormValid.value) return null
   
   isSavingInvoice.value = true
   invoiceSaveMessage.value = null
@@ -1696,6 +1724,9 @@ const saveInvoiceAddress = async () => {
           invoiceSaveMessage.value = null
         }, 3000)
         
+        // ✅ Rückgabe der ID für EventModal
+        return result.data?.id || null
+        
       } else {
         throw new Error(result.error || 'Unbekannter Fehler')
       }
@@ -1706,6 +1737,7 @@ const saveInvoiceAddress = async () => {
       type: 'error',
       text: `❌ Fehler beim Speichern: ${err.message}`
     }
+    return null
   } finally {
     isSavingInvoice.value = false
   }
