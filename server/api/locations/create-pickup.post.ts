@@ -10,15 +10,17 @@ export default defineEventHandler(async (event) => {
 
     // ✅ 2. INPUT VALIDATION
     const body = await readBody(event)
-    const { address, latitude, longitude, place_id, studentId, name: locationName } = body
+    const { address, latitude, longitude, place_id, studentId, userId, name: locationName } = body
 
     // Validate required fields
     if (!address || typeof address !== 'string' || !address.trim()) {
       throw createError({ statusCode: 400, message: 'Address is required and must be a string' })
     }
 
-    if (!studentId || typeof studentId !== 'string' || !studentId.match(/^[0-9a-f\-]{36}$/i)) {
-      throw createError({ statusCode: 400, message: 'Invalid studentId format' })
+    // Accept either studentId (legacy) or userId (new)
+    const targetUserId = userId || studentId
+    if (!targetUserId || typeof targetUserId !== 'string' || !targetUserId.match(/^[0-9a-f\-]{36}$/i)) {
+      throw createError({ statusCode: 400, message: 'Invalid userId format' })
     }
 
     if (!locationName || typeof locationName !== 'string' || !locationName.trim()) {
@@ -34,25 +36,25 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Longitude must be a number' })
     }
 
-    // ✅ 3. TENANT ISOLATION: Verify user owns the student
+    // ✅ 3. TENANT ISOLATION: Verify user is in same tenant
     const supabase = await getSupabaseServerClient(event)
 
-    const { data: student, error: studentError } = await supabase
+    const { data: targetUser, error: userError } = await supabase
       .from('users')
       .select('id, tenant_id, role')
-      .eq('id', studentId)
+      .eq('id', targetUserId)
       .eq('tenant_id', user.tenant_id)
       .eq('is_active', true)
       .single()
 
-    if (studentError || !student) {
-      console.error('❌ Student not found or unauthorized:', { studentId, userTenantId: user.tenant_id, error: studentError })
-      throw createError({ statusCode: 403, message: 'Student not found or unauthorized' })
+    if (userError || !targetUser) {
+      console.error('❌ User not found or unauthorized:', { targetUserId, userTenantId: user.tenant_id, error: userError })
+      throw createError({ statusCode: 403, message: 'User not found or unauthorized' })
     }
 
-    // ✅ 4. SANITY CHECK: Only students can have pickup locations
-    if (student.role !== 'student') {
-      throw createError({ statusCode: 400, message: 'Only students can have pickup locations' })
+    // ✅ 4. SANITY CHECK: Only students and staff can have pickup locations
+    if (!['student', 'staff'].includes(targetUser.role)) {
+      throw createError({ statusCode: 400, message: 'Only students and staff can have pickup locations' })
     }
 
     // ✅ 5. INPUT SANITIZATION
@@ -62,7 +64,7 @@ export default defineEventHandler(async (event) => {
 
     const locationToSave = {
       location_type: 'pickup',
-      user_id: studentId,
+      user_id: targetUserId,
       tenant_id: user.tenant_id,
       name: sanitizedName,
       address: sanitizedAddress,
@@ -76,7 +78,8 @@ export default defineEventHandler(async (event) => {
 
     console.log('📤 Saving pickup location:', {
       user_id: user.id,
-      student_id: studentId,
+      target_user_id: targetUserId,
+      target_user_role: targetUser.role,
       tenant_id: user.tenant_id,
       name: sanitizedName
     })

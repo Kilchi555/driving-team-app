@@ -541,14 +541,17 @@ const loadStudentPickupLocations = async (studentId: string) => {
   }
 }
 
-const savePickupLocation = async (locationData: any, studentId: string) => {
+const savePickupLocation = async (locationData: any, userId: string) => {
   try {
     logger.debug('📤 Calling secure API to save pickup location')
     
-    const locationName = `${props.selectedStudentName} - ${locationData.name}`.trim()
+    // ✅ For students: "StudentName - LocationName", for staff: just "LocationName"
+    const locationName = props.selectedStudentName 
+      ? `${props.selectedStudentName} - ${locationData.name}`.trim()
+      : locationData.name
     
     // ✅ Call secure API instead of direct DB query
-    const { data, error: apiError } = await $fetch('/api/locations/create-pickup', {
+    const response = await $fetch('/api/locations/create-pickup', {
       method: 'POST',
       body: {
         name: locationName,
@@ -556,18 +559,18 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
         latitude: locationData.latitude || null,
         longitude: locationData.longitude || null,
         place_id: locationData.place_id || null,
-        studentId: studentId
+        userId: userId // Works for both students and staff
       }
     })
 
-    if (apiError) {
-      console.error('❌ API Error:', apiError)
-      throw new Error(apiError.message || 'Failed to save location')
+    if (!response || response.error) {
+      console.error('❌ API Error:', response?.error)
+      throw new Error(response?.error?.message || 'Failed to save location')
     }
 
     const savedLocation = {
-      ...data,
-      address: data.address || '',
+      ...response,
+      address: response.address || '',
       source: 'pickup' as const
     }
     
@@ -741,8 +744,53 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       // ✅ LOADING STATE BEENDEN:
       isLoadingGooglePlaces.value = false
       logger.debug('💾 Saved and selected new pickup location:', savedLocation.name)
+    } else if (props.currentStaffId) {
+      // Kein Student, aber Staff vorhanden - speichere als pickup location für Staff
+      try {
+        isLoadingGooglePlaces.value = true
+        
+        const staffLocationName = locationData.name
+        const savedLocation = await savePickupLocation(locationData, props.currentStaffId)
+        
+        await nextTick()
+        selectedLocationId.value = savedLocation.id
+        manualLocationInput.value = savedLocation.address || savedLocation.name
+        selectedCustomLocation.value = savedLocation
+        
+        emit('update:modelValue', savedLocation.id)
+        emit('locationSelected', savedLocation)
+        
+        logger.debug('✅ Staff pickup location saved:', savedLocation.name)
+        isLoadingGooglePlaces.value = false
+        
+      } catch (err: any) {
+        console.error('❌ Error saving staff location:', err)
+        error.value = `Fehler beim Speichern des Standorts: ${err.message}`
+        isLoadingGooglePlaces.value = false
+        
+        // Fallback: temporäre Location
+        const tempLocation = {
+          id: `temp_${Date.now()}`,
+          name: locationData.name,
+          address: locationData.address,
+          place_id: locationData.place_id,
+          latitude: locationData.latitude || null,
+          longitude: locationData.longitude || null,
+          location_type: 'pickup',
+          source: 'google'
+        }
+        
+        selectedLocationId.value = tempLocation.id
+        manualLocationInput.value = tempLocation.address || tempLocation.name
+        selectedCustomLocation.value = tempLocation
+        
+        emit('update:modelValue', null)
+        emit('locationSelected', tempLocation)
+        
+        logger.debug('⚠️ Fallback to temporary location:', tempLocation)
+      }
     } else {
-      // Kein Student selected - zeige nur temporäre Location an, speichere nicht
+      // Kein Student UND kein Staff - zeige nur temporäre Location an
       try {
         isLoadingGooglePlaces.value = true
         
@@ -829,6 +877,25 @@ const getLocationMapsUrl = (location: Location) => {
 }
 
 // === WATCHERS ===
+
+// ✅ Load staff pickup locations when currentStaffId changes (for other event types)
+watch(() => props.currentStaffId, async (newStaffId, oldStaffId) => {
+  // Only load if no student is selected (other event types)
+  if (newStaffId && newStaffId !== oldStaffId && !props.selectedStudentId) {
+    isLoadingLocations.value = true
+    
+    // Reset current selection when staff changes
+    selectedLocationId.value = ''
+    selectedCustomLocation.value = null
+    emit('update:modelValue', null)
+    
+    // Load staff's own pickup locations
+    await loadStudentPickupLocations(newStaffId)
+    isLoadingLocations.value = false
+    
+    logger.debug('✅ Staff pickup locations loaded:', studentPickupLocations.value.length)
+  }
+}, { immediate: false })
 
 watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
   if (newStudentId && newStudentId !== oldStudentId) {
