@@ -1,4 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
+import { requireAuth } from '~/server/utils/auth'
+import { getSupabaseServerClient } from '~/server/utils/supabase-server'
 
 export default defineEventHandler(async (event) => {
   try {
