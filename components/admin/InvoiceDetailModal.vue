@@ -602,37 +602,34 @@ const closeModal = () => {
   emit('close')
 }
 
-// ✅ Lade alle Payments für diese Rechnung (inkl. gelöschte, zur Anzeige als "storniert")
+// ✅ Lade alle Payments für diese Rechnung via secure API
 const loadInvoicePayments = async () => {
   if (!props.invoice?.invoice_number) return;
   
   try {
     const { getSupabase } = await import('~/utils/supabase');
     const supabase = getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    // Lade ALLE Payments mit dieser invoice_number (auch gelöschte)
-    const { data: payments, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('invoice_number', props.invoice.invoice_number)
-      .order('created_at', { ascending: true });
+    if (!session?.access_token) return;
     
-    if (!error && payments) {
-      allInvoicePayments.value = payments;
-      
-      // Berechne Total nur aus aktiven (nicht gelöschten) Payments
-      totalExcludingCancelled.value = payments
-        .filter(p => !p.deleted_at)
-        .reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0);
-      
-      logger.debug('✅ Invoice payments loaded:', payments.length, 'Total excluding cancelled:', totalExcludingCancelled.value);
+    const response = await $fetch('/api/admin/invoice-details', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      query: { invoice_number: props.invoice.invoice_number }
+    }) as any;
+    
+    if (response?.payments) {
+      allInvoicePayments.value = response.payments;
+      totalExcludingCancelled.value = response.totalExcludingCancelled || 0;
+      logger.debug('✅ Invoice payments loaded via API:', response.payments.length);
     }
   } catch (err) {
     console.error('⚠️ Error loading invoice payments:', err);
   }
 }
 
-// Lade detaillierte Daten wenn das Modal geöffnet wird
+// ✅ Lade detaillierte Daten via secure API
 const loadDetailedData = async () => {
   // Initialisiere editedInvoice wenn das Modal geöffnet wird
   if (props.invoice) {
@@ -649,78 +646,49 @@ const loadDetailedData = async () => {
     // ✅ Lade alle Payments für diese Rechnung
     await loadInvoicePayments();
     
-    // Lade immer das neueste Payment per user_id, da die appointment_id möglicherweise nicht übereinstimmt
+    // ✅ Lade detaillierte Daten via API
     if (props.invoice.user_id) {
       try {
         const { getSupabase } = await import('~/utils/supabase');
         const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('user_id', props.invoice.user_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        if (!error && data) {
-          fallbackPayment.value = data;
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.access_token) return;
+        
+        const response = await $fetch('/api/admin/invoice-details', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          query: { user_id: props.invoice.user_id }
+        }) as any;
+        
+        if (response) {
+          // Latest payment
+          if (response.latestPayment) {
+            fallbackPayment.value = response.latestPayment;
+          }
           
-                     // Lade die start_time aus der appointments Tabelle
-           if (data.appointment_id) {
-             const { data: appointmentData, error: appointmentError } = await supabase
-               .from('appointments')
-               .select(`
-                 start_time, 
-                 event_type_code, 
-                 type
-               `)
-               .eq('id', data.appointment_id)
-               .single();
-             
-             if (!appointmentError && appointmentData) {
-               appointmentStartTime.value = appointmentData.start_time;
-               appointmentEventTypeCode.value = appointmentData.event_type_code;
-               appointmentType.value = appointmentData.type;
-               
-               // Lade den event_type_name separat aus der event_types Tabelle
-               if (appointmentData.event_type_code) {
-                 const { data: eventTypeData, error: eventTypeError } = await supabase
-                   .from('event_types')
-                   .select('name')
-                   .eq('code', appointmentData.event_type_code)
-                   .single();
-                 
-                 if (!eventTypeError && eventTypeData) {
-                   appointmentEventTypeName.value = eventTypeData.name;
-                 }
-               }
-             }
-             
-             // Lade die Kundendaten aus der users Tabelle
-             if (data.user_id) {
-               logger.debug('🔍 Loading user data for user_id:', data.user_id);
-               
-               const { data: userData, error: userError } = await supabase
-                 .from('users')
-                 .select('first_name, last_name, email, phone, street, street_nr, zip, city')
-                 .eq('id', data.user_id)
-                 .single();
-               
-               if (!userError && userData) {
-                 logger.debug('✅ User data loaded:', userData);
-                 customerData.value = userData;
-               } else if (userError) {
-                 console.warn('❌ Could not load user data:', userError);
-               }
-             }
-           }
+          // Appointment details
+          if (response.appointmentDetails) {
+            appointmentStartTime.value = response.appointmentDetails.start_time;
+            appointmentEventTypeCode.value = response.appointmentDetails.event_type_code;
+            appointmentType.value = response.appointmentDetails.type;
+          }
+          
+          // Event type name
+          if (response.eventTypeName) {
+            appointmentEventTypeName.value = response.eventTypeName;
+          }
+          
+          // Customer data
+          if (response.customerData) {
+            customerData.value = response.customerData;
+            logger.debug('✅ Customer data loaded via API:', response.customerData);
+          }
         }
       } catch (e) {
-        console.warn('Could not load payment data');
+        console.warn('Could not load detailed data via API:', e);
       }
     }
-
-
-    
   } catch (error) {
     console.error('Error loading detailed data:', error);
   } finally {
@@ -763,109 +731,57 @@ const onModalOpen = () => {
   }
 };
 
-const editInvoice = async () => {
+// ✅ Status-Update-Funktionen via secure API
+const updateInvoiceStatus = async (action: string) => {
   try {
     if (!props.invoice?.id) return
     
-    // Status auf 'draft' setzen falls nicht bereits draft
-    if (props.invoice.status !== 'draft') {
-      const { getSupabase } = await import('~/utils/supabase')
-      const supabase = getSupabase()
-      
-      const { error } = await supabase
-        .from('invoices')
-        .update({ 
-          status: 'draft',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', props.invoice.id)
-      
-      if (error) throw error
-    }
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    // Event emittieren für Parent-Komponente
-    emit('edit', props.invoice.id)
+    if (!session?.access_token) return
     
+    await $fetch('/api/admin/invoice-update-status', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { invoice_id: props.invoice.id, action }
+    })
+    
+    return true
   } catch (error) {
-    console.error('Fehler beim Bearbeiten der Rechnung:', error)
+    console.error(`Fehler bei Aktion ${action}:`, error)
+    return false
   }
 }
 
+const editInvoice = async () => {
+  if (!props.invoice?.id) return
+  
+  if (props.invoice.status !== 'draft') {
+    await updateInvoiceStatus('draft')
+  }
+  emit('edit', props.invoice.id)
+}
+
 const sendInvoice = async () => {
-  try {
-    if (!props.invoice?.id) return
-    
-    // Status auf 'sent' setzen
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('invoices')
-      .update({ 
-        status: 'sent',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', props.invoice.id)
-    
-    if (error) throw error
-    
-    // Event emittieren für Parent-Komponente
+  if (!props.invoice?.id) return
+  if (await updateInvoiceStatus('sent')) {
     emit('send', props.invoice.id)
-    
-  } catch (error) {
-    console.error('Fehler beim Versenden der Rechnung:', error)
   }
 }
 
 const markAsPaid = async () => {
-  try {
-    if (!props.invoice?.id) return
-    
-    // Payment-Status auf 'paid' setzen
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('invoices')
-      .update({ 
-        payment_status: 'paid',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', props.invoice.id)
-    
-    if (error) throw error
-    
-    // Event emittieren für Parent-Komponente
+  if (!props.invoice?.id) return
+  if (await updateInvoiceStatus('paid')) {
     emit('markAsPaid', props.invoice.id)
-    
-  } catch (error) {
-    console.error('Fehler beim Markieren als bezahlt:', error)
   }
 }
 
 const cancelInvoice = async () => {
-  try {
-    if (!props.invoice?.id) return
-    
-    // Status auf 'cancelled' setzen
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    
-    const { error } = await supabase
-      .from('invoices')
-      .update({ 
-        status: 'cancelled',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', props.invoice.id)
-    
-    if (error) throw error
-    
-    // Event emittieren für Parent-Komponente
+  if (!props.invoice?.id) return
+  if (await updateInvoiceStatus('cancelled')) {
     emit('cancel', props.invoice.id)
-    
-  } catch (error) {
-    console.error('Fehler beim Stornieren der Rechnung:', error)
   }
 }
 
@@ -939,107 +855,8 @@ const metadataProducts = computed(() => {
   return parsedMetadata.value.products || [];
 });
 
-// Neue Funktion: Lade ALLE Zahlungen für eine Rechnung (inkl. gelöschte)
-const loadAllInvoicePayments = async (invoiceNumber: string) => {
-  if (!invoiceNumber) return [];
-  
-  try {
-    const { getSupabase } = await import('~/utils/supabase');
-    const supabase = getSupabase();
-    
-    // Lade ALLE Payments für diese Rechnung (inkl. gelöschte)
-    const { data: payments, error } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        appointment_id,
-        lesson_price_rappen,
-        admin_fee_rappen,
-        products_price_rappen,
-        discount_amount_rappen,
-        total_amount_rappen,
-        description,
-        metadata,
-        deleted_at
-      `)
-      .eq('invoice_number', invoiceNumber);
-    
-    if (error) {
-      console.warn('Fehler beim Laden aller Zahlungen:', error);
-      return [];
-    }
-    
-    allInvoicePayments.value = payments || [];
-    
-    // Berechne Total ohne stornierte Payments
-    const activePayments = (payments || []).filter(p => !p.deleted_at);
-    totalExcludingCancelled.value = activePayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0);
-    
-    return payments || [];
-  } catch (error) {
-    console.error('Fehler beim Laden aller Zahlungen:', error);
-    return [];
-  }
-};
-
-// Neue Funktion: Lade detaillierte Zahlungsdaten aus der payments Tabelle
-const loadPaymentDetails = async (appointmentId: string) => {
-  if (!appointmentId) return null;
-  
-  try {
-    const { getSupabase } = await import('~/utils/supabase');
-    const supabase = getSupabase();
-    
-    // Lade Zahlungsdaten aus der payments Tabelle
-    const { data: payment, error } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        lesson_price_rappen,
-        admin_fee_rappen,
-        products_price_rappen,
-        discount_amount_rappen,
-        total_amount_rappen,
-        description,
-        metadata
-      `)
-      .eq('appointment_id', appointmentId)
-      .single();
-    
-    if (error) {
-      // Falls keine Zahlung per appointment_id gefunden wird, versuche es per user_id
-      if (props.invoice?.user_id) {
-        const { data: fallbackPayment, error: fallbackError } = await supabase
-          .from('payments')
-          .select(`
-            id,
-            lesson_price_rappen,
-            admin_fee_rappen,
-            products_price_rappen,
-            discount_amount_rappen,
-            total_amount_rappen,
-            description,
-            metadata
-          `)
-          .eq('user_id', props.invoice.user_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (!fallbackError && fallbackPayment) {
-          return fallbackPayment;
-        }
-      }
-      console.warn('Fehler beim Laden der Zahlungsdaten:', error);
-      return null;
-    }
-    
-    return payment;
-  } catch (error) {
-    console.error('Fehler beim Laden der Zahlungsdaten:', error);
-    return null;
-  }
-};
+// ✅ Diese Funktionen wurden durch die API ersetzt
+// loadAllInvoicePayments und loadPaymentDetails werden jetzt von loadInvoicePayments und loadDetailedData abgedeckt
 
 
 
@@ -1147,50 +964,41 @@ const updateProductName = (index: number, event: Event) => {
   safeEditedInvoice.value.items[index].product_name = target.value;
 };
 
+// ✅ Speichere Änderungen via secure API
 const saveChanges = async () => {
   if (!editedInvoice.value || !props.invoice) return;
   
   isSaving.value = true;
   
   try {
-    
     const { getSupabase } = await import('~/utils/supabase');
     const supabase = getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    // Berechne den neuen Gesamtbetrag basierend auf den geänderten Daten
-    let newTotalAmount = props.invoice.subtotal_rappen;
-    
-    // Addiere Produktpreise
-    if (safeEditedInvoice.value.items) {
-      const productsTotal = safeEditedInvoice.value.items.reduce((sum, item) => {
-        return sum + (item.quantity * item.unit_price_rappen);
-      }, 0);
-      newTotalAmount += productsTotal;
+    if (!session?.access_token) {
+      throw new Error('Nicht authentifiziert');
     }
     
-    // Subtrahiere Rabatte
-    if (safeEditedInvoice.value.discount_amount_rappen) {
-      newTotalAmount -= safeEditedInvoice.value.discount_amount_rappen;
-    }
+    const paymentId = fallbackPayment.value?.id || props.invoice.id;
     
-    // Aktualisiere die Rechnung in der payments Tabelle
-    const { error } = await supabase
-      .from('payments')
-      .update({
-        billing_company_name: editedInvoice.value.billing_company_name,
-        billing_contact_person: editedInvoice.value.billing_contact_person,
-        billing_street: editedInvoice.value.billing_street,
-        billing_street_number: editedInvoice.value.billing_street_number,
-        billing_zip: editedInvoice.value.billing_zip,
-        billing_city: editedInvoice.value.billing_city,
-        billing_country: editedInvoice.value.billing_country,
-        billing_email: editedInvoice.value.billing_email,
-        notes: editedInvoice.value.notes,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', fallbackPayment.value?.id || props.invoice.id);
-    
-    if (error) throw error;
+    await $fetch('/api/admin/invoice-save', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: {
+        payment_id: paymentId,
+        update_data: {
+          billing_company_name: editedInvoice.value.billing_company_name,
+          billing_contact_person: editedInvoice.value.billing_contact_person,
+          billing_street: editedInvoice.value.billing_street,
+          billing_street_number: editedInvoice.value.billing_street_number,
+          billing_zip: editedInvoice.value.billing_zip,
+          billing_city: editedInvoice.value.billing_city,
+          billing_country: editedInvoice.value.billing_country,
+          billing_email: editedInvoice.value.billing_email,
+          notes: editedInvoice.value.notes
+        }
+      }
+    });
     
     // Aktualisiere die lokalen Daten nach dem Speichern
     if (fallbackPayment.value) {
@@ -1210,12 +1018,13 @@ const saveChanges = async () => {
     // Beende den Bearbeitungsmodus
     isEditing.value = false;
     
-    // Zeige Erfolgsmeldung
-    logger.debug('✅ Rechnungsdaten erfolgreich gespeichert');
+    // Emit updated event
+    emit('updated', props.invoice.id);
+    
+    logger.debug('✅ Rechnungsdaten erfolgreich gespeichert via API');
     
   } catch (error) {
     console.error('❌ Error saving invoice changes:', error);
-    // Hier könnte ein Toast oder eine Fehlermeldung angezeigt werden
   } finally {
     isSaving.value = false;
   }
