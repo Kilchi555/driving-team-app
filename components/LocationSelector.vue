@@ -543,44 +543,26 @@ const loadStudentPickupLocations = async (studentId: string) => {
 
 const savePickupLocation = async (locationData: any, studentId: string) => {
   try {
-    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
+    logger.debug('📤 Calling secure API to save pickup location')
+    
     const locationName = `${props.selectedStudentName} - ${locationData.name}`.trim()
     
-    const locationToSave = {
-      location_type: 'pickup',
-      user_id: studentId,
-      tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
-      name: locationName,
-      address: locationData.address,
-      latitude: locationData.latitude || null,
-      longitude: locationData.longitude || null,
-      google_place_id: locationData.place_id || null,
-      is_active: true
-    }
-    
-    logger.debug('📤 Saving pickup location:', locationToSave)
-    
-    const { data, error: saveError } = await supabase
-      .from('locations')
-      .insert(locationToSave)
-      .select()
-      .single()
+    // ✅ Call secure API instead of direct DB query
+    const { data, error: apiError } = await $fetch('/api/locations/create-pickup', {
+      method: 'POST',
+      body: {
+        name: locationName,
+        address: locationData.address,
+        latitude: locationData.latitude || null,
+        longitude: locationData.longitude || null,
+        place_id: locationData.place_id || null,
+        studentId: studentId
+      }
+    })
 
-    if (saveError) {
-      console.error('❌ Supabase Error:', saveError)
-      throw saveError
+    if (apiError) {
+      console.error('❌ API Error:', apiError)
+      throw new Error(apiError.message || 'Failed to save location')
     }
 
     const savedLocation = {
@@ -590,7 +572,7 @@ const savePickupLocation = async (locationData: any, studentId: string) => {
     }
     
     studentPickupLocations.value.push(savedLocation)
-    logger.debug('✅ Pickup location saved successfully:', savedLocation)
+    logger.debug('✅ Pickup location saved successfully via API:', savedLocation)
     return savedLocation
 
   } catch (err: any) {
@@ -760,92 +742,36 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       isLoadingGooglePlaces.value = false
       logger.debug('💾 Saved and selected new pickup location:', savedLocation.name)
     } else {
-      // Kein Student selected - speichere als Standard-Location für Staff
+      // Kein Student selected - zeige nur temporäre Location an, speichere nicht
       try {
         isLoadingGooglePlaces.value = true
         
-        // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Nicht angemeldet')
-
-        const { data: userProfile, error: profileError } = await supabase
-          .from('users')
-          .select('tenant_id')
-          .eq('auth_user_id', user.id)
-          .single()
-
-        if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-        if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-        
-        const locationToSave = {
-          location_type: 'standard',
-          user_id: null,
-          staff_ids: props.currentStaffId ? [props.currentStaffId] : [],  // ✅ STAFF_IDS als Array
-          tenant_id: userProfile.tenant_id,  // ✅ TENANT ID
-          name: locationData.name,
-          address: locationData.address,
-          latitude: locationData.latitude || null,
-          longitude: locationData.longitude || null,
-          google_place_id: locationData.place_id || null,
-          is_active: true
-        }
-        
-        logger.debug('📤 Saving standard location for staff:', locationToSave)
-        
-        const { data: savedLocation, error: saveError } = await supabase
-          .from('locations')
-          .insert(locationToSave)
-          .select()
-          .single()
-
-        if (saveError) {
-          console.error('❌ Supabase Error:', saveError)
-          throw saveError
-        }
-
-        const location = {
-          ...savedLocation,
-          address: savedLocation.address || '',
-          source: 'standard' as const
-        }
-        
-        // Füge zur Standard-Locations Liste hinzu
-        standardLocations.value.push(location)
-        
-        selectedLocationId.value = savedLocation.id
-        manualLocationInput.value = savedLocation.address || savedLocation.name
-        selectedCustomLocation.value = location
-        
-        emit('update:modelValue', savedLocation.id)
-        emit('locationSelected', location)
-        
-        logger.debug('✅ Standard location saved for staff:', savedLocation.name)
-        isLoadingGooglePlaces.value = false
-        
-      } catch (err: any) {
-        console.error('❌ Error saving standard location:', err)
-        error.value = `Fehler beim Speichern des Standorts: ${err.message}`
-        isLoadingGooglePlaces.value = false
-        
-        // Fallback: temporäre Location
+        // ✅ Nur temporäre Location anzeigen, NICHT speichern (kein Student = keine pickup location möglich)
         const tempLocation = {
           id: `temp_${Date.now()}`,
           name: locationData.name,
           address: locationData.address,
           place_id: locationData.place_id,
-          latitude: null,
-          longitude: null,
+          latitude: locationData.latitude || null,
+          longitude: locationData.longitude || null,
           location_type: 'pickup',
           source: 'google'
         }
         
+        selectedLocationId.value = tempLocation.id
+        manualLocationInput.value = tempLocation.address || tempLocation.name
         selectedCustomLocation.value = tempLocation
-        manualLocationInput.value = locationData.address
         
         emit('update:modelValue', null)
         emit('locationSelected', tempLocation)
         
-        logger.debug('⚠️ Fallback to temporary location:', tempLocation)
+        logger.debug('⚠️ Using temporary location (no student selected):', tempLocation)
+        isLoadingGooglePlaces.value = false
+        
+      } catch (err: any) {
+        console.error('❌ Error in temporary location:', err)
+        error.value = `Fehler bei der Adresse: ${err.message}`
+        isLoadingGooglePlaces.value = false
       }
     }
     
