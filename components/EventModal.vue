@@ -2302,11 +2302,6 @@ const loadCategoriesForEventModal = async () => {
           }
         }
       }
-      
-      // ✅ Trigger CategorySelector to reload categories if it's mounted
-      if (categorySelectorRef.value) {
-        await categorySelectorRef.value.loadCategories()
-      }
     }
   } catch (error) {
     console.error('❌ Error loading categories for EventModal:', error)

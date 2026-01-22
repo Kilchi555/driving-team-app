@@ -351,6 +351,19 @@
           </div>
         </div>
         
+        <!-- Gespeicherte Rechnungsadresse anzeigen (CREATE-Modus mit bestehender Adresse) -->
+        <div v-if="shouldShowSavedBillingAddress && !props.isEditMode" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm font-medium text-gray-700">Gespeicherte Rechnungsadresse</span>
+            <button 
+              @click="startEditingBillingAddress"
+              class="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Bearbeiten
+            </button>
+          </div>
+          <div class="text-sm text-gray-600 whitespace-pre-line">{{ formatStudentBillingAddress() }}</div>
+        </div>
 
         <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
         <div v-if="shouldShowBillingAddressForm" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -716,6 +729,50 @@ const formatInvoiceAddress = (): string => {
   
   if (invoiceAddr.vat_number) {
     lines.push(`UID: ${invoiceAddr.vat_number}`)
+  }
+  
+  return lines.join('\n') || 'Keine Adressdaten verfügbar'
+}
+
+// ✅ NEU: Format student billing address for display (CREATE-Modus)
+const formatStudentBillingAddress = (): string => {
+  const addr = studentBillingAddress.value
+  if (!addr) return 'Keine Rechnungsadresse gefunden'
+  
+  const lines = []
+  
+  if (addr.company_name) {
+    lines.push(addr.company_name)
+  }
+  
+  if (addr.contact_person) {
+    lines.push(addr.contact_person)
+  }
+  
+  if (addr.street && addr.street_number) {
+    lines.push(`${addr.street} ${addr.street_number}`)
+  } else if (addr.street) {
+    lines.push(addr.street)
+  }
+  
+  if (addr.zip && addr.city) {
+    lines.push(`${addr.zip} ${addr.city}`)
+  }
+  
+  if (addr.country && addr.country !== 'Schweiz') {
+    lines.push(addr.country)
+  }
+  
+  if (addr.email) {
+    lines.push(`E-Mail: ${addr.email}`)
+  }
+  
+  if (addr.phone) {
+    lines.push(`Tel: ${addr.phone}`)
+  }
+  
+  if (addr.vat_number) {
+    lines.push(`UID: ${addr.vat_number}`)
   }
   
   return lines.join('\n') || 'Keine Adressdaten verfügbar'
@@ -1521,16 +1578,18 @@ const shouldShowBillingAddressForm = computed(() => {
   const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
   const hasPaymentSelection = showPaymentSelection.value
   const isEditing = isEditingBillingAddress.value
+  const hasExistingAddress = !!studentBillingAddress.value
   
   // Formular soll angezeigt werden wenn:
-  // 1. Rechnung ausgewählt UND Payment-Auswahl sichtbar (neuer Termin)
-  // 2. ODER wenn gerade die Rechnungsadresse bearbeitet wird (Edit-Modus)
-  const result = isInvoiceSelected && (hasPaymentSelection || isEditing)
+  // 1. Rechnung ausgewählt UND gerade bearbeitet wird (Edit-Modus Button geklickt)
+  // 2. ODER Rechnung ausgewählt UND Payment-Auswahl sichtbar UND KEINE bestehende Adresse
+  const result = isInvoiceSelected && (isEditing || (hasPaymentSelection && !hasExistingAddress))
   
   logger.debug('📝 shouldShowBillingAddressForm check:', {
     isInvoiceSelected,
     hasPaymentSelection,
     isEditing,
+    hasExistingAddress,
     result
   })
   
