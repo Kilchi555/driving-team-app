@@ -1,6 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAuth } from '~/server/utils/auth'
-import { getSupabaseServerClient } from '~/server/utils/supabase-server'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ 3. TENANT ISOLATION: Verify user is in same tenant
-    const supabase = await getSupabaseServerClient(event)
+    const supabase = getSupabaseAdmin()
 
     const { data: targetUser, error: userError } = await supabase
       .from('users')
