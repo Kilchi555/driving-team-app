@@ -672,36 +672,46 @@ const roundToNearestFranken = (rappen: number): number => {
         .single()
       
       if (existingPayment && existingPayment.lesson_price_rappen > 0 && appointment) {
-        const lessonPrice = existingPayment.lesson_price_rappen || 0
-        const adminFee = existingPayment.admin_fee_rappen || 0
-        const total = existingPayment.total_amount_rappen || (lessonPrice + adminFee)
         const originalDuration = appointment.duration_minutes
         
-        logger.debug('✅ Edit-Mode: Using existing payment price:', {
-          lessonPrice: lessonPrice / 100,
-          adminFee: adminFee / 100,
-          total: total / 100,
-          originalDuration,
-          currentDuration: durationMinutes
-        })
-        
-        // Appointment count ermitteln für die Anzeige
-        let appointmentNumber = 1
-        if (userId) {
-          appointmentNumber = await getAppointmentCount(userId, categoryCode)
-        }
-        
-        return {
-          base_price_rappen: lessonPrice,
-          admin_fee_rappen: adminFee,
-          total_rappen: total,
-          base_price_chf: (lessonPrice / 100).toFixed(2),
-          admin_fee_chf: (adminFee / 100).toFixed(2),
-          total_chf: (total / 100).toFixed(2),
-          category_code: categoryCode,
-          duration_minutes: durationMinutes,
-          appointment_number: appointmentNumber,
-          original_duration_minutes: originalDuration // ✅ NEU: Original-Duration zurückgeben
+        // ✅ WICHTIG: Nur cached price verwenden, wenn Duration NICHT geändert wurde!
+        if (originalDuration === durationMinutes) {
+          const lessonPrice = existingPayment.lesson_price_rappen || 0
+          const adminFee = existingPayment.admin_fee_rappen || 0
+          const total = existingPayment.total_amount_rappen || (lessonPrice + adminFee)
+          
+          logger.debug('✅ Edit-Mode: Using existing payment price (duration unchanged):', {
+            lessonPrice: lessonPrice / 100,
+            adminFee: adminFee / 100,
+            total: total / 100,
+            originalDuration,
+            currentDuration: durationMinutes
+          })
+          
+          // Appointment count ermitteln für die Anzeige
+          let appointmentNumber = 1
+          if (userId) {
+            appointmentNumber = await getAppointmentCount(userId, categoryCode)
+          }
+          
+          return {
+            base_price_rappen: lessonPrice,
+            admin_fee_rappen: adminFee,
+            total_rappen: total,
+            base_price_chf: (lessonPrice / 100).toFixed(2),
+            admin_fee_chf: (adminFee / 100).toFixed(2),
+            total_chf: (total / 100).toFixed(2),
+            category_code: categoryCode,
+            duration_minutes: durationMinutes,
+            appointment_number: appointmentNumber,
+            original_duration_minutes: originalDuration
+          }
+        } else {
+          logger.debug('⚠️ Edit-Mode: Duration changed, recalculating price with rounding rules:', {
+            originalDuration,
+            newDuration: durationMinutes
+          })
+          // Fall through to normal calculation with rounding rules
         }
       } else {
         logger.debug('⚠️ Edit-Mode: No existing payment found, will calculate new price')

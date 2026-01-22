@@ -1088,7 +1088,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
           // Get the payment record for this appointment
           const { data: payments, error: paymentFetchError } = await supabase
             .from('payments')
-            .select('id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, discount_amount_rappen')
+            .select('id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, discount_amount_rappen, payment_status')
             .eq('appointment_id', result.id)
             .single()
           
@@ -1099,14 +1099,23 @@ const useEventModalForm = (currentUser?: any, refs?: {
               + (productResult.totalProductsPriceRappen || 0) 
               - (payments.discount_amount_rappen || 0)
             
+            // ✅ Prepare update data
+            const paymentUpdateData: any = {
+              products_price_rappen: productResult.totalProductsPriceRappen,
+              total_amount_rappen: Math.max(0, newTotal),
+              updated_at: new Date().toISOString()
+            }
+            
+            // ✅ IMMER den aktuellen payment_status beibehalten!
+            if (payments.payment_status) {
+              paymentUpdateData.payment_status = payments.payment_status
+              logger.debug('✅ Preserving payment status in products update:', payments.payment_status)
+            }
+            
             // Update payment with products price
             const { error: updateError } = await supabase
               .from('payments')
-              .update({
-                products_price_rappen: productResult.totalProductsPriceRappen,
-                total_amount_rappen: Math.max(0, newTotal),
-                updated_at: new Date().toISOString()
-              })
+              .update(paymentUpdateData)
               .eq('appointment_id', result.id)
             
             if (updateError) {
@@ -1643,7 +1652,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       // userData already fetched at the start of this function
       
-      const updateData = {
+      const updateData: any = {
         lesson_price_rappen: lessonPriceRappen,
         products_price_rappen: productsPriceRappen,
         discount_amount_rappen: discountAmountRappen,
@@ -1654,6 +1663,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
         company_billing_address_id: companyBillingAddressId || null,
         invoice_address: invoiceAddress,
         updated_at: new Date().toISOString()
+      }
+      
+      // ✅ WICHTIG: IMMER den aktuellen payment_status aus der DB beibehalten!
+      // Der Status sollte nur von der Payment-Logik geändert werden, nicht vom Appointment-Edit!
+      logger.debug('📋 Existing payment status from DB:', existingPayment.payment_status)
+      if (existingPayment.payment_status) {
+        updateData.payment_status = existingPayment.payment_status
+        logger.debug('✅ Preserving payment status:', existingPayment.payment_status)
       }
       
       logger.debug('💳 Updating payment entry:', updateData)
