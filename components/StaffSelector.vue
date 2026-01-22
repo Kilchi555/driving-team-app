@@ -272,14 +272,25 @@ const loadStaff = async () => {
   try {
     logger.debug('👥 StaffSelector: Loading staff members via API...')
     
+    // ✅ Get auth token
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
+    }
+    
     // ✅ Build query params
     const queryParams = new URLSearchParams()
     if (props.excludeCurrentUser && props.currentUser?.id) {
       queryParams.set('excludeUserId', props.currentUser.id)
     }
     
-    // ✅ Call secure API
-    const response = await $fetch(`/api/staff/get-team-members?${queryParams.toString()}`)
+    // ✅ Call secure API with auth header
+    const response = await $fetch(`/api/staff/get-team-members?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
     
     if (!response || !response.staff) {
       throw new Error('Invalid API response')

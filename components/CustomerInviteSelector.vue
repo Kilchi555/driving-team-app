@@ -700,8 +700,7 @@ defineExpose({
   clearAll,
   resetSelection,
   createInvitedCustomers,
-  toggleExpanded,
-  loadCategories
+  toggleExpanded
 })
 </script>
 
