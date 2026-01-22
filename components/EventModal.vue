@@ -636,6 +636,10 @@ import { usePricing } from '~/composables/usePricing'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useProductSale } from '~/composables/useProductSale'
 import { useProducts } from '~/composables/useProducts'
+import { useEventModalApi } from '~/composables/useEventModalApi'
+
+// ✅ Initialize secure API layer
+const eventModalApi = useEventModalApi()
 import { useStaffAvailability, type StaffAvailability } from '~/composables/useStaffAvailability'
 import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
 import { useStudentCredits } from '~/composables/useStudentCredits'
@@ -1011,14 +1015,9 @@ const handleSaveAppointment = async () => {
         user_id: props.eventData.user_id || props.eventData.extendedProps?.user_id
       }
       
-      // ✅ WICHTIG: Lade den ORIGINAL Payment-Preis BEVOR dem Save!
+      // ✅ WICHTIG: Lade den ORIGINAL Payment-Preis BEVOR dem Save via secure API!
       try {
-        const supabase = getSupabase()
-        const { data: payment } = await supabase
-          .from('payments')
-          .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, total_amount_rappen, payment_status')
-          .eq('appointment_id', props.eventData.id)
-          .maybeSingle()
+        const payment = await eventModalApi.getPaymentByAppointment(props.eventData.id)
         
         if (payment) {
           originalPaymentData = payment
@@ -1030,7 +1029,7 @@ const handleSaveAppointment = async () => {
           })
         }
       } catch (err) {
-        logger.warn('Could not load original payment data')
+        logger.warn('Could not load original payment data via API')
       }
       
       logger.debug('📋 Original appointment data for duration check:', {
@@ -1660,16 +1659,12 @@ const handleStaffChanged = async (event: Event) => {
   // Wenn ein Schüler ausgewählt ist, können wir den Titel aktualisieren
   if (selectedStudent.value && formData.value.staff_id) {
     try {
-      // Lade den neuen Staff-Namen
-      const { data: staffData, error: staffError } = await supabase
-        .from('users')
-        .select('first_name, last_name')
-        .eq('id', formData.value.staff_id)
-        .single()
+      // ✅ Lade den neuen Staff-Namen via secure API
+      const staffData = await eventModalApi.getUser(formData.value.staff_id)
       
-      if (!staffError && staffData) {
+      if (staffData) {
         const staffName = `${staffData.first_name} ${staffData.last_name}`.trim()
-        logger.debug('✅ Staff name loaded:', staffName)
+        logger.debug('✅ Staff name loaded via API:', staffName)
         
         // Aktualisiere den Titel falls nötig
         if (formData.value.title && !formData.value.title.includes(staffName)) {
@@ -1708,27 +1703,16 @@ const loadAvailableStaff = async () => {
       return
     }
     
-    const { data: allStaff, error: staffError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, role, tenant_id')
-      .eq('role', 'staff') // Nur Staff-Rolle
-      .eq('tenant_id', currentUserTenantId) // Nur Staff vom gleichen Tenant
-      .eq('is_active', true) // Nur aktive Benutzer
-      .order('first_name')
-    
-    if (staffError) {
-      console.error('❌ Error loading staff from database:', staffError)
-      availableStaff.value = []
-      return
-    }
+    // ✅ Load staff list via secure API
+    const allStaff = await eventModalApi.getStaffList(true)
     
     if (!allStaff || allStaff.length === 0) {
-      logger.debug('⚠️ No staff members found in database')
+      logger.debug('⚠️ No staff members found via API')
       availableStaff.value = []
       return
     }
     
-    logger.debug('👥 Found staff members in database:', allStaff.length)
+    logger.debug('👥 Found staff members via API:', allStaff.length)
     
     // ✅ Check availability if we have time data
     let staffWithAvailability = []
@@ -2261,18 +2245,13 @@ const loadDefaultDurations = async () => {
   await nextTick()
 }
 
-// ✅ Load categories for EventModal to ensure they are available immediately
+// ✅ Load categories for EventModal to ensure they are available immediately via secure API
 const loadCategoriesForEventModal = async () => {
   try {
-    const supabase = getSupabase()
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('code', { ascending: true })
+    const categoryData = await eventModalApi.getCategories()
     
-    if (categoryError) {
-      console.error('❌ Error loading categories for EventModal:', categoryError)
+    if (!categoryData) {
+      console.error('❌ Error loading categories via API')
       return
     }
     
@@ -2395,48 +2374,20 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
     isLoadingAdminFee.value = true
     logger.debug('🧮 Calculating admin fee for:', { categoryCode, studentId })
 
-    // 1. Zähle bestehende NICHT-stornierte Termine für diesen Schüler + Kategorie
-    const { data: existingAppointments, error: countError } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('user_id', studentId)
-      .eq('type', categoryCode)
-      .neq('status', 'cancelled') // ✅ WICHTIG: Stornierte Termine ausschließen
-      .neq('status', 'deleted')   // ✅ Auch gelöschte Termine ausschließen
-
-    if (countError) {
-      console.error('❌ Error counting appointments:', countError)
-      calculatedAdminFee.value = 0
-      return
-    }
-
-    const appointmentCount = existingAppointments?.length || 0
-    logger.debug('📊 Existing appointments count:', appointmentCount)
+    // 1. Zähle bestehende NICHT-stornierte Termine für diesen Schüler + Kategorie via secure API
+    const appointmentCount = await eventModalApi.countStudentAppointments(studentId, categoryCode)
+    logger.debug('📊 Existing appointments count via API:', appointmentCount)
 
     // 2. Admin-Fee ab dem 2. Termin (also wenn bereits >= 1 Termine existieren)
     if (appointmentCount >= 1) {
-      // 3. Admin-Fee aus pricing_rules Tabelle holen
-      const { data: pricingRule, error: pricingError } = await supabase
-        .from('pricing_rules')
-        .select('admin_fee_rappen, admin_fee_applies_from')
-        .eq('category_code', categoryCode)
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle()
-
-      if (pricingError) {
-        console.error('❌ Error loading pricing rule:', pricingError)
-        // Fallback: Standard Admin-Fee von CHF 5.00
-        calculatedAdminFee.value = 5.00
-        logger.debug('⚠️ Using fallback admin fee: CHF 5.00')
-        return
-      }
+      // 3. Admin-Fee via secure API holen
+      const pricingRule = await eventModalApi.getPricingRuleByCategory(categoryCode)
 
       const adminFeeRappen = pricingRule?.admin_fee_rappen || 500 // Fallback 500 rappen = CHF 5.00
       const adminFeeChf = adminFeeRappen / 100
 
       calculatedAdminFee.value = adminFeeChf
-      logger.debug('✅ Admin fee calculated:', {
+      logger.debug('✅ Admin fee calculated via API:', {
         appointmentCount,
         adminFeeRappen,
         adminFeeChf,
@@ -2492,18 +2443,12 @@ const handleStudentSelected = async (student: Student | null) => {
     logger.debug('✅ staff_id gesetzt bei Student-Auswahl:', currentUser.value.id)
   }
   
-  // ✅ NEU: Load default event type if not already set (create mode only)
+  // ✅ NEU: Load default event type via secure API if not already set (create mode only)
   if (props.mode === 'create' && !formData.value.selectedSpecialType && currentUser.value?.tenant_id) {
     try {
-      const { data: defaultEventType, error } = await supabase
-        .from('event_types')
-        .select('code, name, default_duration_minutes')
-        .eq('tenant_id', currentUser.value.tenant_id)
-        .eq('is_default', true)
-        .eq('is_active', true)
-        .maybeSingle()
+      const defaultEventType = await eventModalApi.getDefaultEventType()
       
-      if (!error && defaultEventType) {
+      if (defaultEventType) {
         // Check if it's a lesson type or other type
         if (defaultEventType.code === 'lesson') {
           // Keep as lesson, don't show EventTypeSelector
@@ -2560,49 +2505,26 @@ const handleStudentSelected = async (student: Student | null) => {
     })
   }
   
-  // ✅ NEU: Kategorie aus dem letzten Termin des Schülers laden
+  // ✅ NEU: Kategorie aus dem letzten Termin des Schülers laden via secure API
   // 🚫 ABER NICHT bei Freeslot-Modus - dort soll der User die Kategorie selbst wählen
   if (student?.id && !(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')) {
     try {
-      logger.debug('🔄 Loading last appointment category for student:', student.first_name)
+      logger.debug('🔄 Loading last appointment category for student via API:', student.first_name)
       
-      // Suche nach dem letzten Termin des Schülers
-      const { data: lastAppointment, error } = await supabase
-        .from('appointments')
-        .select('type, event_type_code, start_time')
-        .eq('user_id', student.id)
-        .order('start_time', { ascending: false })
-        .limit(1)
-        .single()
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 = keine Ergebnisse
-        throw error
-      }
+      // Suche nach dem letzten Termin des Schülers via secure API
+      const lastAppointment = await eventModalApi.getLastStudentAppointment(student.id)
       
       if (lastAppointment && lastAppointment.type) {
-        logger.debug('✅ Last appointment category found:', lastAppointment.type)
+        logger.debug('✅ Last appointment category found via API:', lastAppointment.type)
         formData.value.type = lastAppointment.type
         
-        // ✅ Kategorie-Daten aus DB laden für Dauer-Berechnung
+        // ✅ Kategorie-Daten aus API laden für Dauer-Berechnung (tenant-isoliert)
         try {
-          let categoryQuery = supabase
-            .from('categories')
-            .select('code, lesson_duration_minutes, exam_duration_minutes')
-            .eq('code', lastAppointment.type)
-            .eq('is_active', true)
-          
-          // ✅ WICHTIG: Auch nach tenant_id filtern
-          if (currentUser.value?.tenant_id) {
-            categoryQuery = categoryQuery.eq('tenant_id', currentUser.value.tenant_id)
-          }
-          
-          const { data: categoryData, error: categoryError } = await categoryQuery.maybeSingle()
-          
-          if (categoryError) throw categoryError
+          const categoryData = await eventModalApi.getCategoryByCode(lastAppointment.type)
           
           if (categoryData) {
             selectedCategory.value = categoryData
-            logger.debug('✅ Category data loaded from last appointment:', categoryData)
+            logger.debug('✅ Category data loaded via API:', categoryData)
             
             // ✅ Dauer basierend auf event_type_code setzen
             if (lastAppointment.event_type_code === 'exam') {
@@ -2641,16 +2563,12 @@ const handleStudentSelected = async (student: Student | null) => {
                 logger.debug('🔄 Updating location to student\'s last used location:', lastLocation.location_id)
                 formData.value.location_id = lastLocation.location_id
                 
-                // ✅ Auch selectedLocation aktualisieren
-                const { data: locationData, error: locationError } = await supabase
-                  .from('locations')
-                  .select('*')
-                  .eq('id', lastLocation.location_id)
-                  .single()
+                // ✅ Auch selectedLocation via secure API aktualisieren
+                const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
                 
-                if (!locationError && locationData) {
+                if (locationData) {
                   selectedLocation.value = locationData
-                  logger.debug('✅ Location updated to student\'s last used location:', locationData.name)
+                  logger.debug('✅ Location updated via API:', locationData.name)
                 }
               }
             } catch (locationError) {
@@ -2742,17 +2660,13 @@ const handleStudentSelected = async (student: Student | null) => {
       // 2. Letzten Standort für diesen Schüler laden
       const lastLocation = await modalForm.loadLastAppointmentLocation(student.id)
       if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
-        logger.debug('🔄 Updating location to student\'s last used:', lastLocation.location_id)
+        logger.debug('🔄 Updating location to student\'s last used via API:', lastLocation.location_id)
         formData.value.location_id = lastLocation.location_id
         
-        // ✅ Auch selectedLocation aktualisieren
-        const { data: locationData, error: locationError } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('id', lastLocation.location_id)
-          .single()
+        // ✅ Auch selectedLocation via secure API aktualisieren
+        const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
         
-        if (!locationError && locationData) {
+        if (locationData) {
           // ✅ NEU: Füge die custom_location_address hinzu, falls verfügbar
           if (lastLocation.custom_location_address) {
             locationData.custom_location_address = lastLocation.custom_location_address
@@ -2760,7 +2674,7 @@ const handleStudentSelected = async (student: Student | null) => {
           }
           
           selectedLocation.value = locationData
-          logger.debug('✅ Location updated to student\'s last used location:', locationData.name)
+          logger.debug('✅ Location updated via API:', locationData.name)
           
           // ✅ Titel neu generieren nach Standort-Änderung
           nextTick(() => {
@@ -2965,34 +2879,15 @@ const handleLessonTypeSelected = async (lessonType: any) => {
       availableDurations.value = [examDuration]
       logger.debug('📝 Set exam duration:', examDuration)
     } else if (lessonType.code === 'lesson') {
-      logger.debug('🚗 Fahrstunde erkannt: Lade lesson_duration_minutes aus DB')
+      logger.debug('🚗 Fahrstunde erkannt: Lade lesson_duration_minutes via secure API')
       
-      // ✅ WICHTIG: Dauern direkt aus der Datenbank laden, nicht aus selectedCategory
+      // ✅ WICHTIG: Dauern via API laden (bereits tenant-isoliert)
       if (formData.value.type && currentUser.value?.id) {
         try {
-          // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-          const { data: { user } } = await supabase.auth.getUser()
-          if (!user) throw new Error('Nicht angemeldet')
-
-          const { data: userProfile, error: profileError } = await supabase
-            .from('users')
-            .select('tenant_id')
-            .eq('auth_user_id', user.id)
-            .single()
-
-          if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-          if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+          // ✅ Lade Kategorie via secure API (tenant-isoliert)
+          const categoryData = await eventModalApi.getCategoryByCode(formData.value.type)
           
-          // Lade Kategorie-Dauern direkt aus der categories Tabelle mit Tenant-Filter
-          const { data: categoryData, error } = await supabase
-            .from('categories')
-            .select('lesson_duration_minutes')
-            .eq('code', formData.value.type)
-            .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
-            .eq('is_active', true)
-            .single()
-          
-          if (!error && categoryData?.lesson_duration_minutes) {
+          if (categoryData?.lesson_duration_minutes) {
             // String-Array zu Number-Array konvertieren
             let lessonDurations = categoryData.lesson_duration_minutes
             if (Array.isArray(lessonDurations)) {
@@ -3006,7 +2901,7 @@ const handleLessonTypeSelected = async (lessonType: any) => {
             }
             
             availableDurations.value = lessonDurations
-            logger.debug('✅ Lesson durations loaded from DB:', lessonDurations)
+            logger.debug('✅ Lesson durations loaded via API:', lessonDurations)
             
             // ✅ Intelligente Dauer-Auswahl
             const currentDuration = formData.value.duration_minutes
@@ -3024,12 +2919,12 @@ const handleLessonTypeSelected = async (lessonType: any) => {
               }
             }
           } else {
-            logger.debug('⚠️ Could not load durations from DB, using fallback')
+            logger.debug('⚠️ Could not load durations via API, using fallback')
             availableDurations.value = [45]
             formData.value.duration_minutes = 45
           }
         } catch (err) {
-          console.error('❌ Error loading lesson durations:', err)
+          console.error('❌ Error loading lesson durations via API:', err)
           availableDurations.value = [45]
           formData.value.duration_minutes = 45
         }
@@ -3106,16 +3001,8 @@ const handleDurationChanged = async (newDuration: number) => {
   
   // ✅ NEW: If this is edit mode with paid payment, check if duration increase is attempted
   if (props.mode === 'edit' && props.eventData?.id && oldDuration !== newDuration) {
-    const supabase = getSupabase()
-    
-    // Get payment status
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, payment_status')
-      .eq('appointment_id', props.eventData.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // Get payment status via secure API
+    const payment = await eventModalApi.getPaymentByAppointment(props.eventData.id)
     
     // If paid and trying to INCREASE duration, show error and reset
     if (payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')) {
@@ -3459,24 +3346,20 @@ const handleCustomersCleared = () => {
   invitedCustomers.value = []
 }
 
+// ✅ Load category data via secure API
 const loadCategoryData = async (categoryCode: string) => {
   try {
-    logger.debug('🔄 Loading category data for:', categoryCode)
-    const { data, error } = await supabase
-      .from('categories')
-      .select('code, lesson_duration_minutes, exam_duration_minutes')
-      .eq('code', categoryCode)
-      .eq('is_active', true)
-      .single()
+    logger.debug('🔄 Loading category data via API for:', categoryCode)
+    const data = await eventModalApi.getCategoryByCode(categoryCode)
     
-    if (error) throw error
+    if (!data) throw new Error('Category not found')
     
     selectedCategory.value = data
-    logger.debug('✅ Category data loaded:', data)
+    logger.debug('✅ Category data loaded via API:', data)
     
     return data
   } catch (err) {
-    console.error('❌ Error loading category:', err)
+    console.error('❌ Error loading category via API:', err)
     selectedCategory.value = null
     return null
   }
@@ -3598,11 +3481,11 @@ const handleDelete = async () => {
   showCancellationReasonModal.value = true
 }
 
-// ✅ SOFT-DELETE OHNE PAYMENT-LÖSCHUNG (für Kostenverrechnung)
+// ✅ SOFT-DELETE OHNE PAYMENT-LÖSCHUNG (für Kostenverrechnung) via secure API
 const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, status: string = 'cancelled') => {
   if (!props.eventData?.id) return
   
-  logger.debug('🗑️ Performing soft delete WITHOUT payment cleanup for appointment:', props.eventData.id)
+  logger.debug('🗑️ Performing soft delete WITHOUT payment cleanup via API:', props.eventData.id)
   logger.debug('🗑️ Deletion reason:', deletionReason)
   logger.debug('🗑️ Status:', status)
   logger.debug('🗑️ Current user:', props.currentUser?.id)
@@ -3610,7 +3493,7 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
   try {
     isLoading.value = true
     
-    // ✅ NUR den Termin als gelöscht markieren, KEINE Payments löschen
+    // ✅ NUR den Termin als gelöscht markieren via secure API, KEINE Payments löschen
     const updateData = {
       deleted_at: new Date().toISOString(),
       deleted_by: props.currentUser?.id,
@@ -3620,17 +3503,14 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
     
     logger.debug('🗑️ Update data:', updateData)
     
-    const { error: updateError } = await supabase
-      .from('appointments')
-      .update(updateData)
-      .eq('id', props.eventData.id)
+    const updateResult = await eventModalApi.updateAppointment(props.eventData.id, { update_data: updateData })
     
-    if (updateError) {
-      console.error('❌ Error updating appointment:', updateError)
-      throw updateError
+    if (!updateResult) {
+      console.error('❌ Failed to update appointment via API')
+      throw new Error('Failed to soft delete appointment')
     }
     
-    logger.debug('✅ Appointment soft deleted successfully (without payment cleanup)')
+    logger.debug('✅ Appointment soft deleted successfully via API (without payment cleanup)')
     
     // ✅ Schließe das Modal
     emit('close')
@@ -3655,21 +3535,15 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
   try {
     isLoading.value = true
     
-    // ✅ SCHRITT 1: Hole Payment-Infos für Refund-Berechnung
-    logger.debug('💳 Fetching payment for appointment:', props.eventData.id)
+    // ✅ SCHRITT 1: Hole Payment-Infos für Refund-Berechnung via secure API
+    logger.debug('💳 Fetching payment for appointment via API:', props.eventData.id)
     
-    const { data: payments, error: getPaymentError } = await supabase
-      .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
-      .eq('appointment_id', props.eventData.id)
+    const payment = await eventModalApi.getPaymentByAppointment(props.eventData.id)
     
     let lessonPriceRappen = 0
     let adminFeeRappen = 0
     
-    if (getPaymentError) {
-      console.warn('⚠️ Could not fetch payment:', getPaymentError)
-    } else if (payments && payments.length > 0) {
-      const payment = payments[0]
+    if (payment) {
       logger.debug('📋 Current payment:', payment)
       lessonPriceRappen = payment.lesson_price_rappen || 0
       adminFeeRappen = payment.admin_fee_rappen || 0
@@ -3692,8 +3566,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           shouldCreditHours: cancellationPolicyResult.value?.shouldCreditHours || false,
           chargePercentage: cancellationPolicyResult.value?.chargePercentage || 100,
           // ✅ NEW: Pass the original payment info for full refund calculation
-          originalLessonPrice: payments?.[0]?.lesson_price_rappen || lessonPriceRappen,
-          originalAdminFee: payments?.[0]?.admin_fee_rappen || adminFeeRappen
+          originalLessonPrice: payment?.lesson_price_rappen || lessonPriceRappen,
+          originalAdminFee: payment?.admin_fee_rappen || adminFeeRappen
         }
       })
       
@@ -3708,31 +3582,27 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       // Continue anyway - still delete the appointment
     }
     
-    // ✅ SCHRITT 2: Update Payment - setze lesson_price auf 0 und admin_fee auf 0
-    if (payments && payments.length > 0) {
-      const payment = payments[0]
+    // ✅ SCHRITT 2: Update Payment via secure API - setze lesson_price auf 0 und admin_fee auf 0
+    if (payment) {
       const newTotalRappen = (payment.products_price_rappen || 0) - (payment.discount_amount_rappen || 0)
       
-      const { error: updatePaymentError } = await supabase
-        .from('payments')
-        .update({
-          lesson_price_rappen: 0,
-          admin_fee_rappen: 0,
-          total_amount_rappen: Math.max(newTotalRappen, 0)
-        })
-        .eq('id', payment.id)
+      const updateResult = await eventModalApi.updatePayment(payment.id, {
+        lesson_price_rappen: 0,
+        admin_fee_rappen: 0,
+        total_amount_rappen: Math.max(newTotalRappen, 0)
+      })
       
-      if (updatePaymentError) {
-        console.warn('⚠️ Could not update payment:', updatePaymentError)
+      if (!updateResult) {
+        console.warn('⚠️ Could not update payment via API')
       } else {
-        logger.debug('✅ Payment updated - lesson_price and admin_fee removed, total recalculated')
+        logger.debug('✅ Payment updated via API - lesson_price and admin_fee removed, total recalculated')
       }
     }
     
     // ✅ WICHTIG: Product sales NICHT löschen! Sie bleiben für die Kostenverrechnung erhalten!
     logger.debug('ℹ️ Product sales are NOT deleted - keeping them for accounting purposes')
     
-    // ✅ SCHRITT 3: SOFT DELETE: Termin als gelöscht markieren
+    // ✅ SCHRITT 3: SOFT DELETE via secure API: Termin als gelöscht markieren
     const eventType = props.eventData.type || props.eventData.event_type_code
     const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
     
@@ -3746,18 +3616,14 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     logger.debug('🗑️ Update data:', updateData)
     logger.debug('🎯 Event type:', eventType, 'isOtherEventType:', isOtherEventType)
     
-    const { data, error } = await supabase
-      .from('appointments')
-      .update(updateData)
-      .eq('id', props.eventData.id)
-      .select('id, deleted_at, deleted_by, status, deletion_reason')
+    const updateResult = await eventModalApi.updateAppointment(props.eventData.id, { update_data: updateData })
     
-    if (error) {
-      console.error('❌ Database error:', error)
-      throw error
+    if (!updateResult) {
+      console.error('❌ Failed to update appointment via API')
+      throw new Error('Failed to soft delete appointment')
     }
     
-    logger.debug('✅ Appointment soft deleted successfully:', data)
+    logger.debug('✅ Appointment soft deleted successfully via API:', updateResult)
     logger.debug('✅ Status set to:', status)
     logger.debug('✅ Deletion reason:', deletionReason)
     logger.debug('✅ Database response:', data)
@@ -4020,8 +3886,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       return
     }
     
-    // ✅ For non-lesson types (VKU, etc.): Simple soft delete without payment handling
-    logger.debug('ℹ️ Non-lesson type - performing simple soft delete')
+    // ✅ For non-lesson types (VKU, etc.): Simple soft delete without payment handling via secure API
+    logger.debug('ℹ️ Non-lesson type - performing simple soft delete via API')
     
     const updateData: any = {
       status: 'cancelled',
@@ -4032,16 +3898,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       deleted_by: props.currentUser?.id
     }
     
-    const { error: updateError } = await supabase
-      .from('appointments')
-      .update(updateData)
-      .eq('id', props.eventData.id)
+    const updateResult = await eventModalApi.updateAppointment(props.eventData.id, { update_data: updateData })
     
-    if (updateError) {
-      throw updateError
+    if (!updateResult) {
+      throw new Error('Failed to cancel appointment via API')
     }
     
-    logger.debug('✅ Non-lesson appointment cancelled successfully')
+    logger.debug('✅ Non-lesson appointment cancelled successfully via API')
     
     // Show success notification
     uiStore.addNotification({
@@ -4346,24 +4209,21 @@ const filteredCancellationReasons = computed(() => {
 const appointmentPrice = ref(0)
 
 // Funktion zum Laden des Preises aus der payments Tabelle
+// ✅ Load appointment price via secure API
 const loadAppointmentPrice = async (appointmentId: string) => {
   try {
-    const { data: payment, error } = await supabase
-      .from('payments')
-      .select('lesson_price_rappen')
-      .eq('appointment_id', appointmentId)
-      .single()
+    const payment = await eventModalApi.getPaymentByAppointment(appointmentId)
     
-    if (error) {
-      logger.debug('⚠️ No payment found for appointment:', appointmentId, error.message)
+    if (!payment) {
+      logger.debug('⚠️ No payment found for appointment via API:', appointmentId)
       return 0
     }
     
     const price = payment?.lesson_price_rappen || 0
-    logger.debug('💰 Loaded appointment price from payments:', price)
+    logger.debug('💰 Loaded appointment price via API:', price)
     return price
   } catch (err) {
-    console.error('❌ Error loading appointment price:', err)
+    console.error('❌ Error loading appointment price via API:', err)
     return 0
   }
 }
@@ -4458,24 +4318,16 @@ const markInvoiceAsPaid = async () => {
   if (!cancellationInvoiceData.value?.id) return
   
   try {
-    logger.debug('💰 Marking invoice as paid:', cancellationInvoiceData.value.id)
+    logger.debug('💰 Marking invoice as paid via API:', cancellationInvoiceData.value.id)
     
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString()
-      })
-      .eq('id', cancellationInvoiceData.value.id)
-      .select()
-      .single()
+    const data = await eventModalApi.markInvoiceAsPaid(cancellationInvoiceData.value.id)
     
-    if (error) {
-      console.error('❌ Error updating invoice:', error)
+    if (!data) {
+      console.error('❌ Error updating invoice via API')
       return
     }
     
-    logger.debug('✅ Invoice marked as paid:', data)
+    logger.debug('✅ Invoice marked as paid via API:', data)
     
     // ✅ Aktualisiere die lokalen Daten
     cancellationInvoiceData.value = {
@@ -4492,30 +4344,16 @@ const markInvoiceAsPaid = async () => {
 // ✅ Funktion zum Anzeigen des Payment Status Modals
 const showPaymentStatus = async (appointmentId: string) => {
   try {
-    logger.debug('🔍 Loading payment status for appointment:', appointmentId)
+    logger.debug('🔍 Loading payment status via API for appointment:', appointmentId)
     
-    // ✅ Lade die Stornierungs-Rechnung für diesen Termin
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .select('*')
-      .eq('appointment_id', appointmentId)
-      .eq('invoice_type', 'cancellation_fee')
-      .single()
-    
-    if (error) {
-      console.error('❌ Error loading invoice:', error)
-      return
-    }
+    // ✅ Lade die Stornierungs-Rechnung via secure API
+    const invoice = await eventModalApi.getInvoice(appointmentId, 'cancellation_fee')
     
     if (invoice) {
-      // ✅ Lade zusätzliche Termin-Daten
-      const { data: appointment, error: aptError } = await supabase
-        .from('appointments')
-        .select('title, start_time')
-        .eq('id', appointmentId)
-        .single()
+      // ✅ Lade zusätzliche Termin-Daten via secure API
+      const appointment = await eventModalApi.getAppointment(appointmentId)
       
-      if (!aptError && appointment) {
+      if (appointment) {
         cancellationInvoiceData.value = {
           ...invoice,
           appointment_title: appointment.title,
@@ -4523,7 +4361,7 @@ const showPaymentStatus = async (appointmentId: string) => {
         }
         
         showPaymentStatusModal.value = true
-        logger.debug('✅ Payment status modal opened')
+        logger.debug('✅ Payment status modal opened via API')
       }
     } else {
       logger.debug('ℹ️ No cancellation invoice found for appointment')
@@ -4577,30 +4415,26 @@ const initializeFormData = async () => {
     logger.debug(`✅ Default availableDurations set to [${fallbackDuration}]`)
   }
 
-  // ✅ WICHTIG: Location vom letzten Termin laden falls nicht vorhanden
+  // ✅ WICHTIG: Location vom letzten Termin laden falls nicht vorhanden via secure API
   if (!formData.value.location_id && props.currentUser?.id) {
     try {
-      logger.debug('📍 Loading last location for current user...')
+      logger.debug('📍 Loading last location for current user via API...')
       const lastLocation = await modalForm.loadLastAppointmentLocation()
       
       if (lastLocation.location_id) {
         formData.value.location_id = lastLocation.location_id
         logger.debug('✅ Last location loaded:', lastLocation.location_id)
         
-        // Auch selectedLocation für UI setzen
-        const { data: locationData, error: locationError } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('id', lastLocation.location_id)
-          .single()
+        // Auch selectedLocation via secure API für UI setzen
+        const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
         
-        if (!locationError && locationData) {
+        if (locationData) {
           selectedLocation.value = locationData
-          logger.debug('✅ Location data loaded for UI:', locationData.name)
+          logger.debug('✅ Location data loaded via API for UI:', locationData.name)
         }
       }
     } catch (locationError) {
-      logger.debug('⚠️ Could not load last location:', locationError)
+      logger.debug('⚠️ Could not load last location via API:', locationError)
     }
   }
 
@@ -4688,21 +4522,16 @@ const initializeFormData = async () => {
           formData.value.location_id = lastLocation.location_id
           logger.debug('✅ Last appointment location_id loaded for freeslot:', lastLocation.location_id)
           
-          // ✅ Auch selectedLocation setzen für UI-Anzeige
+          // ✅ Auch selectedLocation via secure API setzen für UI-Anzeige
           try {
-            // Lade die vollständigen Location-Daten aus der locations Tabelle
-            const { data: locationData, error: locationError } = await supabase
-              .from('locations')
-              .select('*')
-              .eq('id', lastLocation.location_id)
-              .single()
+            const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
             
-            if (!locationError && locationData) {
+            if (locationData) {
               selectedLocation.value = locationData
-              logger.debug('✅ Location data loaded for UI:', locationData.name)
+              logger.debug('✅ Location data loaded via API for UI:', locationData.name)
             }
           } catch (locationError) {
-            logger.debug('⚠️ Could not load full location data for UI:', locationError)
+            logger.debug('⚠️ Could not load full location data via API:', locationError)
           }
         }
         
@@ -5402,23 +5231,16 @@ watch(() => props.isVisible, async (newVisible) => {
       isNewAppointment: props.eventData?.isNewAppointment
     })
     
-    // ✅ Load tenant name for SMS/Email
+    // ✅ Load tenant name for SMS/Email via secure API
     try {
-      const tenantId = currentUser.value?.tenant_id
-      if (tenantId) {
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('name, twilio_from_sender')
-          .eq('id', tenantId)
-          .single()
-        
-        if (tenantData?.twilio_from_sender) {
-          tenantName.value = tenantData.twilio_from_sender
-          logger.debug('🏢 Tenant SMS sender loaded (twilio_from_sender):', tenantName.value)
-        } else if (tenantData?.name) {
-          tenantName.value = tenantData.name
-          logger.debug('🏢 Tenant name loaded:', tenantName.value)
-        }
+      const tenantData = await eventModalApi.getTenantInfo()
+      
+      if (tenantData?.twilio_from_sender) {
+        tenantName.value = tenantData.twilio_from_sender
+        logger.debug('🏢 Tenant SMS sender loaded via API (twilio_from_sender):', tenantName.value)
+      } else if (tenantData?.name) {
+        tenantName.value = tenantData.name
+        logger.debug('🏢 Tenant name loaded via API:', tenantName.value)
       }
     } catch (error) {
       console.warn('⚠️ Could not load tenant name:', error)
@@ -5768,33 +5590,23 @@ onMounted(async () => {
   // ✅ Load available products
   await loadProducts()
   
-  // ✅ NEU: Lade auch verfügbare Produkte für den productSale
+  // ✅ NEU: Lade auch verfügbare Produkte via secure API
   if (availableProducts.value.length === 0) {
     try {
-      let productQuery = supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
+      const products = await eventModalApi.getProducts()
       
-      // ✅ WICHTIG: Nach tenant_id filtern, falls verfügbar
-      if (currentUser.value?.tenant_id) {
-        productQuery = productQuery.eq('tenant_id', currentUser.value.tenant_id)
-        logger.debug('🏢 Filtering products by tenant_id:', currentUser.value.tenant_id)
-      }
-      
-      const { data, error } = await productQuery.order('display_order')
-      
-      if (!error && data) {
+      if (products) {
         // Setze verfügbare Produkte direkt in den productSale
-        availableProducts.value = data.map(product => ({
+        availableProducts.value = products.map((product: any) => ({
           id: product.id,
           name: product.name,
           price: product.price_rappen / 100,
           description: product.description
         }))
+        logger.debug('✅ Products loaded via API:', availableProducts.value.length)
       }
     } catch (err) {
-      console.error('❌ Error loading available products for productSale:', err)
+      console.error('❌ Error loading products via API:', err)
     }
   }
   
