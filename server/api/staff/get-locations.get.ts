@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation
     let query_builder = supabaseAdmin
       .from('locations')
-      .select('id, name, address, formatted_address, street, street_number, zip, city, country, tenant_id')
+      .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
 

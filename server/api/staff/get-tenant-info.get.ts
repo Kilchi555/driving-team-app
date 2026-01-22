@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 3: Get tenant info
     const { data: tenant, error } = await supabaseAdmin
       .from('tenants')
-      .select('id, name, twilio_from_sender, email_from_name, email_from_address')
+      .select('id, name, twilio_from_sender')
       .eq('id', tenantId)
       .single()
 

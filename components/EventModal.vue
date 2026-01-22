@@ -984,11 +984,16 @@ const handleSaveAppointment = async () => {
     }
     
     // ✅ NEU: Auto-save billing address before saving appointment
-    if (selectedStudent.value && priceDisplayRef.value) {
+    if (selectedStudent.value && priceDisplayRef.value && selectedPaymentMethod.value === 'invoice') {
       try {
         logger.debug('💾 Auto-saving billing address before appointment save...')
-        await priceDisplayRef.value.saveInvoiceAddress()
-        logger.debug('✅ Billing address auto-saved')
+        const billingAddressId = await priceDisplayRef.value.saveInvoiceAddress()
+        if (billingAddressId) {
+          savedCompanyBillingAddressId.value = billingAddressId
+          logger.debug('✅ Billing address auto-saved with ID:', billingAddressId)
+        } else {
+          logger.debug('ℹ️ No billing address ID returned (form invalid or error)')
+        }
       } catch (billingError) {
         console.warn('⚠️ Could not auto-save billing address:', billingError)
         // Nicht den Termin-Speicher abbrechen, nur loggen
@@ -1370,7 +1375,7 @@ const modalForm = useEventModalForm(props.currentUser, {
   selectedPaymentData,   // ✅ Payment Data State übergeben
   selectedProducts,      // ✅ Selected Products übergeben
   dynamicPricing,        // ✅ Dynamic Pricing für Admin-Fee übergeben
-
+  savedCompanyBillingAddressId, // ✅ Company Billing Address ID übergeben
 })
 
 const {
