@@ -2640,12 +2640,9 @@ const handleStudentSelected = async (student: Student | null) => {
         
         // ✅ Verfügbare Dauer-Optionen basierend auf der Kategorie laden
         try {
-          if (!modalForm.categoryData.categoriesLoaded.value) {
-            await modalForm.categoryData.loadCategories()
-          }
-          
-          const categoryData = modalForm.categoryData.getCategoryByCode(lastCategory)
-                  if (categoryData?.lesson_duration_minutes) {
+          // ✅ Die Kategorien werden durch die Watcher automatisch geladen
+          const categoryData = await loadCategoryData(lastCategory)
+          if (categoryData?.lesson_duration_minutes) {
           const durations = Array.isArray(categoryData.lesson_duration_minutes) 
             ? categoryData.lesson_duration_minutes 
             : [categoryData.lesson_duration_minutes]
@@ -4493,13 +4490,9 @@ const initializeFormData = async () => {
         
         // ✅ Verfügbare Dauer-Optionen basierend auf der Kategorie laden
         try {
-          // Stelle sicher, dass Kategorien geladen sind
-          if (!modalForm.categoryData.categoriesLoaded.value) {
-            await modalForm.categoryData.loadCategories()
-          }
-          
-          const categoryData = modalForm.categoryData.getCategoryByCode(lastCategory)
-                  if (categoryData?.lesson_duration_minutes) {
+          // ✅ Die Kategorien werden durch die Watcher automatisch geladen
+          const categoryData = await loadCategoryData(lastCategory)
+          if (categoryData?.lesson_duration_minutes) {
           const durations = Array.isArray(categoryData.lesson_duration_minutes) 
             ? categoryData.lesson_duration_minutes 
             : [categoryData.lesson_duration_minutes]
