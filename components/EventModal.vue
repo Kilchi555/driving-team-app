@@ -992,147 +992,53 @@ const handleSaveAppointment = async () => {
     }
     
     // Call the saveAppointment function from the composable
-    // ✅ NEW: If duration decreased on paid appointment, credit the difference to student
-    if (props.mode === 'edit' && props.eventData?.id) {
-      try {
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!session?.access_token) {
-          logger.error('No session token available for API calls')
-          return
-        }
-        
-        // ✅ Load original appointment via secure API
-        const appointmentResponse = await $fetch('/api/staff/get-appointment', {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
-          },
-          query: {
-            id: props.eventData.id
-          }
-        })
-        
-        const originalAppointment = appointmentResponse.success ? appointmentResponse.data : null
-        
-        if (originalAppointment && formData.value.duration_minutes < originalAppointment.duration_minutes) {
-          // Duration was decreased - credit the difference
-          const durationReduction = originalAppointment.duration_minutes - formData.value.duration_minutes
-          
-          logger.debug('📉 Duration decreased, crediting student:', {
-            original: originalAppointment.duration_minutes,
-            new: formData.value.duration_minutes,
-            reduction: durationReduction
-          })
-          
-          // ✅ Load existing payment via secure API
-          // Note: We need to get the payment by appointment_id, but our API gets by payment ID
-          // So we'll use a direct query here temporarily until we add a get-payment-by-appointment API
-          const { data: payment } = await supabase
-            .from('payments')
-            .select('*')
-            .eq('appointment_id', props.eventData.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          
-          // ✅ Always adjust payment amount (for both completed and pending)
-          if (payment && payment.lesson_price_rappen > 0) {
-            // Calculate price per minute
-            const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
-            const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
-            const newLessonPriceRappen = payment.lesson_price_rappen - creditAmountRappen
-            
-            logger.debug('💰 Price adjustment calculation:', {
-              paymentStatus: payment.payment_status,
-              pricePerMinute: (pricePerMinute / 100).toFixed(4),
-              creditAmountRappen,
-              creditAmountCHF: (creditAmountRappen / 100).toFixed(2),
-              oldLessonPrice: payment.lesson_price_rappen,
-              newLessonPrice: newLessonPriceRappen
-            })
-            
-            // Calculate new total
-            const newTotalRappen = newLessonPriceRappen + 
-              (payment.admin_fee_rappen || 0) + 
-              (payment.products_price_rappen || 0) - 
-              (payment.discount_amount_rappen || 0)
-            
-            // ✅ Update payment amount via secure API
-            const priceNote = `Preis angepasst aufgrund Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min (-CHF ${(creditAmountRappen / 100).toFixed(2)})`
-            const existingNotes = payment.notes || ''
-            const updatedNotes = existingNotes ? `${existingNotes}\n${priceNote}` : priceNote
-            
-            try {
-              await $fetch('/api/staff/update-payment', {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`
-                },
-                body: {
-                  payment_id: payment.id,
-                  update_data: {
-                    lesson_price_rappen: newLessonPriceRappen,
-                    total_amount_rappen: newTotalRappen
-                    // Note: We're NOT updating 'notes' via API to keep it simple
-                    // The API has a field whitelist and 'notes' might not be included
-                  }
-                }
-              })
-              
-              logger.debug('✅ Payment updated with new price via API:', {
-                oldTotal: payment.total_amount_rappen,
-                newTotal: newTotalRappen,
-                adjustment: creditAmountRappen
-              })
-            } catch (paymentUpdateError: any) {
-              logger.error('Payment', 'Failed to update payment via API:', paymentUpdateError)
-            }
-            
-            // ✅ Only credit student balance if payment was already completed
-            if (payment.payment_status === 'completed') {
-              // ✅ Add credit via secure API (handles both update and insert)
-              try {
-                await $fetch('/api/staff/credit-transaction', {
-                  method: 'POST',
-                  headers: {
-                    Authorization: `Bearer ${session.access_token}`
-                  },
-                  body: {
-                    user_id: originalAppointment.user_id,
-                    amount_rappen: creditAmountRappen,
-                    reason: `Gutschrift für Dauer-Reduktion: ${originalAppointment.duration_minutes}min → ${formData.value.duration_minutes}min`,
-                    type: 'duration_reduction_credit',
-                    reference_type: 'appointment',
-                    reference_id: props.eventData.id
-                  }
-                })
-                
-                logger.debug('✅ Student credit updated via API:', {
-                  studentId: originalAppointment.user_id,
-                  creditAmount: (creditAmountRappen / 100).toFixed(2)
-                })
-              } catch (creditError: any) {
-                logger.error('StudentCredit', 'Failed to update credit via API:', creditError)
-              }
-              
-              // ✅ API already logs the transaction, so we just show success message
-              showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
-            } else {
-              // For pending payments, just notify about price adjustment (no credit transaction)
-              logger.debug('ℹ️ Payment is pending - price adjusted but no credit given')
-              showSuccess('Preis angepasst', `Payment-Betrag wurde um CHF ${(creditAmountRappen / 100).toFixed(2)} reduziert.`)
-            }
-          }
-        }
-      } catch (creditError: any) {
-        logger.error('EventModal', 'Error processing duration reduction:', creditError)
-        // Don't block appointment save if credit fails
-      }
-    }
-    
     // ✅ Declare savedAppointment outside try-catch so it's accessible later
     let savedAppointment: any = null
+    
+    // ✅ Store original appointment data AND payment BEFORE saving (for duration reduction check)
+    let originalAppointmentData: any = null
+    let originalPaymentData: any = null
+    
+    if (props.mode === 'edit' && props.eventData?.id) {
+      // Get duration from eventData - could be duration_minutes or duration
+      const originalDuration = props.eventData.duration_minutes || props.eventData.duration || 
+        (props.eventData.extendedProps?.duration_minutes) || 
+        (props.eventData.extendedProps?.duration)
+      
+      originalAppointmentData = {
+        id: props.eventData.id,
+        duration_minutes: originalDuration,
+        user_id: props.eventData.user_id || props.eventData.extendedProps?.user_id
+      }
+      
+      // ✅ WICHTIG: Lade den ORIGINAL Payment-Preis BEVOR dem Save!
+      try {
+        const supabase = getSupabase()
+        const { data: payment } = await supabase
+          .from('payments')
+          .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, total_amount_rappen, payment_status')
+          .eq('appointment_id', props.eventData.id)
+          .maybeSingle()
+        
+        if (payment) {
+          originalPaymentData = payment
+          logger.debug('💰 Original payment data for duration check:', {
+            id: payment.id,
+            lesson_price_rappen: payment.lesson_price_rappen,
+            total_amount_rappen: payment.total_amount_rappen,
+            payment_status: payment.payment_status
+          })
+        }
+      } catch (err) {
+        logger.warn('Could not load original payment data')
+      }
+      
+      logger.debug('📋 Original appointment data for duration check:', {
+        id: originalAppointmentData.id,
+        duration_minutes: originalAppointmentData.duration_minutes,
+        user_id: originalAppointmentData.user_id
+      })
+    }
     
     try {
       // ✅ WICHTIG: Stelle sicher, dass die Preisberechnung vor dem Speichern abgeschlossen ist
@@ -1165,6 +1071,126 @@ const handleSaveAppointment = async () => {
       logger.error('EventModal', 'Appointment was not saved')
       showError('Fehler', 'Termin konnte nicht gespeichert werden.')
       return
+    }
+    
+    // ✅ NEW: AFTER saving, check if duration was decreased on paid appointment and credit the difference
+    if (props.mode === 'edit' && originalAppointmentData && formData.value.duration_minutes < originalAppointmentData.duration_minutes) {
+      try {
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session?.access_token) {
+          logger.warn('No session token available for duration reduction credit')
+        } else {
+          // Duration was decreased - credit the difference
+          const durationReduction = originalAppointmentData.duration_minutes - formData.value.duration_minutes
+          
+          logger.debug('📉 Duration decreased, crediting student:', {
+            original: originalAppointmentData.duration_minutes,
+            new: formData.value.duration_minutes,
+            reduction: durationReduction
+          })
+          
+          // ✅ WICHTIG: Verwende originalPaymentData (BEVOR dem Save geladen!)
+          // Das Payment NACH dem Save hat bereits den neuen Preis!
+          if (!originalPaymentData || originalPaymentData.lesson_price_rappen <= 0) {
+            logger.warn('⚠️ No original payment data available for duration reduction')
+          }
+          
+          // ✅ Use ORIGINAL payment price, not the updated one!
+          if (originalPaymentData && originalPaymentData.lesson_price_rappen > 0) {
+            // Calculate price per minute based on ORIGINAL price
+            const pricePerMinute = originalPaymentData.lesson_price_rappen / originalAppointmentData.duration_minutes
+            const creditAmountRappen = Math.round(durationReduction * pricePerMinute)
+            const newLessonPriceRappen = originalPaymentData.lesson_price_rappen - creditAmountRappen
+            
+            logger.debug('💰 Price adjustment calculation:', {
+              paymentStatus: originalPaymentData.payment_status,
+              pricePerMinute: (pricePerMinute / 100).toFixed(4),
+              creditAmountRappen,
+              creditAmountCHF: (creditAmountRappen / 100).toFixed(2),
+              oldLessonPrice: originalPaymentData.lesson_price_rappen,
+              newLessonPrice: newLessonPriceRappen
+            })
+            
+            // Calculate new total based on ORIGINAL payment
+            const newTotalRappen = newLessonPriceRappen + 
+              (originalPaymentData.admin_fee_rappen || 0) + 
+              (originalPaymentData.products_price_rappen || 0) - 
+              (originalPaymentData.discount_amount_rappen || 0)
+            
+            // ✅ Update payment amount via secure API, preserving payment_status
+            const updateData: any = {
+              lesson_price_rappen: newLessonPriceRappen,
+              total_amount_rappen: newTotalRappen
+            }
+            
+            // ✅ CRITICAL: Preserve payment_status if already completed
+            if (originalPaymentData.payment_status === 'completed') {
+              updateData.payment_status = 'completed'
+            }
+            
+            try {
+              await $fetch('/api/staff/update-payment', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`
+                },
+                body: {
+                  payment_id: originalPaymentData.id,
+                  update_data: updateData
+                }
+              })
+              
+              logger.debug('✅ Payment updated with new price via API:', {
+                oldTotal: originalPaymentData.total_amount_rappen,
+                newTotal: newTotalRappen,
+                adjustment: creditAmountRappen,
+                statusPreserved: originalPaymentData.payment_status
+              })
+            } catch (paymentUpdateError: any) {
+              logger.error('Payment', 'Failed to update payment via API:', paymentUpdateError)
+            }
+            
+            // ✅ Only credit student balance if payment was already completed
+            if (originalPaymentData.payment_status === 'completed') {
+              // ✅ Add credit via secure API
+              try {
+                await $fetch('/api/staff/credit-transaction', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`
+                  },
+                  body: {
+                    user_id: originalAppointmentData.user_id,
+                    amount_rappen: creditAmountRappen,
+                    reason: `Gutschrift für Dauer-Reduktion: ${originalAppointmentData.duration_minutes}min → ${formData.value.duration_minutes}min`,
+                    type: 'duration_reduction_credit',
+                    reference_type: 'appointment',
+                    reference_id: savedAppointment.id
+                  }
+                })
+                
+                logger.debug('✅ Student credit updated via API:', {
+                  studentId: originalAppointmentData.user_id,
+                  creditAmount: (creditAmountRappen / 100).toFixed(2)
+                })
+                
+                showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
+              } catch (creditError: any) {
+                logger.error('StudentCredit', 'Failed to update credit via API:', creditError)
+                showError('Fehler', 'Guthaben konnte nicht hinzugefügt werden.')
+              }
+            } else {
+              // For pending payments, just notify about price adjustment (no credit transaction)
+              logger.debug('ℹ️ Payment is pending - price adjusted but no credit given')
+            }
+          }
+        }
+      } catch (creditError: any) {
+        logger.error('EventModal', 'Error processing duration reduction:', creditError)
+        // Don't block appointment close if credit fails
+      }
     }
     
     // ✅ NEW: Use secure backend API to apply credit to appointment

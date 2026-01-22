@@ -174,17 +174,21 @@ export default defineEventHandler(async (event) => {
             }
             
             // ✅ Update payment_status based on remaining amount
-            // Only change status if it was 'pending' before (don't override 'completed' if paid, or 'cancelled')
-            if (existingPayment.payment_status === 'pending' || existingPayment.payment_status === 'completed') {
+            // WICHTIG: NIEMALS 'completed' auf 'pending' zurücksetzen! 
+            // Bereits bezahlte Termine bleiben bezahlt (Preis wird angepasst, aber nicht der Status)
+            if (existingPayment.payment_status === 'pending') {
+              // Nur bei 'pending' den Status basierend auf remainingAmount ändern
               paymentUpdateData.payment_status = remainingAmountRappen === 0 ? 'completed' : 'pending'
               
-              // Set or clear paid_at
-              const existingPaidAt = (existingPayment as any).paid_at
-              if (remainingAmountRappen === 0 && !existingPaidAt) {
+              // Set paid_at nur bei neuen completed payments
+              if (remainingAmountRappen === 0) {
                 paymentUpdateData.paid_at = new Date().toISOString()
-              } else if (remainingAmountRappen > 0) {
-                paymentUpdateData.paid_at = null
               }
+            } else if (existingPayment.payment_status === 'completed') {
+              // Bei bereits bezahlten Payments: Status BEIBEHALTEN!
+              // Der Preis wird angepasst, aber der Status bleibt 'completed'
+              paymentUpdateData.payment_status = 'completed'
+              logger.debug('✅ Preserving completed payment status')
             }
             
             const { error: updatePaymentError } = await supabase
