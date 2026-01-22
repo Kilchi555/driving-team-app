@@ -270,52 +270,32 @@ const loadStaff = async () => {
   error.value = null
   
   try {
-    logger.debug('👥 StaffSelector: Loading staff members...')
-    const supabase = getSupabase()
-
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
+    logger.debug('👥 StaffSelector: Loading staff members via API...')
     
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
-
-    logger.debug('🔍 StaffSelector - Current tenant_id:', tenantId)
-
-    let query = supabase
-      .from('users')
-      .select('id, first_name, last_name, email, role, is_active')
-      .eq('role', 'staff')  // Nur Staff, keine Admins
-      .eq('is_active', true)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('first_name')
-
-    // Aktuellen User ausschließen falls gewünscht
+    // ✅ Build query params
+    const queryParams = new URLSearchParams()
     if (props.excludeCurrentUser && props.currentUser?.id) {
-      query = query.neq('id', props.currentUser.id)
+      queryParams.set('excludeUserId', props.currentUser.id)
     }
-
-    const { data, error: fetchError } = await query
-
-    if (fetchError) throw fetchError
     
-    const typedStaff: Staff[] = (data || []).map((user: UserFromDB) => ({
+    // ✅ Call secure API
+    const response = await $fetch(`/api/staff/get-team-members?${queryParams.toString()}`)
+    
+    if (!response || !response.staff) {
+      throw new Error('Invalid API response')
+    }
+    
+    const typedStaff: Staff[] = response.staff.map((user: UserFromDB) => ({
       id: user.id,
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       email: user.email || '',
-      role: 'staff', // Immer 'staff' da wir nur Staff laden
+      role: 'staff',
       is_active: user.is_active
     }))
     
     availableStaff.value = typedStaff
-    logger.debug('✅ Staff members loaded for tenant:', availableStaff.value.length)
+    logger.debug('✅ Staff members loaded via API:', availableStaff.value.length)
 
   } catch (err: any) {
     console.error('❌ StaffSelector: Error loading staff:', err)
