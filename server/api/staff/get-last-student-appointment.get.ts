@@ -4,18 +4,17 @@ import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 
 /**
- * ✅ GET /api/staff/get-payment
+ * ✅ GET /api/staff/get-last-student-appointment
  * 
- * Secure API to fetch payment details
+ * Secure API to get the last appointment for a student
+ * Used for pre-filling category selection based on previous appointments
  * 
  * Query Params:
- *   - id: Payment ID (optional if appointment_id provided)
- *   - appointment_id: Appointment ID (optional if id provided)
+ *   - student_id (required): Student user ID
  * 
  * Security Layers:
  *   1. Bearer Token Authentication
  *   2. Tenant Isolation
- *   3. Ownership Check
  */
 
 export default defineEventHandler(async (event) => {
@@ -49,82 +48,61 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!userProfile.is_active) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'User account is inactive'
-      })
-    }
-
     const tenantId = userProfile.tenant_id
 
     // ✅ LAYER 3: INPUT VALIDATION
     const query = getQuery(event)
-    const paymentId = query.id as string | undefined
-    const appointmentId = query.appointment_id as string | undefined
+    const studentId = query.student_id as string | undefined
 
-    if (!paymentId && !appointmentId) {
+    if (!studentId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Payment ID or Appointment ID is required'
+        statusMessage: 'Student ID is required'
       })
     }
 
-    // Validate UUID format
+    // Validate UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (paymentId && !uuidRegex.test(paymentId)) {
+    if (!uuidRegex.test(studentId)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid payment ID format'
-      })
-    }
-    if (appointmentId && !uuidRegex.test(appointmentId)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid appointment ID format'
+        statusMessage: 'Invalid student ID format'
       })
     }
 
     // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation
-    let queryBuilder = supabaseAdmin
-      .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, total_amount_rappen, credit_used_rappen, payment_status, payment_method, wallee_transaction_id, appointment_id, user_id, tenant_id, created_at')
+    const { data: appointment, error } = await supabaseAdmin
+      .from('appointments')
+      .select('id, type, event_type_code, start_time, title')
+      .eq('user_id', studentId)
       .eq('tenant_id', tenantId)
-
-    if (paymentId) {
-      queryBuilder = queryBuilder.eq('id', paymentId)
-    } else if (appointmentId) {
-      queryBuilder = queryBuilder.eq('appointment_id', appointmentId)
-    }
-
-    const { data: payment, error } = await queryBuilder
-      .order('created_at', { ascending: false })
+      .order('start_time', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     if (error) {
-      logger.error('❌ Error fetching payment:', error)
+      logger.error('❌ Error fetching last appointment:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Failed to fetch payment'
+        statusMessage: 'Failed to fetch last appointment'
       })
     }
 
     // ✅ LAYER 5: AUDIT LOGGING
-    logger.debug('✅ Payment fetched successfully:', {
+    logger.debug('✅ Last student appointment fetched:', {
       userId: userProfile.id,
-      tenantId: tenantId,
-      paymentId: payment?.id || null,
-      appointmentId: appointmentId || null
+      tenantId,
+      studentId,
+      appointmentId: appointment?.id || null
     })
 
     return {
       success: true,
-      data: payment // Can be null if not found
+      data: appointment // Can be null if no appointments found
     }
 
   } catch (error: any) {
-    logger.error('❌ Staff get-payment API error:', error)
+    logger.error('❌ Staff get-last-student-appointment API error:', error)
 
     if (error.statusCode) {
       throw error
@@ -132,7 +110,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to fetch payment'
+      statusMessage: error.message || 'Failed to fetch last appointment'
     })
   }
 })
