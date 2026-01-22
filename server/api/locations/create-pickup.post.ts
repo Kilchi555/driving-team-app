@@ -1,13 +1,26 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { requireAuth } from '~/server/utils/auth'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
     // ✅ 1. AUTHENTIFIZIERUNG
-    const user = await requireAuth(event)
-    if (!user?.id || !user?.tenant_id) {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+
+    const supabase = getSupabaseAdmin()
+
+    // Get user from users table to get tenant_id
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id, role')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (userError || !user) {
+      throw createError({ statusCode: 401, message: 'User not found' })
     }
 
     // ✅ 2. INPUT VALIDATION
@@ -39,8 +52,6 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ 3. TENANT ISOLATION: Verify user is in same tenant
-    const supabase = getSupabaseAdmin()
-
     const { data: targetUser, error: userError } = await supabase
       .from('users')
       .select('id, tenant_id, role')
