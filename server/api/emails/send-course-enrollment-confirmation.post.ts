@@ -53,13 +53,14 @@ export default defineEventHandler(async (event) => {
         first_name,
         last_name,
         course_id,
+        custom_sessions,
         courses!inner(
           id,
           name,
           description,
           category,
           price_per_participant_rappen,
-          course_sessions(start_time, end_time)
+          course_sessions(id, sari_session_id, start_time, end_time)
         ),
         tenants!inner(
           id,
@@ -83,8 +84,50 @@ export default defineEventHandler(async (event) => {
     const course = enrollment.courses as any
     const tenant = enrollment.tenants as any
     
-    // Format sessions - group by day, show times
-    const sessions = course?.course_sessions || []
+    // Format sessions - apply custom sessions if available
+    let sessions = course?.course_sessions || []
+    
+    // If custom sessions selected, replace the relevant sessions
+    if (enrollment.custom_sessions && typeof enrollment.custom_sessions === 'object') {
+      logger.debug('📧 Applying custom sessions to email:', enrollment.custom_sessions)
+      
+      // Convert to object if needed
+      const customMap = typeof enrollment.custom_sessions === 'string' 
+        ? JSON.parse(enrollment.custom_sessions) 
+        : enrollment.custom_sessions
+      
+      // Group sessions by date first
+      const byDate: Map<string, any[]> = new Map()
+      for (const session of sessions) {
+        const date = session.start_time.split('T')[0]
+        if (!byDate.has(date)) byDate.set(date, [])
+        byDate.get(date)!.push(session)
+      }
+      
+      // Build final sessions list with custom sessions applied
+      const finalSessions: any[] = []
+      let position = 0
+      for (const [date, daySessions] of byDate.entries()) {
+        position++
+        const customSession = customMap[position.toString()]
+        
+        if (customSession) {
+          // Use custom session instead - create synthetic session object
+          finalSessions.push({
+            start_time: customSession.startTime,
+            end_time: customSession.endTime,
+            isCustom: true,
+            customCourseName: customSession.courseName?.split(' - ')[0]
+          })
+        } else {
+          // Use original sessions
+          finalSessions.push(...daySessions)
+        }
+      }
+      
+      sessions = finalSessions
+    }
+    
     const formattedSessions = formatSessionsForEmail(sessions)
 
     const price = course?.price_per_participant_rappen 
