@@ -6413,25 +6413,11 @@ const selectExistingUser = async (user: any) => {
 const loadCourseEnrollments = async (courseId: string) => {
   logger.debug('🔍 loadCourseEnrollments called with courseId:', courseId)
   try {
+    // Use course_registrations_with_participant VIEW for clean, flat data
+    // No need to manually JOIN course_participants anymore
     const { data, error } = await getSupabase()
-      .from('course_registrations')
-      .select(`
-        *,
-        participant:course_participants!course_registrations_participant_id_fkey(
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          faberid,
-          user_id
-        ),
-        deleted_by_user:users!course_registrations_deleted_by_fkey(
-          id,
-          first_name,
-          last_name
-        )
-      `)
+      .from('course_registrations_with_participant')
+      .select('*')
       .eq('course_id', courseId)
       .is('deleted_at', null) // Only load active (not soft deleted) registrations
 
@@ -6449,26 +6435,12 @@ const loadCourseEnrollments = async (courseId: string) => {
 const loadDeletedEnrollments = async (courseId: string) => {
   logger.debug('🔍 loadDeletedEnrollments called with courseId:', courseId)
   try {
+    // Use course_registrations_with_participant VIEW for clean, flat data
     const { data, error } = await getSupabase()
-      .from('course_registrations')
-      .select(`
-        *,
-        participant:course_participants!course_registrations_participant_id_fkey(
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          user_id
-        ),
-        deleted_by_user:users!course_registrations_deleted_by_fkey(
-          id,
-          first_name,
-          last_name
-        )
-      `)
+      .from('course_registrations_with_participant')
+      .select('*')
       .eq('course_id', courseId)
-      .not('deleted_at', 'is', null) // Only load soft deleted registrations
+      .not('deleted_at', 'is', null) // Only load DELETED registrations
 
     if (error) {
       console.error('❌ Error loading deleted enrollments:', error)
