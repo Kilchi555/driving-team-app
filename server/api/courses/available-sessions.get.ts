@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
     category, 
     sessionPosition, // Which session to swap (e.g., "3" or "4")
     afterDate,       // Must be after this date (to ensure chronological order)
-    excludeCourseId  // Exclude the user's current course
+    excludeCourseId, // Exclude the user's current course
+    courseLocation   // Location filter - only show sessions from same location
   } = query
 
   if (!tenantId || !category || !sessionPosition) {
@@ -26,6 +27,19 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
   const positionNum = parseInt(sessionPosition as string)
+
+  // Extract city/location from description (e.g., "Baslerstrasse 145, 8048 Zürich" → "Zürich")
+  const extractLocation = (description: string): string => {
+    if (!description) return ''
+    const parts = description.split(',')
+    if (parts.length >= 2) {
+      // Get last part and trim
+      return parts[parts.length - 1].trim()
+    }
+    return description
+  }
+
+  const filterLocation = courseLocation ? extractLocation(courseLocation as string) : null
 
   try {
     logger.debug(`Fetching available sessions for position ${positionNum}, afterDate: ${afterDate}`)
@@ -67,6 +81,15 @@ export default defineEventHandler(async (event) => {
       // Skip excluded course
       if (course.id === excludeCourseId) continue
       if (!course.sari_course_id) continue
+      
+      // Filter by location if provided
+      if (filterLocation) {
+        const courseLocation = extractLocation(course.description)
+        if (courseLocation !== filterLocation) {
+          logger.debug(`Skipping course ${course.name} - location mismatch (${courseLocation} != ${filterLocation})`)
+          continue
+        }
+      }
       
       const sessions = course.course_sessions || []
       if (sessions.length === 0) continue
