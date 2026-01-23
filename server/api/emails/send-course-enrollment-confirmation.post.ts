@@ -177,7 +177,13 @@ export default defineEventHandler(async (event) => {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
 
-      await resend.emails.send(enrollmentEmail)
+      // IMPORTANT: from field is required by Resend
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+      
+      await resend.emails.send({
+        from: fromEmail,
+        ...enrollmentEmail
+      })
       logger.info('✅ Course enrollment confirmation email sent to:', enrollment.email)
 
       return {
