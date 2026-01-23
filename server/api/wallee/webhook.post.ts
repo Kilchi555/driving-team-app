@@ -335,7 +335,9 @@ export default defineEventHandler(async (event) => {
           
           // ============ UPDATE COURSE PARTICIPANT COUNT ============
           if (paymentStatus === 'completed') {
+            logger.debug('📊 Registrations for participant count:', updatedRegistrations.map(r => ({ id: r.id, course_id: r.course_id })))
             const courseIds = [...new Set(updatedRegistrations.map(r => r.course_id).filter(Boolean))]
+            logger.debug('📊 Course IDs to update:', courseIds)
             
             for (const courseId of courseIds) {
               // Count confirmed registrations for this course
@@ -830,6 +832,7 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
         tenant_id,
         course_id,
         payment_id,
+        custom_sessions,
         courses!inner(
           id,
           sari_managed,
@@ -892,11 +895,27 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     
     // Get ALL course IDs from group (e.g., "GROUP_2110027_2110028_2110029_2110030" → [2110027, 2110028, 2110029, 2110030])
     const sariCourseIdParts = course.sari_course_id.split('_')
-    const sariCourseIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+    let sariCourseIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
     
     if (sariCourseIds.length === 0) {
       logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
       return
+    }
+    
+    // Apply custom sessions if any were selected
+    if (registration.custom_sessions && typeof registration.custom_sessions === 'object') {
+      logger.info('🔄 Applying custom sessions:', registration.custom_sessions)
+      
+      // custom_sessions format: {"3": {sariSessionId: "2110045", ...}, "4": {sariSessionId: "2110046", ...}}
+      for (const [position, customData] of Object.entries(registration.custom_sessions)) {
+        const posIdx = parseInt(position) - 1 // Convert to 0-indexed
+        const custom = customData as any
+        
+        if (custom?.sariSessionId && posIdx >= 0 && posIdx < sariCourseIds.length) {
+          logger.debug(`📝 Replacing session at position ${position}: ${sariCourseIds[posIdx]} → ${custom.sariSessionId}`)
+          sariCourseIds[posIdx] = custom.sariSessionId
+        }
+      }
     }
     
     // Format birthdate as YYYY-MM-DD (already should be in this format)

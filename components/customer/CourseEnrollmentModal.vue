@@ -27,11 +27,94 @@
             <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
             <p class="text-lg font-bold mt-2 text-gray-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
             
-            <!-- Sessions -->
-            <div class="mt-3 space-y-1">
-              <div v-for="(session, idx) in groupedSessions" :key="idx" class="text-sm">
-                <span class="text-gray-800">{{ formatSessionDate(session.date) }} </span>
-                <span class="text-gray-500"> {{ session.timeRange }}</span>
+            <!-- Sessions with swap option -->
+            <div class="mt-3 space-y-2">
+              <div 
+                v-for="(session, idx) in sessionGroups" 
+                :key="idx" 
+                class="flex items-center justify-between text-sm p-2 rounded-lg"
+                :class="session.isCustom ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'"
+              >
+                <div class="flex-1">
+                  <span class="text-gray-800 font-medium">{{ session.label }}: </span>
+                  <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }} </span>
+                  <span class="text-gray-500">{{ session.timeRange }}</span>
+                  <span v-if="session.isCustom" class="ml-2 text-xs text-blue-600">({{ session.customCourseName }})</span>
+                </div>
+                <button
+                  v-if="session.isChangeable && step === 'contact'"
+                  @click="openSessionSwapModal(session)"
+                  class="ml-2 px-3 py-1 text-xs font-medium rounded-lg border transition-colors"
+                  :style="{ 
+                    color: getTenantPrimaryColor(), 
+                    borderColor: getTenantPrimaryColor() 
+                  }"
+                >
+                  {{ session.isCustom ? 'Ändern' : 'Ändern' }}
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Session Swap Modal -->
+          <div 
+            v-if="showSessionSwapModal" 
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            @click.self="closeSessionSwapModal"
+          >
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+              <div class="p-4 border-b flex items-center justify-between">
+                <h3 class="font-semibold text-gray-800">{{ swapModalTitle }}</h3>
+                <button @click="closeSessionSwapModal" class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div class="p-4 overflow-y-auto max-h-[60vh]">
+                <div v-if="isLoadingSwapOptions" class="text-center py-8">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" :style="{ borderColor: getTenantPrimaryColor() }"></div>
+                  <p class="text-sm text-gray-500">Lade verfügbare Sessions...</p>
+                </div>
+                
+                <div v-else-if="availableSwapSessions.length === 0" class="text-center py-8 text-gray-500">
+                  <p>Keine alternativen Sessions verfügbar.</p>
+                </div>
+                
+                <div v-else class="space-y-2">
+                  <!-- Option to reset to original -->
+                  <button
+                    v-if="swappingSession?.isCustom"
+                    @click="resetSessionToOriginal"
+                    class="w-full p-3 text-left rounded-lg border-2 border-gray-200 hover:border-gray-400 transition-colors"
+                  >
+                    <div class="font-medium text-gray-800">Original wiederherstellen</div>
+                    <div class="text-sm text-gray-500">Zurück zur ursprünglichen Session</div>
+                  </button>
+                  
+                  <!-- Available sessions -->
+                  <button
+                    v-for="option in availableSwapSessions"
+                    :key="option.sessionId"
+                    @click="selectSwapSession(option)"
+                    class="w-full p-3 text-left rounded-lg border-2 transition-colors"
+                    :class="option.isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-400'"
+                  >
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <div class="font-medium text-gray-800">{{ formatSessionDate(option.date) }}</div>
+                        <div class="text-sm text-gray-600">{{ formatSwapTime(option.startTime, option.endTime) }}</div>
+                        <div class="text-xs text-gray-500 mt-1">{{ option.courseLocation }}</div>
+                      </div>
+                      <div class="text-right">
+                        <span class="text-xs px-2 py-1 rounded-full" :class="option.freeSlots > 3 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'">
+                          {{ option.freeSlots }} frei
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -266,6 +349,13 @@ const isValidPhone = computed(() => {
 
 const agbAccepted = ref(false)
 
+// Session swap state
+const customSessions = ref<Record<string, any>>({})
+const showSessionSwapModal = ref(false)
+const swappingSession = ref<any>(null)
+const availableSwapSessions = ref<any[]>([])
+const isLoadingSwapOptions = ref(false)
+
 const canSubmit = computed(() => {
   return isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
 })
@@ -308,8 +398,138 @@ const groupedSessions = computed(() => {
   }))
 })
 
+// Session groups with swap capability
+const sessionGroups = computed(() => {
+  if (!props.course?.course_sessions?.length) return []
+  
+  const sorted = [...props.course.course_sessions].sort((a: any, b: any) => 
+    a.start_time.localeCompare(b.start_time)
+  )
+  
+  // Group by date
+  const byDate: Map<string, any[]> = new Map()
+  for (const session of sorted) {
+    const date = session.start_time.split('T')[0]
+    if (!byDate.has(date)) byDate.set(date, [])
+    byDate.get(date)!.push(session)
+  }
+  
+  // Build session groups
+  const groups: any[] = []
+  let position = 0
+  
+  for (const [date, sessions] of byDate.entries()) {
+    position++
+    const isGrouped = sessions.length > 1 // Multiple sessions on same day = grouped
+    
+    // Check if this session has been customized
+    const customSession = customSessions.value[position.toString()]
+    
+    groups.push({
+      position,
+      label: `Teil ${position}${isGrouped ? `-${position + sessions.length - 1}` : ''}`,
+      date,
+      displayDate: customSession?.date || date,
+      startTime: sessions[0].start_time,
+      endTime: sessions[sessions.length - 1].end_time,
+      timeRange: customSession 
+        ? formatSwapTime(customSession.startTime, customSession.endTime)
+        : `${formatTime(sessions[0].start_time)} - ${formatTime(sessions[sessions.length - 1].end_time)}`,
+      parts: sessions.length,
+      isChangeable: !isGrouped && position > 1, // Can change if single session and not first
+      isCustom: !!customSession,
+      customCourseName: customSession?.courseName?.split(' - ')[0],
+      originalSariIds: sessions.map((s: any) => s.sari_session_id).filter(Boolean),
+      sariIds: customSession?.sariSessionId ? [customSession.sariSessionId] : sessions.map((s: any) => s.sari_session_id).filter(Boolean)
+    })
+    
+    // If grouped, skip the additional positions
+    if (isGrouped) {
+      position += sessions.length - 1
+    }
+  }
+  
+  return groups
+})
+
+const swapModalTitle = computed(() => {
+  if (!swappingSession.value) return ''
+  return `${swappingSession.value.label} ändern`
+})
+
 // Methods
 const formatPrice = (rappen: number) => (rappen / 100).toFixed(2)
+
+const formatSwapTime = (startTime: string, endTime: string) => {
+  if (!startTime) return ''
+  const start = formatTime(startTime)
+  const end = endTime ? formatTime(endTime) : ''
+  return end ? `${start} - ${end}` : start
+}
+
+// Session swap methods
+const openSessionSwapModal = async (session: any) => {
+  swappingSession.value = session
+  showSessionSwapModal.value = true
+  isLoadingSwapOptions.value = true
+  availableSwapSessions.value = []
+  
+  try {
+    // Get the date of the previous session for chronological validation
+    const prevSession = sessionGroups.value.find((s: any) => s.position === session.position - 1)
+    const afterDate = prevSession?.displayDate || prevSession?.date
+    
+    const response = await $fetch('/api/courses/available-sessions', {
+      query: {
+        tenantId: props.tenantId,
+        category: props.course.category,
+        sessionPosition: session.position,
+        afterDate,
+        excludeCourseId: props.course.id
+      }
+    }) as any
+    
+    if (response.success) {
+      availableSwapSessions.value = response.sessions.map((s: any) => ({
+        ...s,
+        isSelected: customSessions.value[session.position.toString()]?.sariSessionId === s.sariSessionId
+      }))
+    }
+  } catch (error) {
+    console.error('Error loading swap options:', error)
+  } finally {
+    isLoadingSwapOptions.value = false
+  }
+}
+
+const closeSessionSwapModal = () => {
+  showSessionSwapModal.value = false
+  swappingSession.value = null
+  availableSwapSessions.value = []
+}
+
+const selectSwapSession = (option: any) => {
+  if (!swappingSession.value) return
+  
+  customSessions.value[swappingSession.value.position.toString()] = {
+    sariSessionId: option.sariSessionId,
+    sessionId: option.sessionId,
+    courseId: option.courseId,
+    courseName: option.courseName,
+    date: option.date,
+    startTime: option.startTime,
+    endTime: option.endTime
+  }
+  
+  closeSessionSwapModal()
+}
+
+const resetSessionToOriginal = () => {
+  if (!swappingSession.value) return
+  
+  delete customSessions.value[swappingSession.value.position.toString()]
+  closeSessionSwapModal()
+}
 
 const formatSessionDate = (dateStr: string) => {
   try {
@@ -404,6 +624,9 @@ const submitEnrollment = async () => {
       ? '/api/courses/enroll-wallee'
       : '/api/courses/enroll-cash'
     
+    // Build custom sessions object if any sessions were swapped
+    const hasCustomSessions = Object.keys(customSessions.value).length > 0
+    
     const response = await $fetch(endpoint, {
       method: 'POST',
       body: {
@@ -412,7 +635,8 @@ const submitEnrollment = async () => {
         birthdate: birthdate,
         tenantId: props.tenantId,
         email: formData.value.email,
-        phone: formData.value.phone
+        phone: formData.value.phone,
+        customSessions: hasCustomSessions ? customSessions.value : null
       }
     }) as any
     
@@ -441,6 +665,10 @@ watch(() => props.isOpen, (isOpen) => {
     enrollmentError.value = null
     sariData.value = null
     agbAccepted.value = false
+    customSessions.value = {}
+    showSessionSwapModal.value = false
+    swappingSession.value = null
+    availableSwapSessions.value = []
     formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
   }
 })
