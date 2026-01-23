@@ -146,16 +146,64 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 8. Create pending enrollment
+    // 8. Create or find Guest User
+    logger.debug('🔍 Looking for existing user with email:', finalEmail)
+    
+    let guestUserId: string
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', finalEmail)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (existingUser) {
+      guestUserId = existingUser.id
+      logger.debug('✅ Found existing user:', guestUserId)
+    } else {
+      // Create new guest user (no auth_user_id)
+      logger.debug('👤 Creating guest user...')
+      
+      const { data: newUser, error: userError } = await supabase
+        .from('users')
+        .insert({
+          first_name: customerData.firstname,
+          last_name: customerData.lastname,
+          email: finalEmail,
+          phone: finalPhone,
+          tenant_id: tenantId,
+          role: 'student',
+          is_active: true,
+          is_guest: true, // Mark as guest
+          auth_user_id: null // No auth account
+        })
+        .select('id')
+        .single()
+
+      if (userError || !newUser) {
+        logger.error('❌ Failed to create guest user:', userError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Guest user could not be created'
+        })
+      }
+
+      guestUserId = newUser.id
+      logger.info('✅ Guest user created:', guestUserId)
+    }
+
+    // 9. Create pending enrollment
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('course_registrations')
       .insert({
         course_id: courseId,
         tenant_id: tenantId,
+        user_id: guestUserId, // ✅ NOW HAS USER_ID!
         first_name: customerData.firstname,
         last_name: customerData.lastname,
         email: finalEmail,
         phone: finalPhone,
+        sari_faberid: faberidClean, // Store for deduplication
         status: 'pending',
         payment_status: 'pending'
       })

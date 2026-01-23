@@ -278,12 +278,40 @@ export default defineEventHandler(async (event) => {
 
     logger.info('✅ Payment page URL generated')
 
-    // 10. Update enrollment with payment info
+    // 10. Create Payment record in payments table
+    logger.debug('💾 Creating payment record in database...')
+    
+    const { data: paymentRecord, error: paymentCreateError } = await supabase
+      .from('payments')
+      .insert({
+        user_id: enrollmentId, // Use enrollment ID as temporary - will be filled by webhook
+        course_registration_id: enrollmentId, // ✅ Link to course registration
+        appointment_id: null, // No appointment for course registrations
+        payment_method: 'wallee',
+        payment_status: 'pending',
+        total_amount_rappen: amount,
+        currency: currency,
+        description: `Course: ${metadata?.course_name || 'Unknown'}`,
+        wallee_transaction_id: transactionId.toString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('id')
+      .single()
+
+    if (paymentCreateError) {
+      logger.warn('⚠️ Could not create payment record:', paymentCreateError)
+      // Non-critical - continue anyway (webhook will handle it)
+    } else if (paymentRecord) {
+      logger.info('✅ Payment record created:', paymentRecord.id)
+    }
+
+    // 11. Update enrollment with payment info
     const { error: updateError } = await supabase
       .from('course_registrations')
       .update({
         payment_status: 'pending',
-        payment_id: transactionId.toString() // Store transaction ID in notes since no metadata column
+        payment_id: paymentRecord?.id || transactionId.toString() // Use payment record ID if available, fallback to transaction ID
       })
       .eq('id', enrollmentId)
 
