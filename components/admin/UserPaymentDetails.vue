@@ -1904,34 +1904,19 @@ const loadUserAppointments = async () => {
           }).filter(p => p.name !== 'Unbekanntes Produkt') // Filtere ungültige Produkte heraus
         } else {
           console.warn('⚠️ No products found for appointment', appointment.id)
-                const productName = productData?.name || item.description || 'Unbekanntes Produkt'
-                
-                return {
-                  name: productName,
-                price: (item.total_price_rappen || 0) / 100,
-                quantity: item.quantity || 1,
-                total_price: (item.total_price_rappen || 0) / 100
-                }
-              }).filter(p => p.name !== 'Unbekanntes Produkt')
-              
-              if (products.length > 0) {
-                logger.debug('✅ Loaded products from fallback query:', products)
-              }
-            }
-          }
+        }
           
-          // Nur als letzter Fallback "Zusatzprodukt" verwenden
-          if (!products || products.length === 0) {
-            console.warn('⚠️ Using fallback "Zusatzprodukt" for appointment', appointment.id)
-            products = [
-              { 
-                name: 'Zusatzprodukt', 
-                price: productsPrice, 
-                quantity: 1,
-                total_price: productsPrice
-              }
-            ]
-          }
+        // Nur als letzter Fallback "Zusatzprodukt" verwenden
+        if (!products || products.length === 0) {
+          console.warn('⚠️ Using fallback "Zusatzprodukt" for appointment', appointment.id)
+          products = [
+            { 
+              name: 'Zusatzprodukt', 
+              price: productsPrice, 
+              quantity: 1,
+              total_price: productsPrice
+            }
+          ]
         }
       }
       
