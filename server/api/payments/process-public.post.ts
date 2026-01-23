@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     // Get base URL for redirects - auto-detect from request
     const host = event.headers.get('host') || ''
     const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = `${protocol}://${host}` || process.env.PUBLIC_URL || 'http://localhost:3000'
+    const baseUrl = host ? `${protocol}://${host}` : (process.env.PUBLIC_URL || 'https://www.simy.ch')
     
     logger.debug(`Payment redirect baseUrl: ${baseUrl} (host: ${host})`)
     let tenantSlug = 'driving-team' // Default
