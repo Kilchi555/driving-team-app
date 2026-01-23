@@ -44,11 +44,14 @@ export default defineEventHandler(async (event) => {
     })
 
     // Get base URL for redirects - auto-detect from request
-    const host = (event.headers['host'] as string) || ''
+    // Use x-forwarded-host first (Vercel), then host header, then fallback
+    const forwardedHost = event.headers['x-forwarded-host'] as string
+    const regularHost = event.headers['host'] as string
+    const host = forwardedHost || regularHost || ''
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const baseUrl = host ? `${protocol}://${host}` : (process.env.PUBLIC_URL || 'https://www.simy.ch')
     
-    logger.debug(`Payment redirect baseUrl: ${baseUrl} (host: ${host})`)
+    logger.info(`Payment redirect: host=${host}, forwardedHost=${forwardedHost}, regularHost=${regularHost}, baseUrl=${baseUrl}`)
     let tenantSlug = 'driving-team' // Default
 
     // 1. Validate inputs
