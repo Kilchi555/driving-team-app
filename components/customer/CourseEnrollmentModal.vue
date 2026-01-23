@@ -525,11 +525,6 @@ const sessionGroups = computed(() => {
       originalSariIds: sessions.map((s: any) => s.sari_session_id).filter(Boolean),
       sariIds: customSession?.sariSessionId ? [customSession.sariSessionId] : sessions.map((s: any) => s.sari_session_id).filter(Boolean)
     })
-    
-    // If grouped, skip the additional positions
-    if (isGrouped) {
-      position += sessions.length - 1
-    }
   }
   
   return groups
