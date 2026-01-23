@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Get base URL for redirects - auto-detect from request
-    const host = event.headers.get('host') || ''
+    const host = (event.headers['host'] as string) || ''
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const baseUrl = host ? `${protocol}://${host}` : (process.env.PUBLIC_URL || 'https://www.simy.ch')
     
