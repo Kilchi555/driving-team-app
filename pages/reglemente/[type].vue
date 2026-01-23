@@ -64,7 +64,12 @@ const route = useRoute()
 const router = useRouter()
 
 const type = computed(() => route.params.type as string)
-const tenantSlug = computed(() => route.query.tenant as string || null)
+const tenantSlug = computed(() => {
+  const slug = route.query.tenant as string || null
+  console.log('🔍 Query params:', route.query)
+  console.log('🔍 Tenant slug from query:', slug)
+  return slug
+})
 
 const isLoading = ref(true)
 const error = ref<string | null>(null)
