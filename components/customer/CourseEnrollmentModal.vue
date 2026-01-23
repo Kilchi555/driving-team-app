@@ -22,17 +22,16 @@
         <!-- Content -->
         <div class="p-6">
           <!-- Course Info -->
-          <div class="rounded-lg p-4 mb-6 border-2" :style="getCourseInfoStyle()">
-            <h3 class="font-semibold" :style="getTextColor()">{{ course.name.split(' - ')[0] }}</h3>
-            <p class="text-sm mt-1" :style="{ color: getTenantPrimaryColor() + '80' }">{{ course.description }}</p>
-            <p class="text-lg font-bold mt-2" :style="getTextColor()">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+          <div class="rounded-lg p-4 mb-6" :style="{ backgroundColor: getTenantBackgroundColor() }">
+            <h3 class="font-semibold text-gray-800">{{ course.name.split(' - ')[0] }}</h3>
+            <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
+            <p class="text-lg font-bold mt-2 text-gray-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
             
             <!-- Sessions -->
             <div class="mt-3 space-y-1">
               <div v-for="(session, idx) in groupedSessions" :key="idx" class="text-sm">
-                <span :style="getTextColor()">{{ formatSessionDate(session.date) }}:</span>
-                <span style="color: #6B7280"> {{ session.timeRange }}</span>
-                <span v-if="session.parts > 1" class="text-blue-500">({{ session.parts }} Teile)</span>
+                <span class="text-gray-800">{{ formatSessionDate(session.date) }}:</span>
+                <span class="text-gray-500"> {{ session.timeRange }}</span>
               </div>
             </div>
           </div>
@@ -161,7 +160,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Wird verarbeitet...
+                  Lädt...
                 </span>
                 <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
               </button>
