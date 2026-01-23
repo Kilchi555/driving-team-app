@@ -43,8 +43,12 @@ export default defineEventHandler(async (event) => {
       tenantId
     })
 
-    // Get base URL for redirects (will be set after enrollment is loaded)
-    const baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000'
+    // Get base URL for redirects - auto-detect from request
+    const host = event.headers.get('host') || ''
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}` || process.env.PUBLIC_URL || 'http://localhost:3000'
+    
+    logger.debug(`Payment redirect baseUrl: ${baseUrl} (host: ${host})`)
     let tenantSlug = 'driving-team' // Default
 
     // 1. Validate inputs
