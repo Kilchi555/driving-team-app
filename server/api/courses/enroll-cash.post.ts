@@ -54,6 +54,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // 2b. IMPORTANT: Check if cash payment is allowed (only for Einsiedeln!)
+    // Cash enrollment is ONLY allowed for Einsiedeln courses
+    // All other locations MUST use Wallee payment
+    const courseLocation = course.description?.toLowerCase() || ''
+    const isEinsiedeln = courseLocation.includes('einsiedeln') || courseLocation.includes('einsiedeln')
+    
+    if (!isEinsiedeln) {
+      logger.warn('❌ Cash payment attempted for non-Einsiedeln course:', {
+        courseId,
+        location: course.description
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Cash-on-site payment is only available for Einsiedeln courses. Please use online payment.'
+      })
+    }
+
     // 3. Get SARI credentials
     const credentials = await getSARICredentialsSecure(tenantId, 'COURSE_ENROLLMENT_CASH')
     if (!credentials) {
