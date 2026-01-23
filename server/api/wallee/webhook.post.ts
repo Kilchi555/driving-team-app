@@ -906,14 +906,20 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     if (registration.custom_sessions && typeof registration.custom_sessions === 'object') {
       logger.info('🔄 Applying custom sessions:', registration.custom_sessions)
       
-      // custom_sessions format: {"3": {sariSessionId: "2110045", ...}, "4": {sariSessionId: "2110046", ...}}
+      // custom_sessions format: {"2": {sariSessionIds: ["2110059", "2110060"], ...}}
       for (const [position, customData] of Object.entries(registration.custom_sessions)) {
         const posIdx = parseInt(position) - 1 // Convert to 0-indexed
         const custom = customData as any
         
-        if (custom?.sariSessionId && posIdx >= 0 && posIdx < sariCourseIds.length) {
-          logger.debug(`📝 Replacing session at position ${position}: ${sariCourseIds[posIdx]} → ${custom.sariSessionId}`)
-          sariCourseIds[posIdx] = custom.sariSessionId
+        // Get all session IDs for this position (could be 1-2 sessions per day)
+        const customSessionIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
+        
+        if (customSessionIds.length > 0 && posIdx >= 0 && posIdx < sariCourseIds.length) {
+          // Replace as many sessions as we have custom IDs
+          for (let i = 0; i < customSessionIds.length && (posIdx + i) < sariCourseIds.length; i++) {
+            logger.debug(`📝 Replacing session at position ${position}+${i}: ${sariCourseIds[posIdx + i]} → ${customSessionIds[i]}`)
+            sariCourseIds[posIdx + i] = customSessionIds[i]
+          }
         }
       }
     }
