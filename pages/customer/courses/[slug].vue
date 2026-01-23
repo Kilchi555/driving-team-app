@@ -139,14 +139,18 @@
               </div>
               <div class="text-right">
                 <p class="text-sm text-slate-500">Freie Plätze</p>
-                <p class="font-semibold" :style="{'color': tenantBranding?.primary_color || '#10B981'}">
-                  {{ course.free_slots && course.free_slots > 3 ? 'mehr als 3' : course.free_slots || '?' }}
+                <p class="font-semibold" :class="{'text-red-500': course.free_slots === 0}" :style="course.free_slots > 0 ? {'color': tenantBranding?.primary_color || '#10B981'} : {}">
+                  <span v-if="course.free_slots > 3">mehr als 3</span>
+                  <span v-else-if="course.free_slots === 0">Ausgebucht</span>
+                  <span v-else-if="course.free_slots !== undefined">{{ course.free_slots }}</span>
+                  <span v-else>?</span>
                 </p>
               </div>
             </div>
             
             <!-- Button Full Width -->
             <button 
+              v-if="course.free_slots > 0"
               @click.stop="openEnrollmentModal(course)"
               class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90"
               :style="{

@@ -9,7 +9,7 @@
         <!-- Course Info -->
         <div v-if="course" class="mb-6">
           <div class="flex items-center justify-between mb-4">
-            <h1 class="text-3xl font-bold" :style="{ color: getTenantPrimaryColor() }">{{ course.name }}</h1>
+            <h1 class="text-3xl font-bold" :style="{ color: getTenantPrimaryColor() }">{{ course.name.split(' - ')[0] }}</h1>
             <span v-if="course.sari_managed" class="px-3 py-1 text-xs font-semibold rounded-full" :style="{ backgroundColor: getTenantPrimaryColor() + '20', color: getTenantPrimaryColor() }">
               SARI-verwalteter Kurs
             </span>
