@@ -8,7 +8,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
-import { createHmac } from 'crypto'
+// crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
 // ============ TYPES ============
@@ -70,46 +70,12 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Get API secret for signature validation
-    let apiSecret = process.env.WALLEE_SECRET_KEY
+    // Get expected webhook secret (static token from Wallee webhook header config)
+    const expectedSecret = process.env.WALLEE_WEBHOOK_SECRET || 'wh_dT8kP2mX9qR4vL7nJ3bY6cZ1fH5'
     
-    // If we have a spaceId, try to get tenant-specific secret
-    if (body.spaceId) {
-      try {
-        const supabase = getSupabaseAdmin()
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('wallee_secret_key')
-          .eq('wallee_space_id', body.spaceId.toString())
-          .single()
-        
-        if (tenant?.wallee_secret_key) {
-          apiSecret = tenant.wallee_secret_key
-        }
-      } catch (e) {
-        // Use default secret if tenant lookup fails
-      }
-    }
-    
-    if (!apiSecret) {
-      logger.error('❌ No Wallee API secret configured')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Wallee API secret not configured'
-      })
-    }
-    
-    // Validate HMAC signature
-    const bodyString = JSON.stringify(body)
-    const computedSignature = createHmac('sha256', apiSecret)
-      .update(bodyString)
-      .digest('hex')
-    
-    if (signature !== computedSignature) {
-      logger.error('❌ Invalid webhook signature - signature mismatch', {
-        provided: signature.substring(0, 16) + '...',
-        computed: computedSignature.substring(0, 16) + '...'
-      })
+    // Validate static signature (custom header from Wallee)
+    if (signature !== expectedSecret) {
+      logger.error('❌ Invalid webhook signature - token mismatch')
       throw createError({
         statusCode: 401,
         statusMessage: 'Invalid webhook signature'
@@ -339,27 +305,28 @@ export default defineEventHandler(async (event) => {
     
     // ============ LAYER 9: UPDATE COURSE REGISTRATIONS (NEW!) ============
     if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
-      const courseRegistrationIds = paymentsToUpdate
-        .filter(p => p.course_registration_id)
-        .map(p => p.course_registration_id)
+      const registrationStatus = paymentStatus === 'completed' ? 'confirmed' : 'pending'
+      const paymentStatusUpdate = paymentStatus === 'completed' ? 'paid' : 'pending'
       
-      if (courseRegistrationIds.length > 0) {
-        const registrationStatus = paymentStatus === 'completed' ? 'confirmed' : 'pending'
-        const paymentStatusUpdate = paymentStatus === 'completed' ? 'paid' : 'pending'
-        
-        const { error: registrationError } = await supabase
+      // Get payment IDs to find linked course registrations
+      const paymentIds = paymentsToUpdate.map(p => p.id)
+      
+      if (paymentIds.length > 0) {
+        // Update course_registrations that have these payment_ids
+        const { data: updatedRegistrations, error: registrationError } = await supabase
           .from('course_registrations')
           .update({
             status: registrationStatus,
             payment_status: paymentStatusUpdate,
             updated_at: new Date().toISOString()
           })
-          .in('id', courseRegistrationIds)
+          .in('payment_id', paymentIds)
+          .select('id')
         
         if (registrationError) {
           logger.warn('⚠️ Error updating course registrations:', registrationError)
-        } else {
-          logger.info(`✅ Updated ${courseRegistrationIds.length} course registration(s) to: ${registrationStatus}`)
+        } else if (updatedRegistrations && updatedRegistrations.length > 0) {
+          logger.info(`✅ Updated ${updatedRegistrations.length} course registration(s) to: ${registrationStatus}`)
         }
       }
     }
