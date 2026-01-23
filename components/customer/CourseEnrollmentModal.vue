@@ -22,15 +22,16 @@
         <!-- Content -->
         <div class="p-6">
           <!-- Course Info -->
-          <div class="bg-blue-50 rounded-lg p-4 mb-6">
-            <h3 class="font-semibold text-blue-900">{{ course.name }}</h3>
-            <p class="text-sm text-blue-700 mt-1">{{ course.description }}</p>
-            <p class="text-lg font-bold text-blue-900 mt-2">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+          <div class="rounded-lg p-4 mb-6 border-2" :style="getCourseInfoStyle()">
+            <h3 class="font-semibold" :style="getTextColor()">{{ course.name.split(' - ')[0] }}</h3>
+            <p class="text-sm mt-1" :style="{ color: getTenantPrimaryColor() + '80' }">{{ course.description }}</p>
+            <p class="text-lg font-bold mt-2" :style="getTextColor()">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
             
             <!-- Sessions -->
             <div class="mt-3 space-y-1">
-              <div v-for="(session, idx) in groupedSessions" :key="idx" class="text-sm text-blue-700">
-                {{ formatSessionDate(session.date) }}: {{ session.timeRange }}
+              <div v-for="(session, idx) in groupedSessions" :key="idx" class="text-sm">
+                <span :style="getTextColor()">{{ formatSessionDate(session.date) }}:</span>
+                <span style="color: #6B7280"> {{ session.timeRange }}</span>
                 <span v-if="session.parts > 1" class="text-blue-500">({{ session.parts }} Teile)</span>
               </div>
             </div>
@@ -42,14 +43,17 @@
             
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">FABERID (Führerausweisberechtigungs-ID)</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Lernfahrausweis ID *</label>
                 <input 
                   v-model="formData.faberid"
                   type="text"
-                  placeholder="z.B. 69197806"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder=""
+                  class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                  :style="{ '--tw-ring-color': getTenantPrimaryColor(), borderColor: isFaberIdFocused ? getTenantPrimaryColor() : 'rgb(203, 213, 225)' }"
+                  @focus="isFaberIdFocused = true"
+                  @blur="isFaberIdFocused = false"
                 />
-                <p class="text-xs text-slate-500 mt-1">Die Nummer findest du auf deinem Lernfahrausweis</p>
+                <p class="text-xs text-slate-500 mt-1">Für ZH & AG die Nummer im Adressfeld, andere Kantone Faber oder Reg-Nr</p>
               </div>
               
               <div>
@@ -66,11 +70,12 @@
               {{ lookupError }}
             </div>
 
-            <button 
-              @click="lookupSARI"
-              :disabled="!canLookup || isLoading"
-              class="mt-6 w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-            >
+              <button 
+                @click="lookupSARI"
+                :disabled="!canLookup || isLoading"
+                class="mt-6 w-full py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                :style="{ backgroundColor: getTenantPrimaryColor() }"
+              >
               <span v-if="isLoading" class="flex items-center justify-center gap-2">
                 <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
@@ -117,9 +122,12 @@
                 <input 
                   v-model="formData.phone"
                   type="tel"
-                  placeholder="+41 79 123 45 67"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="+41"
+                  class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                  :style="{ '--tw-ring-color': getTenantPrimaryColor(), borderColor: isPhoneFocused ? getTenantPrimaryColor() : 'rgb(203, 213, 225)' }"
                   :class="{ 'border-red-300': formData.phone && !isValidPhone }"
+                  @focus="isPhoneFocused = true"
+                  @blur="isPhoneFocused = false; formatPhoneNumber()"
                 />
                 <p v-if="formData.phone && !isValidPhone" class="text-xs text-red-500 mt-1">Bitte gib eine gültige Telefonnummer ein</p>
               </div>
@@ -145,7 +153,8 @@
               <button 
                 @click="submitEnrollment"
                 :disabled="!canSubmit || isLoading"
-                class="flex-1 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                :style="{ backgroundColor: getTenantPrimaryColor() }"
               >
                 <span v-if="isLoading" class="flex items-center justify-center gap-2">
                   <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
@@ -168,6 +177,7 @@
 import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { extractCityFromCourseDescription, determinePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+import { useTenant } from '~/composables/useTenant'
 
 interface Props {
   isOpen: boolean
@@ -178,12 +188,31 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits(['close', 'enrolled'])
 
+// Tenant hooks
+const { tenantPrimaryColor } = useTenant()
+
+// Helper functions for colors
+const getTenantPrimaryColor = () => {
+  return tenantPrimaryColor.value || '#3B82F6'
+}
+
+const getTenantBackgroundColor = () => {
+  const primary = getTenantPrimaryColor()
+  return primary + '10' // 10% opacity version
+}
+
+const getTextColor = () => {
+  return { color: getTenantPrimaryColor() }
+}
+
 // State
 const step = ref<'lookup' | 'contact'>('lookup')
 const isLoading = ref(false)
 const lookupError = ref<string | null>(null)
 const enrollmentError = ref<string | null>(null)
 const sariData = ref<any>(null)
+const isFaberIdFocused = ref(false)
+const isPhoneFocused = ref(false)
 
 const formData = ref({
   faberid: '',
@@ -262,11 +291,18 @@ const formatPrice = (rappen: number) => (rappen / 100).toFixed(2)
 const formatSessionDate = (dateStr: string) => {
   try {
     const date = new Date(dateStr + 'T00:00:00')
-    return new Intl.DateTimeFormat('de-CH', {
+    const formatted = new Intl.DateTimeFormat('de-CH', {
       weekday: 'short',
       day: '2-digit',
-      month: '2-digit'
+      month: '2-digit',
+      year: 'numeric'
     }).format(date)
+    // Replace comma and format weekday to 2 chars + dot
+    const parts = formatted.split(' ')
+    if (parts.length > 0) {
+      parts[0] = parts[0].slice(0, 2) + '.'
+    }
+    return parts.join(' ')
   } catch {
     return dateStr
   }
@@ -274,15 +310,11 @@ const formatSessionDate = (dateStr: string) => {
 
 const formatTime = (isoString: string) => {
   try {
-    let hours, minutes
-    if (isoString.includes('T')) {
-      const timePart = isoString.split('T')[1]
-      ;[hours, minutes] = timePart.split(':')
-    } else {
-      const timePart = isoString.split(' ')[1]
-      ;[hours, minutes] = timePart.split(':')
-    }
-    return `${hours}:${minutes}`
+    if (!isoString) return ''
+    const parts = isoString.split('T')
+    if (parts.length < 2) return ''
+    const timeWithZone = parts[1]
+    return timeWithZone.substring(0, 5)
   } catch {
     return ''
   }
@@ -296,10 +328,8 @@ const lookupSARI = async () => {
     const faberidClean = formData.value.faberid.replace(/\./g, '')
     
     // Ensure birthdate is in YYYY-MM-DD format
-    // HTML5 date input gives us YYYY-MM-DD, but just to be safe
     let birthdate = formData.value.birthdate
     if (!birthdate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      // Try to parse and reformat if needed
       const parts = birthdate.split('.')
       if (parts.length === 3) {
         birthdate = `${parts[2]}-${parts[1]}-${parts[0]}`
@@ -321,11 +351,11 @@ const lookupSARI = async () => {
       formData.value.phone = response.customer.phone || ''
       step.value = 'contact'
     } else {
-      lookupError.value = response.message || 'Daten konnten nicht verifiziert werden'
+      lookupError.value = getGermanErrorMessage(response)
     }
   } catch (error: any) {
     logger.error('SARI lookup error:', error)
-    lookupError.value = error.data?.message || error.message || 'Fehler bei der Datenprüfung'
+    lookupError.value = getGermanErrorMessage(error)
   } finally {
     isLoading.value = false
   }
@@ -370,11 +400,11 @@ const submitEnrollment = async () => {
         emit('enrolled')
       }
     } else {
-      enrollmentError.value = response.message || 'Anmeldung fehlgeschlagen'
+      enrollmentError.value = getGermanErrorMessage(response)
     }
   } catch (error: any) {
     logger.error('Enrollment error:', error)
-    enrollmentError.value = error.data?.message || error.message || 'Fehler bei der Anmeldung'
+    enrollmentError.value = getGermanErrorMessage(error)
   } finally {
     isLoading.value = false
   }
@@ -390,5 +420,90 @@ watch(() => props.isOpen, (isOpen) => {
     formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
   }
 })
+
+const getCourseInfoStyle = () => {
+  return {
+    backgroundColor: getTenantBackgroundColor(),
+    borderColor: getTenantPrimaryColor()
+  }
+}
+
+const getGermanErrorMessage = (error: any): string => {
+  const message = error.data?.message || error.message || error.message || ''
+  const statusCode = error.data?.statusCode || error.statusCode
+  
+  if (message.includes('Dieser Kurs ist leider ausgebucht.')) {
+    return 'Dieser Kurs ist leider ausgebucht.'
+  }
+  if (message.includes('Sie sind bereits für diesen Kurs angemeldet.')) {
+    return 'Sie sind bereits für diesen Kurs angemeldet.'
+  }
+  if (message.includes('Die Lernfahrausweis ID ist ungültig.')) {
+    return 'Überprüfen Sie Ihre Angaben. Die Lernfahrausweis ID scheint ungültig zu sein.'
+  }
+  if (message.includes('SARI validation failed')) {
+    return 'Die eingegebenen Daten wurden nicht gefunden. Überprüfen Sie Ihre Angaben.'
+  }
+  if (message.includes('Ihre Fahrerlaubnis genügt nicht für diesen Kurs.')) {
+    return 'Ihre Fahrerlaubnis genügt nicht für diesen Kurs.'
+  }
+  if (message.includes('Validation failed')) {
+    return 'Ihre Eingaben sind ungültig. Bitte überprüfen Sie diese.'
+  }
+  if (message.includes('Missing required fields')) {
+    return 'Es fehlen Pflichtfelder. Bitte füllen Sie alle Felder aus.'
+  }
+  if (message.includes('invalid input syntax for type uuid')) {
+    return 'Ein technischer Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+  }
+  if (message.includes('SARI enrollment not possible')) {
+    return 'Eine Anmeldung über SARI ist derzeit nicht möglich. Bitte kontaktieren Sie uns.'
+  }
+  if (message.includes('Could not verify course availability')) {
+    return 'Die Kursverfügbarkeit konnte nicht überprüft werden. Bitte versuchen Sie es später erneut.'
+  }
+  if (message.includes('Guest user could not be created')) {
+    return 'Ein technischer Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+  }
+  if (message.includes('Failed to create payment session')) {
+    return 'Die Zahlung konnte nicht initialisiert werden. Bitte versuchen Sie es später erneut.'
+  }
+  if (message.includes('Cash-on-site payment is only available for Einsiedeln courses')) {
+    return 'Barzahlung vor Ort ist nur für Kurse in Einsiedeln verfügbar. Bitte wählen Sie Online-Zahlung.'
+  }
+  if (message.includes('Die E-Mail-Adresse ist ungültig.')) {
+    return 'Überprüfen Sie Ihre Angaben. Die E-Mail-Adresse ist ungültig.'
+  }
+  if (message.includes('Die Telefonnummer ist ungültig.')) {
+    return 'Überprüfen Sie Ihre Angaben. Die Telefonnummer ist ungültig.'
+  }
+  
+  switch (statusCode) {
+    case 400:
+      return 'Überprüfen Sie Ihre Angaben. Diese scheinen ungültig zu sein.'
+    case 401:
+      return 'Sie sind nicht autorisiert. Bitte melden Sie sich an.'
+    case 404:
+      return 'Die angefragten Daten wurden nicht gefunden.'
+    case 409:
+      return 'Konflikt: Die Aktion konnte nicht ausgeführt werden (z.B. bereits angemeldet).'
+    case 500:
+      return 'Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+    default:
+      return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
+  }
+}
+
+const formatPhoneNumber = () => {
+  let phone = formData.value.phone.replace(/\s/g, '').replace(/[^0-9+]/g, '')
+  if (phone.startsWith('0041')) {
+    phone = '+' + phone.substring(2)
+  } else if (phone.startsWith('0')) {
+    phone = '+41' + phone.substring(1)
+  } else if (!phone.startsWith('+41') && phone.length > 0) {
+    phone = '+41' + phone
+  }
+  formData.value.phone = phone
+}
 </script>
 
