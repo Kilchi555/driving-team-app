@@ -357,23 +357,21 @@ function formatSessionsForEmail(sessions: any[]): string {
     const year = date.getFullYear()
     const formattedDate = `${weekday}. ${day}.${month}.${year}`
     
+    // Extract time directly from ISO string (already local time from SARI)
+    // Format: "2026-03-14T18:00:00" → "18:00"
+    const extractTime = (isoString: string) => {
+      if (!isoString) return ''
+      const timePart = isoString.split('T')[1]
+      if (!timePart) return ''
+      return timePart.substring(0, 5) // "18:00:00" → "18:00"
+    }
+    
     // Get time range for this day
     const times = daySessions.map(s => {
-      const start = new Date(s.start_time)
-      const end = s.end_time ? new Date(s.end_time) : null
+      const startTime = extractTime(s.start_time)
+      const endTime = s.end_time ? extractTime(s.end_time) : null
       
-      const startTime = start.toLocaleTimeString('de-CH', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'Europe/Zurich'
-      })
-      
-      if (end) {
-        const endTime = end.toLocaleTimeString('de-CH', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'Europe/Zurich'
-        })
+      if (endTime) {
         return `${startTime} - ${endTime}`
       }
       return startTime
@@ -381,22 +379,11 @@ function formatSessionsForEmail(sessions: any[]): string {
     
     // If multiple sessions on same day, show range from first start to last end
     if (daySessions.length > 1) {
-      const firstStart = new Date(daySessions[0].start_time)
+      const startTime = extractTime(daySessions[0].start_time)
       const lastSession = daySessions[daySessions.length - 1]
-      const lastEnd = lastSession.end_time ? new Date(lastSession.end_time) : null
+      const endTime = lastSession.end_time ? extractTime(lastSession.end_time) : null
       
-      const startTime = firstStart.toLocaleTimeString('de-CH', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'Europe/Zurich'
-      })
-      
-      if (lastEnd) {
-        const endTime = lastEnd.toLocaleTimeString('de-CH', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'Europe/Zurich'
-        })
+      if (endTime) {
         formattedDays.push(`<li>${formattedDate}, ${startTime} - ${endTime}</li>`)
       } else {
         formattedDays.push(`<li>${formattedDate}, ${startTime}</li>`)
