@@ -906,19 +906,55 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     if (registration.custom_sessions && typeof registration.custom_sessions === 'object') {
       logger.info('🔄 Applying custom sessions:', registration.custom_sessions)
       
+      // First, figure out how many sessions are in each position (day)
+      // We need to count sessions per day to calculate the correct start index
+      const sessionsPerPosition: number[] = []
+      
+      // Fetch course sessions to understand the day-grouping
+      const { data: courseSessions } = await supabase
+        .from('course_sessions')
+        .select('id, start_time')
+        .eq('course_id', course.id)
+        .order('start_time', { ascending: true })
+      
+      if (courseSessions && courseSessions.length > 0) {
+        // Group by date
+        const byDate: Map<string, number> = new Map()
+        for (const session of courseSessions) {
+          const date = session.start_time.split('T')[0]
+          byDate.set(date, (byDate.get(date) || 0) + 1)
+        }
+        for (const count of byDate.values()) {
+          sessionsPerPosition.push(count)
+        }
+      } else {
+        // Fallback: assume 1 session per position
+        sessionsPerPosition.push(...Array(sariCourseIds.length).fill(1))
+      }
+      
+      logger.debug(`📊 Sessions per position: ${sessionsPerPosition.join(', ')}`)
+      
       // custom_sessions format: {"2": {sariSessionIds: ["2110059", "2110060"], ...}}
       for (const [position, customData] of Object.entries(registration.custom_sessions)) {
-        const posIdx = parseInt(position) - 1 // Convert to 0-indexed
+        const posNum = parseInt(position)
         const custom = customData as any
+        
+        // Calculate start index based on cumulative sessions in previous positions
+        let startIdx = 0
+        for (let p = 0; p < posNum - 1 && p < sessionsPerPosition.length; p++) {
+          startIdx += sessionsPerPosition[p]
+        }
         
         // Get all session IDs for this position (could be 1-2 sessions per day)
         const customSessionIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
         
-        if (customSessionIds.length > 0 && posIdx >= 0 && posIdx < sariCourseIds.length) {
+        logger.debug(`📍 Position ${position}: startIdx=${startIdx}, customSessionIds=${customSessionIds.join(',')}`)
+        
+        if (customSessionIds.length > 0 && startIdx >= 0 && startIdx < sariCourseIds.length) {
           // Replace as many sessions as we have custom IDs
-          for (let i = 0; i < customSessionIds.length && (posIdx + i) < sariCourseIds.length; i++) {
-            logger.debug(`📝 Replacing session at position ${position}+${i}: ${sariCourseIds[posIdx + i]} → ${customSessionIds[i]}`)
-            sariCourseIds[posIdx + i] = customSessionIds[i]
+          for (let i = 0; i < customSessionIds.length && (startIdx + i) < sariCourseIds.length; i++) {
+            logger.debug(`📝 Replacing session at index ${startIdx + i}: ${sariCourseIds[startIdx + i]} → ${customSessionIds[i]}`)
+            sariCourseIds[startIdx + i] = customSessionIds[i]
           }
         }
       }
