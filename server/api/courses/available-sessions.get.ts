@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
     sessionPosition, // Which session to swap (e.g., "3" or "4")
     afterDate,       // Must be after this date (to ensure chronological order)
     excludeCourseId, // Exclude the user's current course
-    courseLocation   // Location filter - only show sessions from same location
+    courseLocation,  // Location filter
+    currentDate      // Exclude sessions on this date (current session date)
   } = query
 
   if (!tenantId || !category || !sessionPosition) {
@@ -82,8 +83,9 @@ export default defineEventHandler(async (event) => {
       if (course.id === excludeCourseId) continue
       if (!course.sari_course_id) continue
       
-      // Filter by location if provided
-      if (filterLocation) {
+      // Don't filter by location for VKU (courses at different locations)
+      // Only filter for PGS/other categories where location matters
+      if (filterLocation && category !== 'VKU') {
         const courseLocation = extractLocation(course.description)
         if (courseLocation !== filterLocation) {
           logger.debug(`Skipping course ${course.name} - location mismatch (${courseLocation} != ${filterLocation})`)
@@ -135,6 +137,15 @@ export default defineEventHandler(async (event) => {
         const afterDateTime = new Date(afterDate as string)
         if (firstSessionDate <= afterDateTime) {
           logger.debug(`  - Session date ${firstSessionDate.toISOString()} is not after ${afterDateTime.toISOString()}, skipping`)
+          continue
+        }
+      }
+      
+      // Skip if same date as current session
+      if (currentDate) {
+        const sessionDateStr = sessionsForPosition[0].start_time.split('T')[0]
+        if (sessionDateStr === currentDate) {
+          logger.debug(`  - Session date ${sessionDateStr} matches current date ${currentDate}, skipping`)
           continue
         }
       }
