@@ -145,3 +145,11 @@ export function composeRateLimits(limiters: ReturnType<typeof createRateLimitMid
   })
 }
 
+/**
+ * Default export - required for Nitro middleware
+ * This file primarily exports helper functions; actual rate limiting is applied per-endpoint
+ */
+export default defineEventHandler(() => {
+  // No-op: Rate limiting is applied on specific endpoints using createRateLimitMiddleware
+})
+
