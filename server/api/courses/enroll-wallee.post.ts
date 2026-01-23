@@ -44,10 +44,11 @@ const handler = defineEventHandler(async (event) => {
       birthdate, 
       tenantId,
       email,
-      phone
+      phone,
+      customSessions // Optional: for flexible session selection
     } = body
 
-    logger.debug('📝 Wallee enrollment request:', { courseId, tenantId })
+    logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions })
 
     // 1. Validate inputs
     if (!courseId || !faberid || !birthdate || !tenantId) {
@@ -226,7 +227,8 @@ const handler = defineEventHandler(async (event) => {
         phone: finalPhone,
         sari_faberid: faberidClean, // Store for deduplication
         status: 'pending',
-        payment_status: 'pending'
+        payment_status: 'pending',
+        custom_sessions: customSessions || null // Store custom session selections
       })
       .select('id')
       .single()
