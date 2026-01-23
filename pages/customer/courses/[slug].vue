@@ -148,17 +148,36 @@
               </div>
             </div>
             
-            <!-- Button Full Width -->
-            <button 
-              v-if="course.free_slots > 0"
-              @click.stop="openEnrollmentModal(course)"
-              class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90"
-              :style="{
-                'backgroundColor': tenantBranding?.primary_color || '#10B981'
-              }"
-            >
-              Anmelden
-            </button>
+            <!-- Buttons -->
+            <div class="space-y-2">
+              <!-- Sessions anpassen Button (always visible) -->
+              <button
+                v-if="hasChangeableSessions(course)"
+                @click.stop="openSessionCustomizer(course)"
+                class="w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors flex items-center justify-center gap-2"
+                :style="{
+                  'color': tenantBranding?.primary_color || '#10B981',
+                  'borderColor': tenantBranding?.primary_color || '#10B981'
+                }"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Sessions anpassen
+              </button>
+              
+              <!-- Anmelden Button -->
+              <button 
+                v-if="course.free_slots > 0"
+                @click.stop="openEnrollmentModal(course)"
+                class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90"
+                :style="{
+                  'backgroundColor': tenantBranding?.primary_color || '#10B981'
+                }"
+              >
+                Anmelden
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -420,6 +439,32 @@ const closeEnrollmentModal = () => {
 const handleEnrolled = () => {
   closeEnrollmentModal()
   loadData() // Refresh to update free slots
+}
+
+// Check if a course has changeable sessions (for the button)
+const hasChangeableSessions = (course: any): boolean => {
+  if (!course?.course_sessions?.length) return false
+  
+  const sorted = [...course.course_sessions].sort((a: any, b: any) => 
+    a.start_time.localeCompare(b.start_time)
+  )
+  
+  // Group by date
+  const byDate: Map<string, any[]> = new Map()
+  for (const session of sorted) {
+    const date = session.start_time.split('T')[0]
+    if (!byDate.has(date)) byDate.set(date, [])
+    byDate.get(date)!.push(session)
+  }
+  
+  // Check if there are more than 1 group (more than 1 day)
+  return byDate.size > 1
+}
+
+const openSessionCustomizer = (course: any) => {
+  selectedCourse.value = course
+  showEnrollmentModal.value = true
+  // The modal will automatically show the session customizer on mount
 }
 
 // Apply query params to filters
