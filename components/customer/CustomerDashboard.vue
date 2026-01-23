@@ -699,9 +699,26 @@
                 <!-- Payment Details (Produkte & Rabatte) -->
                 <div v-if="hasPaymentDetails(appointment)" class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
                   <div class="space-y-1.5">
-                    <!-- Payment details section (empty for now) -->
-                    
-                    <!-- Methode 2: Direkte Spalten (alt, Fallback) -->
+                    <!-- Payment details from payment object or direct fields -->
+                    <div v-if="appointment.payment">
+                      <div v-if="getPaymentField(appointment, 'lesson_price_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
+                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'lesson_price_rappen')) }}</span>
+                      </div>
+                      <div v-if="getPaymentField(appointment, 'admin_fee_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">Verwaltungsgebühr</span>
+                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'admin_fee_rappen')) }}</span>
+                      </div>
+                      <div v-if="getPaymentField(appointment, 'products_price_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">Produkte</span>
+                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'products_price_rappen')) }}</span>
+                      </div>
+                      <div v-if="getPaymentField(appointment, 'discount_amount_rappen') > 0" class="flex justify-between items-center">
+                        <span class="text-gray-700">Rabatt</span>
+                        <span class="text-red-600 font-medium text-xs">- CHF {{ formatPrice(getPaymentField(appointment, 'discount_amount_rappen')) }}</span>
+                      </div>
+                    </div>
+                    <!-- Fallback: Direct payment fields if no payment object -->
                     <template v-else>
                       <div v-if="getPaymentField(appointment, 'lesson_price_rappen') > 0" class="flex justify-between items-center">
                         <span class="text-gray-700">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
