@@ -450,24 +450,76 @@ export class SARISyncEngine {
             .maybeSingle()
 
           if (!existingReg) {
-            // Create course registration
+            // Create course registration with full SARI data sync (TIER 1 enhancement)
+            const registrationData: any = {
+              // Core linking
+              course_id: simyCourseId,
+              participant_id: participantId,
+              tenant_id: this.tenantId,
+              
+              // Status
+              status: participant.confirmed ? 'confirmed' : 'pending',
+              payment_status: participant.confirmed ? 'paid' : 'pending',
+              
+              // TIER 1: Personal Data from SARI
+              first_name: fullCustomerData?.firstname || participant.firstname || 'Unbekannt',
+              last_name: fullCustomerData?.lastname || participant.lastname || 'Unbekannt',
+              email: participant.email || fullCustomerData?.email || null,
+              phone: participant.phone || fullCustomerData?.phone || null,
+              sari_faberid: participant.faberid,
+              street: fullCustomerData?.address || null,
+              zip: fullCustomerData?.zip || null,
+              city: fullCustomerData?.city || null,
+              
+              // TIER 1: Full SARI Audit Trail
+              sari_data: fullCustomerData ? {
+                faberid: fullCustomerData.faberid,
+                firstname: fullCustomerData.firstname,
+                lastname: fullCustomerData.lastname,
+                birthdate: fullCustomerData.birthdate,
+                email: fullCustomerData.email,
+                phone: fullCustomerData.phone,
+                address: fullCustomerData.address,
+                zip: fullCustomerData.zip,
+                city: fullCustomerData.city,
+                syncedAt: new Date().toISOString(),
+                syncSource: 'SARI_SYNC_ENGINE'
+              } : null,
+              
+              // TIER 1: License/Qualification Data
+              sari_licenses: fullCustomerData?.licenses && fullCustomerData.licenses.length > 0 ? {
+                licenses: fullCustomerData.licenses.map((license: any) => ({
+                  type: license.type || 'UNKNOWN',
+                  issued_date: license.date_issued,
+                  issued_by: license.country || 'CH',
+                  is_valid: license.valid !== false
+                })),
+                licenses_count: fullCustomerData.licenses.length,
+                synced_at: new Date().toISOString()
+              } : null,
+              
+              // Metadata
+              sari_synced: true,
+              sari_synced_at: new Date().toISOString(),
+              registered_by: 'sari-sync',
+              notes: `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${participant.faberid}`,
+              created_at: new Date().toISOString()
+            }
+
             const { error: regError } = await this.supabase
               .from('course_registrations')
-              .insert({
-                course_id: simyCourseId,
-                participant_id: participantId,
-                tenant_id: this.tenantId,
-                status: participant.confirmed ? 'confirmed' : 'pending',
-                sari_synced: true,
-                sari_synced_at: new Date().toISOString(),
-                created_at: new Date().toISOString()
-              })
+              .insert(registrationData)
 
             if (regError) {
               logger.error(`Error creating registration for ${participant.faberid}: ${regError.message}`)
             } else {
               syncedCount++
-              logger.debug(`✅ Created registration for ${participant.faberid}`)
+              logger.debug(`✅ Created registration for ${participant.faberid}:`, {
+                name: `${registrationData.first_name} ${registrationData.last_name}`,
+                email: registrationData.email,
+                phone: registrationData.phone,
+                licenses: registrationData.sari_licenses?.licenses_count || 0
+              })
             }
           }
         } catch (err: any) {
