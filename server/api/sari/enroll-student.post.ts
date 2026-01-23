@@ -198,18 +198,73 @@ export default defineEventHandler(async (event) => {
 
     console.log(`✅ [${userProfile.auth_user_id}] Successfully enrolled student in SARI course ${sariCourseId}`)
 
-    // Create local course registration
+    // Get full customer data from SARI for enriched registration (TIER 1 enhancement)
+    let sariCustomerData = null
+    try {
+      sariCustomerData = await sariClient.getCustomer(student.faberid, birthdate)
+      console.log(`📥 Retrieved full SARI customer data for ${student.faberid}`)
+    } catch (err: any) {
+      console.warn(`⚠️ Could not fetch full SARI customer data: ${err.message}`)
+    }
+
+    // Create local course registration with enriched SARI data (TIER 1 enhancement)
+    const registrationData: any = {
+      // Core linking
+      course_id: course.id,
+      user_id: studentId,
+      tenant_id: userProfile.tenant_id,
+      
+      // Status
+      status: 'confirmed',
+      payment_status: 'paid',
+      
+      // TIER 1: Personal Data from SARI/Student
+      first_name: student.first_name,
+      last_name: student.last_name,
+      sari_faberid: student.faberid,
+      email: sariCustomerData?.email || null,
+      phone: sariCustomerData?.phone || null,
+      street: sariCustomerData?.address || null,
+      zip: sariCustomerData?.zip || null,
+      city: sariCustomerData?.city || null,
+      
+      // TIER 1: Full SARI Audit Trail
+      sari_data: sariCustomerData ? {
+        faberid: sariCustomerData.faberid,
+        firstname: sariCustomerData.firstname,
+        lastname: sariCustomerData.lastname,
+        birthdate: sariCustomerData.birthdate,
+        email: sariCustomerData.email,
+        phone: sariCustomerData.phone,
+        address: sariCustomerData.address,
+        zip: sariCustomerData.zip,
+        city: sariCustomerData.city,
+        syncedAt: new Date().toISOString(),
+        syncSource: 'MANUAL_ENROLLMENT'
+      } : null,
+      
+      // TIER 1: License/Qualification Data
+      sari_licenses: sariCustomerData?.licenses && sariCustomerData.licenses.length > 0 ? {
+        licenses: sariCustomerData.licenses.map((license: any) => ({
+          type: license.type || 'UNKNOWN',
+          issued_date: license.date_issued,
+          issued_by: license.country || 'CH',
+          is_valid: license.valid !== false
+        })),
+        licenses_count: sariCustomerData.licenses.length,
+        synced_at: new Date().toISOString()
+      } : null,
+      
+      // Metadata
+      sari_synced: true,
+      sari_synced_at: new Date().toISOString(),
+      registered_by: user.id,
+      notes: `Manually enrolled by admin on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${student.faberid}`
+    }
+
     const { data: registration, error: regError } = await supabase
       .from('course_registrations')
-      .insert({
-        course_id: course.id,
-        user_id: studentId,
-        tenant_id: userProfile.tenant_id,
-        status: 'confirmed',
-        sari_synced: true,
-        sari_synced_at: new Date().toISOString(),
-        registered_by: user.id
-      })
+      .insert(registrationData)
       .select()
       .single()
 
