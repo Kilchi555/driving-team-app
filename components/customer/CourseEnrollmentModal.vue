@@ -30,7 +30,7 @@
             <!-- Sessions -->
             <div class="mt-3 space-y-1">
               <div v-for="(session, idx) in groupedSessions" :key="idx" class="text-sm">
-                <span class="text-gray-800">{{ formatSessionDate(session.date) }}:</span>
+                <span class="text-gray-800">{{ formatSessionDate(session.date) }} </span>
                 <span class="text-gray-500"> {{ session.timeRange }}</span>
               </div>
             </div>
@@ -142,7 +142,28 @@
               {{ enrollmentError }}
             </div>
 
-            <div class="flex gap-3 mt-6">
+            <!-- AGB Checkbox -->
+            <div class="mt-6 flex items-start gap-3">
+              <input 
+                id="agb-checkbox"
+                v-model="agbAccepted"
+                type="checkbox"
+                class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                :style="{ accentColor: getTenantPrimaryColor() }"
+              />
+              <label for="agb-checkbox" class="text-sm text-slate-600">
+                Ich habe die 
+                <a 
+                  href="https://www.simy.ch/agb" 
+                  target="_blank" 
+                  class="underline hover:no-underline"
+                  :style="{ color: getTenantPrimaryColor() }"
+                >AGB's</a> 
+                gelesen und akzeptiere diese.
+              </label>
+            </div>
+
+            <div class="flex gap-3 mt-4">
               <button 
                 @click="step = 'lookup'"
                 class="flex-1 py-3 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
@@ -242,8 +263,10 @@ const isValidPhone = computed(() => {
   return phoneClean.length >= 10
 })
 
+const agbAccepted = ref(false)
+
 const canSubmit = computed(() => {
-  return isValidEmail.value && isValidPhone.value && sariData.value
+  return isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
 })
 
 const groupedSessions = computed(() => {
@@ -253,9 +276,9 @@ const groupedSessions = computed(() => {
     a.start_time.localeCompare(b.start_time)
   )
   
-  const grouped: { date: string; timeRange: string; parts: number }[] = []
+  const grouped: { date: string; startTime: string; endTime: string; parts: number }[] = []
   let currentDate = ''
-  let currentGroup: any = null
+  let currentGroup: { date: string; startTime: string; endTime: string; parts: number } | null = null
   
   for (const session of sorted) {
     const date = session.start_time.split('T')[0]
@@ -269,7 +292,7 @@ const groupedSessions = computed(() => {
         endTime: session.end_time,
         parts: 1
       }
-    } else {
+    } else if (currentGroup) {
       currentGroup.endTime = session.end_time
       currentGroup.parts++
     }
@@ -416,6 +439,7 @@ watch(() => props.isOpen, (isOpen) => {
     lookupError.value = null
     enrollmentError.value = null
     sariData.value = null
+    agbAccepted.value = false
     formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
   }
 })

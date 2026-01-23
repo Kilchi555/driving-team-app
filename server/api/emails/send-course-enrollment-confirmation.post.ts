@@ -57,6 +57,7 @@ export default defineEventHandler(async (event) => {
           id,
           name,
           description,
+          category,
           price_per_participant_rappen,
           course_sessions(start_time, end_time)
         ),
@@ -118,65 +119,135 @@ export default defineEventHandler(async (event) => {
       `
     }
 
-    // 4. Build HTML email
+    // 4. Build "Wichtig!" section based on course category
+    const courseCategory = course?.category?.toUpperCase() || ''
+    const isVKU = courseCategory === 'VKU'
+    const isPGS = courseCategory === 'PGS'
+    const isEinsiedeln = course?.description?.toLowerCase().includes('einsiedeln')
+    const isCashPayment = paymentMethod === 'cash'
+    
+    let importantNotice = ''
+    if (isVKU) {
+      importantNotice = `
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+            <li>Gültiger Lernfahrausweis mitnehmen</li>
+            <li><a href="https://www.simy.ch/agb" style="color: #92400e;">AGB's</a> beachten</li>
+          </ul>
+        </div>
+      `
+    } else if (isPGS) {
+      let pgsNotices = `
+            <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
+            <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
+            <li>Gültiger Lernfahrausweis mitnehmen</li>`
+      
+      // Add cash notice for Einsiedeln PGS
+      if (isEinsiedeln && isCashPayment) {
+        pgsNotices += `
+            <li><strong>Kursgeld in bar mitnehmen (CHF ${price})</strong></li>`
+      }
+      
+      pgsNotices += `
+            <li><a href="https://www.simy.ch/agb" style="color: #92400e;">AGB's</a> beachten</li>`
+      
+      importantNotice = `
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #92400e;">${pgsNotices}
+          </ul>
+        </div>
+      `
+    } else {
+      // Default for other course types
+      importantNotice = `
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+            <li>Gültiger Lernfahrausweis mitnehmen</li>
+            <li><a href="https://www.simy.ch/agb" style="color: #92400e;">AGB's</a> beachten</li>
+          </ul>
+        </div>
+      `
+    }
+
+    // 5. Build HTML email with responsive design
     const enrollmentEmail = {
       to: enrollment.email,
       subject: emailSubject,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, rgba(16, 185, 129, 0.8) 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0; font-size: 24px;">Anmeldebestätigung</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">${tenant?.name}</p>
-          </div>
-          
-          <!-- Content -->
-          <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-            <p>Hallo ${enrollment.first_name},</p>
-            
-            <p>vielen Dank für deine Anmeldung!</p>
-            
-            <!-- Course Details -->
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="margin-top: 0; color: ${tenant?.primary_color || '#10B981'};">Kursdetails</h3>
-              <p style="margin: 10px 0;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
-              <p style="margin: 10px 0;"><strong>Standort:</strong> ${course?.description}</p>
-              <p style="margin: 10px 0;"><strong>Kursbeitrag:</strong> CHF ${price}</p>
-              
-              <!-- Sessions -->
-              <div style="margin-top: 15px;">
-                <strong>Termine:</strong>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                  ${formattedSessions}
-                </ul>
-              </div>
-            </div>
-            
-            <!-- Payment Method Notice -->
-            ${paymentMethodNotice}
-            
-            <!-- Next Steps -->
-            <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${tenant?.primary_color || '#10B981'};">
-              <h3 style="margin-top: 0;">Nächste Schritte</h3>
-              <ul style="margin: 0; padding-left: 20px;">
-                <li>Dein Platz im Kurs ist reserviert</li>
-                <li>Du erhältst weitere Infos per E-Mail</li>
-                <li>Bei Fragen: ${tenant?.contact_email}</li>
-              </ul>
-            </div>
-            
-            <p style="margin-bottom: 0;">Viel Erfolg und Freude beim Kurs!</p>
-            <p style="color: #666; font-size: 12px; margin-top: 20px;">
-              ${tenant?.name}<br>
-              ${tenant?.contact_email}
-            </p>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px;">
-            <p style="margin: 0;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
-          </div>
-        </div>
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${emailSubject}</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6;">
+            <tr>
+              <td align="center" style="padding: 20px 10px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, rgba(16, 185, 129, 0.8) 100%); color: white; padding: 25px 20px; text-align: center;">
+                      <h1 style="margin: 0; font-size: 22px; font-weight: 600;">Anmeldebestätigung</h1>
+                      <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">${tenant?.name}</p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 25px 20px;">
+                      <p style="margin: 0 0 15px 0; font-size: 16px;">Hallo ${enrollment.first_name},</p>
+                      <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">vielen Dank für deine Anmeldung!</p>
+                      
+                      <!-- Course Details -->
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 16px;">Kursdetails</h3>
+                            <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
+                            <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Standort:</strong> ${course?.description}</p>
+                            <p style="margin: 0 0 15px 0; font-size: 14px;"><strong>Kursbeitrag:</strong> CHF ${price}</p>
+                            
+                            <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Termine:</strong></p>
+                            <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #374151;">
+                              ${formattedSessions}
+                            </ul>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Payment Method Notice -->
+                      ${paymentMethodNotice}
+                      
+                      <!-- Important Notice -->
+                      ${importantNotice}
+                      
+                      <p style="margin: 20px 0 5px 0; font-size: 15px;">Viel Erfolg und Freude beim Kurs!</p>
+                      <p style="margin: 15px 0 0 0; font-size: 12px; color: #6b7280;">
+                        ${tenant?.name}<br>
+                        ${tenant?.contact_email}
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background: #f3f4f6; padding: 15px 20px; text-align: center;">
+                      <p style="margin: 0; font-size: 11px; color: #9ca3af;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `
     }
 
