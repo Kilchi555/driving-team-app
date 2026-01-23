@@ -176,7 +176,7 @@
                     <div class="flex justify-between items-start">
                       <div>
                         <div class="font-medium text-gray-800">{{ formatSessionDate(option.date) }}</div>
-                        <div class="text-sm text-gray-600">{{ formatSwapTime(option.startTime, option.endTime) }}</div>
+                        <div class="text-sm text-gray-600">{{ option.displayTimeRange || formatSwapTime(option.startTime, option.endTime) }}</div>
                         <div class="text-xs text-gray-500 mt-1">{{ option.courseLocation }}</div>
                       </div>
                       <div class="text-right">
@@ -500,17 +500,23 @@ const sessionGroups = computed(() => {
   // Build session groups
   const groups: any[] = []
   let position = 0
+  let sessionCounter = 0 // Track actual session numbers
   
   for (const [date, sessions] of byDate.entries()) {
     position++
     const isGrouped = sessions.length > 1 // Multiple sessions on same day = grouped
+    
+    // Calculate session numbers for label
+    const startSessionNum = sessionCounter + 1
+    const endSessionNum = sessionCounter + sessions.length
+    sessionCounter += sessions.length
     
     // Check if this session has been customized
     const customSession = customSessions.value[position.toString()]
     
     groups.push({
       position,
-      label: `Teil ${position}${isGrouped ? `-${position + sessions.length - 1}` : ''}`,
+      label: `Teil ${startSessionNum}${isGrouped ? `-${endSessionNum}` : ''}`,
       date,
       displayDate: customSession?.date || date,
       startTime: sessions[0].start_time,
@@ -564,15 +570,44 @@ const openSessionSwapModal = async (session: any) => {
         sessionPosition: session.position,
         afterDate,
         excludeCourseId: props.course.id,
-        courseLocation: props.course.description
+        courseLocation: props.course.description,
+        currentDate: session.date // Exclude sessions on the same date
       }
     }) as any
     
     if (response.success) {
-      availableSwapSessions.value = response.sessions.map((s: any) => ({
-        ...s,
-        isSelected: customSessions.value[session.position.toString()]?.sariSessionId === s.sariSessionId
-      }))
+      // Group sessions by date and course
+      const grouped: Map<string, any[]> = new Map()
+      
+      for (const session of response.sessions) {
+        const key = `${session.courseId}-${session.date}`
+        if (!grouped.has(key)) {
+          grouped.set(key, [])
+        }
+        grouped.get(key)!.push(session)
+      }
+      
+      // Convert groups to display format
+      availableSwapSessions.value = Array.from(grouped.values()).map((sessionGroup: any[]) => {
+        // Sort by start time
+        const sorted = [...sessionGroup].sort((a, b) => 
+          a.startTime.localeCompare(b.startTime)
+        )
+        
+        // Combine start/end times
+        const firstSession = sorted[0]
+        const lastSession = sorted[sorted.length - 1]
+        
+        return {
+          ...firstSession,
+          startTime: firstSession.startTime,
+          endTime: lastSession.endTime,
+          displayTimeRange: `${firstSession.startTime.split('T')[1].substring(0, 5)} - ${lastSession.endTime.split('T')[1].substring(0, 5)}`,
+          // For SARI, use first session ID (they're all same session ID at same time anyway)
+          isSelected: customSessions.value[session.position.toString()]?.sariSessionId === firstSession.sariSessionId,
+          groupSize: sessionGroup.length
+        }
+      })
     }
   } catch (error) {
     console.error('Error loading swap options:', error)
