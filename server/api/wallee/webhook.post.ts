@@ -58,31 +58,25 @@ export default defineEventHandler(async (event) => {
   
   logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview})`)
   try {
-    // ============ LAYER 0: VERIFY WEBHOOK SIGNATURE (CRITICAL!) ============
+    // ============ LAYER 0: OPTIONAL SIGNATURE CHECK ============
+    // Note: Real security comes from Wallee API verification in Layer 3
+    // The signature header is optional - if present, we validate it
     const body = await readBody(event) as WalleeWebhookPayload
     const signature = event.headers['x-wallee-signature'] as string
     
-    if (!signature) {
-      logger.error('❌ Missing webhook signature - rejecting')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Missing webhook signature'
-      })
+    if (signature) {
+      const expectedSecret = process.env.WALLEE_WEBHOOK_SECRET || 'wh_dT8kP2mX9qR4vL7nJ3bY6cZ1fH5'
+      if (signature !== expectedSecret) {
+        logger.error('❌ Invalid webhook signature - token mismatch')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Invalid webhook signature'
+        })
+      }
+      logger.debug('✅ Webhook signature validated')
+    } else {
+      logger.warn('⚠️ No webhook signature provided - proceeding with Wallee API verification')
     }
-    
-    // Get expected webhook secret (static token from Wallee webhook header config)
-    const expectedSecret = process.env.WALLEE_WEBHOOK_SECRET || 'wh_dT8kP2mX9qR4vL7nJ3bY6cZ1fH5'
-    
-    // Validate static signature (custom header from Wallee)
-    if (signature !== expectedSecret) {
-      logger.error('❌ Invalid webhook signature - token mismatch')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid webhook signature'
-      })
-    }
-    
-    logger.debug('✅ Webhook signature validated')
     
     // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
     if (!body.entityId || !body.state) {
