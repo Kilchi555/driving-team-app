@@ -86,13 +86,17 @@ export class SARISyncEngine {
         }
       }
 
-      // 3. Log success
+      // 3. Clean up deleted courses (deactivate courses that no longer exist in SARI)
+      const deletedCount = await this.cleanupDeletedCourses(courseType, courseGroups)
+
+      // 4. Log success
       logEntry.status = errors.length === 0 ? 'success' : 'partial'
       logEntry.result = {
         courses_synced: syncedCourses,
         sessions_synced: syncedSessions,
         participants_synced: syncedParticipants,
-        courses_failed: errors.length
+        courses_failed: errors.length,
+        courses_deleted: deletedCount
       }
 
       await this.logSyncOperation(logEntry)
@@ -108,7 +112,8 @@ export class SARISyncEngine {
           course_type: courseType,
           courses_synced: syncedCourses,
           sessions_synced: syncedSessions,
-          participants_synced: syncedParticipants
+          participants_synced: syncedParticipants,
+          courses_deleted: deletedCount
         }
       }
     } catch (error: any) {
@@ -136,6 +141,80 @@ export class SARISyncEngine {
   }
 
   /**
+   * Clean up deleted courses from SARI
+   * Mark courses as inactive if they no longer exist in SARI
+   */
+  private async cleanupDeletedCourses(
+    courseType: 'VKU' | 'PGS',
+    activeGroups: SARICourseGroup[]
+  ): Promise<number> {
+    try {
+      // Get all active SARI course IDs from current groups
+      const activeSariIds = activeGroups.flatMap(group => 
+        group.courses?.map((s: any) => s.id) || []
+      )
+      
+      // Find group IDs for all active courses
+      const activeGroupIds = activeGroups.map(group => 
+        `GROUP_${(group.courses || []).map((s: any) => s.id).join('_')}`
+      )
+
+      logger.debug(`📋 Checking for deleted courses: ${activeGroupIds.length} active groups`)
+
+      // Find all SARI-managed courses for this tenant and type that are NOT in the active list
+      const { data: orphanedCourses } = await this.supabase
+        .from('courses')
+        .select('id, sari_course_id, name')
+        .eq('tenant_id', this.tenantId)
+        .eq('category', courseType)
+        .eq('sari_managed', true)
+        .eq('is_active', true)
+
+      if (!orphanedCourses || orphanedCourses.length === 0) {
+        logger.debug('✅ No SARI courses to check for deletion')
+        return 0
+      }
+
+      let deletedCount = 0
+
+      for (const course of orphanedCourses) {
+        // Check if this course's sari_course_id is in the active list
+        if (!activeGroupIds.includes(course.sari_course_id)) {
+          logger.warn(`🗑️  Deactivating deleted SARI course: "${course.name}" (SARI ID: ${course.sari_course_id})`)
+
+          // Soft delete: Set is_active to false and status to 'cancelled' (for SARI-deleted courses)
+          const { error } = await this.supabase
+            .from('courses')
+            .update({
+              is_active: false,
+              status: 'cancelled',
+              status_changed_at: new Date().toISOString(),
+              status_changed_by: null, // System-initiated deletion
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', course.id)
+
+          if (error) {
+            logger.error(`Failed to deactivate course ${course.id}: ${error.message}`)
+          } else {
+            deletedCount++
+            logger.info(`✅ Deactivated course ${course.id}: "${course.name}"`)
+          }
+        }
+      }
+
+      if (deletedCount > 0) {
+        logger.info(`🧹 Cleanup: Deactivated ${deletedCount} deleted SARI courses`)
+      }
+
+      return deletedCount
+    } catch (err: any) {
+      logger.error(`Failed to cleanup deleted courses: ${err.message}`)
+      return 0
+    }
+  }
+
+  /**
    * Map a SARI course GROUP to a Simy course + sessions
    * Group = "Verkehrskunde Lachen" with sessions Teil 1, 2, 3, 4
    */
@@ -152,7 +231,7 @@ export class SARISyncEngine {
     // Get first session for location info
     const firstSession = sessions[0]
     const location = firstSession.address 
-      ? `${firstSession.address.name}, ${firstSession.address.address}, ${firstSession.address.zip} ${firstSession.address.city}`
+      ? `${firstSession.address.address}, ${firstSession.address.zip} ${firstSession.address.city}`
       : ''
     
     // Parse group start date
@@ -181,7 +260,7 @@ export class SARISyncEngine {
       tenant_id: this.tenantId,
       category: courseType,
       name: `${group.name} - ${formattedDate}`,
-      description: `📍 ${location}\n📅 Start: ${formattedDate}\n👥 ${sessions.length} Kursteile`,
+      description: location, // Just the address: street, number, zip, city
       max_participants: maxParticipants,
       current_participants: currentParticipants,
       instructor_id: null,
@@ -243,10 +322,27 @@ export class SARISyncEngine {
     for (let i = 0; i < sessions.length; i++) {
       const sariSession = sessions[i]
       
-      // Parse session date (format: "2026-01-10 08:00")
-      const sessionDate = new Date(sariSession.date.replace(' ', 'T'))
-      // Assume 2 hour sessions for VKU
-      const endDate = new Date(sessionDate.getTime() + 2 * 60 * 60 * 1000)
+      // Debug: Log what fields SARI sends
+      if (i === 0) {
+        logger.debug(`📋 SARI session structure (first session):`, {
+          id: sariSession.id,
+          name: sariSession.name,
+          date: sariSession.date,
+          fields: Object.keys(sariSession)
+        })
+      }
+      
+      // Parse session date (format from SARI: "2026-01-10 08:00")
+      // IMPORTANT: SARI sends LOCAL time (Swiss time), NOT UTC
+      // We need to store it as UTC by treating the local time as if it were UTC
+      // so that when displayed, it shows the original local time
+      const localTimeStr = sariSession.date.replace(' ', 'T') // "2026-01-10T08:00"
+      const startDate = new Date(localTimeStr + 'Z') // Add Z to treat as UTC (preserves the local time values)
+      
+      // Calculate duration based on course type
+      // VKU = 2 hours, PGS = 4 hours
+      const durationHours = courseType === 'VKU' ? 2 : 4
+      const endDate = new Date(new Date(startDate).getTime() + durationHours * 60 * 60 * 1000)
 
       // Extract instructor for this session
       const sessionInstructor = sariSession.instructor || sariSession.teacher || sariSession.address?.name || 'SARI Kursleiter'
@@ -257,7 +353,7 @@ export class SARISyncEngine {
         session_number: i + 1,
         title: sariSession.name,
         description: `SARI ID: ${sariSession.id} | Freie Plätze: ${sariSession.freeplaces}`,
-        start_time: sessionDate.toISOString(),
+        start_time: startDate.toISOString(),
         end_time: endDate.toISOString(),
         instructor_type: 'external' as const,
         external_instructor_name: sessionInstructor,
@@ -501,7 +597,6 @@ export class SARISyncEngine {
               // Metadata
               sari_synced: true,
               sari_synced_at: new Date().toISOString(),
-              registered_by: 'sari-sync',
               notes: `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${participant.faberid}`,
               created_at: new Date().toISOString()
             }

@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/calculate-availability",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/sync-sari-courses",
+      "schedule": "0 * * * *"
     }
   ]
 }
