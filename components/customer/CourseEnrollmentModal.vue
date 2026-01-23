@@ -154,7 +154,7 @@
               <label for="agb-checkbox" class="text-sm text-slate-600">
                 Ich habe die 
                 <a 
-                  href="https://www.simy.ch/agb" 
+                  :href="`/reglemente/agb?tenant=${props.tenantSlug}`" 
                   target="_blank" 
                   class="underline hover:no-underline"
                   :style="{ color: getTenantPrimaryColor() }"
@@ -203,6 +203,7 @@ interface Props {
   isOpen: boolean
   course: any
   tenantId: string
+  tenantSlug: string
 }
 
 const props = defineProps<Props>()

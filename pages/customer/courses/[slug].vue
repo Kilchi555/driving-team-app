@@ -170,6 +170,7 @@
       :is-open="showEnrollmentModal"
       :course="selectedCourse"
       :tenant-id="tenantId"
+      :tenant-slug="slug"
       @close="closeEnrollmentModal"
       @enrolled="handleEnrolled"
     />

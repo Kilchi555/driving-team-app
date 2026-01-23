@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
     if (paymentMethod === 'cash') {
       paymentMethodNotice = `
         <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <h3 style="margin-top: 0; color: #92400e;">Zahlungsweisen: Barzahlung vor Ort</h3>
+          <h3 style="margin-top: 0; color: #92400e;">Zahlungsmethode: Barzahlung vor Ort</h3>
           <p style="margin: 10px 0 0 0; color: #92400e;">
             <strong>Bitte bringen Sie CHF ${price} in bar zum ersten Kurstag mit.</strong>
           </p>
@@ -125,6 +125,8 @@ export default defineEventHandler(async (event) => {
     const isPGS = courseCategory === 'PGS'
     const isEinsiedeln = course?.description?.toLowerCase().includes('einsiedeln')
     const isCashPayment = paymentMethod === 'cash'
+    const tenantSlug = tenant?.slug || ''
+    const agbUrl = `https://www.simy.ch/reglemente/agb?tenant=${tenantSlug}`
     
     let importantNotice = ''
     if (isVKU) {
@@ -133,7 +135,7 @@ export default defineEventHandler(async (event) => {
           <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
           <ul style="margin: 0; padding-left: 20px; color: #92400e;">
             <li>Gültiger Lernfahrausweis mitnehmen</li>
-            <li><a href="https://www.simy.ch/agb" style="color: #92400e;">AGB's</a> beachten</li>
+            <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
           </ul>
         </div>
       `
@@ -150,7 +152,7 @@ export default defineEventHandler(async (event) => {
       }
       
       pgsNotices += `
-            <li><a href="https://www.simy.ch/agb" style="color: #92400e;">AGB's</a> beachten</li>`
+            <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
       
       importantNotice = `
         <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
@@ -166,7 +168,7 @@ export default defineEventHandler(async (event) => {
           <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
           <ul style="margin: 0; padding-left: 20px; color: #92400e;">
             <li>Gültiger Lernfahrausweis mitnehmen</li>
-            <li><a href="https://www.simy.ch/agb" style="color: #92400e;">AGB's</a> beachten</li>
+            <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
           </ul>
         </div>
       `
@@ -211,7 +213,7 @@ export default defineEventHandler(async (event) => {
                             <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 16px;">Kursdetails</h3>
                             <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
                             <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Standort:</strong> ${course?.description}</p>
-                            <p style="margin: 0 0 15px 0; font-size: 14px;"><strong>Kursbeitrag:</strong> CHF ${price}</p>
+                            <p style="margin: 0 0 15px 0; font-size: 14px;"><strong>Kurskosten:</strong> CHF ${price}</p>
                             
                             <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Termine:</strong></p>
                             <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #374151;">
