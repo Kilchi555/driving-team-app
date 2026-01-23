@@ -27,39 +27,111 @@
             <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
             <p class="text-lg font-bold mt-2 text-gray-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
             
-            <!-- Sessions with swap option -->
-            <div class="mt-3 space-y-2">
+            <!-- Sessions overview -->
+            <div class="mt-3 space-y-1">
               <div 
                 v-for="(session, idx) in sessionGroups" 
                 :key="idx" 
-                class="flex items-center justify-between text-sm p-2 rounded-lg"
+                class="text-sm p-2 rounded-lg"
                 :class="session.isCustom ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'"
               >
-                <div class="flex-1">
-                  <span class="text-gray-800 font-medium">{{ session.label }}: </span>
-                  <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }} </span>
-                  <span class="text-gray-500">{{ session.timeRange }}</span>
-                  <span v-if="session.isCustom" class="ml-2 text-xs text-blue-600">({{ session.customCourseName }})</span>
+                <span class="text-gray-800 font-medium">{{ session.label }}: </span>
+                <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }} </span>
+                <span class="text-gray-500">{{ session.timeRange }}</span>
+                <span v-if="session.isCustom" class="ml-2 text-xs text-blue-600">({{ session.customCourseName }})</span>
+              </div>
+            </div>
+            
+            <!-- Sessions anpassen Button -->
+            <button
+              v-if="hasChangeableSessions"
+              @click="showSessionCustomizer = true"
+              class="mt-3 w-full py-2 text-sm font-medium rounded-lg border transition-colors flex items-center justify-center gap-2"
+              :style="{ 
+                color: getTenantPrimaryColor(), 
+                borderColor: getTenantPrimaryColor() 
+              }"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {{ hasCustomSessions ? 'Sessions bearbeiten' : 'Sessions anpassen' }}
+            </button>
+          </div>
+          
+          <!-- Session Customizer Modal -->
+          <div 
+            v-if="showSessionCustomizer" 
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            @click.self="showSessionCustomizer = false"
+          >
+            <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden">
+              <div class="p-4 border-b flex items-center justify-between">
+                <h3 class="font-semibold text-gray-800">Sessions anpassen</h3>
+                <button @click="showSessionCustomizer = false" class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div class="p-4 overflow-y-auto max-h-[65vh]">
+                <p class="text-sm text-gray-600 mb-4">
+                  Wähle für jede Session das gewünschte Datum. Die erste Session ist fix.
+                </p>
+                
+                <!-- All sessions list -->
+                <div class="space-y-3">
+                  <div 
+                    v-for="session in sessionGroups" 
+                    :key="session.position"
+                    class="p-3 rounded-lg border"
+                    :class="session.isCustom ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <span class="font-medium text-gray-800">{{ session.label }}</span>
+                        <span v-if="!session.isChangeable" class="ml-2 text-xs text-gray-400">(fix)</span>
+                      </div>
+                      <button
+                        v-if="session.isChangeable"
+                        @click="openSessionSwapModal(session)"
+                        class="px-3 py-1 text-xs font-medium rounded-lg transition-colors"
+                        :style="{ 
+                          backgroundColor: getTenantPrimaryColor(),
+                          color: 'white'
+                        }"
+                      >
+                        Ändern
+                      </button>
+                    </div>
+                    <div class="mt-1 text-sm">
+                      <span class="text-gray-700">{{ formatSessionDate(session.displayDate) }}</span>
+                      <span class="text-gray-500 ml-2">{{ session.timeRange }}</span>
+                    </div>
+                    <div v-if="session.isCustom" class="mt-1 text-xs text-blue-600">
+                      {{ session.customCourseName }}
+                    </div>
+                  </div>
                 </div>
+              </div>
+              
+              <div class="p-4 border-t">
                 <button
-                  v-if="session.isChangeable && step === 'contact'"
-                  @click="openSessionSwapModal(session)"
-                  class="ml-2 px-3 py-1 text-xs font-medium rounded-lg border transition-colors"
-                  :style="{ 
-                    color: getTenantPrimaryColor(), 
-                    borderColor: getTenantPrimaryColor() 
-                  }"
+                  @click="showSessionCustomizer = false"
+                  class="w-full py-2 text-white font-medium rounded-lg transition-colors"
+                  :style="{ backgroundColor: getTenantPrimaryColor() }"
                 >
-                  {{ session.isCustom ? 'Ändern' : 'Ändern' }}
+                  Fertig
                 </button>
               </div>
             </div>
           </div>
           
-          <!-- Session Swap Modal -->
+          <!-- Session Swap Options Modal (nested) -->
           <div 
             v-if="showSessionSwapModal" 
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
             @click.self="closeSessionSwapModal"
           >
             <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
@@ -351,10 +423,21 @@ const agbAccepted = ref(false)
 
 // Session swap state
 const customSessions = ref<Record<string, any>>({})
+const showSessionCustomizer = ref(false)
 const showSessionSwapModal = ref(false)
 const swappingSession = ref<any>(null)
 const availableSwapSessions = ref<any[]>([])
 const isLoadingSwapOptions = ref(false)
+
+// Check if any sessions can be changed
+const hasChangeableSessions = computed(() => {
+  return sessionGroups.value.some(s => s.isChangeable)
+})
+
+// Check if user has customized any sessions
+const hasCustomSessions = computed(() => {
+  return Object.keys(customSessions.value).length > 0
+})
 
 const canSubmit = computed(() => {
   return isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
@@ -436,7 +519,7 @@ const sessionGroups = computed(() => {
         ? formatSwapTime(customSession.startTime, customSession.endTime)
         : `${formatTime(sessions[0].start_time)} - ${formatTime(sessions[sessions.length - 1].end_time)}`,
       parts: sessions.length,
-      isChangeable: !isGrouped && position > 1, // Can change if single session and not first
+      isChangeable: position > 1, // Can change any session/group except the first one
       isCustom: !!customSession,
       customCourseName: customSession?.courseName?.split(' - ')[0],
       originalSariIds: sessions.map((s: any) => s.sari_session_id).filter(Boolean),
@@ -659,13 +742,17 @@ const submitEnrollment = async () => {
 
 // Reset on close
 watch(() => props.isOpen, (isOpen) => {
-  if (!isOpen) {
+  if (isOpen) {
+    // Start with session customizer open if called from course page
+    showSessionCustomizer.value = false // Will open normally unless specified
+  } else {
     step.value = 'lookup'
     lookupError.value = null
     enrollmentError.value = null
     sariData.value = null
     agbAccepted.value = false
     customSessions.value = {}
+    showSessionCustomizer.value = false
     showSessionSwapModal.value = false
     swappingSession.value = null
     availableSwapSessions.value = []
