@@ -8,6 +8,8 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { SARIClient } from '~/utils/sariClient'
+import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -323,6 +325,13 @@ export default defineEventHandler(async (event) => {
           logger.warn('⚠️ Error updating course registrations:', registrationError)
         } else if (updatedRegistrations && updatedRegistrations.length > 0) {
           logger.info(`✅ Updated ${updatedRegistrations.length} course registration(s) to: ${registrationStatus}`)
+          
+          // ============ ENROLL IN SARI AFTER PAYMENT ============
+          if (paymentStatus === 'completed') {
+            for (const reg of updatedRegistrations) {
+              await enrollInSARIAfterPayment(supabase, reg.id)
+            }
+          }
           
           // ============ UPDATE COURSE PARTICIPANT COUNT ============
           if (paymentStatus === 'completed') {
@@ -804,5 +813,114 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
     } catch (err: any) {
       logger.warn('⚠️ Course enrollment email processing failed:', err.message)
     }
+  }
+}
+
+// ============ SARI ENROLLMENT AFTER PAYMENT ============
+async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
+  try {
+    logger.info(`📝 SARI enrollment for registration: ${registrationId}`)
+    
+    // 1. Get registration details with course info AND payment metadata
+    const { data: registration, error: regError } = await supabase
+      .from('course_registrations')
+      .select(`
+        id,
+        sari_faberid,
+        tenant_id,
+        course_id,
+        payment_id,
+        courses!inner(
+          id,
+          sari_managed,
+          sari_course_id,
+          tenant_id
+        )
+      `)
+      .eq('id', registrationId)
+      .single()
+    
+    if (regError || !registration) {
+      logger.warn('⚠️ Registration not found for SARI enrollment:', registrationId)
+      return
+    }
+    
+    const course = registration.courses
+    
+    // 2. Skip if not SARI-managed
+    if (!course.sari_managed || !course.sari_course_id) {
+      logger.debug('⏭️ Course is not SARI-managed, skipping SARI enrollment')
+      return
+    }
+    
+    // 3. Skip if no FABERID
+    if (!registration.sari_faberid) {
+      logger.warn('⚠️ No SARI FABERID found for registration:', registrationId)
+      return
+    }
+    
+    // 4. Get birthdate from payment metadata
+    let birthdate: string | null = null
+    
+    if (registration.payment_id) {
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('metadata')
+        .eq('id', registration.payment_id)
+        .single()
+      
+      if (payment?.metadata?.sari_birthdate) {
+        birthdate = payment.metadata.sari_birthdate
+        logger.debug('✅ Got birthdate from payment metadata:', birthdate)
+      }
+    }
+    
+    if (!birthdate) {
+      logger.error('❌ No birthdate available for SARI enrollment (not in payment metadata)')
+      return
+    }
+    
+    // 5. Get SARI credentials
+    const credentials = await getSARICredentialsSecure(registration.tenant_id, 'WEBHOOK_ENROLLMENT')
+    if (!credentials) {
+      logger.error('❌ SARI credentials not found for tenant:', registration.tenant_id)
+      return
+    }
+    
+    // 6. Create SARI client and enroll
+    const sari = new SARIClient(credentials)
+    
+    // Get first course ID from group (e.g., "GROUP_2110027_2110028_..." → 2110027)
+    const sariCourseId = course.sari_course_id.split('_')[1]
+    if (!sariCourseId) {
+      logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
+      return
+    }
+    
+    // Format birthdate as YYYY-MM-DD (already should be in this format)
+    const birthdateFormatted = typeof birthdate === 'string' && birthdate.includes('T')
+      ? birthdate.split('T')[0]
+      : birthdate
+    
+    logger.info(`🎯 Enrolling in SARI: courseId=${sariCourseId}, faberid=${registration.sari_faberid}, birthdate=${birthdateFormatted}`)
+    
+    await sari.enrollStudent(parseInt(sariCourseId), registration.sari_faberid, birthdateFormatted)
+    
+    logger.info('✅ SARI enrollment successful!')
+    
+    // 7. Update registration with sari_synced
+    await supabase
+      .from('course_registrations')
+      .update({
+        sari_synced: true,
+        sari_synced_at: new Date().toISOString()
+      })
+      .eq('id', registrationId)
+    
+    logger.info('✅ Registration marked as SARI synced')
+    
+  } catch (error: any) {
+    logger.error('❌ SARI enrollment failed:', error.message)
+    // Non-critical - payment was successful, enrollment can be done manually
   }
 }

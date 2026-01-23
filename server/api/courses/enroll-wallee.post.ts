@@ -274,6 +274,7 @@ const handler = defineEventHandler(async (event) => {
           tenantId: tenantId,
           metadata: {
             sari_faberid: faberidClean,
+            sari_birthdate: birthdate, // Store for SARI enrollment after payment
             course_name: course.name,
             course_location: course.description
           }
