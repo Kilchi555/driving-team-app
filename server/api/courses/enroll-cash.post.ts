@@ -6,6 +6,8 @@
  * 2. Creates CONFIRMED enrollment (no payment needed)
  * 3. Immediately enrolls in SARI (if sari_managed)
  * 4. Sends confirmation email
+ * 
+ * Rate Limiting: 5 attempts per IP per minute (prevent SARI brute-force)
  */
 
 import { defineEventHandler, readBody, createError } from 'h3'
@@ -14,8 +16,27 @@ import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { validateLicense } from '~/server/utils/license-validation'
+import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 
-export default defineEventHandler(async (event) => {
+// Rate limiting: 5 attempts per IP per minute
+const rateLimiter = createRateLimitMiddleware({
+  maxAttempts: 5,
+  windowMs: 60 * 1000, // 1 minute
+  keyGenerator: (event) => {
+    // Get IP address
+    const forwarded = event.headers['x-forwarded-for']
+    if (forwarded) {
+      return forwarded.split(',')[0].trim()
+    }
+    const realIp = event.headers['x-real-ip']
+    if (realIp) {
+      return realIp
+    }
+    return event.node.req.socket?.remoteAddress || 'unknown'
+  }
+})
+
+const handler = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const { 
@@ -278,8 +299,9 @@ export default defineEventHandler(async (event) => {
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
         body: {
-          enrollmentId: enrollment.id,
-          paymentMethod: 'cash'
+          courseRegistrationId: enrollment.id,
+          paymentMethod: 'cash',
+          totalAmount: course.price_per_participant_rappen / 100 // In CHF
         }
       })
       logger.info(`📧 Confirmation email sent to ${finalEmail}`)
@@ -305,5 +327,12 @@ export default defineEventHandler(async (event) => {
       statusMessage: error.message || 'Enrollment failed'
     })
   }
+})
+
+export default defineEventHandler(async (event) => {
+  // Apply rate limiting first
+  await rateLimiter(event)
+  // Then handle the request
+  return handler(event)
 })
 

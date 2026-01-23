@@ -5,6 +5,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { createHmac } from 'crypto'
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
 // ============ TYPES ============
@@ -48,9 +49,67 @@ export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   
   try {
-    // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
+    // ============ LAYER 0: VERIFY WEBHOOK SIGNATURE (CRITICAL!) ============
     const body = await readBody(event) as WalleeWebhookPayload
+    const signature = event.headers['x-wallee-signature'] as string
     
+    if (!signature) {
+      logger.error('❌ Missing webhook signature - rejecting')
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Missing webhook signature'
+      })
+    }
+    
+    // Get API secret for signature validation
+    let apiSecret = process.env.WALLEE_SECRET_KEY
+    
+    // If we have a spaceId, try to get tenant-specific secret
+    if (body.spaceId) {
+      try {
+        const supabase = getSupabaseAdmin()
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('wallee_secret_key')
+          .eq('wallee_space_id', body.spaceId.toString())
+          .single()
+        
+        if (tenant?.wallee_secret_key) {
+          apiSecret = tenant.wallee_secret_key
+        }
+      } catch (e) {
+        // Use default secret if tenant lookup fails
+      }
+    }
+    
+    if (!apiSecret) {
+      logger.error('❌ No Wallee API secret configured')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Wallee API secret not configured'
+      })
+    }
+    
+    // Validate HMAC signature
+    const bodyString = JSON.stringify(body)
+    const computedSignature = createHmac('sha256', apiSecret)
+      .update(bodyString)
+      .digest('hex')
+    
+    if (signature !== computedSignature) {
+      logger.error('❌ Invalid webhook signature - signature mismatch', {
+        provided: signature.substring(0, 16) + '...',
+        computed: computedSignature.substring(0, 16) + '...'
+      })
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Invalid webhook signature'
+      })
+    }
+    
+    logger.debug('✅ Webhook signature validated')
+    
+    // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
     if (!body.entityId || !body.state) {
       logger.warn('❌ Invalid webhook payload - missing entityId or state')
       return { success: false, error: 'Invalid webhook payload' }
@@ -704,140 +763,41 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
     try {
       // Check if this payment is for a course enrollment
       // First try looking up by course_registration_id (new way)
-      let courseReg = null
+      let courseRegistrationId = null
       
       if (payment.course_registration_id) {
-        const { data } = await supabase
-          .from('course_registrations')
-          .select(`
-            id,
-            email,
-            first_name,
-            last_name,
-            course_id,
-            courses!inner(
-              id,
-              name,
-              description,
-              price_per_participant_rappen,
-              course_sessions(start_time)
-            ),
-            tenants!inner(
-              id,
-              name,
-              slug,
-              contact_email,
-              primary_color
-            )
-          `)
-          .eq('id', payment.course_registration_id)
-          .single()
-        
-        courseReg = data
+        courseRegistrationId = payment.course_registration_id
       } else if (payment.id) {
         // Fallback: try looking up by payment_id (old way for compatibility)
         const { data } = await supabase
           .from('course_registrations')
-          .select(`
-            id,
-            email,
-            first_name,
-            last_name,
-            course_id,
-            courses!inner(
-              id,
-              name,
-              description,
-              price_per_participant_rappen,
-              course_sessions(start_time)
-            ),
-            tenants!inner(
-              id,
-              name,
-              slug,
-              contact_email,
-              primary_color
-            )
-          `)
+          .select('id')
           .eq('payment_id', payment.id)
           .single()
         
-        courseReg = data
+        if (data) {
+          courseRegistrationId = data.id
+        }
       }
       
-      if (!courseReg?.email) {
-        logger.debug('⏭️ No course enrollment email found for payment:', payment.id)
+      if (!courseRegistrationId) {
+        logger.debug('⏭️ No course enrollment found for payment:', payment.id)
         continue
       }
       
-      const course = courseReg.courses
-      const tenant = courseReg.tenants
-      const courseDate = course?.course_sessions?.[0]?.start_time
-        ? new Date(course.course_sessions[0].start_time).toLocaleDateString('de-CH')
-        : 'TBD'
-      
-      const enrollmentEmail = {
-        to: courseReg.email,
-        subject: `Anmeldebestätigung: ${course?.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, rgba(16, 185, 129, 0.8) 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; font-size: 24px;">Anmeldebestätigung</h1>
-              <p style="margin: 5px 0 0 0; opacity: 0.9;">${tenant?.name}</p>
-            </div>
-            
-            <!-- Content -->
-            <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-              <p>Hallo ${courseReg.first_name},</p>
-              
-              <p>vielen Dank für deine Anmeldung! Deine Zahlung wurde erfolgreich verarbeitet.</p>
-              
-              <!-- Course Details -->
-              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: ${tenant?.primary_color || '#10B981'};">Kursdetails</h3>
-                <p><strong>Kurs:</strong> ${course?.name}</p>
-                <p><strong>Standort:</strong> ${course?.description}</p>
-                <p><strong>Startdatum:</strong> ${courseDate}</p>
-                <p><strong>Kursbeitrag:</strong> CHF ${(course?.price_per_participant_rappen ? course.price_per_participant_rappen / 100 : 0).toFixed(2)}</p>
-              </div>
-              
-              <!-- Next Steps -->
-              <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${tenant?.primary_color || '#10B981'};">
-                <h3 style="margin-top: 0;">Nächste Schritte</h3>
-                <ul style="margin: 0; padding-left: 20px;">
-                  <li>Dein Platz im Kurs ist reserviert</li>
-                  <li>Du erhältst weitere Infos per E-Mail</li>
-                  <li>Bei Fragen: ${tenant?.contact_email}</li>
-                </ul>
-              </div>
-              
-              <p style="margin-bottom: 0;">Viel Erfolg und Freude beim Kurs!</p>
-              <p style="color: #666; font-size: 12px; margin-top: 20px;">
-                ${tenant?.name}<br>
-                ${tenant?.contact_email}
-              </p>
-            </div>
-            
-            <!-- Footer -->
-            <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px;">
-              <p style="margin: 0;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
-            </div>
-          </div>
-        `
-      }
-      
-      // Send email using Resend
+      // Trigger the email service
       try {
-        const { Resend } = await import('resend')
-        const resend = new Resend(process.env.RESEND_API_KEY)
-        
-        await resend.emails.send(enrollmentEmail)
-        logger.info('✅ Course enrollment confirmation email sent to:', courseReg.email)
-      } catch (resendErr: any) {
-        logger.warn('⚠️ Resend email service failed:', resendErr.message)
-        // Try alternative: log for manual sending
-        logger.debug('📧 Email to be sent manually:', enrollmentEmail.to, enrollmentEmail.subject)
+        await $fetch('/api/emails/send-course-enrollment-confirmation', {
+          method: 'POST',
+          body: {
+            courseRegistrationId,
+            paymentMethod: 'wallee'
+          }
+        })
+        logger.info('✅ Course enrollment confirmation email triggered for:', courseRegistrationId)
+      } catch (err: any) {
+        logger.warn('⚠️ Email service call failed:', err.message)
+        // Non-critical - continue
       }
     } catch (err: any) {
       logger.warn('⚠️ Course enrollment email processing failed:', err.message)
