@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
           name,
           description,
           price_per_participant_rappen,
-          course_sessions(start_time)
+          course_sessions(start_time, end_time)
         ),
         tenants!inner(
           id,
@@ -81,9 +81,10 @@ export default defineEventHandler(async (event) => {
 
     const course = enrollment.courses
     const tenant = enrollment.tenants
-    const courseDate = course?.course_sessions?.[0]?.start_time
-      ? new Date(course.course_sessions[0].start_time).toLocaleDateString('de-CH')
-      : 'TBD'
+    
+    // Format sessions - group by day, show times
+    const sessions = course?.course_sessions || []
+    const formattedSessions = formatSessionsForEmail(sessions)
 
     const price = course?.price_per_participant_rappen 
       ? (course.price_per_participant_rappen / 100).toFixed(2)
@@ -138,10 +139,17 @@ export default defineEventHandler(async (event) => {
             <!-- Course Details -->
             <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="margin-top: 0; color: ${tenant?.primary_color || '#10B981'};">Kursdetails</h3>
-              <p style="margin: 10px 0;"><strong>Kurs:</strong> ${course?.name}</p>
+              <p style="margin: 10px 0;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
               <p style="margin: 10px 0;"><strong>Standort:</strong> ${course?.description}</p>
-              <p style="margin: 10px 0;"><strong>Startdatum:</strong> ${courseDate}</p>
               <p style="margin: 10px 0;"><strong>Kursbeitrag:</strong> CHF ${price}</p>
+              
+              <!-- Sessions -->
+              <div style="margin-top: 15px;">
+                <strong>Termine:</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                  ${formattedSessions}
+                </ul>
+              </div>
             </div>
             
             <!-- Payment Method Notice -->
@@ -220,4 +228,95 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
+
+// Helper function to format sessions for email
+function formatSessionsForEmail(sessions: any[]): string {
+  if (!sessions || sessions.length === 0) {
+    return '<li>Termine werden noch bekannt gegeben</li>'
+  }
+  
+  // Sort sessions by start_time
+  const sortedSessions = [...sessions].sort((a, b) => 
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  )
+  
+  // Group sessions by date
+  const sessionsByDate: Record<string, any[]> = {}
+  
+  for (const session of sortedSessions) {
+    const date = new Date(session.start_time)
+    const dateKey = date.toISOString().split('T')[0] // YYYY-MM-DD
+    
+    if (!sessionsByDate[dateKey]) {
+      sessionsByDate[dateKey] = []
+    }
+    sessionsByDate[dateKey].push(session)
+  }
+  
+  // Format each day
+  const formattedDays: string[] = []
+  
+  for (const [dateKey, daySessions] of Object.entries(sessionsByDate)) {
+    const date = new Date(dateKey + 'T12:00:00') // Noon to avoid timezone issues
+    
+    // Format date: "Fr. 24.01.2026"
+    const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+    const weekday = weekdays[date.getDay()]
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+    const formattedDate = `${weekday}. ${day}.${month}.${year}`
+    
+    // Get time range for this day
+    const times = daySessions.map(s => {
+      const start = new Date(s.start_time)
+      const end = s.end_time ? new Date(s.end_time) : null
+      
+      const startTime = start.toLocaleTimeString('de-CH', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Europe/Zurich'
+      })
+      
+      if (end) {
+        const endTime = end.toLocaleTimeString('de-CH', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Europe/Zurich'
+        })
+        return `${startTime} - ${endTime}`
+      }
+      return startTime
+    })
+    
+    // If multiple sessions on same day, show range from first start to last end
+    if (daySessions.length > 1) {
+      const firstStart = new Date(daySessions[0].start_time)
+      const lastSession = daySessions[daySessions.length - 1]
+      const lastEnd = lastSession.end_time ? new Date(lastSession.end_time) : null
+      
+      const startTime = firstStart.toLocaleTimeString('de-CH', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'Europe/Zurich'
+      })
+      
+      if (lastEnd) {
+        const endTime = lastEnd.toLocaleTimeString('de-CH', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'Europe/Zurich'
+        })
+        formattedDays.push(`<li>${formattedDate}, ${startTime} - ${endTime}</li>`)
+      } else {
+        formattedDays.push(`<li>${formattedDate}, ${startTime}</li>`)
+      }
+    } else {
+      // Single session
+      formattedDays.push(`<li>${formattedDate}, ${times[0]}</li>`)
+    }
+  }
+  
+  return formattedDays.join('\n                  ')
+}
 
