@@ -310,7 +310,8 @@ export default defineEventHandler(async (event) => {
       tenant_id: tenantId,
       metadata: {
         enrollment_id: enrollmentId,
-        course_id: courseId
+        course_id: courseId,
+        ...metadata // Include sari_faberid, sari_birthdate, etc.
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
