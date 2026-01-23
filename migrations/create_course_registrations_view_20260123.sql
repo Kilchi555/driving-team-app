@@ -34,9 +34,6 @@ SELECT
   cr.deleted_at,
   cr.deleted_by,
   cr.registered_at,
-  cr.enrollment_date,
-  cr.enrollment_time,
-  cr.enrollment_notes,
   
   -- Participant data (from course_participants via JOIN)
   -- Using COALESCE for backward compatibility with old data in CR
@@ -51,8 +48,6 @@ SELECT
   -- SARI data (from course_participants)
   cp.faberid,
   cp.birthdate,
-  cp.sari_data,
-  cp.sari_licenses,
   
   -- Participant metadata
   cp.created_by AS participant_created_by
@@ -123,8 +118,7 @@ SELECT
   COUNT(*) as total_registrations,
   COUNT(CASE WHEN first_name IS NOT NULL AND first_name != '' THEN 1 END) as with_first_name,
   COUNT(CASE WHEN email IS NOT NULL THEN 1 END) as with_email,
-  COUNT(CASE WHEN faberid IS NOT NULL THEN 1 END) as with_sari_faberid,
-  COUNT(CASE WHEN sari_licenses IS NOT NULL THEN 1 END) as with_licenses
+  COUNT(CASE WHEN faberid IS NOT NULL THEN 1 END) as with_sari_faberid
 FROM public.course_registrations_with_participant;
 
 -- Check for NULL participants (orphaned registrations)
