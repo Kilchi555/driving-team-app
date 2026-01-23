@@ -107,23 +107,29 @@ onMounted(async () => {
     // If tenant slug provided, fetch tenant-specific regulation
     if (tenantSlug.value) {
       // Get tenant ID from slug
-      const { data: tenantData } = await useFetch('/api/tenants/by-slug', {
+      const tenantData = await $fetch('/api/tenants/by-slug', {
         query: { slug: tenantSlug.value }
+      }).catch((err) => {
+        console.error('Error fetching tenant:', err)
+        return null
       })
       
-      if (tenantData.value?.id) {
-        tenantName.value = tenantData.value.name || ''
+      if (tenantData?.data?.id) {
+        tenantName.value = tenantData.data.name || ''
         
         // Fetch regulation for this tenant
-        const { data: regData } = await useFetch('/api/reglemente/public', {
+        const regData = await $fetch('/api/reglemente/public', {
           query: { 
-            tenantId: tenantData.value.id,
+            tenantId: tenantData.data.id,
             type: type.value
           }
+        }).catch((err) => {
+          console.error('Error fetching regulation:', err)
+          return null
         })
         
-        if (regData.value?.content) {
-          reglementContent.value = regData.value.content
+        if (regData?.content) {
+          reglementContent.value = regData.content
         } else {
           error.value = 'Reglement nicht gefunden'
         }
