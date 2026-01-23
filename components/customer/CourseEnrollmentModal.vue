@@ -568,7 +568,8 @@ const openSessionSwapModal = async (session: any) => {
         category: props.course.category,
         sessionPosition: session.position,
         afterDate,
-        excludeCourseId: props.course.id
+        excludeCourseId: props.course.id,
+        courseLocation: props.course.description
       }
     }) as any
     
@@ -768,9 +769,14 @@ const getCourseInfoStyle = () => {
 }
 
 const getGermanErrorMessage = (error: any): string => {
-  const message = error.data?.message || error.message || error.message || ''
+  // Try multiple error message locations
+  const message = error.data?.message || error.message || error.statusMessage || error.data || ''
   const statusCode = error.data?.statusCode || error.statusCode
   
+  // License errors from SARI
+  if (message.includes('Lizenz') || message.includes('Fahrerlaubnis') || message.includes('Category')) {
+    return message
+  }
   if (message.includes('Dieser Kurs ist leider ausgebucht.')) {
     return 'Dieser Kurs ist leider ausgebucht.'
   }
