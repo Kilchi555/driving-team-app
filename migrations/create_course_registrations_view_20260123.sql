@@ -67,47 +67,9 @@ Use this instead of manual JOINs in application queries.';
 
 ALTER VIEW public.course_registrations_with_participant SET (security_barrier = on);
 
--- ============================================================
--- STEP 3: Create RLS Policies for VIEW
--- ============================================================
-
--- Policy 1: Admins and staff can view all registrations in their tenant
-CREATE POLICY "Admin staff view all registrations via view"
-ON public.course_registrations_with_participant
-FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 
-    FROM public.users u
-    WHERE u.auth_user_id = auth.uid()
-      AND u.tenant_id = course_registrations_with_participant.tenant_id
-      AND u.role IN ('admin', 'staff', 'superadmin')
-      AND u.is_active = true
-  )
-);
-
--- Policy 2: Users can view their own registration
-CREATE POLICY "Users view own registration via view"
-ON public.course_registrations_with_participant
-FOR SELECT
-TO authenticated
-USING (
-  user_id IN (
-    SELECT id 
-    FROM public.users 
-    WHERE auth_user_id = auth.uid() 
-      AND is_active = true
-  )
-  OR
-  participant_id IN (
-    SELECT cp.id
-    FROM public.course_participants cp
-    INNER JOIN public.users u ON cp.user_id = u.id
-    WHERE u.auth_user_id = auth.uid()
-      AND u.is_active = true
-  )
-);
+-- Note: RLS Policies on VIEWs are not directly supported
+-- The VIEW inherits RLS from the underlying tables (course_registrations, course_participants)
+-- which already have their own RLS policies
 
 -- ============================================================
 -- STEP 4: Verification
