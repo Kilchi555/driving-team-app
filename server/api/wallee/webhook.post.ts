@@ -269,7 +269,34 @@ export default defineEventHandler(async (event) => {
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
     
-    // ============ LAYER 8: UPDATE APPOINTMENTS ============
+    // ============ LAYER 9: UPDATE COURSE REGISTRATIONS (NEW!) ============
+    if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
+      const courseRegistrationIds = paymentsToUpdate
+        .filter(p => p.course_registration_id)
+        .map(p => p.course_registration_id)
+      
+      if (courseRegistrationIds.length > 0) {
+        const registrationStatus = paymentStatus === 'completed' ? 'confirmed' : 'pending'
+        const paymentStatusUpdate = paymentStatus === 'completed' ? 'paid' : 'pending'
+        
+        const { error: registrationError } = await supabase
+          .from('course_registrations')
+          .update({
+            status: registrationStatus,
+            payment_status: paymentStatusUpdate,
+            updated_at: new Date().toISOString()
+          })
+          .in('id', courseRegistrationIds)
+        
+        if (registrationError) {
+          logger.warn('⚠️ Error updating course registrations:', registrationError)
+        } else {
+          logger.info(`✅ Updated ${courseRegistrationIds.length} course registration(s) to: ${registrationStatus}`)
+        }
+      }
+    }
+
+    // ============ LAYER 10: UPDATE APPOINTMENTS ============
     if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
       const appointmentIds = paymentsToUpdate
         .filter(p => p.appointment_id)
