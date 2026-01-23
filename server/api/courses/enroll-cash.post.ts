@@ -205,16 +205,11 @@ export default defineEventHandler(async (event) => {
         email: finalEmail,
         phone: finalPhone,
         sari_faberid: faberidClean,
-        street: customerData.address || '',
-        zip: customerData.zip || '',
-        city: customerData.city || '',
         status: 'confirmed',
         payment_status: 'paid', // Cash-on-site is always "paid"
-        payment_method: 'cash_on_site',
-        enrolled_at: new Date().toISOString(),
-        confirmed_at: new Date().toISOString(),
-        sari_data: customerData,
-        sari_licenses: customerData.licenses || []
+        payment_method: 'cash_on_site'
+        // Note: street, zip, city are in users table via user_id
+        // Note: No sari_data/sari_licenses columns in course_registrations
       })
       .select('id')
       .single()

@@ -703,31 +703,67 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
   for (const payment of payments) {
     try {
       // Check if this payment is for a course enrollment
-      const { data: courseReg } = await supabase
-        .from('course_registrations')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          course_id,
-          courses!inner(
+      // First try looking up by course_registration_id (new way)
+      let courseReg = null
+      
+      if (payment.course_registration_id) {
+        const { data } = await supabase
+          .from('course_registrations')
+          .select(`
             id,
-            name,
-            description,
-            price_per_participant_rappen,
-            course_sessions(start_time)
-          ),
-          tenants!inner(
+            email,
+            first_name,
+            last_name,
+            course_id,
+            courses!inner(
+              id,
+              name,
+              description,
+              price_per_participant_rappen,
+              course_sessions(start_time)
+            ),
+            tenants!inner(
+              id,
+              name,
+              slug,
+              contact_email,
+              primary_color
+            )
+          `)
+          .eq('id', payment.course_registration_id)
+          .single()
+        
+        courseReg = data
+      } else if (payment.id) {
+        // Fallback: try looking up by payment_id (old way for compatibility)
+        const { data } = await supabase
+          .from('course_registrations')
+          .select(`
             id,
-            name,
-            slug,
-            contact_email,
-            primary_color
-          )
-        `)
-        .eq('payment_id', payment.id)
-        .single()
+            email,
+            first_name,
+            last_name,
+            course_id,
+            courses!inner(
+              id,
+              name,
+              description,
+              price_per_participant_rappen,
+              course_sessions(start_time)
+            ),
+            tenants!inner(
+              id,
+              name,
+              slug,
+              contact_email,
+              primary_color
+            )
+          `)
+          .eq('payment_id', payment.id)
+          .single()
+        
+        courseReg = data
+      }
       
       if (!courseReg?.email) {
         logger.debug('⏭️ No course enrollment email found for payment:', payment.id)
