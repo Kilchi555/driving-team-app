@@ -80,8 +80,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const course = enrollment.courses
-    const tenant = enrollment.tenants
+    const course = enrollment.courses as any
+    const tenant = enrollment.tenants as any
     
     // Format sessions - group by day, show times
     const sessions = course?.course_sessions || []
@@ -97,25 +97,30 @@ export default defineEventHandler(async (event) => {
 
     if (paymentMethod === 'cash') {
       paymentMethodNotice = `
-        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <h3 style="margin-top: 0; color: #92400e;">Zahlungsmethode: Barzahlung vor Ort</h3>
-          <p style="margin: 10px 0 0 0; color: #92400e;">
-            <strong>Bitte bringen Sie CHF ${price} in bar zum ersten Kurstag mit.</strong>
-          </p>
-          <p style="margin: 10px 0 0 0; font-size: 14px; color: #92400e;">
-            Die Zahlung ist erforderlich, damit Sie den Kurs besuchen können.
-          </p>
-        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Zahlungsmethode: Barzahlung vor Ort</h3>
+              <p style="margin: 0; color: #92400e; font-size: 13px;">
+                <strong>Bitte bringen Sie CHF ${price} in bar zum ersten Kurstag mit.</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
       `
       emailSubject = `Anmeldebestätigung: ${course?.name} (Barzahlung)`
     } else {
       paymentMethodNotice = `
-        <div style="background: #dcfce7; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <h3 style="margin-top: 0; color: #166534;">Zahlungsweisen: Online bezahlt</h3>
-          <p style="margin: 10px 0 0 0; color: #166534;">
-            Deine Zahlung wurde erfolgreich verarbeitet. Dein Platz ist gesichert!
-          </p>
-        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #dcfce7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #22c55e;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #166534; font-size: 14px; font-weight: 600;">Zahlungsmethode: Online bezahlt</h3>
+              <p style="margin: 0; color: #166534; font-size: 13px;">
+                Deine Zahlung wurde erfolgreich verarbeitet. Dein Platz ist gesichert!
+              </p>
+            </td>
+          </tr>
+        </table>
       `
     }
 
@@ -131,46 +136,58 @@ export default defineEventHandler(async (event) => {
     let importantNotice = ''
     if (isVKU) {
       importantNotice = `
-        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
-          <ul style="margin: 0; padding-left: 20px; color: #92400e;">
-            <li>Gültiger Lernfahrausweis mitnehmen</li>
-            <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
-          </ul>
-        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
+              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">
+                <li>Gültiger Lernfahrausweis mitnehmen</li>
+                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
+              </ul>
+            </td>
+          </tr>
+        </table>
       `
     } else if (isPGS) {
       let pgsNotices = `
-            <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
-            <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
-            <li>Gültiger Lernfahrausweis mitnehmen</li>`
+                <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
+                <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
+                <li>Gültiger Lernfahrausweis mitnehmen</li>`
       
       // Add cash notice for Einsiedeln PGS
       if (isEinsiedeln && isCashPayment) {
         pgsNotices += `
-            <li><strong>Kursgeld in bar mitnehmen (CHF ${price})</strong></li>`
+                <li><strong>Kursgeld in bar mitnehmen (CHF ${price})</strong></li>`
       }
       
       pgsNotices += `
-            <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
+                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
       
       importantNotice = `
-        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
-          <ul style="margin: 0; padding-left: 20px; color: #92400e;">${pgsNotices}
-          </ul>
-        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
+              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">${pgsNotices}
+              </ul>
+            </td>
+          </tr>
+        </table>
       `
     } else {
       // Default for other course types
       importantNotice = `
-        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="margin-top: 0; color: #92400e;">Wichtig!</h3>
-          <ul style="margin: 0; padding-left: 20px; color: #92400e;">
-            <li>Gültiger Lernfahrausweis mitnehmen</li>
-            <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
-          </ul>
-        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
+              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">
+                <li>Gültiger Lernfahrausweis mitnehmen</li>
+                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
+              </ul>
+            </td>
+          </tr>
+        </table>
       `
     }
 
@@ -210,13 +227,13 @@ export default defineEventHandler(async (event) => {
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
                         <tr>
                           <td style="padding: 20px;">
-                            <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 16px;">Kursdetails</h3>
-                            <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
-                            <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Standort:</strong> ${course?.description}</p>
-                            <p style="margin: 0 0 15px 0; font-size: 14px;"><strong>Kurskosten:</strong> CHF ${price}</p>
+                            <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 15px; font-weight: 600;">Kursdetails</h3>
+                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
+                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Standort:</strong> ${course?.description}</p>
+                            <p style="margin: 0 0 12px 0; font-size: 13px;"><strong>Kurskosten:</strong> CHF ${price}</p>
                             
-                            <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Termine:</strong></p>
-                            <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #374151;">
+                            <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>Termine:</strong></p>
+                            <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #374151;">
                               ${formattedSessions}
                             </ul>
                           </td>
