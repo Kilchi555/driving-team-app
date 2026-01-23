@@ -147,48 +147,18 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ============ FETCH 4: Payment items ============
-    const paymentIds = Array.from(paymentsMap.values()).map(p => p.id)
-    let paymentItemsMap = new Map()
-
-    if (paymentIds.length > 0) {
-      const { data: itemsData, error: itemsError } = await serviceSupabase
-        .from('payment_items')
-        .select('id, payment_id, item_name, item_type, quantity, total_price_rappen')
-        .in('payment_id', paymentIds)
-        .order('created_at', { ascending: true })
-
-      if (itemsError) {
-        logger.warn('⚠️ Error loading payment_items:', itemsError)
-      } else if (itemsData) {
-        itemsData.forEach(item => {
-          // Find the appointment for this payment_id
-          const appointment = confirmationsData.find((apt: any) => {
-            const payment = paymentsMap.get(apt.id)
-            return payment && payment.id === item.payment_id
-          })
-          
-          if (appointment) {
-            if (!paymentItemsMap.has(appointment.id)) {
-              paymentItemsMap.set(appointment.id, [])
-            }
-            paymentItemsMap.get(appointment.id).push(item)
-          }
-        })
-      }
-    }
+    // ============ FETCH 4: Payments loaded ============
+    // (payment_items table no longer used)
 
     // ============ MERGE ALL DATA ============
     const enrichedConfirmations = confirmationsData.map((apt: any) => {
       const payment = paymentsMap.get(apt.id)
       const category = apt.type ? categoriesMap.get(apt.type) : null
-      const paymentItems = paymentItemsMap.get(apt.id) || []
 
       return {
         ...apt,
         payment: payment || null,
-        categories: category || null,
-        payment_items: paymentItems
+        categories: category || null
       }
     })
 
