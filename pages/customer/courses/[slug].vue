@@ -150,9 +150,9 @@
             
             <!-- Buttons -->
             <div class="space-y-2">
-              <!-- Sessions anpassen Button (always visible) -->
+              <!-- Sessions anpassen Button (only if course has free slots) -->
               <button
-                v-if="hasChangeableSessions(course)"
+                v-if="hasChangeableSessions(course) && course.free_slots > 0"
                 @click.stop="openSessionCustomizer(course)"
                 class="w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors flex items-center justify-center gap-2"
                 :style="{
