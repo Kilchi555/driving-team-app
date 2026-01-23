@@ -1774,85 +1774,53 @@ const loadUserAppointments = async () => {
       paymentsData = payments || []
     }
 
-    // OPTIMIZATION: Batch load all products and discounts at once using payment_items
+    // Load products and discounts (using existing separate tables)
     let allProducts: any[] = []
     let allDiscounts: any[] = []
     
     if (appointmentIds.length > 0) {
-      // Zuerst: Payment IDs für alle Appointments finden
+      // Load all products and discounts in separate queries
       const paymentIds = paymentsData.map(p => p.id).filter(Boolean)
       
       if (paymentIds.length > 0) {
-        // ✅ Lade ALLE payment_items (Produkte UND Rabatte) in einer Abfrage
-        const { data: paymentItemsData, error: paymentItemsError } = await supabase
-          .from('payment_items')
-        .select(`
-          id,
-            payment_id,
-            item_type,
-            product_id,
-            discount_id,
+        // Load products from product_sales table
+        const { data: productsData, error: productsError } = await supabase
+          .from('product_sales')
+          .select(`
+            id,
+            appointment_id,
             quantity,
             unit_price_rappen,
             total_price_rappen,
-            description,
+            product_id,
             products (
               id,
               name,
               description
-            ),
-            discounts (
-              id,
-              code,
-              description
-          )
-        `)
-          .in('payment_id', paymentIds)
-      
-        if (!paymentItemsError && paymentItemsData) {
-          // Erstelle Payment-zu-Appointment Mapping
-          const paymentToAppointment = new Map<string, string>()
-          paymentsData.forEach(p => {
-            if (p.id && p.appointment_id) {
-              paymentToAppointment.set(p.id, p.appointment_id)
-            }
-          })
-          
-          // Verarbeite payment_items und trenne Produkte und Rabatte
-          paymentItemsData.forEach((item: any) => {
-            const appointmentId = paymentToAppointment.get(item.payment_id)
-            if (!appointmentId) return
-            
-            if (item.item_type === 'product') {
-              const productData = item.products
-              const productName = productData?.name || item.description || 'Unbekanntes Produkt'
-              
-              allProducts.push({
-                appointment_id: appointmentId,
-                id: item.id,
-                quantity: item.quantity,
-                unit_price_rappen: item.unit_price_rappen,
-                total_price_rappen: item.total_price_rappen,
-                product_id: item.product_id,
-                products: { name: productName }
-              })
-            } else if (item.item_type === 'discount') {
-              const discountData = item.discounts
-              const discountReason = discountData?.description || item.description || 'Rabatt'
-              
-              allDiscounts.push({
-                appointment_id: appointmentId,
-                id: item.id,
-                amount_rappen: Math.abs(item.total_price_rappen || 0), // Rabatte sind negativ gespeichert
-                discount_type: discountData?.code || 'custom',
-                reason: discountReason
-            })
-          }
-        })
+            )
+          `)
+          .in('appointment_id', appointmentIds)
         
-          logger.debug('✅ Loaded from payment_items:', allProducts.length, 'products,', allDiscounts.length, 'discounts')
-        } else if (paymentItemsError) {
-          console.warn('⚠️ Error loading payment_items:', paymentItemsError)
+        if (productsData && !productsError) {
+          allProducts = productsData
+          logger.debug('✅ Loaded products from product_sales:', allProducts.length)
+        }
+        
+        // Load discounts from discount_sales table
+        const { data: discountsData, error: discountsError } = await supabase
+          .from('discount_sales')
+          .select(`
+            id,
+            appointment_id,
+            amount_rappen,
+            discount_type,
+            reason
+          `)
+          .in('appointment_id', appointmentIds)
+        
+        if (discountsData && !discountsError) {
+          allDiscounts = discountsData
+          logger.debug('✅ Loaded discounts from discount_sales:', allDiscounts.length)
         }
       }
     }
@@ -1935,30 +1903,7 @@ const loadUserAppointments = async () => {
             }
           }).filter(p => p.name !== 'Unbekanntes Produkt') // Filtere ungültige Produkte heraus
         } else {
-          console.warn('⚠️ No products found in batch load for appointment', appointment.id, 'but hasProducts is true')
-          // Fallback: Versuche payment_items direkt zu laden
-          if (payment?.id) {
-            const { data: fallbackItems, error: fallbackItemsError } = await supabase
-              .from('payment_items')
-              .select(`
-                id,
-                item_type,
-                product_id,
-                quantity,
-                unit_price_rappen,
-                total_price_rappen,
-                description,
-                products (
-                  id,
-                  name
-                )
-              `)
-              .eq('payment_id', payment.id)
-              .eq('item_type', 'product')
-            
-            if (!fallbackItemsError && fallbackItems && fallbackItems.length > 0) {
-              products = fallbackItems.map((item: any) => {
-                const productData = item.products
+          console.warn('⚠️ No products found for appointment', appointment.id)
                 const productName = productData?.name || item.description || 'Unbekanntes Produkt'
                 
                 return {

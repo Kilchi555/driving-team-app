@@ -699,25 +699,7 @@
                 <!-- Payment Details (Produkte & Rabatte) -->
                 <div v-if="hasPaymentDetails(appointment)" class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
                   <div class="space-y-1.5">
-                    <!-- Methode 1: payment_items (neu) -->
-                    <template v-if="appointment.payment_items && appointment.payment_items.length > 0">
-                      <div 
-                        v-for="item in appointment.payment_items" 
-                        :key="item.id"
-                        class="flex justify-between items-center"
-                      >
-                        <div class="flex-1">
-                          <span class="text-gray-700">{{ item.item_name }}</span>
-                          <span v-if="item.quantity > 1" class="text-gray-500 text-xs ml-1">({{ item.quantity }}x)</span>
-                        </div>
-                        <span 
-                          class="text-gray-900 font-medium text-xs"
-                          :class="{ 'text-red-600': item.item_type === 'discount' }"
-                        >
-                          {{ item.item_type === 'discount' ? '-' : '' }}CHF {{ formatPrice(Math.abs(item.total_price_rappen)) }}
-                        </span>
-                      </div>
-                    </template>
+                    <!-- Payment details section (empty for now) -->
                     
                     <!-- Methode 2: Direkte Spalten (alt, Fallback) -->
                     <template v-else>
@@ -1607,12 +1589,9 @@ const loadPendingConfirmations = async () => {
     // No need for separate queries:
     // - Payments: already loaded
     // - Categories: already loaded
-    // - Payment items: already loaded
     // - Staff: already loaded
     pendingConfirmations.value = confirmationsData.map((apt: any) => ({
-      ...apt,
-      // These are already in the response from the API
-      payment_items: apt.payment_items || [],
+      ...apt
     }))
 
     logger.debug('✅ Pending confirmations loaded with full data from API')
@@ -1652,12 +1631,7 @@ const getCategoryLabel = (appointment: any) => {
 
 // Helper: Check if appointment has payment details to show
 const hasPaymentDetails = (appointment: any) => {
-  // Methode 1: payment_items existieren
-  if (appointment.payment_items && appointment.payment_items.length > 0) {
-    return true
-  }
-  
-  // Methode 2: Payment-Objekt existiert mit Werten
+  // Payment-Objekt existiert mit Werten
   if (appointment.payment) {
     if (appointment.payment.lesson_price_rappen > 0 ||
         appointment.payment.admin_fee_rappen > 0 ||
@@ -1668,7 +1642,7 @@ const hasPaymentDetails = (appointment: any) => {
     }
   }
   
-  // Methode 3: Direkte Payment-Felder existieren (alter Fallback)
+  // Direkte Payment-Felder existieren (alter Fallback)
   if (appointment.lesson_price_rappen > 0 ||
       appointment.admin_fee_rappen > 0 ||
       appointment.products_price_rappen > 0 ||
