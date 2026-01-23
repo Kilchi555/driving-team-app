@@ -100,17 +100,6 @@
             </button>
           </div>
 
-          <!-- Staff Selector für andere Terminarten -->
-          <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection" class="py-2">
-            <StaffSelector
-              ref="staffSelectorRef"
-              v-model="invitedStaffIds"
-              :current-user="currentUser"
-              :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              @selection-changed="handleStaffSelectionChanged"
-            />
-          </div>
-
           <!-- Customer Invite Selector für andere Terminarten -->
           <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection">
             <CustomerInviteSelector
