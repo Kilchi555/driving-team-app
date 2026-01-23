@@ -1,6 +1,9 @@
 // server/api/wallee/webhook.post.ts
 // ✅ SECURE & RELIABLE Wallee Webhook Handler
-// Configured URL in Wallee: https://www.simy.ch/api/wallee/webhook
+// Configured URLs in Wallee:
+//   - Production: https://www.simy.ch/api/wallee/webhook
+//   - Preview: https://preview.simy.ch/api/wallee/webhook
+// Auto-detection based on host header
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
@@ -48,6 +51,12 @@ const STATUS_PRIORITY: Record<string, number> = {
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   
+  // Auto-detect environment based on request host
+  const host = event.headers['host'] || ''
+  const isProduction = host.includes('www.simy.ch') && !host.includes('preview')
+  const isPreview = host.includes('preview.simy.ch')
+  
+  logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview})`)
   try {
     // ============ LAYER 0: VERIFY WEBHOOK SIGNATURE (CRITICAL!) ============
     const body = await readBody(event) as WalleeWebhookPayload
