@@ -890,9 +890,11 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     // 6. Create SARI client and enroll
     const sari = new SARIClient(credentials)
     
-    // Get first course ID from group (e.g., "GROUP_2110027_2110028_..." → 2110027)
-    const sariCourseId = course.sari_course_id.split('_')[1]
-    if (!sariCourseId) {
+    // Get ALL course IDs from group (e.g., "GROUP_2110027_2110028_2110029_2110030" → [2110027, 2110028, 2110029, 2110030])
+    const sariCourseIdParts = course.sari_course_id.split('_')
+    const sariCourseIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+    
+    if (sariCourseIds.length === 0) {
       logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
       return
     }
@@ -902,11 +904,31 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       ? birthdate.split('T')[0]
       : birthdate
     
-    logger.info(`🎯 Enrolling in SARI: courseId=${sariCourseId}, faberid=${registration.sari_faberid}, birthdate=${birthdateFormatted}`)
+    logger.info(`🎯 Enrolling in SARI for ${sariCourseIds.length} sessions: ${sariCourseIds.join(', ')}`)
     
-    await sari.enrollStudent(parseInt(sariCourseId), registration.sari_faberid, birthdateFormatted)
+    // Enroll in ALL sessions
+    let successCount = 0
+    let errorCount = 0
     
-    logger.info('✅ SARI enrollment successful!')
+    for (const sessionId of sariCourseIds) {
+      try {
+        logger.debug(`📝 Enrolling in session ${sessionId}...`)
+        await sari.enrollStudent(parseInt(sessionId), registration.sari_faberid, birthdateFormatted)
+        successCount++
+        logger.debug(`✅ Session ${sessionId} enrolled`)
+      } catch (sessionError: any) {
+        // If already enrolled, that's OK - count as success
+        if (sessionError.message?.includes('ALREADY_ENROLLED') || sessionError.message?.includes('PERSON_ALREADY_ADDED')) {
+          logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
+          successCount++
+        } else {
+          logger.warn(`⚠️ Session ${sessionId} enrollment failed:`, sessionError.message)
+          errorCount++
+        }
+      }
+    }
+    
+    logger.info(`✅ SARI enrollment completed: ${successCount}/${sariCourseIds.length} sessions successful${errorCount > 0 ? `, ${errorCount} errors` : ''}`)
     
     // 7. Update registration with sari_synced
     await supabase
