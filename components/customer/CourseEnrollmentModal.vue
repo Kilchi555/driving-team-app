@@ -603,8 +603,9 @@ const openSessionSwapModal = async (session: any) => {
           startTime: firstSession.startTime,
           endTime: lastSession.endTime,
           displayTimeRange: `${firstSession.startTime.split('T')[1].substring(0, 5)} - ${lastSession.endTime.split('T')[1].substring(0, 5)}`,
-          // For SARI, use first session ID (they're all same session ID at same time anyway)
-          isSelected: customSessions.value[session.position.toString()]?.sariSessionId === firstSession.sariSessionId,
+          // Store ALL session IDs for this group (for grouped sessions)
+          sariSessionIds: sorted.map((s: any) => s.sariSessionId),
+          isSelected: customSessions.value[session.position.toString()]?.sariSessionIds?.[0] === firstSession.sariSessionId,
           groupSize: sessionGroup.length
         }
       })
@@ -625,8 +626,9 @@ const closeSessionSwapModal = () => {
 const selectSwapSession = (option: any) => {
   if (!swappingSession.value) return
   
+  // Store all session IDs for this group (for grouped sessions at same time)
   customSessions.value[swappingSession.value.position.toString()] = {
-    sariSessionId: option.sariSessionId,
+    sariSessionIds: option.sariSessionIds || [option.sariSessionId], // Array of all session IDs in this group
     sessionId: option.sessionId,
     courseId: option.courseId,
     courseName: option.courseName,
