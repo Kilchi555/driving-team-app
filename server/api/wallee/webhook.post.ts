@@ -312,15 +312,47 @@ export default defineEventHandler(async (event) => {
           .update({
             status: registrationStatus,
             payment_status: paymentStatusUpdate,
+            sari_synced: paymentStatus === 'completed', // Mark as synced (SARI enrollment happened during validation)
+            sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
             updated_at: new Date().toISOString()
           })
           .in('payment_id', paymentIds)
-          .select('id')
+          .select('id, course_id')
         
         if (registrationError) {
           logger.warn('⚠️ Error updating course registrations:', registrationError)
         } else if (updatedRegistrations && updatedRegistrations.length > 0) {
           logger.info(`✅ Updated ${updatedRegistrations.length} course registration(s) to: ${registrationStatus}`)
+          
+          // ============ UPDATE COURSE PARTICIPANT COUNT ============
+          if (paymentStatus === 'completed') {
+            const courseIds = [...new Set(updatedRegistrations.map(r => r.course_id).filter(Boolean))]
+            
+            for (const courseId of courseIds) {
+              // Count confirmed registrations for this course
+              const { count, error: countError } = await supabase
+                .from('course_registrations')
+                .select('*', { count: 'exact', head: true })
+                .eq('course_id', courseId)
+                .eq('status', 'confirmed')
+              
+              if (!countError && count !== null) {
+                const { error: updateError } = await supabase
+                  .from('courses')
+                  .update({ 
+                    current_participants: count,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', courseId)
+                
+                if (updateError) {
+                  logger.warn(`⚠️ Error updating current_participants for course ${courseId}:`, updateError)
+                } else {
+                  logger.info(`✅ Updated current_participants for course ${courseId}: ${count}`)
+                }
+              }
+            }
+          }
         }
       }
     }
