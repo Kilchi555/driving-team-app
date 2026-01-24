@@ -31,8 +31,7 @@ export default defineEventHandler(async (event) => {
         custom_sessions,
         courses (
           id,
-          name,
-          course_type
+          name
         )
       `)
       .eq('user_id', user.id)
