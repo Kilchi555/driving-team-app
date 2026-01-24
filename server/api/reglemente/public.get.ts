@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     console.log('🔍 Fetching regulation:', { tenantId, type })
     
     const { data: regulation, error: regError } = await supabase
-      .from('tenant_reglemente')
+      .from('tenant_reglements')
       .select('content, updated_at, title')
       .eq('tenant_id', tenantId)
       .eq('type', type)
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
     if (regError || !regulation) {
       // Try to get a default/template regulation
       const { data: defaultReg } = await supabase
-        .from('tenant_reglemente')
+        .from('tenant_reglements')
         .select('content, updated_at, title')
         .is('tenant_id', null)
         .eq('type', type)
