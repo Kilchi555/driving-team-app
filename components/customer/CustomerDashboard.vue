@@ -2265,7 +2265,6 @@ const loadCourseRegistrations = async () => {
         course_registration_id: reg.id,
         course_id: reg.course_id,
         course_name: reg.courses?.name || 'Kurs',
-        course_type: reg.courses?.course_type,
         start_time: session.start_time,
         end_time: session.end_time,
         session_number: session.session_number,
