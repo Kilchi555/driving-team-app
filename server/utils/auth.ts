@@ -1,4 +1,6 @@
 import { H3Event } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { logger } from '~/utils/logger'
 
 export async function getAuthenticatedUser(event: H3Event) {
   try {
@@ -34,8 +36,34 @@ export async function getAuthenticatedUser(event: H3Event) {
       return null
     }
 
-    const user = await response.json()
-    return user
+    const authUser = await response.json()
+    const authUserId = authUser.id
+    
+    logger.debug(`✅ Token verified for auth user: ${authUserId}`)
+
+    // Get the database user record using the auth user ID
+    const supabase = getSupabaseAdmin()
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id, auth_user_id, role')
+      .eq('auth_user_id', authUserId)
+      .single()
+
+    if (userError || !dbUser?.id) {
+      logger.warn(`❌ User not found in database for auth_user_id: ${authUserId}`)
+      return null
+    }
+
+    logger.debug(`✅ Database user found: ${dbUser.id} (auth_user_id: ${authUserId})`)
+
+    // Return the database user (with the correct id)
+    return {
+      id: dbUser.id,
+      auth_user_id: authUserId,
+      email: authUser.email,
+      tenant_id: dbUser.tenant_id,
+      role: dbUser.role
+    }
 
   } catch (error: any) {
     console.error('❌ Error getting authenticated user:', error)
