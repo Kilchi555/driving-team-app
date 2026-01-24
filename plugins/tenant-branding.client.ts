@@ -18,6 +18,31 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       }
     }
     
+    // Skip these paths - they're NOT tenant slugs!
+    const nonTenantPaths = [
+      '/register-staff',
+      '/password-reset',
+      '/reset-password',
+      '/tenant-register',
+      '/tenant-start',
+      '/tenant-demo',
+      '/customer-dashboard',
+      '/dashboard',
+      '/login',
+      '/register',
+      '/auswahl',
+      '/shop',
+      '/learning',
+      '/users',
+      '/customers',
+      '/upgrade'
+    ]
+    
+    if (currentRoute?.path && nonTenantPaths.includes(currentRoute.path)) {
+      logger.debug('🎨 getTenantInfo: Path is not a tenant slug:', currentRoute.path)
+      return null
+    }
+    
     // 1. Prüfe Login-Seiten mit Tenant-Slug in Route-Parametern
     if (currentRoute?.params?.tenant) {
       logger.debug('🎨 getTenantInfo: Found tenant param:', currentRoute.params.tenant, 'from route:', currentRoute.name)
