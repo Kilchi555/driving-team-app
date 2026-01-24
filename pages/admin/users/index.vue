@@ -1512,7 +1512,12 @@ const sendStaffInvitation = async () => {
     const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(data.error || 'Fehler beim Senden der Einladung')
+      throw new Error(data.statusMessage || data.message || data.error || 'Fehler beim Senden der Einladung')
+    }
+    
+    // Double check success flag
+    if (data.success === false) {
+      throw new Error(data.message || 'Einladung konnte nicht erstellt werden')
     }
 
     logger.debug('✅ Invitation sent successfully:', data)
