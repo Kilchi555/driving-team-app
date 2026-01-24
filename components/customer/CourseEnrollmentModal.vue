@@ -191,6 +191,16 @@
                   >
                     <div class="font-medium text-gray-800">Original wiederherstellen</div>
                     <div class="text-sm text-gray-500">Zurück zur ursprünglichen Session</div>
+                    <!-- Warning if other sessions will be affected -->
+                    <div 
+                      v-if="resetAffectedSessions.length > 0" 
+                      class="mt-2 text-xs text-amber-600 flex items-center gap-1"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Teil {{ resetAffectedSessions.join(', ') }} wird ebenfalls zurückgesetzt
+                    </div>
                   </button>
                   
                   <!-- Available sessions -->
@@ -574,6 +584,28 @@ const swapModalTitle = computed(() => {
   return `${swappingSession.value.label} ändern`
 })
 
+// Check which sessions would be affected if we reset the current session
+const resetAffectedSessions = computed(() => {
+  if (!swappingSession.value) return []
+  
+  const currentPosition = swappingSession.value.position
+  const originalDate = swappingSession.value.date
+  
+  const affected: number[] = []
+  
+  // Check previous positions that have custom sessions after our original date
+  for (let pos = currentPosition - 1; pos >= 1; pos--) {
+    const prevCustom = customSessions.value[pos.toString()]
+    if (prevCustom && prevCustom.date > originalDate) {
+      affected.push(pos)
+    } else {
+      break
+    }
+  }
+  
+  return affected
+})
+
 // Methods
 const formatPrice = (rappen: number) => (rappen / 100).toFixed(2)
 
@@ -792,7 +824,37 @@ const showSessionOrderWarning = (message: string) => {
 const resetSessionToOriginal = () => {
   if (!swappingSession.value) return
   
-  delete customSessions.value[swappingSession.value.position.toString()]
+  const currentPosition = swappingSession.value.position
+  const originalDate = swappingSession.value.date // Original date from course
+  
+  // Check if resetting would break chronological order with previous sessions
+  // Find all previous positions that have custom sessions with dates AFTER the original date
+  const positionsToReset: number[] = []
+  
+  for (let pos = currentPosition - 1; pos >= 1; pos--) {
+    const prevCustom = customSessions.value[pos.toString()]
+    if (prevCustom && prevCustom.date > originalDate) {
+      // This previous custom session is AFTER our original date - need to reset it too
+      positionsToReset.push(pos)
+    } else {
+      // Found a session that's before our original date - stop checking
+      break
+    }
+  }
+  
+  // Reset all affected sessions (including current one)
+  delete customSessions.value[currentPosition.toString()]
+  
+  if (positionsToReset.length > 0) {
+    for (const pos of positionsToReset) {
+      delete customSessions.value[pos.toString()]
+    }
+    
+    // Show warning that other sessions were also reset
+    const resetLabels = positionsToReset.map(p => `Teil ${p}`).join(', ')
+    showSessionOrderWarning(`${resetLabels} wurde(n) ebenfalls zurückgesetzt, um die chronologische Reihenfolge einzuhalten.`)
+  }
+  
   closeSessionSwapModal()
 }
 
