@@ -447,13 +447,10 @@ ${tenantName}`
   }
 })
 
-// Helper function to generate a secure random token
+// Helper function to generate a cryptographically secure random token
 function generateToken(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let token = ''
-  for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return token
+  // Use crypto.randomBytes for cryptographically secure randomness
+  const crypto = require('crypto')
+  return crypto.randomBytes(24).toString('base64url') // 32 chars, URL-safe
 }
 
