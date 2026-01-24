@@ -1234,11 +1234,35 @@ const upcomingAppointments = computed(() => {
 })
 
 // Count of all upcoming lessons (appointments + course sessions)
+// Groups course sessions on the same day as ONE appointment
 const upcomingLessonsCount = computed(() => {
   const now = new Date()
-  return lessons.value.filter(lesson => 
+  const upcomingLessons = lessons.value.filter(lesson => 
     new Date(lesson.start_time) > now
-  ).length
+  )
+  
+  // Group course sessions by date + course_id (same day = 1 appointment)
+  const courseSessionKeys = new Set<string>()
+  let count = 0
+  
+  for (const lesson of upcomingLessons) {
+    if (lesson.event_type_code === 'course') {
+      // Group by date + course_id
+      const date = lesson.start_time.split('T')[0]
+      const key = `${date}_${lesson.course_id || lesson.id}`
+      
+      if (!courseSessionKeys.has(key)) {
+        courseSessionKeys.add(key)
+        count++
+      }
+      // If key already exists, don't count again (same day = 1 appointment)
+    } else {
+      // Non-course lessons count as 1 each
+      count++
+    }
+  }
+  
+  return count
 })
 
 const completedAppointments = computed(() => {
@@ -2290,9 +2314,26 @@ const loadCourseRegistrations = async () => {
     lessons.value = [
       ...(appointments.value || []),
       ...courseLessons
-    ].sort((a: any, b: any) => 
-      new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-    )
+    ].sort((a: any, b: any) => {
+      // For course sessions, sort by registration + session_number to preserve order
+      // For appointments, sort by start_time
+      if (a.event_type_code === 'course' && b.event_type_code === 'course') {
+        // Both are course sessions from same registration - sort by session_number
+        if (a.course_registration_id === b.course_registration_id) {
+          return (a.session_number || 0) - (b.session_number || 0)
+        }
+        // Different registrations - sort by registration then session number
+        return a.course_registration_id.localeCompare(b.course_registration_id)
+      } else if (a.event_type_code === 'course') {
+        // Course session vs appointment - course comes after its appointments
+        return 1
+      } else if (b.event_type_code === 'course') {
+        // Appointment vs course session
+        return -1
+      }
+      // Both appointments - sort by start_time
+      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    })
 
     logger.debug('✅ Course registrations loaded:', courseRegistrations.length, 'Total lessons:', lessons.value.length)
   } catch (err: any) {

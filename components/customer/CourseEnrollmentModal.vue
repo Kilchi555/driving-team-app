@@ -1026,6 +1026,19 @@ const getGermanErrorMessage = (error: any): string => {
   if (message.includes('Sie sind bereits für diesen Kurs angemeldet.')) {
     return 'Sie sind bereits für diesen Kurs angemeldet.'
   }
+  // SARI deadline/capacity errors (most specific first)
+  if (message.includes('Anmeldungsfrist abgelaufen') || message.includes('DEADLINE_VIOLATED')) {
+    return 'Anmeldungsfrist abgelaufen. Der Kurs nimmt keine neuen Anmeldungen mehr an.'
+  }
+  if (message.includes('Der Kurs ist leider voll besetzt') || message.includes('CAPACITY')) {
+    return 'Der Kurs ist leider voll besetzt.'
+  }
+  if (message.includes('Lernfahrausweis nicht gefunden oder ungültig') || message.includes('INVALID_PERSON')) {
+    return 'Lernfahrausweis nicht gefunden oder ungültig. Bitte überprüfen Sie Ihre Angaben.'
+  }
+  if (message.includes('SARI-Anmeldung fehlgeschlagen')) {
+    return 'Die Anmeldung über SARI ist fehlgeschlagen. Bitte versuchen Sie es später erneut.'
+  }
   if (message.includes('Die Lernfahrausweis ID ist ungültig.')) {
     return 'Überprüfen Sie Ihre Angaben. Die Lernfahrausweis ID scheint ungültig zu sein.'
   }

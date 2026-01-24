@@ -197,48 +197,113 @@ export default defineEventHandler(async (event) => {
         
         logger.debug(`🔍 Reg ${reg.id}: Found ${originalSessions.length} sessions for course ${reg.course_id}`)
         
-        // Start with original sessions, then apply custom overrides
-        let sessions = originalSessions.map((session: any) => ({
-          ...session,
-          is_custom: false
-        }))
+        // First: Group original sessions by date to calculate position and session_number
+        const byDate: Map<string, any[]> = new Map()
+        for (const session of originalSessions) {
+          const date = session.start_time.split('T')[0]
+          if (!byDate.has(date)) byDate.set(date, [])
+          byDate.get(date)!.push(session)
+        }
+        
+        // Sort dates chronologically
+        const sortedDates = Array.from(byDate.keys()).sort()
+        
+        // Build mapping: position -> sessions (with session_number = actual part number 1,2,3,4...)
+        let currentPosition = 0
+        let partCounter = 0 // Fortlaufende Teil-Nummer (1, 2, 3, 4...)
+        const positionToSessions: Map<number, any[]> = new Map()
+        const positionToPartRange: Map<number, { start: number, end: number }> = new Map()
+        
+        for (const date of sortedDates) {
+          const daySessions = byDate.get(date)!
+          currentPosition++
+          const startPart = partCounter + 1
+          
+          // Sort sessions within day by start_time
+          daySessions.sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
+          
+          // Add session_number (actual Teil number) to each session
+          const sessionsWithNumber = daySessions.map((s: any) => {
+            partCounter++
+            return {
+              ...s,
+              session_number: partCounter, // Teil 1, 2, 3, 4...
+              position: currentPosition, // Tag 1, Tag 2...
+              is_custom: false
+            }
+          })
+          
+          positionToSessions.set(currentPosition, sessionsWithNumber)
+          positionToPartRange.set(currentPosition, { start: startPart, end: partCounter })
+        }
+        
+        // Flatten to get all sessions with session_number assigned
+        let sessions = Array.from(positionToSessions.values()).flat()
+        
+        logger.debug(`🔍 Reg ${reg.id}: Sessions grouped into ${currentPosition} positions, ${partCounter} parts total`)
+        sessions.forEach((s: any) => {
+          logger.debug(`   Teil ${s.session_number} (Position ${s.position}): ${s.start_time}`)
+        })
         
         // If custom_sessions exist, replace the corresponding positions
         if (reg.custom_sessions && typeof reg.custom_sessions === 'object') {
           const customSessions = reg.custom_sessions as Record<string, any>
           
-          // For each custom session position, replace the original
+          // For each custom session position, replace ALL sessions of that position
           Object.entries(customSessions).forEach(([positionStr, customData]: [string, any]) => {
             const position = parseInt(positionStr)
             
-            // Find the index of the session with this session_number
-            const idx = sessions.findIndex((s: any) => s.session_number === position)
+            logger.debug(`🔍 Processing custom session for position ${position}:`)
+            logger.debug(`   Custom courseId: ${customData.courseId}`)
+            logger.debug(`   Custom date: ${customData.date}`)
             
-            if (idx !== -1) {
-              // Get the custom_location from the fetched session details
-              const sessionDetails = customSessionDetails[customData.sessionId] || {}
-              const customLocation = sessionDetails.custom_location || null
+            // Get the part range for this position (e.g., position 2 = Teil 3-4)
+            const partRange = positionToPartRange.get(position)
+            logger.debug(`   Part range for position ${position}: ${partRange?.start}-${partRange?.end}`)
+            
+            // REMOVE all original sessions with this position
+            const originalCount = sessions.filter((s: any) => s.position === position).length
+            sessions = sessions.filter((s: any) => s.position !== position)
+            logger.debug(`   Removed ${originalCount} original sessions for position ${position}`)
+            
+            // Get sessions from the custom course for the same date
+            const customCourseSessions = sessionsByClass[customData.courseId] || []
+            const customDate = customData.date // e.g. "2026-04-16"
+            
+            // Find all sessions from custom course on that date
+            const customDaySessions = customCourseSessions.filter((s: any) => 
+              s.start_time.split('T')[0] === customDate
+            )
+            
+            // Sort by start_time
+            customDaySessions.sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
+            
+            logger.debug(`   Found ${customDaySessions.length} sessions from custom course on ${customDate}`)
+            
+            // Add all custom sessions with the correct Teil numbers
+            let partNum = partRange?.start || 1
+            customDaySessions.forEach((customSession: any) => {
+              const sessionDetails = customSessionDetails[customSession.id] || {}
+              const customLocation = sessionDetails.custom_location || customSession.custom_location || null
               
-              logger.debug(`🔍 Replacing session ${position}:`)
-              logger.debug(`   Custom session ID: ${customData.sessionId}`)
-              logger.debug(`   Session details found: ${!!customSessionDetails[customData.sessionId]}`)
-              logger.debug(`   Custom location: ${customLocation || 'NULL/EMPTY'}`)
-              
-              // Replace with custom session data
-              sessions[idx] = {
-                id: customData.sessionId,
-                session_number: position,
-                start_time: customData.startTime,
-                end_time: customData.endTime,
+              sessions.push({
+                id: customSession.id,
+                session_number: partNum, // Teil 3, 4... (correct part number)
+                position: position, // Tag 2
+                start_time: customSession.start_time,
+                end_time: customSession.end_time,
                 course_id: customData.courseId,
                 course_name: customData.courseName,
                 custom_location: customLocation,
-                current_participants: customData.current_participants || 0,
-                max_participants: customData.max_participants || 0,
+                current_participants: customSession.current_participants || 0,
+                max_participants: customSession.max_participants || 0,
                 is_custom: true
-              }
-              logger.debug(`🔍 Reg ${reg.id}: Replaced session ${position} with custom session (location: ${sessionDetails.custom_location || 'none'})`)
-            }
+              })
+              logger.debug(`   Added custom session Teil ${partNum}: ${customSession.start_time} - ${customSession.end_time}`)
+              partNum++
+            })
+            
+            logger.debug(`🔍 Reg ${reg.id}: Replaced position ${position} with ${customDaySessions.length} custom sessions`)
           })
         }
 

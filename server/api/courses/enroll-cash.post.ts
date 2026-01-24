@@ -45,10 +45,11 @@ const handler = defineEventHandler(async (event) => {
       birthdate, 
       tenantId,
       email,
-      phone
+      phone,
+      customSessions // Support for swapped sessions
     } = body
 
-    logger.debug('💵 Cash enrollment request:', { courseId, tenantId })
+    logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions })
 
     // 1. Validate inputs
     if (!courseId || !faberid || !birthdate || !tenantId) {
@@ -231,7 +232,144 @@ const handler = defineEventHandler(async (event) => {
       logger.info('✅ Guest user created:', guestUserId)
     }
 
-    // 9. Create CONFIRMED enrollment (no payment needed)
+    // 9. SARI sync FIRST (before DB save) - if managed
+    // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
+    if (course.sari_managed && course.sari_course_id && faberidClean) {
+      // Extract ALL session IDs from the group
+      const sariCourseIdParts = String(course.sari_course_id).split('_')
+      let sariSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+      
+      if (sariSessionIds.length === 0) {
+        logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Ungültiges Kursformat. Bitte kontaktieren Sie uns.'
+        })
+      }
+      
+      // Apply custom sessions if any were selected (same logic as Wallee webhook)
+      if (customSessions && typeof customSessions === 'object') {
+        logger.info('🔄 Applying custom sessions for SARI enrollment:', customSessions)
+        
+        for (const [position, customData] of Object.entries(customSessions)) {
+          const custom = customData as any
+          
+          // Get original IDs to replace and new IDs
+          const originalIds = custom?.originalSariIds || []
+          const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
+          
+          logger.debug(`📍 Position ${position}: originalIds=${originalIds.join(',')}, newIds=${newIds.join(',')}`)
+          
+          if (originalIds.length > 0 && newIds.length > 0) {
+            // Replace each original ID with corresponding new ID
+            for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
+              const origId = originalIds[i]
+              const newId = newIds[i]
+              
+              const idx = sariSessionIds.findIndex((id: string) => id === origId || id === origId.toString())
+              if (idx >= 0) {
+                logger.debug(`📝 Replacing session ID ${sariSessionIds[idx]} → ${newId} at index ${idx}`)
+                sariSessionIds[idx] = newId
+              } else {
+                logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
+              }
+            }
+          } else if (newIds.length > 0 && originalIds.length === 0) {
+            // Legacy fallback: Position-based replacement
+            logger.warn('⚠️ Using legacy position-based replacement (no originalSariIds)')
+            
+            // Group sessions by date to understand position mapping
+            const courseSessions = course.course_sessions || []
+            const sessionsPerPosition: number[] = []
+            
+            if (courseSessions.length > 0) {
+              const byDate: Map<string, number> = new Map()
+              for (const session of courseSessions) {
+                const date = session.start_time.split('T')[0]
+                byDate.set(date, (byDate.get(date) || 0) + 1)
+              }
+              for (const count of byDate.values()) {
+                sessionsPerPosition.push(count)
+              }
+            } else if (sariSessionIds.length === 4) {
+              sessionsPerPosition.push(2, 2) // Assume VKU pattern
+            } else {
+              sessionsPerPosition.push(...Array(sariSessionIds.length).fill(1))
+            }
+            
+            const posNum = parseInt(position)
+            let startIdx = 0
+            for (let p = 0; p < posNum - 1 && p < sessionsPerPosition.length; p++) {
+              startIdx += sessionsPerPosition[p]
+            }
+            
+            for (let i = 0; i < newIds.length && (startIdx + i) < sariSessionIds.length; i++) {
+              logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariSessionIds[startIdx + i]} → ${newIds[i]}`)
+              sariSessionIds[startIdx + i] = newIds[i]
+            }
+          }
+        }
+      }
+      
+      logger.info(`🎯 Enrolling in SARI for ${sariSessionIds.length} sessions: ${sariSessionIds.join(', ')}`)
+      
+      // Enroll in ALL sessions
+      let successCount = 0
+      let errorCount = 0
+      let lastError: any = null
+      
+      for (const sessionId of sariSessionIds) {
+        try {
+          logger.debug(`📝 Enrolling in session ${sessionId}...`)
+          await sari.enrollStudent(parseInt(sessionId), faberidClean, birthdate)
+          successCount++
+          logger.debug(`✅ Session ${sessionId} enrolled`)
+        } catch (error: any) {
+          const errorMessage = error.message || ''
+          
+          // If already enrolled, that's OK - count as success
+          if (errorMessage.includes('ALREADY_ENROLLED') || errorMessage.includes('PERSON_ALREADY_ADDED')) {
+            logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
+            successCount++
+          } else {
+            lastError = error
+            errorCount++
+            logger.warn(`⚠️ Session ${sessionId} enrollment failed:`, errorMessage)
+          }
+        }
+      }
+      
+      logger.info(`✅ SARI enrollment: ${successCount}/${sariSessionIds.length} sessions successful${errorCount > 0 ? `, ${errorCount} errors` : ''}`)
+      
+      // If ALL sessions failed, throw error with the last error message
+      if (successCount === 0 && lastError) {
+        const errorMessage = lastError.message || ''
+        
+        if (errorMessage.includes('DEADLINE_VIOLATED') || errorMessage.includes('deadline')) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Anmeldungsfrist abgelaufen. Der Kurs nimmt keine neuen Anmeldungen mehr an.'
+          })
+        } else if (errorMessage.includes('CAPACITY') || errorMessage.includes('capacity') || errorMessage.includes('full')) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Der Kurs ist leider voll besetzt.'
+          })
+        } else if (errorMessage.includes('INVALID_PERSON') || errorMessage.includes('invalid') || errorMessage.includes('not found')) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Lernfahrausweis nicht gefunden oder ungültig.'
+          })
+        } else {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'SARI-Anmeldung fehlgeschlagen. Bitte versuchen Sie es später erneut.'
+          })
+        }
+      }
+    }
+
+    // 10. Create CONFIRMED enrollment (only after SARI check passed)
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('course_registrations')
       .insert({
@@ -245,9 +383,12 @@ const handler = defineEventHandler(async (event) => {
         sari_faberid: faberidClean,
         status: 'confirmed',
         payment_status: 'paid', // Cash-on-site is always "paid"
-        payment_method: 'cash_on_site'
-        // Note: street, zip, city are in users table via user_id
-        // Note: No sari_data/sari_licenses columns in course_registrations
+        payment_method: 'cash_on_site',
+        // Store custom sessions if any were selected
+        custom_sessions: customSessions || null,
+        // Mark as SARI synced (enrollment happened before DB save)
+        sari_synced: course.sari_managed ? true : null,
+        sari_synced_at: course.sari_managed ? new Date().toISOString() : null
       })
       .select('id')
       .single()
@@ -279,22 +420,7 @@ const handler = defineEventHandler(async (event) => {
 
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
 
-    // 9. Immediately sync to SARI (if managed)
-    if (course.sari_managed && course.sari_course_id && faberidClean) {
-      try {
-        const sariCourseIdMatch = String(course.sari_course_id).match(/(\d+)/)
-        const numericSariCourseId = sariCourseIdMatch ? parseInt(sariCourseIdMatch[1]) : null
-
-        if (numericSariCourseId) {
-          await sari.enrollStudent(numericSariCourseId, faberidClean, birthdate)
-          logger.info(`✅ Synced enrollment to SARI: ${numericSariCourseId}`)
-        }
-      } catch (error: any) {
-        logger.warn('⚠️ SARI enrollment sync failed (non-critical):', error.message)
-      }
-    }
-
-    // 10. Send confirmation email
+    // 11. Send confirmation email
     try {
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
