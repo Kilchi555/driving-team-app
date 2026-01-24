@@ -95,32 +95,43 @@ export default defineEventHandler(async (event) => {
     // Build final result with future sessions only
     const upcomingRegistrations = (activeRegistrations || [])
       .map((reg: any) => {
-        let sessions = sessionsByClass[reg.course_id] || []
+        let originalSessions = sessionsByClass[reg.course_id] || []
         
-        logger.debug(`🔍 Reg ${reg.id}: Found ${sessions.length} sessions for course ${reg.course_id}`)
+        logger.debug(`🔍 Reg ${reg.id}: Found ${originalSessions.length} sessions for course ${reg.course_id}`)
         
-        // If custom_sessions exist, apply them to show which sessions are actually booked
+        // Start with original sessions, then apply custom overrides
+        let sessions = originalSessions.map((session: any) => ({
+          ...session,
+          is_custom: false
+        }))
+        
+        // If custom_sessions exist, replace the corresponding positions
         if (reg.custom_sessions && typeof reg.custom_sessions === 'object') {
           const customSessions = reg.custom_sessions as Record<string, any>
           
-          // Build a list of custom session objects from the metadata
-          const appliedSessions = Object.values(customSessions)
-            .map((customData: any) => ({
-              id: customData.sessionId,
-              session_number: parseInt(Object.keys(customSessions).find(k => customSessions[k].sessionId === customData.sessionId) || '0'),
-              start_time: customData.startTime,
-              end_time: customData.endTime,
-              course_id: customData.courseId,
-              current_participants: customData.current_participants || 0,
-              max_participants: customData.max_participants || 0,
-              is_custom: true
-            }))
-          
-          // If we have custom sessions, use those for display (they're the actual booked sessions)
-          if (appliedSessions.length > 0) {
-            logger.debug(`🔍 Reg ${reg.id}: Using ${appliedSessions.length} custom sessions`)
-            sessions = appliedSessions
-          }
+          // For each custom session position, replace the original
+          Object.entries(customSessions).forEach(([positionStr, customData]: [string, any]) => {
+            const position = parseInt(positionStr)
+            
+            // Find the index of the session with this session_number
+            const idx = sessions.findIndex((s: any) => s.session_number === position)
+            
+            if (idx !== -1) {
+              // Replace with custom session data
+              sessions[idx] = {
+                id: customData.sessionId,
+                session_number: position,
+                start_time: customData.startTime,
+                end_time: customData.endTime,
+                course_id: customData.courseId,
+                course_name: customData.courseName,
+                current_participants: customData.current_participants || 0,
+                max_participants: customData.max_participants || 0,
+                is_custom: true
+              }
+              logger.debug(`🔍 Reg ${reg.id}: Replaced session ${position} with custom session`)
+            }
+          })
         }
 
         const futureSessions = sessions.filter((session: any) => 
