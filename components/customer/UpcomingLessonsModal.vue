@@ -84,7 +84,7 @@
               <div class="mb-3 flex items-center gap-4 text-sm">
                 <div class="flex items-center gap-2">
                   <span class="text-xl">🕐</span>
-                  <span class="font-semibold text-gray-700">{{ formatTimeRange(lesson.start_time, lesson.end_time) }}</span>
+                  <span class="font-semibold text-gray-700">{{ formatTimeRange(lesson.start_time, lesson.end_time, lesson.event_type_code === 'course') }}</span>
                 </div>
                 <div v-if="lesson.duration_minutes" class="flex items-center gap-2">
                   <span class="text-xl">⏱️</span>
@@ -181,8 +181,19 @@ const formatLessonDate = (dateString: string) => {
   }
 }
 
-const formatTimeRange = (startTime: string, endTime: string) => {
-  // Convert UTC times to Zurich local time
+const formatTimeRange = (startTime: string, endTime: string, isCourseSession: boolean = false) => {
+  // For course sessions: time is already in local time, just extract HH:MM
+  if (isCourseSession) {
+    // ISO string like "2026-02-01T18:30:00+00:00" - extract time directly
+    const startMatch = startTime.match(/T(\d{2}:\d{2})/)
+    const endMatch = endTime.match(/T(\d{2}:\d{2})/)
+    
+    if (startMatch && endMatch) {
+      return `${startMatch[1]} - ${endMatch[1]}`
+    }
+  }
+  
+  // For appointments: Convert UTC times to Zurich local time
   const start = new Date(startTime)
   const end = new Date(endTime)
   
@@ -202,9 +213,10 @@ const formatTimeRange = (startTime: string, endTime: string) => {
 }
 
 const getLessonTypeTitle = (eventTypeCode: string, lesson?: any): string => {
-  // If it's a course session, show the course name
+  // If it's a course session, show the course name WITHOUT the date suffix
   if (eventTypeCode === 'course' && lesson?.course_name) {
-    return lesson.course_name
+    // Remove date pattern like " - 27.01.2026" or " - 31.01.2026" from name
+    return lesson.course_name.replace(/\s*-\s*\d{2}\.\d{2}\.\d{4}$/, '')
   }
   
   const titles: Record<string, string> = {
