@@ -627,8 +627,10 @@ const selectSwapSession = (option: any) => {
   if (!swappingSession.value) return
   
   // Store all session IDs for this group (for grouped sessions at same time)
+  // IMPORTANT: Also store originalSariIds so webhook knows which IDs to replace
   customSessions.value[swappingSession.value.position.toString()] = {
-    sariSessionIds: option.sariSessionIds || [option.sariSessionId], // Array of all session IDs in this group
+    sariSessionIds: option.sariSessionIds || [option.sariSessionId], // Array of all NEW session IDs
+    originalSariIds: swappingSession.value.originalSariIds || [], // Array of ORIGINAL session IDs to replace
     sessionId: option.sessionId,
     courseId: option.courseId,
     courseName: option.courseName,
