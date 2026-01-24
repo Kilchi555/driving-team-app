@@ -1,5 +1,31 @@
 <template>
   <Teleport to="body">
+    <!-- Warning Toast for Session Order -->
+    <Transition name="slide-down">
+      <div 
+        v-if="showSessionWarning"
+        class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-md px-4"
+      >
+        <div class="bg-amber-50 border border-amber-300 rounded-lg shadow-lg p-4 flex items-start gap-3">
+          <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-amber-800">Session-Reihenfolge angepasst</p>
+            <p class="text-sm text-amber-700 mt-1">{{ sessionWarningMessage }}</p>
+          </div>
+          <button 
+            @click="showSessionWarning = false"
+            class="text-amber-500 hover:text-amber-700"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Transition>
+    
     <div 
       v-if="isOpen" 
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -431,6 +457,11 @@ const swappingSession = ref<any>(null)
 const availableSwapSessions = ref<any[]>([])
 const isLoadingSwapOptions = ref(false)
 
+// Warning toast for session order issues
+const showSessionWarning = ref(false)
+const sessionWarningMessage = ref('')
+const autoHideWarningTimeout = ref<any>(null)
+
 // Check if any sessions can be changed
 const hasChangeableSessions = computed(() => {
   return sessionGroups.value.some(s => s.isChangeable)
@@ -629,7 +660,7 @@ const closeSessionSwapModal = () => {
   availableSwapSessions.value = []
 }
 
-const selectSwapSession = (option: any) => {
+const selectSwapSession = async (option: any) => {
   if (!swappingSession.value) return
   
   const currentPosition = swappingSession.value.position
@@ -648,25 +679,114 @@ const selectSwapSession = (option: any) => {
     endTime: option.endTime
   }
   
-  // IMPORTANT: If we moved this session to a later date, invalidate any subsequent 
-  // custom sessions that are now chronologically before this one
-  const positionsToCheck = Object.keys(customSessions.value)
-    .map(p => parseInt(p))
-    .filter(p => p > currentPosition)
-    .sort((a, b) => a - b)
+  closeSessionSwapModal()
   
-  for (const pos of positionsToCheck) {
-    const subsequentSession = customSessions.value[pos.toString()]
-    if (subsequentSession && subsequentSession.date) {
-      // If the subsequent session's date is before or equal to the new date, reset it
-      if (subsequentSession.date <= newDate) {
-        console.log(`⚠️ Resetting session ${pos} as it's now before session ${currentPosition}`)
-        delete customSessions.value[pos.toString()]
+  // Check if subsequent sessions need to be adjusted
+  await checkAndFixSessionOrder(currentPosition, newDate)
+}
+
+// Check if session order is valid and auto-fix if needed
+const checkAndFixSessionOrder = async (changedPosition: number, newDate: string) => {
+  // Get all sessions after the changed one
+  const allGroups = sessionGroups.value
+  const subsequentGroups = allGroups.filter((g: any) => g.position > changedPosition)
+  
+  for (const group of subsequentGroups) {
+    // Get the effective date for this group (custom or original)
+    const groupDate = customSessions.value[group.position.toString()]?.date || group.date
+    
+    // If this session is before or same as the changed session, we need to fix it
+    if (groupDate <= newDate) {
+      console.log(`⚠️ Session ${group.position} (${groupDate}) is before/same as session ${changedPosition} (${newDate})`)
+      
+      // Try to auto-find the next available session after the new date
+      const nextSession = await findNextAvailableSession(group.position, newDate)
+      
+      if (nextSession) {
+        // Auto-set the next available session
+        customSessions.value[group.position.toString()] = {
+          sariSessionIds: nextSession.sariSessionIds || [nextSession.sariSessionId],
+          originalSariIds: group.originalSariIds || [],
+          sessionId: nextSession.sessionId,
+          courseId: nextSession.courseId,
+          courseName: nextSession.courseName,
+          date: nextSession.date,
+          startTime: nextSession.startTime,
+          endTime: nextSession.endTime
+        }
+        
+        // Show warning toast
+        showSessionOrderWarning(`Teil ${group.label} wurde automatisch auf ${formatSessionDate(nextSession.date)} verschoben, da er nach Teil ${changedPosition} absolviert werden muss.`)
+        
+        // Update newDate for the next iteration
+        newDate = nextSession.date
+      } else {
+        // No session available - reset to original and show warning
+        delete customSessions.value[group.position.toString()]
+        showSessionOrderWarning(`Teil ${group.label} wurde zurückgesetzt. Bitte wählen Sie ein neues Datum das nach Teil ${changedPosition} liegt.`)
       }
     }
   }
+}
+
+// Find next available session after a given date
+const findNextAvailableSession = async (position: number, afterDate: string): Promise<any | null> => {
+  try {
+    const response = await $fetch('/api/courses/available-sessions', {
+      query: {
+        tenantId: props.tenantId,
+        category: props.course.category,
+        sessionPosition: position,
+        afterDate,
+        excludeCourseId: props.course.id,
+        courseLocation: props.course.description
+      }
+    }) as any
+    
+    if (response.success && response.sessions?.length > 0) {
+      // Group by date and return the first (earliest) group
+      const grouped: Map<string, any[]> = new Map()
+      for (const session of response.sessions) {
+        const key = `${session.courseId}-${session.date}`
+        if (!grouped.has(key)) grouped.set(key, [])
+        grouped.get(key)!.push(session)
+      }
+      
+      // Get first group sorted by date
+      const sortedGroups = Array.from(grouped.values()).sort((a, b) => 
+        a[0].date.localeCompare(b[0].date)
+      )
+      
+      if (sortedGroups.length > 0) {
+        const firstGroup = sortedGroups[0].sort((a: any, b: any) => 
+          a.startTime.localeCompare(b.startTime)
+        )
+        const first = firstGroup[0]
+        const last = firstGroup[firstGroup.length - 1]
+        
+        return {
+          ...first,
+          endTime: last.endTime,
+          sariSessionIds: firstGroup.map((s: any) => s.sariSessionId)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error finding next session:', err)
+  }
+  return null
+}
+
+// Show warning toast
+const showSessionOrderWarning = (message: string) => {
+  sessionWarningMessage.value = message
+  showSessionWarning.value = true
   
-  closeSessionSwapModal()
+  // Auto-hide after 8 seconds
+  if (autoHideWarningTimeout.value) clearTimeout(autoHideWarningTimeout.value)
+  autoHideWarningTimeout.value = setTimeout(() => {
+    showSessionWarning.value = false
+  }, 8000)
 }
 
 const resetSessionToOriginal = () => {
@@ -913,3 +1033,22 @@ const formatPhoneNumber = () => {
 }
 </script>
 
+<style scoped>
+/* Toast slide-down animation */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-100%);
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>

@@ -108,6 +108,61 @@ const handler = defineEventHandler(async (event) => {
       throw error
     }
 
+    // 5b. Validate custom sessions chronological order
+    if (customSessions && typeof customSessions === 'object') {
+      const positions = Object.keys(customSessions)
+        .map(p => parseInt(p))
+        .sort((a, b) => a - b)
+      
+      // Get original session dates from course_sessions
+      const sortedOriginalSessions = (course.course_sessions || [])
+        .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
+      
+      // Group by date to get position-date mapping
+      const dateByPosition: Record<number, string> = {}
+      let pos = 1
+      let currentDate = ''
+      for (const session of sortedOriginalSessions) {
+        const sessionDate = session.start_time.split('T')[0]
+        if (sessionDate !== currentDate) {
+          currentDate = sessionDate
+          pos++
+        }
+        if (!dateByPosition[pos]) {
+          dateByPosition[pos] = sessionDate
+        }
+      }
+      
+      // Build effective dates (custom overrides original)
+      const effectiveDates: { position: number; date: string }[] = []
+      const allPositions = [...new Set([...Object.keys(dateByPosition).map(Number), ...positions])]
+        .sort((a, b) => a - b)
+      
+      for (const position of allPositions) {
+        const customSession = customSessions[position.toString()]
+        const effectiveDate = customSession?.date || dateByPosition[position]
+        if (effectiveDate) {
+          effectiveDates.push({ position, date: effectiveDate })
+        }
+      }
+      
+      // Check chronological order
+      for (let i = 1; i < effectiveDates.length; i++) {
+        const prev = effectiveDates[i - 1]
+        const curr = effectiveDates[i]
+        
+        if (curr.date <= prev.date) {
+          logger.error(`❌ Session order invalid: Teil ${curr.position} (${curr.date}) is before/same as Teil ${prev.position} (${prev.date})`)
+          throw createError({
+            statusCode: 400,
+            statusMessage: `Ungültige Session-Reihenfolge: Teil ${curr.position} muss nach Teil ${prev.position} absolviert werden. Bitte passen Sie die Termine an.`
+          })
+        }
+      }
+      
+      logger.info('✅ Custom sessions order validated')
+    }
+
     // 6. Validate SARI enrollment is possible (before payment!)
     if (course.sari_managed && course.sari_course_id) {
       try {
