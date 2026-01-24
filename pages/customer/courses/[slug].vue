@@ -467,18 +467,24 @@ const openSessionCustomizer = (course: any) => {
   // The modal will automatically show the session customizer on mount
 }
 
-// Apply query params to filters
-watch(() => route.query, (query) => {
-  // Handle success parameter
-  if (query.success === 'true' && query.enrollmentId) {
+// Check for success params on mount
+const checkSuccessParams = () => {
+  if (route.query.success === 'true' && route.query.enrollmentId) {
+    logger.debug('✅ Success params found:', route.query.enrollmentId)
     showSuccess.value = true
     // Auto-hide after 5 seconds
     setTimeout(() => {
       showSuccess.value = false
     }, 5000)
-    // Clean up the URL but don't reload
+    // Clean up the URL
     window.history.replaceState({}, '', route.path)
   }
+}
+
+// Apply query params to filters
+watch(() => route.query, (query) => {
+  // Handle success parameter
+  checkSuccessParams()
   
   // Apply filter params
   if (query.category) selectedCategory.value = query.category as string
@@ -488,6 +494,9 @@ watch(() => route.query, (query) => {
 // Load data
 onMounted(async () => {
   logger.debug('Loading courses for slug:', slug.value)
+  
+  // Check success params on mount (in case watch didn't catch them)
+  checkSuccessParams()
   
   try {
     await loadData()
