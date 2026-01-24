@@ -85,9 +85,9 @@ export default defineEventHandler(async (event) => {
       if (course.id === excludeCourseId) continue
       if (!course.sari_course_id) continue
       
-      // Don't filter by location for VKU (courses at different locations)
-      // Only filter for PGS/other categories where location matters
-      if (filterLocation && category !== 'VKU') {
+      // Filter by location if provided
+      // Both VKU and PGS should be filtered by location
+      if (filterLocation) {
         const courseLocation = extractLocation(course.description)
         if (courseLocation !== filterLocation) {
           logger.debug(`Skipping course ${course.name} - location mismatch (${courseLocation} != ${filterLocation})`)
