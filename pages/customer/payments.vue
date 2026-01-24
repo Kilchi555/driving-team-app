@@ -1146,6 +1146,11 @@ const onAppointmentCancelled = async (appointmentId: string) => {
 }
 
 const getAppointmentTitle = (payment: any): string => {
+  // Check if this is a course payment (has metadata with course_name)
+  if (!payment.appointments && payment.metadata?.course_name) {
+    return payment.metadata.course_name
+  }
+  
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (!appointment) return 'Fahrlektion'
   
@@ -1159,6 +1164,23 @@ const getAppointmentTitle = (payment: any): string => {
 }
 
 const getAppointmentDateTime = (payment: any): string => {
+  // For course payments, show the course start date from metadata
+  if (!payment.appointments && payment.metadata?.course_start_date) {
+    const dateStr = payment.metadata.course_start_date
+    try {
+      const date = new Date(dateStr)
+      const formattedDate = date.toLocaleDateString('de-CH', {
+        timeZone: 'Europe/Zurich',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+      return `Kursbeginn: ${formattedDate}`
+    } catch (error) {
+      return 'Kursbeginn: -'
+    }
+  }
+  
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (!appointment || !appointment.start_time) return ''
   

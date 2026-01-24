@@ -301,6 +301,7 @@ export default defineEventHandler(async (event) => {
     const paymentInsertData: any = {
       user_id: actualUserId,
       appointment_id: null, // No appointment for course registrations
+      course_registration_id: enrollmentId, // Link to course registration
       payment_method: 'wallee',
       payment_status: 'pending',
       total_amount_rappen: amount,
@@ -311,6 +312,7 @@ export default defineEventHandler(async (event) => {
       metadata: {
         enrollment_id: enrollmentId,
         course_id: courseId,
+        course_start_date: enrollment.courses?.course_start_date, // Add course start date for display
         ...metadata // Include sari_faberid, sari_birthdate, etc.
       },
       created_at: new Date().toISOString(),
