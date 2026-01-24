@@ -10,15 +10,15 @@
     >
       <div class="max-w-6xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
-          <NuxtLink 
-            to="/" 
-            class="flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
+          <button 
+            @click="router.back()"
+            class="flex items-center gap-2 text-white hover:opacity-80 transition-opacity cursor-pointer"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
             <span>Zurück</span>
-          </NuxtLink>
+          </button>
           <h1 class="text-xl font-semibold text-white text-right">Unsere Kurse</h1>
         </div>
       </div>
@@ -180,7 +180,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 // Removed: import { getSupabase } - now using secure API
 import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
@@ -192,6 +192,7 @@ definePageMeta({
 })
 
 const route = useRoute()
+const router = useRouter()
 const slug = computed(() => route.params.slug as string)
 
 // State
