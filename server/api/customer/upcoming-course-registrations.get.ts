@@ -92,8 +92,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Collect all custom session IDs to fetch their details (for custom_location)
+    // Collect all custom session IDs AND their course IDs to fetch their details (for custom_location)
     const customSessionIds: string[] = []
+    const customCourseIds: Set<string> = new Set()
+    
     activeRegistrations.forEach((reg: any) => {
       let customSessions = reg.custom_sessions
       
@@ -113,14 +115,38 @@ export default defineEventHandler(async (event) => {
             customSessionIds.push(customData.sessionId)
             logger.debug(`🔍 Found custom session ID: ${customData.sessionId}`)
             logger.debug(`   Full custom data:`, JSON.stringify(customData))
+            
+            // Also track the course ID if provided
+            if (customData.courseId) {
+              customCourseIds.add(customData.courseId)
+            }
           }
         })
       }
     })
 
     logger.debug('🔍 All custom session IDs to fetch:', customSessionIds.length, customSessionIds.slice(0, 5))
+    logger.debug('🔍 Custom course IDs:', Array.from(customCourseIds))
+
+    // Load sessions from custom courses too (in case swapped sessions are from different courses)
+    if (customCourseIds.size > 0) {
+      const { data: customCourseSessions, error: customCourseError } = await supabase
+        .from('course_sessions')
+        .select('*')
+        .in('course_id', Array.from(customCourseIds))
+        .order('start_time', { ascending: true })
+
+      if (!customCourseError && customCourseSessions) {
+        logger.debug('🔍 Loaded sessions from custom courses:', customCourseSessions.length)
+        customCourseSessions.forEach(session => {
+          sessionsByClass[session.course_id] = sessionsByClass[session.course_id] || []
+          sessionsByClass[session.course_id].push(session)
+        })
+      }
+    }
 
     // Fetch custom session details (for custom_location)
+    // NOTE: Custom sessions can be from DIFFERENT courses, so we fetch ALL of them by ID
     let customSessionDetails: Record<string, any> = {}
     if (customSessionIds.length > 0) {
       const { data: customSessions, error: customError } = await supabase
@@ -132,7 +158,7 @@ export default defineEventHandler(async (event) => {
         logger.debug('🔍 Loaded custom session details:', customSessions.length)
         customSessions.forEach(session => {
           customSessionDetails[session.id] = session
-          logger.debug(`   Session ${session.id}: ${session.custom_location || 'no location'}`)
+          logger.debug(`   Session ${session.id}: location=${session.custom_location || 'NULL'}`)
         })
       } else if (customError) {
         logger.error('❌ Error loading custom sessions:', customError)
