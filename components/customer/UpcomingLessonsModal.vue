@@ -70,7 +70,7 @@
                   <span v-if="lesson.type && lesson.type !== 'course_session'" class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full text-white" :style="{ backgroundColor: primaryColor }">
                     {{ lesson.type }}
                   </span>
-                  <!-- Show session number for courses as "Teil X" -->
+                  <!-- Show session number for courses as "Teil X" or "Teil X-Y" -->
                   <span v-if="lesson.event_type_code === 'course' && lesson.session_number" class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full" :style="{ backgroundColor: primaryColor + '20', color: primaryColor }">
                     Teil {{ lesson.session_number }}
                   </span>
@@ -425,7 +425,65 @@ const filteredLessons = computed(() => {
     return sortOrder.value === 'asc' ? dateA - dateB : dateB - dateA
   })
   
-  return filtered
+  // Group course sessions by date (same day = one entry)
+  const grouped: any[] = []
+  const courseSessionsByDateAndCourse: Map<string, any[]> = new Map()
+  
+  for (const lesson of filtered) {
+    if (lesson.event_type_code === 'course') {
+      // Group course sessions by date + course_id
+      const date = lesson.start_time.split('T')[0]
+      const key = `${date}_${lesson.course_id || lesson.id}`
+      
+      if (!courseSessionsByDateAndCourse.has(key)) {
+        courseSessionsByDateAndCourse.set(key, [])
+      }
+      courseSessionsByDateAndCourse.get(key)!.push(lesson)
+    } else {
+      // Non-course lessons go directly to grouped
+      grouped.push(lesson)
+    }
+  }
+  
+  // Convert grouped course sessions to single entries
+  for (const [key, sessions] of courseSessionsByDateAndCourse.entries()) {
+    // Sort by start_time within the group
+    sessions.sort((a, b) => a.start_time.localeCompare(b.start_time))
+    
+    const firstSession = sessions[0]
+    const lastSession = sessions[sessions.length - 1]
+    
+    // Calculate session number range (e.g., "1 & 2" or just "1")
+    const sessionNumbers = sessions
+      .map(s => s.session_number)
+      .filter(Boolean)
+      .sort((a, b) => a - b)
+    
+    const sessionLabel = sessionNumbers.length > 1
+      ? `${sessionNumbers[0]} & ${sessionNumbers[sessionNumbers.length - 1]}`
+      : sessionNumbers[0]?.toString() || ''
+    
+    // Create grouped entry with combined time range
+    grouped.push({
+      ...firstSession,
+      id: key, // Use unique key for v-for
+      start_time: firstSession.start_time,
+      end_time: lastSession.end_time,
+      session_number: sessionLabel, // "1-2" instead of just "1"
+      grouped_count: sessions.length,
+      // Keep location from first session
+      location_details: firstSession.location_details
+    })
+  }
+  
+  // Re-sort after grouping
+  grouped.sort((a, b) => {
+    const dateA = new Date(a.start_time).getTime()
+    const dateB = new Date(b.start_time).getTime()
+    return sortOrder.value === 'asc' ? dateA - dateB : dateB - dateA
+  })
+  
+  return grouped
 })
 </script>
 
