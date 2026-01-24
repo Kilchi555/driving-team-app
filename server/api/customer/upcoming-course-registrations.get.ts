@@ -18,6 +18,8 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const now = new Date().toISOString()
 
+    logger.debug('🔍 Fetching course registrations for user:', user.id)
+
     // Fetch course registrations for this user with course and sessions info
     const { data: registrations, error: regError } = await supabase
       .from('course_registrations')
@@ -29,6 +31,7 @@ export default defineEventHandler(async (event) => {
         registration_date,
         payment_status,
         custom_sessions,
+        deleted_at,
         courses (
           id,
           name
@@ -37,15 +40,21 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', user.id)
       .eq('status', 'confirmed')
       .eq('payment_status', 'paid')
-      .is('deleted_at', null)
 
     if (regError) {
       logger.error('❌ Error loading course registrations:', regError)
       throw createError({ statusCode: 500, statusMessage: 'Failed to load course registrations' })
     }
 
+    logger.debug('🔍 Raw registrations from DB:', registrations?.length || 0, registrations?.slice(0, 1))
+
+    // Filter out deleted registrations
+    const activeRegistrations = (registrations || []).filter(r => !r.deleted_at)
+
     // For each registration, fetch the course_sessions
-    const courseIds = [...new Set((registrations || []).map(r => r.course_id).filter(Boolean))]
+    const courseIds = [...new Set((activeRegistrations || []).map(r => r.course_id).filter(Boolean))]
+    
+    logger.debug('🔍 Course IDs to fetch sessions for:', courseIds.length, courseIds.slice(0, 3))
     
     let sessionsByClass: Record<string, any[]> = {}
     if (courseIds.length > 0) {
@@ -56,19 +65,24 @@ export default defineEventHandler(async (event) => {
         .order('start_time', { ascending: true })
 
       if (!sessionsError && sessions) {
+        logger.debug('🔍 Loaded course_sessions:', sessions.length)
         sessions.forEach(session => {
           if (!sessionsByClass[session.course_id]) {
             sessionsByClass[session.course_id] = []
           }
           sessionsByClass[session.course_id].push(session)
         })
+      } else if (sessionsError) {
+        logger.error('❌ Error loading sessions:', sessionsError)
       }
     }
 
     // Build final result with future sessions only
-    const upcomingRegistrations = (registrations || [])
+    const upcomingRegistrations = (activeRegistrations || [])
       .map((reg: any) => {
         let sessions = sessionsByClass[reg.course_id] || []
+        
+        logger.debug(`🔍 Reg ${reg.id}: Found ${sessions.length} sessions for course ${reg.course_id}`)
         
         // If custom_sessions exist, apply them to show which sessions are actually booked
         if (reg.custom_sessions && typeof reg.custom_sessions === 'object') {
@@ -89,6 +103,7 @@ export default defineEventHandler(async (event) => {
           
           // If we have custom sessions, use those for display (they're the actual booked sessions)
           if (appliedSessions.length > 0) {
+            logger.debug(`🔍 Reg ${reg.id}: Using ${appliedSessions.length} custom sessions`)
             sessions = appliedSessions
           }
         }
@@ -96,6 +111,8 @@ export default defineEventHandler(async (event) => {
         const futureSessions = sessions.filter((session: any) => 
           new Date(session.start_time) > new Date(now)
         )
+        
+        logger.debug(`🔍 Reg ${reg.id}: ${futureSessions.length} future sessions`)
 
         return {
           ...reg,
