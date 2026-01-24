@@ -192,7 +192,7 @@ export default defineEventHandler(async (event) => {
       baseUrl = 'https://www.simy.ch'
     }
     
-    const inviteLink = `${baseUrl}/register-staff?token=${token}`
+    const inviteLink = `${baseUrl}/register/staff?token=${token}`
 
     // Get tenant info for branding using service role
     const { data: tenant } = await serviceSupabase
