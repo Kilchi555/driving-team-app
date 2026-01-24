@@ -1513,8 +1513,9 @@ const navigateToLessonBooking = async () => {
 }
 
 const navigateToCourseBooking = async () => {
-  // Navigiere zur Coming Soon Seite
-  await navigateTo('/customer/coming-soon')
+  // Navigiere zur Kursbuchungsseite
+  const tenantSlug = currentTenant.value?.slug || 'driving-team'
+  await navigateTo(`/customer/courses/${tenantSlug}`)
 }
 
 const navigateToShop = async () => {
