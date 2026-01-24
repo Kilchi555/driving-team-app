@@ -983,6 +983,7 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       : birthdate
     
     logger.info(`🎯 Enrolling in SARI for ${sariCourseIds.length} sessions: ${sariCourseIds.join(', ')}`)
+    logger.info(`🔐 SARI Credentials: faberid=${registration.sari_faberid}, birthdate=${birthdateFormatted}`)
     
     // Enroll in ALL sessions
     let successCount = 0
@@ -990,17 +991,21 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     
     for (const sessionId of sariCourseIds) {
       try {
-        logger.debug(`📝 Enrolling in session ${sessionId}...`)
-        await sari.enrollStudent(parseInt(sessionId), registration.sari_faberid, birthdateFormatted)
+        logger.debug(`📝 Enrolling in session ${sessionId} (type: ${typeof sessionId}, parsed: ${parseInt(sessionId)})...`)
+        const result = await sari.enrollStudent(parseInt(sessionId), registration.sari_faberid, birthdateFormatted)
         successCount++
-        logger.debug(`✅ Session ${sessionId} enrolled`)
+        logger.debug(`✅ Session ${sessionId} enrolled, result:`, result)
       } catch (sessionError: any) {
         // If already enrolled, that's OK - count as success
         if (sessionError.message?.includes('ALREADY_ENROLLED') || sessionError.message?.includes('PERSON_ALREADY_ADDED')) {
           logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
           successCount++
         } else {
-          logger.warn(`⚠️ Session ${sessionId} enrollment failed:`, sessionError.message)
+          logger.warn(`⚠️ Session ${sessionId} enrollment failed:`, {
+            message: sessionError.message,
+            code: sessionError.code,
+            response: sessionError.response
+          })
           errorCount++
         }
       }
