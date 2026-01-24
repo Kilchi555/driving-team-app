@@ -92,6 +92,34 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Collect all custom session IDs to fetch their details (for custom_location)
+    const customSessionIds: string[] = []
+    activeRegistrations.forEach((reg: any) => {
+      if (reg.custom_sessions && typeof reg.custom_sessions === 'object') {
+        Object.values(reg.custom_sessions).forEach((customData: any) => {
+          if (customData.sessionId) {
+            customSessionIds.push(customData.sessionId)
+          }
+        })
+      }
+    })
+
+    // Fetch custom session details (for custom_location)
+    let customSessionDetails: Record<string, any> = {}
+    if (customSessionIds.length > 0) {
+      const { data: customSessions, error: customError } = await supabase
+        .from('course_sessions')
+        .select('id, custom_location')
+        .in('id', customSessionIds)
+
+      if (!customError && customSessions) {
+        customSessions.forEach(session => {
+          customSessionDetails[session.id] = session
+        })
+        logger.debug('🔍 Loaded custom session details:', customSessions.length)
+      }
+    }
+
     // Build final result with future sessions only
     const upcomingRegistrations = (activeRegistrations || [])
       .map((reg: any) => {
@@ -117,6 +145,9 @@ export default defineEventHandler(async (event) => {
             const idx = sessions.findIndex((s: any) => s.session_number === position)
             
             if (idx !== -1) {
+              // Get the custom_location from the fetched session details
+              const sessionDetails = customSessionDetails[customData.sessionId] || {}
+              
               // Replace with custom session data
               sessions[idx] = {
                 id: customData.sessionId,
@@ -125,11 +156,12 @@ export default defineEventHandler(async (event) => {
                 end_time: customData.endTime,
                 course_id: customData.courseId,
                 course_name: customData.courseName,
+                custom_location: sessionDetails.custom_location || null,
                 current_participants: customData.current_participants || 0,
                 max_participants: customData.max_participants || 0,
                 is_custom: true
               }
-              logger.debug(`🔍 Reg ${reg.id}: Replaced session ${position} with custom session`)
+              logger.debug(`🔍 Reg ${reg.id}: Replaced session ${position} with custom session (location: ${sessionDetails.custom_location || 'none'})`)
             }
           })
         }
