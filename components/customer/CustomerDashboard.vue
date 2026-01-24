@@ -2279,7 +2279,8 @@ const loadCourseRegistrations = async () => {
         start_time: session.start_time,
         end_time: session.end_time,
         session_number: session.session_number,
-        location_details: null,
+        // Use custom_location from course_sessions for location display
+        location_details: session.custom_location ? { formatted_address: session.custom_location } : null,
         location_id: null,
         event_type_code: 'course'
       }))
