@@ -180,26 +180,61 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 6. Validate SARI enrollment is possible (before payment!)
+    // This does a TEST enrollment to check for deadline violations, course full, etc.
     if (course.sari_managed && course.sari_course_id) {
       try {
         logger.info(`🔍 Validating SARI enrollment possibility for course ${course.sari_course_id}`)
         
-        const enrollmentCheck = await sari.canEnrollInCourse(course.sari_course_id, faberidClean)
+        // Build the list of ALL session IDs to validate (original + custom swaps)
+        const sariCourseIdParts = course.sari_course_id.split('_')
+        let allSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
         
-        if (!enrollmentCheck.canEnroll) {
+        // Apply custom session swaps if any
+        if (customSessions && typeof customSessions === 'object') {
+          logger.info('🔄 Applying custom sessions for validation:', Object.keys(customSessions))
+          
+          for (const [position, customData] of Object.entries(customSessions)) {
+            const custom = customData as any
+            const originalIds = custom?.originalSariIds || []
+            const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
+            
+            if (originalIds.length > 0 && newIds.length > 0) {
+              // Replace original IDs with new IDs
+              for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
+                const idx = allSessionIds.findIndex((id: string) => id === originalIds[i] || id === originalIds[i].toString())
+                if (idx >= 0) {
+                  allSessionIds[idx] = newIds[i]
+                }
+              }
+            } else if (newIds.length > 0) {
+              // Legacy: position-based replacement
+              const posNum = parseInt(position)
+              if (posNum > 0 && posNum <= allSessionIds.length) {
+                allSessionIds[posNum - 1] = newIds[0]
+              }
+            }
+          }
+        }
+        
+        logger.info(`🎯 Validating ${allSessionIds.length} sessions: ${allSessionIds.join(', ')}`)
+        
+        // Do TEST enrollment for ALL sessions to catch deadline violations
+        const validationResult = await sari.validateAllSessions(allSessionIds, faberidClean, birthdate)
+        
+        if (!validationResult.canEnroll) {
           throw createError({
             statusCode: 400,
-            statusMessage: enrollmentCheck.reason || 'SARI enrollment not possible'
+            statusMessage: validationResult.reason || 'SARI enrollment not possible'
           })
         }
         
-        logger.info(`✅ SARI enrollment validation passed`)
+        logger.info(`✅ SARI enrollment validation passed for all ${allSessionIds.length} sessions`)
       } catch (error: any) {
         if (error.statusCode) throw error
         logger.error('❌ SARI enrollment check failed:', error.message)
         throw createError({
           statusCode: 400,
-          statusMessage: 'Could not verify course availability'
+          statusMessage: error.message || 'Could not verify course availability'
         })
       }
     }

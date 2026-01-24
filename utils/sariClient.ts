@@ -422,6 +422,113 @@ export class SARIClient {
   }
 
   /**
+   * Validate enrollment for ALL sessions (including custom swapped sessions)
+   * Does a test enrollment and immediately unenrolls to check for deadline violations etc.
+   * @param sessionIds Array of SARI session IDs to validate
+   * @param faberid Student's FABER ID
+   * @param birthdate Student's birthdate (YYYY-MM-DD)
+   */
+  async validateAllSessions(
+    sessionIds: string[],
+    faberid: string,
+    birthdate: string
+  ): Promise<{ canEnroll: boolean; reason?: string; failedSessionId?: string }> {
+    const enrolledSessions: string[] = []
+    
+    try {
+      for (const sessionId of sessionIds) {
+        const numericId = parseInt(sessionId)
+        
+        // First check if already enrolled
+        try {
+          const members = await this.getCourseDetail(numericId)
+          const alreadyEnrolled = members.some(m => m.faberid === faberid)
+          if (alreadyEnrolled) {
+            console.log(`⏭️ Session ${sessionId}: Already enrolled (OK for validation)`)
+            continue // Already enrolled is fine for validation
+          }
+        } catch (e) {
+          // If getCourseDetail fails, try enrollment anyway
+        }
+        
+        // Try to enroll (test)
+        try {
+          console.log(`🔍 Test enrollment for session ${sessionId}...`)
+          await this.enrollStudent(numericId, faberid, birthdate)
+          enrolledSessions.push(sessionId)
+          console.log(`✅ Test enrollment successful for session ${sessionId}`)
+        } catch (error: any) {
+          const errorMsg = error.message || ''
+          
+          // If already enrolled, that's OK
+          if (errorMsg.includes('ALREADY_ENROLLED') || errorMsg.includes('PERSON_ALREADY_ADDED')) {
+            console.log(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
+            continue
+          }
+          
+          // Deadline violation - this is what we're looking for
+          if (errorMsg.includes('COURSE_PERSON_DEADLINE_VIOLATED')) {
+            console.log(`❌ Session ${sessionId}: Deadline violated`)
+            // Rollback any test enrollments we made
+            await this.rollbackTestEnrollments(enrolledSessions, faberid)
+            return { 
+              canEnroll: false, 
+              reason: 'Die Anmeldefrist für diesen Kurs ist abgelaufen. Bitte wählen Sie einen anderen Termin.',
+              failedSessionId: sessionId
+            }
+          }
+          
+          // Course full
+          if (errorMsg.includes('COURSE_FULL') || errorMsg.includes('NO_FREE_PLACES')) {
+            console.log(`❌ Session ${sessionId}: Course full`)
+            await this.rollbackTestEnrollments(enrolledSessions, faberid)
+            return { 
+              canEnroll: false, 
+              reason: 'Der ausgewählte Termin ist leider bereits ausgebucht.',
+              failedSessionId: sessionId
+            }
+          }
+          
+          // Other error
+          console.error(`❌ Session ${sessionId}: ${errorMsg}`)
+          await this.rollbackTestEnrollments(enrolledSessions, faberid)
+          return { 
+            canEnroll: false, 
+            reason: `Anmeldung nicht möglich: ${errorMsg}`,
+            failedSessionId: sessionId
+          }
+        }
+      }
+      
+      // All sessions validated - now rollback the test enrollments
+      await this.rollbackTestEnrollments(enrolledSessions, faberid)
+      
+      return { canEnroll: true }
+    } catch (error: any) {
+      console.error('❌ validateAllSessions error:', error.message)
+      // Try to rollback any test enrollments
+      await this.rollbackTestEnrollments(enrolledSessions, faberid)
+      return { canEnroll: false, reason: `Validierungsfehler: ${error.message}` }
+    }
+  }
+
+  /**
+   * Helper: Rollback test enrollments by unenrolling
+   */
+  private async rollbackTestEnrollments(sessionIds: string[], faberid: string): Promise<void> {
+    for (const sessionId of sessionIds) {
+      try {
+        console.log(`🔄 Rolling back test enrollment for session ${sessionId}...`)
+        await this.unenrollStudent(parseInt(sessionId), faberid)
+        console.log(`✅ Rolled back session ${sessionId}`)
+      } catch (e: any) {
+        // If unenroll fails, log but continue - session might have auto-unenrolled or never enrolled
+        console.warn(`⚠️ Could not rollback session ${sessionId}: ${e.message}`)
+      }
+    }
+  }
+
+  /**
    * Helper: Extract numeric SARI course ID from a potential group string
    * e.g., "GROUP_2110023_..." → 2110023
    */
