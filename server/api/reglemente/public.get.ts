@@ -56,10 +56,20 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Regulation not found'
-      })
+      // Fallback: Return placeholder content instead of 404
+      const placeholders: Record<string, string> = {
+        agb: '<h1>Allgemeine Geschäftsbedingungen</h1><p>Die Allgemeinen Geschäftsbedingungen werden in Kürze bereitgestellt.</p>',
+        datenschutz: '<h1>Datenschutz</h1><p>Unsere Datenschutzerklärung wird in Kürze bereitgestellt.</p>',
+        nutzungsbedingungen: '<h1>Nutzungsbedingungen</h1><p>Die Nutzungsbedingungen werden in Kürze bereitgestellt.</p>',
+        widerruf: '<h1>Widerrufsrecht</h1><p>Informationen zum Widerrufsrecht werden in Kürze bereitgestellt.</p>'
+      }
+
+      return {
+        content: placeholders[type as string] || '<p>Keine Inhalte verfügbar</p>',
+        updatedAt: new Date().toISOString(),
+        isDefault: true,
+        isPlaceholder: true
+      }
     }
 
     return {
