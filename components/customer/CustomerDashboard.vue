@@ -171,14 +171,14 @@
                 <h3 class="text-lg font-semibold text-gray-900">Kommende Termine</h3>
               </div>
               <div class="bg-gray-100 px-3 py-1 rounded-full">
-                <span class="text-sm font-semibold text-gray-700">{{ upcomingAppointments.length }}</span>
+                <span class="text-sm font-semibold text-gray-700">{{ upcomingLessonsCount }}</span>
               </div>
             </div>
             
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
-                <p v-if="upcomingAppointments.length > 0" class="text-gray-600 text-sm">
-                  Du hast {{ upcomingAppointments.length }} {{ upcomingAppointments.length === 1 ? 'Termin' : 'Termine' }} geplant
+                <p v-if="upcomingLessonsCount > 0" class="text-gray-600 text-sm">
+                  Du hast {{ upcomingLessonsCount }} {{ upcomingLessonsCount === 1 ? 'Termin' : 'Termine' }} geplant
                 </p>
                 <p v-else class="text-gray-600 text-sm">
                   Keine Termine geplant
@@ -792,7 +792,7 @@
 
     <UpcomingLessonsModal 
       :is-open="showUpcomingLessonsModal"
-      :lessons="upcomingAppointments"
+      :lessons="lessons"
       @close="showUpcomingLessonsModal = false"
     />
 
@@ -1231,6 +1231,14 @@ const upcomingAppointments = computed(() => {
   return appointments.value.filter(apt => 
     new Date(apt.start_time) > now
   ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+})
+
+// Count of all upcoming lessons (appointments + course sessions)
+const upcomingLessonsCount = computed(() => {
+  const now = new Date()
+  return lessons.value.filter(lesson => 
+    new Date(lesson.start_time) > now
+  ).length
 })
 
 const completedAppointments = computed(() => {
