@@ -2,6 +2,7 @@ import { getSupabase } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
+import { sendEmail } from '~/server/utils/email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
@@ -326,23 +327,14 @@ Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 Freundliche Grüsse
 ${tenantName}`
 
-        // Use service role for edge function invocation
-        const { data: emailResult, error: emailError } = await serviceSupabase.functions.invoke('send-email', {
-          body: {
-            to: email,
-            subject,
-            body: bodyText,
-            html: bodyHtml
-          },
-          method: 'POST'
+        // Use Resend API for email sending
+        const emailResult = await sendEmail({
+          to: email,
+          subject,
+          html: bodyHtml
         })
 
-        if (emailError) {
-          console.error('❌ Email sending via send-email failed:', emailError)
-          throw emailError
-        }
-
-        logger.debug('✅ Email sent via send-email:', emailResult)
+        logger.debug('✅ Email sent via Resend:', emailResult)
         
         return {
           success: true,
@@ -449,8 +441,13 @@ ${tenantName}`
 
 // Helper function to generate a cryptographically secure random token
 function generateToken(): string {
-  // Use crypto.randomBytes for cryptographically secure randomness
-  const crypto = require('crypto')
-  return crypto.randomBytes(24).toString('base64url') // 32 chars, URL-safe
+  // Use Web Crypto API for cryptographically secure randomness (ESM compatible)
+  const array = new Uint8Array(24)
+  crypto.getRandomValues(array)
+  // Convert to base64url (URL-safe)
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
 }
 
