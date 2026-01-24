@@ -1561,9 +1561,12 @@ const loadAllData = async () => {
       return
     }
 
+    // Load appointments first, then course registrations (which merges with appointments)
+    await loadAppointments()
+    
+    // These can run in parallel
     await Promise.all([
-      loadAppointments(),
-      loadCourseRegistrations(),
+      loadCourseRegistrations(), // Must run after loadAppointments to merge correctly
       loadLocations(),
       loadStaff(),
       loadPendingConfirmations()
@@ -2185,7 +2188,7 @@ const loadAppointments = async () => {
     logger.debug('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
 
     appointments.value = lessonsWithEvaluations
-    lessons.value = lessonsWithEvaluations
+    // Note: lessons.value is set by loadCourseRegistrations which merges appointments + course sessions
 
   } catch (err: any) {
     logger.error('❌ Error loading appointments:', {
