@@ -241,7 +241,9 @@ export class SARISyncEngine {
     })
 
     // Standard VKU/PGS settings
-    const maxParticipants = 12
+    // VKU: 12 participants per course
+    // PGS: 5 participants per course
+    const maxParticipants = courseType === 'VKU' ? 12 : 5
     // current_participants = 0 initially, wird durch Registrierungen gepflegt
     const currentParticipants = 0
     
