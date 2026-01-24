@@ -562,8 +562,12 @@ const openSessionSwapModal = async (session: any) => {
   
   try {
     // Get the date of the previous session for chronological validation
+    // Use displayDate (which reflects custom session dates) not original date
     const prevSession = sessionGroups.value.find((s: any) => s.position === session.position - 1)
     const afterDate = prevSession?.displayDate || prevSession?.date
+    
+    // Use displayDate for currentDate as well (the actual current date of this session)
+    const currentSessionDate = session.displayDate || session.date
     
     const response = await $fetch('/api/courses/available-sessions', {
       query: {
@@ -573,7 +577,7 @@ const openSessionSwapModal = async (session: any) => {
         afterDate,
         excludeCourseId: props.course.id,
         courseLocation: props.course.description,
-        currentDate: session.date // Exclude sessions on the same date
+        currentDate: currentSessionDate // Exclude sessions on the same date (custom or original)
       }
     }) as any
     
@@ -628,17 +632,38 @@ const closeSessionSwapModal = () => {
 const selectSwapSession = (option: any) => {
   if (!swappingSession.value) return
   
+  const currentPosition = swappingSession.value.position
+  const newDate = option.date
+  
   // Store all session IDs for this group (for grouped sessions at same time)
   // IMPORTANT: Also store originalSariIds so webhook knows which IDs to replace
-  customSessions.value[swappingSession.value.position.toString()] = {
+  customSessions.value[currentPosition.toString()] = {
     sariSessionIds: option.sariSessionIds || [option.sariSessionId], // Array of all NEW session IDs
     originalSariIds: swappingSession.value.originalSariIds || [], // Array of ORIGINAL session IDs to replace
     sessionId: option.sessionId,
     courseId: option.courseId,
     courseName: option.courseName,
-    date: option.date,
+    date: newDate,
     startTime: option.startTime,
     endTime: option.endTime
+  }
+  
+  // IMPORTANT: If we moved this session to a later date, invalidate any subsequent 
+  // custom sessions that are now chronologically before this one
+  const positionsToCheck = Object.keys(customSessions.value)
+    .map(p => parseInt(p))
+    .filter(p => p > currentPosition)
+    .sort((a, b) => a - b)
+  
+  for (const pos of positionsToCheck) {
+    const subsequentSession = customSessions.value[pos.toString()]
+    if (subsequentSession && subsequentSession.date) {
+      // If the subsequent session's date is before or equal to the new date, reset it
+      if (subsequentSession.date <= newDate) {
+        console.log(`⚠️ Resetting session ${pos} as it's now before session ${currentPosition}`)
+        delete customSessions.value[pos.toString()]
+      }
+    }
   }
   
   closeSessionSwapModal()
