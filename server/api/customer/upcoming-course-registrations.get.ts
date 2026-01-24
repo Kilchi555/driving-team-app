@@ -112,6 +112,7 @@ export default defineEventHandler(async (event) => {
           if (customData.sessionId) {
             customSessionIds.push(customData.sessionId)
             logger.debug(`🔍 Found custom session ID: ${customData.sessionId}`)
+            logger.debug(`   Full custom data:`, JSON.stringify(customData))
           }
         })
       }
