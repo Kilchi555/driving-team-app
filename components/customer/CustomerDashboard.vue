@@ -1555,6 +1555,7 @@ const loadAllData = async () => {
 
     await Promise.all([
       loadAppointments(),
+      loadCourseRegistrations(),
       loadLocations(),
       loadStaff(),
       loadPendingConfirmations()
@@ -2234,6 +2235,58 @@ const loadStaff = async () => {
     console.error('❌ Error loading staff:', err)
     // Fallback: continue without staff data
     staff.value = []
+  }
+}
+
+const loadCourseRegistrations = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    const response = await $fetch('/api/customer/upcoming-course-registrations', {
+      method: 'GET',
+      headers: session?.access_token ? {
+        'Authorization': `Bearer ${session.access_token}`
+      } : {}
+    }) as any
+    
+    if (!response?.success) {
+      logger.warn('⚠️ No upcoming course registrations')
+      return
+    }
+
+    const courseRegistrations = response.data || []
+    
+    // Transform course registrations into lesson-like format for the modal
+    const courseLessons = courseRegistrations.flatMap((reg: any) => {
+      return (reg.course_sessions || []).map((session: any) => ({
+        id: `course-${session.id}`,
+        type: 'course_session',
+        course_registration_id: reg.id,
+        course_id: reg.course_id,
+        course_name: reg.courses?.name || 'Kurs',
+        course_type: reg.courses?.course_type,
+        start_time: session.start_time,
+        end_time: session.end_time,
+        session_number: session.session_number,
+        location_details: null,
+        location_id: null,
+        event_type_code: 'course'
+      }))
+    })
+
+    // Merge with existing lessons
+    lessons.value = [
+      ...(appointments.value || []),
+      ...courseLessons
+    ].sort((a: any, b: any) => 
+      new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    )
+
+    logger.debug('✅ Course registrations loaded:', courseRegistrations.length, 'Total lessons:', lessons.value.length)
+  } catch (err: any) {
+    logger.error('❌ Error loading course registrations:', err)
+    // Don't fail the entire load if this fails
   }
 }
 

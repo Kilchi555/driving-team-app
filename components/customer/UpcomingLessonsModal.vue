@@ -64,10 +64,14 @@
               <div v-if="lesson.event_type_code" class="mb-3 pb-3 border-b border-gray-200">
                 <div class="flex items-center gap-2 mb-1">
                   <h4 class="text-lg font-bold text-gray-900">
-                    {{ getLessonTypeTitle(lesson.event_type_code) }}
+                    {{ getLessonTypeTitle(lesson.event_type_code, lesson) }}
                   </h4>
                   <span v-if="lesson.type" class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full text-white" :style="{ backgroundColor: primaryColor }">
                     {{ lesson.type }}
+                  </span>
+                  <!-- Show session number for courses -->
+                  <span v-if="lesson.event_type_code === 'course' && lesson.session_number" class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full text-white" :style="{ backgroundColor: primaryColor }">
+                    Session {{ lesson.session_number }}
                   </span>
                 </div>
                 <p v-if="lesson.staff?.first_name" class="text-sm font-medium text-gray-600">
@@ -196,11 +200,17 @@ const formatTimeRange = (startTime: string, endTime: string) => {
   return `${startStr} - ${endStr}`
 }
 
-const getLessonTypeTitle = (eventTypeCode: string): string => {
+const getLessonTypeTitle = (eventTypeCode: string, lesson?: any): string => {
+  // If it's a course session, show the course name
+  if (eventTypeCode === 'course' && lesson?.course_name) {
+    return lesson.course_name
+  }
+  
   const titles: Record<string, string> = {
     'exam': 'Prüfungsfahrt inkl. WarmUp und Rückfahrt',
     'theory': 'Theorielektion',
-    'lesson': 'Fahrlektion'
+    'lesson': 'Fahrlektion',
+    'course': 'Kurs'
   }
   return titles[eventTypeCode] || 'Fahrlektion'
 }
