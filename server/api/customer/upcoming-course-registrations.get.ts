@@ -165,6 +165,12 @@ export default defineEventHandler(async (event) => {
             if (idx !== -1) {
               // Get the custom_location from the fetched session details
               const sessionDetails = customSessionDetails[customData.sessionId] || {}
+              const customLocation = sessionDetails.custom_location || null
+              
+              logger.debug(`🔍 Replacing session ${position}:`)
+              logger.debug(`   Custom session ID: ${customData.sessionId}`)
+              logger.debug(`   Session details found: ${!!customSessionDetails[customData.sessionId]}`)
+              logger.debug(`   Custom location: ${customLocation || 'NULL/EMPTY'}`)
               
               // Replace with custom session data
               sessions[idx] = {
@@ -174,7 +180,7 @@ export default defineEventHandler(async (event) => {
                 end_time: customData.endTime,
                 course_id: customData.courseId,
                 course_name: customData.courseName,
-                custom_location: sessionDetails.custom_location || null,
+                custom_location: customLocation,
                 current_participants: customData.current_participants || 0,
                 max_participants: customData.max_participants || 0,
                 is_custom: true
@@ -199,6 +205,13 @@ export default defineEventHandler(async (event) => {
       .filter((reg: any) => reg.course_sessions.length > 0)
 
     logger.debug('✅ Upcoming course registrations loaded:', upcomingRegistrations.length)
+    
+    // Debug: Log custom_location for each session
+    upcomingRegistrations.forEach((reg: any) => {
+      reg.course_sessions.forEach((session: any) => {
+        logger.debug(`   Session ${session.session_number}: location=${session.custom_location || 'NULL'}`)
+      })
+    })
 
     return {
       success: true,
