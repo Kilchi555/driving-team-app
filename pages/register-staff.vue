@@ -298,14 +298,17 @@
               type="password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Mindestens 8 Zeichen"
+              placeholder="Mindestens 12 Zeichen"
             />
             <div class="mt-2 space-y-1">
               <p class="text-xs" :class="passwordChecks.length ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
+                {{ passwordChecks.length ? '✓' : '○' }} Mindestens 12 Zeichen
               </p>
               <p class="text-xs" :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.uppercase ? '✓' : '○' }} Mindestens 1 Großbuchstabe
+                {{ passwordChecks.uppercase ? '✓' : '○' }} Mindestens 1 Grossbuchstabe
+              </p>
+              <p class="text-xs" :class="passwordChecks.lowercase ? 'text-green-600' : 'text-gray-500'">
+                {{ passwordChecks.lowercase ? '✓' : '○' }} Mindestens 1 Kleinbuchstabe
               </p>
               <p class="text-xs" :class="passwordChecks.number ? 'text-green-600' : 'text-gray-500'">
                 {{ passwordChecks.number ? '✓' : '○' }} Mindestens 1 Zahl
@@ -409,14 +412,16 @@ const showSuccessToast = ref(false)
 
 // Computed
 const passwordChecks = computed(() => ({
-  length: password.value.length >= 8,
+  length: password.value.length >= 12,
   uppercase: /[A-Z]/.test(password.value),
+  lowercase: /[a-z]/.test(password.value),
   number: /[0-9]/.test(password.value)
 }))
 
 const passwordIsValid = computed(() => {
   return passwordChecks.value.length && 
          passwordChecks.value.uppercase && 
+         passwordChecks.value.lowercase &&
          passwordChecks.value.number
 })
 
