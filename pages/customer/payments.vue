@@ -197,11 +197,13 @@
                   <div class="flex justify-between space-x-2">
                     <div class="text-xl sm:text-2xl font-bold text-gray-900">
                       CHF {{ 
-                        ((roundToNearestFranken(payment.lesson_price_rappen) + 
-                          roundToNearestFranken(payment.admin_fee_rappen || 0) + 
-                          roundToNearestFranken(payment.products_price_rappen || 0) - 
-                          roundToNearestFranken(payment.discount_amount_rappen || 0) - 
-                          roundToNearestFranken(payment.credit_used_rappen || 0)) / 100).toFixed(2) 
+                        (!payment.appointments && payment.metadata?.course_name)
+                          ? (roundToNearestFranken(payment.total_amount_rappen || 0) / 100).toFixed(2)
+                          : ((roundToNearestFranken(payment.lesson_price_rappen) + 
+                              roundToNearestFranken(payment.admin_fee_rappen || 0) + 
+                              roundToNearestFranken(payment.products_price_rappen || 0) - 
+                              roundToNearestFranken(payment.discount_amount_rappen || 0) - 
+                              roundToNearestFranken(payment.credit_used_rappen || 0)) / 100).toFixed(2) 
                       }}
                     </div>
                     <div class="text-xs sm:text-sm text-gray-500">
