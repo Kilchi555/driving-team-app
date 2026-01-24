@@ -59,7 +59,9 @@ export default defineEventHandler(async (event) => {
           id,
           sari_session_id,
           start_time,
-          end_time
+          end_time,
+          current_participants,
+          max_participants
         )
       `)
       .eq('tenant_id', tenantId)
@@ -124,10 +126,23 @@ export default defineEventHandler(async (event) => {
 
       logger.debug(`Course ${course.name} has ${sessionsForPosition.length} session(s) at position ${positionNum}`)
 
-      // Check course has free slots
-      const freeSlots = course.max_participants - (course.current_participants || 0)
+      // Check course-level free slots (fallback)
+      const courseFreeSlots = course.max_participants - (course.current_participants || 0)
+      
+      // Check session-level free slots (if available)
+      // Use session max_participants if set, otherwise course max_participants
+      let sessionFreeSlots = courseFreeSlots
+      const firstSession = sessionsForPosition[0]
+      if (firstSession.max_participants !== null && firstSession.max_participants !== undefined) {
+        sessionFreeSlots = firstSession.max_participants - (firstSession.current_participants || 0)
+      } else if (firstSession.current_participants !== null) {
+        sessionFreeSlots = course.max_participants - (firstSession.current_participants || 0)
+      }
+      
+      const freeSlots = Math.min(courseFreeSlots, sessionFreeSlots)
+      
       if (freeSlots <= 0) {
-        logger.debug(`  - Course full, skipping`)
+        logger.debug(`  - Course/session full (course: ${courseFreeSlots}, session: ${sessionFreeSlots}), skipping`)
         continue
       }
 
