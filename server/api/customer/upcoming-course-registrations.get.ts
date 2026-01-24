@@ -146,23 +146,48 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch custom session details (for custom_location)
-    // NOTE: Custom sessions can be from DIFFERENT courses, so we fetch ALL of them by ID
+    // NOTE: Custom sessions can be from DIFFERENT courses
+    // We match by courseId + startTime + endTime since sessionId might be temporary/local ID
     let customSessionDetails: Record<string, any> = {}
+    
     if (customSessionIds.length > 0) {
-      const { data: customSessions, error: customError } = await supabase
-        .from('course_sessions')
-        .select('id, custom_location')
-        .in('id', customSessionIds)
-
-      if (!customError && customSessions) {
-        logger.debug('🔍 Loaded custom session details:', customSessions.length)
-        customSessions.forEach(session => {
-          customSessionDetails[session.id] = session
-          logger.debug(`   Session ${session.id}: location=${session.custom_location || 'NULL'}`)
-        })
-      } else if (customError) {
-        logger.error('❌ Error loading custom sessions:', customError)
-      }
+      // Build a map of unique (courseId, startTime, endTime) -> session details
+      const allSessions = Object.values(sessionsByClass).flat()
+      
+      activeRegistrations.forEach((reg: any) => {
+        let customSessions = reg.custom_sessions
+        
+        if (typeof customSessions === 'string') {
+          try {
+            customSessions = JSON.parse(customSessions)
+          } catch (e) {
+            return
+          }
+        }
+        
+        if (customSessions && typeof customSessions === 'object') {
+          Object.values(customSessions).forEach((customData: any) => {
+            // Find matching session by courseId + startTime + endTime
+            const matchingSession = allSessions.find((s: any) => 
+              s.course_id === customData.courseId &&
+              s.start_time === customData.startTime &&
+              s.end_time === customData.endTime
+            )
+            
+            if (matchingSession) {
+              customSessionDetails[customData.sessionId] = matchingSession
+              logger.debug(`🔍 Matched custom session ${customData.sessionId}:`)
+              logger.debug(`   Course: ${customData.courseId}`)
+              logger.debug(`   Time: ${customData.startTime} - ${customData.endTime}`)
+              logger.debug(`   Location: ${matchingSession.custom_location || 'NULL'}`)
+            } else {
+              logger.warn(`⚠️ Could not find matching session for custom data:`, JSON.stringify(customData))
+            }
+          })
+        }
+      })
+      
+      logger.debug('🔍 Loaded custom session details:', Object.keys(customSessionDetails).length)
     }
 
     // Build final result with future sessions only
