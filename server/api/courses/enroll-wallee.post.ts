@@ -94,9 +94,25 @@ const handler = defineEventHandler(async (event) => {
       logger.debug('✅ SARI customer validated:', customerData.firstname)
     } catch (error: any) {
       logger.error('❌ SARI validation failed:', error.message)
+      
+      // Provide specific error messages for common validation failures
+      let userMessage = 'SARI Validierung fehlgeschlagen'
+      
+      if (error.message?.includes('MISMATCH_BIRTHDATE_FABERID') || 
+          error.message?.includes('mismatch') ||
+          error.message?.includes('Ausweisnummer') ||
+          error.message?.includes('Geburtsdatum')) {
+        userMessage = 'Die Ausweisnummer und/oder das Geburtsdatum stimmen nicht überein. Bitte überprüfen Sie Ihre Eingaben.'
+      } else if (error.message?.includes('NOT_FOUND') || 
+                 error.message?.includes('nicht gefunden')) {
+        userMessage = 'Die Ausweisnummer wurde nicht gefunden. Bitte überprüfen Sie die Eingabe.'
+      } else if (error.message?.includes('LICENSE_EXPIRED')) {
+        userMessage = 'Ihr Führerschein für diese Kategorie ist abgelaufen.'
+      }
+      
       throw createError({
         statusCode: 400,
-        statusMessage: error.message || 'SARI validation failed'
+        statusMessage: userMessage
       })
     }
 
