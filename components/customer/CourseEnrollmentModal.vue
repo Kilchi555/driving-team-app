@@ -32,13 +32,15 @@
               <div 
                 v-for="(session, idx) in sessionGroups" 
                 :key="idx" 
-                class="text-sm p-2 rounded-lg"
+                class="text-sm p-2 rounded-lg flex flex-col gap-1"
                 :class="session.isCustom ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'"
               >
-                <span class="text-gray-800 font-medium">{{ session.label }}: </span>
-                <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }} </span>
+                <div>
+                  <span class="text-gray-800 font-medium">{{ session.label }}: </span>
+                  <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }}</span>
+                </div>
                 <span class="text-gray-500">{{ session.timeRange }}</span>
-                <span v-if="session.isCustom" class="ml-2 text-xs text-blue-600">({{ session.customCourseName }})</span>
+                <span v-if="session.isCustom" class="text-xs text-blue-600">({{ session.customCourseName }})</span>
               </div>
             </div>
             
