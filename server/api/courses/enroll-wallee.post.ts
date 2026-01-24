@@ -114,9 +114,17 @@ const handler = defineEventHandler(async (event) => {
         .map(p => parseInt(p))
         .sort((a, b) => a - b)
       
+      logger.info('🔍 Validating custom sessions order:', {
+        hasCustomSessions: true,
+        customPositions: positions,
+        totalCustomSessions: Object.keys(customSessions).length
+      })
+      
       // Get original session dates from course_sessions
       const sortedOriginalSessions = (course.course_sessions || [])
         .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
+      
+      logger.info('📅 Total sessions in course:', sortedOriginalSessions.length)
       
       // Group by date to get position-date mapping (position 1 = first day, etc.)
       const dateByPosition: Record<number, string> = {}
@@ -131,13 +139,18 @@ const handler = defineEventHandler(async (event) => {
         }
       }
       
-      logger.debug('📅 Original positions:', dateByPosition)
-      logger.debug('🔄 Custom sessions:', customSessions)
+      logger.info('📅 Original positions (should match session count):', { 
+        dateByPosition, 
+        maxPosition: Math.max(...Object.keys(dateByPosition).map(Number)) 
+      })
+      logger.debug('🔄 Custom sessions details:', customSessions)
       
       // Build effective dates (custom overrides original)
       const effectiveDates: { position: number; date: string }[] = []
       const allPositions = [...new Set([...Object.keys(dateByPosition).map(Number), ...positions])]
         .sort((a, b) => a - b)
+      
+      logger.info('🔢 All positions to check:', allPositions)
       
       for (const position of allPositions) {
         const customSession = customSessions[position.toString()]
@@ -147,7 +160,7 @@ const handler = defineEventHandler(async (event) => {
         }
       }
       
-      logger.debug('📊 Effective dates:', effectiveDates)
+      logger.info('📊 Effective dates for validation:', effectiveDates.map(e => `Teil ${e.position}: ${e.date}`))
       
       // Check chronological order
       for (let i = 1; i < effectiveDates.length; i++) {
@@ -164,7 +177,6 @@ const handler = defineEventHandler(async (event) => {
       }
       
       logger.info('✅ Custom sessions order validated')
-    }
 
     // 6. Validate SARI enrollment is possible (before payment!)
     if (course.sari_managed && course.sari_course_id) {
