@@ -30,28 +30,34 @@ export default defineEventHandler(async (event) => {
 
   try {
     // Fetch the regulation from the database
+    console.log('🔍 Fetching regulation:', { tenantId, type })
+    
     const { data: regulation, error: regError } = await supabase
       .from('tenant_reglemente')
-      .select('content, updated_at')
+      .select('content, updated_at, title')
       .eq('tenant_id', tenantId)
       .eq('type', type)
       .eq('is_active', true)
       .single()
 
+    console.log('📋 Query result:', { regulation, error: regError?.message })
+    
     if (regError || !regulation) {
       // Try to get a default/template regulation
       const { data: defaultReg } = await supabase
         .from('tenant_reglemente')
-        .select('content, updated_at')
+        .select('content, updated_at, title')
         .is('tenant_id', null)
         .eq('type', type)
         .eq('is_active', true)
         .single()
 
       if (defaultReg) {
+        console.log('✅ Using default regulation')
         return {
           content: defaultReg.content,
           updatedAt: defaultReg.updated_at,
+          title: defaultReg.title,
           isDefault: true
         }
       }
@@ -64,6 +70,7 @@ export default defineEventHandler(async (event) => {
         widerruf: '<h1>Widerrufsrecht</h1><p>Informationen zum Widerrufsrecht werden in Kürze bereitgestellt.</p>'
       }
 
+      console.log('⚠️ Using placeholder for type:', type)
       return {
         content: placeholders[type as string] || '<p>Keine Inhalte verfügbar</p>',
         updatedAt: new Date().toISOString(),
@@ -72,9 +79,11 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    console.log('✅ Regulation found')
     return {
       content: regulation.content,
       updatedAt: regulation.updated_at,
+      title: regulation.title,
       isDefault: false
     }
   } catch (err: any) {
