@@ -1,13 +1,13 @@
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Authenticate user
-    const user = await getAuthenticatedUser(event)
+    // Authenticate user - use the DB ID version to get the correct user ID for queries
+    const user = await getAuthenticatedUserWithDbId(event)
     if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
     // Rate limit

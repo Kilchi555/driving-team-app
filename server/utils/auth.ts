@@ -36,9 +36,25 @@ export async function getAuthenticatedUser(event: H3Event) {
       return null
     }
 
-    const authUser = await response.json()
+    const user = await response.json()
+    return user
+
+  } catch (error: any) {
+    console.error('❌ Error getting authenticated user:', error)
+    return null
+  }
+}
+
+/**
+ * Get authenticated user with database user ID
+ * This resolves the auth user ID to the actual database user record
+ */
+export async function getAuthenticatedUserWithDbId(event: H3Event) {
+  try {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) return null
+
     const authUserId = authUser.id
-    
     logger.debug(`✅ Token verified for auth user: ${authUserId}`)
 
     // Get the database user record using the auth user ID
@@ -66,7 +82,7 @@ export async function getAuthenticatedUser(event: H3Event) {
     }
 
   } catch (error: any) {
-    console.error('❌ Error getting authenticated user:', error)
+    console.error('❌ Error getting authenticated user with DB ID:', error)
     return null
   }
 }
