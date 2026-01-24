@@ -118,20 +118,21 @@ const handler = defineEventHandler(async (event) => {
       const sortedOriginalSessions = (course.course_sessions || [])
         .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
       
-      // Group by date to get position-date mapping
+      // Group by date to get position-date mapping (position 1 = first day, etc.)
       const dateByPosition: Record<number, string> = {}
-      let pos = 1
+      let pos = 0
       let currentDate = ''
       for (const session of sortedOriginalSessions) {
         const sessionDate = session.start_time.split('T')[0]
         if (sessionDate !== currentDate) {
           currentDate = sessionDate
-          pos++
-        }
-        if (!dateByPosition[pos]) {
+          pos++ // Increment BEFORE storing, so first day = position 1
           dateByPosition[pos] = sessionDate
         }
       }
+      
+      logger.debug('📅 Original positions:', dateByPosition)
+      logger.debug('🔄 Custom sessions:', customSessions)
       
       // Build effective dates (custom overrides original)
       const effectiveDates: { position: number; date: string }[] = []
@@ -145,6 +146,8 @@ const handler = defineEventHandler(async (event) => {
           effectiveDates.push({ position, date: effectiveDate })
         }
       }
+      
+      logger.debug('📊 Effective dates:', effectiveDates)
       
       // Check chronological order
       for (let i = 1; i < effectiveDates.length; i++) {
