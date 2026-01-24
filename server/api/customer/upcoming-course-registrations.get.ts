@@ -95,14 +95,29 @@ export default defineEventHandler(async (event) => {
     // Collect all custom session IDs to fetch their details (for custom_location)
     const customSessionIds: string[] = []
     activeRegistrations.forEach((reg: any) => {
-      if (reg.custom_sessions && typeof reg.custom_sessions === 'object') {
-        Object.values(reg.custom_sessions).forEach((customData: any) => {
+      let customSessions = reg.custom_sessions
+      
+      // Parse if it's a JSON string
+      if (typeof customSessions === 'string') {
+        try {
+          customSessions = JSON.parse(customSessions)
+        } catch (e) {
+          logger.warn('❌ Failed to parse custom_sessions JSON:', e)
+          return
+        }
+      }
+      
+      if (customSessions && typeof customSessions === 'object') {
+        Object.values(customSessions).forEach((customData: any) => {
           if (customData.sessionId) {
             customSessionIds.push(customData.sessionId)
+            logger.debug(`🔍 Found custom session ID: ${customData.sessionId}`)
           }
         })
       }
     })
+
+    logger.debug('🔍 All custom session IDs to fetch:', customSessionIds.length, customSessionIds.slice(0, 5))
 
     // Fetch custom session details (for custom_location)
     let customSessionDetails: Record<string, any> = {}
@@ -113,10 +128,13 @@ export default defineEventHandler(async (event) => {
         .in('id', customSessionIds)
 
       if (!customError && customSessions) {
+        logger.debug('🔍 Loaded custom session details:', customSessions.length)
         customSessions.forEach(session => {
           customSessionDetails[session.id] = session
+          logger.debug(`   Session ${session.id}: ${session.custom_location || 'no location'}`)
         })
-        logger.debug('🔍 Loaded custom session details:', customSessions.length)
+      } else if (customError) {
+        logger.error('❌ Error loading custom sessions:', customError)
       }
     }
 
