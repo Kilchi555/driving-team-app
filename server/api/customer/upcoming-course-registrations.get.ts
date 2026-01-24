@@ -20,23 +20,10 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('🔍 Fetching course registrations for user:', user.id)
 
-    // Fetch course registrations for this user with course and sessions info
+    // Fetch course registrations for this user - simpler query without nested relations
     const { data: registrations, error: regError } = await supabase
       .from('course_registrations')
-      .select(`
-        id,
-        course_id,
-        user_id,
-        status,
-        registration_date,
-        payment_status,
-        custom_sessions,
-        deleted_at,
-        courses (
-          id,
-          name
-        )
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .eq('status', 'confirmed')
       .eq('payment_status', 'paid')
@@ -46,15 +33,43 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to load course registrations' })
     }
 
-    logger.debug('🔍 Raw registrations from DB:', registrations?.length || 0, registrations?.slice(0, 1))
+    logger.debug('🔍 Raw registrations from DB:', registrations?.length || 0)
+    if (registrations && registrations.length > 0) {
+      logger.debug('   First reg:', {
+        id: registrations[0].id,
+        course_id: registrations[0].course_id,
+        status: registrations[0].status,
+        payment_status: registrations[0].payment_status,
+        deleted_at: registrations[0].deleted_at
+      })
+    }
 
     // Filter out deleted registrations
     const activeRegistrations = (registrations || []).filter(r => !r.deleted_at)
+    logger.debug('🔍 Active registrations (not deleted):', activeRegistrations.length)
 
     // For each registration, fetch the course_sessions
     const courseIds = [...new Set((activeRegistrations || []).map(r => r.course_id).filter(Boolean))]
     
     logger.debug('🔍 Course IDs to fetch sessions for:', courseIds.length, courseIds.slice(0, 3))
+    
+    // Fetch course info (name, etc)
+    let coursesByIdMap: Record<string, any> = {}
+    if (courseIds.length > 0) {
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('courses')
+        .select('id, name')
+        .in('id', courseIds)
+
+      if (!coursesError && coursesData) {
+        coursesData.forEach(course => {
+          coursesByIdMap[course.id] = course
+        })
+        logger.debug('🔍 Loaded courses:', coursesData.length)
+      } else if (coursesError) {
+        logger.error('❌ Error loading courses:', coursesError)
+      }
+    }
     
     let sessionsByClass: Record<string, any[]> = {}
     if (courseIds.length > 0) {
@@ -116,6 +131,7 @@ export default defineEventHandler(async (event) => {
 
         return {
           ...reg,
+          courses: coursesByIdMap[reg.course_id] || { id: reg.course_id, name: 'Kurs' },
           course_sessions: futureSessions
         }
       })
