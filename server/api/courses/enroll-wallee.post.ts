@@ -177,6 +177,7 @@ const handler = defineEventHandler(async (event) => {
       }
       
       logger.info('✅ Custom sessions order validated')
+    }
 
     // 6. Validate SARI enrollment is possible (before payment!)
     if (course.sari_managed && course.sari_course_id) {
