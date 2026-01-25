@@ -389,6 +389,11 @@ export class AvailabilityCalculator {
         loc.staff_ids?.includes(staff.id)
       )
 
+      // Debug logging
+      if (staffLocations.length === 0) {
+        logger.debug(`⚠️ Staff ${staff.id.substring(0, 8)}... has NO matching locations! (staff_ids parsing issue?)`)
+      }
+
       // Get staff's categories
       const staffCategories = params.categories.filter(cat => {
         // If staff has specific category, only allow that one
