@@ -1226,195 +1226,43 @@ const formatDate = (dateTimeString: string) => {
 }
 
 const loadStaffForCategory = async () => {
-  if (!canSearch.value) return
+  if (!canSearch.value || !currentTenant.value) return
   
   hasSearched.value = true
   lastSearchTime.value = new Date().toLocaleTimeString('de-DE')
   
   try {
-    // Ensure we have a tenant
-    if (!currentTenant.value) return
+    logger.debug('🔄 Loading staff via secure API...')
     
-    logger.debug('🔍 Current tenant:', {
-      id: currentTenant.value.id,
-      name: currentTenant.value.name,
-      slug: currentTenant.value.slug
-    })
-    
-    // Trigger external calendar sync for all staff
-    logger.debug('🔄 Triggering external calendar sync...')
-    await autoSyncCalendars()
-    
-    // Load staff categories from locations (available_categories + staff_ids)
-    logger.debug('📚 Building staff categories from locations data...')
-    
-    // Load all tenant locations to build staff category map
-    // First try with filters
-    let { data: tenantLocations, error: locationsError } = await supabase
-      .from('locations')
-      .select('id, name, available_categories, staff_ids, is_active, tenant_id')
-      .eq('is_active', true)
-      .eq('tenant_id', currentTenant.value.id)
-    
-    // If we get 0 results, try without is_active filter
-    if ((tenantLocations?.length || 0) === 0 && !locationsError) {
-      logger.debug('⚠️ No locations with is_active=true, trying without filter...')
-      const result2 = await supabase
-        .from('locations')
-        .select('id, name, available_categories, staff_ids, is_active, tenant_id')
-        .eq('tenant_id', currentTenant.value.id)
-      tenantLocations = result2.data || []
-      locationsError = result2.error
-      logger.debug('📍 Second query (no is_active filter) returned:', tenantLocations?.length || 0)
-    }
-    
-    // If still 0, try completely unrestricted
-    if ((tenantLocations?.length || 0) === 0 && !locationsError) {
-      logger.debug('⚠️ Still no locations, trying completely unrestricted query...')
-      const result3 = await supabase
-        .from('locations')
-        .select('id, name, available_categories, staff_ids, is_active, tenant_id')
-        .limit(100)
-      tenantLocations = result3.data || []
-      locationsError = result3.error
-      logger.debug('📍 Unrestricted query returned:', tenantLocations?.length || 0, 'total locations in system')
-    }
-    
-    logger.debug('📍 Loaded locations:', {
-      count: tenantLocations?.length || 0,
-      error: locationsError?.message || 'none',
-      tenant_id_used: currentTenant.value.id,
-      sample: tenantLocations?.slice(0, 2).map((l: any) => ({
-        id: l.id,
-        name: l.name,
-        tenant_id: l.tenant_id,
-        is_active: l.is_active,
-        staff_ids: l.staff_ids,
-        categories: l.available_categories
-      }))
-    })
-    
-    if (locationsError) {
-      console.error('❌ Error loading locations:', locationsError)
-    }
-    
-    // Build a map of staff_id -> [categories] from locations
-    const staffCategoryMap = new Map<string, string[]>()
-    
-    if (tenantLocations) {
-      tenantLocations.forEach((location: any) => {
-        const availableCategories = location.available_categories || []
-        // Parse staff_ids if it's a string (JSON array), otherwise use as is
-        let staffIds = location.staff_ids || []
-        if (typeof staffIds === 'string') {
-          try {
-            staffIds = JSON.parse(staffIds)
-          } catch (e) {
-            logger.warn('⚠️ Could not parse staff_ids:', staffIds)
-            staffIds = []
-          }
-        }
-        
-        // Add each category to each staff member at this location
-        staffIds.forEach((staffId: string) => {
-          if (!staffCategoryMap.has(staffId)) {
-            staffCategoryMap.set(staffId, [])
-          }
-          const staffCategories = staffCategoryMap.get(staffId)!
-          // Add categories that aren't already there
-          availableCategories.forEach((category: string) => {
-            if (!staffCategories.includes(category)) {
-              staffCategories.push(category)
-            }
-          })
-        })
+    const response = await fetch('/api/booking/get-locations-and-staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: currentTenant.value.id,
+        category_code: filters.value.category_code
       })
-    }
-    
-    logger.debug('📊 Built staff category map from locations:', Object.fromEntries(staffCategoryMap))
-    
-    // Load full staff data from users table
-    const staffIds = Array.from(staffCategoryMap.keys())
-    logger.debug('🔍 Loading full staff data for', staffIds.length, 'staff members:', staffIds)
-    
-    let staffData: any[] = []
-    let staffError: any = null
-    
-    if (staffIds.length > 0) {
-      // Try to load staff data
-      const result = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, role, category, is_active')
-        .in('id', staffIds)
-      
-      staffData = result.data || []
-      staffError = result.error
-      
-      logger.debug('📊 Staff query result:', {
-        requested_ids: staffIds,
-        returned_count: staffData?.length || 0,
-        error: staffError?.message || 'none',
-        data_sample: staffData?.slice(0, 2)
-      })
-      
-      if (staffError) {
-        console.error('❌ Error loading staff data:', staffError)
-        // Fallback: Try without filters
-        logger.debug('🔄 Trying fallback query without filters...')
-        const fallbackResult = await supabase
-          .from('users')
-          .select('id, first_name, last_name, email, role, category')
-          .eq('role', 'staff')
-        
-        if (fallbackResult.data) {
-          staffData = fallbackResult.data.filter((u: any) => staffIds.includes(u.id))
-          logger.debug('✅ Fallback query succeeded, found', staffData.length, 'staff')
+    })
+
+    const data = await response.json()
+    if (!data.success) throw new Error(data.message || 'API error')
+
+    logger.debug('✅ API:', data.staff_count, 'staff,', data.location_count, 'locations')
+
+    // Build staff with their locations
+    const staffMap = new Map<string, any>()
+    data.locations.forEach((loc: any) => {
+      loc.available_staff?.forEach((s: any) => {
+        if (!staffMap.has(s.id)) {
+          staffMap.set(s.id, { ...s, available_locations: [] })
         }
-      }
-    }
-    
-    // Create a map of staff by id for quick lookup
-    const staffDataMap = new Map<string, any>()
-    staffData?.forEach((staff: any) => {
-      staffDataMap.set(staff.id, staff)
+        staffMap.get(s.id)!.available_locations.push(loc)
+      })
     })
+    availableStaff.value = Array.from(staffMap.values())
     
-    // Get all staff that have locations assigned with full data
-    const allStaffWithLocations = Array.from(staffCategoryMap.keys()).map(staffId => {
-      const fullStaffData = staffDataMap.get(staffId) || {}
-      return {
-        id: staffId,
-        first_name: fullStaffData.first_name || 'Unknown',
-        last_name: fullStaffData.last_name || 'Staff',
-        email: fullStaffData.email,
-        category: fullStaffData.category
-      }
-    })
-    
-    // Filter staff who can teach the selected category
-    const capableStaff = allStaffWithLocations.filter((staff: any) => {
-      const categories = staffCategoryMap.get(staff.id) || []
-      return categories.includes(filters.value.category_code)
-    })
-    
-    // Add available_locations array to each staff
-    availableStaff.value = capableStaff.map((staff: any) => ({
-      ...staff,
-      available_locations: []
-    }))
-    
-    logger.debug('✅ Staff for category', filters.value.category_code, ':', availableStaff.value.length)
-    logger.debug('🔍 Capable staff:', capableStaff.map((s: any) => ({ 
-      id: s.id, 
-      name: `${s.first_name} ${s.last_name}`, 
-      categories: staffCategoryMap.get(s.id) || [] 
-    })))
-    
-    // Load locations for all staff, but do NOT generate time slots yet
-    await loadLocationsForAllStaff(false)
-    
-  } catch (err) {
-    console.error('❌ Error loading staff for category:', err)
+  } catch (err: any) {
+    logger.error('❌ loadStaffForCategory:', err)
+    error.value = 'Fehler beim Laden der Fahrlehrer'
   }
 }
 
