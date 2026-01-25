@@ -100,6 +100,7 @@ export default defineEventHandler(async (event: H3Event) => {
       .eq('is_available', true) // CRITICAL: Only return available slots!
       .gte('start_time', `${query.start_date}T00:00:00Z`)
       .lte('start_time', `${query.end_date}T23:59:59Z`)
+      .gt('end_time', new Date().toISOString()) // CRITICAL: Only future slots!
       .order('start_time', { ascending: true })
 
     // Optional filters
