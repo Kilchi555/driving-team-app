@@ -431,7 +431,7 @@
                 <button
                   v-for="slot in day.slots"
                   :key="slot.id"
-                  @click="selectTimeSlot(slot)"
+                  @click="selectedSlot = slot; currentStep = 5"
                   class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5"
                   :style="getInteractiveCardStyle(
                     selectedSlot?.id === slot.id || hoveredSlotId === slot.id,
@@ -770,9 +770,12 @@ const supabase = getSupabase()
 
 // ❌ REMOVED: checkBatchAvailability (replaced by backend API)
 // Old function did 22+ direct DB queries - now handled by availability-calculator service
+// NOTE: The following dead code should be removed in future refactoring
+// @ts-ignore - Legacy code, no longer used but kept for reference
+// eslint-disable-next-line
 
 // NEW: Fetch pre-computed availability slots from secure API
-const fetchAvailableSlotsForCombination = async () => {
+const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId: string = '') => {
   try {
     if (timeSlots.length === 0) return []
     
@@ -1026,6 +1029,10 @@ const isLoadingLocations = ref(false)
 const isLoadingTimeSlots = ref(false)
 const tenantSettings = ref<any>({})
 
+// Slot reservation management
+const remainingSeconds = ref(600) // 10 minutes countdown
+const reservedUntil = ref<Date | null>(null)
+
 // New flow state
 const currentStep = ref(1)
 const selectedCategory = ref<any>(null)
@@ -1066,6 +1073,9 @@ const pickupAddressDetails = ref<any>(null)
 const isValidatingAddress = ref(false)
 const pickupAddressInput = ref<HTMLInputElement | null>(null)
 let autocomplete: any = null
+
+// Booking notes and other details
+const bookingNotes = ref('')
 
 const filters = ref({
   category_code: '',
@@ -1856,7 +1866,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     
     // Fetch slots from secure API
     const slots = await fetchAvailableSlots({
-      tenant_id: tenant.value?.id || '',
+      tenant_id: currentTenant.value?.id || '',
       staff_id: selectedInstructor.value.id,
       location_id: selectedLocation.value.id,
       category_code: selectedCategory.value.code,
@@ -1896,14 +1906,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     logger.debug(`✅ Converted ${timeSlots.length} slots for UI display`)
     
     // Store globally for UI
-    availableSlotsForCalendar.value = timeSlots
-    
-    // Update per-week slots (for UI compatibility)
-    if (Array.isArray(slotsPerWeek.value)) {
-      slotsPerWeek.value = [1, 2, 3, 4].map(weekNum => 
-        timeSlots.filter(slot => slot.week_number === weekNum)
-      )
-    }
+    availableTimeSlots.value = timeSlots
     
   } catch (err: any) {
     logger.error('❌ Error fetching slots:', err)
