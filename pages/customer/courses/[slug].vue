@@ -479,9 +479,6 @@ watch(() => route.query, (query) => {
 onMounted(async () => {
   logger.debug('Loading courses for slug:', slug.value)
   
-  // Check success params on mount (in case watch didn't catch them)
-  checkSuccessParams()
-  
   try {
     await loadData()
   } catch (e: any) {
