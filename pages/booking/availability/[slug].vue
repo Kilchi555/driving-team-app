@@ -1281,7 +1281,7 @@ const loadStaffForCategory = async () => {
     
     // Load full staff data from users table
     const staffIds = Array.from(staffCategoryMap.keys())
-    logger.debug('🔍 Loading full staff data for', staffIds.length, 'staff members')
+    logger.debug('🔍 Loading full staff data for', staffIds.length, 'staff members:', staffIds)
     
     const { data: staffData, error: staffError } = await supabase
       .from('users')
@@ -1289,6 +1289,13 @@ const loadStaffForCategory = async () => {
       .in('id', staffIds)
       .eq('role', 'staff')
       .eq('is_active', true)
+    
+    logger.debug('📊 Staff query result:', {
+      requested_ids: staffIds,
+      returned_count: staffData?.length || 0,
+      error: staffError?.message || 'none',
+      data_sample: staffData?.slice(0, 2)
+    })
     
     if (staffError) {
       console.error('❌ Error loading staff data:', staffError)
