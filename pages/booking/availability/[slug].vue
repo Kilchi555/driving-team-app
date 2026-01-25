@@ -1222,9 +1222,8 @@ const loadStaffForCategory = async () => {
   lastSearchTime.value = new Date().toLocaleTimeString('de-DE')
   
   try {
-    // Load base data first with tenant filtering
+    // Ensure we have a tenant
     if (!currentTenant.value) return
-    await loadBaseData(currentTenant.value.id)
     
     // Trigger external calendar sync for all staff
     logger.debug('🔄 Triggering external calendar sync...')
