@@ -144,11 +144,22 @@ export default defineEventHandler(async (event) => {
 
     // ============ DETAILED LOGGING: SLOTS PER STAFF ============
     const supabaseAdmin = getSupabaseAdmin()
-    const { data: allSlots } = await supabaseAdmin
+    
+    // Get the tenant_id filter
+    const tenantFilter = tenantId === 'ALL' ? undefined : tenantId
+    
+    // Build query to get all slots (no limit)
+    let query = supabaseAdmin
       .from('availability_slots')
-      .select('staff_id')
+      .select('staff_id', { count: 'exact' })
+    
+    if (tenantFilter) {
+      query = query.eq('tenant_id', tenantFilter)
+    }
+    
+    const { data: allSlots, count: totalCount } = await query
       .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString())
+      .lt('end_time', endDate.toISOString())
 
     // Count slots per staff
     const slotsByStaff = new Map<string, number>()
@@ -158,9 +169,10 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('📊 AVAILABILITY SLOTS PER STAFF:', {
       date_range: `${startDate.toISOString()} to ${endDate.toISOString()}`,
-      total_slots: allSlots?.length || 0,
+      tenant: tenantFilter || 'ALL',
+      total_slots: totalCount || 0,
       by_staff: Array.from(slotsByStaff.entries()).map(([staffId, count]) => ({
-        staff_id: staffId.substring(0, 8) + '...',
+        staff_id: staffId?.substring(0, 8) + '...' || 'unknown',
         slots: count
       }))
     })
