@@ -1279,10 +1279,37 @@ const loadStaffForCategory = async () => {
     
     logger.debug('📊 Built staff category map from locations:', Object.fromEntries(staffCategoryMap))
     
-    // Get all staff that have locations assigned
+    // Load full staff data from users table
+    const staffIds = Array.from(staffCategoryMap.keys())
+    logger.debug('🔍 Loading full staff data for', staffIds.length, 'staff members')
+    
+    const { data: staffData, error: staffError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, role, category')
+      .in('id', staffIds)
+      .eq('role', 'staff')
+      .eq('is_active', true)
+    
+    if (staffError) {
+      console.error('❌ Error loading staff data:', staffError)
+    }
+    
+    // Create a map of staff by id for quick lookup
+    const staffDataMap = new Map<string, any>()
+    staffData?.forEach((staff: any) => {
+      staffDataMap.set(staff.id, staff)
+    })
+    
+    // Get all staff that have locations assigned with full data
     const allStaffWithLocations = Array.from(staffCategoryMap.keys()).map(staffId => {
-      // Find the staff member in locations data
-      return { id: staffId }
+      const fullStaffData = staffDataMap.get(staffId) || {}
+      return {
+        id: staffId,
+        first_name: fullStaffData.first_name || 'Unknown',
+        last_name: fullStaffData.last_name || 'Staff',
+        email: fullStaffData.email,
+        category: fullStaffData.category
+      }
     })
     
     // Filter staff who can teach the selected category
