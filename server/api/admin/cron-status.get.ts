@@ -80,6 +80,24 @@ export default defineEventHandler(async (event) => {
       success: true,
       timestamp: now.toISOString(),
       cronJobs: {
+        'cleanup-expired-invitations': {
+          path: '/api/cron/cleanup-expired-invitations',
+          schedule: '0 2 * * *', // Daily at 2 AM
+          description: 'Removes expired invitation links',
+          nextRun: getNextCronTime('0 2 * * *')
+        },
+        'calculate-availability': {
+          path: '/api/cron/calculate-availability',
+          schedule: '0 2 * * *', // Daily at 2 AM
+          description: 'Recalculates available booking slots for all staff members',
+          nextRun: getNextCronTime('0 2 * * *')
+        },
+        'sync-sari-courses': {
+          path: '/api/cron/sync-sari-courses',
+          schedule: '0 * * * *', // Every hour
+          description: 'Syncs courses from SARI system',
+          nextRun: getNextCronTime('0 * * * *')
+        },
         'process-automatic-payments': {
           path: '/api/cron/process-automatic-payments',
           schedule: '0 * * * *', // Every hour
@@ -123,17 +141,25 @@ function getNextCronTime(cronExpression: string): string {
   // Simple calculation for common patterns
   // "0 * * * *" = every hour at minute 0
   // "0 0 * * *" = daily at midnight
+  // "0 2 * * *" = daily at 2 AM
   
   const now = new Date()
   const next = new Date(now)
   
   if (cronExpression === '0 * * * *') {
-    // Next hour
+    // Next hour at minute 0
     next.setHours(now.getHours() + 1, 0, 0, 0)
   } else if (cronExpression === '0 0 * * *') {
     // Next midnight
     next.setDate(now.getDate() + 1)
     next.setHours(0, 0, 0, 0)
+  } else if (cronExpression === '0 2 * * *') {
+    // Next 2 AM
+    next.setHours(2, 0, 0, 0)
+    if (next <= now) {
+      // If 2 AM has already passed today, schedule for tomorrow
+      next.setDate(now.getDate() + 1)
+    }
   }
   
   return next.toISOString()

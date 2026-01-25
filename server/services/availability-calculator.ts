@@ -555,7 +555,7 @@ export class AvailabilityCalculator {
     }
 
     try {
-      // Delete existing slots for this range
+      // Delete existing slots: both old ones (before startDate) and ones in the calculated range
       let deleteQuery = this.supabase.from('availability_slots').delete()
 
       if (tenantId) {
@@ -564,17 +564,39 @@ export class AvailabilityCalculator {
       if (staffId) {
         deleteQuery = deleteQuery.eq('staff_id', staffId)
       }
+      
+      // IMPORTANT: Delete both old slots (end_time < startDate) AND slots in the range
       if (startDate) {
-        deleteQuery = deleteQuery.gte('start_time', startDate.toISOString())
+        // Delete old slots that have already ended
+        deleteQuery = deleteQuery.lt('end_time', startDate.toISOString())
+      }
+
+      const { error: deleteOldError } = await deleteQuery
+
+      if (deleteOldError) {
+        logger.warn('⚠️ Could not delete old slots:', deleteOldError)
+      }
+
+      // Now delete slots in the calculated range (will be replaced with new ones)
+      let deleteRangeQuery = this.supabase.from('availability_slots').delete()
+
+      if (tenantId) {
+        deleteRangeQuery = deleteRangeQuery.eq('tenant_id', tenantId)
+      }
+      if (staffId) {
+        deleteRangeQuery = deleteRangeQuery.eq('staff_id', staffId)
+      }
+      if (startDate) {
+        deleteRangeQuery = deleteRangeQuery.gte('start_time', startDate.toISOString())
       }
       if (endDate) {
-        deleteQuery = deleteQuery.lte('start_time', endDate.toISOString())
+        deleteRangeQuery = deleteRangeQuery.lte('start_time', endDate.toISOString())
       }
 
-      const { error: deleteError } = await deleteQuery
+      const { error: deleteRangeError } = await deleteRangeQuery
 
-      if (deleteError) {
-        logger.warn('⚠️ Could not delete old slots:', deleteError)
+      if (deleteRangeError) {
+        logger.warn('⚠️ Could not delete slots in range:', deleteRangeError)
       }
 
       // Insert new slots in batches (Supabase limit: 1000 rows per insert)
