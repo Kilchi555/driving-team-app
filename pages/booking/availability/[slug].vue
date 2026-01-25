@@ -1278,7 +1278,16 @@ const loadStaffForCategory = async () => {
     if (tenantLocations) {
       tenantLocations.forEach((location: any) => {
         const availableCategories = location.available_categories || []
-        const staffIds = location.staff_ids || []
+        // Parse staff_ids if it's a string (JSON array), otherwise use as is
+        let staffIds = location.staff_ids || []
+        if (typeof staffIds === 'string') {
+          try {
+            staffIds = JSON.parse(staffIds)
+          } catch (e) {
+            logger.warn('⚠️ Could not parse staff_ids:', staffIds)
+            staffIds = []
+          }
+        }
         
         // Add each category to each staff member at this location
         staffIds.forEach((staffId: string) => {
