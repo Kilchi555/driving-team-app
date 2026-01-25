@@ -2,9 +2,10 @@
 <template>
   <div>
     <slot />
+    <GlobalNotifications />
   </div>
 </template>
 
 <script setup>
-// Optional: Global layout logic here
+import GlobalNotifications from '~/components/GlobalNotifications.vue'
 </script>
