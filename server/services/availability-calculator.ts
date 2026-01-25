@@ -274,29 +274,40 @@ export class AvailabilityCalculator {
       .from('staff_working_hours')
       .select('id, staff_id, day_of_week, start_time, end_time, is_active')
       .in('staff_id', staffIds)
-      .eq('is_active', true)
+      // Load ALL working hours (active and inactive)
+      // We'll filter for is_active=true in the slot generation logic below
+      // This prevents issues when all entries are marked inactive
 
     if (error) throw error
 
-    // If no hours found, create default hours (Mon-Fri 8-18)
-    if (!data || data.length === 0) {
-      const defaultHours: StaffWorkingHours[] = []
-      for (const staffId of staffIds) {
-        for (let day = 1; day <= 5; day++) {
-          defaultHours.push({
-            id: `${staffId}-${day}`,
-            staff_id: staffId,
-            day_of_week: day,
-            start_time: '08:00',
-            end_time: '18:00',
-            is_active: true
-          })
-        }
-      }
-      return defaultHours
+    // Filter for active hours, but return defaults if none are active
+    const activeHours = (data || []).filter(h => h.is_active)
+    
+    if (activeHours.length > 0) {
+      return activeHours
     }
 
-    return data
+    // Fallback: If no active hours defined, create default hours (Mon-Fri 8-18)
+    const defaultHours: StaffWorkingHours[] = []
+    for (const staffId of staffIds) {
+      for (let day = 1; day <= 5; day++) {
+        defaultHours.push({
+          id: `${staffId}-${day}-default`,
+          staff_id: staffId,
+          day_of_week: day,
+          start_time: '08:00',
+          end_time: '18:00',
+          is_active: true
+        })
+      }
+    }
+    
+    logger.debug('⚠️ No active working hours found, using defaults:', {
+      staffIds,
+      defaultsCreated: defaultHours.length
+    })
+    
+    return defaultHours
   }
 
   /**
