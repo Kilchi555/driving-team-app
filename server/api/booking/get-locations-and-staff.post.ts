@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     // 1. Load all active locations for this tenant
     const { data: tenantLocations, error: locationsError } = await serviceSupabase
       .from('locations')
-      .select('id, name, address, available_categories, staff_ids, is_active, tenant_id, category_pickup_settings, time_windows')
+      .select('id, name, address, available_categories, staff_ids, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city')
       .eq('tenant_id', tenant_id)
       .eq('is_active', true)
 
@@ -128,14 +128,28 @@ export default defineEventHandler(async (event) => {
             timeWindows = []
           }
         }
+        
+        // Parse category_pickup_settings if it's a string
+        let categoryPickupSettings = location.category_pickup_settings || {}
+        if (typeof categoryPickupSettings === 'string') {
+          try {
+            categoryPickupSettings = JSON.parse(categoryPickupSettings)
+          } catch (e) {
+            categoryPickupSettings = {}
+          }
+        }
 
         locationsMap.set(location.id, {
           id: location.id,
           name: location.name,
           address: location.address,
           available_categories: location.available_categories || [],
-          category_pickup_settings: location.category_pickup_settings || {},
+          category_pickup_settings: categoryPickupSettings,
           time_windows: timeWindows,
+          pickup_enabled: location.pickup_enabled || false,
+          pickup_radius_minutes: location.pickup_radius_minutes || 0,
+          postal_code: location.postal_code,
+          city: location.city,
           available_staff: []
         })
       }
