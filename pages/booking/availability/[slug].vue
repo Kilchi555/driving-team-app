@@ -1235,6 +1235,12 @@ const loadStaffForCategory = async () => {
     // Ensure we have a tenant
     if (!currentTenant.value) return
     
+    logger.debug('🔍 Current tenant:', {
+      id: currentTenant.value.id,
+      name: currentTenant.value.name,
+      slug: currentTenant.value.slug
+    })
+    
     // Trigger external calendar sync for all staff
     logger.debug('🔄 Triggering external calendar sync...')
     await autoSyncCalendars()
@@ -1245,18 +1251,20 @@ const loadStaffForCategory = async () => {
     // Load all tenant locations to build staff category map
     const { data: tenantLocations, error: locationsError } = await supabase
       .from('locations')
-      .select('id, name, available_categories, staff_ids')
+      .select('id, name, available_categories, staff_ids, is_active, tenant_id')
       .eq('is_active', true)
       .eq('tenant_id', currentTenant.value.id)
     
     logger.debug('📍 Loaded locations:', {
       count: tenantLocations?.length || 0,
       error: locationsError?.message || 'none',
+      tenant_id_used: currentTenant.value.id,
       sample: tenantLocations?.slice(0, 2).map((l: any) => ({
         id: l.id,
         name: l.name,
         staff_ids: l.staff_ids,
-        categories: l.available_categories
+        categories: l.available_categories,
+        is_active: l.is_active
       }))
     })
     
