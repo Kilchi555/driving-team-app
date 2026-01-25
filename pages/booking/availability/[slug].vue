@@ -1283,22 +1283,40 @@ const loadStaffForCategory = async () => {
     const staffIds = Array.from(staffCategoryMap.keys())
     logger.debug('🔍 Loading full staff data for', staffIds.length, 'staff members:', staffIds)
     
-    const { data: staffData, error: staffError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, role, category')
-      .in('id', staffIds)
-      .eq('role', 'staff')
-      .eq('is_active', true)
+    let staffData: any[] = []
+    let staffError: any = null
     
-    logger.debug('📊 Staff query result:', {
-      requested_ids: staffIds,
-      returned_count: staffData?.length || 0,
-      error: staffError?.message || 'none',
-      data_sample: staffData?.slice(0, 2)
-    })
-    
-    if (staffError) {
-      console.error('❌ Error loading staff data:', staffError)
+    if (staffIds.length > 0) {
+      // Try to load staff data
+      const result = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, role, category, is_active')
+        .in('id', staffIds)
+      
+      staffData = result.data || []
+      staffError = result.error
+      
+      logger.debug('📊 Staff query result:', {
+        requested_ids: staffIds,
+        returned_count: staffData?.length || 0,
+        error: staffError?.message || 'none',
+        data_sample: staffData?.slice(0, 2)
+      })
+      
+      if (staffError) {
+        console.error('❌ Error loading staff data:', staffError)
+        // Fallback: Try without filters
+        logger.debug('🔄 Trying fallback query without filters...')
+        const fallbackResult = await supabase
+          .from('users')
+          .select('id, first_name, last_name, email, role, category')
+          .eq('role', 'staff')
+        
+        if (fallbackResult.data) {
+          staffData = fallbackResult.data.filter((u: any) => staffIds.includes(u.id))
+          logger.debug('✅ Fallback query succeeded, found', staffData.length, 'staff')
+        }
+      }
     }
     
     // Create a map of staff by id for quick lookup
