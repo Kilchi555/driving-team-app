@@ -1249,11 +1249,36 @@ const loadStaffForCategory = async () => {
     logger.debug('📚 Building staff categories from locations data...')
     
     // Load all tenant locations to build staff category map
-    const { data: tenantLocations, error: locationsError } = await supabase
+    // First try with filters
+    let { data: tenantLocations, error: locationsError } = await supabase
       .from('locations')
       .select('id, name, available_categories, staff_ids, is_active, tenant_id')
       .eq('is_active', true)
       .eq('tenant_id', currentTenant.value.id)
+    
+    // If we get 0 results, try without is_active filter
+    if ((tenantLocations?.length || 0) === 0 && !locationsError) {
+      logger.debug('⚠️ No locations with is_active=true, trying without filter...')
+      const result2 = await supabase
+        .from('locations')
+        .select('id, name, available_categories, staff_ids, is_active, tenant_id')
+        .eq('tenant_id', currentTenant.value.id)
+      tenantLocations = result2.data || []
+      locationsError = result2.error
+      logger.debug('📍 Second query (no is_active filter) returned:', tenantLocations?.length || 0)
+    }
+    
+    // If still 0, try completely unrestricted
+    if ((tenantLocations?.length || 0) === 0 && !locationsError) {
+      logger.debug('⚠️ Still no locations, trying completely unrestricted query...')
+      const result3 = await supabase
+        .from('locations')
+        .select('id, name, available_categories, staff_ids, is_active, tenant_id')
+        .limit(100)
+      tenantLocations = result3.data || []
+      locationsError = result3.error
+      logger.debug('📍 Unrestricted query returned:', tenantLocations?.length || 0, 'total locations in system')
+    }
     
     logger.debug('📍 Loaded locations:', {
       count: tenantLocations?.length || 0,
@@ -1262,9 +1287,10 @@ const loadStaffForCategory = async () => {
       sample: tenantLocations?.slice(0, 2).map((l: any) => ({
         id: l.id,
         name: l.name,
+        tenant_id: l.tenant_id,
+        is_active: l.is_active,
         staff_ids: l.staff_ids,
-        categories: l.available_categories,
-        is_active: l.is_active
+        categories: l.available_categories
       }))
     })
     
