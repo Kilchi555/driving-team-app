@@ -130,6 +130,18 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
+    logger.debug('📊 Slots query result:', {
+      count: slots?.length || 0,
+      filters: {
+        tenant_id: query.tenant_id,
+        staff_id: query.staff_id,
+        location_id: query.location_id,
+        category_code: query.category_code,
+        duration_minutes: query.duration_minutes,
+        date_range: `${query.start_date} to ${query.end_date}`
+      }
+    })
+
     // ============ LAYER 4: ENRICH WITH MINIMAL DATA ============
     // Load staff names and location names (public info)
     const staffIds = [...new Set(slots?.map(s => s.staff_id) || [])]
