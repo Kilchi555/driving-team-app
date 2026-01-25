@@ -52,10 +52,18 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ READ OPTIONS ============
-    const body = (await readBody(event).catch(() => ({}))) as CalculateAvailabilityRequest
-    const days = body.days || 30
-    const tenantId = body.tenant_id
-    const staffId = body.staff_id
+    let body: any = {}
+    try {
+      body = await readBody(event)
+      logger.debug('📦 Request body received:', body)
+    } catch (bodyError: any) {
+      logger.debug('ℹ️ No request body or parsing error (using defaults):', bodyError?.message)
+      // Use defaults
+    }
+    
+    const days = body?.days || 30
+    const tenantId = body?.tenant_id
+    const staffId = body?.staff_id
 
     logger.debug('🎯 Cron options:', {
       tenant_id: tenantId || 'ALL',
