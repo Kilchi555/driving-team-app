@@ -47,7 +47,8 @@ interface Location {
   location_type: string
   is_active: boolean
   staff_ids?: string[]
-  category?: string[]
+  available_categories?: string[] // Categories this location supports
+  category?: string[] // Deprecated, use available_categories
   tenant_id: string
 }
 
@@ -250,7 +251,7 @@ export class AvailabilityCalculator {
   private async loadLocations(tenantId?: string): Promise<Location[]> {
     let query = this.supabase
       .from('locations')
-      .select('id, name, address, location_type, is_active, staff_ids, category, tenant_id')
+      .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id')
       .eq('is_active', true)
       .eq('location_type', 'standard')
 
@@ -261,13 +262,44 @@ export class AvailabilityCalculator {
     const { data, error } = await query
     if (error) throw error
 
-    // Parse staff_ids if stored as JSON string
-    return (data || []).map(loc => ({
-      ...loc,
-      staff_ids: typeof loc.staff_ids === 'string' 
-        ? JSON.parse(loc.staff_ids) 
-        : (loc.staff_ids || [])
-    }))
+    // Parse staff_ids and available_categories if stored as JSON string
+    const parsed = (data || []).map(loc => {
+      let staffIds = loc.staff_ids || []
+      let availableCategories = loc.available_categories || []
+      
+      // Parse staff_ids if it's a string
+      if (typeof staffIds === 'string') {
+        try {
+          staffIds = JSON.parse(staffIds)
+        } catch (e) {
+          logger.warn(`⚠️ Could not parse staff_ids for location ${loc.name}:`, staffIds)
+          staffIds = []
+        }
+      }
+      
+      // Parse available_categories if it's a string
+      if (typeof availableCategories === 'string') {
+        try {
+          availableCategories = JSON.parse(availableCategories)
+        } catch (e) {
+          logger.warn(`⚠️ Could not parse available_categories for location ${loc.name}:`, availableCategories)
+          availableCategories = []
+        }
+      }
+      
+      return {
+        ...loc,
+        staff_ids: staffIds,
+        available_categories: availableCategories
+      }
+    })
+    
+    // Debug: Log loaded locations with their staff
+    parsed.forEach(loc => {
+      logger.debug(`📍 Location: ${loc.name} | Staff: ${(loc.staff_ids || []).length} | Categories: ${(loc.available_categories || []).join(', ') || 'ALL'}`)
+    })
+    
+    return parsed
   }
 
   /**
@@ -280,40 +312,45 @@ export class AvailabilityCalculator {
       .from('staff_working_hours')
       .select('id, staff_id, day_of_week, start_time, end_time, is_active')
       .in('staff_id', staffIds)
-      // Load ALL working hours (active and inactive)
-      // We'll filter for is_active=true in the slot generation logic below
-      // This prevents issues when all entries are marked inactive
 
     if (error) throw error
 
-    // Filter for active hours, but return defaults if none are active
+    // Filter for active hours only
     const activeHours = (data || []).filter(h => h.is_active)
     
-    if (activeHours.length > 0) {
-      return activeHours
-    }
-
-    // Fallback: If no active hours defined, create default hours (Mon-Fri 8-18)
-    const defaultHours: StaffWorkingHours[] = []
+    // Check PER STAFF if they have working hours, add defaults for those who don't
+    const result: StaffWorkingHours[] = [...activeHours]
+    const staffWithHours = new Set(activeHours.map(h => h.staff_id))
+    
     for (const staffId of staffIds) {
-      for (let day = 1; day <= 5; day++) {
-        defaultHours.push({
-          id: `${staffId}-${day}-default`,
-          staff_id: staffId,
-          day_of_week: day,
-          start_time: '08:00',
-          end_time: '18:00',
-          is_active: true
-        })
+      if (!staffWithHours.has(staffId)) {
+        // This staff has NO active working hours - add defaults (Mon-Fri 8-18)
+        logger.debug(`⚠️ Staff ${staffId.substring(0, 8)}... has no working hours, adding defaults`)
+        for (let day = 1; day <= 5; day++) {
+          result.push({
+            id: `${staffId}-${day}-default`,
+            staff_id: staffId,
+            day_of_week: day,
+            start_time: '08:00',
+            end_time: '18:00',
+            is_active: true
+          })
+        }
       }
     }
     
-    logger.debug('⚠️ No active working hours found, using defaults:', {
-      staffIds,
-      defaultsCreated: defaultHours.length
+    // Log summary
+    const hoursByStaff = new Map<string, number>()
+    result.forEach(h => {
+      hoursByStaff.set(h.staff_id, (hoursByStaff.get(h.staff_id) || 0) + 1)
+    })
+    logger.debug('📅 Working hours per staff:')
+    hoursByStaff.forEach((count, staffId) => {
+      const isDefault = !staffWithHours.has(staffId)
+      logger.debug(`   ${staffId.substring(0, 8)}...: ${count} days ${isDefault ? '(defaults)' : ''}`)
     })
     
-    return defaultHours
+    return result
   }
 
   /**
@@ -389,20 +426,37 @@ export class AvailabilityCalculator {
         loc.staff_ids?.includes(staff.id)
       )
 
-      // Debug logging
+      // Skip staff without locations
       if (staffLocations.length === 0) {
         logger.debug(`⚠️ Staff ${staff.id.substring(0, 8)}... has NO matching locations! (staff_ids parsing issue?)`)
+        continue
       }
 
       // Get staff's categories
       const staffCategories = params.categories.filter(cat => {
-        // If staff has specific category, only allow that one
+        // If staff has specific category, only allow those
         if (staff.category) {
-          return staff.category === cat.code
+          // staff.category can be an array ["A", "B"] or a string "A,B"
+          let staffCats: string[]
+          if (Array.isArray(staff.category)) {
+            staffCats = staff.category
+          } else if (typeof staff.category === 'string') {
+            staffCats = staff.category.split(',').map((c: string) => c.trim())
+          } else {
+            staffCats = []
+          }
+          return staffCats.includes(cat.code)
         }
         // Otherwise allow all categories
         return true
       })
+      
+      // Debug logging
+      logger.debug(`👤 Staff ${staff.first_name} ${staff.last_name} (${staff.id.substring(0, 8)}...):`)
+      logger.debug(`   - Locations: ${staffLocations.map(l => l.name).join(', ')}`)
+      logger.debug(`   - Staff category: ${staff.category || 'NONE (all allowed)'}`)
+      logger.debug(`   - Working hours: ${staffHours.length} entries`)
+      logger.debug(`   - Matching categories: ${staffCategories.map(c => c.code).join(', ') || 'NONE!'}`)
 
       // Get staff's appointments and busy times
       const staffAppointments = params.appointments.filter(apt => apt.staff_id === staff.id)
@@ -431,9 +485,11 @@ export class AvailabilityCalculator {
           // For each category
           for (const category of staffCategories) {
             // Check if location supports this category
-            if (location.category && location.category.length > 0 && !location.category.includes(category.code)) {
-              continue
+            // If available_categories is empty, allow all categories (location supports everything)
+            if (location.available_categories && location.available_categories.length > 0 && !location.available_categories.includes(category.code)) {
+              continue // Location has category restrictions and this category is not allowed
             }
+            // If available_categories is empty or undefined, all categories are allowed
 
             // For each lesson duration
             for (const durationMinutes of category.lesson_duration_minutes) {
@@ -463,6 +519,19 @@ export class AvailabilityCalculator {
       }
     }
 
+    // Summary: Count slots per staff
+    const slotsByStaff = new Map<string, number>()
+    slots.forEach(slot => {
+      const staffId = slot.staff_id
+      slotsByStaff.set(staffId, (slotsByStaff.get(staffId) || 0) + 1)
+    })
+    
+    logger.debug('📊 Slots generated per staff:')
+    slotsByStaff.forEach((count, staffId) => {
+      const staffMember = params.staff.find(s => s.id === staffId)
+      logger.debug(`   ${staffMember?.first_name || 'Unknown'} ${staffMember?.last_name || staffId.substring(0, 8)}: ${count} slots`)
+    })
+
     return slots
   }
 
@@ -488,13 +557,15 @@ export class AvailabilityCalculator {
     const [startHour, startMinute] = params.startTime.split(':').map(Number)
     const [endHour, endMinute] = params.endTime.split(':').map(Number)
 
-    // Create start datetime
+    // Create start datetime (use UTC to avoid timezone issues)
+    // Working hours are stored as local time (e.g., 07:00 = 07:00 Swiss time)
+    // We use UTC methods so the stored time matches the working hours
     const slotStart = new Date(params.date)
-    slotStart.setHours(startHour, startMinute, 0, 0)
+    slotStart.setUTCHours(startHour, startMinute, 0, 0)
 
     // Create end datetime
     const workingEnd = new Date(params.date)
-    workingEnd.setHours(endHour, endMinute, 0, 0)
+    workingEnd.setUTCHours(endHour, endMinute, 0, 0)
 
     // Generate slots in 15-minute increments
     const currentSlot = new Date(slotStart)
@@ -509,13 +580,19 @@ export class AvailabilityCalculator {
       }
 
       // Check if slot conflicts with appointments or busy times
-      const isAvailable = !this.hasConflict({
+      const hasConflict = this.hasConflict({
         slotStart: currentSlot,
         slotEnd,
         appointments: params.appointments,
         busyTimes: params.busyTimes,
         bufferMinutes: params.bufferMinutes
       })
+
+      // Skip slots that conflict with appointments or busy times
+      if (hasConflict) {
+        currentSlot.setMinutes(currentSlot.getMinutes() + 15)
+        continue
+      }
 
       slots.push({
         tenant_id: params.staff.tenant_id,
@@ -524,7 +601,7 @@ export class AvailabilityCalculator {
         start_time: currentSlot.toISOString(),
         end_time: slotEnd.toISOString(),
         duration_minutes: params.durationMinutes,
-        is_available: isAvailable,
+        is_available: true, // Only available slots are created
         category_code: params.category.code
       })
 
