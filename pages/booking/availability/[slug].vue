@@ -1109,7 +1109,7 @@ const canSearch = computed(() => {
   return currentTenant.value && filters.value.category_code
 })
 
-const staffCount = computed(() => activeStaff.value.length)
+const staffCount = computed(() => availableStaff.value.length)
 
 const filteredCategories = computed(() => {
   return categories.value
@@ -1269,8 +1269,14 @@ const loadStaffForCategory = async () => {
     
     logger.debug('📊 Built staff category map from locations:', Object.fromEntries(staffCategoryMap))
     
+    // Get all staff that have locations assigned
+    const allStaffWithLocations = Array.from(staffCategoryMap.keys()).map(staffId => {
+      // Find the staff member in locations data
+      return { id: staffId }
+    })
+    
     // Filter staff who can teach the selected category
-    const capableStaff = activeStaff.value.filter((staff: any) => {
+    const capableStaff = allStaffWithLocations.filter((staff: any) => {
       const categories = staffCategoryMap.get(staff.id) || []
       return categories.includes(filters.value.category_code)
     })
