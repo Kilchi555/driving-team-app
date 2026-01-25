@@ -1647,33 +1647,33 @@ const selectCategory = async (category: any) => {
   await loadStaffForCategory()
   
   // Get unique locations from staff
-  const locationsSet = new Set<string>()
+  // Build unique locations from all staff, avoiding duplicates
+  const locationsMap = new Map<string, any>()
+  
   availableStaff.value.forEach((staff: any) => {
     if (staff.available_locations) {
       staff.available_locations.forEach((location: any) => {
-        locationsSet.add(JSON.stringify({
-          id: location.id,
-          name: location.name,
-          address: location.address,
-          category_pickup_settings: location.category_pickup_settings || {},
-          time_windows: parseTimeWindows(location.time_windows), // ✅ Parse time_windows if it's a string
-          available_staff: [staff]
-        }))
+        if (!locationsMap.has(location.id)) {
+          locationsMap.set(location.id, {
+            id: location.id,
+            name: location.name,
+            address: location.address,
+            category_pickup_settings: location.category_pickup_settings || {},
+            time_windows: parseTimeWindows(location.time_windows),
+            available_staff: []
+          })
+        }
+        // Add staff to this location (avoid duplicates)
+        const locationEntry = locationsMap.get(location.id)!
+        if (!locationEntry.available_staff.some((s: any) => s.id === staff.id)) {
+          locationEntry.available_staff.push(staff)
+        }
       })
     }
   })
   
-  // Convert set back to array and merge staff for each location
-  availableLocations.value = Array.from(locationsSet).map((locationStr: string) => {
-    const location = JSON.parse(locationStr)
-    const allStaffForLocation = availableStaff.value.filter((staff: any) => 
-      staff.available_locations?.some((loc: any) => loc.id === location.id)
-    )
-    return {
-      ...location,
-      available_staff: allStaffForLocation
-    }
-  })
+  // Convert map to array
+  availableLocations.value = Array.from(locationsMap.values())
   
   await waitForPressEffect()
   currentStep.value = 2
