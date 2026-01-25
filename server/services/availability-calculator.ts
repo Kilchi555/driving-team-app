@@ -109,6 +109,18 @@ export class AvailabilityCalculator {
    */
   async calculateAvailability(options: CalculateOptions): Promise<number> {
     const startTime = Date.now()
+    
+    // Defensive: Validate options
+    if (!options) {
+      throw new Error('Missing options parameter')
+    }
+    if (!options.startDate) {
+      throw new Error('Missing startDate in options')
+    }
+    if (!options.endDate) {
+      throw new Error('Missing endDate in options')
+    }
+    
     logger.debug('🔄 Starting availability calculation...', {
       tenantId: options.tenantId,
       staffId: options.staffId,
@@ -191,12 +203,21 @@ export class AvailabilityCalculator {
 
     // Load minimum booking lead time
     const staffIds = data?.map(s => s.id) || []
-    const { data: availabilitySettings } = await this.supabase
-      .from('staff_availability_settings')
-      .select('staff_id, minimum_booking_lead_time_hours')
-      .in('staff_id', staffIds)
+    const settingsMap = new Map()
+    
+    // Only query settings if we have staff
+    if (staffIds.length > 0) {
+      const { data: availabilitySettings } = await this.supabase
+        .from('staff_availability_settings')
+        .select('staff_id, minimum_booking_lead_time_hours')
+        .in('staff_id', staffIds)
 
-    const settingsMap = new Map(availabilitySettings?.map(s => [s.staff_id, s.minimum_booking_lead_time_hours]))
+      if (availabilitySettings) {
+        availabilitySettings.forEach(s => {
+          settingsMap.set(s.staff_id, s.minimum_booking_lead_time_hours)
+        })
+      }
+    }
 
     return (data || []).map(staff => ({
       ...staff,
