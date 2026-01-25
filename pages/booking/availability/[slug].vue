@@ -1245,9 +1245,20 @@ const loadStaffForCategory = async () => {
     // Load all tenant locations to build staff category map
     const { data: tenantLocations, error: locationsError } = await supabase
       .from('locations')
-      .select('available_categories, staff_ids')
+      .select('id, name, available_categories, staff_ids')
       .eq('is_active', true)
       .eq('tenant_id', currentTenant.value.id)
+    
+    logger.debug('📍 Loaded locations:', {
+      count: tenantLocations?.length || 0,
+      error: locationsError?.message || 'none',
+      sample: tenantLocations?.slice(0, 2).map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        staff_ids: l.staff_ids,
+        categories: l.available_categories
+      }))
+    })
     
     if (locationsError) {
       console.error('❌ Error loading locations:', locationsError)
@@ -1683,6 +1694,8 @@ const getDurationButtonStyle = (isSelected: boolean, isHover = false) =>
 const getDurationBadgeStyle = (isSelected: boolean) => getInteractiveBadgeStyle(isSelected)
 
 const selectCategory = async (category: any) => {
+  logger.debug('🎯 selectCategory called:', category.code)
+  
   selectedCategory.value = category
   filters.value.category_code = category.code
   
@@ -1696,7 +1709,14 @@ const selectCategory = async (category: any) => {
   selectedPickupLocation.value = null
   
   // Load staff for this category
-  await loadStaffForCategory()
+  try {
+    logger.debug('🔄 Calling loadStaffForCategory...')
+    await loadStaffForCategory()
+    logger.debug('✅ loadStaffForCategory completed')
+  } catch (err: any) {
+    logger.error('❌ loadStaffForCategory failed:', err)
+    return
+  }
   
   // Get unique locations from staff
   // Build unique locations from all staff, avoiding duplicates
