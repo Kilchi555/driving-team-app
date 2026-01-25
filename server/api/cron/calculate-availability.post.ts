@@ -142,6 +142,29 @@ export default defineEventHandler(async (event) => {
     // ============ CLEANUP EXPIRED RESERVATIONS ============
     await cleanupExpiredReservations()
 
+    // ============ DETAILED LOGGING: SLOTS PER STAFF ============
+    const supabaseAdmin = getSupabaseAdmin()
+    const { data: allSlots } = await supabaseAdmin
+      .from('availability_slots')
+      .select('staff_id')
+      .gte('start_time', startDate.toISOString())
+      .lte('start_time', endDate.toISOString())
+
+    // Count slots per staff
+    const slotsByStaff = new Map<string, number>()
+    allSlots?.forEach((slot: any) => {
+      slotsByStaff.set(slot.staff_id, (slotsByStaff.get(slot.staff_id) || 0) + 1)
+    })
+
+    logger.debug('📊 AVAILABILITY SLOTS PER STAFF:', {
+      date_range: `${startDate.toISOString()} to ${endDate.toISOString()}`,
+      total_slots: allSlots?.length || 0,
+      by_staff: Array.from(slotsByStaff.entries()).map(([staffId, count]) => ({
+        staff_id: staffId.substring(0, 8) + '...',
+        slots: count
+      }))
+    })
+
     // ============ AUDIT LOGGING ============
     const duration = Date.now() - startTime
     logger.debug('✅ Calculate Availability Cron Job completed:', {
