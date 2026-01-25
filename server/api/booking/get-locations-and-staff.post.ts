@@ -38,13 +38,14 @@ export default defineEventHandler(async (event) => {
       category_code
     })
 
-    // 1. Load all active STANDARD locations for this tenant
+    // 1. Load all active STANDARD locations for this tenant that are publicly bookable
     const { data: tenantLocations, error: locationsError } = await serviceSupabase
       .from('locations')
-      .select('id, name, address, available_categories, staff_ids, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type')
+      .select('id, name, address, available_categories, staff_ids, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type, public_bookable')
       .eq('tenant_id', tenant_id)
       .eq('is_active', true)
-      .eq('location_type', 'standard') // Only standard locations, not pickup/other types
+      .eq('location_type', 'standard') // Only standard locations
+      .eq('public_bookable', true) // Only locations available for public booking
 
     if (locationsError) {
       logger.error('❌ Error loading locations:', locationsError)
