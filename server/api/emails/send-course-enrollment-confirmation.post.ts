@@ -96,19 +96,19 @@ export default defineEventHandler(async (event) => {
         ? JSON.parse(enrollment.custom_sessions) 
         : enrollment.custom_sessions
       
-      // Group sessions by date first
-      const byDate: Map<string, any[]> = new Map()
-      for (const session of sessions) {
-        const date = session.start_time.split('T')[0]
-        if (!byDate.has(date)) byDate.set(date, [])
-        byDate.get(date)!.push(session)
-      }
+      // Sort sessions by start_time first
+      const sortedSessions = [...sessions].sort((a, b) => 
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      )
       
-      // Build final sessions list with custom sessions applied
+      // Group sessions by position (assuming 2 sessions per position)
+      // This matches how custom_sessions are keyed (position 1, 2, 3, etc.)
+      const groupSize = 2
       const finalSessions: any[] = []
-      let position = 0
-      for (const [date, daySessions] of byDate.entries()) {
-        position++
+      
+      for (let i = 0; i < sortedSessions.length; i += groupSize) {
+        const position = Math.floor(i / groupSize) + 1
+        const groupSessions = sortedSessions.slice(i, i + groupSize)
         const customSession = customMap[position.toString()]
         
         if (customSession) {
@@ -121,7 +121,7 @@ export default defineEventHandler(async (event) => {
           })
         } else {
           // Use original sessions
-          finalSessions.push(...daySessions)
+          finalSessions.push(...groupSessions)
         }
       }
       
