@@ -261,7 +261,13 @@ export class AvailabilityCalculator {
     const { data, error } = await query
     if (error) throw error
 
-    return data || []
+    // Parse staff_ids if stored as JSON string
+    return (data || []).map(loc => ({
+      ...loc,
+      staff_ids: typeof loc.staff_ids === 'string' 
+        ? JSON.parse(loc.staff_ids) 
+        : (loc.staff_ids || [])
+    }))
   }
 
   /**
