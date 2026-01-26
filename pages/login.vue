@@ -658,7 +658,7 @@ const handleLogin = async () => {
       }
     }
     
-    showSuccess('Erfolgreich angemeldet', 'Willkommen zurück!')
+    // Keine Toast-Meldung nötig - Benutzer wird weitergeleitet
     logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
     
@@ -772,7 +772,7 @@ const handleMFAVerify = async () => {
       }
     }
     
-    showSuccess('Erfolgreich angemeldet', 'Willkommen zurück!')
+    // Keine Toast-Meldung nötig - Benutzer wird weitergeleitet
     logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
   }

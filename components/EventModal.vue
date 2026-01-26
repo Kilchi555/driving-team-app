@@ -3612,7 +3612,6 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     logger.debug('✅ Appointment soft deleted successfully via API:', updateResult)
     logger.debug('✅ Status set to:', status)
     logger.debug('✅ Deletion reason:', deletionReason)
-    logger.debug('✅ Database response:', data)
     
     // ✅ NEU: SMS und Email versenden bei Löschung
     const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
