@@ -132,7 +132,27 @@ export default defineEventHandler(async (event) => {
     logger.debug('👤 User:', userProfile.id)
     logger.debug('📋 Reason ID:', cancellationReasonId)
 
-    // ============ LAYER 6: AUTHORIZATION CHECK ============
+    // ============ LAYER 6: ROLE CHECK - Only customers can use this endpoint ============
+    // Staff/Admin should use cancel-staff.post.ts instead
+    if (!['client', 'student'].includes(userProfile.role)) {
+      await logAudit({
+        user_id: userProfile.id,
+        auth_user_id: authenticatedUserId,
+        action: 'cancel_appointment',
+        resource_type: 'appointment',
+        status: 'failed',
+        error_message: `Unauthorized: User role '${userProfile.role}' cannot use customer cancellation endpoint`,
+        ip_address: ipAddress,
+        tenant_id: tenantId
+      })
+      
+      throw createError({
+        statusCode: 403,
+        message: 'This endpoint is for customers only. Staff should use cancel-staff endpoint.'
+      })
+    }
+
+    // ============ LAYER 7: AUTHORIZATION CHECK ============
     // Get appointment with payment (including credit_used_rappen for refund handling)
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
@@ -141,6 +161,7 @@ export default defineEventHandler(async (event) => {
         payments (id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id)
       `)
       .eq('id', appointmentId)
+      .eq('tenant_id', tenantId)  // ✅ CRITICAL: Tenant isolation
       .single()
 
     if (appointmentError || !appointment) {
@@ -300,6 +321,7 @@ export default defineEventHandler(async (event) => {
       .from('appointments')
       .update(updateData)
       .eq('id', appointmentId)
+      .eq('tenant_id', tenantId)  // ✅ CRITICAL: Tenant isolation
 
     if (updateError) {
       console.error('❌ Error updating appointment:', updateError)

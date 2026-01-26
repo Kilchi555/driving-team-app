@@ -3537,34 +3537,37 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
       logger.debug('ℹ️ No payment found for appointment')
     }
     
-    // ✅ SCHRITT 1.5: Call API endpoint to handle refund if needed
-    logger.debug('📡 Calling handle-cancellation endpoint...')
+    // ✅ SCHRITT 1.5: Call secure cancel-staff API endpoint with full authorization checks
+    logger.debug('📡 Calling cancel-staff endpoint with authorization...')
     try {
-      // ✅ NEW: Pass the full payment info and cancellation policy to handle-cancellation
-      const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No session token available')
+      }
+      
+      const cancellationResult = await $fetch('/api/appointments/cancel-staff', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: {
           appointmentId: props.eventData.id,
+          cancellationReasonId: cancellationReasonId || 'other', // Use a default reason ID
           deletionReason,
           lessonPriceRappen,
           adminFeeRappen,
-          // ✅ NEW: Pass cancellation policy info
           shouldCreditHours: cancellationPolicyResult.value?.shouldCreditHours || false,
           chargePercentage: cancellationPolicyResult.value?.chargePercentage || 100,
-          // ✅ NEW: Pass the original payment info for full refund calculation
           originalLessonPrice: payment?.lesson_price_rappen || lessonPriceRappen,
           originalAdminFee: payment?.admin_fee_rappen || adminFeeRappen
         }
       })
       
-      logger.debug('✅ Cancellation processed:', cancellationResult)
-      // @ts-ignore - cancellationResult is of type unknown
-      if (cancellationResult.action === 'refund_processed') {
-        // @ts-ignore
-        logger.debug(`💰 Refund applied: CHF ${cancellationResult.details.refundAmount}`)
-      }
+      logger.debug('✅ Cancellation processed via secure endpoint:', cancellationResult)
     } catch (error: any) {
-      console.warn('⚠️ Error calling handle-cancellation endpoint:', error)
+      console.warn('⚠️ Error calling cancel-staff endpoint:', error)
       // Continue anyway - still delete the appointment
     }
     
