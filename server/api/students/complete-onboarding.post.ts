@@ -310,17 +310,17 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 10: Audit logging
     await logAudit({
       action: 'onboarding_completed',
-      userId: user.id,
-      tenantId: user.tenant_id,
-      resourceType: 'user_onboarding',
-      resourceId: user.id,
+      user_id: user.id,
+      tenant_id: user.tenant_id,
+      resource_type: 'user_onboarding',
+      resource_id: user.id,
+      status: 'success',
       details: {
         email: email,
         categories: categoryValue,
         firstName: sanitizedFirstName,
         lastName: sanitizedLastName
-      },
-      severity: 'info'
+      }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     logger.debug('✅ Onboarding completed successfully for user:', user.id)
