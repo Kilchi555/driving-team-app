@@ -499,29 +499,35 @@
     <!-- No Policy Modal - Staff Decision -->
     <div v-if="showNoPolicyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">
-          Keine Stornierungsrichtlinie gefunden
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+          Soll dieser Termin verrechnet werden?
         </h3>
-        <p class="text-gray-600 mb-6">
-          Für diesen Termin wurde keine Stornierungsrichtlinie gefunden. Bitte wähle aus, ob der Termin verrechnet werden soll:
+        <p class="text-sm text-gray-600 mb-4">
+          Der Termin wird in weniger als 24 Stunden abgesagt. Wähle, ob der Schüler belastet werden soll:
         </p>
+        
+        <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-6">
+          <p class="text-sm font-medium text-blue-900">
+            💰 Preis: {{ ((appointmentPrice || 0) / 100).toFixed(2) }} CHF
+          </p>
+        </div>
         
         <div class="space-y-3">
           <button
             @click="handleNoPolicyChoice(0)"
-            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
           >
-            Kostenlos (0% verrechnen)
+            ✅ Kostenlos absagen (Credits zurück)
           </button>
           <button
             @click="handleNoPolicyChoice(100)"
-            class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
           >
-            Vollständig verrechnen (100%)
+            💳 Vollständig verrechnen (100%)
           </button>
           <button
             @click="showNoPolicyModal = false"
-            class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
           >
             Abbrechen
           </button>
@@ -3983,6 +3989,26 @@ const confirmCancellationWithReason = async () => {
     needsPaymentInquiry: hoursUntilAppointment < 24 && !isPaid,
     policyCharge: cancellationPolicyResult.value?.chargeAmountRappen || 0
   })
+  
+  // ✅ NEW: For staff cancellations within 24h without force_charge_percentage,
+  // ask the staff if they want to charge or not
+  const isStaffCancellation = cancellationType.value === 'staff'
+  const forceChargePercentage = (selectedReason as any).force_charge_percentage
+  const hasForceCharge = forceChargePercentage !== null && forceChargePercentage !== undefined
+  const isWithin24h = hoursUntilAppointment < 24 && hoursUntilAppointment >= 0
+  
+  if (isStaffCancellation && isWithin24h && !hasForceCharge) {
+    logger.debug('❓ Staff cancellation within 24h without force charge - asking for decision')
+    
+    // Load appointment price if not already loaded
+    if (!appointmentPrice.value && props.eventData?.id) {
+      await loadAppointmentPrice(props.eventData.id)
+    }
+    
+    // Show charge decision modal
+    showNoPolicyModal.value = true
+    return
+  }
   
   // ✅ SCHRITT 4: Direkt mit dem Löschen fortfahren
   logger.debug('🗑️ Proceeding with cancellation')
