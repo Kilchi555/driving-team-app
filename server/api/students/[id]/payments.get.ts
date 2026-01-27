@@ -239,6 +239,20 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ LAYER 9: MERGE ALL DATA ============
+    // Übersetzungs-Map für event_type_code
+    const eventTypeTranslations: Record<string, string> = {
+      lesson: 'Fahrstunde',
+      exam: 'Prüfung',
+      theory: 'Theorieunterricht',
+      vku: 'VKU',
+      haltbar: 'Haltbarkeitsprüfung'
+    }
+    
+    const translateEventType = (code: string | null | undefined): string => {
+      if (!code) return 'Termin'
+      return eventTypeTranslations[code.toLowerCase()] || code
+    }
+    
     const enrichedPayments = (paymentsData || []).map(payment => {
       const apt = Array.isArray(payment.appointments)
         ? payment.appointments[0]
@@ -268,6 +282,7 @@ export default defineEventHandler(async (event) => {
               status: apt.status,
               type: apt.type,
               event_type_code: apt.event_type_code,
+              event_type_label: translateEventType(apt.event_type_code),
               deleted_at: apt.deleted_at,
               deletion_reason: apt.deletion_reason,
               cancellation_charge_percentage: apt.cancellation_charge_percentage,
