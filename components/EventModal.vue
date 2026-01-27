@@ -3789,9 +3789,16 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       // ✅ NEW: Determine if this is staff or customer cancellation
       const isStaffCancellation = cancellationType === 'staff'
       
-      // ✅ For staff cancellation: use new secure API
-      if (isStaffCancellation) {
-        logger.debug('🔑 Staff cancellation - using secure cancel-staff API')
+      // ✅ ALWAYS use cancel-staff for staff/admin users regardless of cancellationType
+      // cancellationType is historical and may not reflect actual user role
+      const currentUserRole = props.currentUser?.role
+      const isStaffUser = ['staff', 'admin', 'tenant_admin'].includes(currentUserRole)
+      
+      logger.debug('🔑 Cancellation type:', { cancellationType, currentUserRole, isStaffUser })
+      
+      // ✅ For staff/admin: use secure cancel-staff API
+      if (isStaffUser) {
+        logger.debug('🔑 Staff/Admin cancellation - using secure cancel-staff API')
         
         const { data: sessionData } = await supabase.auth.getSession()
         const accessToken = sessionData?.session?.access_token
@@ -3816,9 +3823,6 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         
         logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
         
-        // ✅ API handled everything: payments, products, discounts, appointment update
-        // No need to do manual cleanup!
-        
         // Show success notification
         uiStore.addNotification({
           type: 'success',
@@ -3826,14 +3830,13 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
           message: staffCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
         })
         
-        // ✅ After successful staff cancellation, emit close and refresh
         emit('appointment-deleted', props.eventData.id)
         emit('save-event', { type: 'deleted', id: props.eventData.id })
         handleClose()
         return
       }
       
-      // ✅ For customer cancellation: call customer cancel API
+      // ✅ For customers: use customer cancellation API
       logger.debug('👤 Customer cancellation - calling cancel-customer API')
       
       const { data: sessionData } = await supabase.auth.getSession()

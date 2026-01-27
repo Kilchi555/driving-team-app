@@ -68,6 +68,7 @@ export default defineEventHandler(async (event) => {
         tenant_id
       `)
       .is('deleted_at', null)
+      .not('status', 'eq', 'cancelled')  // ✅ Filter out cancelled appointments
       .eq('tenant_id', tenantId)
       .order('start_time')
 
