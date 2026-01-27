@@ -657,7 +657,7 @@
                     
                     <!-- Service Description (on new line) -->
                     <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
-                      {{ payment.appointment.event_types?.name || payment.appointment.event_type_code || 'Termin' }}
+                      {{ payment.appointment.event_type_label || payment.appointment.event_types?.name || payment.appointment.event_type_code || 'Termin' }}
                       <span v-if="payment.appointment?.type" class="font-normal">
                         Kat. {{ payment.appointment.type }}
                       </span>
