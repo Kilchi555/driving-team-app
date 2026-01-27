@@ -18,10 +18,13 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.slice(7)
-    const supabase = getSupabase(token)
     
-    // Get authenticated user
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+    // ============ LAYER 1B: VERIFY TOKEN ============
+    // Import and use getSupabase to verify the token
+    const { getSupabase: getSupabaseClient } = await import('~/utils/supabase')
+    const supabaseUserClient = getSupabaseClient(token)
+    
+    const { data: { user: authUser }, error: authError } = await supabaseUserClient.auth.getUser(token)
     if (authError || !authUser?.id) {
       throw createError({
         statusCode: 401,
