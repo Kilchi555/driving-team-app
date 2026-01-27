@@ -669,7 +669,7 @@
                 </div>
                 
                 <!-- Product Sales & Discounts Section -->
-                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0) || (payment.credit_used_rappen && payment.credit_used_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
+                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || payment.discount_amount_rappen > 0 || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0) || (payment.credit_used_rappen && payment.credit_used_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
                   <!-- Product Sales -->
                   <div v-for="productSale in (payment.product_sales || [])" :key="productSale.id" class="flex justify-between items-center">
                     <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
@@ -696,16 +696,16 @@
                     </span>
                   </div>
                   
-                  <!-- Discount Sale (Rabatt) -->
-                  <div v-if="payment.discount_sale && payment.discount_sale.discount_amount_rappen > 0" class="flex justify-between items-center">
+                  <!-- Discount Sale (Rabatt) - from either discount_sale or payment.discount_amount_rappen -->
+                  <div v-if="payment.discount_sale?.discount_amount_rappen > 0 || payment.discount_amount_rappen > 0" class="flex justify-between items-center">
                     <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                      {{ payment.discount_sale.discount_reason || 'Rabatt' }}
+                      {{ payment.discount_sale?.discount_reason || 'Rabatt' }}
                     </span>
                     <span :class="[
                       'font-semibold',
                       payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
                     ]">
-                      -{{ ((payment.discount_sale.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
+                      -{{ (((payment.discount_sale?.discount_amount_rappen || payment.discount_amount_rappen || 0)) / 100).toFixed(2) }} CHF
                     </span>
                   </div>
                   
