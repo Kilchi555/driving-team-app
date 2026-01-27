@@ -810,8 +810,8 @@ function validateBirthdate() {
   
   const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0)
   
-  if (actualAge < 16) {
-    fieldErrors.value.birthdate = 'Mindestalter: 16 Jahre'
+  if (actualAge < 14) {
+    fieldErrors.value.birthdate = 'Mindestalter: 14 Jahre'
   } else {
     fieldErrors.value.birthdate = ''
   }
