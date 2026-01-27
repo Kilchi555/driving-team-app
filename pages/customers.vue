@@ -1125,15 +1125,27 @@ const showSuccessToast = (title: string, message: string = '') => {
   showToast.value = true
   logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
   
-  // Auto-hide after 3 seconds
+  // Auto-hide after 6 seconds (increased from 3 seconds for better readability)
   toastTimeoutId = setTimeout(() => {
     showToast.value = false
     toastTimeoutId = null
-  }, 3000)
+  }, 6000)
 }
 
 const showErrorToast = (title: string, message: string = '') => {
   logger.debug('🔔 showErrorToast called:', { title, message })
+  clearToastTimeout()
+  toastType.value = 'error'
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+  logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
+  
+  // Auto-hide after 8 seconds for errors (longer to read error message)
+  toastTimeoutId = setTimeout(() => {
+    showToast.value = false
+    toastTimeoutId = null
+  }, 8000)logger.debug('🔔 showErrorToast called:', { title, message })
   clearToastTimeout()
   toastType.value = 'error'
   toastTitle.value = title
