@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
           appointment_id,
           discount_reason,
           discount_amount_rappen,
-          discount_percentage,
+          discount_type,
           tenant_id
         `)
         .in('appointment_id', appointmentIds)
