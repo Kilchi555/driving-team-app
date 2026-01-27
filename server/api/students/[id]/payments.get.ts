@@ -179,6 +179,12 @@ export default defineEventHandler(async (event) => {
       if (discountSalesError) {
         logger.warn('⚠️ Error loading discount sales:', discountSalesError)
       } else if (discountSalesData) {
+        logger.debug('✅ Loaded discount sales:', {
+          count: discountSalesData.length,
+          appointments: appointmentIds.length,
+          sample: discountSalesData[0]
+        })
+        
         for (const ds of discountSalesData) {
           discountSalesMap[ds.appointment_id] = ds
 
