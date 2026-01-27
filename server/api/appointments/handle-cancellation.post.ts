@@ -159,7 +159,7 @@ export default defineEventHandler(async (event) => {
         )
         
         // ✅ NEW: Mark appointment as cancelled
-        await markAppointmentCancelled(supabase, appointmentId, deletionReason)
+        await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
         
         return refundResult
       } else {
@@ -231,7 +231,7 @@ export default defineEventHandler(async (event) => {
         }
         
         // ✅ NEW: Mark appointment as cancelled
-        await markAppointmentCancelled(supabase, appointmentId, deletionReason)
+        await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
         
         return {
           success: true,
@@ -347,7 +347,7 @@ export default defineEventHandler(async (event) => {
       }
       
       // ✅ NEW: Mark appointment as cancelled
-      await markAppointmentCancelled(supabase, appointmentId, deletionReason)
+      await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
       
       return {
         success: true,
@@ -366,7 +366,8 @@ export default defineEventHandler(async (event) => {
 async function markAppointmentCancelled(
   supabase: any,
   appointmentId: string,
-  deletionReason: string
+  deletionReason: string,
+  tenantId: string  // ✅ Add tenant_id parameter
 ) {
   try {
     const { error: updateError } = await supabase
@@ -377,6 +378,7 @@ async function markAppointmentCancelled(
         deletion_reason: deletionReason
       })
       .eq('id', appointmentId)
+      .eq('tenant_id', tenantId)  // ✅ Use the passed tenantId
     
     if (updateError) {
       console.warn('⚠️ Could not mark appointment as cancelled:', updateError)
