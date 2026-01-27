@@ -107,21 +107,42 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
                 >
-                <div class="mt-3 text-xs space-y-1">
-                  <div :class="form.password.length >= 12 ? 'text-green-600' : 'text-red-600'">
-                    {{ form.password.length >= 12 ? '✅' : '❌' }} Mindestens 12 Zeichen
+                <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md space-y-2">
+                  <p class="text-xs font-semibold text-gray-700 mb-3">Anforderungen für sicheres Passwort:</p>
+                  
+                  <div class="flex items-center space-x-2" :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="form.password.length >= 12 ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ form.password.length >= 12 ? '✓' : '-' }}
+                    </div>
+                    <span class="text-sm">Mindestens 12 Zeichen (aktuell: {{ form.password.length }})</span>
                   </div>
-                  <div :class="/[A-Z]/.test(form.password) ? 'text-green-600' : 'text-red-600'">
-                    {{ /[A-Z]/.test(form.password) ? '✅' : '❌' }} Mindestens ein Großbuchstabe
+
+                  <div class="flex items-center space-x-2" :class="/[A-Z]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[A-Z]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ /[A-Z]/.test(form.password) ? '✓' : '-' }}
+                    </div>
+                    <span class="text-sm">Mindestens ein Großbuchstabe (A-Z)</span>
                   </div>
-                  <div :class="/[a-z]/.test(form.password) ? 'text-green-600' : 'text-red-600'">
-                    {{ /[a-z]/.test(form.password) ? '✅' : '❌' }} Mindestens ein Kleinbuchstabe
+
+                  <div class="flex items-center space-x-2" :class="/[a-z]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[a-z]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ /[a-z]/.test(form.password) ? '✓' : '-' }}
+                    </div>
+                    <span class="text-sm">Mindestens ein Kleinbuchstabe (a-z)</span>
                   </div>
-                  <div :class="/[0-9]/.test(form.password) ? 'text-green-600' : 'text-red-600'">
-                    {{ /[0-9]/.test(form.password) ? '✅' : '❌' }} Mindestens eine Zahl
+
+                  <div class="flex items-center space-x-2" :class="/[0-9]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[0-9]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ /[0-9]/.test(form.password) ? '✓' : '-' }}
+                    </div>
+                    <span class="text-sm">Mindestens eine Zahl (0-9)</span>
                   </div>
-                  <div :class="form.password.length <= 500 ? 'text-green-600' : 'text-red-600'">
-                    {{ form.password.length <= 500 ? '✅' : '❌' }} Maximal 500 Zeichen
+
+                  <div class="flex items-center space-x-2" :class="form.password.length <= 500 ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="form.password.length <= 500 ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ form.password.length <= 500 ? '✓' : '-' }}
+                    </div>
+                    <span class="text-sm">Maximal 500 Zeichen</span>
                   </div>
                 </div>
               </div>
@@ -845,14 +866,6 @@ onMounted(async () => {
     ]
     termsText.value = 'Test AGB - Development Mode'
     form.email = 'test@example.com'
-    return
-  }
-  
-  // Redirect if we're on localhost to production domain
-  if (process.client && window.location.hostname === 'localhost') {
-    const redirectUrl = `https://simy.ch/onboarding/${token}`
-    logger.debug('🔄 Redirecting onboarding link from localhost to production:', redirectUrl)
-    window.location.href = redirectUrl
     return
   }
 

@@ -1145,18 +1145,7 @@ const showErrorToast = (title: string, message: string = '') => {
   toastTimeoutId = setTimeout(() => {
     showToast.value = false
     toastTimeoutId = null
-  }, 8000)logger.debug('🔔 showErrorToast called:', { title, message })
-  clearToastTimeout()
-  toastType.value = 'error'
-  toastTitle.value = title
-  toastMessage.value = message
-  showToast.value = true
-  
-  // Auto-hide after 3 seconds
-  toastTimeoutId = setTimeout(() => {
-    showToast.value = false
-    toastTimeoutId = null
-  }, 3000)
+  }, 8000)
 }
 </script>
 
