@@ -107,10 +107,22 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
                 >
-                <div class="mt-1 text-xs">
-                  <p :class="passwordTooShort ? 'text-red-600' : 'text-gray-500'">
-                    {{ passwordTooShort ? 'Passwort ist zu kurz (min. 12 Zeichen).' : 'Mindestens 12 Zeichen, Gross-/Kleinbuchstaben, Zahlen' }}
-                  </p>
+                <div class="mt-3 text-xs space-y-1">
+                  <div :class="form.password.length >= 12 ? 'text-green-600' : 'text-red-600'">
+                    {{ form.password.length >= 12 ? '✅' : '❌' }} Mindestens 12 Zeichen
+                  </div>
+                  <div :class="/[A-Z]/.test(form.password) ? 'text-green-600' : 'text-red-600'">
+                    {{ /[A-Z]/.test(form.password) ? '✅' : '❌' }} Mindestens ein Großbuchstabe
+                  </div>
+                  <div :class="/[a-z]/.test(form.password) ? 'text-green-600' : 'text-red-600'">
+                    {{ /[a-z]/.test(form.password) ? '✅' : '❌' }} Mindestens ein Kleinbuchstabe
+                  </div>
+                  <div :class="/[0-9]/.test(form.password) ? 'text-green-600' : 'text-red-600'">
+                    {{ /[0-9]/.test(form.password) ? '✅' : '❌' }} Mindestens eine Zahl
+                  </div>
+                  <div :class="form.password.length <= 500 ? 'text-green-600' : 'text-red-600'">
+                    {{ form.password.length <= 500 ? '✅' : '❌' }} Maximal 500 Zeichen
+                  </div>
                 </div>
               </div>
 
@@ -127,7 +139,8 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Passwort wiederholen"
                 >
-                <p v-if="passwordMismatch" class="mt-1 text-xs text-red-600">Passwörter stimmen nicht überein.</p>
+                <p v-if="passwordMismatch" class="mt-1 text-xs text-red-600">❌ Passwörter stimmen nicht überein.</p>
+                <p v-else-if="form.confirmPassword && form.confirmPassword === form.password" class="mt-1 text-xs text-green-600">✅ Passwörter stimmen überein.</p>
               </div>
 
               <p v-if="passwordError" class="text-red-600 text-sm">{{ passwordError }}</p>
@@ -1084,9 +1097,32 @@ const openRegulationModal = async (type: string) => {
 const handleNextStep = async () => {
   // Validate current step
   if (step.value === 0) {
-    // Password validation
+    // Password validation - MUST MATCH BACKEND REQUIREMENTS!
+    // Backend checks in complete-onboarding.post.ts:
+    // 1. Length >= 12
+    // 2. At least one uppercase letter [A-Z]
+    // 3. At least one lowercase letter [a-z]
+    // 4. At least one digit [0-9]
+    // 5. Max 500 characters
+    
     if (form.password.length < 12) {
       passwordError.value = 'Passwort muss mindestens 12 Zeichen lang sein'
+      return
+    }
+    if (form.password.length > 500) {
+      passwordError.value = 'Passwort darf maximal 500 Zeichen lang sein'
+      return
+    }
+    if (!/[A-Z]/.test(form.password)) {
+      passwordError.value = 'Passwort muss mindestens einen Großbuchstaben enthalten'
+      return
+    }
+    if (!/[a-z]/.test(form.password)) {
+      passwordError.value = 'Passwort muss mindestens einen Kleinbuchstaben enthalten'
+      return
+    }
+    if (!/[0-9]/.test(form.password)) {
+      passwordError.value = 'Passwort muss mindestens eine Zahl enthalten'
       return
     }
     if (form.password !== form.confirmPassword) {
