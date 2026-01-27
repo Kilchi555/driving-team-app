@@ -698,9 +698,12 @@
                   
                   <!-- Discount Sale (Rabatt) - from either discount_sale or payment.discount_amount_rappen -->
                   <div v-if="payment.discount_sale?.discount_amount_rappen > 0 || payment.discount_amount_rappen > 0" class="flex justify-between items-center">
-                    <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                      {{ payment.discount_sale?.discount_reason || 'Rabatt' }}
-                    </span>
+                    <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                      <span>{{ payment.discount_sale?.discount_reason || 'Rabatt' }}</span>
+                      <span v-if="payment.discount_sale?.discount_type" class="text-xs ml-2 opacity-75">
+                        ({{ payment.discount_sale.discount_type }})
+                      </span>
+                    </div>
                     <span :class="[
                       'font-semibold',
                       payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
