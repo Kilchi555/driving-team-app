@@ -3990,27 +3990,36 @@ const confirmCancellationWithReason = async () => {
     policyCharge: cancellationPolicyResult.value?.chargeAmountRappen || 0
   })
   
-  // ✅ NEW: For staff cancellations within 24h without force_charge_percentage,
-  // ask the staff if they want to charge or not
-  const isStaffCancellation = cancellationType.value === 'staff'
-  const forceChargePercentage = (selectedReason as any).force_charge_percentage
-  const hasForceCharge = forceChargePercentage !== null && forceChargePercentage !== undefined
+  // ✅ NEW: When STUDENT cancels within 24h, ask staff if they want to charge
+  // Logic: Only show modal for student cancellations < 24h
+  // Staff cancellations are always free, > 24h is always free
+  const isCancelledByStudent = cancellationType.value === 'student'
   const isWithin24h = hoursUntilAppointment < 24 && hoursUntilAppointment >= 0
   
-  if (isStaffCancellation && isWithin24h && !hasForceCharge) {
-    logger.debug('❓ Staff cancellation within 24h without force charge - asking for decision')
+  logger.debug('❓ Charge decision check:', {
+    cancellationType: cancellationType.value,
+    isCancelledByStudent,
+    hoursUntilAppointment: hoursUntilAppointment.toFixed(2),
+    isWithin24h,
+    shouldShowModal: isCancelledByStudent && isWithin24h
+  })
+  
+  // ✅ Show modal ONLY if: Student cancellation AND < 24h
+  if (isCancelledByStudent && isWithin24h) {
+    logger.debug('❓ Student cancellation within 24h - asking staff if they want to charge')
     
     // Load appointment price if not already loaded
     if (!appointmentPrice.value && props.eventData?.id) {
       await loadAppointmentPrice(props.eventData.id)
     }
     
-    // Show charge decision modal
+    // Show charge decision modal and STOP here
+    // Do NOT proceed with cancellation until staff decides
     showNoPolicyModal.value = true
-    return
+    return  // ← EXIT! Don't call proceedWithCancellation yet
   }
   
-  // ✅ SCHRITT 4: Direkt mit dem Löschen fortfahren
+  // ✅ SCHRITT 4: Direkt mit dem Löschen fortfahren (nur wenn kein Modal gezeigt wurde)
   logger.debug('🗑️ Proceeding with cancellation')
   await proceedWithCancellation(selectedReason)
 }
@@ -4113,9 +4122,42 @@ const selectReasonAndContinue = async (reasonId: string) => {
 const goToPolicySelection = async () => {
   logger.debug('📋 Going to policy selection')
   
-  // ✅ NEW: Check if selected reason has force_charge_percentage
+  // ✅ NEW: Check if this is a student cancellation within 24h
+  // If so, show charge decision modal INSTEAD of policy
+  const appointmentTime = new Date(props.eventData?.start || props.eventData?.start_time)
+  const now = new Date()
+  const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  
   const selectedReason = cancellationReasons.value.find(r => r.id === selectedCancellationReasonId.value)
-  // @ts-ignore - selectedReason may have additional properties from database
+  const isCancelledByStudent = (selectedReason as any).cancellation_type === 'student'
+  const isWithin24h = hoursUntilAppointment < 24 && hoursUntilAppointment >= 0
+  
+  logger.debug('📋 Policy selection check:', {
+    isCancelledByStudent,
+    isWithin24h,
+    shouldShowChargeModal: isCancelledByStudent && isWithin24h
+  })
+  
+  // ✅ If student cancellation within 24h, show charge decision modal instead
+  if (isCancelledByStudent && isWithin24h) {
+    logger.debug('❓ Student cancellation within 24h - showing charge decision modal instead of policy')
+    
+    // ✅ CRITICAL: Save the selected reason so handleNoPolicyChoice can use it!
+    pendingCancellationReason.value = selectedReason
+    
+    // Load appointment price
+    if (props.eventData?.id) {
+      const price = await loadAppointmentPrice(props.eventData.id)
+      appointmentPrice.value = price
+    }
+    
+    // Show charge modal and STOP
+    showNoPolicyModal.value = true
+    return
+  }
+  
+  // ✅ Otherwise continue with normal policy flow
+  // Check if selected reason has force_charge_percentage
   const forceChargePercentage = (selectedReason as any).force_charge_percentage
   const cancellationType = (selectedReason as any).cancellation_type
   
