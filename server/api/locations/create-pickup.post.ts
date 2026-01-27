@@ -51,18 +51,29 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Longitude must be a number' })
     }
 
-    // ✅ 3. TENANT ISOLATION: Verify user is in same tenant
+    // ✅ 3. TENANT ISOLATION: Verify user exists in same tenant
     const { data: targetUser, error: targetUserError } = await supabase
       .from('users')
-      .select('id, tenant_id, role')
+      .select('id, tenant_id, role, is_active')
       .eq('id', targetUserId)
       .eq('tenant_id', user.tenant_id)
-      .eq('is_active', true)
       .single()
 
     if (targetUserError || !targetUser) {
       console.error('❌ User not found or unauthorized:', { targetUserId, userTenantId: user.tenant_id, error: targetUserError })
       throw createError({ statusCode: 403, message: 'User not found or unauthorized' })
+    }
+
+    // ⚠️ WICHTIG: Allow inactive users to have pickup locations (they might be suspended but still have bookings)
+    // Only reject if user is completely deleted (deleted_at is set)
+    const { data: userDeleted } = await supabase
+      .from('users')
+      .select('deleted_at')
+      .eq('id', targetUserId)
+      .single()
+
+    if (userDeleted?.deleted_at) {
+      throw createError({ statusCode: 403, message: 'Cannot add location for deleted user' })
     }
 
     // ✅ 4. SANITY CHECK: Only students and staff can have pickup locations
