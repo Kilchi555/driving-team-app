@@ -52,6 +52,10 @@ export default defineEventHandler(async (event) => {
 
     if (aptError) throw new Error(`Appointment not found: ${aptError.message}`)
 
+    // ✅ CRITICAL: Mark appointment as cancelled immediately
+    // This must happen before any refund logic, so status is set correctly
+    await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
+
     // Get payment with tenant_id filter to bypass RLS issues
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
@@ -114,6 +118,7 @@ export default defineEventHandler(async (event) => {
       if (chargePercentage === 0 && shouldCreditHours) {
         // Staff cancellation without charge - no need to create credit or do anything
         logger.debug('✅ Staff cancellation with no charge on unpaid appointment - no action needed')
+        
         return {
           success: true,
           message: 'Appointment cancelled - no payment to process (staff cancellation)',
@@ -157,9 +162,6 @@ export default defineEventHandler(async (event) => {
           refundableAmount,
           deletionReason
         )
-        
-        // ✅ NEW: Mark appointment as cancelled
-        await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
         
         return refundResult
       } else {
@@ -229,9 +231,6 @@ export default defineEventHandler(async (event) => {
             reason: deletionReason
           })
         }
-        
-        // ✅ NEW: Mark appointment as cancelled
-        await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
         
         return {
           success: true,
@@ -345,9 +344,6 @@ export default defineEventHandler(async (event) => {
           })
         }
       }
-      
-      // ✅ NEW: Mark appointment as cancelled
-      await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
       
       return {
         success: true,
