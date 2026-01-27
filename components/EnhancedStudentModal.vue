@@ -578,21 +578,21 @@
                 @click="handlePaymentCardClick(payment)"
                 :class="[
                   'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm',
-                  payment.appointments?.status === 'cancelled'
+                  payment.appointment?.status === 'cancelled'
                     ? 'border-l-orange-300 bg-orange-50 cursor-pointer hover:shadow-md'
                     : payment.payment_status === 'completed'
                     ? 'border-l-green-300 bg-gray-50 opacity-60 cursor-not-allowed'
                     : 'hover:shadow-md cursor-pointer',
-                  selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled' && payment.payment_status !== 'completed'
+                  selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed'
                     ? 'ring-2 ring-offset-0'
                     : ''
                 ]"
                 :style="{
-                  ...(payment.appointments?.status !== 'cancelled' && payment.payment_status !== 'completed' ? { 
+                  ...(payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' ? { 
                     borderLeftColor: primaryColor,
                     backgroundColor: selectedPayments.includes(payment.id) ? primaryColor + '20' : primaryColor + '08'
                   } : {}),
-                  ...(selectedPayments.includes(payment.id) && payment.appointments?.status !== 'cancelled' && payment.payment_status !== 'completed' ? {
+                  ...(selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' ? {
                     '--tw-ring-color': primaryColor
                   } : {})
                 }"
@@ -606,7 +606,7 @@
                       <div class="flex items-center gap-2">
                         <span :class="[
                           'text-xl font-bold',
-                          payment.appointments?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
+                          payment.appointment?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
                         ]">
                           {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
                         </span>
@@ -617,9 +617,9 @@
                       <!-- Combined Status Badge -->
                       <div :class="[
                         'px-3 py-1 text-xs font-semibold rounded-full flex flex-col items-end',
-                        payment.appointments?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
-                        payment.appointments?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
-                        payment.appointments?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                        payment.appointment?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
+                        payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
+                        payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
                         payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                         payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
@@ -627,10 +627,10 @@
                         'bg-gray-100 text-gray-700'
                       ]">
                         <span>
-                          {{ payment.appointments?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'Abgesagt • Rückvergütet' :
-                             payment.appointments?.status === 'cancelled' && payment.payment_status === 'completed' ? 'Abgesagt • Bezahlt' :
-                             payment.appointments?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt • Unbezahlt' :
-                             payment.appointments?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt • Fehlgeschlagen' :
+                          {{ payment.appointment?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'Abgesagt • Rückvergütet' :
+                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'Abgesagt • Bezahlt' :
+                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt • Unbezahlt' :
+                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt • Fehlgeschlagen' :
                              payment.payment_status === 'completed' ? 'Bezahlt' :
                              payment.payment_status === 'pending' ? 'Unbezahlt' :
                              payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
@@ -647,22 +647,22 @@
                     </div>
                     
                     <!-- Date and Time -->
-                    <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'" class="text-xs">
-                      <span class="font-medium">{{ formatLocalDate(payment.appointments?.start_time || payment.created_at) }}</span>
+                    <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'" class="text-xs">
+                      <span class="font-medium">{{ formatLocalDate(payment.appointment?.start_time || payment.created_at) }}</span>
                       <span class="mx-1">•</span>
-                      <span>{{ formatLocalTime(payment.appointments?.start_time || payment.created_at) }} Uhr</span>
-                      <span v-if="payment.appointments?.duration_minutes" class="mx-1">•</span>
-                      <span v-if="payment.appointments?.duration_minutes" class="font-medium">{{ payment.appointments.duration_minutes }} min</span>
+                      <span>{{ formatLocalTime(payment.appointment?.start_time || payment.created_at) }} Uhr</span>
+                      <span v-if="payment.appointment?.duration_minutes" class="mx-1">•</span>
+                      <span v-if="payment.appointment?.duration_minutes" class="font-medium">{{ payment.appointment.duration_minutes }} min</span>
                     </div>
                     
                     <!-- Service Description (on new line) -->
-                    <div :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
-                      {{ payment.appointments.event_types?.name || payment.appointments.event_type_code || 'Termin' }}
-                      <span v-if="payment.appointments?.type" class="font-normal">
-                        Kat. {{ payment.appointments.type }}
+                    <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
+                      {{ payment.appointment.event_types?.name || payment.appointment.event_type_code || 'Termin' }}
+                      <span v-if="payment.appointment?.type" class="font-normal">
+                        Kat. {{ payment.appointment.type }}
                       </span>
-                      <span v-if="payment.appointments.staff" class="font-normal text-gray-600">
-                        mit {{ payment.appointments.staff.first_name }}
+                      <span v-if="payment.appointment.staff" class="font-normal text-gray-600">
+                        mit {{ payment.appointment.staff.first_name }}
                       </span>
                     </div>
                   </div>
@@ -672,12 +672,12 @@
                 <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0) || (payment.credit_used_rappen && payment.credit_used_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
                   <!-- Product Sales -->
                   <div v-for="productSale in (payment.product_sales || [])" :key="productSale.id" class="flex justify-between items-center">
-                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                    <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
                       {{ productSale.products?.name || 'Produkt' }} <span class="text-xs">({{ productSale.quantity }}x)</span>
                     </span>
                     <span :class="[
                       'font-semibold',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                      payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
                     ]">
                       {{ ((productSale.unit_price_rappen || 0) * productSale.quantity / 100).toFixed(2) }} CHF
                     </span>
@@ -685,12 +685,12 @@
                   
                   <!-- Admin Fee -->
                   <div v-if="payment.admin_fee_rappen && payment.admin_fee_rappen > 0" class="flex justify-between items-center">
-                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                    <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
                       Adminpauschale
                     </span>
                     <span :class="[
                       'font-semibold',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                      payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
                     ]">
                       {{ (payment.admin_fee_rappen / 100).toFixed(2) }} CHF
                     </span>
@@ -698,12 +698,12 @@
                   
                   <!-- Discount Sale (Rabatt) -->
                   <div v-if="payment.discount_sale && payment.discount_sale.discount_amount_rappen > 0" class="flex justify-between items-center">
-                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                    <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
                       {{ payment.discount_sale.discount_reason || 'Rabatt' }}
                     </span>
                     <span :class="[
                       'font-semibold',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                      payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
                     ]">
                       -{{ ((payment.discount_sale.discount_amount_rappen || 0) / 100).toFixed(2) }} CHF
                     </span>
@@ -711,12 +711,12 @@
                   
                   <!-- ✅ NEW: Credit Used -->
                   <div v-if="payment.credit_used_rappen && payment.credit_used_rappen > 0" class="flex justify-between items-center border-t pt-2 mt-2">
-                    <span :class="payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'" class="font-medium">
+                    <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'" class="font-medium">
                       Verwendetes Guthaben
                     </span>
                     <span :class="[
                       'font-semibold',
-                      payment.appointments?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
+                      payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-green-600'
                     ]">
                       -{{ (payment.credit_used_rappen / 100).toFixed(2) }} CHF
                     </span>
@@ -724,7 +724,7 @@
                 </div>
                 
                 <!-- Stornierungs-Policy Info (nur bei expanded) -->
-                <div v-if="payment.appointments?.status === 'cancelled' && expandedCancelledPayments.has(payment.id)" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                <div v-if="payment.appointment?.status === 'cancelled' && expandedCancelledPayments.has(payment.id)" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
                   <div v-if="calculateCancelledPayment(payment)" class="text-sm space-y-2">
                     <div>
                       <span class="text-gray-600">Stornierungs-Policy:</span>
@@ -774,10 +774,10 @@
                 </div>
                 
                 <!-- Cancellation Date -->
-                <div v-if="payment.appointments?.deleted_at" class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
+                <div v-if="payment.appointment?.deleted_at" class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
                   <span class="text-gray-600">Abgesagt am:</span>
                   <span class="ml-1 font-medium text-gray-900">
-                    {{ formatLocalDate(payment.appointments.deleted_at) }} {{ formatLocalTime(payment.appointments.deleted_at) }}
+                    {{ formatLocalDate(payment.appointment.deleted_at) }} {{ formatLocalTime(payment.appointment.deleted_at) }}
                   </span>
                 </div>
                 
@@ -1378,19 +1378,19 @@ const getCancellationPolicy = (appointment: any) => {
 
 // Hilfsfunktion: Berechnet die finale Abrechnung für abgesagte Termine
 const calculateCancelledPayment = (payment: any) => {
-  if (!payment.appointments || payment.appointments.status !== 'cancelled') {
+  if (!payment.appointment || payment.appointment.status !== 'cancelled') {
     return null
   }
   
   // Use the stored cancellation_charge_percentage directly
-  const chargePercentage = payment.appointments.cancellation_charge_percentage ?? 100
+  const chargePercentage = payment.appointment.cancellation_charge_percentage ?? 100
   const refundPercentage = 100 - chargePercentage
   
   logger.debug('💰 calculateCancelledPayment:', {
-    appointmentId: payment.appointments.id,
+    appointmentId: payment.appointment.id,
     chargePercentage,
     refundPercentage,
-    storedCharge: payment.appointments.cancellation_charge_percentage,
+    storedCharge: payment.appointment.cancellation_charge_percentage,
     paymentStatus: payment.payment_status
   })
   
@@ -1728,7 +1728,7 @@ const totalSelectedAmount = computed(() => {
 // Handle click on payment card
 const handlePaymentCardClick = (payment: any) => {
   // If cancelled, allow selection if there's a charge to collect
-  if (payment.appointments?.status === 'cancelled') {
+  if (payment.appointment?.status === 'cancelled') {
     logger.debug('📋 Toggling cancelled payment details:', payment.id)
     // Toggle expansion to show/hide details
     if (expandedCancelledPayments.value.has(payment.id)) {
@@ -1738,7 +1738,7 @@ const handlePaymentCardClick = (payment: any) => {
     }
     
     // ✅ NEW: Also allow selection if there's a charge (chargePercentage > 0)
-    const chargePercentage = payment.appointments.cancellation_charge_percentage ?? 100
+    const chargePercentage = payment.appointment.cancellation_charge_percentage ?? 100
     if (chargePercentage > 0 && payment.payment_status === 'pending') {
       logger.debug('💳 Cancelled payment with charge can be selected - toggling selection', {
         chargePercentage,
@@ -2392,147 +2392,36 @@ const loadPayments = async () => {
   try {
     logger.debug('💰 Loading payments for student:', props.selectedStudent.id)
     
+    // Get auth token
     const supabase = getSupabase()
-    
-    // ✅ NEU: Lade Student Credit Balance
-    const { data: creditData, error: creditError } = await supabase
-      .from('student_credits')
-      .select('balance_rappen')
-      .eq('user_id', props.selectedStudent.id)
-      .single()
-    
-    if (creditError && creditError.code !== 'PGRST116') {
-      console.warn('⚠️ Could not load student credit:', creditError)
-    } else if (creditData) {
-      studentBalance.value = creditData.balance_rappen || 0
-      logger.debug('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      throw new Error('No authentication token found')
     }
     
-    // Lade Zahlungen über appointments - RLS filtert automatisch nach tenant_id
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        created_at,
-        payment_method,
-        payment_status,
-        paid_at,
-        total_amount_rappen,
-        admin_fee_rappen,
-        appointment_id,
-        invoice_address,
-        appointments!inner(
-          id,
-          user_id, 
-          start_time, 
-          title, 
-          status, 
-          event_type_code,
-          staff_id,
-          type,
-          deleted_at,
-          deletion_reason,
-          duration_minutes,
-          cancellation_charge_percentage,
-          event_types(name)
-        )
-      `)
-      .eq('appointments.user_id', props.selectedStudent.id)
-      .order('created_at', { ascending: false })
-    
-    if (paymentsError) {
-      console.error('❌ Error loading payments:', paymentsError)
-      throw paymentsError
-    }
-    
-    // Lade discount_sales und product_sales über appointment_id
-    const appointmentIds = (paymentsData || []).map(p => p.appointment_id).filter(Boolean)
-    let discountSalesMap: Record<string, any> = {}
-    let productSalesMap: Record<string, any[]> = {}
-    
-    if (appointmentIds.length > 0) {
-      // Lade discount_sales (Haupt-Verkauf mit Rabatt)
-      const { data: discountSalesData, error: discountSalesError } = await supabase
-        .from('discount_sales')
-        .select('*')
-        .in('appointment_id', appointmentIds)
-      
-      if (discountSalesError) {
-        console.error('❌ Error loading discount sales:', discountSalesError)
-      } else if (discountSalesData) {
-        discountSalesData.forEach(ds => {
-          discountSalesMap[ds.appointment_id] = ds
-          
-          // Lade product_sales (Items) für diese discount_sale
-          if (ds.id) {
-            supabase
-              .from('product_sales')
-              .select(`
-                *,
-                products(name, price_rappen)
-              `)
-              .eq('product_sale_id', ds.id)
-              .then(({ data: productsData, error: productsError }) => {
-                if (productsError) {
-                  console.error('❌ Error loading products for sale:', productsError)
-                } else if (productsData) {
-                  if (!productSalesMap[ds.appointment_id]) {
-                    productSalesMap[ds.appointment_id] = []
-                  }
-                  productSalesMap[ds.appointment_id].push(...productsData)
-                }
-              })
-          }
-        })
+    // ✅ SECURE API CALL: Call backend API instead of direct DB queries
+    const response = await $fetch(`/api/students/${props.selectedStudent.id}/payments`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
       }
+    }) as any
+    
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load payments from API')
     }
     
-    // Warte kurz auf die product_sales Queries
-    await new Promise(resolve => setTimeout(resolve, 300))
+    // Extract data from API response
+    const { student_balance, payments: paymentsData } = response.data
     
-    // Lade Fahrlehrer-Namen für Zahlungen
-    const staffIds = [...new Set((paymentsData || [])
-      .map(p => {
-        // appointments ist ein Array, nehme das erste Element
-        const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
-        return apt?.staff_id
-      })
-      .filter(Boolean))]
+    // Update student balance
+    studentBalance.value = student_balance || 0
+    logger.debug('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF')
     
-    let staffMap: Record<string, any> = {}
+    // ✅ API returns fully enriched payments with all related data
+    payments.value = paymentsData || []
     
-    if (staffIds.length > 0) {
-      const { data: staffData, error: staffError } = await supabase
-        .from('users')
-        .select('id, first_name')
-        .in('id', staffIds)
-      
-      if (staffError) {
-        console.error('❌ Error loading staff for payments:', staffError)
-      } else if (staffData) {
-        staffData.forEach(staff => {
-          staffMap[staff.id] = staff
-        })
-      }
-    }
-    
-    // Verknüpfe alle Daten über appointment_id und füge staff hinzu
-    payments.value = (paymentsData || []).map(payment => {
-      // appointments ist ein Array, nehme das erste Element
-      const apt = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
-      
-      return {
-        ...payment,
-        discount_sale: payment.appointment_id ? discountSalesMap[payment.appointment_id] : null,
-        product_sales: payment.appointment_id ? (productSalesMap[payment.appointment_id] || []) : [],
-        appointments: apt ? {
-          ...apt,
-          staff: apt.staff_id ? staffMap[apt.staff_id] : null
-        } : null
-      }
-    })
-    
-    logger.debug('✅ Loaded', payments.value.length, 'payments with product/discount sales')
+    logger.debug('✅ Loaded', payments.value.length, 'payments with product/discount sales via secure API')
     
   } catch (error: any) {
     console.error('Error loading payments:', error)
