@@ -434,21 +434,20 @@ const submitForm = async () => {
     logger.debug('📧 Email Success:', newStudent?.emailSuccess)
     logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
-    // ✅ Benachrichtigung - zeige Erfolg an wenn Schüler erstellt wurde
-    // SMS wird automatisch im Backend versendet
+    // ✅ Benachrichtigung via globales UI Toast (bessere UX, länger sichtbar)
     const contactInfo = form.value.phone
     const contactType = 'SMS'
     
     logger.debug('✅ Schüler erstellt und Einladung versendet via:', contactType)
-    showSuccessToast(
-      'Schüler erstellt!',
-      `Onboarding-Link wurde via ${contactType} an ${contactInfo} gesendet.`
-    )
     
-    // ✅ WICHTIG: Verzögere resetForm() damit Toast sichtbar bleibt (3 Sekunden)
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    // Use global UI toast for better UX and longer visibility
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Schüler erstellt!',
+      message: `Onboarding-Link wurde via ${contactType} an ${contactInfo} gesendet.`
+    })
     
-    logger.debug('🚀 Resetting form after toast display')
+    logger.debug('🚀 Resetting form after notification')
     resetForm()
     emit('added', newStudent)
     
