@@ -543,7 +543,20 @@ const loadStudentPickupLocations = async (studentId: string) => {
 
 const savePickupLocation = async (locationData: any, userId: string) => {
   try {
-    logger.debug('📤 Calling secure API to save pickup location')
+    logger.debug('📤 Calling secure API to save pickup location', {
+      userId,
+      locationName: locationData.name,
+      address: locationData.address
+    })
+    
+    // ✅ Validate userId before sending
+    if (!userId || typeof userId !== 'string') {
+      throw new Error(`Invalid userId: ${userId} (type: ${typeof userId})`)
+    }
+    
+    if (!userId.match(/^[0-9a-f\-]{36}$/i)) {
+      throw new Error(`userId does not match UUID format: ${userId}`)
+    }
     
     // ✅ For students: "StudentName - LocationName", for staff: just "LocationName"
     const locationName = props.selectedStudentName 
@@ -574,7 +587,7 @@ const savePickupLocation = async (locationData: any, userId: string) => {
     })
 
     if (!response || response.error) {
-      console.error('❌ API Error:', response?.error)
+      console.error('❌ API Error response:', response?.error)
       throw new Error(response?.error?.message || 'Failed to save location')
     }
 
@@ -589,8 +602,27 @@ const savePickupLocation = async (locationData: any, userId: string) => {
     return savedLocation
 
   } catch (err: any) {
-    console.error('❌ Error saving pickup location:', err)
-    error.value = `Fehler beim Speichern des Treffpunkts: ${err.message}`
+    // Log detailed error information
+    console.error('❌ Error saving pickup location:', {
+      error: err,
+      message: err?.message,
+      statusCode: err?.statusCode,
+      status: err?.status,
+      data: err?.data,
+      responseText: err?.responseText
+    })
+    
+    // Try to extract better error message from response
+    let errorMessage = err?.message || 'Failed to save location'
+    if (err?.data?.message) {
+      errorMessage = err.data.message
+    } else if (err?.response?.status === 400) {
+      errorMessage = 'Invalid location data. Please check the address and try again.'
+    } else if (err?.response?.status === 403) {
+      errorMessage = 'You do not have permission to save locations for this student.'
+    }
+    
+    error.value = `Fehler beim Speichern des Treffpunkts: ${errorMessage}`
     throw err
   }
 }
