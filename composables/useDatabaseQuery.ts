@@ -8,8 +8,10 @@ interface QueryFilter {
 }
 
 interface QueryOptions {
+  action: 'select' | 'insert' | 'update' | 'delete'
   table: string
   select?: string
+  data?: Record<string, any>
   filters?: QueryFilter[]
   order?: { column: string; ascending?: boolean }
   limit?: number
@@ -21,22 +23,42 @@ interface QueryOptions {
  * Safe database query composable
  * 
  * Replaces direct Supabase calls with secure server-side queries
+ * Supports SELECT, INSERT, UPDATE, DELETE operations
  * 
  * Usage:
  * 
  *   const { query, data, loading, error } = useDatabaseQuery()
  *   
+ *   // SELECT
  *   await query({
+ *     action: 'select',
  *     table: 'locations',
  *     select: '*',
- *     filters: [
- *       { column: 'tenant_id', operator: 'eq', value: tenantId },
- *       { column: 'is_active', operator: 'eq', value: true }
- *     ],
+ *     filters: [{ column: 'tenant_id', operator: 'eq', value: tenantId }],
  *     order: { column: 'name', ascending: true }
  *   })
  *   
- *   console.log(data.value) // Array of locations
+ *   // INSERT
+ *   await query({
+ *     action: 'insert',
+ *     table: 'locations',
+ *     data: { name: 'New Location', tenant_id: tenantId }
+ *   })
+ *   
+ *   // UPDATE
+ *   await query({
+ *     action: 'update',
+ *     table: 'locations',
+ *     data: { name: 'Updated Name' },
+ *     filters: [{ column: 'id', operator: 'eq', value: locationId }]
+ *   })
+ *   
+ *   // DELETE
+ *   await query({
+ *     action: 'delete',
+ *     table: 'locations',
+ *     filters: [{ column: 'id', operator: 'eq', value: locationId }]
+ *   })
  */
 
 export const useDatabaseQuery = () => {
@@ -50,16 +72,18 @@ export const useDatabaseQuery = () => {
     data.value = null
 
     try {
-      logger.debug('🔍 Executing safe database query:', {
-        table: options.table,
-        filters: options.filters?.length || 0
+      logger.debug('🔍 Executing database query:', {
+        action: options.action,
+        table: options.table
       })
 
       const response = await $fetch('/api/database/query', {
         method: 'POST',
         body: {
+          action: options.action,
           table: options.table,
-          select: options.select || '*',
+          select: options.select,
+          data: options.data,
           filters: options.filters,
           order: options.order,
           limit: options.limit,
@@ -74,6 +98,7 @@ export const useDatabaseQuery = () => {
 
       data.value = response.data
       logger.debug('✅ Database query successful:', {
+        action: options.action,
         table: options.table,
         rowCount: Array.isArray(response.data) ? response.data.length : (response.data ? 1 : 0)
       })
