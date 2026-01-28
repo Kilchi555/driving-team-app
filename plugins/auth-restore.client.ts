@@ -8,14 +8,53 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // Only run in browser
   if (!process.client) return
 
-  logger.debug('🔄 Auth restore plugin starting (HTTP-Only cookies)...')
+  logger.debug('🔄 Auth restore plugin starting...')
 
   try {
     const authStore = useAuthStore()
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
     
-    // Only fetch if we don't already have a user (from session-persist plugin)
+    // FIRST: Check if Supabase already has a valid session (from its own localStorage)
+    const { data: existingSession } = await supabase.auth.getSession()
+    
+    if (existingSession?.session) {
+      logger.debug('✅ Supabase session found in storage, validating...')
+      
+      // Verify the session is still valid by checking getUser
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      
+      if (userData?.user && !userError) {
+        logger.debug('✅ Supabase session is valid for:', userData.user.email)
+        
+        // Update auth store if needed
+        if (!authStore.user) {
+          authStore.user = userData.user as any
+          
+          // Fetch profile if needed
+          if (!authStore.userProfile) {
+            try {
+              const response = await $fetch('/api/auth/current-user') as any
+              if (response?.profile) {
+                authStore.userProfile = response.profile
+                authStore.userRole = response.profile.role || ''
+              }
+            } catch (err) {
+              logger.debug('⚠️ Could not fetch profile:', err)
+            }
+          }
+        }
+        
+        logger.debug('✅ Auth restore complete (from Supabase storage)')
+        return
+      } else {
+        logger.debug('⚠️ Supabase session exists but getUser failed:', userError?.message)
+      }
+    }
+    
+    // No valid Supabase session - check if we have a user in auth store (from session-persist)
     if (!authStore.user) {
-      logger.debug('🔄 Checking session via API...')
+      logger.debug('🔄 No user in store, checking via API...')
       
       // Check session via API (tokens are in HTTP-Only cookies)
       const response = await $fetch('/api/auth/current-user') as any
@@ -30,63 +69,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       } else {
         logger.debug('🔄 No valid session cookie found')
       }
-    } else {
-      logger.debug('✅ Session already loaded from cache, skipping API call')
     }
     
-    // IMPORTANT: Restore session to Supabase client via setSession
-    // This populates sessionStorage with the session data
-    // Supabase will use this for client-side queries
-    if (authStore.user) {
-      try {
-        const { getSupabase } = await import('~/utils/supabase')
-        const supabase = getSupabase()
-        
-        // Get current session first to verify it's empty
-        const { data: beforeSession } = await supabase.auth.getSession()
-        logger.debug('🔐 Session before setSession:', beforeSession?.session ? 'EXISTS' : 'EMPTY')
-        
-        // Set session with REAL user data from auth response
-        // authStore.user.id is the Supabase Auth UID from the HTTP-Only cookie
-        const { error } = await supabase.auth.setSession({
-          access_token: authStore.user.id, // Use real Supabase Auth ID as token placeholder
-          refresh_token: authStore.user.id,
-          user: {
-            id: authStore.user.id, // REAL Supabase Auth UID
-            email: authStore.user.email,
-            user_metadata: authStore.user.user_metadata || {},
-            app_metadata: {},
-            aud: '',
-            created_at: new Date().toISOString(),
-            confirmation_sent_at: null,
-            email_confirmed_at: null,
-            phone: '',
-            phone_confirmed_at: null,
-            identities: [],
-            last_sign_in_at: null,
-            role: '',
-            updated_at: new Date().toISOString()
-          }
-        })
-        
-        if (error) {
-          logger.debug('⚠️ Error setting Supabase session:', error)
-        } else {
-          // Verify session was set
-          const { data: afterSession } = await supabase.auth.getSession()
-          logger.debug('✅ Supabase session set, getSession returns:', afterSession?.session ? 'EXISTS' : 'EMPTY')
-          
-          // Also check getUser
-          const { data: userCheck } = await supabase.auth.getUser()
-          logger.debug('✅ getUser returns:', userCheck?.user?.id ? `USER FOUND: ${userCheck.user.id}` : 'USER NULL')
-        }
-      } catch (err) {
-        logger.debug('⚠️ Could not set Supabase session:', err)
-      }
-      
-      logger.debug('✅ Session restored in plugin, role:', authStore.userRole)
-    } else {
-      logger.debug('⚠️ No user to restore Supabase session')
+    // If we have a user but no Supabase session, we need to get fresh tokens
+    // This happens when Supabase localStorage was cleared but HTTP-Only cookies are still valid
+    if (authStore.user && !existingSession?.session) {
+      logger.debug('⚠️ User in store but no Supabase session - tokens needed from server')
+      // The user will need to re-login to get fresh tokens
+      // HTTP-Only cookies can authenticate API calls, but not client Supabase calls
     }
     
   } catch (err: any) {

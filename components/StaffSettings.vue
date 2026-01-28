@@ -649,6 +649,7 @@ import StaffCashBalance from './StaffCashBalance.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
 import { useTenant } from '~/composables/useTenant'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useAuthStore } from '~/stores/auth'
 
 interface Props {
   currentUser: any
@@ -826,19 +827,17 @@ const loadCalendarToken = async () => {
   isLoadingCalendarToken.value = true
   try {
     logger.debug('📅 Loading existing calendar token...')
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('calendar_tokens')
-      .select('token')
-      .eq('staff_id', props.currentUser.id)
-      .eq('is_active', true)
-      .maybeSingle()
-    
-    if (tokenError) {
-      logger.warn('⚠️ Error loading calendar token:', tokenError.message)
-      return
-    }
+    const tokenData = await query({
+      table: 'calendar_tokens',
+      select: 'token',
+      filters: [
+        { column: 'staff_id', operator: 'eq', value: props.currentUser.id },
+        { column: 'is_active', operator: 'eq', value: true }
+      ],
+      single: true
+    })
     
     if (tokenData?.token) {
       calendarTokenLink.value = `https://simy.ch/api/calendar/ics?token=${tokenData.token}`
@@ -967,6 +966,7 @@ const parseLocalDateTime = (dateTimeStr: string): Date => {
 // Methods
 // In StaffSettings.vue - ersetzen Sie die Funktion mit dieser typisierten Version:
 import { saveWithOfflineSupport } from '~/utils/offlineQueue'
+import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 
 const loadExamLocations = async () => {
   if (!props.currentUser?.id) return;
@@ -979,49 +979,45 @@ const loadExamLocations = async () => {
     const staffId = props.currentUser.id;
 
     // 1. Alle verfügbaren globalen Prüfungsstandorte laden (tenant_id = null, staff_ids = empty/null)
-    const { data: allLocations, error: locationsError } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('location_type', 'exam')
-      .is('tenant_id', null) // Global locations (no tenant assigned)
-      .eq('is_active', true)
-      .order('name');
+    const { query } = useDatabaseQuery()
+    const allLocations = await query({
+      table: 'locations',
+      select: '*',
+      filters: [
+        { column: 'location_type', operator: 'eq', value: 'exam' },
+        { column: 'is_active', operator: 'eq', value: true }
+      ],
+      order: { column: 'name', ascending: true }
+    })
 
-    if (locationsError) throw locationsError;
     availableExamLocations.value = allLocations || [];
 
     // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
-    // ✅ WICHTIG: Mit Tenant-Filter UND Staff-Filter
-    const { data: userProfile, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', staffId)
-      .single();
-    
-    if (userError) throw userError;
-    const userTenantId = userProfile?.tenant_id;
+    const { query } = useDatabaseQuery()
+    const userTenantId = props.currentUser.tenant_id;
 
-    const { data: staffExamLocationsData, error: allExamError } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('location_type', 'exam')
-      .eq('is_active', true)
-      .eq('tenant_id', userTenantId) // ✅ TENANT FILTER
-      .order('name');
-
-    if (allExamError) throw allExamError;
+    const staffExamLocationsData = await query({
+      table: 'locations',
+      select: '*',
+      filters: [
+        { column: 'location_type', operator: 'eq', value: 'exam' },
+        { column: 'is_active', operator: 'eq', value: true },
+        { column: 'tenant_id', operator: 'eq', value: userTenantId }
+      ],
+      order: { column: 'name', ascending: true }
+    })
     
     // ✅ Filter im Frontend: Nur Locations wo dieser Staff in staff_ids drin ist
-    staffExamLocations.value = (staffExamLocationsData || []).filter(loc => {
+    staffExamLocations.value = (staffExamLocationsData || []).filter((loc: any) => {
       const staffIds = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
       return staffIds.includes(staffId)
     });
 
-      logger.debug('✅ Prüfungsstandorte geladen:', {
+    logger.debug('✅ Prüfungsstandorte geladen:', {
       verfügbar: availableExamLocations.value.length,
       aktiviert_durch_Mitarbeiter: staffExamLocations.value.length,
-      aktive_namen: staffExamLocations.value.map(loc => loc.name)
-      });
+      aktive_namen: staffExamLocations.value.map((loc: any) => loc.name)
+    });
 
   } catch (err: any) {
     console.error('❌ Fehler beim Laden der Prüfungsstandorte:', err);
@@ -1524,29 +1520,31 @@ const loadData = async () => {
   error.value = null
 
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
 
     logger.debug('🔥 Loading staff settings data...')
 
     // Kategorien laden (nur für aktuellen Tenant)
-    const { data: categories, error: categoriesError } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('tenant_id', props.currentUser.tenant_id)
-      .eq('is_active', true)
-      .order('name')
-
-    if (categoriesError) throw categoriesError
+    const categories = await query({
+      table: 'categories',
+      select: '*',
+      filters: [
+        { column: 'tenant_id', operator: 'eq', value: props.currentUser.tenant_id },
+        { column: 'is_active', operator: 'eq', value: true }
+      ],
+      order: { column: 'name', ascending: true }
+    })
     availableCategories.value = categories || []
 
     // Alle Standard-Standorte des Tenants laden (mit allen staff_ids)
-    const { data: allLocations, error: allLocationsError } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('tenant_id', props.currentUser.tenant_id)
-      .eq('location_type', 'standard') // Nur Standard Locations, keine Exam/Prüfungs Locations
-
-    if (allLocationsError) throw allLocationsError
+    const allLocations = await query({
+      table: 'locations',
+      select: '*',
+      filters: [
+        { column: 'tenant_id', operator: 'eq', value: props.currentUser.tenant_id },
+        { column: 'location_type', operator: 'eq', value: 'standard' }
+      ]
+    })
     allTenantLocations.value = allLocations || []
 
     // myLocations für Backward-Compatibility (wird nicht mehr verwendet)
@@ -1588,19 +1586,17 @@ const loadWorkingHoursData = async () => {
   }
   
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     
     logger.debug('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
     
-    const { data: appointments, error } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('staff_id', props.currentUser.id)
-    
-    if (error) {
-      console.error('❌ DEBUG: Database error:', error)
-      return
-    }
+    const appointments = await query({
+      table: 'appointments',
+      select: '*',
+      filters: [
+        { column: 'staff_id', operator: 'eq', value: props.currentUser.id }
+      ]
+    })
     
     logger.debug('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
     
@@ -1841,35 +1837,22 @@ const closeToast = () => {
   showToast.value = false
 }
 
-// Logout Funktion
+// Logout Funktion - nutzt authStore für korrektes Cookie/Session-Handling
 const handleLogout = async () => {
   try {
-    const supabase = getSupabase()
+    const authStore = useAuthStore()
     
-    // Direct logout without confirmation for better UX
-    
-    // Logout aus Supabase
-    const { error } = await supabase.auth.signOut()
-    
-    if (error) {
-      console.error('❌ Logout error:', error)
-      showErrorToast('Abmeldung fehlgeschlagen', 'Bitte versuchen Sie es erneut.')
-      return
-    }
-    
-    // Erfolgreiche Abmeldung
+    // Erfolgreiche Abmeldung vorbereiten
     showSuccessToast('Erfolgreich abgemeldet', 'Sie werden zur Anmeldeseite weitergeleitet.')
     
-    // Kurze Verzögerung für Toast-Anzeige
+    // Schließe das Modal
+    emit('close')
+    
+    // Kurze Verzögerung für Toast-Anzeige, dann Logout
     setTimeout(async () => {
-      // Schließe das Modal
-      emit('close')
-      
-      // Navigiere zur tenant-spezifischen Login-Seite
-      const { currentTenantBranding } = useTenantBranding()
-      const slug = currentTenantBranding.value?.slug
-      await navigateTo(slug ? `/${slug}` : '/login')
-    }, 1500)
+      // ✅ Korrekt: authStore.logout() räumt HTTP-Only Cookies, localStorage und Supabase Session auf
+      await authStore.logout()
+    }, 500)
     
   } catch (err: any) {
     console.error('❌ Logout error:', err)

@@ -654,8 +654,9 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       console.warn('⚠️ Failed to fetch user profile:', profileFetchError.message)
     }
 
-    // Return user data (tokens are in HTTP-Only cookies, NOT in response body)
-    // This prevents XSS attacks from stealing tokens via JavaScript
+    // Return user data including tokens for client-side Supabase session
+    // Tokens are ALSO in HTTP-Only cookies for server-side API calls
+    // We return them here so the client Supabase can make direct queries
     return {
       success: true,
       user: {
@@ -665,8 +666,10 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       },
       // User profile from database (for frontend state)
       profile: userProfile,
-      // Session info without tokens (for frontend state only)
+      // Session info WITH tokens for client Supabase
       session: {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
         expires_in: sessionDuration,
         expires_at: Math.floor(Date.now() / 1000) + sessionDuration
       },
