@@ -35,7 +35,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
                        to.path.startsWith('/customer/courses') ||
                        isSlugRoute
   
-  logger.debug('🔐 Auth middleware:', { isPublicRoute, isSlugRoute })
+  logger.debug('🔐 Auth middleware:', { isPublicRoute, isSlugRoute, path: to.path })
   
   if (isPublicRoute) {
     logger.debug('🔓 Auth middleware: Skipping public route:', to.path)
@@ -65,17 +65,29 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    logger.debug('Auth middleware: User not logged in, isInitialized:', authStore.isInitialized)
+    logger.debug('🚫 Auth middleware: User not logged in, blocking protected route:', to.path)
     logger.debug('Auth middleware: AuthStore state:', {
       isLoggedIn: authStore.isLoggedIn,
       isInitialized: authStore.isInitialized,
-      hasProfile: authStore.hasProfile
+      hasProfile: authStore.hasProfile,
+      user: authStore.user ? 'PRESENT' : 'NULL'
     })
     
-    // Für Admin-Seiten, leite zur Dashboard weiter statt zur Hauptseite
-    if (to.path.startsWith('/admin/')) {
-      logger.debug('Auth middleware: Redirecting admin page to dashboard')
-      return navigateTo('/dashboard')
+    // ✅ Block protected routes (dashboard, staff, admin, customer)
+    if (to.path.startsWith('/dashboard') || 
+        to.path.startsWith('/staff/') || 
+        to.path.startsWith('/admin/') || 
+        to.path.startsWith('/customer/')) {
+      logger.debug('🔒 Auth middleware: Blocking protected route, redirecting to login:', to.path)
+      
+      // Try to save the intended destination
+      try {
+        sessionStorage.setItem('redirect_after_login', to.path)
+      } catch (e) {
+        logger.warn('Could not save redirect destination:', e)
+      }
+      
+      return navigateTo('/login')
     }
     
     // WICHTIG: Nicht umleiten wenn wir gerade von /login oder /driving-team kommen!
@@ -85,7 +97,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       return
     }
     
-    // ✅ NEU: Versuche zur Slug-Route weiterzuleiten, ansonsten zum Login
+    // ✅ Versuche zur Slug-Route weiterzuleiten, ansonsten zum Login
     // Extract slug from current path if available
     const slugMatch = to.path.match(/^\/([^\/]+)/)
     if (slugMatch && slugMatch[1]) {
@@ -112,4 +124,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     logger.debug('Auth middleware: No slug found, redirecting to login')
     return navigateTo('/login')
   }
+  
+  logger.debug('✅ Auth middleware: User is logged in, allowing access to:', to.path)
 })

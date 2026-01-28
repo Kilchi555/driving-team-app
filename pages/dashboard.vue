@@ -16,6 +16,9 @@ import { useFeatureFlags } from '@/utils/useFeatureFlags'
 import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
+// ✅ Protect this page - require authentication
+defineRouteMiddleware('auth')
+
 
 interface CalendarApi {
   today(): void
