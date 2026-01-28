@@ -1,6 +1,7 @@
 // composables/usePricing.ts - Vereinheitlichte und optimierte Pricing-Lösung
 import { ref, computed, watch, type Ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 
 // ===== INTERFACES =====
 interface PricingRule {
@@ -324,20 +325,11 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     try {
       logger.debug('🔄 Loading pricing rules from Supabase...')
       
-      // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) {
-        throw new Error('User not authenticated')
-      }
+      // Get current user's tenant_id from auth store (avoids direct Supabase call)
+      const authStore = useAuthStore()
+      const tenantId = authStore.userProfile?.tenant_id
       
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser.id)
-        .single()
-      
-      if (userError) throw userError
-      if (!userData?.tenant_id) {
+      if (!tenantId) {
         console.warn('⚠️ User has no tenant_id, using fallback pricing')
         await createFallbackPricingRules()
         return
@@ -347,7 +339,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('business_type')
-        .eq('id', userData.tenant_id)
+        .eq('id', tenantId)
         .single()
 
       if (tenantError) throw tenantError
@@ -359,12 +351,12 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         return
       }
       
-      logger.debug('🔍 Loading pricing rules for tenant:', userData.tenant_id)
+      logger.debug('🔍 Loading pricing rules for tenant:', tenantId)
       
       const { data, error } = await supabase
         .from('pricing_rules')
         .select('*')
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('category_code')
 
@@ -373,7 +365,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         throw new Error(`Database error: ${error.message}`)
       }
 
-      logger.debug('📊 Raw pricing rules from DB:', data?.length || 0, 'rules for tenant', userData.tenant_id)
+      logger.debug('📊 Raw pricing rules from DB:', data?.length || 0, 'rules for tenant', tenantId)
       logger.debug('📊 Pricing rules details:', data?.map(r => ({
         id: r.id,
         category: r.category_code,
@@ -755,15 +747,11 @@ const roundToNearestFranken = (rappen: number): number => {
   let actualTenantId = tenantId
   if (!actualTenantId) {
     try {
-      // Hole tenant_id aus der Auth-Session des aktuellen Benutzers
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (currentUser) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('tenant_id')
-          .eq('auth_user_id', currentUser.id)
-          .single()
-        actualTenantId = userProfile?.tenant_id
+      // Hole tenant_id aus der Auth Store
+      const authStore = useAuthStore()
+      const userTenantId = authStore.userProfile?.tenant_id
+      if (userTenantId) {
+        actualTenantId = userTenantId
       }
     } catch (err) {
       console.warn('⚠️ Could not fetch tenant_id:', err)

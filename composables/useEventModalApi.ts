@@ -14,35 +14,20 @@ import logger from '~/utils/logger'
 export const useEventModalApi = () => {
   const { getSupabase } = useNuxtApp().$supabase ? { getSupabase: () => useNuxtApp().$supabase } : { getSupabase: async () => (await import('~/utils/supabase')).getSupabase() }
 
-  // ✅ Helper: Get auth token
-  const getAuthToken = async (): Promise<string | null> => {
-    try {
-      const { getSupabase } = await import('~/utils/supabase')
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      return session?.access_token || null
-    } catch {
-      return null
-    }
-  }
-
   // ✅ Helper: Make authenticated API call
+  // Authentication is handled via HTTP-Only cookies (sent automatically by browser)
+  // Server middleware converts cookies to Authorization headers
   const apiCall = async <T>(
     url: string, 
     options: { method?: string; body?: any; query?: Record<string, any> } = {}
   ): Promise<T | null> => {
-    const token = await getAuthToken()
-    if (!token) {
-      logger.warn('⚠️ No auth token available for API call:', url)
-      return null
-    }
-
     try {
       const response = await $fetch<{ success: boolean; data: T }>(url, {
         method: options.method || 'GET',
-        headers: { Authorization: `Bearer ${token}` },
         body: options.body,
         query: options.query
+        // No Authorization header needed - cookies are sent automatically
+        // Server middleware converts cookies to Authorization headers
       })
       return response?.data || null
     } catch (error: any) {
@@ -127,22 +112,17 @@ export const useEventModalApi = () => {
    * Get current user's tenant ID
    */
   const getCurrentUserTenant = async () => {
-    const token = await getAuthToken()
-    if (!token) return null
-    
     try {
-      const { getSupabase } = await import('~/utils/supabase')
-      const supabase = getSupabase()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      // Get tenant ID from auth store first (fastest)
+      const { useAuthStore } = await import('~/stores/auth')
+      const authStore = useAuthStore()
+      if (authStore.userProfile?.tenant_id) {
+        return authStore.userProfile.tenant_id
+      }
       
-      // Use the get-user API to get tenant info
-      const response = await $fetch<{ success: boolean; data: any }>('/api/staff/get-user', {
-        headers: { Authorization: `Bearer ${token}` },
-        query: { id: user.id, fields: 'tenant_id' }
-      }).catch(() => null)
-      
-      return response?.data?.tenant_id || null
+      // Fallback: Use API to get current user info
+      const response = await $fetch<{ profile?: { tenant_id?: string } }>('/api/auth/current-user').catch(() => null)
+      return response?.profile?.tenant_id || null
     } catch {
       return null
     }
@@ -399,9 +379,6 @@ export const useEventModalApi = () => {
   }
 
   return {
-    // Helpers
-    getAuthToken,
-
     // Payment
     getPaymentByAppointment,
     getPaymentById,

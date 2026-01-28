@@ -359,8 +359,21 @@ const {
   loadWorkingHours, 
   getActiveWorkingHours, 
   isOutsideWorkingHours,
-  workingHoursByDay 
+  workingHoursByDay,
+  setDefaultWorkingHours,
+  activeWorkingHours
 } = useStaffWorkingHours()
+
+// ✅ Current user tracking (from props or composable)
+const { currentUser: composableCurrentUser } = useCurrentUser()
+
+const getCurrentUserId = () => {
+  return props.currentUser?.id || composableCurrentUser.value?.id
+}
+
+const getCurrentUserData = () => {
+  return props.currentUser || composableCurrentUser.value
+}
 
 const emit = defineEmits(['view-updated', 'appointment-changed'])
 
@@ -393,24 +406,29 @@ const loadEventTypeColors = async () => {
   }
 }
 
-// NEUE FUNKTION: Nicht-Arbeitszeiten aus DB laden und als wiederkehrende Events anzeigen
-const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
+// NEUE FUNKTION: Nicht-Arbeitszeiten via Backend API laden
+const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
   try {
-    logger.debug('🔒 Loading non-working hours blocks from DB...')
+    logger.debug('🔒 Loading non-working hours blocks via Backend API...')
     
-    // ALLE Working hours für diesen Staff laden (aktive UND inaktive)
-    const { data: allWorkingHours, error } = await supabase
-      .from('staff_working_hours')
-      .select('*')
-      .eq('staff_id', staffId)
-      .order('day_of_week')
+    // Working hours via Backend API laden (Auth wird via HTTP-Only Cookies automatisch gehandhabt)
+    const response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
     
-    if (error) {
-      console.error('Error loading working hours:', error)
+    if (!response.success) {
+      logger.debug('⚠️ No working hours found')
       return []
     }
     
-    logger.debug('✅ Loaded all working hours:', allWorkingHours?.length || 0)
+    const allWorkingHours = response.workingHours
+    logger.debug('✅ Loaded all working hours via API:', allWorkingHours?.length || 0)
+    if (allWorkingHours && allWorkingHours.length > 0) {
+      logger.debug('🔍 Sample working hours from API:', allWorkingHours.slice(0, 3).map((wh: any) => ({
+        day_of_week: wh.day_of_week,
+        is_active: wh.is_active,
+        start_time: wh.start_time,
+        end_time: wh.end_time
+      })))
+    }
     
     const events: CalendarEvent[] = []
     
@@ -425,6 +443,10 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
       // Prüfe ob der Tag aktive Working Hours hat
       const hasActiveWorkingHours = dayWorkingHours.some(wh => wh.is_active === true)
       
+      if (dayOfWeek === 1) { // Debug nur für Montag
+        logger.debug(`📊 Day ${dayOfWeek} (Montag): ${dayWorkingHours.length} entries, hasActiveWorkingHours: ${hasActiveWorkingHours}`, dayWorkingHours.map(wh => ({ is_active: wh.is_active, start: wh.start_time, end: wh.end_time })))
+      }
+      
       const year = currentDate.getFullYear()
       const month = String(currentDate.getMonth() + 1).padStart(2, '0')
       const day = String(currentDate.getDate()).padStart(2, '0')
@@ -432,6 +454,7 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
       
       // FALL 1: Tag hat KEINE aktiven Working Hours → ganzer Tag blockieren
       if (!hasActiveWorkingHours) {
+        logger.debug(`🚫 Day ${dayOfWeek}: No active working hours - will gray out entire day`)
         events.push({
           id: `non-working-day-${dayOfWeek}-${dateStr}`,
           title: '',
@@ -451,6 +474,7 @@ const loadNonWorkingHoursBlocks = async (staffId: string, startDate: Date, endDa
       } 
       // FALL 2: Tag hat aktive Working Hours → nur die inaktiven Blöcke blockieren
       else {
+        logger.debug(`✅ Day ${dayOfWeek}: Has active working hours - will show only non-working blocks`)
         const inactiveBlocks = dayWorkingHours.filter(wh => wh.is_active === false)
         
         inactiveBlocks.forEach((block, index) => {
@@ -706,55 +730,25 @@ const loadStaffMeetings = async () => {
 // 1. Die verbesserte loadRegularAppointments Funktion:
 const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   try {
-    logger.debug('📅 Loading external busy times...')
+    logger.debug('📅 Loading external busy times via Backend API...')
     
-    const { currentUser: composableCurrentUser } = useCurrentUser()
-    const currentUserData = props.currentUser || composableCurrentUser.value
+    // External busy times via Backend API laden (Auth wird via HTTP-Only Cookies automatisch gehandhabt)
+    const response = await $fetch<{ success: boolean, busyTimes: any[], staffId: string }>('/api/staff/get-external-busy-times')
     
-    if (!currentUserData?.id) {
-      logger.debug('⚠️ No user data for external busy times')
+    if (!response.success || !response.busyTimes || response.busyTimes.length === 0) {
+      logger.debug('📅 No external busy times found via API')
       return []
     }
     
-    logger.debug('🔍 DEBUG: Loading external busy times for user:', { 
-      userId: currentUserData.id, 
-      tenantId: currentUserData.tenant_id 
-    })
+    const busyTimes = response.busyTimes
+    logger.debug('✅ Loaded external busy times via API:', busyTimes.length)
     
-    // Load external busy times für einen erweiterten Zeitraum (1 Jahr voraus)
-    const oneYearFromNow = new Date()
-    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1)
-    
-    const { data: busyTimes, error } = await supabase
-      .from('external_busy_times')
-      .select('*')
-      .eq('staff_id', currentUserData.id)
-      .eq('tenant_id', currentUserData.tenant_id)
-      .gte('end_time', new Date().toISOString()) // Ab jetzt
-      .lte('start_time', oneYearFromNow.toISOString()) // Bis 1 Jahr voraus
-      .order('start_time')
-    
-    if (error) {
-      console.error('Error loading external busy times:', error)
-      return []
-    }
-    
-    if (!busyTimes || busyTimes.length === 0) {
-      logger.debug('📅 No external busy times found')
-      return []
-    }
-    
-    logger.debug('✅ Loaded external busy times:', busyTimes.length)
-    
-    // Convert UTC times to local time for display (same as appointments)
+    // Convert UTC times to local time for display
     const parseUTCTime = (utcTimeString: string) => {
-      // Parse UTC ISO string and convert to local time
       let timeStr = utcTimeString
-      // Normalize format: convert space format to ISO if needed
       if (timeStr.includes(' ') && !timeStr.includes('T')) {
         timeStr = timeStr.replace(' ', 'T')
       }
-      // Ensure timezone suffix is properly formatted
       if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
         timeStr = timeStr.replace('+00', '+00:00')
       }
@@ -763,11 +757,9 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
       }
       
       const utcDate = new Date(timeStr)
-      // Use toLocaleString to convert UTC to local timezone (Europe/Zurich)
       const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
       const localDate = new Date(localDateStr)
       
-      // Create local date string for calendar display
       const localYear = localDate.getFullYear()
       const localMonth = String(localDate.getMonth() + 1).padStart(2, '0')
       const localDay = String(localDate.getDate()).padStart(2, '0')
@@ -778,22 +770,22 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     }
     
     // Convert to calendar events
-    const events: CalendarEvent[] = busyTimes.map(busy => {
+    const events: CalendarEvent[] = busyTimes.map((busy: any) => {
       return {
         id: `external-busy-${busy.id}`,
         title: busy.event_title || 'Privat',
         start: parseUTCTime(busy.start_time),
         end: parseUTCTime(busy.end_time),
-        backgroundColor: '#e9d5ff', // Helles Lila (durchklickbar)
+        backgroundColor: '#e9d5ff',
         borderColor: 'transparent',
         textColor: '#9333ea',
-        display: 'background', // Als Hintergrund, damit durchklickbar
+        display: 'background',
         classNames: ['external-busy-block'],
         extendedProps: {
           type: 'external_busy',
           external_event_id: busy.external_event_id,
           sync_source: busy.sync_source,
-          isClickThrough: true // Marker für durchklickbar
+          isClickThrough: true
         }
       }
     })
@@ -801,7 +793,7 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     return events
     
   } catch (error) {
-    console.error('Error loading external busy times:', error)
+    console.error('Error loading external busy times via API:', error)
     return []
   }
 }
@@ -812,11 +804,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
   try {
     logger.debug('🔄 Loading appointments via backend API...')
     
-    // Get auth session for API call
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('No authentication token found')
-    }
+    // Authentication is handled via HTTP-Only cookies (sent automatically)
 
     // Build query parameters
     const params = new URLSearchParams()
@@ -830,12 +818,10 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       adminStaffFilter: props.adminStaffFilter
     })
 
-    // Call backend API
+    // Call backend API (cookies sent automatically)
     const response = await $fetch(`/api/calendar/get-appointments?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'GET'
+      // No Authorization header needed - cookies are sent automatically
     }) as any
 
     if (!response?.success || !response?.data) {
@@ -1115,6 +1101,10 @@ const loadAppointments = async (forceReload = false) => {
     logger.debug('⚠️ Calendar update already in progress, skipping load')
     return
   }
+  
+  // ✅ Versuche currentUser zu bestimmen (Props oder Composable)
+  const staffId = getCurrentUserId()
+  logger.debug('🔍 loadAppointments staffId:', staffId)
 
   // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
   const calendarApi = calendar.value?.getApi()
@@ -1144,16 +1134,21 @@ const loadAppointments = async (forceReload = false) => {
     
     logger.debug('📅 Loading events for view range:', viewStart, 'to', viewEnd)
     
+    // ✅ LOAD WORKING HOURS - wird jetzt via Backend API in loadNonWorkingHoursBlocks geladen
+    logger.debug('🔒 Working hours will be loaded via Backend API (auth token based)')
+    
     // ✅ VIEWPORT-BASED: Pass date range to appointments loader
     logger.debug('⏱️ Performance: Starting parallel loads with viewport dates')
     const startTime = performance.now()
     
-    // Parallel laden (mit aktuellen View-Daten)
+    // Parallel laden - Backend APIs werden verwendet, daher kein staffId nötig
+    logger.debug('🔄 Starting parallel loads via Backend APIs')
     const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
       loadRegularAppointments(viewStart, viewEnd), // ← Pass viewport dates
-      loadExternalBusyTimes(),
-      loadNonWorkingHoursBlocks(props.currentUser?.id || '', viewStart, viewEnd),
+      loadExternalBusyTimes(), // ← Uses backend API with auth token
+      loadNonWorkingHoursBlocks(staffId, viewStart, viewEnd), // ← Uses backend API with auth token
     ])
+    logger.debug('📊 Loaded events:', { appointments: appointments.length, nonWorkingHours: nonWorkingHoursEvents.length, externalBusy: externalBusyEvents.length })
     
     const loadDuration = (performance.now() - startTime).toFixed(0)
     logger.debug(`⏱️ Performance: All loads completed in ${loadDuration}ms`)
@@ -2548,9 +2543,6 @@ onMounted(async () => {
   }
 })
 
-
-
-
 // Watch for admin staff filter changes
 watch(() => props.adminStaffFilter, async (newFilter) => {
   logger.debug('🔄 Admin staff filter changed:', newFilter)
@@ -2560,14 +2552,23 @@ watch(() => props.adminStaffFilter, async (newFilter) => {
   }
 }, { immediate: false })
 
-// ✅ Watch für User-Änderungen mit Cache-Invalidierung
+// ✅ Watch für User-Änderungen mit Cache-Invalidierung (Props)
 watch(() => props.currentUser, async (newUser, oldUser) => {
   if (newUser && newUser.id !== oldUser?.id) {
-    logger.debug('🔄 User changed, invalidating cache and reloading')
+    logger.debug('🔄 User changed via props, invalidating cache and reloading')
     invalidateCache()
     await loadAppointments(true)
   }
 }, { deep: true })
+
+// ✅ Watch für User-Änderungen vom Composable (z.B. nach Login)
+watch(() => composableCurrentUser.value?.id, async (newId, oldId) => {
+  if (newId && newId !== oldId && calendar.value) {
+    logger.debug('🔄 User ID available from composable, loading appointments:', newId)
+    invalidateCache()
+    await loadAppointments(true)
+  }
+})
 
 watch(calendarEvents, (newEvents) => {
   try {

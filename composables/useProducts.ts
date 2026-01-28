@@ -1,6 +1,8 @@
 // composables/useProducts.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 
 export interface Product {
   id: string
@@ -53,26 +55,36 @@ export const useProducts = () => {
     error.value = null
 
     try {
-      const supabase = getSupabase()
+      // Get tenant_id from auth store (avoids direct Supabase call)
+      const authStore = useAuthStore()
+      const tenantId = authStore.userProfile?.tenant_id
       
-      // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-      
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-      
-      if (userError) throw userError
-      if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
+      if (!tenantId) {
+        // Fallback: try to get from API
+        const userResponse = await $fetch('/api/auth/current-user') as any
+        if (!userResponse?.profile?.tenant_id) {
+          throw new Error('User has no tenant assigned')
+        }
+        
+        // Use API to get products (handles auth via cookies)
+        const response = await $fetch('/api/staff/get-products') as any
+        if (response?.data) {
+          products.value = (response.data || []).map((product: any) => ({
+            ...product,
+            price_chf: product.price_rappen / 100
+          }))
+          logger.debug('✅ Products loaded via API:', products.value.length)
+          return
+        }
+      }
 
+      // Direct Supabase query with tenant filter
+      const supabase = getSupabase()
       const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .eq('tenant_id', userData.tenant_id) // Filter by tenant
+        .eq('tenant_id', tenantId)
         .order('display_order')
         .order('name')
 
@@ -84,7 +96,7 @@ export const useProducts = () => {
         price_chf: product.price_rappen / 100
       }))
 
-      logger.debug('✅ Products loaded for tenant:', userData.tenant_id, products.value.length)
+      logger.debug('✅ Products loaded for tenant:', tenantId, products.value.length)
     } catch (err: any) {
       console.error('❌ Error loading products:', err)
       error.value = err.message
@@ -115,18 +127,13 @@ export const useProducts = () => {
     try {
       const supabase = getSupabase()
       
-      // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      // Get tenant_id from auth store (avoids direct Supabase auth call)
+      const authStore = useAuthStore()
+      const tenantId = authStore.userProfile?.tenant_id
       
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-      
-      if (userError) throw userError
-      if (!userData?.tenant_id) throw new Error('User has no tenant assigned')
+      if (!tenantId) {
+        throw new Error('User has no tenant assigned')
+      }
       
       const { data, error } = await supabase
         .from('product_sales')
@@ -148,7 +155,7 @@ export const useProducts = () => {
           )
         `)
         .eq('appointment_id', appointmentId)
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', tenantId)
 
       if (error) throw error
 
@@ -192,7 +199,6 @@ export const useProducts = () => {
     loadProducts,
     getProductById,
     calculateProductTotal,
-
     loadAppointmentProducts
   }
 }

@@ -515,7 +515,7 @@ const {
 const authStore = useAuthStore()
 const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
-const { currentTenant } = useTenant()
+const { currentTenant, loadTenant: loadTenantComposable } = useTenant()
 const mfaFlow = useMFAFlow()
 const supabase = getSupabase()
 
@@ -550,9 +550,8 @@ const handleLogin = async () => {
     // Check if MFA is required
     if (response?.requiresMFA) {
       logger.debug('🔐 MFA required for:', response.email)
-      // TODO: Implement MFA flow for [slug] page (currently only on /login)
-      loginError.value = 'Multi-Faktor-Authentifizierung erforderlich. Bitte verwenden Sie /login für MFA.'
-      return
+      await mfaFlow.handleMFARequired(response.email)
+      return // MFA-Screen wird jetzt angezeigt
     }
 
     // Check if login failed
@@ -565,32 +564,21 @@ const handleLogin = async () => {
 
     logger.debug('✅ Login successful')
 
-    // Set session from response
-    const supabase = getSupabase()
-    if (response.session) {
-      try {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: response.session.access_token,
-          refresh_token: response.session.refresh_token
-        })
-        if (sessionError) {
-          logger.debug('⚠️ setSession returned error:', sessionError.message)
-        } else {
-          logger.debug('✅ Supabase client session updated')
-        }
-      } catch (err) {
-        logger.debug('⚠️ setSession threw error:', err)
-      }
-    }
+    // Session tokens are now in HTTP-Only cookies (set by backend)
+    // No need to call setSession - cookies are automatically sent with requests
 
-    // Store session and user
+    // Store user in auth store
     authStore.user = response.user
 
-    // Wait for auth state update
-    await new Promise(resolve => setTimeout(resolve, 200))
-
-    // Load user profile
-    await authStore.fetchUserProfile(response.user.id)
+    // Use profile from login response (if available) or fetch via API
+    if (response.profile) {
+      authStore.userProfile = response.profile
+      authStore.userRole = response.profile.role || ''
+      logger.debug('✅ User profile from login response:', response.profile.email)
+    } else {
+      // Fallback: fetch profile via API
+      await authStore.fetchUserProfile(response.user.id)
+    }
 
     const user = authStore.userProfile
 
@@ -753,7 +741,11 @@ const handleLogout = async () => {
     
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     // Zur tenant-spezifischen Login-Seite weiterleiten
-    if (currentTenant.value?.slug) {
+    // Use tenantSlug from route instead of currentTenant (which might be cleared)
+    const slug = route.params.slug
+    if (slug) {
+      router.push(`/${slug}`)
+    } else if (currentTenant.value?.slug) {
       router.push(`/${currentTenant.value.slug}`)
     } else {
       router.push('/')
@@ -993,6 +985,15 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Failed to load tenant branding:', error)
+  }
+  
+  // Load currentTenant from URL slug so it's available for login
+  try {
+    await loadTenantComposable(tenantSlug.value)
+    logger.debug('✅ Loaded currentTenant from URL slug:', tenantSlug.value)
+  } catch (err: any) {
+    logger.debug('⚠️ Failed to load currentTenant:', err.message)
+    // Continue anyway - login will fail with proper error message
   }
   
   // ✅ PRÜFUNG: Session-Check mit Timeout - verhindert hängen bleiben

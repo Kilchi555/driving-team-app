@@ -583,37 +583,23 @@ const handleLogin = async () => {
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
     
-    // Session is now stored in httpOnly cookie (secure, XSS-protected)
-    // No need to store tokens in localStorage/sessionStorage anymore!
+    // Session tokens are now in HTTP-Only cookies (set by backend)
+    // No need to call setSession - cookies are automatically sent with requests
     logger.debug('🔐 Session stored in httpOnly cookie (secure)')
     
-    // Note: We still call setSession to update Supabase client state
-    const supabase = getSupabase()
-    if (response.session) {
-      try {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: response.session.access_token,
-          refresh_token: response.session.refresh_token
-        })
-        if (sessionError) {
-          logger.debug('⚠️ setSession returned error:', sessionError.message)
-        } else {
-          logger.debug('✅ Supabase client session updated')
-        }
-      } catch (err) {
-        logger.debug('⚠️ setSession threw error:', err)
-      }
-    }
-    
-    // Speichere Session und User
+    // Speichere User in Auth Store
     const authStore = useAuthStore()
     authStore.user = response.user
     
-    // Warte kurz für Auth-State Update
-    await new Promise(resolve => setTimeout(resolve, 200))
-    
-    // Lade User-Profil
-    await authStore.fetchUserProfile(response.user.id)
+    // Use profile from login response (if available) or fetch via API
+    if (response.profile) {
+      authStore.userProfile = response.profile
+      authStore.userRole = response.profile.role || ''
+      logger.debug('✅ User profile from login response:', response.profile.email)
+    } else {
+      // Fallback: fetch profile via API
+      await authStore.fetchUserProfile(response.user.id)
+    }
     
     const user = authStore.userProfile
     

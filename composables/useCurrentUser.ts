@@ -1,16 +1,17 @@
 // composables/useCurrentUser.ts
+// Uses API endpoint to get current user (tokens are in HTTP-Only cookies)
 import { ref, computed } from 'vue'
-import { toLocalTimeString } from '~/utils/dateUtils'
-import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 
 export const useCurrentUser = () => {
   const currentUser = ref<any>(null)
   const isLoading = ref(false)
   const userError = ref<string | null>(null)
-  const profileExists = ref(false) // 🆕 NEU: Profil-Status
+  const profileExists = ref(false)
 
   const fetchCurrentUser = async () => {
-    // Skip auf Login-Seite
+    // Skip on login page
     if (process.client && window.location.pathname === '/') {
       return
     }
@@ -18,49 +19,44 @@ export const useCurrentUser = () => {
     isLoading.value = true
     userError.value = null
     currentUser.value = null
-    profileExists.value = false // 🆕 Reset
+    profileExists.value = false
 
     try {
-      // Nutze Supabase-Modul Client
-      const supabase = getSupabase()
-      
-      // 1. Auth-User holen
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      const user = authData?.user
+      // First check auth store (might already have the user from login)
+      const authStore = useAuthStore()
+      if (authStore.userProfile) {
+        logger.debug('✅ User from auth store:', authStore.userProfile.email)
+        currentUser.value = {
+          ...authStore.userProfile,
+          auth_user_id: authStore.user?.id
+        }
+        profileExists.value = true
+        return
+      }
 
-      if (authError || !user?.email) {
+      // Fallback: fetch from API (uses HTTP-Only cookies)
+      const response = await $fetch('/api/auth/current-user') as any
+      
+      if (!response?.user) {
         userError.value = 'Nicht eingeloggt'
         return
       }
 
-      logger.debug('Auth-User gefunden:', user.email)
+      logger.debug('Auth-User gefunden via API:', response.user.email)
 
-      // 2. Database-User per E-Mail suchen
-      const { data: usersData, error: dbError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', user.email)
-        .eq('is_active', true)
-
-      if (dbError) {
-        console.error('Database Error:', dbError)
-        userError.value = `Database-Fehler: ${dbError.message}`
-        return
-      }
-
-      if (!usersData || usersData.length === 0) {
-        logger.debug('Business-User nicht gefunden für:', user.email)
+      if (!response.profile) {
+        logger.debug('Business-User nicht gefunden für:', response.user.email)
         profileExists.value = false
         currentUser.value = {
-          email: user.email,
-          auth_user_id: user.id
+          email: response.user.email,
+          auth_user_id: response.user.id
         }
         return
       }
 
-      // ✅ User gefunden
-      const userData = usersData[0]
-      logger.debug('✅ Business-User geladen:', userData)
+      // User found
+      const userData = response.profile
+      logger.debug('✅ Business-User geladen via API:', userData.email)
       
       if (!userData.tenant_id) {
         console.warn('⚠️ User nicht zugewiesen:', userData.email)
@@ -70,9 +66,9 @@ export const useCurrentUser = () => {
       
       currentUser.value = {
         ...userData,
-        auth_user_id: user.id
+        auth_user_id: response.user.id
       }
-      profileExists.value = true // 🆕 Profil existiert
+      profileExists.value = true
 
     } catch (err: any) {
       console.error('Unerwarteter Fehler:', err)
@@ -82,44 +78,34 @@ export const useCurrentUser = () => {
     }
   }
 
-  // 🆕 NEU: Funktion zum Erstellen des User-Profils
+  // Create user profile via API
   const createUserProfile = async (profileData: { company_name: string, role: string }) => {
     isLoading.value = true
     userError.value = null
 
     try {
-      const supabase = getSupabase()
-      const { data: authData } = await supabase.auth.getUser()
-      const user = authData?.user
-
-      if (!user?.email) {
+      // Get current user from API (uses HTTP-Only cookies)
+      const userResponse = await $fetch('/api/auth/current-user') as any
+      
+      if (!userResponse?.user?.email) {
         throw new Error('Kein authentifizierter Benutzer')
       }
 
-      // Erstelle neuen User in der Datenbank
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          email: user.email,
-          auth_user_id: user.id,
+      // Create profile via API endpoint
+      const data = await $fetch('/api/users/create-profile', {
+        method: 'POST',
+        body: {
           company_name: profileData.company_name,
-          role: profileData.role,
-          is_active: true,
-          created_at: toLocalTimeString(new Date)
-        })
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
+          role: profileData.role
+        }
+      }) as any
 
       logger.debug('✅ Profil erstellt:', data)
       
-      // Update lokaler State
+      // Update local state
       currentUser.value = {
         ...data,
-        auth_user_id: user.id
+        auth_user_id: userResponse.user.id
       }
       profileExists.value = true
 

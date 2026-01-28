@@ -1,39 +1,118 @@
 /**
  * Global fetch interceptor for handling API errors
- * Automatically logs out users when session expires (401 Unauthorized)
+ * Automatically redirects to login when session expires (401 Unauthorized)
+ * Shows user-friendly message instead of confusing error
  */
 
+import { useAuthStore } from '~/stores/auth'
+import { useUIStore } from '~/stores/ui'
+
+// Prevent multiple redirects happening at once
+let isRedirecting = false
+
 export default defineNuxtPlugin((nuxtApp) => {
-  const authStore = useAuthStore()
-
-  // Create intercepted fetch instance
+  // Create intercepted fetch instance with cookies enabled
+  // CRITICAL: ofetch will use this instance for all API calls
   const interceptedFetch = $fetch.create({
-    onError: async (error: any) => {
-      const status = error.response?.status || error.status
-
-      console.log('🔍 Fetch error interceptor triggered:', { status, message: error.message })
+    // Configure ofetch to send cookies with same-origin requests
+    // This is critical for httpOnly cookie authentication
+    fetchOptions: {
+      credentials: 'include' as const // Send cookies with every request
+    },
+    onResponseError: async ({ response, error }) => {
+      const status = response?.status
 
       // Handle 401 - Session expired or invalid token
-      if (status === 401) {
-        console.warn('⚠️ Session expired (401 Unauthorized) - Logging out user')
+      if (status === 401 && !isRedirecting) {
+        isRedirecting = true
+        console.warn('⚠️ Session expired (401) - Redirecting to login')
 
-        // Clear auth store
-        authStore.logout()
-
-        // Clear any stored session data
         try {
-          const supabase = useSupabaseClient()
-          await supabase.auth.signOut()
-        } catch (err) {
-          console.error('Error signing out from Supabase:', err)
+          const authStore = useAuthStore()
+          
+          // Get tenant slug before clearing state
+          let redirectPath = '/login'
+          const tenantId = authStore.userProfile?.tenant_id
+          
+          if (tenantId) {
+            // Try to get tenant slug for redirect
+            try {
+              const { data: tenant } = await $fetch(`/api/tenants/get-slug?id=${tenantId}`)
+              if (tenant?.slug) {
+                redirectPath = `/${tenant.slug}`
+              }
+            } catch {
+              // Fallback: try localStorage
+              const lastSlug = localStorage.getItem('last_tenant_slug')
+              if (lastSlug) {
+                redirectPath = `/${lastSlug}`
+              }
+            }
+          } else {
+            // No tenant in profile, try localStorage
+            const lastSlug = localStorage.getItem('last_tenant_slug')
+            if (lastSlug) {
+              redirectPath = `/${lastSlug}`
+            }
+          }
+
+          // Clear auth state
+          authStore.clearAuthState()
+
+          // Show user-friendly message
+          try {
+            const uiStore = useUIStore()
+            uiStore.addNotification({
+              type: 'warning',
+              title: 'Sitzung abgelaufen',
+              message: 'Bitte melden Sie sich erneut an.',
+              duration: 5000
+            })
+          } catch {
+            // UI store might not be available
+          }
+
+          // Call logout API to clear cookies
+          try {
+            await $fetch('/api/auth/logout', { method: 'POST' })
+          } catch {
+            // Ignore logout errors
+          }
+
+          // Redirect to login
+          await navigateTo(redirectPath)
+        } finally {
+          // Reset flag after a delay to prevent rapid re-triggers
+          setTimeout(() => {
+            isRedirecting = false
+          }, 2000)
         }
 
-        // Redirect to login
-        await navigateTo('/login')
+        // Don't re-throw - we've handled it gracefully
+        return
       }
 
-      // Re-throw the error so the caller still gets it
-      throw error
+      // Handle 403 - Forbidden (user doesn't have permission)
+      if (status === 403) {
+        console.warn('⚠️ Access denied (403)')
+        try {
+          const uiStore = useUIStore()
+          uiStore.addNotification({
+            type: 'error',
+            title: 'Zugriff verweigert',
+            message: 'Sie haben keine Berechtigung für diese Aktion.',
+            duration: 5000
+          })
+        } catch {
+          // UI store might not be available
+        }
+      }
+
+      // Re-throw other errors so callers can handle them
+      throw createError({
+        statusCode: status,
+        statusMessage: response?.statusText || 'Request failed'
+      })
     }
   })
 

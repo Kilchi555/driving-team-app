@@ -380,131 +380,27 @@ const loadAllCriteria = async () => {
   error.value = null
   
   try {
-    // Get current user's tenant_id first
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    // ✅ PRÜFE OB ES EINE THEORIELEKTION IST
+    // Check if it's a theory lesson
     const isTheoryLesson = props.appointment?.appointment_type === 'theory' || props.appointment?.event_type_code === 'theory'
     
-    let criteria: any[] = []
-    let cError: any = null
-
-    if (isTheoryLesson) {
-      logger.debug('📚 Loading evaluation criteria for theory lesson - category:', props.studentCategory)
-      // Bei Theorielektionen: Lade NUR Theorie-Kriterien
-      
-      // 1. Lade tenant-spezifische Theorie-Kriterien
-      const tenantTheoryResult = await supabase
-        .from('evaluation_criteria')
-        .select(`
-          id, 
-          name, 
-          description, 
-          is_active,
-          display_order,
-          category_id,
-          driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
-        `)
-        .eq('is_active', true)
-        .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-        .eq('evaluation_categories.is_theory', true)
-      
-      // 2. Lade globale Theorie-Kriterien
-      const globalTheoryResult = await supabase
-        .from('evaluation_criteria')
-        .select(`
-          id, 
-          name, 
-          description, 
-          is_active,
-          display_order,
-          category_id,
-          driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
-        `)
-        .eq('is_active', true)
-        .is('evaluation_categories.tenant_id', null)
-        .eq('evaluation_categories.is_theory', true)
-      
-      if (tenantTheoryResult.error) throw tenantTheoryResult.error
-      if (globalTheoryResult.error) throw globalTheoryResult.error
-      
-      // Kombiniere beide Listen
-      criteria = [...(tenantTheoryResult.data || []), ...(globalTheoryResult.data || [])]
-      
-      // Debug: Logge die ersten Kriterien um zu sehen was geladen wird
-      logger.debug('📚 Loaded criteria for theory lesson:', {
-        tenant: tenantTheoryResult.data?.length || 0,
-        global: globalTheoryResult.data?.length || 0,
-        total: criteria.length
-      })
-      logger.debug('📚 First criteria sample:', criteria[0])
-      logger.debug('📚 First criteria evaluation_categories:', criteria[0]?.evaluation_categories)
-      
-      // Lade Kategorie-Namen separat falls sie fehlen
-      const categoryIds = [...new Set(criteria.map(c => c.category_id))]
-      logger.debug('📚 Category IDs to load:', categoryIds)
-      
-      const { data: categoriesData } = await supabase
-        .from('evaluation_categories')
-        .select('id, name')
-        .in('id', categoryIds)
-      
-      logger.debug('📚 Loaded categories data:', categoriesData)
-      
-      // Füge Kategorie-Namen zu den Kriterien hinzu
-      criteria = criteria.map(criterion => {
-        logger.debug('📚 Processing criterion:', criterion.name, 'category_id:', criterion.category_id)
-        logger.debug('📚 Current evaluation_categories:', criterion.evaluation_categories)
-        
-        if (!criterion.evaluation_categories?.name) {
-          const category = categoriesData?.find(c => c.id === criterion.category_id)
-          logger.debug('📚 Found category for criterion:', category)
-          criterion.evaluation_categories = { 
-            name: category?.name || 'Unbekannte Kategorie',
-            ...criterion.evaluation_categories 
-          }
-        }
-        logger.debug('📚 Final evaluation_categories:', criterion.evaluation_categories)
-        return criterion
-      })
-    } else {
-      logger.debug('📚 Loading regular evaluation criteria for category:', props.studentCategory)
-      // Normale Lektion: Lade nur normale Fahrkategorie-Kriterien
-      const result = await supabase
-        .from('evaluation_criteria')
-        .select(`
-          id, 
-          name, 
-          description, 
-          is_active,
-          display_order,
-          category_id,
-          driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
-        `)
-        .eq('is_active', true)
-        .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-        .contains('driving_categories', [props.studentCategory])
-        .eq('evaluation_categories.is_theory', false) // Nur normale Kriterien
-      
-      criteria = result.data || []
-      cError = result.error
+    logger.debug('📚 Loading evaluation criteria via Backend API - isTheory:', isTheoryLesson)
+    
+    // Load criteria via backend API (uses auth token automatically)
+    const response = await $fetch<{ success: boolean, criteria: any[], tenantId: string, error?: string }>('/api/staff/get-evaluation-criteria', {
+      query: {
+        isTheoryLesson: isTheoryLesson.toString()
+      }
+    })
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Fehler beim Laden der Bewertungskriterien')
     }
-
-    if (cError) throw cError
-
+    
+    const criteria = response.criteria || []
+    const tenantId = response.tenantId
+    
+    logger.debug('✅ Loaded', criteria.length, 'evaluation criteria')
+    
     if (!criteria || criteria.length === 0) {
       const categoryType = isTheoryLesson ? 'Theorie' : props.studentCategory
       error.value = `Keine Bewertungskriterien gefunden für ${categoryType}`
@@ -520,7 +416,7 @@ const loadAllCriteria = async () => {
       .select('id, name, color, display_order, is_active')
       .in('id', categoryIds)
       .eq('is_active', true)
-      .eq('tenant_id', userProfile.tenant_id)
+      .eq('tenant_id', tenantId)
 
     if (catError) throw catError
 
