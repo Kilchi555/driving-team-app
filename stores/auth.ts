@@ -147,8 +147,8 @@ const isAdmin = computed(() => {
         return { requiresMFA: true, email: backendResponse.email }
       }
 
-      // Session tokens are now in HTTP-Only cookies (set by backend)
-      // We only need to update the frontend state - NO localStorage needed!
+      // Session tokens are in HTTP-Only cookies (for server API calls)
+      // AND returned in response (for client-side Supabase)
       if (backendResponse.user) {
         user.value = {
           id: backendResponse.user.id,
@@ -166,7 +166,43 @@ const isAdmin = computed(() => {
           await fetchUserProfile(backendResponse.user.id)
         }
         
-        logger.debug('✅ Login successful (session in HTTP-Only cookies)')
+        // ✅ KRITISCH: Setze die Supabase Client Session mit den echten Tokens
+        logger.debug('🔐 Backend session response:', {
+          hasAccessToken: !!backendResponse.session?.access_token,
+          hasRefreshToken: !!backendResponse.session?.refresh_token,
+          accessTokenLength: backendResponse.session?.access_token?.length || 0
+        })
+        
+        if (backendResponse.session?.access_token && backendResponse.session?.refresh_token) {
+          try {
+            const supabaseClient = getSupabase()
+            if (supabaseClient) {
+              const { error: sessionError } = await supabaseClient.auth.setSession({
+                access_token: backendResponse.session.access_token,
+                refresh_token: backendResponse.session.refresh_token
+              })
+              
+              if (sessionError) {
+                logger.debug('⚠️ Error setting Supabase session:', sessionError)
+              } else {
+                logger.debug('✅ Supabase client session set successfully')
+                
+                // Verify session was set
+                const { data: verifySession } = await supabaseClient.auth.getSession()
+                const { data: verifyUser } = await supabaseClient.auth.getUser()
+                logger.debug('🔐 Session verification:', {
+                  hasSession: !!verifySession?.session,
+                  hasUser: !!verifyUser?.user,
+                  userId: verifyUser?.user?.id || 'none'
+                })
+              }
+            }
+          } catch (err) {
+            logger.debug('⚠️ Could not set Supabase session:', err)
+          }
+        }
+        
+        logger.debug('✅ Login successful (session in HTTP-Only cookies + Supabase client)')
         return true
       }
 

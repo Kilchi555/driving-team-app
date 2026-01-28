@@ -63,6 +63,11 @@ export interface PersistentSession {
     last_name?: string
     auth_user_id: string
   }
+  // Supabase session tokens for client-side queries
+  tokens?: {
+    access_token: string
+    refresh_token: string
+  }
   timestamp: number
   expiresIn: number // 24 hours = 86400000 ms
 }
