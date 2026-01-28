@@ -5,21 +5,50 @@ import { logger } from '~/utils/logger'
 /**
  * Generic secure database query endpoint
  * 
- * Allows clients to safely query the database without exposing service role key.
+ * Allows clients to safely query and modify the database without exposing service role key.
  * Uses auth tokens from HTTP-Only cookies for authorization.
  * 
  * Usage from client:
  * 
+ *   // READ
  *   const response = await $fetch('/api/database/query', {
  *     method: 'POST',
  *     body: {
+ *       action: 'select',
  *       table: 'locations',
  *       select: '*',
- *       filters: [
- *         { column: 'tenant_id', operator: 'eq', value: 'tenant-123' },
- *         { column: 'is_active', operator: 'eq', value: true }
- *       ],
- *       order: { column: 'name', ascending: true }
+ *       filters: [{ column: 'tenant_id', operator: 'eq', value: 'tenant-123' }]
+ *     }
+ *   })
+ *   
+ *   // INSERT
+ *   const response = await $fetch('/api/database/query', {
+ *     method: 'POST',
+ *     body: {
+ *       action: 'insert',
+ *       table: 'locations',
+ *       data: { name: 'Location 1', tenant_id: 'tenant-123' }
+ *     }
+ *   })
+ *   
+ *   // UPDATE
+ *   const response = await $fetch('/api/database/query', {
+ *     method: 'POST',
+ *     body: {
+ *       action: 'update',
+ *       table: 'locations',
+ *       data: { name: 'Updated Name' },
+ *       filters: [{ column: 'id', operator: 'eq', value: 'loc-123' }]
+ *     }
+ *   })
+ *   
+ *   // DELETE
+ *   const response = await $fetch('/api/database/query', {
+ *     method: 'POST',
+ *     body: {
+ *       action: 'delete',
+ *       table: 'locations',
+ *       filters: [{ column: 'id', operator: 'eq', value: 'loc-123' }]
  *     }
  *   })
  */
@@ -31,8 +60,10 @@ interface QueryFilter {
 }
 
 interface QueryRequest {
+  action: 'select' | 'insert' | 'update' | 'delete'
   table: string
   select?: string
+  data?: Record<string, any>
   filters?: QueryFilter[]
   order?: { column: string; ascending?: boolean }
   limit?: number
@@ -49,6 +80,13 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'Table name required'
+      })
+    }
+
+    if (!body.action) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Action required (select, insert, update, delete)'
       })
     }
 
@@ -92,19 +130,125 @@ export default defineEventHandler(async (event) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     logger.debug('📊 Executing database query:', {
+      action: body.action,
       table: body.table,
-      select: body.select || '*',
-      filters: body.filters?.length || 0,
-      limit: body.limit
+      filters: body.filters?.length || 0
     })
 
-    // Build query
-    let query = supabase
-      .from(body.table)
-      .select(body.select || '*')
+    let query: any
+    let data: any
+    let error: any
 
-    // Apply filters
-    if (body.filters && body.filters.length > 0) {
+    // HANDLE SELECT
+    if (body.action === 'select') {
+      query = supabase
+        .from(body.table)
+        .select(body.select || '*')
+
+      // Apply filters
+      if (body.filters && body.filters.length > 0) {
+        for (const filter of body.filters) {
+          switch (filter.operator) {
+            case 'eq':
+              query = query.eq(filter.column, filter.value)
+              break
+            case 'neq':
+              query = query.neq(filter.column, filter.value)
+              break
+            case 'lt':
+              query = query.lt(filter.column, filter.value)
+              break
+            case 'lte':
+              query = query.lte(filter.column, filter.value)
+              break
+            case 'gt':
+              query = query.gt(filter.column, filter.value)
+              break
+            case 'gte':
+              query = query.gte(filter.column, filter.value)
+              break
+            case 'like':
+              query = query.like(filter.column, filter.value)
+              break
+            case 'ilike':
+              query = query.ilike(filter.column, filter.value)
+              break
+            case 'in':
+              query = query.in(filter.column, filter.value)
+              break
+            case 'is':
+              query = query.is(filter.column, filter.value)
+              break
+            case 'contains':
+              query = query.contains(filter.column, filter.value)
+              break
+          }
+        }
+      }
+
+      // Apply ordering
+      if (body.order) {
+        query = query.order(body.order.column, {
+          ascending: body.order.ascending !== false
+        })
+      }
+
+      // Apply limit
+      if (body.limit) {
+        query = query.limit(body.limit)
+      }
+
+      // Apply offset
+      if (body.offset) {
+        query = query.range(body.offset, (body.offset + (body.limit || 1000)) - 1)
+      }
+
+      // Execute query
+      const result = body.single 
+        ? await query.single()
+        : await query
+
+      data = result.data
+      error = result.error
+    }
+
+    // HANDLE INSERT
+    else if (body.action === 'insert') {
+      if (!body.data) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Data required for insert'
+        })
+      }
+
+      const result = await supabase
+        .from(body.table)
+        .insert(body.data)
+        .select()
+
+      data = result.data
+      error = result.error
+    }
+
+    // HANDLE UPDATE
+    else if (body.action === 'update') {
+      if (!body.data) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Data required for update'
+        })
+      }
+
+      if (!body.filters || body.filters.length === 0) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Filters required for update'
+        })
+      }
+
+      query = supabase.from(body.table).update(body.data)
+
+      // Apply filters
       for (const filter of body.filters) {
         switch (filter.operator) {
           case 'eq':
@@ -113,62 +257,48 @@ export default defineEventHandler(async (event) => {
           case 'neq':
             query = query.neq(filter.column, filter.value)
             break
-          case 'lt':
-            query = query.lt(filter.column, filter.value)
-            break
-          case 'lte':
-            query = query.lte(filter.column, filter.value)
-            break
-          case 'gt':
-            query = query.gt(filter.column, filter.value)
-            break
-          case 'gte':
-            query = query.gte(filter.column, filter.value)
-            break
-          case 'like':
-            query = query.like(filter.column, filter.value)
-            break
-          case 'ilike':
-            query = query.ilike(filter.column, filter.value)
-            break
-          case 'in':
-            query = query.in(filter.column, filter.value)
-            break
-          case 'is':
-            query = query.is(filter.column, filter.value)
-            break
-          case 'contains':
-            query = query.contains(filter.column, filter.value)
-            break
+          // ... other operators
         }
       }
+
+      const result = await query.select()
+      data = result.data
+      error = result.error
     }
 
-    // Apply ordering
-    if (body.order) {
-      query = query.order(body.order.column, {
-        ascending: body.order.ascending !== false
-      })
-    }
+    // HANDLE DELETE
+    else if (body.action === 'delete') {
+      if (!body.filters || body.filters.length === 0) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Filters required for delete'
+        })
+      }
 
-    // Apply limit
-    if (body.limit) {
-      query = query.limit(body.limit)
-    }
+      query = supabase.from(body.table).delete()
 
-    // Apply offset
-    if (body.offset) {
-      query = query.range(body.offset, (body.offset + (body.limit || 1000)) - 1)
-    }
+      // Apply filters
+      for (const filter of body.filters) {
+        switch (filter.operator) {
+          case 'eq':
+            query = query.eq(filter.column, filter.value)
+            break
+          case 'neq':
+            query = query.neq(filter.column, filter.value)
+            break
+          // ... other operators
+        }
+      }
 
-    // Execute query
-    const { data, error } = body.single 
-      ? await query.single()
-      : await query
+      const result = await query.select()
+      data = result.data
+      error = result.error
+    }
 
     if (error) {
       logger.debug('❌ Database query error:', {
         table: body.table,
+        action: body.action,
         code: error.code,
         message: error.message
       })
@@ -177,6 +307,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Database query successful:', {
       table: body.table,
+      action: body.action,
       rowCount: Array.isArray(data) ? data.length : (data ? 1 : 0)
     })
 

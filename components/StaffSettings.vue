@@ -975,11 +975,10 @@ const loadExamLocations = async () => {
   error.value = null;
 
   try {
-    const supabase = getSupabase();
     const staffId = props.currentUser.id;
+    const { query } = useDatabaseQuery()
 
     // 1. Alle verfügbaren globalen Prüfungsstandorte laden (tenant_id = null, staff_ids = empty/null)
-    const { query } = useDatabaseQuery()
     const allLocations = await query({
       table: 'locations',
       select: '*',
@@ -993,7 +992,6 @@ const loadExamLocations = async () => {
     availableExamLocations.value = allLocations || [];
 
     // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
-    const { query } = useDatabaseQuery()
     const userTenantId = props.currentUser.tenant_id;
 
     const staffExamLocationsData = await query({
@@ -1050,36 +1048,38 @@ const toggleExamLocation = async (location: any) => {
   error.value = null;
 
   try {
-    const supabase = getSupabase();
+    const { query } = useDatabaseQuery();
     const staffId = props.currentUser.id;
 
     // Wir identifizieren einen Standort nicht nur über die ID, sondern auch über Name & Adresse
-    // Dies ist nötig, da wir für die Präferenzen neue Zeilen erstellen.
-    const { data: existingPreference, error: fetchError } = await supabase
-      .from('locations')
-      .select('id')
-      .eq('staff_id', staffId)
-      .eq('name', location.name)
-      .eq('address', location.address)
-      .eq('location_type', 'exam')
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
+    const existingPreference = await query({
+      action: 'select',
+      table: 'locations',
+      select: 'id',
+      filters: [
+        { column: 'staff_id', operator: 'eq', value: staffId },
+        { column: 'name', operator: 'eq', value: location.name },
+        { column: 'address', operator: 'eq', value: location.address },
+        { column: 'location_type', operator: 'eq', value: 'exam' }
+      ],
+      single: true
+    });
 
     if (existingPreference) {
       // Wenn die Präferenz-Zeile existiert, löschen wir sie
-      const { error: deleteError } = await supabase
-        .from('locations')
-        .delete()
-        .eq('id', existingPreference.id);
+      await query({
+        action: 'delete',
+        table: 'locations',
+        filters: [{ column: 'id', operator: 'eq', value: existingPreference.id }]
+      });
 
-      if (deleteError) throw deleteError;
       logger.debug('✅ Prüfungsstandort-Präferenz gelöscht für:', location.name);
     } else {
       // Wenn keine Präferenz-Zeile existiert, erstellen wir eine neue
-      const { error: insertError } = await supabase
-        .from('locations')
-        .insert({
+      await query({
+        action: 'insert',
+        table: 'locations',
+        data: {
           staff_id: staffId,
           name: location.name,
           address: location.address,
@@ -1087,11 +1087,10 @@ const toggleExamLocation = async (location: any) => {
           is_active: true,
           city: location.city,
           canton: location.canton,
-          postal_code: location.postal_code,
-          // Füge hier weitere relevante Spalten aus dem globalen Standort hinzu
-        });
+          postal_code: location.postal_code
+        }
+      });
 
-      if (insertError) throw insertError;
       logger.debug('✅ Neue Prüfungsstandort-Präferenz erstellt für:', location.name);
     }
 
@@ -1156,19 +1155,20 @@ const removeExamLocation = async (location: any) => {
   error.value = null
 
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     const staffId = props.currentUser.id
 
     // Remove from database
-    const { error: deleteError } = await supabase
-      .from('locations')
-      .delete()
-      .eq('staff_id', staffId)
-      .eq('name', location.name)
-      .eq('address', location.address)
-      .eq('location_type', 'exam')
-
-    if (deleteError) throw deleteError
+    await query({
+      action: 'delete',
+      table: 'locations',
+      filters: [
+        { column: 'staff_id', operator: 'eq', value: staffId },
+        { column: 'name', operator: 'eq', value: location.name },
+        { column: 'address', operator: 'eq', value: location.address },
+        { column: 'location_type', operator: 'eq', value: 'exam' }
+      ]
+    })
 
     logger.debug('✅ Prüfungsstandort entfernt:', location.name)
     
@@ -2100,15 +2100,14 @@ const clearWorkingHours = async () => {
   
   isSavingWorkingHours.value = true
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     
     // Delete all working hours for this staff
-    const { error } = await supabase
-      .from('staff_working_hours')
-      .delete()
-      .eq('staff_id', props.currentUser.id)
-    
-    if (error) throw error
+    await query({
+      action: 'delete',
+      table: 'staff_working_hours',
+      filters: [{ column: 'staff_id', operator: 'eq', value: props.currentUser.id }]
+    })
     
     // Reload and reinitialize form
     await loadWorkingHours(props.currentUser.id)
