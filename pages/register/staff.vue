@@ -441,48 +441,39 @@ const loadInvitation = async () => {
       return
     }
 
-    // Fetch invitation from database (public access via RLS policy)
-    const { data, error: fetchError } = await supabase
-      .from('staff_invitations')
-      .select('*')
-      .eq('invitation_token', token)
-      .eq('status', 'pending')
-      .single()
+    // Fetch invitation from API
+    const response = await $fetch('/api/staff/get-invitation', {
+      method: 'POST',
+      body: { token }
+    }).catch((err: any) => {
+      const statusCode = err.status
+      if (statusCode === 404) {
+        error.value = 'Ungültige oder abgelaufene Einladung'
+      } else if (statusCode === 410) {
+        error.value = 'Diese Einladung ist abgelaufen'
+      } else {
+        error.value = 'Fehler beim Laden der Einladung'
+      }
+      throw err
+    }) as any
 
-    if (fetchError || !data) {
-      error.value = 'Ungültige oder abgelaufene Einladung'
-      return
+    if (!response?.success) {
+      throw new Error('Invitation fetch failed')
     }
 
-    // Check if expired
-    if (new Date(data.expires_at) < new Date()) {
-      error.value = 'Diese Einladung ist abgelaufen'
-      return
-    }
+    const invitation = response.invitation
+    const tenant = response.tenant
+    const categories = response.categories || []
 
-    invitation.value = data
     // Pre-fill editable fields from invitation
-    firstName.value = data.first_name || ''
-    lastName.value = data.last_name || ''
-    email.value = data.email || ''
-    phone.value = data.phone || ''
-    logger.debug('✅ Invitation loaded:', data)
+    firstName.value = invitation.first_name || ''
+    lastName.value = invitation.last_name || ''
+    email.value = invitation.email || ''
+    phone.value = invitation.phone || ''
+    logger.debug('✅ Invitation loaded:', invitation)
 
-    // Load categories if business type is driving_school
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('business_type')
-      .eq('id', data.tenant_id)
-      .single()
-    if (tenant?.business_type === 'driving_school') {
-      const { data: cats } = await supabase
-        .from('categories')
-        .select('code, name')
-        .eq('tenant_id', data.tenant_id)
-        .eq('is_active', true)
-        .order('code')
-      availableCategories.value = cats || []
-    }
+    // Set available categories
+    availableCategories.value = categories
 
   } catch (err: any) {
     console.error('Error loading invitation:', err)

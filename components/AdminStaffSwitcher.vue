@@ -50,8 +50,9 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { logger } from '~/utils/logger'
 
 interface Staff {
   id: string
@@ -104,16 +105,10 @@ const loadStaffList = async () => {
 
   isLoading.value = true
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
+    // Get current user's tenant_id from props
+    const tenantId = currentUser.value?.tenant_id
     
     if (!tenantId) {
       throw new Error('User has no tenant assigned')
@@ -121,15 +116,18 @@ const loadStaffList = async () => {
 
     logger.debug('🔍 AdminStaffSwitcher - Current tenant_id:', tenantId)
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email')
-      .eq('role', 'staff')
-      .eq('is_active', true)
-      .eq('tenant_id', tenantId) // Filter by current tenant
-      .order('first_name')
+    const data = await query({
+      action: 'select',
+      table: 'users',
+      select: 'id, first_name, last_name, email',
+      filters: [
+        { column: 'role', operator: 'eq', value: 'staff' },
+        { column: 'is_active', operator: 'eq', value: true },
+        { column: 'tenant_id', operator: 'eq', value: tenantId }
+      ],
+      order: { column: 'first_name', ascending: true }
+    })
 
-    if (error) throw error
     staffList.value = data || []
     logger.debug('✅ Staff list loaded for tenant:', staffList.value.length, 'staff members')
   } catch (err) {
