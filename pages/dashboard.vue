@@ -17,7 +17,9 @@ import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 // ✅ Protect this page - require authentication
-defineRouteMiddleware('auth')
+definePageMeta({
+  middleware: 'auth'
+})
 
 
 interface CalendarApi {
