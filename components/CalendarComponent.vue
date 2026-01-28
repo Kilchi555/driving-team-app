@@ -380,20 +380,12 @@ const emit = defineEmits(['view-updated', 'appointment-changed'])
 // ✅ NEW FUNCTION: Load event types and their colors from DB
 const loadEventTypeColors = async () => {
   try {
-    const supabase = getSupabase()
-    const { data: eventTypes, error } = await supabase
-      .from('event_types')
-      .select('code, default_color')
-      .eq('is_active', true)
+    // Use secure API to load event types (handles auth server-side)
+    const response = await $fetch('/api/staff/get-event-types') as any
     
-    if (error) {
-      logger.warn('⚠️ Failed to load event type colors:', error)
-      return
-    }
-    
-    if (eventTypes && eventTypes.length > 0) {
+    if (response?.data && Array.isArray(response.data)) {
       const colorsMap: Record<string, string> = {}
-      eventTypes.forEach(et => {
+      response.data.forEach((et: any) => {
         if (et.code && et.default_color) {
           colorsMap[et.code] = et.default_color
         }
