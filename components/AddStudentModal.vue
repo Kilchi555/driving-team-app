@@ -335,17 +335,14 @@ const loadStaffMembers = async () => {
   if (props.currentUser?.role !== 'admin') return
 
   try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('role', 'staff')
-      .eq('is_active', true)
-      .order('first_name')
-
-    if (error) throw error
-    staffMembers.value = data || []
-
+    const response = await $fetch('/api/staff/get-staff-list') as any
+    if (response?.data) {
+      staffMembers.value = response.data.map((s: any) => ({
+        id: s.id,
+        first_name: s.first_name,
+        last_name: s.last_name
+      }))
+    }
   } catch (error) {
     console.error('Fehler beim Laden der Fahrlehrer:', error)
   }
@@ -356,30 +353,22 @@ const loadCategories = async () => {
 
   isLoadingCategories.value = true
   try {
-    const supabase = getSupabase()
-    
-    // Get user's tenant_id
-    const { data: userProfile, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', props.currentUser.id)
-      .single()
-
-    if (userError || !userProfile?.tenant_id) {
-      console.error('Could not get tenant_id:', userError)
+    // Use auth context tenant or get from profile
+    const authStore = useAuthStore()
+    if (!authStore.userProfile?.tenant_id) {
+      console.error('No tenant_id in user profile')
       return
     }
 
-    // Load categories for this tenant
-    const { data, error } = await supabase
-      .from('categories')
-      .select('code, name, is_active')
-      .eq('tenant_id', userProfile.tenant_id)
-      .eq('is_active', true)
-      .order('code')
-
-    if (error) throw error
-    availableCategories.value = data || []
+    // Load categories via secure API (handles auth server-side)
+    const response = await $fetch('/api/staff/get-categories') as any
+    if (response?.data) {
+      availableCategories.value = response.data.map((c: any) => ({
+        code: c.code,
+        name: c.name,
+        is_active: c.is_active
+      }))
+    }
 
   } catch (error) {
     console.error('Fehler beim Laden der Kategorien:', error)

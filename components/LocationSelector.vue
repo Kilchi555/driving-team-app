@@ -323,66 +323,31 @@ const clearManualLocation = () => {
 
 const loadStandardLocations = async () => {
   try {
-    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    let query = supabase
-      .from('locations')
-      .select('id, name, address, latitude, longitude, location_type, staff_ids')
-      .eq('location_type', 'standard')
-      .eq('is_active', true)
-      .order('name')
-
-    // ✅ TENANT FILTER: tenant_id ist verfügbar
-    query = query.eq('tenant_id', userProfile.tenant_id)
-    logger.debug('✅ Using tenant_id filter for locations:', userProfile.tenant_id)
-
-    // ✅ ADMIN & STAFF FILTER: Admins sehen alle Tenant-Locations, Staff nur ihre eigenen
-    if (props.currentStaffId) {
-      // Staff: Lade alle Tenant-Locations (zeige nur die, wo der Staff registriert ist)
-      logger.debug('🔍 Loading tenant locations for staff:', props.currentStaffId)
-    } else {
-      // Admin oder kein Staff: Lade ALLE Tenant-Locations
-      logger.debug('🔍 Loading ALL tenant locations (admin access or no staff specified)')
+    // Use secure API to load standard locations (handles auth server-side)
+    const response = await $fetch('/api/staff/get-locations', {
+      query: {
+        location_type: 'standard'
+      }
+    }) as any
+    
+    if (response?.data) {
+      let filteredLocations = response.data.map((item: any) => ({
+        ...item,
+        address: item.address || '',
+        source: 'standard' as const
+      }))
+      
+      // Filter locations: if staff is specified, only show locations where staff is registered
+      if (props.currentStaffId) {
+        filteredLocations = filteredLocations.filter((l: any) => {
+          const staffIds = l.staff_ids || []
+          return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
+        })
+      }
+      
+      standardLocations.value = filteredLocations
+      logger.debug('✅ Standard locations loaded:', filteredLocations.length)
     }
-
-    const { data, error: fetchError } = await query
-
-    if (fetchError) throw fetchError
-    
-    // Filter locations: if staff is specified, only show locations where staff is registered
-    let filteredLocations = data || []
-    if (props.currentStaffId) {
-      filteredLocations = filteredLocations.filter(l => {
-        const staffIds = l.staff_ids || []
-        return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
-      })
-    }
-    
-    standardLocations.value = filteredLocations.map(item => ({
-      ...item,
-      address: item.address || '',
-      source: 'standard' as const
-    }))
-    
-    logger.debug('✅ Standard locations loaded:', data?.length)
-    logger.debug('🔍 LocationSelector Debug:', {
-      tenantId: userProfile.tenant_id,
-      currentStaffId: props.currentStaffId,
-      isAdmin: !props.currentStaffId,
-      locationsCount: data?.length,
-      locations: data?.map(l => ({ id: l.id, name: l.name, staff_ids: l.staff_ids, address: l.address }))
-    })
     
   } catch (err: any) {
     console.error('❌ Error loading standard locations:', err)
@@ -402,42 +367,21 @@ const loadLastUsedLocation = async (userId: string, staffId: string): Promise<an
       return null
     }
     
-    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    // Use secure API to load last used location (handles auth server-side)
+    const response = await $fetch('/api/staff/get-last-used-location', {
+      query: {
+        user_id: userId,
+        staff_id: staffId
+      }
+    }) as any
     
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('location_id, custom_location_name, custom_location_address')
-      .eq('user_id', userId)
-      .eq('staff_id', staffId)
-      .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
-      .eq('status', 'completed')
-      .order('start_time', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    
-    if (error) {
-      logger.debug('❌ Error loading appointments:', error)
-      return null
+    if (response?.data) {
+      logger.debug('✅ Last used location data:', response.data)
+      return response.data
     }
     
-    if (!data) {
-      logger.debug('ℹ️ No completed appointments found')
-      return null
-    }
-    
-    logger.debug('✅ Last used location data:', data)
-    return data
+    logger.debug('ℹ️ No completed appointments found')
+    return null
     
   } catch (err: any) {
     logger.debug('❌ Error loading last location:', err)
@@ -454,38 +398,24 @@ const loadStudentPickupLocations = async (studentId: string) => {
   try {
     logger.debug('🔍 Loading student pickup locations for:', studentId)
     
-    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    // Use secure API to load pickup locations (handles auth server-side)
+    const response = await $fetch('/api/staff/get-locations', {
+      query: {
+        location_type: 'pickup',
+        user_id: studentId
+      }
+    }) as any
     
-    // 1. Lade alle Pickup-Locations des Schülers mit Tenant-Filter
-    const { data, error: fetchError } = await supabase
-      .from('locations')
-      .select('id, name, address, latitude, longitude, location_type, user_id, google_place_id')
-      .eq('location_type', 'pickup')
-      .eq('user_id', studentId)
-      .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
-      .eq('is_active', true)
-      .order('name')
-
-    if (fetchError) throw fetchError
-    
-    studentPickupLocations.value = (data || []).map(item => ({
-      ...item,
-      address: item.address || '',
-      source: 'pickup' as const
-    }))
-    
-    logger.debug('✅ Student pickup locations loaded:', data?.length)
+    if (response?.data) {
+      studentPickupLocations.value = response.data.map((item: any) => ({
+        ...item,
+        address: item.address || '',
+        source: 'pickup' as const
+      }))
+      logger.debug('✅ Student pickup locations loaded:', response.data.length)
+    } else {
+      studentPickupLocations.value = []
+    }
     
     // 2. Lade letzten verwendeten Standort nur wenn staffId vorhanden UND keine Location bereits gesetzt ist
     if (props.currentStaffId && !props.modelValue && !props.disableAutoSelection) {
