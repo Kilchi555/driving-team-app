@@ -132,28 +132,25 @@ const availableTimeSlots = computed(() => {
 
 // Methods
 export const useStaffWorkingHours = () => {
-  const supabase = getSupabase()
-
   // Arbeitszeiten laden
   const loadWorkingHours = async (staffId: string) => {
     isLoading.value = true
     error.value = null
     
     try {
-      // RLS Policy sollte automatisch filtern, aber wir können trotzdem explizit filtern
-      const { data, error: fetchError } = await supabase
-        .from('staff_working_hours')
-        .select(`
-          *,
-          users!inner(auth_user_id, first_name, last_name)
-        `)
-        .eq('staff_id', staffId)
-        .order('day_of_week')
+      // Fetch from API instead of direct Supabase
+      const data = await $fetch('/api/staff/working-hours', {
+        method: 'POST',
+        body: {
+          action: 'list',
+          staffId
+        }
+      }) as any
 
-      if (fetchError) throw fetchError
+      if (!data?.success) throw new Error('Failed to load working hours')
       
       // Konvertiere UTC-Zeiten zu Lokalzeit für die Anzeige
-      workingHours.value = (data || []).map(wh => ({
+      workingHours.value = (data.data || []).map((wh: any) => ({
         ...wh,
         start_time: utcTimeToLocal(wh.start_time),
         end_time: utcTimeToLocal(wh.end_time)
@@ -168,38 +165,37 @@ export const useStaffWorkingHours = () => {
     }
   }
 
-  // Arbeitszeit speichern/aktualisieren - erstellt automatisch Nicht-Arbeitszeiten
+  // Arbeitszeit speichern/aktualisieren
   const saveWorkingHour = async (staffId: string, workingHour: WorkingHourForm) => {
     try {
       logger.debug('💾 Saving working hour:', { staffId, workingHour })
       
-      // Get tenant_id for this staff
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
+      // Convert to UTC for storage
+      const utcStartTime = localTimeToUtc(workingHour.start_time)
+      const utcEndTime = localTimeToUtc(workingHour.end_time)
       
-      if (userError || !userData?.tenant_id) {
-        console.error('❌ Could not get tenant_id:', userError)
-        throw new Error('Tenant-ID nicht gefunden')
-      }
+      // Save via API
+      const response = await $fetch('/api/staff/working-hours', {
+        method: 'POST',
+        body: {
+          action: 'save',
+          staffId,
+          dayOfWeek: workingHour.day_of_week,
+          startTime: workingHour.is_active ? utcStartTime : null,
+          endTime: workingHour.is_active ? utcEndTime : null,
+          isActive: workingHour.is_active
+        }
+      }) as any
+
+      if (!response?.success) throw new Error('Failed to save working hours')
       
-      // Erst alle bestehenden Einträge für diesen Tag löschen
-      // WICHTIG: .select() hinzufügen um zu prüfen ob wirklich gelöscht wurde!
-      const { data: deletedRows, error: deleteError } = await supabase
-        .from('staff_working_hours')
-        .delete()
-        .eq('staff_id', staffId)
-        .eq('day_of_week', workingHour.day_of_week)
-        .select()
+      logger.debug('✅ Working hour saved')
       
-      if (deleteError) {
-        console.error('❌ Error deleting existing hours:', deleteError)
-        throw deleteError
-      }
-      
-      logger.debug(`🗑️ Deleted ${deletedRows?.length || 0} existing entries for day ${workingHour.day_of_week}`)
+    } catch (err: any) {
+      console.error('❌ Error saving working hour:', err)
+      throw err
+    }
+  }
       
       const entries = []
       
@@ -274,8 +270,8 @@ export const useStaffWorkingHours = () => {
       }))
       workingHours.value.push(...localData)
       
-      logger.debug('✅ Working hours saved:', insertData.length, 'entries')
-      return localData
+      logger.debug('✅ Working hour saved')
+      return response.data
       
     } catch (err: any) {
       console.error('❌ Error saving working hour:', err)
@@ -288,19 +284,34 @@ export const useStaffWorkingHours = () => {
     try {
       logger.debug('💾 Saving working day with multiple blocks:', { staffId, workingDay })
       
-      // Get tenant_id for this staff
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
+      // Convert to UTC for storage
+      const utcBlocks = (workingDay.blocks || []).map(block => ({
+        ...block,
+        start_time: localTimeToUtc(block.start_time),
+        end_time: localTimeToUtc(block.end_time)
+      }))
       
-      if (userError || !userData?.tenant_id) {
-        console.error('❌ Could not get tenant_id:', userError)
-        throw new Error('Tenant-ID nicht gefunden')
-      }
+      // Save via API
+      const response = await $fetch('/api/staff/working-hours', {
+        method: 'POST',
+        body: {
+          action: 'save_day',
+          staffId,
+          dayOfWeek: workingDay.day_of_week,
+          blocks: utcBlocks
+        }
+      }) as any
+
+      if (!response?.success) throw new Error('Failed to save working day')
       
-      // Erst alle bestehenden Einträge für diesen Tag löschen
+      logger.debug('✅ Working day saved')
+      return response.data
+      
+    } catch (err: any) {
+      console.error('❌ Error saving working day:', err)
+      throw err
+    }
+  }
       // WICHTIG: .select() hinzufügen um zu prüfen ob wirklich gelöscht wurde!
       const { data: deletedRows, error: deleteError } = await supabase
         .from('staff_working_hours')
