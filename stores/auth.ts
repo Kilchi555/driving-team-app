@@ -61,76 +61,64 @@ const isAdmin = computed(() => {
   const initializeAuthStore = async () => {
     logger.debug('🔥 Initializing Auth Store')
 
-    // Get Supabase client
-    const supabaseClient = getSupabase()
-    if (!supabaseClient) {
-      console.error('❌ Failed to get Supabase client')
-      return
-    }
-
-    // ✅ NEU: Session beim Start wiederherstellen
+    // SECURITY: Session is stored in HTTP-Only cookies
+    // We need to ask the server if we have a valid session
     if (process.client) {
       try {
-        const { data: { session } } = await supabaseClient.auth.getSession()
-        if (session?.user && !user.value) {
-          logger.debug('🔄 Restoring session for:', session.user.email)
-          user.value = session.user
-          await fetchUserProfile(session.user.id)
+        // Check if we have a valid session via HTTP-Only cookies
+        const response = await $fetch('/api/auth/current-user') as any
+        
+        if (response?.user && !user.value) {
+          logger.debug('🔄 Restoring session from HTTP-Only cookie for:', response.user.email)
+          user.value = response.user
+          
+          // If profile was returned, use it directly
+          if (response.profile) {
+            userProfile.value = response.profile
+            userRole.value = response.profile.role || ''
+            logger.debug('✅ Profile restored:', response.profile.email)
+          } else {
+            // Fallback: fetch profile separately
+            await fetchUserProfile(response.user.id)
+          }
         }
       } catch (error) {
-        console.error('❌ Error restoring session:', error)
+        console.error('❌ Error restoring session from cookies:', error)
       }
     }
-
-    // Auth State Change Listener
-    supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
-      logger.debug('🔄 Auth state changed:', event, !!session)
-      
-      if (session?.user) {
-        user.value = session.user
-        await fetchUserProfile(session.user.id)
-      } else {
-        clearAuthState()
-      }
-    })
 
     isInitialized.value = true
-      logger.debug('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
-
+    logger.debug('✅ Auth Store initialization completed, isInitialized:', isInitialized.value)
   }
 
-  // stores/auth.ts - nach Zeile wo initializeAuthStore steht
-    const restoreSession = async () => {
-      try {
-        logger.debug('🔄 Restoring session...')
+  // Restore session from HTTP-Only cookies
+  const restoreSession = async () => {
+    try {
+      logger.debug('🔄 Restoring session from HTTP-Only cookies...')
+      
+      // Ask the server if we have a valid session (via HTTP-Only cookies)
+      const response = await $fetch('/api/auth/current-user') as any
+      
+      if (response?.user) {
+        logger.debug('✅ Session restored for:', response.user.email)
+        user.value = response.user
         
-        const supabaseClient = getSupabase()
-        if (!supabaseClient) {
-          console.error('❌ Failed to get Supabase client')
-          return false
-        }
-        
-        const { data: { session }, error } = await supabaseClient.auth.getSession()
-        
-        if (error) {
-          console.error('❌ Session restore error:', error)
-          return false
-        }
-        
-        if (session?.user) {
-          logger.debug('✅ Session restored for:', session.user.email)
-          user.value = session.user
-          await fetchUserProfile(session.user.id)
-          return true
+        if (response.profile) {
+          userProfile.value = response.profile
+          userRole.value = response.profile.role || ''
         } else {
-          logger.debug('❌ No session found to restore')
-          return false
+          await fetchUserProfile(response.user.id)
         }
-      } catch (err: any) {
-        console.error('❌ Session restore failed:', err)
+        return true
+      } else {
+        logger.debug('❌ No valid session cookie found')
         return false
       }
+    } catch (err: any) {
+      console.error('❌ Session restore failed:', err)
+      return false
     }
+  }
 
   const login = async (email: string, password: string, rememberMe: boolean = false) => {
     loading.value = true
@@ -159,30 +147,26 @@ const isAdmin = computed(() => {
         return { requiresMFA: true, email: backendResponse.email }
       }
 
-      // If we have a session from backend, use it to establish auth
-      if (backendResponse.session) {
-        const supabaseClient = getSupabase()
-        if (!supabaseClient) {
-          throw new Error('Failed to get Supabase client')
-        }
-
-        // Set the session from backend response
-        await supabaseClient.auth.setSession({
-          access_token: backendResponse.session.access_token,
-          refresh_token: backendResponse.session.refresh_token
-        })
-
-        // Set user data
-        if (backendResponse.user) {
-          user.value = {
-            id: backendResponse.user.id,
-            email: backendResponse.user.email,
-            user_metadata: backendResponse.user.user_metadata
-          } as any
+      // Session tokens are now in HTTP-Only cookies (set by backend)
+      // We only need to update the frontend state - NO localStorage needed!
+      if (backendResponse.user) {
+        user.value = {
+          id: backendResponse.user.id,
+          email: backendResponse.user.email,
+          user_metadata: backendResponse.user.user_metadata
+        } as any
+        
+        // Use profile from login response (avoids extra API call)
+        if (backendResponse.profile) {
+          userProfile.value = backendResponse.profile
+          userRole.value = backendResponse.profile.role || ''
+          logger.debug('✅ Login successful with profile:', backendResponse.profile.email)
+        } else {
+          // Fallback: fetch profile via API
           await fetchUserProfile(backendResponse.user.id)
         }
-
-        logger.debug('✅ Login successful')
+        
+        logger.debug('✅ Login successful (session in HTTP-Only cookies)')
         return true
       }
 
@@ -267,6 +251,16 @@ const isAdmin = computed(() => {
       const { error } = await supabaseClient.auth.signOut()
       if (error) throw error
       
+      // Clear session cache from localStorage
+      if (process.client) {
+        try {
+          localStorage.removeItem('app-session-cache')
+          logger.debug('🗑️ Session cache cleared from localStorage')
+        } catch (err) {
+          logger.debug('⚠️ Could not clear session cache:', err)
+        }
+      }
+      
       clearAuthState()
       logger.debug('✅ Logout successful')
       
@@ -319,51 +313,26 @@ const isAdmin = computed(() => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      logger.debug('👤 Fetching user profile for:', userId)
+      logger.debug('👤 Fetching user profile via API for:', userId)
       
-      const supabaseClient = getSupabase()
-      if (!supabaseClient) {
-        console.error('❌ Failed to get Supabase client')
-        return
+      // Use API endpoint instead of direct Supabase (tokens are in HTTP-Only cookies)
+      const response = await $fetch('/api/auth/current-user') as any
+      
+      if (response?.profile) {
+        userProfile.value = response.profile
+        userRole.value = response.profile.role || ''
+        
+        logger.debug('✅ User profile loaded via API:', {
+          role: response.profile.role,
+          tenant_id: response.profile.tenant_id,
+          email: response.profile.email,
+          user_id: response.profile.id
+        })
+      } else {
+        logger.debug('📝 No user profile found via API')
+        userProfile.value = null
+        userRole.value = ''
       }
-      
-      const { data, error } = await supabaseClient
-        .from('users')
-        .select(`
-          id,
-          auth_user_id,
-          email,
-          role,
-          first_name,
-          last_name,
-          phone,
-          tenant_id,
-          is_active,
-          preferred_payment_method
-        `)
-        .eq('auth_user_id', userId) 
-        .eq('is_active', true)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          logger.debug('📝 No user profile found, needs setup')
-          userProfile.value = null
-          userRole.value = ''
-          return
-        }
-        throw error
-      }
-
-      userProfile.value = data
-      userRole.value = data.role || ''
-      
-      logger.debug('✅ User profile loaded:', {
-        role: data.role,
-        tenant_id: data.tenant_id,
-        email: data.email,
-        user_id: data.id
-      })
     } catch (err: any) {
       console.error('❌ Error fetching user profile:', err.message)
       errorMessage.value = 'Konnte Benutzerprofil nicht laden.'

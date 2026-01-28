@@ -23,28 +23,18 @@ export const getAuthToken = (event: any): string | null => {
     return authHeader.slice(7)
   }
 
-  // Try 2: HTTP-Only cookie (Supabase auth-token or sb-access-token)
-  let token = getCookie(event, 'sb-access-token')
+  // Try 2: HTTP-Only cookie (matches cookies.ts COOKIE_NAME)
+  let token = getCookie(event, 'sb-auth-token')
   if (token) {
-    logger.debug('🔐 Auth token from sb-access-token cookie')
+    logger.debug('🔐 Auth token from sb-auth-token cookie')
     return token
   }
 
-  // Try 3: Alternative cookie name
-  token = getCookie(event, 'auth-token')
+  // Try 3: Refresh token cookie (for token refresh flow)
+  token = getCookie(event, 'sb-refresh-token')
   if (token) {
-    logger.debug('🔐 Auth token from auth-token cookie')
+    logger.debug('🔐 Refresh token from sb-refresh-token cookie')
     return token
-  }
-
-  // Try 4: Look for any cookie containing auth token
-  const cookieHeader = getHeader(event, 'cookie')
-  if (cookieHeader) {
-    const tokenMatch = cookieHeader.match(/sb-access-token=([^;]+)/)
-    if (tokenMatch) {
-      logger.debug('🔐 Auth token from cookie header')
-      return tokenMatch[1]
-    }
   }
 
   logger.warn('❌ No authentication token found')

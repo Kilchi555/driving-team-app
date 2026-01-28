@@ -136,6 +136,48 @@ function toRad(degrees: number): number {
 }
 
 /**
+ * Check if a login from a new location is suspicious based on distance and time
+ * Used for device verification when checking known devices
+ */
+export function isSuspiciousLocation(
+  prevLat: number | null,
+  prevLon: number | null,
+  prevTime: Date,
+  currentLat: number | null,
+  currentLon: number | null
+): { suspicious: boolean; reason?: string } {
+  // Can't determine suspicion without coordinates
+  if (!prevLat || !prevLon || !currentLat || !currentLon) {
+    return { suspicious: false }
+  }
+
+  // Calculate distance
+  const distance = calculateDistance(prevLat, prevLon, currentLat, currentLon)
+  const timeDiffMinutes = (Date.now() - prevTime.getTime()) / 1000 / 60
+
+  // Suspicious if > 500km traveled in < 60 minutes (impossible without flying)
+  const maxSpeedKmPerHour = 500 // approximate max commercial flight speed
+  const requiredMinutes = (distance / maxSpeedKmPerHour) * 60
+
+  if (distance > 100 && timeDiffMinutes < requiredMinutes) {
+    return {
+      suspicious: true,
+      reason: `Impossible travel: ${Math.round(distance)}km in ${Math.round(timeDiffMinutes)} minutes`
+    }
+  }
+
+  // Suspicious if same device logs in from very different location (> 1000km) in same day
+  if (distance > 1000 && timeDiffMinutes < 24 * 60) {
+    return {
+      suspicious: true,
+      reason: `Large distance change: ${Math.round(distance)}km in ${Math.round(timeDiffMinutes / 60)} hours`
+    }
+  }
+
+  return { suspicious: false }
+}
+
+/**
  * Detect impossible travel (login from different countries within short time)
  * Returns true if travel is suspicious
  */

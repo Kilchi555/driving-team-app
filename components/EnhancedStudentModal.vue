@@ -1973,17 +1973,9 @@ const loadRatingPoints = async () => {
   if (!props.selectedStudent) return
   
   try {
-    const supabase = getSupabase()
-    
-    // Get tenant_id from current user or selected student
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id || props.selectedStudent.tenant_id
+    // Get tenant_id from auth store or selected student
+    const authStore = useAuthStore()
+    const tenantId = authStore.userProfile?.tenant_id || props.selectedStudent.tenant_id
     
     if (!tenantId) {
       console.warn('⚠️ No tenant_id found for loading rating points')
@@ -2056,148 +2048,36 @@ const loadLessons = async () => {
   try {
     logger.debug('📚 Loading lessons for student:', props.selectedStudent.id)
     
-    const supabase = getSupabase()
-    
-    // Lade Termine für diesen Schüler - RLS filtert automatisch nach tenant_id
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        user_id,
-        start_time,
-        end_time,
-        type,
-        status,
-        title,
-        description,
-        duration_minutes,
-        event_type_code,
-        staff_id,
-        event_types (
-          name
-        )
-      `)
-      .eq('user_id', props.selectedStudent.id)
-      .order('start_time', { ascending: false })
-    
-    if (appointmentsError) {
-      console.error('❌ Error loading appointments:', appointmentsError)
-      throw appointmentsError
+    // Use secure backend API instead of direct DB queries
+    const response = await $fetch('/api/staff/get-student-lessons', {
+      query: {
+        studentId: props.selectedStudent.id
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load lessons from API')
     }
+
+    const appointmentsData = response.data
     
-    // Lade Evaluationen und Notes für die Termine
-    const appointmentIds = (appointmentsData || []).map(apt => apt.id)
+    // Build evaluations map from API response (evaluations already loaded in API)
     let evaluationsMap: Record<string, any[]> = {}
+    appointmentsData.forEach((apt: any) => {
+      evaluationsMap[apt.id] = apt.evaluations || []
+    })
     
-    if (appointmentIds.length > 0) {
-      logger.debug('🔍 Loading evaluations for', appointmentIds.length, 'appointments')
-      
-      // Lade Notes mit Evaluationen - vereinfachte Query ohne Join
-      const { data: notesData, error: notesError } = await supabase
-        .from('notes')
-        .select('*')
-        .in('appointment_id', appointmentIds)
-      
-      if (notesError) {
-        console.error('❌ Error loading notes:', notesError)
-      } else if (notesData) {
-        logger.debug('📝 Loaded', notesData.length, 'notes')
-        
-        // Hole Criteria-IDs für weitere Details
-        const criteriaIds = [...new Set(notesData
-          .filter(n => n.evaluation_criteria_id)
-          .map(n => n.evaluation_criteria_id))]
-        
-        let criteriaMap: Record<string, any> = {}
-        
-        if (criteriaIds.length > 0) {
-          const { data: criteriaData } = await supabase
-            .from('evaluation_criteria')
-            .select('id, name')
-            .in('id', criteriaIds)
-          
-          if (criteriaData) {
-            criteriaData.forEach(c => {
-              criteriaMap[c.id] = c
-            })
-          }
-        }
-        
-        // Gruppiere Notes nach appointment_id, nimm nur die LETZTEN (neuesten) pro evaluation_criteria_id
-        const latestEvaluationsMap: Record<string, Record<string, any>> = {}
-        
-        // Sortiere Notes nach created_at DESC (neueste zuerst) - nur created_at da updated_at nicht existiert
-        const sortedNotes = [...notesData].sort((a, b) => {
-          const dateA = new Date(a.created_at).getTime()
-          const dateB = new Date(b.created_at).getTime()
-          return dateB - dateA // Neueste zuerst
-        })
-        
-        logger.debug('🔍 Total notes loaded:', notesData.length)
-        
-        sortedNotes.forEach(note => {
-          const aptId = note.appointment_id
-          const criteriaId = note.evaluation_criteria_id
-          
-          if (!latestEvaluationsMap[aptId]) {
-            latestEvaluationsMap[aptId] = {}
-          }
-          
-          // Wenn dieses Kriterium noch nicht vorhanden ist (da wir sortiert haben, ist das erste die neueste), speichern
-          if (!latestEvaluationsMap[aptId][criteriaId]) {
-            logger.debug(`✅ Keeping evaluation for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
-            latestEvaluationsMap[aptId][criteriaId] = {
-              ...note,
-              evaluation_criteria: criteriaId ? criteriaMap[criteriaId] : null
-            }
-          } else {
-            logger.debug(`⏭️ Skipping duplicate for apt ${aptId.slice(0, 8)}, criteria ${criteriaId?.slice(0, 8)}`)
-          }
-        })
-        
-        // Konvertiere in das erwartete Format
-        Object.entries(latestEvaluationsMap).forEach(([aptId, criteriaMap]) => {
-          evaluationsMap[aptId] = Object.values(criteriaMap)
-          logger.debug(`📦 Apt ${aptId.slice(0, 8)} has ${evaluationsMap[aptId].length} evaluations`)
-        })
-      }
-    }
+    logger.debug('🎯 Frontend received evaluations:', evaluationsMap) // DEBUG
     
-    // Lade Instructor-Namen
-    const instructorIds = [...new Set((appointmentsData || [])
-      .map(apt => apt.staff_id)
-      .filter(Boolean))]
-    
-    let instructorsMap: Record<string, any> = {}
-    
-    if (instructorIds.length > 0) {
-      const { data: instructorsData, error: instructorsError } = await supabase
-        .from('users')
-        .select('id, first_name')
-        .in('id', instructorIds)
-      
-      if (instructorsError) {
-        console.error('❌ Error loading instructors:', instructorsError)
-      } else if (instructorsData) {
-        instructorsData.forEach(instructor => {
-          instructorsMap[instructor.id] = instructor
-        })
-      }
-    }
-    
-    // Build a map of previous evaluations to detect changes
-    const previousEvaluationsMap: Record<string, Record<string, any>> = {}
-    
-    // Füge Evaluationen und Instructor-Namen zu Appointments hinzu
-    const lessonsWithEvaluations = (appointmentsData || []).map((apt, index) => {
-      const aptEvaluations = (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating)
+    // Füge Evaluationen zu Appointments hinzu
+    const lessonsWithEvaluations = (appointmentsData || []).map((apt: any, index: number) => {
+      const aptEvaluations = (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id)
+      logger.debug('🎯 Apt evaluations for', apt.id?.slice(0, 8), ':', aptEvaluations) // DEBUG
       
       // Filter to show only new or changed evaluations
       let displayEvaluations = aptEvaluations
       
-      // If this is not the first appointment, filter to show only new/changed evaluations
       if (index > 0) {
-        // Get previous appointment's evaluations
         const previousApt = appointmentsData[index - 1]
         const previousEvals = (evaluationsMap[previousApt?.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating) || []
         const prevEvalsMap: Record<string, any> = {}
@@ -2205,10 +2085,8 @@ const loadLessons = async () => {
           prevEvalsMap[e.evaluation_criteria_id] = e
         })
         
-        // Show only evaluations that are new or have changed rating
         displayEvaluations = aptEvaluations.filter(currentEval => {
           const prevEval = prevEvalsMap[currentEval.evaluation_criteria_id]
-          // Show if: no previous eval (new) OR rating changed
           return !prevEval || prevEval.criteria_rating !== currentEval.criteria_rating
         })
       }
@@ -2217,8 +2095,7 @@ const loadLessons = async () => {
         ...apt,
         notes: evaluationsMap[apt.id] || [],
         evaluations: displayEvaluations,
-        allEvaluations: aptEvaluations, // Keep all for reference if needed
-        instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
+        allEvaluations: aptEvaluations
       }
     })
     
@@ -2395,19 +2272,11 @@ const loadPayments = async () => {
   try {
     logger.debug('💰 Loading payments for student:', props.selectedStudent.id)
     
-    // Get auth token
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('No authentication token found')
-    }
-    
     // ✅ SECURE API CALL: Call backend API instead of direct DB queries
+    // Authentication is handled via HTTP-Only cookies (sent automatically)
     const response = await $fetch(`/api/students/${props.selectedStudent.id}/payments`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'GET'
+      // No Authorization header needed - cookies are sent automatically
     }) as any
     
     if (!response?.success || !response?.data) {

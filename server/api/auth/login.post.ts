@@ -391,8 +391,8 @@ export default defineEventHandler(async (event) => {
         logger.debug('📱 Checking device and sending verification email if new...')
         
         // Get geolocation for IP
-        const { getGeoLocation, isSuspiciousLocation } = await import('~/server/utils/geolocation')
-        const geoData = await getGeoLocation(clientIp)
+        const { getIPLocation, isSuspiciousLocation } = await import('~/server/utils/geolocation')
+        const geoData = await getIPLocation(clientIp)
         
         // Check if device is already known
         const { data: existingDevice } = await adminSupabase
@@ -636,7 +636,26 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       // Don't fail the login for this
     }
 
-    // Return session data
+    // Fetch user profile from database (needed for frontend state)
+    let userProfile = null
+    try {
+      const { data: profileData, error: profileError } = await adminSupabase
+        .from('users')
+        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method')
+        .eq('auth_user_id', data.user.id)
+        .eq('is_active', true)
+        .single()
+      
+      if (!profileError && profileData) {
+        userProfile = profileData
+        logger.debug('✅ User profile loaded:', profileData.email)
+      }
+    } catch (profileFetchError: any) {
+      console.warn('⚠️ Failed to fetch user profile:', profileFetchError.message)
+    }
+
+    // Return user data (tokens are in HTTP-Only cookies, NOT in response body)
+    // This prevents XSS attacks from stealing tokens via JavaScript
     return {
       success: true,
       user: {
@@ -644,13 +663,14 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
         email: data.user.email,
         user_metadata: data.user.user_metadata
       },
+      // User profile from database (for frontend state)
+      profile: userProfile,
+      // Session info without tokens (for frontend state only)
       session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_in: sessionDuration, // Use custom session duration
-        expires_at: Math.floor(Date.now() / 1000) + sessionDuration // Unix timestamp
+        expires_in: sessionDuration,
+        expires_at: Math.floor(Date.now() / 1000) + sessionDuration
       },
-      rememberMe // Pass back to frontend
+      rememberMe
     }
 
   } catch (error: any) {
@@ -667,4 +687,3 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
     })
   }
 })
-

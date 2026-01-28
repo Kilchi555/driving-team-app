@@ -210,21 +210,12 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
   globalState.error = null
 
   try {
-    const supabase = getSupabase()
-    
-    // Get auth session for API call
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('No authentication token found')
-    }
-
-    // Use the new backend API endpoint that bypasses RLS
+    // Use the backend API endpoint that bypasses RLS
+    // Authentication is handled via HTTP-Only cookies (sent automatically)
     logger.debug('🚀 Fetching pending appointments via backend API...')
     const response = await $fetch('/api/admin/get-pending-appointments', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'GET'
+      // No Authorization header needed - cookies are sent automatically
     }) as any
 
     if (!response?.success || !response?.data) {

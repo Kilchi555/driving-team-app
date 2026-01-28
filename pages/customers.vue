@@ -671,18 +671,11 @@ const loadStudents = async (loadAppointments = true) => {
   try {
     logger.debug('Current user role:', currentUser.value.role)
     
-    // Get auth token
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('No authentication token found')
-    }
-
     // Use the new backend API endpoint that bypasses RLS
+    // Authentication is handled via HTTP-Only cookies (sent automatically)
     const response = await $fetch('/api/admin/get-tenant-users', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'GET'
+      // No Authorization header needed - cookies are sent automatically
     }) as any
 
     if (!response?.success || !response?.data) {
@@ -977,8 +970,6 @@ const resendOnboardingSms = async () => {
     // ============================================
     logger.debug('📧 Calling secure API to send onboarding SMS...')
     
-    const { data: { session } } = await supabase.auth.getSession()
-    
     if (!pendingStudent.value?.id) {
       logger.error('❌ Student ID missing!', { pendingStudent: pendingStudent.value })
       throw new Error('Student ID is missing')
@@ -986,18 +977,16 @@ const resendOnboardingSms = async () => {
     
     logger.debug('📋 Sending SMS for student:', {
       studentId: pendingStudent.value.id,
-      firstName: pendingStudent.value.first_name,
-      hasSession: !!session?.access_token
+      firstName: pendingStudent.value.first_name
     })
     
+    // Authentication is handled via HTTP-Only cookies (sent automatically)
     const smsResponse = await $fetch('/api/students/resend-onboarding-sms', {
       method: 'POST',
       body: {
         studentId: pendingStudent.value.id
-      },
-      headers: {
-        Authorization: `Bearer ${session?.access_token}`
       }
+      // No Authorization header needed - cookies are sent automatically
     }) as any
 
     if (!smsResponse?.success) {
@@ -1040,16 +1029,13 @@ const copyOnboardingLink = async () => {
     // ============================================
     // Call secure API to get onboarding token
     // ============================================
-    const { data: { session } } = await supabase.auth.getSession()
-    
+    // Authentication is handled via HTTP-Only cookies (sent automatically)
     const tokenResponse = await $fetch('/api/students/get-onboarding-token', {
       method: 'GET',
       params: {
         studentId: pendingStudent.value.id
-      },
-      headers: {
-        Authorization: `Bearer ${session?.access_token}`
       }
+      // No Authorization header needed - cookies are sent automatically
     }) as any
 
     if (!tokenResponse?.success || !tokenResponse?.onboarding_token) {

@@ -6,43 +6,33 @@ let supabaseInstance: SupabaseClient | null = null
 let supabaseAdminInstance: SupabaseClient | null = null
 let storageAdapter: any | null = null
 
-// Custom Storage Adapter für normales localStorage - als Singleton
-// Supabase speichert Sessions direkt im localStorage ohne Prefix
-function getNormalStorage() {
+// SECURITY: SessionStorage adapter - tokens are stored in HTTP-Only cookies AND sessionStorage
+// sessionStorage is cleared when the browser tab is closed, making it more secure than localStorage
+// This allows Supabase client-side queries to work while keeping tokens from localStorage XSS exposure
+// HTTP-Only cookies provide the real auth layer, sessionStorage is just for client-side convenience
+function getSecureSessionStorage() {
   if (storageAdapter) {
     return storageAdapter
   }
 
-  if (typeof window === 'undefined') {
-    // Fallback für Server-Side: normales localStorage-Verhalten
-    return {
-      getItem: (key: string) => null,
-      setItem: (key: string, value: string) => {},
-      removeItem: (key: string) => {}
-    }
-  }
+  // Check if sessionStorage is available (browser environment)
+  const isSessionStorageAvailable = typeof sessionStorage !== 'undefined'
 
   storageAdapter = {
     getItem: (key: string): string | null => {
-      try {
-        return localStorage.getItem(key)
-      } catch (error) {
-        console.error('❌ Error reading from storage:', error)
-        return null
+      if (isSessionStorageAvailable) {
+        return sessionStorage.getItem(key)
       }
+      return null
     },
     setItem: (key: string, value: string): void => {
-      try {
-        localStorage.setItem(key, value)
-      } catch (error) {
-        console.error('❌ Error writing to storage:', error)
+      if (isSessionStorageAvailable) {
+        sessionStorage.setItem(key, value)
       }
     },
     removeItem: (key: string): void => {
-      try {
-        localStorage.removeItem(key)
-      } catch (error) {
-        console.error('❌ Error removing from storage:', error)
+      if (isSessionStorageAvailable) {
+        sessionStorage.removeItem(key)
       }
     }
   }
@@ -90,8 +80,10 @@ export const getSupabase = (): SupabaseClient => {
 
     logger.debug('Supabase', '🔗 Initializing Supabase client with URL:', supabaseUrl)
     
-    // Use normal localStorage for session persistence across browser windows
-    const storage = process.client ? getNormalStorage() : undefined
+    // SECURITY: Use sessionStorage - tokens are in HTTP-Only cookies AND sessionStorage
+    // sessionStorage is cleared when browser tab closes (more secure than localStorage)
+    // This allows client-side Supabase queries while preventing XSS token theft
+    const storage = process.client ? getSecureSessionStorage() : undefined
     
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
