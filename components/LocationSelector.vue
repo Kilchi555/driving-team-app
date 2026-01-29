@@ -493,19 +493,9 @@ const savePickupLocation = async (locationData: any, userId: string) => {
       ? `${props.selectedStudentName} - ${locationData.name}`.trim()
       : locationData.name
     
-    // ✅ Get auth token from Supabase
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      throw new Error('No authentication token found')
-    }
-    
-    // ✅ Call secure API with auth header
+    // ✅ Call secure API - Auth is handled via HTTP-Only cookies automatically
     const response = await $fetch('/api/locations/create-pickup', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: {
         name: locationName,
         address: locationData.address,
