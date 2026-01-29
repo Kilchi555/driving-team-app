@@ -1,6 +1,5 @@
-import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabase } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -8,9 +7,21 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { action, documentId, base64Data, documentType, categoryCode } = body
 
-    // Get authenticated user
-    const supabase = getSupabase()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get auth token from HTTP-only cookie
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Nicht authentifiziert'
+      })
+    }
+
+    // Extract token from "Bearer <token>"
+    const authToken = authHeader.replace('Bearer ', '')
+
+    // Get authenticated user using admin client with token
+    const supabase = getSupabaseAdmin()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authToken)
 
     if (authError || !user) {
       throw createError({
@@ -21,18 +32,8 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('📄 Document action:', action, 'for user:', user.id)
 
-    // Create service role client
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+    // Use admin client for database queries
+    const serviceSupabase = getSupabaseAdmin()
 
     // Get user info to find their tenant
     const { data: userProfile, error: profileError } = await serviceSupabase
