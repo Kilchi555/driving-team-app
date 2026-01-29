@@ -1,7 +1,6 @@
-// composables/useStaffDurations.ts - Komplett Datenbank-getrieben
+// composables/useStaffDurations.ts - Migriert zu API-basierten Abfragen
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 export const useStaffDurations = () => {
   // State
@@ -19,85 +18,27 @@ export const useStaffDurations = () => {
     }))
   })
 
-  // Verfügbare Dauern für Staff + Kategorie aus Datenbank laden
+  // Verfügbare Dauern für Staff + Kategorie via API laden
   const loadAvailableDurations = async (categoryCode: string, staffId: string) => {
-    logger.debug('🔥 Loading durations from DB for:', categoryCode, 'staff:', staffId)
+    logger.debug('🔥 Loading durations from API for:', categoryCode, 'staff:', staffId)
     isLoading.value = true
     error.value = null
 
     try {
-      const supabase = getSupabase()
+      const { durations } = await $fetch('/api/staff/durations', {
+        method: 'GET',
+        query: {
+          categoryCode,
+          staffId
+        }
+      })
 
-      // 1. Staff Settings laden (preferred_durations)
-      const { data: staffSettings, error: staffError } = await supabase
-        .from('staff_settings')
-        .select('preferred_durations')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      if (staffError) {
-        logger.debug('⚠️ No staff settings found, will use category defaults')
-      }
-
-      // Get user's tenant_id first
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
-
-      if (!userProfile?.tenant_id) return null
-
-      // Get tenant business_type first
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('business_type')
-        .eq('id', userProfile.tenant_id)
-        .single()
-
-      if (tenantError || tenantData?.business_type !== 'driving_school') {
-        logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
-        return null
-      }
-
-      // 2. Kategorie aus DB laden (für Fallback-Dauer)
-      const { data: category, error: categoryError } = await supabase
-        .from('categories')
-        .select('lesson_duration, code')
-        .eq('code', categoryCode)
-        .eq('tenant_id', userProfile.tenant_id)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      if (categoryError) throw categoryError
-
-      if (!category) {
-        throw new Error(`Kategorie ${categoryCode} nicht gefunden`)
-      }
-
-      // 3. Staff preferred_durations parsen
-      let finalDurations: number[] = []
-      
-      if (staffSettings?.preferred_durations) {
-        // Staff hat eigene Dauern konfiguriert
-        finalDurations = staffSettings.preferred_durations
-          .split(',')
-          .map((d: string) => parseInt(d.trim()))
-          .filter((d: number) => !isNaN(d) && d > 0)
-          .sort((a: number, b: number) => a - b)
-        
-        logger.debug('✅ Using staff configured durations:', finalDurations)
-      } else {
-        // Fallback: Standard-Dauer der Kategorie
-        finalDurations = [category.lesson_duration || 45]
-        logger.debug('⚠️ No staff durations found, using category default:', finalDurations)
-      }
-
-      availableDurations.value = finalDurations
-      return finalDurations
+      availableDurations.value = durations
+      logger.debug('✅ Durations loaded via API:', durations)
+      return durations
 
     } catch (err: any) {
-      console.error('❌ Error loading durations from DB:', err)
+      console.error('❌ Error loading durations from API:', err)
       error.value = err.message
       // Absoluter Fallback
       availableDurations.value = [45]
@@ -107,29 +48,25 @@ export const useStaffDurations = () => {
     }
   }
 
-  // Staff preferred durations in DB updaten
+  // Staff preferred durations via API updaten
   const updateStaffDurations = async (staffId: string, newDurations: number[]) => {
-    logger.debug('🔄 Updating staff durations in DB:', newDurations)
+    logger.debug('🔄 Updating staff durations via API:', newDurations)
     
     try {
-      const supabase = getSupabase()
-      // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
-      const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
-      
-      const { error: upsertError } = await supabase
-        .from('staff_settings')
-        .upsert({
-          staff_id: staffId,
-          preferred_durations: durationsString,
-          updated_at: toLocalTimeString(new Date)
-        })
+      const result = await $fetch('/api/staff/durations', {
+        method: 'POST',
+        body: {
+          staffId,
+          newDurations
+        }
+      })
 
-      if (upsertError) throw upsertError
-
-      logger.debug('✅ Staff durations updated in DB as JSON:', durationsString)
+      logger.debug('✅ Staff durations updated via API:', result)
       
       // State aktualisieren
       availableDurations.value = newDurations.sort((a: number, b: number) => a - b)
+      
+      return result
       
     } catch (err: any) {
       console.error('❌ Error updating staff durations:', err)
@@ -138,46 +75,11 @@ export const useStaffDurations = () => {
     }
   }
 
-  // Standard-Dauern für alle Kategorien aus DB laden (für Settings UI)
+  // Standard-Dauern für alle Kategorien (Fallback hardcoded)
   const loadAllPossibleDurations = async () => {
-    logger.debug('🔥 Loading all possible durations from DB')
+    logger.debug('🔥 Loading all possible durations')
     
     try {
-      const supabase = getSupabase()
-      
-      // Get user's tenant_id first
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', userId)
-        .single()
-
-      if (!userProfile?.tenant_id) return []
-
-      // Get tenant business_type first
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('business_type')
-        .eq('id', userProfile.tenant_id)
-        .single()
-
-      if (tenantError) throw tenantError
-      
-      // Only load categories if business_type is driving_school
-      if (tenantData?.business_type !== 'driving_school') {
-        logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
-        return []
-      }
-
-      // Alle aktiven Kategorien laden
-      const { data: categories, error } = await supabase
-        .from('categories')
-        .select('code, lesson_duration')
-        .eq('is_active', true)
-        .order('display_order')
-
-      if (error) throw error
-
       // Alle möglichen Dauern sammeln (15min steps von 45-240)
       const allDurations = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240]
       
@@ -186,11 +88,7 @@ export const useStaffDurations = () => {
         label: duration >= 120 
           ? `${Math.floor(duration / 60)}h ${duration % 60 > 0 ? duration % 60 + 'min' : ''}`.trim() 
           : `${duration}min`,
-        // Zeige welche Kategorien diese Dauer unterstützen (Info für Settings)
-        supportedCategories: categories?.filter(cat => {
-          // Logik welche Kategorien welche Dauern unterstützen kann in DB erweitert werden
-          return duration >= (cat.lesson_duration || 45)
-        }).map(cat => cat.code) || []
+        supportedCategories: []
       }))
 
     } catch (err: any) {
@@ -199,19 +97,14 @@ export const useStaffDurations = () => {
     }
   }
 
-  // Staff-Settings für User laden
+  // Staff-Settings für User laden via API
   const loadStaffSettings = async (staffId: string) => {
-    logger.debug('🔥 Loading complete staff settings from DB')
+    logger.debug('🔥 Loading staff settings from API')
     
     try {
-      const supabase = getSupabase()
-      const { data, error } = await supabase
-        .from('staff_settings')
-        .select('*')
-        .eq('staff_id', staffId)
-        .maybeSingle()
-
-      if (error) throw error
+      const { data } = await $fetch(`/api/staff/settings/${staffId}`, {
+        method: 'GET'
+      })
       
       return data
     } catch (err: any) {
