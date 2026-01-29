@@ -280,7 +280,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
+// ✅ Using secure API instead of direct Supabase
 
 // Meta
 definePageMeta({
@@ -288,8 +288,7 @@ definePageMeta({
   middleware: 'admin'
 })
 
-// Composables
-const supabase = getSupabase()
+// Composables - using secure API (no direct Supabase)
 
 // State
 const isLoading = ref(false)
@@ -400,242 +399,35 @@ const loadStaffHours = async () => {
       throw new Error('Bitte wählen Sie einen gültigen Zeitraum')
     }
 
-    // Get current user's tenant_id first
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    logger.debug('🔍 Loading staff hours for tenant:', tenantId)
+    logger.debug('🔍 Loading staff hours via secure API')
 
-    // Get tenant business_type first
-    const { data: tenantData, error: tenantError } = await supabase
-      .from('tenants')
-      .select('business_type')
-      .eq('id', userProfile.tenant_id)
-      .single()
+    // ✅ Use secure backend API instead of direct Supabase queries
+    const response = await $fetch('/api/admin/get-staff-hours', {
+      query: {
+        startDate: start,
+        endDate: end
+      }
+    }) as any
 
-    if (tenantError) throw tenantError
-    
-    // Only load categories if business_type is driving_school
-    if (tenantData?.business_type !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
-      availableCategories.value = []
-      isLoading.value = false
-      return
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to load staff hours')
     }
 
-    // Lade verfügbare Kategorien - FILTERED BY TENANT
-    const { data: categories, error: categoriesError } = await supabase
-      .from('categories')
-      .select('code, name')
-      .eq('is_active', true)
-      .eq('tenant_id', tenantId)
-      .order('code')
-
-    if (categoriesError) throw categoriesError
-    
-    // Speichere Kategorien für die UI
-    availableCategories.value = categories || []
-
-    // Lade Staff-Daten mit Stunden-Statistiken - FILTERED BY TENANT
-    const { data: staffData, error: staffError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        role
-      `)
-      .eq('role', 'staff')
-      .eq('tenant_id', tenantId)
-
-    if (staffError) throw staffError
-
-
-        // Für jeden Staff die Stunden-Statistiken berechnen
-        const staffWithHours = await Promise.all(
-          staffData.map(async (staff) => {
-            // Lade aktive Termine - FILTERED BY TENANT
-            const { data: appointments, error: appointmentsError } = await supabase
-              .from('appointments')
-              .select(`
-                id,
-                start_time,
-                duration_minutes,
-                event_type_code,
-                type,
-                status
-              `)
-              .eq('staff_id', staff.id)
-              .eq('tenant_id', tenantId)
-              .gte('start_time', start)
-              .lt('start_time', end)
-              .neq('status', 'cancelled')
-
-            // Lade abgesagte Termine - FILTERED BY TENANT
-            const { data: cancelledAppointments, error: cancelledError } = await supabase
-              .from('appointments')
-              .select(`
-                id,
-                start_time,
-                duration_minutes,
-                event_type_code,
-                type,
-                status
-              `)
-              .eq('staff_id', staff.id)
-              .eq('tenant_id', tenantId)
-              .gte('start_time', start)
-              .lt('start_time', end)
-              .eq('status', 'cancelled')
-
-
-        if (appointmentsError || cancelledError) {
-          console.warn(`Error loading appointments for staff ${staff.id}:`, appointmentsError || cancelledError)
-          return {
-            ...staff,
-            appointment_count: 0,
-            total_hours: 0,
-            average_hours: 0,
-            last_appointment: null,
-            cancelled_count: 0,
-            cancelled_hours: 0,
-            category_stats: {},
-            vku_hours: 0,
-            nhk_hours: 0,
-            pgs_hours: 0,
-            fl_wb_hours: 0,
-            rest_hours: 0
-          }
-        }
-
-        const totalMinutes = appointments.reduce((sum, apt) => sum + (apt.duration_minutes || 0), 0)
-        const totalHours = totalMinutes / 60
-
-        // Berechne Stunden pro Kategorie (Kat A, Kat B, etc.)
-        const categoryStats: Record<string, { count: number; hours: number }> = {}
-        
-        // Initialisiere alle Kategorien
-        categories?.forEach(cat => {
-          categoryStats[cat.code] = { count: 0, hours: 0 }
-        })
-        
-        // Initialisiere Event-Typ Statistiken
-        let vkuHours = 0
-        let nhkHours = 0
-        let pgsHours = 0
-        let flWbHours = 0
-        let restHours = 0
-        
-        // Zähle Termine pro Kategorie und Event-Typ
-        appointments.forEach(apt => {
-          const category = apt.type || 'unknown'
-          const eventType = apt.event_type_code || 'unknown'
-          const hours = (apt.duration_minutes || 0) / 60
-          
-          // Kategorien (Fahrkategorien)
-          if (categoryStats[category]) {
-            categoryStats[category].count++
-            categoryStats[category].hours += hours
-          }
-          
-          // Event-Typen (andere Events)
-          switch (eventType) {
-            case 'vku':
-              vkuHours += hours
-              break
-            case 'nhk':
-              nhkHours += hours
-              break
-            case 'pgs':
-              pgsHours += hours
-              break
-            case 'fl-wb':
-              flWbHours += hours
-              break
-            default:
-              // Nur andere Events zählen, nicht die normalen Kategorien
-              if (!['lesson', 'exam', 'theory'].includes(eventType)) {
-                restHours += hours
-              }
-              break
-          }
-        })
-        
-        // Berechne abgesagte Termine
-        const cancelledCount = cancelledAppointments?.length || 0
-        const cancelledHours = cancelledAppointments?.reduce((sum, apt) => sum + (apt.duration_minutes || 0), 0) / 60 || 0
-
-        // Letzter Termin
-        const lastAppointment = appointments.length > 0 
-          ? appointments.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
-          : null
-
-        // Calculate monthly hours for year overview
-        const monthlyHours: Record<string, number> = {}
-        months.forEach((_, index) => {
-          monthlyHours[months[index]] = 0
-        })
-
-        appointments.forEach(apt => {
-          const appointmentDate = new Date(apt.start_time)
-          const appointmentYear = appointmentDate.getFullYear()
-          const monthIndex = appointmentDate.getMonth()
-          const monthName = months[monthIndex]
-          const hours = (apt.duration_minutes || 0) / 60
-          
-          // Only count hours for the selected year
-          if (appointmentYear === selectedYear.value) {
-            monthlyHours[monthName] = (monthlyHours[monthName] || 0) + hours
-          }
-        })
-
-        // Store monthly hours for this staff member
-        staffMonthlyHours.value[staff.id] = monthlyHours
-
-        return {
-          ...staff,
-          appointment_count: appointments.length,
-          total_hours: totalHours,
-          average_hours: appointments.length > 0 ? totalHours / appointments.length : 0,
-          last_appointment: lastAppointment?.start_time,
-          cancelled_count: cancelledCount,
-          cancelled_hours: cancelledHours,
-          category_stats: categoryStats,
-          vku_hours: vkuHours,
-          nhk_hours: nhkHours,
-          pgs_hours: pgsHours,
-          fl_wb_hours: flWbHours,
-          rest_hours: restHours
-        }
-      })
-    )
-
-    staffHours.value = staffWithHours
-
-    // Berechne Zusammenfassung
-    const activeStaff = staffWithHours.filter(s => s.appointment_count > 0).length
-    const totalHours = staffWithHours.reduce((sum, s) => sum + s.total_hours, 0)
-    const totalAppointments = staffWithHours.reduce((sum, s) => sum + s.appointment_count, 0)
-
-    summary.value = {
-      activeStaff,
-      totalHours,
-      averageHours: activeStaff > 0 ? totalHours / activeStaff : 0,
-      totalAppointments
+    // Use the response data directly
+    staffHours.value = response.staffWithHours || []
+    staffMonthlyHours.value = response.staffMonthlyHours || {}
+    availableCategories.value = response.availableCategories || []
+    summary.value = response.summary || {
+      activeStaff: 0,
+      totalHours: 0,
+      averageHours: 0,
+      totalAppointments: 0
     }
+
+    logger.debug('✅ Staff hours loaded via API:', staffHours.value.length, 'staff members')
 
   } catch (err: any) {
-    console.error('Error loading staff hours:', err)
+    console.error('❌ Error loading staff hours:', err)
     error.value = err.message || 'Fehler beim Laden der Stundenübersicht'
   } finally {
     isLoading.value = false

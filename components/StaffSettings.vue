@@ -640,7 +640,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
-import { getSupabase } from '~/utils/supabase'
+// ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
 import Toast from '~/components/Toast.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
@@ -1711,8 +1711,6 @@ const saveAllSettings = async () => {
   saveSuccess.value = false
 
   try {
-    const supabase = getSupabase()
-
     // 1. Arbeitszeiten speichern
     logger.debug('💾 Saving working hours...')
     try {
