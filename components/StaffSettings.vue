@@ -859,18 +859,9 @@ const generateCalendarToken = async () => {
   
   isGeneratingToken.value = true
   try {
-    const supabase = getSupabase()
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session?.access_token) {
-      throw new Error('Nicht authentifiziert')
-    }
-    
+    // ✅ Use secure API - Auth is handled via HTTP-Only cookies automatically
     const response: any = await $fetch('/api/calendar/generate-token', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      }
+      method: 'POST'
     })
     
     if (response?.success && response?.calendarLink) {
@@ -1255,34 +1246,35 @@ const addExamLocation = async () => {
   if (!newExamLocation.value.name || !newExamLocation.value.address) return
 
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     
-    const { data, error } = await supabase
-      .from('locations') // 👈 Tabelle auf 'locations' geändert
-      .insert({
-        staff_ids: [props.currentUser.id], // Use staff_ids array instead of staff_id
+    // Insert via secure API
+    const data = await query({
+      action: 'insert',
+      table: 'locations',
+      data: {
+        staff_ids: [props.currentUser.id],
         tenant_id: props.currentUser.tenant_id,
         name: newExamLocation.value.name,
         address: newExamLocation.value.address,
-        available_categories: newExamLocation.value.categories, // 👈 Feldname korrigiert
-        location_type: 'exam', // 👈 Diese Zeile wurde hinzugefügt
+        available_categories: newExamLocation.value.categories,
+        location_type: 'exam',
         is_active: true
-      })
-      .select()
-      .single()
+      }
+    })
 
-    if (error) throw error
+    if (data && data.length > 0) {
+      examLocations.value.push(data[0])
+      
+      // Reset form
+      newExamLocation.value = {
+        name: '',
+        address: '',
+        categories: []
+      }
 
-    examLocations.value.push(data)
-    
-    // Reset form
-    newExamLocation.value = {
-      name: '',
-      address: '',
-      categories: []
+      logger.debug('✅ Exam location added:', data[0])
     }
-
-    logger.debug('✅ Exam location added:', data)
 
   } catch (err: any) {
     console.error('❌ Error adding exam location:', err)
@@ -1299,33 +1291,33 @@ const createNewLocation = async () => {
   }
 
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     
-    // Create new location with current staff_id in staff_ids array
-    const { data, error } = await supabase
-      .from('locations')
-      .insert({
+    // Insert via secure API
+    const data = await query({
+      action: 'insert',
+      table: 'locations',
+      data: {
         name: newLocationForm.value.name,
         address: newLocationForm.value.address,
-        staff_ids: [props.currentUser.id], // Add current staff to the location
+        staff_ids: [props.currentUser.id],
         tenant_id: props.currentUser.tenant_id,
         available_categories: newLocationForm.value.available_categories,
         location_type: 'standard',
         is_active: true
-      })
-      .select()
-      .single()
+      }
+    })
 
-    if (error) throw error
-
-    // Add to local state
-    allTenantLocations.value.push(data)
-    
-    // Reset form and close modal
-    resetLocationForm()
-    showNewLocationModal.value = false
-    
-    logger.debug('✅ Location created successfully:', data)
+    if (data && data.length > 0) {
+      // Add to local state
+      allTenantLocations.value.push(data[0])
+      
+      // Reset form and close modal
+      resetLocationForm()
+      showNewLocationModal.value = false
+      
+      logger.debug('✅ Location created successfully:', data[0])
+    }
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
     error.value = `Fehler beim Erstellen: ${err.message}`
@@ -1345,7 +1337,7 @@ const resetLocationForm = () => {
 // Toggle Location Assignment (Hinzufügen/Entfernen) - für Standard Locations
 const toggleLocationAssignment = async (locationId: string) => {
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     const staffId = props.currentUser?.id
 
     // Finde die Location
@@ -1368,13 +1360,13 @@ const toggleLocationAssignment = async (locationId: string) => {
       logger.debug(`🔥 Adding staff ${staffId} to location ${locationId}`)
     }
 
-    // Update in Datenbank
-    const { error } = await supabase
-      .from('locations')
-      .update({ staff_ids: currentStaffIds })
-      .eq('id', locationId)
-
-    if (error) throw error
+    // Update via secure API
+    await query({
+      action: 'update',
+      table: 'locations',
+      filters: [{ column: 'id', operator: 'eq', value: locationId }],
+      data: { staff_ids: currentStaffIds }
+    })
 
     // Optimistic Update in UI
     const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
@@ -1394,7 +1386,7 @@ const toggleLocationAssignment = async (locationId: string) => {
 // Automatisches Erstellen wenn nicht vorhanden, oder Update von staff_ids
 const toggleExamLocationAssignment = async (sourceLocation: any) => {
   try {
-    const supabase = getSupabase()
+    const { query } = useDatabaseQuery()
     const staffId = props.currentUser?.id
     const tenantId = props.currentUser?.tenant_id
 
@@ -1404,17 +1396,20 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
 
     logger.debug(`🔍 Toggling exam location: ${sourceLocation.name} for staff ${staffId} in tenant ${tenantId}`)
 
-    // Step 1: Prüfe ob diese Location bereits im Tenant existiert
-    const { data: existingLocation, error: findError } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('name', sourceLocation.name)
-      .eq('address', sourceLocation.address)
-      .eq('location_type', 'exam')
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
+    // Step 1: Prüfe ob diese Location bereits im Tenant existiert via secure API
+    const existingLocations = await query({
+      action: 'select',
+      table: 'locations',
+      select: '*',
+      filters: [
+        { column: 'name', operator: 'eq', value: sourceLocation.name },
+        { column: 'address', operator: 'eq', value: sourceLocation.address },
+        { column: 'location_type', operator: 'eq', value: 'exam' },
+        { column: 'tenant_id', operator: 'eq', value: tenantId }
+      ]
+    })
 
-    if (findError) throw findError
+    const existingLocation = existingLocations && existingLocations.length > 0 ? existingLocations[0] : null
 
     if (existingLocation) {
       // Step 2a: Location existiert bereits → Update staff_ids
@@ -1431,19 +1426,21 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
         logger.debug(`➕ Adding staff to location`)
       }
 
-      const { error: updateError } = await supabase
-        .from('locations')
-        .update({ staff_ids: currentStaffIds })
-        .eq('id', existingLocation.id)
+      await query({
+        action: 'update',
+        table: 'locations',
+        filters: [{ column: 'id', operator: 'eq', value: existingLocation.id }],
+        data: { staff_ids: currentStaffIds }
+      })
 
-      if (updateError) throw updateError
       logger.debug(`✅ Updated staff_ids: ${currentStaffIds.join(', ')}`)
     } else {
-      // Step 2b: Location existiert nicht → Neuen Eintrag erstellen
+      // Step 2b: Location existiert nicht → Neuen Eintrag erstellen via secure API
       logger.debug(`📍 Location doesn't exist, creating new one`)
-      const { error: insertError } = await supabase
-        .from('locations')
-        .insert({
+      await query({
+        action: 'insert',
+        table: 'locations',
+        data: {
           name: sourceLocation.name,
           address: sourceLocation.address,
           city: sourceLocation.city,
@@ -1454,9 +1451,9 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
           tenant_id: tenantId,
           staff_ids: [staffId],
           google_place_id: sourceLocation.google_place_id || null
-        })
+        }
+      })
 
-      if (insertError) throw insertError
       logger.debug(`✅ Created new exam location with staff ${staffId}`)
     }
 
