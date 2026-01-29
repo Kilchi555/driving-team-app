@@ -637,6 +637,7 @@ import { useEventModalApi } from '~/composables/useEventModalApi'
 const eventModalApi = useEventModalApi()
 import { useStaffAvailability, type StaffAvailability } from '~/composables/useStaffAvailability'
 import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
+import { useAutoAssignStaff } from '~/composables/useAutoAssignStaff'
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
@@ -1052,6 +1053,27 @@ const handleSaveAppointment = async () => {
       savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)
+      
+      // ✅ NEW: Check for auto-assignment (only on create mode for new appointments)
+      if (props.mode === 'create' && savedAppointment?.id && selectedStudent.value?.id && currentUser.value?.id) {
+        try {
+          logger.debug('🔍 Checking auto-assignment for student:', selectedStudent.value.id)
+          const assignmentResult = await checkFirstAppointmentAssignment({
+            user_id: selectedStudent.value.id,
+            staff_id: currentUser.value.id
+          })
+          
+          if (assignmentResult.assigned) {
+            logger.debug('✅ Auto-assignment completed:', assignmentResult)
+            showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem Fahrlehrer zugeordnet.`)
+          } else {
+            logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
+          }
+        } catch (assignmentError: any) {
+          logger.warn('⚠️ Auto-assignment check failed:', assignmentError)
+          // Don't fail the appointment save due to assignment error
+        }
+      }
     } catch (saveError: any) {
       logger.error('EventModal', 'Error saving appointment:', saveError)
       
@@ -1349,6 +1371,9 @@ const isLoadingAdminFee = ref<boolean>(false)
 const availableStaff = ref<StaffAvailability[]>([])
 const { loadStaffWithAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
 const isEditingStaff = ref(false)
+
+// ✅ Auto-Assign Staff
+const { checkFirstAppointmentAssignment } = useAutoAssignStaff()
 
 // ✅ Staff Category Durations - use database instead of hardcoded values
 const { 
