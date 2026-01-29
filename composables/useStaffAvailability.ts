@@ -1,6 +1,6 @@
-// composables/useStaffAvailability.ts
+// composables/useStaffAvailability.ts - Migriert zu API-basierten Abfragen
 import { ref, readonly } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export interface StaffAvailability {
   id: string
@@ -13,12 +13,11 @@ export interface StaffAvailability {
 }
 
 export const useStaffAvailability = () => {
-  const supabase = getSupabase()
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
   /**
-   * Check if a staff member is available at a specific time
+   * Check if a staff member is available at a specific time via API
    */
   const checkStaffAvailability = async (
     staffId: string, 
@@ -28,55 +27,29 @@ export const useStaffAvailability = () => {
     excludeAppointmentId?: string
   ): Promise<boolean> => {
     try {
-      // Convert time to ISO format for database query
-      const startDateTime = `${date}T${startTime}:00`
-      const endDateTime = `${date}T${endTime}:00`
+      logger.debug('🔍 Checking availability via API:', staffId)
       
-      logger.debug('🔍 Checking availability for staff:', staffId, 'at', startDateTime, 'to', endDateTime)
+      const result = await $fetch('/api/staff/check-conflicts', {
+        method: 'POST',
+        body: {
+          staffId,
+          date,
+          startTime,
+          endTime,
+          excludeAppointmentId
+        }
+      })
+
+      return result.isAvailable
       
-      // Check for appointment conflicts using simple time range comparison
-      const { data: conflictingAppointments, error: dbError } = await supabase
-        .from('appointments')
-        .select('id, start_time, end_time, title, status')
-        .eq('staff_id', staffId)
-        .eq('status', 'scheduled') // Only scheduled appointments, not cancelled
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .or(`start_time.lt.${endDateTime},end_time.gt.${startDateTime}`) // Simple overlap check
-      
-      if (dbError) {
-        console.error('❌ Error checking staff availability:', dbError)
-        return true // Assume available on error
-      }
-      
-      // Filter out current appointment if editing
-      const actualConflicts = conflictingAppointments?.filter(apt => apt.id !== excludeAppointmentId) || []
-      
-      const isAvailable = actualConflicts.length === 0
-      
-      if (!isAvailable) {
-        logger.debug('🚫 Staff', staffId, 'is busy at this time:', {
-          conflicts: actualConflicts.length,
-          conflictingAppointments: actualConflicts.map(apt => ({
-            id: apt.id,
-            start: apt.start,
-            end: apt.end,
-            title: apt.title
-          }))
-        })
-      } else {
-        logger.debug('✅ Staff', staffId, 'is available at this time')
-      }
-      
-      return isAvailable
-      
-    } catch (error) {
-      console.error('❌ Error in checkStaffAvailability:', error)
+    } catch (error: any) {
+      logger.error('Error in checkStaffAvailability:', error)
       return true // Assume available on error
     }
   }
 
   /**
-   * Load all staff members with availability status for a specific time
+   * Load all staff members with availability status for a specific time via API
    */
   const loadStaffWithAvailability = async (
     date?: string,
@@ -92,68 +65,23 @@ export const useStaffAvailability = () => {
     try {
       logger.debug('👥 Loading staff members with availability...')
       
-      // Load basic staff information
-      const { data: allStaff, error: staffError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, email, role')
-        .eq('role', 'staff')
-        .eq('is_active', true)
-        .order('first_name')
-      
-      if (staffError) throw staffError
-      
-      // If we have time information, check availability
-      if (date && startTime && endTime) {
-        logger.debug('📅 Checking staff availability for:', { date, startTime, endTime })
-        
-        const staffWithAvailability = await Promise.all(
-          allStaff.map(async (staff) => {
-            const isAvailable = await checkStaffAvailability(
-              staff.id,
-              date,
-              startTime,
-              endTime,
-              excludeAppointmentId
-            )
-            
-            return {
-              ...staff,
-              isAvailable,
-              availabilityStatus: isAvailable ? 'available' : 'busy'
-            }
-          })
-        )
-        
-        // Sort: available first, then busy
-        const sortedStaff = staffWithAvailability.sort((a, b) => {
-          if (a.isAvailable && !b.isAvailable) return -1
-          if (!a.isAvailable && b.isAvailable) return 1
-          return a.first_name.localeCompare(b.first_name)
-        })
-        
-        logger.debug('✅ Staff loaded with availability:', {
-          total: sortedStaff.length,
-          available: sortedStaff.filter(s => s.isAvailable).length,
-          busy: sortedStaff.filter(s => !s.isAvailable).length
-        })
-        
-        return sortedStaff
-        
-      } else {
-        // No time information available - show all staff
-        const staffWithUnknownStatus = allStaff.map(staff => ({
-          ...staff,
-          isAvailable: true,
-          availabilityStatus: 'unknown' as const
-        }))
-        
-        logger.debug('✅ All staff loaded (no time info available):', staffWithUnknownStatus.length, 'members')
-        return staffWithUnknownStatus
-      }
+      const query: Record<string, string> = {}
+      if (date) query.date = date
+      if (startTime) query.startTime = startTime
+      if (endTime) query.endTime = endTime
+      if (excludeAppointmentId) query.excludeAppointmentId = excludeAppointmentId
+
+      const result = await $fetch('/api/staff/availability', {
+        method: 'GET',
+        query
+      })
+
+      logger.debug('✅ Staff loaded with availability')
+      return result.staff || []
       
     } catch (err: any) {
-      console.error('❌ Error loading staff with availability:', err)
-      error.value = err.message || 'Fehler beim Laden der Fahrlehrer'
+      logger.error('Error loading staff with availability:', err)
+      error.value = err.message || 'Error loading staff'
       return []
     } finally {
       isLoading.value = false
@@ -198,7 +126,6 @@ export const useStaffAvailability = () => {
     durationMinutes: number
   ): Promise<string | null> => {
     try {
-      // This is a simplified version - you might want to implement more sophisticated logic
       const startDateTime = new Date(`${date}T${startTime}:00`)
       const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000)
       
@@ -219,8 +146,8 @@ export const useStaffAvailability = () => {
       
       return await getNextAvailableSlot(staffId, date, nextTime, durationMinutes)
       
-    } catch (error) {
-      console.error('❌ Error getting next available slot:', error)
+    } catch (error: any) {
+      logger.error('Error getting next available slot:', error)
       return null
     }
   }
