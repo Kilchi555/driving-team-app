@@ -118,19 +118,6 @@ const cssVariables = computed(() => {
 export const useTenantBranding = () => {
   const supabase = getSupabase()
 
-  // Helper: Get auth header if user is authenticated
-  const getAuthHeader = async (): Promise<string | null> => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.access_token) {
-        return `Bearer ${session.access_token}`
-      }
-    } catch (e) {
-      logger.debug('No auth session available')
-    }
-    return null
-  }
-
   // Tenant-Branding laden (by slug)
   const loadTenantBranding = async (tenantSlug?: string) => {
     logger.debug('🎨 loadTenantBranding called with slug:', tenantSlug)
@@ -147,11 +134,9 @@ export const useTenantBranding = () => {
 
       // ✅ SECURE API CALL - No direct DB access
       try {
-        const authHeader = await getAuthHeader()
         const response: any = await $fetch('/api/tenants/branding', {
           method: 'GET',
-          query: { slug: tenantSlug },
-          headers: authHeader ? { Authorization: authHeader } : {}
+          query: { slug: tenantSlug }
         })
 
         if (response?.success && response.data) {
@@ -189,11 +174,9 @@ export const useTenantBranding = () => {
       logger.debug('🔍 loadTenantBrandingById: Calling secure API for ID:', tenantId)
 
       // ✅ SECURE API CALL - No direct DB access
-      const authHeader = await getAuthHeader()
       const response: any = await $fetch('/api/tenants/branding', {
         method: 'GET',
-        query: { id: tenantId },
-        headers: authHeader ? { Authorization: authHeader } : {}
+        query: { id: tenantId }
       })
 
       if (!response?.success || !response.data) {

@@ -261,16 +261,8 @@ onMounted(async () => {
     console.log('🔍 Learning page - Loading via API...')
 
     // ✅ SECURE API CALL - Get all learning progress data
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      throw new Error('No session available')
-    }
-
     const response = await $fetch('/api/customer/get-learning-progress', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`
-      }
+      method: 'GET'
     }) as any
 
     if (!response.success) {

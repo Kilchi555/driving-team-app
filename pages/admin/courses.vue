@@ -6201,13 +6201,10 @@ const syncSARIParticipants = async () => {
   sariParticipantsSyncSuccess.value = false
 
   try {
-    const { data: session } = await getSupabase().auth.getSession()
-    
     const response = await fetch('/api/sari/sync-participants', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.session?.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         courseId: selectedCourse.value.id

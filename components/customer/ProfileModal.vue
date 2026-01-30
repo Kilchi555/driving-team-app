@@ -592,13 +592,6 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     }
     
     // Use secure API for upload instead of direct storage access
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      throw new Error('Nicht angemeldet')
-    }
-    
     const formData = new FormData()
     formData.append('file', file)
     formData.append('documentType', 'id_document')
@@ -607,9 +600,6 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     
     const response = await $fetch('/api/customer/upload-document', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: formData
     })
 
@@ -646,21 +636,8 @@ const saveProfile = async () => {
   try {
     logger.debug('💾 Saving profile with data:', formData.value)
     
-    // Get current user session for auth header
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      throw new Error('Keine aktive Sitzung. Bitte melden Sie sich erneut an.')
-    }
-    
-    logger.debug('🔐 Using access token for profile update')
-    
     const response = await $fetch('/api/customer/update-profile', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: {
         firstName: formData.value.firstName,
         lastName: formData.value.lastName,
@@ -780,20 +757,8 @@ watch(() => props.categories, (newVal) => {
  */
 const loadWebAuthnCredentials = async () => {
   try {
-    // Get Supabase session token
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session?.access_token) {
-      logger.debug('⚠️ No session for loading credentials')
-      webAuthnCredentials.value = []
-      return
-    }
-
     const response = await fetch('/api/auth/webauthn-credentials', {
-      method: 'GET',
-      headers: { 
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'GET'
     })
 
     if (!response.ok) {
@@ -832,19 +797,11 @@ const registerFaceID = async () => {
   try {
     logger.debug('🔐 Starting WebAuthn registration...')
 
-    // Get Supabase session token
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session?.access_token) {
-      throw new Error('Authentifizierung erforderlich')
-    }
-
     // Get registration options from server
     const response = await fetch('/api/auth/webauthn-registration-options', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ 
         deviceName: `${navigator.userAgentData?.platform || 'Device'} - ${new Date().toLocaleDateString('de-CH')}` 
@@ -883,8 +840,7 @@ const registerFaceID = async () => {
     const verifyResponse = await fetch('/api/auth/webauthn-register', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         credential: {
@@ -967,18 +923,8 @@ const deleteWebAuthnCredential = async (credentialId: string) => {
   webAuthnError.value = ''
 
   try {
-    // Get Supabase session token
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session?.access_token) {
-      throw new Error('Authentifizierung erforderlich')
-    }
-
     const response = await fetch(`/api/auth/webauthn-credential/${credentialId}`, {
-      method: 'DELETE',
-      headers: { 
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'DELETE'
     })
 
     if (!response.ok) {

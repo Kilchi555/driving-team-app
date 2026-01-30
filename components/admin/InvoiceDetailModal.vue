@@ -607,15 +607,8 @@ const loadInvoicePayments = async () => {
   if (!props.invoice?.invoice_number) return;
   
   try {
-    const { getSupabase } = await import('~/utils/supabase');
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) return;
-    
     const response = await $fetch('/api/admin/invoice-details', {
       method: 'GET',
-      headers: { Authorization: `Bearer ${session.access_token}` },
       query: { invoice_number: props.invoice.invoice_number }
     }) as any;
     
@@ -649,15 +642,8 @@ const loadDetailedData = async () => {
     // ✅ Lade detaillierte Daten via API
     if (props.invoice.user_id) {
       try {
-        const { getSupabase } = await import('~/utils/supabase');
-        const supabase = getSupabase();
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.access_token) return;
-        
         const response = await $fetch('/api/admin/invoice-details', {
           method: 'GET',
-          headers: { Authorization: `Bearer ${session.access_token}` },
           query: { user_id: props.invoice.user_id }
         }) as any;
         
@@ -736,15 +722,8 @@ const updateInvoiceStatus = async (action: string) => {
   try {
     if (!props.invoice?.id) return
     
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) return
-    
     await $fetch('/api/admin/invoice-update-status', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { invoice_id: props.invoice.id, action }
     })
     
@@ -971,19 +950,10 @@ const saveChanges = async () => {
   isSaving.value = true;
   
   try {
-    const { getSupabase } = await import('~/utils/supabase');
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) {
-      throw new Error('Nicht authentifiziert');
-    }
-    
     const paymentId = fallbackPayment.value?.id || props.invoice.id;
     
     await $fetch('/api/admin/invoice-save', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
       body: {
         payment_id: paymentId,
         update_data: {

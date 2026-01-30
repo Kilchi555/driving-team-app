@@ -2132,14 +2132,6 @@ const createAppointmentSecure = async (userData: any) => {
   try {
     logger.debug('📅 Creating appointment via secure API...')
     
-    // Get auth token
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      throw new Error('Bitte melden Sie sich an um fortzufahren.')
-    }
-    
     if (!reservedSlotId.value) {
       throw new Error('Slot-Reservierung abgelaufen. Bitte wählen Sie erneut einen Zeitslot.')
     }
@@ -2152,8 +2144,7 @@ const createAppointmentSecure = async (userData: any) => {
         appointment_type: 'lesson',
         category_code: selectedCategory.value?.code || '',
         notes: bookingNotes.value || undefined
-      },
-      session.access_token
+      }
     )
     
     logger.debug('✅ Appointment created:', response.appointment.id)

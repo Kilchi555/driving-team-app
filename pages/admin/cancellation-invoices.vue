@@ -311,17 +311,9 @@ const stats = computed(() => {
 const loadCancellationInvoices = async () => {
   try {
     isLoading.value = true
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      console.error('No session found')
-      return
-    }
 
     const response = await $fetch('/api/admin/cancellation-invoices', {
       method: 'GET',
-      headers: { Authorization: `Bearer ${session.access_token}` },
       query: {
         status: filters.value.status || undefined,
         search: filters.value.search || undefined
@@ -355,17 +347,8 @@ const loadCancellationInvoices = async () => {
 // ✅ Mark invoice as paid via secure API
 const markInvoiceAsPaid = async (invoiceId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      console.error('No session found')
-      return
-    }
-    
     const response = await $fetch('/api/admin/invoice-update-status', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { invoice_id: invoiceId, action: 'paid' }
     }) as any
     

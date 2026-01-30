@@ -473,14 +473,6 @@ const loadAllData = async () => {
   if (!userProfile.value?.id) return
 
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    const accessToken = session?.access_token
-
-    if (!accessToken) {
-      throw new Error('No authentication token found')
-    }
-
     // ✅ Use SINGLE comprehensive API to fetch ALL payment page data
     // This replaces THREE separate queries with ONE secure API call:
     // 1. User payment preferences
@@ -489,10 +481,7 @@ const loadAllData = async () => {
     logger.debug('📄 Loading payment page data via secure API...')
 
     const response = await $fetch('/api/customer/get-payment-page-data', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
+      method: 'GET'
     }) as any
 
     if (!response?.success || !response?.data) {
@@ -555,11 +544,6 @@ const payAllUnpaid = async () => {
     
     logger.debug('💳 Processing payment via secure API:', firstPayment.id)
     
-    // Get session for auth header
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) throw new Error('User not authenticated')
-    
     // API only needs paymentId - it fetches user data from auth token
     interface PaymentResponse {
       success: boolean
@@ -571,9 +555,6 @@ const payAllUnpaid = async () => {
     
     const response = await $fetch<PaymentResponse>('/api/payments/process', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      },
       body: {
         paymentId: firstPayment.id,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
@@ -604,11 +585,6 @@ const payIndividual = async (payment: any) => {
   processingPaymentIds.value.add(payment.id)
   
   try {
-    // Get session for authentication
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) throw new Error('User session not found')
-    
     logger.debug('💳 Processing payment via secure API:', payment.id)
     
     // If payment is not already wallee, convert it first
@@ -640,9 +616,6 @@ const payIndividual = async (payment: any) => {
     
     const walleeResponse = await $fetch('/api/payments/process', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: {
         paymentId: payment.id,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,

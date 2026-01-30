@@ -1255,13 +1255,8 @@ const loadBillingAddressFromExistingPayments = async (studentId: string) => {
   try {
     logger.debug('🔍 Loading billing address via API for student:', studentId)
     
-    // ✅ Use secure API instead of direct DB query
-    const { data: { session } } = await getSupabase().auth.getSession()
-    
+    // ✅ Use secure API - cookies are automatically sent
     const response = await $fetch('/api/staff/get-billing-address', {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      },
       query: {
         user_id: studentId
       }

@@ -420,14 +420,8 @@ const fetchUsersSummary = async () => {
     logger.debug('🔄 Loading users payment summary via API...')
     
     // ✅ Use new secure API instead of direct DB queries
-    // Get auth token for API call
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/admin/get-payments-overview', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`
-      }
+      method: 'GET'
     }) as any
 
     if (!response.success) {

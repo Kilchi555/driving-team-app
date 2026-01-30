@@ -45,18 +45,10 @@ export const useCustomerPayments = () => {
       isLoading.value = true
       
       // ✅ Use backend API to fetch payments with staff data (bypasses RLS)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
-        throw new Error('No authentication token found')
-      }
-
       logger.debug('🔍 Loading payments via API for user:', currentUser.value.id)
 
       const response = await $fetch('/api/customer/get-payments', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
+        method: 'GET'
       }) as any
 
       if (!response?.success || !response?.data) {

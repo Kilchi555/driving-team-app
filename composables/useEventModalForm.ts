@@ -339,20 +339,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return
       }
       
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        logger.error('❌ No access token available')
-        return
-      }
-      
       logger.debug('🔍 Loading student via backend API...')
       const { user: student } = await $fetch('/api/admin/get-user-for-edit', {
-        query: { user_id: userId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+        query: { user_id: userId }
       })
 
       logger.debug('📊 Student query result:', { student })
@@ -381,19 +370,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Load existing discount from discount_sales table
   const loadExistingDiscount = async (appointmentId: string) => {
     try {
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        logger.error('❌ No access token available')
-        return null
-      }
-      
       const { discountSales } = await $fetch('/api/admin/get-discount-sales', {
-        query: { appointment_id: appointmentId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+        query: { appointment_id: appointmentId }
       })
       
       const discount = discountSales?.[0]
@@ -609,16 +587,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('💰 Saving discount via API:', discountData)
       
-      // ✅ Get auth token and add Authorization header
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      
       // Call secure API instead of direct Supabase query
       const result = await $fetch('/api/discounts/save', {
         method: 'POST',
-        headers: session?.access_token ? {
-          'Authorization': `Bearer ${session.access_token}`
-        } : {},
         body: {
           appointmentId,
           discountData
@@ -1051,14 +1022,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Auto-assign staff to customer (via Backend API to bypass RLS)
       if (mode === 'create' && result.staff_id && result.user_id) {
         try {
-          const supabase = getSupabase()
-          const { data: { session } } = await supabase.auth.getSession()
-          
           const response = await $fetch('/api/admin/update-user-assigned-staff', {
             method: 'POST',
-            headers: session?.access_token ? {
-              'Authorization': `Bearer ${session.access_token}`
-            } : {},
             body: {
               userId: result.user_id,
               staffId: result.staff_id

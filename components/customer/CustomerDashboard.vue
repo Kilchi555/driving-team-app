@@ -1528,20 +1528,9 @@ const navigateToShop = async () => {
 const navigateToReglement = async (type: string) => {
   // ✅ CHANGED: Don't navigate away, instead load and show reglement in modal
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session?.access_token) {
-      console.error('No auth token')
-      return
-    }
-
     // Load reglement content via API
     const response = await $fetch<any>('/api/customer/reglements', {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       query: { type }
     })
 
@@ -1619,14 +1608,8 @@ const loadPendingConfirmations = async () => {
   try {
     // ✅ Use backend API to fetch pending confirmations with ALL data
     // (staff, payments, categories, payment_items - all in ONE call!)
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/customer/get-pending-confirmations', {
-      method: 'GET',
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {}
+      method: 'GET'
     }) as any
     
     if (!response?.success || !response?.data) {
@@ -1769,14 +1752,8 @@ const confirmAppointment = async (appointment: any) => {
       
       // ✅ WICHTIG: Confirm the appointment via secure API auch für non-Wallee payments!
       try {
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
         const confirmResult = await $fetch('/api/appointments/confirm', {
           method: 'POST',
-          headers: session?.access_token ? {
-            'Authorization': `Bearer ${session.access_token}`
-          } : {},
           body: {
             appointmentId: appointment.id
           }
@@ -1832,14 +1809,8 @@ const confirmAppointment = async (appointment: any) => {
       
       // ✅ WICHTIG: Confirm the appointment via secure API!
       try {
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
         const confirmResult = await $fetch('/api/appointments/confirm', {
           method: 'POST',
-          headers: session?.access_token ? {
-            'Authorization': `Bearer ${session.access_token}`
-          } : {},
           body: {
             appointmentId: appointment.id
           }
@@ -1887,14 +1858,8 @@ const confirmAppointment = async (appointment: any) => {
 
     // ✅ Confirm appointment via secure API
     try {
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      
       const confirmResult = await $fetch('/api/appointments/confirm', {
         method: 'POST',
-        headers: session?.access_token ? {
-          'Authorization': `Bearer ${session.access_token}`
-        } : {},
         body: {
           appointmentId: appointment.id
         }
@@ -1945,15 +1910,8 @@ const loadAppointments = async () => {
 
   try {
     // ✅ Use backend API to fetch appointments with staff data (bypasses RLS)
-    // Get auth token first
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/customer/get-appointments', {
-      method: 'GET',
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {}
+      method: 'GET'
     }) as any
     
     if (!response?.success || !response?.data) {
@@ -1975,14 +1933,8 @@ const loadAppointments = async () => {
       
       try {
         // ✅ Use secure API instead of direct DB query
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
         const response = await $fetch('/api/customer/get-locations', {
           method: 'GET',
-          headers: session?.access_token ? {
-            'Authorization': `Bearer ${session.access_token}`
-          } : {},
           query: {
             ids: locationIds.join(',')
           }
@@ -2050,14 +2002,8 @@ const loadAppointments = async () => {
       
       try {
         // ✅ Use secure API instead of direct DB query
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
         const response = await $fetch('/api/customer/get-evaluation-criteria', {
           method: 'GET',
-          headers: session?.access_token ? {
-            'Authorization': `Bearer ${session.access_token}`
-          } : {},
           query: {
             ids: criteriaIds.join(',')
           }
@@ -2232,14 +2178,8 @@ const loadAppointments = async () => {
 const loadLocations = async () => {
   try {
     // ✅ Use secure API instead of direct DB query
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/customer/get-locations', {
-      method: 'GET',
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {}
+      method: 'GET'
     }) as any
     
     locations.value = response?.data || response?.locations || []
@@ -2251,15 +2191,8 @@ const loadLocations = async () => {
 const loadStaff = async () => {
   try {
     // ✅ Use backend API to fetch staff (bypasses RLS)
-    // Get auth token first
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/customer/get-staff-names', {
-      method: 'GET',
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {}
+      method: 'GET'
     }) as any
     
     if (response?.success && response?.data) {
@@ -2277,14 +2210,8 @@ const loadStaff = async () => {
 
 const loadCourseRegistrations = async () => {
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/customer/upcoming-course-registrations', {
-      method: 'GET',
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {}
+      method: 'GET'
     }) as any
     
     if (!response?.success) {
@@ -2541,15 +2468,7 @@ onMounted(async () => {
     // First, load user data via secure API
     if (!userData.value && currentUser.value?.id) {
       try {
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.access_token) {
-          const response = await $fetch('/api/customer/get-user-profile', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`
-            }
-          })
+        const response = await $fetch('/api/customer/get-user-profile')
           
           if (response.success && response.data) {
             userData.value = response.data
@@ -2606,15 +2525,6 @@ const handlePayNow = async () => {
   logger.debug('💳 Starting secure payment process...')
   
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      displayToast('error', 'Fehler', 'Bitte melde dich erneut an')
-      isProcessingPayment.value = false
-      return
-    }
-    
     const payment = currentPayment.value
     const appointment = currentPaymentAppointment.value
     
@@ -2639,9 +2549,6 @@ const handlePayNow = async () => {
     // ✅ Call secure payment API (same as /customer/payments page)
     const walleeResponse = await $fetch('/api/payments/process', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      },
       body: {
         paymentId: payment.id,
         orderId,

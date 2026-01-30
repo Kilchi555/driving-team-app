@@ -544,15 +544,8 @@ const loadSales = async () => {
     logger.debug('🔄 Loading product sales via API...')
     
     // ✅ Use new secure API instead of direct DB queries
-    // Get auth token for API call
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/admin/get-product-sales', {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`
-      },
       query: { limit: 1000, offset: 0 }
     }) as any
 
