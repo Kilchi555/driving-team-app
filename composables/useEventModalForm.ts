@@ -782,28 +782,21 @@ const useEventModalForm = (currentUser?: any, refs?: {
         throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
       }
       
-      const supabase = getSupabase()
-      
-      // Auth Check
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (!authData?.user) {
+      // ✅ Use authStore instead of direct Supabase auth (HTTP-only cookie authentication)
+      const authStore = useAuthStore()
+      if (!authStore.user) {
         throw new Error('Nicht authentifiziert')
       }
       
-      // User Check
-      const { data: dbUser, error: dbError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', authData.user.id)
-        .single()
-      
-      if (!dbUser) {
+      if (!authStore.userProfile) {
         throw new Error('User-Profil nicht gefunden')
       }
       
-      if (!dbUser.tenant_id) {
+      if (!authStore.userProfile.tenant_id) {
         throw new Error('Benutzer hat keinen Tenant zugeordnet')
       }
+      
+      const dbUser = authStore.userProfile
       
       // Appointment Data
       // ✅ FIX: Für "other" EventTypes ohne Schüler, verwende staff_id als user_id
