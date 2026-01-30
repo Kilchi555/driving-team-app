@@ -1,7 +1,5 @@
 // composables/useDiscounts.ts
 import { ref, computed } from 'vue'
-import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import type { Discount } from '~/types/payment'
 
@@ -34,8 +32,6 @@ export interface DiscountValidationResult {
 }
 
 export const useDiscounts = () => {
-  const supabase = getSupabase()
-  
   // State
   const discounts = ref<DiscountCode[]>([])
   const isLoading = ref(false)
@@ -95,33 +91,19 @@ export const useDiscounts = () => {
 
   const loadDiscountsByCategory = async (categoryCode: string) => {
     try {
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
-
-      const { data, error: dbError } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('tenant_id', userProfile.tenant_id)
-        .eq('is_active', true)
-        .is('deleted_at', null) // Only load non-deleted discounts
-        .or(`category_filter.eq.${categoryCode},category_filter.eq.all`)
-        .order('created_at', { ascending: false })
+      logger.debug('🔄 Loading discounts for category via API:', categoryCode)
       
-      if (dbError) throw dbError
+      // ✅ Use secure API endpoint
+      const response = await $fetch(`/api/discounts/by-category/${categoryCode}`)
       
-      return data || []
+      if (!response.success) {
+        throw new Error('Failed to load discounts by category')
+      }
+      
+      logger.debug('✅ Category discounts loaded:', response.data?.length || 0)
+      return response.data || []
     } catch (err: any) {
-      console.error('❌ Error loading discounts by category:', err)
+      logger.error('❌ Error loading discounts by category:', err.message)
       return []
     }
   }
@@ -132,151 +114,22 @@ export const useDiscounts = () => {
     categoryCode?: string
   ): Promise<DiscountValidationResult> => {
     try {
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
-
-      // ✅ FIRST: Try voucher_codes table (credit/gift vouchers)
-      const { data: voucherData, error: voucherError } = await supabase
-        .from('voucher_codes')
-        .select('*')
-        .ilike('code', code) // Case-insensitive comparison
-        .eq('tenant_id', userProfile.tenant_id)
-        .eq('is_active', true)
-        .single()
+      logger.debug('🔄 Validating discount code via API:', code)
       
-      if (!voucherError && voucherData) {
-        const now = new Date()
-        const validFrom = new Date(voucherData.valid_from)
-        const validUntil = voucherData.valid_until ? new Date(voucherData.valid_until) : null
-        
-        // Check valid period
-        if (now < validFrom || (validUntil && now > validUntil)) {
-          return {
-            isValid: false,
-            discount_amount_rappen: 0,
-            error: 'Gutschein ist nicht gültig'
-          }
+      // ✅ Use secure API endpoint
+      const response = await $fetch('/api/discounts/validate', {
+        method: 'POST',
+        body: {
+          code,
+          amount_rappen,
+          categoryCode
         }
-        
-        // Check redemption limit
-        if (voucherData.max_redemptions && voucherData.current_redemptions >= voucherData.max_redemptions) {
-          return {
-            isValid: false,
-            discount_amount_rappen: 0,
-            error: 'Gutschein hat das Nutzungslimit erreicht'
-          }
-        }
-        
-        // Return voucher credit as discount
-        return {
-          isValid: true,
-          discount_amount_rappen: voucherData.credit_amount_rappen,
-          discount: voucherData as any
-        }
-      }
+      })
       
-      // ✅ SECOND: Try discounts table (percentage/fixed discounts)
-      const { data: discountData, error: discountError } = await supabase
-        .from('discounts')
-        .select('*')
-        .ilike('code', code) // Case-insensitive comparison
-        .eq('tenant_id', userProfile.tenant_id) // Filter by tenant
-        .eq('is_active', true)
-        .single()
-      
-      if (discountError || !discountData) {
-        return {
-          isValid: false,
-          discount_amount_rappen: 0,
-          error: 'Gutscheincode nicht gefunden'
-        }
-      }
-
-      const discount = discountData as Discount
-      
-      // Prüfe Gültigkeitszeitraum
-      const now = new Date()
-      const validFrom = new Date(discount.valid_from)
-      const validUntil = discount.valid_until ? new Date(discount.valid_until) : null
-      
-      if (now < validFrom || (validUntil && now > validUntil)) {
-        return {
-          isValid: false,
-          discount_amount_rappen: 0,
-          error: 'Gutschein ist nicht gültig'
-        }
-      }
-
-      // Prüfe Mindestbetrag
-      if (amount_rappen < discount.min_amount_rappen) {
-        return {
-          isValid: false,
-          discount_amount_rappen: 0,
-          error: `Mindestbetrag von CHF ${(discount.min_amount_rappen / 100).toFixed(2)} nicht erreicht`
-        }
-      }
-
-      // Prüfe Kategorie-Filter
-      if (discount.category_filter && 
-          discount.category_filter !== 'all' && 
-          discount.category_filter !== categoryCode) {
-        return {
-          isValid: false,
-          discount_amount_rappen: 0,
-          error: 'Gutschein gilt nicht für diese Kategorie'
-        }
-      }
-
-      // Prüfe Nutzungslimit
-      if (discount.usage_limit && discount.usage_count >= discount.usage_limit) {
-        return {
-          isValid: false,
-          discount_amount_rappen: 0,
-          error: 'Gutschein wurde bereits maximal genutzt'
-        }
-      }
-
-      // Berechne Rabattbetrag
-      let discountAmount = 0
-      switch (discount.discount_type) {
-        case 'percentage':
-          discountAmount = Math.round((amount_rappen * discount.discount_value) / 100)
-          break
-        case 'fixed':
-          discountAmount = Math.round(discount.discount_value * 100) // CHF zu Rappen
-          break
-        case 'free_lesson':
-        case 'free_product':
-          discountAmount = amount_rappen // Kompletter Betrag
-          break
-      }
-
-      // Begrenze auf maximalen Rabatt
-      if (discount.max_discount_rappen && discountAmount > discount.max_discount_rappen) {
-        discountAmount = discount.max_discount_rappen
-      }
-
-      // Begrenze auf den tatsächlichen Betrag
-      discountAmount = Math.min(discountAmount, amount_rappen)
-
-      return {
-        isValid: true,
-        discount,
-        discount_amount_rappen: discountAmount
-      }
-      
+      logger.debug('✅ Discount validation result:', response.isValid)
+      return response
     } catch (err: any) {
-      console.error('❌ Error validating discount code:', err)
+      logger.error('❌ Error validating discount code:', err.message)
       return {
         isValid: false,
         discount_amount_rappen: 0,
@@ -287,146 +140,106 @@ export const useDiscounts = () => {
 
   const applyDiscount = async (discountId: string) => {
     try {
-      // First get current usage_count
-      const { data: currentDiscount } = await supabase
-        .from('discounts')
-        .select('usage_count')
-        .eq('id', discountId)
-        .single()
+      logger.debug('🔄 Applying discount via API:', discountId)
       
-      const newCount = (currentDiscount?.usage_count || 0) + 1
+      // ✅ Use secure API endpoint
+      const response = await $fetch(`/api/discounts/apply/${discountId}`, {
+        method: 'POST'
+      })
       
-      const { error: dbError } = await supabase
-        .from('discounts')
-        .update({ 
-          usage_count: newCount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', discountId)
-      
-      if (dbError) throw dbError
+      if (!response.success) {
+        throw new Error('Failed to apply discount')
+      }
       
       // Aktualisiere lokalen State
       const discount = discounts.value.find(d => d.id === discountId)
       if (discount) {
-        discount.usage_count += 1
+        discount.usage_count = response.usage_count
         discount.updated_at = new Date().toISOString()
       }
       
-      logger.debug('✅ Discount applied:', discountId)
+      logger.debug('✅ Discount applied via API:', discountId)
       
     } catch (err: any) {
-      console.error('❌ Error applying discount:', err)
+      logger.error('❌ Error applying discount:', err.message)
       throw err
     }
   }
 
   const createDiscount = async (discountData: Partial<DiscountCode>) => {
     try {
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
-
-      // Check if discount code already exists for this tenant
-      if (discountData.code) {
-        const { data: existingDiscount, error: checkError } = await supabase
-          .from('discounts')
-          .select('id, code, name')
-          .eq('code', discountData.code)
-          .eq('tenant_id', userProfile.tenant_id)
-          .single()
-
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-          throw checkError
-        }
-
-        if (existingDiscount) {
-          throw new Error(`Der Gutscheincode "${discountData.code}" existiert bereits für Ihren Tenant. Bitte wählen Sie einen anderen Code.`)
-        }
-      }
-
-      // Add tenant_id to discount data and ensure is_active has a default value
-      const discountWithTenant = {
-        ...discountData,
-        tenant_id: userProfile.tenant_id,
-        is_active: discountData.is_active !== undefined ? discountData.is_active : true
+      logger.debug('🔄 Creating discount via API')
+      
+      // ✅ Use existing save.post endpoint
+      const response = await $fetch('/api/discounts/save', {
+        method: 'POST',
+        body: discountData
+      })
+      
+      if (!response.success) {
+        throw new Error('Failed to create discount')
       }
       
-      logger.debug('🔍 Creating discount with data:', discountWithTenant)
-
-      const { data, error: dbError } = await supabase
-        .from('discounts')
-        .insert(discountWithTenant)
-        .select()
-        .single()
+      discounts.value.unshift(response.data)
+      logger.debug('✅ Discount created via API:', response.data.id)
       
-      if (dbError) {
-        // Handle duplicate key error specifically
-        if (dbError.code === '23505' && dbError.message.includes('discounts_code_key')) {
-          throw new Error(`Der Gutscheincode "${discountData.code}" existiert bereits. Bitte wählen Sie einen anderen Code.`)
-        }
-        throw dbError
-      }
-      
-      discounts.value.unshift(data)
-      logger.debug('✅ Discount created with tenant_id:', data.id, userProfile.tenant_id)
-      logger.debug('🔍 Created discount data:', { id: data.id, name: data.name, is_active: data.is_active })
-      
-      return data
+      return response.data
     } catch (err: any) {
-      console.error('❌ Error creating discount:', err)
+      logger.error('❌ Error creating discount:', err.message)
       throw err
     }
   }
 
   const updateDiscount = async (id: string, updates: Partial<DiscountCode>) => {
     try {
-      const { data, error: dbError } = await supabase
-        .from('discounts')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
+      logger.debug('🔄 Updating discount via API:', id)
       
-      if (dbError) throw dbError
+      // ✅ Use existing save.post endpoint
+      const response = await $fetch('/api/discounts/save', {
+        method: 'POST',
+        body: { id, ...updates }
+      })
+      
+      if (!response.success) {
+        throw new Error('Failed to update discount')
+      }
       
       const index = discounts.value.findIndex(d => d.id === id)
       if (index !== -1) {
-        discounts.value[index] = data
+        discounts.value[index] = response.data
       }
       
-      logger.debug('✅ Discount updated:', id)
+      logger.debug('✅ Discount updated via API:', id)
       
-      return data
+      return response.data
     } catch (err: any) {
-      console.error('❌ Error updating discount:', err)
+      logger.error('❌ Error updating discount:', err.message)
       throw err
     }
   }
 
   const deleteDiscount = async (id: string) => {
     try {
-      const { error: dbError } = await supabase
-        .from('discounts')
-        .delete()
-        .eq('id', id)
+      logger.debug('🔄 Deleting discount via API:', id)
       
-      if (dbError) throw dbError
+      // ✅ TODO: Create DELETE endpoint if needed, for now use soft delete via update
+      const response = await $fetch('/api/discounts/save', {
+        method: 'POST',
+        body: { 
+          id, 
+          deleted_at: new Date().toISOString()
+        }
+      })
+      
+      if (!response.success) {
+        throw new Error('Failed to delete discount')
+      }
       
       discounts.value = discounts.value.filter(d => d.id !== id)
-      logger.debug('✅ Discount deleted:', id)
+      logger.debug('✅ Discount deleted via API:', id)
       
     } catch (err: any) {
-      console.error('❌ Error deleting discount:', err)
+      logger.error('❌ Error deleting discount:', err.message)
       throw err
     }
   }
