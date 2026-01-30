@@ -1347,17 +1347,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
         }
       }
 
-      // ✅ WICHTIG: tenant_id für Payments hinzufügen
+      // ✅ WICHTIG: tenant_id für Payments hinzufügen (use authStore, not direct DB query!)
       const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) {
-        throw new Error('User not authenticated')
+      if (!authStore.userProfile?.tenant_id) {
+        throw new Error('User has no tenant assigned')
       }
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
 
       // ✅ NEW: Check if student credit is being used
       let creditUsedRappen = 0
@@ -1414,7 +1408,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         created_by: formData.value.staff_id || null,
         notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
         invoice_address: invoiceAddress,
-        tenant_id: userData?.tenant_id || null,
+        tenant_id: authStore.userProfile?.tenant_id,  // ✅ Use authStore instead of userData
         credit_used_rappen: creditUsedRappen,
         credit_transaction_id: creditTransactionId,
         // ✅ If credit covers everything, mark as paid
@@ -1490,12 +1484,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let lessonPriceRappen: number
       const appointmentType = formData.value.appointment_type || 'lesson'
       
-      // ✅ Get user data for tenant_id early (needed for pricing rule lookup)
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', formData.value.staff_id)
-        .single()
+      // ✅ Get tenant_id from authStore (not from direct DB query!)
+      const staffTenantId = authStore.userProfile?.tenant_id
+      if (!staffTenantId) {
+        throw new Error('Staff user has no tenant assigned')
+      }
       
       // Check if PriceDisplay already updated the payment with new price
       if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
@@ -1534,7 +1527,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             .from('pricing_rules')
             .select('*')
             .eq('category_code', formData.value.type)
-            .eq('tenant_id', userData?.tenant_id || '')
+            .eq('tenant_id', staffTenantId)  // ✅ Use staffTenantId from authStore
             .eq('is_default', false)
             .order('created_at', { ascending: false })
             .limit(1)
