@@ -76,15 +76,29 @@ export default defineEventHandler(async (event) => {
     // Load evaluations/notes for these appointments
     const appointmentIds = (appointmentsData || []).map(apt => apt.id)
     let evaluationsMap: Record<string, any[]> = {}
-    let criteriaMap: Record<string, any> = {}
 
     if (appointmentIds.length > 0) {
       logger.debug('🔍 Loading evaluations for', appointmentIds.length, 'appointments')
 
-      // Load notes with evaluations
+      // Load notes with evaluations AND their criteria relations
       const { data: notesData, error: notesError } = await supabaseAdmin
         .from('notes')
-        .select('*')
+        .select(`
+          id,
+          appointment_id,
+          note_text,
+          evaluation_criteria_id,
+          criteria_rating,
+          criteria_note,
+          created_at,
+          updated_at,
+          evaluation_criteria (
+            id,
+            name,
+            description,
+            display_order
+          )
+        `)
         .in('appointment_id', appointmentIds)
 
       if (notesError) {
@@ -93,44 +107,22 @@ export default defineEventHandler(async (event) => {
         logger.debug('📝 Loaded', notesData.length, 'notes')
         logger.debug('📝 Sample note:', notesData[0]) // DEBUG
 
-        // Get criteria IDs
-        const criteriaIds = [...new Set(notesData
-          .filter(n => n.evaluation_criteria_id)
-          .map(n => n.evaluation_criteria_id))]
-
-        logger.debug('🔍 Found criteria IDs:', criteriaIds) // DEBUG
-
-        // Load criteria details
-        if (criteriaIds.length > 0) {
-          const { data: criteriaData } = await supabaseAdmin
-            .from('evaluation_criteria')
-            .select('*')
-            .in('id', criteriaIds)
-
-          logger.debug('📋 Loaded criteria:', criteriaData?.length || 0, 'criteria') // DEBUG
-          logger.debug('📋 Sample criteria:', criteriaData?.[0]) // DEBUG
-
-          if (criteriaData) {
-            criteriaData.forEach(c => {
-              // Only keep essential fields to avoid JSON serialization issues
-              criteriaMap[c.id] = {
-                id: c.id,
-                name: c.name,
-                description: c.description,
-                display_order: c.display_order
-              }
-            })
-          }
-        }
-
         // Group notes by appointment_id
         notesData.forEach(note => {
           if (!evaluationsMap[note.appointment_id]) {
             evaluationsMap[note.appointment_id] = []
           }
+          // Transform to match expected structure
           evaluationsMap[note.appointment_id].push({
-            ...note,
-            evaluation_criteria: note.evaluation_criteria_id ? criteriaMap[note.evaluation_criteria_id] : null
+            id: note.id,
+            appointment_id: note.appointment_id,
+            note_text: note.note_text,
+            evaluation_criteria_id: note.evaluation_criteria_id,
+            criteria_rating: note.criteria_rating,
+            criteria_note: note.criteria_note,
+            created_at: note.created_at,
+            updated_at: note.updated_at,
+            evaluation_criteria: note.evaluation_criteria // Directly from relation
           })
         })
       }
