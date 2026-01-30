@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import type { Discount } from '~/types/payment'
 
 export interface DiscountCode {
@@ -61,30 +62,23 @@ export const useDiscounts = () => {
       isLoading.value = true
       error.value = null
       
-      // Get current user's tenant_id
+      // Get current user's tenant_id from auth store
       const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile?.tenant_id) throw new Error('No tenant_id found for user')
+      const tenantId = authStore.userProfile?.tenant_id
+      
+      if (!tenantId) throw new Error('No tenant_id found for user')
       
       const { data, error: dbError } = await supabase
         .from('discounts')
         .select('*')
-        .eq('tenant_id', userProfile.tenant_id)
+        .eq('tenant_id', tenantId)
         .is('deleted_at', null) // Only load non-deleted discounts
         .order('created_at', { ascending: false })
       
       if (dbError) throw dbError
       
       discounts.value = data || []
-      logger.debug('✅ Discounts loaded for tenant:', discounts.value.length, userProfile.tenant_id)
+      logger.debug('✅ Discounts loaded for tenant:', discounts.value.length, tenantId)
       logger.debug('📋 Loaded discount IDs:', discounts.value.map(d => ({ 
         id: d.id, 
         name: d.name, 
