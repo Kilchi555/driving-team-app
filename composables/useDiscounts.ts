@@ -1,5 +1,6 @@
 // composables/useDiscounts.ts
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import type { Discount } from '~/types/payment'
 
@@ -61,7 +62,8 @@ export const useDiscounts = () => {
       error.value = null
       
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
@@ -104,7 +106,8 @@ export const useDiscounts = () => {
   const loadDiscountsByCategory = async (categoryCode: string) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
@@ -140,7 +143,8 @@ export const useDiscounts = () => {
   ): Promise<DiscountValidationResult> => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
@@ -330,7 +334,8 @@ export const useDiscounts = () => {
   const createDiscount = async (discountData: Partial<DiscountCode>) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase

@@ -2,6 +2,7 @@
 // Verwaltung von mehreren Bürokassen mit Staff-Zuweisungen
 
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 export interface OfficeCashRegister {
@@ -53,7 +54,8 @@ export const useOfficeCashRegisters = () => {
   // Get current user's tenant_id
   const getCurrentTenantId = async (): Promise<string | null> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) return null
 
       const { data: userProfile } = await supabase
@@ -149,7 +151,8 @@ export const useOfficeCashRegisters = () => {
       const tenantId = await getCurrentTenantId()
       if (!tenantId) throw new Error('No tenant_id found')
 
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
@@ -191,7 +194,8 @@ export const useOfficeCashRegisters = () => {
     timeRestrictions?: any
   ): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
@@ -253,7 +257,8 @@ export const useOfficeCashRegisters = () => {
   // Check if current user can access a register
   const canAccessRegister = async (registerId: string, requiredLevel: 'manager' | 'operator' | 'viewer' = 'viewer'): Promise<boolean> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) return false
 
       const { data: userProfile } = await supabase

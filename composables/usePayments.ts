@@ -1,5 +1,6 @@
 // composables/usePayments.ts - Gemeinsame Payment Logic
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import type { Payment, Product, Discount, PaymentMethod } from '~/types/payment'

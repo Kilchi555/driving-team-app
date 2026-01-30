@@ -2,6 +2,7 @@
 // Gutschein-Management Composable
 
 import { ref, computed, readonly } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { generateVoucherPDFContent, generateVoucherEmailContent } from '~/utils/voucherGenerator'
 
@@ -137,7 +138,8 @@ export const useVouchers = () => {
       const supabase = getSupabase()
       
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')

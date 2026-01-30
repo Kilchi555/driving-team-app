@@ -1,5 +1,6 @@
 // composables/useEventModalForm.ts
 import { ref, computed, reactive } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useCategoryData } from '~/composables/useCategoryData'
@@ -1354,7 +1355,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       // ✅ WICHTIG: tenant_id für Payments hinzufügen
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) {
         throw new Error('User not authenticated')
       }

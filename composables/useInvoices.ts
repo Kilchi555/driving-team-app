@@ -1,5 +1,6 @@
 // Composable für die Rechnungsverwaltung
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import type { 
   Invoice, 
   InvoiceWithDetails, 
@@ -37,7 +38,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -172,7 +174,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -211,7 +214,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -333,7 +337,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -393,7 +398,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -456,7 +462,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
       
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -508,7 +515,8 @@ export const useInvoices = () => {
       logger.debug('🔗 Supabase client obtained:', !!supabase)
       
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -640,7 +648,8 @@ export const useInvoices = () => {
       const supabase = getSupabase()
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')

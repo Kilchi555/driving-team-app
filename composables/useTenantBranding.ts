@@ -1,5 +1,6 @@
 // composables/useTenantBranding.ts
 import { ref, computed, watch, nextTick } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 export interface TenantBrandingColors {
@@ -315,7 +316,8 @@ export const useTenantBranding = () => {
     logger.debug('🔄 updateTenantBranding called with:', { tenantId, updates })
     
     // Debug: Check current user and auth state
-    const { data: { user } } = await supabase.auth.getUser()
+    const authStore = useAuthStore()
+      const user = authStore.user
     logger.debug('👤 Current user for update:', user)
     logger.debug('🔑 User metadata:', user?.user_metadata)
     logger.debug('🏢 User tenant_id:', user?.user_metadata?.tenant_id)

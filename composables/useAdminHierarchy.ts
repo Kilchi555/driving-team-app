@@ -1,5 +1,6 @@
 // composables/useAdminHierarchy.ts
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 export interface AdminUser {
@@ -39,7 +40,8 @@ export const useAdminHierarchy = () => {
   // Get current user's admin level and permissions
   const loadCurrentUser = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) throw new Error('Not authenticated')
 
       const { data, error: userError } = await supabase

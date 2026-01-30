@@ -1,5 +1,6 @@
 // composables/useExternalCalendarSync.ts
 import { ref } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 const lastSyncTime = ref<number>(0)
@@ -30,7 +31,8 @@ export const useExternalCalendarSync = () => {
       // Get user ID if not provided
       let userId = staffId
       if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser()
+        const authStore = useAuthStore()
+      const user = authStore.user
         if (!user) {
           logger.debug('⚠️ No authenticated user for calendar sync')
           return { success: false, error: 'Not authenticated' }
