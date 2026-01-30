@@ -215,78 +215,8 @@ export default defineEventHandler(async (event) => {
       ...metadata
     }
 
-    logger.debug('🔄 Creating Wallee transaction:', {
-      spaceId: walleeConfig.spaceId,
-      amount: amount / 100,
-      currency,
-      merchant: merchantRef,
-      lineItems: transactionCreate.lineItems
-    })
-
-    // Create transaction
-    let transaction
-    try {
-      transaction = await transactionService.create(
-        walleeConfig.spaceId,
-        transactionCreate
-      )
-    } catch (walleeError: any) {
-      logger.error('❌ Wallee API error creating transaction:', {
-        message: walleeError?.message,
-        body: walleeError?.body,
-        statusCode: walleeError?.statusCode,
-        fullError: JSON.stringify(walleeError, null, 2).substring(0, 500)
-      })
-      throw walleeError
-    }
-
-    // Extract the actual transaction from the SDK response wrapper
-    // The SDK returns { response, body } where body is the Transaction object
-    const actualTransaction = transaction?.body || transaction
-    const transactionId = actualTransaction?.id
-
-    logger.debug('🔍 Wallee response - extracted transaction:', {
-      transactionId: transactionId,
-      state: actualTransaction?.state,
-      hasBody: !!transaction?.body,
-      allKeys: actualTransaction ? Object.keys(actualTransaction).slice(0, 20) : 'null'
-    })
-
-    if (!transactionId) {
-      logger.error('❌ Invalid transaction response from Wallee:', {
-        transaction: JSON.stringify(actualTransaction, null, 2).substring(0, 500),
-        hasBody: !!transaction?.body
-      })
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to create Wallee transaction'
-      })
-    }
-
-    logger.info('✅ Wallee transaction created:', transactionId)
-
-    // 9. Get payment page URL
-    const paymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-    const pageUrlResponse = await paymentPageService.paymentPageUrl(
-      walleeConfig.spaceId,
-      transactionId
-    )
-
-    // Extract the URL from the SDK response wrapper
-    // The SDK returns { response, body } where body is the URL string
-    const pageUrl = pageUrlResponse?.body || pageUrlResponse
-
-    if (!pageUrl) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to generate payment page URL'
-      })
-    }
-
-    logger.info('✅ Payment page URL generated')
-
-    // 10. Create Payment record in payments table
-    logger.debug('💾 Creating payment record in database...')
+    // ✅ STEP 1: Create Payment record FIRST (so we have the ID for merchantReference)
+    logger.debug('💾 Creating payment record in database FIRST...')
     
     // Get the actual user_id from the enrollment (enrollment has user_id from guest user creation)
     const { data: enrollmentUser } = await supabase
@@ -307,7 +237,7 @@ export default defineEventHandler(async (event) => {
       total_amount_rappen: amount,
       currency: currency,
       description: `Course: ${metadata?.course_name || 'Unknown'}`,
-      wallee_transaction_id: transactionId.toString(),
+      // wallee_transaction_id will be set AFTER Wallee transaction is created
       tenant_id: tenantId,
       metadata: {
         enrollment_id: enrollmentId,
@@ -325,36 +255,149 @@ export default defineEventHandler(async (event) => {
       .select('id')
       .single()
 
-    if (paymentCreateError) {
-      logger.warn('⚠️ Could not create payment record:', paymentCreateError)
-      // Non-critical - continue anyway (webhook will handle it)
-    } else if (paymentRecord) {
-      logger.info('✅ Payment record created:', paymentRecord.id)
+    if (paymentCreateError || !paymentRecord) {
+      logger.error('❌ Could not create payment record:', paymentCreateError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to create payment record'
+      })
+    }
+    
+    logger.info('✅ Payment record created:', paymentRecord.id)
+
+    // ✅ STEP 2: Update merchantReference to include payment ID (CRITICAL for webhook fallback!)
+    const paymentMerchantRef = `payment-${paymentRecord.id}|${merchantRef}`
+    transactionCreate.merchantReference = paymentMerchantRef.length <= 200 
+      ? paymentMerchantRef 
+      : paymentMerchantRef.substring(0, 200)
+    transactionCreate.invoiceMerchantReference = transactionCreate.merchantReference
+
+    logger.debug('📝 Updated merchant reference with payment ID:', transactionCreate.merchantReference)
+
+    // ✅ STEP 3: Create Wallee transaction
+    logger.debug('🔄 Creating Wallee transaction:', {
+      spaceId: walleeConfig.spaceId,
+      amount: amount / 100,
+      currency,
+      merchant: transactionCreate.merchantReference,
+      lineItems: transactionCreate.lineItems
+    })
+
+    // Create transaction
+    let transaction
+    try {
+      transaction = await transactionService.create(
+        walleeConfig.spaceId,
+        transactionCreate
+      )
+    } catch (walleeError: any) {
+      logger.error('❌ Wallee API error creating transaction:', {
+        message: walleeError?.message,
+        body: walleeError?.body,
+        statusCode: walleeError?.statusCode,
+        fullError: JSON.stringify(walleeError, null, 2).substring(0, 500)
+      })
+      
+      // Clean up: Delete the payment record we just created
+      await supabase.from('payments').delete().eq('id', paymentRecord.id)
+      
+      throw walleeError
     }
 
-    // 11. Update enrollment with payment info
-    // Only update if we successfully created a payment record (payment_id must be UUID)
-    if (paymentRecord?.id) {
-      const { error: updateError } = await supabase
-        .from('course_registrations')
-        .update({
-          payment_status: 'pending',
-          payment_id: paymentRecord.id // Use the UUID of the created payment record
-        })
-        .eq('id', enrollmentId)
+    // Extract the actual transaction from the SDK response wrapper
+    // The SDK returns { response, body } where body is the Transaction object
+    const actualTransaction = transaction?.body || transaction
+    const transactionId = actualTransaction?.id
 
-      if (updateError) {
-        logger.warn('⚠️ Could not update enrollment with payment ID:', updateError)
-        // Non-critical - continue anyway
-      } else {
-        logger.debug('✅ Enrollment updated with payment_id')
+    logger.debug('🔍 Wallee response - extracted transaction:', {
+      transactionId: transactionId,
+      state: actualTransaction?.state,
+      hasBody: !!transaction?.body,
+      allKeys: actualTransaction ? Object.keys(actualTransaction).slice(0, 20) : 'null'
+    })
+
+    if (!transactionId) {
+      logger.error('❌ Invalid transaction response from Wallee:', {
+        transaction: JSON.stringify(actualTransaction, null, 2).substring(0, 500),
+        hasBody: !!transaction?.body
+      })
+      
+      // Clean up: Delete the payment record we just created
+      await supabase.from('payments').delete().eq('id', paymentRecord.id)
+      
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to create Wallee transaction'
+      })
+    }
+
+    logger.info('✅ Wallee transaction created:', transactionId)
+
+    // ✅ STEP 4: Update Payment with wallee_transaction_id (CRITICAL - retry 3x)
+    let updateSuccess = false
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({
+          wallee_transaction_id: transactionId.toString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentRecord.id)
+
+      if (!updateError) {
+        updateSuccess = true
+        logger.debug(`✅ wallee_transaction_id saved on attempt ${attempt}`)
+        break
       }
+      
+      logger.warn(`⚠️ Attempt ${attempt}/3 to save wallee_transaction_id failed:`, updateError.message)
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 100))
+      }
+    }
+
+    if (!updateSuccess) {
+      logger.error('🚨 CRITICAL: Failed to save wallee_transaction_id after 3 attempts!', {
+        paymentId: paymentRecord.id,
+        transactionId: transactionId.toString()
+      })
+      // Continue anyway - webhook will use merchantReference fallback (payment-{id})
+    }
+
+    // ✅ STEP 5: Get payment page URL
+    const paymentPageService = new Wallee.api.TransactionPaymentPageService(config)
+    const pageUrlResponse = await paymentPageService.paymentPageUrl(
+      walleeConfig.spaceId,
+      transactionId
+    )
+
+    // Extract the URL from the SDK response wrapper
+    // The SDK returns { response, body } where body is the URL string
+    const pageUrl = pageUrlResponse?.body || pageUrlResponse
+
+    if (!pageUrl) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to generate payment page URL'
+      })
+    }
+
+    logger.info('✅ Payment page URL generated')
+
+    // ✅ STEP 6: Update enrollment with payment info
+    const { error: enrollmentUpdateError } = await supabase
+      .from('course_registrations')
+      .update({
+        payment_status: 'pending',
+        payment_id: paymentRecord.id // Use the UUID of the created payment record
+      })
+      .eq('id', enrollmentId)
+
+    if (enrollmentUpdateError) {
+      logger.warn('⚠️ Could not update enrollment with payment ID:', enrollmentUpdateError)
+      // Non-critical - continue anyway
     } else {
-      // No payment record created, just update status
-      await supabase
-        .from('course_registrations')
-        .update({ payment_status: 'pending' })
-        .eq('id', enrollmentId)
+      logger.debug('✅ Enrollment updated with payment_id')
     }
 
     return {
