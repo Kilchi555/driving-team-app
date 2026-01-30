@@ -302,19 +302,8 @@ const runCronManually = async (cronPath: string) => {
   try {
     logger.debug('🔄 Running cron job manually:', cronPath)
     
-    // Hole aktuellen Auth-Token von Supabase
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      throw new Error('Nicht eingeloggt oder Session abgelaufen')
-    }
-    
     const response = await $fetch(cronPath, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'POST'
     })
     
     logger.debug('✅ Cron job completed:', response)

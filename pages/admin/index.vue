@@ -726,10 +726,7 @@ const loadDashboardSummary = async () => {
     logger.debug('🔄 Loading dashboard summary from API...')
 
     const response = await $fetch('/api/admin/dashboard-summary', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authStore.session?.access_token}`
-      }
+      method: 'POST'
     }) as any
 
     if (!response.success) {
@@ -848,10 +845,7 @@ const load12MonthsRevenue = async () => {
     logger.debug('🔄 Loading 12 months revenue from API...')
 
     const response = await $fetch('/api/admin/dashboard-revenue-12m', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authStore.session?.access_token}`
-      }
+      method: 'POST'
     }) as any
 
     if (!response.success) {

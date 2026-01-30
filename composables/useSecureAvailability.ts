@@ -142,8 +142,7 @@ export const useSecureAvailability = () => {
    * Create appointment (after slot reservation)
    */
   const createAppointment = async (
-    options: CreateAppointmentOptions,
-    authToken: string
+    options: CreateAppointmentOptions
   ): Promise<any> => {
     isLoading.value = true
     error.value = null
@@ -153,9 +152,6 @@ export const useSecureAvailability = () => {
 
       const response = await $fetch('/api/booking/create-appointment', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        },
         body: {
           slot_id: options.slot_id,
           session_id: options.session_id,

@@ -98,19 +98,9 @@ const loadReglement = async () => {
   error.value = null
 
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session?.access_token) {
-      throw new Error('Nicht angemeldet')
-    }
-
     // ✅ Call secure API endpoint instead of direct DB query
     const response = await $fetch<any>('/api/customer/reglements', {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       query: {
         type: type.value
       }

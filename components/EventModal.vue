@@ -1097,12 +1097,6 @@ const handleSaveAppointment = async () => {
     // ✅ NEW: AFTER saving, check if duration was decreased on paid appointment and credit the difference
     if (props.mode === 'edit' && originalAppointmentData && formData.value.duration_minutes < originalAppointmentData.duration_minutes) {
       try {
-        const supabase = getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!session?.access_token) {
-          logger.warn('No session token available for duration reduction credit')
-        } else {
           // Duration was decreased - credit the difference
           const durationReduction = originalAppointmentData.duration_minutes - formData.value.duration_minutes
           
@@ -1154,9 +1148,6 @@ const handleSaveAppointment = async () => {
             try {
               await $fetch('/api/staff/update-payment', {
                 method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`
-                },
                 body: {
                   payment_id: originalPaymentData.id,
                   update_data: updateData
@@ -1179,9 +1170,6 @@ const handleSaveAppointment = async () => {
               try {
                 await $fetch('/api/staff/credit-transaction', {
                   method: 'POST',
-                  headers: {
-                    Authorization: `Bearer ${session.access_token}`
-                  },
                   body: {
                     user_id: originalAppointmentData.user_id,
                     amount_rappen: creditAmountRappen,
@@ -1234,14 +1222,8 @@ const handleSaveAppointment = async () => {
         const creditToUse = Math.min(studentCredit.value.balance_rappen, totalPrice)
         
         if (creditToUse > 0 && savedAppointment?.id) {
-          const supabase = getSupabase()
-          const { data: { session } } = await supabase.auth.getSession()
-          
           const response = await $fetch<{ success: boolean; creditTransactionId?: string }>('/api/credit/use-for-appointment', {
             method: 'POST',
-            headers: session?.access_token ? {
-              'Authorization': `Bearer ${session.access_token}`
-            } : {},
             body: {
               appointmentId: savedAppointment.id,
               amountRappen: creditToUse,
@@ -2025,21 +2007,7 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
   
   try {
     // ✅ NEW: Use secure API instead of direct DB query
-    // Get session token for API authentication
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      console.error('❌ No session found')
-      availableDurations.value = [45] // Fallback
-      return
-    }
-    
-    const { data: categories } = await $fetch('/api/staff/get-categories', {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
-    })
+    const { data: categories } = await $fetch('/api/staff/get-categories')
     
     // Find the category by code
     const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
@@ -2138,22 +2106,7 @@ const loadTheoryDurations = async (categoryCode: string) => {
   
   try {
     // ✅ NEW: Use secure API instead of direct DB query
-    // Get session token for API authentication
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      console.error('❌ No session found')
-      formData.value.duration_minutes = 45
-      availableDurations.value = [45]
-      return
-    }
-    
-    const { data: categories } = await $fetch('/api/staff/get-categories', {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
-    })
+    const { data: categories } = await $fetch('/api/staff/get-categories')
     
     // Find the category by code
     const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
@@ -3571,18 +3524,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     // ✅ SCHRITT 1.5: Call secure cancel-staff API endpoint with full authorization checks
     logger.debug('📡 Calling cancel-staff endpoint with authorization...')
     try {
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-      
       const cancellationResult = await $fetch('/api/appointments/cancel-staff', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        },
         body: {
           appointmentId: props.eventData.id,
           cancellationReasonId: cancellationReasonId || 'other', // Use a default reason ID
@@ -3831,18 +3774,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       if (isStaffUser) {
         logger.debug('🔑 Staff/Admin cancellation - using secure cancel-staff API')
         
-        const { data: sessionData } = await supabase.auth.getSession()
-        const accessToken = sessionData?.session?.access_token
-        
-        if (!accessToken) {
-          throw new Error('No valid session for staff cancellation')
-        }
-        
         const staffCancellationResult = await $fetch('/api/appointments/cancel-staff', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          },
           body: {
             appointmentId: props.eventData.id,
             cancellationReasonId: cancellationReasonId,
@@ -3870,18 +3803,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       // ✅ For customers: use customer cancellation API
       logger.debug('👤 Customer cancellation - calling cancel-customer API')
       
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData?.session?.access_token
-      
-      if (!accessToken) {
-        throw new Error('No valid session for customer cancellation')
-      }
-      
       const customerCancellationResult = await $fetch('/api/appointments/cancel-customer', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
         body: {
           appointmentId: props.eventData.id,
           cancellationReasonId: cancellationReasonId,
@@ -4750,14 +4673,8 @@ const handleEditModeLessonType = async () => {
       if (props.eventData.user_id) {
         // ✅ Use secure API instead of direct Supabase query
         try {
-          const supabase = getSupabase()
-          const { data: { session } } = await supabase.auth.getSession()
-          
           const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
-            query: { userId: props.eventData.user_id },
-            headers: session?.access_token ? {
-              'Authorization': `Bearer ${session.access_token}`
-            } : {}
+            query: { userId: props.eventData.user_id }
           }) as { success?: boolean, preferred_payment_method?: string }
           
           if (paymentMethodResponse.success) {
@@ -4903,21 +4820,9 @@ const loadStudentForEdit = async (userId: string) => {
       return
     }
     
-    // ✅ GET AUTH TOKEN FROM SUPABASE SESSION
-    const { data: sessionData } = await supabase.auth.getSession()
-    const token = sessionData?.session?.access_token
-    
-    if (!token) {
-      console.error('❌ No auth token available')
-      return
-    }
-    
-    // ✅ USE BACKEND API WITH AUTH TOKEN
+    // ✅ USE BACKEND API
     // This bypasses the 406 Not Acceptable error from direct users table queries
     const response = await $fetch('/api/admin/get-user-for-edit', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
       query: { user_id: userId }
     }) as { success?: boolean, user?: any }
     
@@ -4963,9 +4868,6 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
       return
     }
     
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     // ✅ Use secure API instead of direct Supabase query
     const updateData: any = {
       userId: studentId,
@@ -4982,9 +4884,6 @@ const saveStudentPaymentPreferences = async (studentId: string, paymentMode: str
     
     const result = await $fetch('/api/admin/update-user-payment-method', {
       method: 'POST',
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {},
       body: updateData
     }) as { success?: boolean, data?: any }
     
@@ -5632,14 +5531,8 @@ const loadUserPaymentPreferences = async (userId: string) => {
     logger.debug('💳 Loading payment preferences for user:', userId)
     
     // ✅ Use secure API instead of direct Supabase query
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
-      query: { userId },
-      headers: session?.access_token ? {
-        'Authorization': `Bearer ${session.access_token}`
-      } : {}
+      query: { userId }
     }) as { success?: boolean, preferred_payment_method?: string }
     
     if (paymentMethodResponse.success) {

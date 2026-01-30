@@ -1121,15 +1121,8 @@ const loadUsers = async () => {
     logger.debug('🔄 Loading users via API...')
     
     // ✅ Use new secure API instead of direct DB queries
-    // Get auth token for API call
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
     const response = await $fetch('/api/admin/get-users-with-stats', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`
-      }
+      method: 'GET'
     }) as any
 
     if (!response.success) {
@@ -1488,17 +1481,10 @@ const sendStaffInvitation = async () => {
   try {
     logger.debug('📧 Sending staff invitation to:', inviteForm.value.email)
 
-    // Get auth token from Supabase session
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('Keine gültige Session gefunden')
-    }
-
     const response = await fetch('/api/staff/invite', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         firstName: inviteForm.value.firstName,

@@ -207,18 +207,8 @@ const hoursUntilAppointment = computed(() => {
 // Methods
 const loadCancellationReasons = async () => {
   try {
-    // Get auth token
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('Nicht angemeldet')
-    }
-
     // Use secure API instead of direct DB query
-    const response = await $fetch('/api/customer/get-cancellation-reasons', {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
-    })
+    const response = await $fetch('/api/customer/get-cancellation-reasons')
 
     if (!response.success) {
       throw new Error('Failed to load cancellation reasons')
@@ -301,18 +291,9 @@ const confirmCancellation = async () => {
     isLoading.value = true
     errorMessage.value = ''
 
-    // Get auth token
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('Nicht angemeldet')
-    }
-
     // Step 1: Cancel appointment via API
     const response = await $fetch('/api/appointments/cancel-customer', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: {
         appointmentId: props.appointment.id,
         cancellationReasonId: selectedReasonId.value
@@ -340,21 +321,12 @@ const confirmCancellation = async () => {
 const uploadMedicalCertificate = async (appointmentId: string) => {
   if (!uploadedFile.value) return
 
-  // Get auth token
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.access_token) {
-    throw new Error('Nicht angemeldet')
-  }
-
   const formData = new FormData()
   formData.append('file', uploadedFile.value)
   formData.append('appointmentId', appointmentId)
 
   await $fetch('/api/medical-certificate/upload', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`
-    },
     body: formData
   })
 }

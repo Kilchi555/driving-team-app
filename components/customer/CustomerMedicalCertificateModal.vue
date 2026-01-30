@@ -163,12 +163,6 @@ const upload = async () => {
       throw new Error('Termin nicht gefunden')
     }
     
-    // Get auth token
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('Nicht angemeldet')
-    }
-    
     // Use secure API for upload instead of direct storage access
     const formData = new FormData()
     formData.append('file', selectedFile.value)
@@ -177,9 +171,6 @@ const upload = async () => {
     
     const response = await $fetch('/api/customer/upload-document', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: formData
     })
     
@@ -190,9 +181,6 @@ const upload = async () => {
     // Update appointment status via secure API
     await $fetch('/api/customer/update-medical-certificate', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
       body: {
         appointmentId: appointment.id,
         medical_certificate_status: 'uploaded',

@@ -2675,15 +2675,6 @@ const testSARIConnection = async () => {
     isSARITesting.value = true
     sariConnectionMessage.value = null
 
-    // Get session for Authorization header
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      sariConnectionSuccess.value = false
-      sariConnectionMessage.value = 'Fehler: Nicht eingeloggt'
-      return
-    }
-
     // Trim all credentials to remove accidental whitespace
     const credentials = {
       environment: sariSettings.value.sari_environment,
@@ -2702,8 +2693,7 @@ const testSARIConnection = async () => {
     const response = await fetch('/api/sari/test-connection', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(credentials)
     })
@@ -2729,14 +2719,6 @@ const saveSARISettings = async () => {
   try {
     isSaving.value = true
 
-    // Get session for Authorization header
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      showError('Nicht eingeloggt')
-      return
-    }
-
     // Trim credentials before saving
     const settingsToSave = {
       sari_enabled: sariSettings.value.sari_enabled,
@@ -2750,8 +2732,7 @@ const saveSARISettings = async () => {
     const response = await fetch('/api/sari/save-settings', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(settingsToSave)
     })
@@ -2787,19 +2768,10 @@ const syncSARICourses = async (courseType: 'VKU' | 'PGS') => {
     syncingCourseType.value = courseType
     sariSyncResult.value = null
 
-    // Get session for Authorization header
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      sariSyncResult.value = { success: false, message: 'Nicht eingeloggt' }
-      return
-    }
-
     const response = await fetch('/api/sari/sync-courses', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ courseType })
     })
