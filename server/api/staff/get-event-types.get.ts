@@ -1,5 +1,5 @@
-import { defineEventHandler } from 'h3'
-import { getSupabaseServiceClient } from '~/utils/supabase-service'
+import { defineEventHandler, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabaseServiceClient()
+    const supabase = getSupabaseAdmin()
 
     // Load active event types
     const { data, error } = await supabase
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
 // Helper function to get authenticated user
 async function getAuthenticatedUser(event: any) {
   try {
-    const supabase = getSupabaseServiceClient()
+    const supabase = getSupabaseAdmin()
     const authHeader = event.node.req.headers.authorization
     
     if (!authHeader?.startsWith('Bearer ')) {
