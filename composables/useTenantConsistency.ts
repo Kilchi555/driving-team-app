@@ -162,19 +162,6 @@ export const useTenantConsistency = () => {
       return false
     }
   }
-        
-        logTenantEvent('inconsistency_detected', storeTenantId, dbTenantId, authStore.userProfile.email)
-        return false
-      }
-
-      return true
-
-    } catch (err) {
-      console.error('❌ Error validating tenant consistency:', err)
-      // Return true to avoid blocking the app on validation errors
-      return true
-    }
-  }
 
   // Get tenant consistency report
   const getTenantReport = () => {
