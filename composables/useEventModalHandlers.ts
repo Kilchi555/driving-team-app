@@ -533,25 +533,18 @@ const handleDurationsChanged = (durations: number[]) => {
     logger.debug('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
     
     try {
-      // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
+      // ✅ TENANT-FILTER: Get tenant_id from auth store
       const authStore = useAuthStore()
-    if (!authStore.user) throw new Error('Not authenticated')
-
-      const { data: userProfile, error: profileError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+      const tenantId = authStore.userProfile?.tenant_id
+      
+      if (!tenantId) throw new Error('User has no tenant assigned')
 
       // ✅ TENANT-GEFILTERTE Kategorie-Dauern laden
       const { data, error } = await supabase
         .from('categories')
         .select('lesson_duration_minutes')
         .eq('code', categoryCode)
-        .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
+        .eq('tenant_id', tenantId)  // ✅ TENANT FILTER
         .eq('is_active', true)
         .maybeSingle()
 
