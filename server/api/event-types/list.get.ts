@@ -2,30 +2,31 @@
 // Retrieve all active event types for the current user's tenant
 
 import { defineEventHandler, getHeader, createError } from 'h3'
-import { useSupabaseAdmin } from '~/composables/useSupabaseAdmin'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get user context from session (set by middleware)
-    const user = await getUser(event)
-    if (!user?.tenant_id) {
+    // Get user context from session
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.tenant_id) {
       throw createError({
         statusCode: 401,
         statusMessage: 'User has no tenant assigned'
       })
     }
 
-    const supabaseAdmin = useSupabaseAdmin()
+    const supabaseAdmin = getSupabaseAdmin()
 
-    logger.debug('🔍 Loading event types for tenant:', user.tenant_id)
+    logger.debug('🔍 Loading event types for tenant:', authUser.tenant_id)
 
     // Load event types for this tenant
     const { data: eventTypes, error } = await supabaseAdmin
       .from('event_types')
       .select('*')
       .eq('is_active', true)
-      .eq('tenant_id', user.tenant_id)
+      .eq('tenant_id', authUser.tenant_id)
       .order('display_order', { ascending: true })
 
     if (error) {
