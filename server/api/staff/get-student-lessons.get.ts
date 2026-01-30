@@ -80,49 +80,53 @@ export default defineEventHandler(async (event) => {
     if (appointmentIds.length > 0) {
       logger.debug('🔍 Loading evaluations for', appointmentIds.length, 'appointments')
 
-      // Load notes with evaluations AND their criteria relations
+      // Load notes with evaluations
       const { data: notesData, error: notesError } = await supabaseAdmin
         .from('notes')
-        .select(`
-          id,
-          appointment_id,
-          note_text,
-          evaluation_criteria_id,
-          criteria_rating,
-          criteria_note,
-          created_at,
-          updated_at,
-          evaluation_criteria (
-            id,
-            name,
-            description,
-            display_order
-          )
-        `)
+        .select('*')
         .in('appointment_id', appointmentIds)
 
       if (notesError) {
         logger.error('❌ Error loading notes:', notesError)
       } else if (notesData) {
         logger.debug('📝 Loaded', notesData.length, 'notes')
-        logger.debug('📝 Sample note:', notesData[0]) // DEBUG
 
-        // Group notes by appointment_id
+        // Get unique criteria IDs from notes that have evaluations
+        const criteriaIds = [...new Set(notesData
+          .filter(n => n.evaluation_criteria_id && n.criteria_rating)
+          .map(n => n.evaluation_criteria_id))]
+
+        logger.debug('🔍 Found', criteriaIds.length, 'unique criteria IDs with ratings')
+
+        // Load criteria details if any exist
+        let criteriaMap: Record<string, any> = {}
+        if (criteriaIds.length > 0) {
+          const { data: criteriaData, error: criteriaError } = await supabaseAdmin
+            .from('evaluation_criteria')
+            .select('id, name, description, display_order')
+            .in('id', criteriaIds)
+
+          if (criteriaError) {
+            logger.error('❌ Error loading criteria:', criteriaError)
+          } else if (criteriaData) {
+            logger.debug('📋 Loaded', criteriaData.length, 'criteria')
+            criteriaData.forEach(c => {
+              criteriaMap[c.id] = c
+            })
+          }
+        }
+
+        // Group notes by appointment_id and attach criteria
         notesData.forEach(note => {
           if (!evaluationsMap[note.appointment_id]) {
             evaluationsMap[note.appointment_id] = []
           }
-          // Transform to match expected structure
           evaluationsMap[note.appointment_id].push({
-            id: note.id,
-            appointment_id: note.appointment_id,
-            note_text: note.note_text,
-            evaluation_criteria_id: note.evaluation_criteria_id,
-            criteria_rating: note.criteria_rating,
-            criteria_note: note.criteria_note,
-            created_at: note.created_at,
-            updated_at: note.updated_at,
-            evaluation_criteria: note.evaluation_criteria // Directly from relation
+            ...note,
+            // Attach criteria if this note has both criteria_id and rating
+            evaluation_criteria: (note.evaluation_criteria_id && note.criteria_rating && criteriaMap[note.evaluation_criteria_id])
+              ? criteriaMap[note.evaluation_criteria_id]
+              : null
           })
         })
       }
