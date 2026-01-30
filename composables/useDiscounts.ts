@@ -62,35 +62,31 @@ export const useDiscounts = () => {
       isLoading.value = true
       error.value = null
       
-      // Get current user's tenant_id from auth store
-      const authStore = useAuthStore()
-      const tenantId = authStore.userProfile?.tenant_id
+      logger.debug('🔄 Loading discounts via API...')
       
-      if (!tenantId) throw new Error('No tenant_id found for user')
+      // ✅ Use secure API endpoint instead of direct Supabase query
+      const response = await $fetch('/api/discounts/list')
       
-      const { data, error: dbError } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .is('deleted_at', null) // Only load non-deleted discounts
-        .order('created_at', { ascending: false })
+      if (!response.success || !response.data) {
+        throw new Error('Failed to load discounts from API')
+      }
       
-      if (dbError) throw dbError
-      
-      discounts.value = data || []
-      logger.debug('✅ Discounts loaded for tenant:', discounts.value.length, tenantId)
+      discounts.value = response.data
+      logger.debug('✅ Discounts loaded via API:', discounts.value.length)
       logger.debug('📋 Loaded discount IDs:', discounts.value.map(d => ({ 
         id: d.id, 
         name: d.name, 
         code: d.code, 
         is_active: d.is_active,
+        discount_type: d.discount_type,
+        is_voucher: d.is_voucher,
         usage_limit: d.usage_limit,
         max_per_user: d.max_per_user,
         usage_count: d.usage_count
       })))
       
     } catch (err: any) {
-      console.error('❌ Error loading discounts:', err)
+      logger.error('❌ Error loading discounts:', err.message)
       error.value = err.message
     } finally {
       isLoading.value = false
