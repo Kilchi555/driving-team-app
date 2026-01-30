@@ -2006,10 +2006,11 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
   
   try {
     // ✅ NEW: Use secure API instead of direct DB query
-    const { data: categories } = await $fetch('/api/staff/get-categories')
+    const response = await $fetch('/api/staff/get-categories') as any
+    const categories = response?.data || response
     
     // Find the category by code
-    const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
+    const categoryData = (categories || []).find((cat: any) => cat.code === categoryCode)
     
     if (!categoryData) {
       console.error('❌ Category not found:', categoryCode)
@@ -2023,32 +2024,32 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
       
       if (Array.isArray(categoryData.lesson_duration_minutes)) {
         // Falls es bereits ein Array ist
-        durations = categoryData.lesson_duration_minutes.map(d => parseInt(d.toString(), 10)).filter(d => !isNaN(d))
-              } else if (typeof categoryData.lesson_duration_minutes === 'string') {
-                // Falls es ein String ist, versuche es zu parsen
-                try {
-                  const parsed = JSON.parse(categoryData.lesson_duration_minutes)
-                  durations = Array.isArray(parsed) 
-                    ? parsed.map(d => parseInt(d.toString(), 10)).filter(d => !isNaN(d))
-                    : [parseInt(parsed.toString(), 10)].filter(d => !isNaN(d))
-                } catch {
-                  // Falls kein JSON, versuche Komma-getrennte Werte zu parsen
-                  durations = categoryData.lesson_duration_minutes.split(',')
-                    .map(d => parseInt(d.trim(), 10))
-                    .filter(d => !isNaN(d))
-                }
-              } else {
-                // Fallback: Einzelner Wert
-                const singleValue = parseInt(categoryData.lesson_duration_minutes.toString(), 10)
-                durations = isNaN(singleValue) ? [45] : [singleValue]
-              }
-              
-              // ✅ NEU: Stelle sicher, dass wir ein flaches Array haben
-              if (Array.isArray(durations) && durations.length > 0 && Array.isArray(durations[0])) {
-                durations = durations.flat()
-              }
-              
-              availableDurations.value = [...durations]
+        durations = categoryData.lesson_duration_minutes.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
+      } else if (typeof categoryData.lesson_duration_minutes === 'string') {
+        // Falls es ein String ist, versuche es zu parsen
+        try {
+          const parsed = JSON.parse(categoryData.lesson_duration_minutes)
+          durations = Array.isArray(parsed) 
+            ? parsed.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
+            : [parseInt(parsed.toString(), 10)].filter((d: number) => !isNaN(d))
+        } catch {
+          // Falls kein JSON, versuche Komma-getrennte Werte zu parsen
+          durations = categoryData.lesson_duration_minutes.split(',')
+            .map((d: any) => parseInt(d.trim(), 10))
+            .filter((d: number) => !isNaN(d))
+        }
+      } else {
+        // Fallback: Einzelner Wert
+        const singleValue = parseInt(categoryData.lesson_duration_minutes.toString(), 10)
+        durations = isNaN(singleValue) ? [45] : [singleValue]
+      }
+      
+      // ✅ NEU: Stelle sicher, dass wir ein flaches Array haben
+      if (Array.isArray(durations) && durations.length > 0 && Array.isArray(durations[0])) {
+        durations = durations.flat()
+      }
+      
+      availableDurations.value = [...durations]
       
       // ✅ NEU: Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
       // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
@@ -2105,10 +2106,11 @@ const loadTheoryDurations = async (categoryCode: string) => {
   
   try {
     // ✅ NEW: Use secure API instead of direct DB query
-    const { data: categories } = await $fetch('/api/staff/get-categories')
+    const response = await $fetch('/api/staff/get-categories') as any
+    const categories = response?.data || response
     
     // Find the category by code
-    const categoryData = categories?.find((cat: any) => cat.code === categoryCode)
+    const categoryData = (categories || []).find((cat: any) => cat.code === categoryCode)
     
     if (!categoryData) {
       console.error('❌ Category not found:', categoryCode)
@@ -2123,19 +2125,19 @@ const loadTheoryDurations = async (categoryCode: string) => {
       
       if (Array.isArray(categoryData.theory_durations)) {
         // Falls es bereits ein Array ist
-        theoryDurations = categoryData.theory_durations.map(d => parseInt(d.toString(), 10)).filter(d => !isNaN(d))
+        theoryDurations = categoryData.theory_durations.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
       } else if (typeof categoryData.theory_durations === 'string') {
         // Falls es ein String ist, versuche es zu parsen
         try {
           const parsed = JSON.parse(categoryData.theory_durations)
           theoryDurations = Array.isArray(parsed) 
-            ? parsed.map(d => parseInt(d.toString(), 10)).filter(d => !isNaN(d))
-            : [parseInt(parsed.toString(), 10)].filter(d => !isNaN(d))
+            ? parsed.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
+            : [parseInt(parsed.toString(), 10)].filter((d: number) => !isNaN(d))
         } catch {
           // Falls kein JSON, versuche Komma-getrennte Werte zu parsen
           theoryDurations = categoryData.theory_durations.split(',')
-            .map(d => parseInt(d.trim(), 10))
-            .filter(d => !isNaN(d))
+            .map((d: any) => parseInt(d.trim(), 10))
+            .filter((d: number) => !isNaN(d))
         }
       } else {
         // Fallback: Einzelner Wert
@@ -3527,7 +3529,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
         method: 'POST',
         body: {
           appointmentId: props.eventData.id,
-          cancellationReasonId: cancellationReasonId || 'other', // Use a default reason ID
+          cancellationReasonId: deletionReason || 'other', // Use deletion reason as ID or default
           deletionReason,
           lessonPriceRappen,
           adminFeeRappen,
