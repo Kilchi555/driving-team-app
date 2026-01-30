@@ -534,8 +534,8 @@ const handleDurationsChanged = (durations: number[]) => {
     
     try {
       // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile, error: profileError } = await supabase
         .from('users')

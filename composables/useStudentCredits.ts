@@ -1,6 +1,8 @@
 // composables/useStudentCredits.ts - Guthaben-Management für Schüler
 
+import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 import type { 
   StudentCredit, 
   CreditTransaction, 
@@ -24,16 +26,10 @@ export const useStudentCredits = () => {
   const getStudentCredit = async (userId: string): Promise<StudentCredit | null> => {
     try {
       const supabase = getSupabase()
+      const authStore = useAuthStore()
       
-      // Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
+      // Get tenant_id from auth store
+      const tenantId = authStore.userProfile?.tenant_id
       if (!tenantId) {
         throw new Error('User has no tenant assigned')
       }
@@ -64,16 +60,10 @@ export const useStudentCredits = () => {
   const getStudentsCredits = async (userIds: string[]): Promise<Record<string, StudentCredit>> => {
     try {
       const supabase = getSupabase()
+      const authStore = useAuthStore()
       
-      // Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
+      // Get tenant_id from auth store
+      const tenantId = authStore.userProfile?.tenant_id
       if (!tenantId) {
         throw new Error('User has no tenant assigned')
       }

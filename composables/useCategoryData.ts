@@ -2,6 +2,7 @@
 
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 
@@ -50,15 +51,9 @@ export const useCategoryData = () => {
     try {
       logger.debug('🔄 Loading categories from database...')
       
-      // Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
+      // Get tenant_id from auth store
+      const authStore = useAuthStore()
+      const tenantId = authStore.userProfile?.tenant_id
       if (!tenantId) {
         throw new Error('User has no tenant assigned')
       }

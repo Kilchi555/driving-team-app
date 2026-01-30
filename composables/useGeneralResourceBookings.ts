@@ -1,4 +1,5 @@
 import { ref, computed, readonly } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 export interface GeneralResourceBooking {
@@ -83,8 +84,8 @@ export function useGeneralResourceBookings() {
 
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -131,8 +132,8 @@ export function useGeneralResourceBookings() {
   const createBooking = async (data: CreateGeneralResourceBookingData) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -173,8 +174,8 @@ export function useGeneralResourceBookings() {
   const updateBooking = async (id: string, data: UpdateGeneralResourceBookingData) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -226,8 +227,8 @@ export function useGeneralResourceBookings() {
   const deleteBooking = async (id: string) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -259,8 +260,8 @@ export function useGeneralResourceBookings() {
   const checkAvailability = async (resourceId: string, startTime: string, endTime: string, excludeBookingId?: string) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')

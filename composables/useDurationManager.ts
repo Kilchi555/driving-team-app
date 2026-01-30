@@ -29,8 +29,8 @@ export const useDurationManager = () => {
       const supabase = getSupabase()
 
       // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile, error: profileError } = await supabase
         .from('users')
@@ -119,8 +119,8 @@ export const useDurationManager = () => {
       const supabase = getSupabase()
       
       // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile, error: profileError } = await supabase
         .from('users')
@@ -188,8 +188,8 @@ export const useDurationManager = () => {
       const supabase = getSupabase()
       
       // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile, error: profileError } = await supabase
         .from('users')

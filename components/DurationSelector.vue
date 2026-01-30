@@ -53,6 +53,7 @@
 
 import { computed, watch, onMounted, ref } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase' 
 
 interface Props {
@@ -100,19 +101,11 @@ const {
 const getLastStudentDuration = async (studentId: string): Promise<number | null> => {
   try {
     const supabase = getSupabase()
+    const authStore = useAuthStore()
     
-    // ✅ TENANT-FILTER: Erst Benutzer-Tenant ermitteln
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+    // ✅ Nutze Auth Store statt direkter Auth-Abfrage
+    const userProfile = authStore.userProfile
+    if (!userProfile?.tenant_id) throw new Error('Nicht angemeldet')
     
     // ✅ TENANT-GEFILTERTE Suche nach dem letzten Termin des Schülers
     const { data: lastAppointment, error } = await supabase
