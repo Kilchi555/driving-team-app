@@ -95,6 +95,8 @@ Return Response
 
 ## 📊 Staff Area Status
 
+> ⚠️ **IMPORTANT:** The tables below (Lines 104-122) are OUTDATED from earlier audit. See "🚀 UPDATE: January 29, 2026" section at the bottom for the CURRENT status. ALL ISSUES HAVE BEEN FIXED ✅
+
 ### Pages (`pages/staff/`)
 | Page | Auth Method | Status | DB Queries |
 |------|-------------|--------|-----------|
