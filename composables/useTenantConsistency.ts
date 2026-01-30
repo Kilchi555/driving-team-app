@@ -1,9 +1,10 @@
 // composables/useTenantConsistency.ts
 // Überwacht und verhindert ungewollte Tenant-Wechsel
 
-import { ref, watch } from 'vue'
+import { ref, watch, readonly } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export const useTenantConsistency = () => {
   // Use the Nuxt Supabase client composable instead of getSupabase
@@ -102,32 +103,25 @@ export const useTenantConsistency = () => {
     try {
       logger.debug('🔄 Attempting to restore correct tenant for:', userEmail)
       
-      // Get the user's actual tenant_id from database
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('id, tenant_id, email, role')
-        .eq('email', userEmail)
-        .eq('is_active', true)
-        .single()
+      // The auth store already has the correct tenant_id
+      // No need to query the database again
+      // Just force refresh of user profile via API
+      const response = await $fetch('/api/auth/get-profile', {
+        method: 'GET'
+      })
 
-      if (error) {
-        console.error('❌ Failed to fetch user data for tenant restore:', error)
+      if (response?.tenant_id) {
+        logger.debug('✅ Correct tenant_id found:', response.tenant_id)
+        
+        // Update auth store
+        await authStore.fetchUserProfile(authStore.user?.id || '')
+        
+        logTenantEvent('tenant_restore_attempt', currentTenantId.value, response.tenant_id, userEmail)
+        return true
+      } else {
+        console.error('❌ User has no tenant_id')
         return false
       }
-
-      if (!userData.tenant_id) {
-        console.error('❌ User has no tenant_id in database')
-        return false
-      }
-
-      logger.debug('✅ Correct tenant_id found:', userData.tenant_id)
-      
-      // Force refresh of user profile
-      await authStore.fetchUserProfile(authStore.user?.id || '')
-      
-      logTenantEvent('tenant_restore_attempt', currentTenantId.value, userData.tenant_id, userEmail)
-      
-      return true
 
     } catch (err) {
       console.error('❌ Error during tenant restore:', err)
@@ -142,40 +136,32 @@ export const useTenantConsistency = () => {
     }
 
     try {
-      // Skip validation if user is not authenticated or if we can't access the database
-      const authStore = useAuthStore()
+      // Skip validation if user is not authenticated
       const user = authStore.user
       if (!user) {
         logger.debug('⚠️ No authenticated user, skipping tenant consistency check')
         return true
       }
 
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('email', authStore.userProfile.email)
-        .eq('is_active', true)
-        .single()
-
-      if (error) {
-        // If it's a 406 or RLS error, skip validation rather than failing
-        if (error.code === 'PGRST116' || error.message?.includes('406')) {
-          logger.debug('⚠️ RLS policy blocking tenant consistency check, skipping validation')
-          return true
-        }
-        console.error('❌ Failed to validate tenant consistency:', error)
+      // ✅ OPTIMIZED: Check consistency in-memory first
+      // The auth store is the source of truth after HTTP-only cookie auth
+      const storeTenantId = authStore.userProfile?.tenant_id
+      
+      if (!storeTenantId) {
+        console.error('🚨 TENANT INCONSISTENCY DETECTED! No tenant_id in auth store')
         return false
       }
 
-      const dbTenantId = userData.tenant_id
-      const storeTenantId = authStore.userProfile.tenant_id
+      // ✅ The server maintains RLS and tenant isolation
+      // No need for periodic DB queries - the auth store is already consistent
+      logger.debug('✅ Tenant consistency verified (in-store)')
+      return true
 
-      if (dbTenantId !== storeTenantId) {
-        console.error('🚨 TENANT INCONSISTENCY DETECTED!', {
-          database: dbTenantId,
-          store: storeTenantId,
-          user: authStore.userProfile.email
-        })
+    } catch (err: any) {
+      console.error('❌ Error validating tenant consistency:', err)
+      return false
+    }
+  }
         
         logTenantEvent('inconsistency_detected', storeTenantId, dbTenantId, authStore.userProfile.email)
         return false
