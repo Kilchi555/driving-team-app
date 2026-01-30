@@ -15,26 +15,53 @@ export async function getAuthenticatedUser(event: H3Event) {
       // ✅ If no Authorization header, try to get from cookies (HTTP-only)
       const cookies = event.node.req.headers.cookie
       if (cookies) {
+        logger.debug('🔍 Attempting to extract token from cookies...')
         // Parse cookies and look for auth token
         const cookieArray = cookies.split(';').map(c => c.trim())
+        
         for (const cookie of cookieArray) {
-          if (cookie.startsWith('sb-') && cookie.includes('=')) {
-            // Found a Supabase session cookie
-            const parts = cookie.split('=')
-            const value = parts.slice(1).join('=') // Handle cookies with = in value
+          logger.debug('🔍 Parsing cookie:', cookie.substring(0, 20) + '...')
+          
+          if (!cookie.includes('=')) continue
+          
+          const [name, ...valueParts] = cookie.split('=')
+          const cookieName = name.trim()
+          const value = valueParts.join('=') // Handle cookies with = in value
+          
+          // Look for Supabase session cookies (sb-{project-id}-auth-token or sb-*-session)
+          if (cookieName.startsWith('sb-') && (cookieName.endsWith('-auth-token') || cookieName.includes('session'))) {
             try {
               const decoded = decodeURIComponent(value)
-              const sessionData = JSON.parse(decoded)
-              if (sessionData?.access_token) {
-                token = sessionData.access_token
-                logger.debug('🔐 Auth token from HTTP-only cookie')
-                break
+              logger.debug('🔍 Decoded cookie value:', decoded.substring(0, 50) + '...')
+              
+              // Try parsing as JSON (Supabase format)
+              try {
+                const sessionData = JSON.parse(decoded)
+                if (sessionData?.access_token) {
+                  token = sessionData.access_token
+                  logger.debug('🔐 Auth token from HTTP-only cookie (JSON format)')
+                  break
+                }
+              } catch {
+                // Maybe it's just the token directly
+                if (decoded && decoded.length > 20) {
+                  token = decoded
+                  logger.debug('🔐 Auth token from HTTP-only cookie (direct format)')
+                  break
+                }
               }
             } catch (e) {
-              // Cookie might not be JSON, try next one
+              logger.debug('⚠️ Failed to parse cookie:', e)
             }
           }
         }
+        
+        if (!token) {
+          logger.debug('⚠️ No valid auth token found in cookies. Available cookies:', 
+            cookieArray.map(c => c.split('=')[0]).join(', '))
+        }
+      } else {
+        logger.debug('⚠️ No cookies header found')
       }
     }
     
