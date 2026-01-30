@@ -402,8 +402,9 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     ]
 
-    // Build merchant reference with customer name, date, time, duration
+    // Build merchant reference with payment ID (CRITICAL for webhook fallback!), customer name, date, time, duration
     const merchantReference = body.orderId || buildMerchantReference({
+      paymentId: payment.id,  // ✅ CRITICAL: Include payment ID for webhook fallback
       staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
       startTime: payment.appointments?.start_time,
       durationMinutes: payment.appointments?.duration_minutes,
@@ -482,19 +483,44 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       throw new Error('Failed to generate Wallee payment URL')
     }
 
-    // Update payment with Wallee transaction ID
+    // Update payment with Wallee transaction ID - CRITICAL: Must succeed for webhook to work!
     const now = new Date().toISOString()
-    const { error: updateError } = await supabaseAdmin
-      .from('payments')
-      .update({
-        wallee_transaction_id: transactionId.toString(),
-        updated_at: now
-      })
-      .eq('id', payment.id)
+    let updateSuccess = false
+    let lastUpdateError: any = null
+    
+    // ✅ RETRY LOGIC: Try 3 times to save wallee_transaction_id
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { error: updateError } = await supabaseAdmin
+        .from('payments')
+        .update({
+          wallee_transaction_id: transactionId.toString(),
+          updated_at: now
+        })
+        .eq('id', payment.id)
 
-    if (updateError) {
-      logger.error('❌ Failed to update payment with transaction ID:', updateError)
-      // Non-critical - still return success as payment is created and Wallee transaction exists
+      if (!updateError) {
+        updateSuccess = true
+        logger.debug(`✅ wallee_transaction_id saved on attempt ${attempt}`)
+        break
+      }
+      
+      lastUpdateError = updateError
+      logger.warn(`⚠️ Attempt ${attempt}/3 to save wallee_transaction_id failed:`, updateError.message)
+      
+      if (attempt < 3) {
+        // Wait before retry (100ms, 200ms)
+        await new Promise(resolve => setTimeout(resolve, attempt * 100))
+      }
+    }
+
+    if (!updateSuccess) {
+      // CRITICAL: Log this prominently so we can investigate
+      logger.error('🚨 CRITICAL: Failed to save wallee_transaction_id after 3 attempts!', {
+        paymentId: payment.id,
+        transactionId: transactionId.toString(),
+        error: lastUpdateError?.message
+      })
+      // Continue anyway - customer should be able to pay, webhook will use fallback
     }
 
     // ============ AUDIT LOGGING & RESPONSE ============
