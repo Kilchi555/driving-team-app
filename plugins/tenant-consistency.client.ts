@@ -3,6 +3,7 @@
 
 import { defineNuxtPlugin } from '#app'
 import { useTenantConsistency } from "~/composables/useTenantConsistency"
+import { logger } from '~/utils/logger'
 
 export default defineNuxtPlugin((nuxtApp) => {
   // Only run on client side
@@ -13,19 +14,17 @@ export default defineNuxtPlugin((nuxtApp) => {
   // Initialize tenant tracking
   initializeTenantTracking()
   
-  // Validate tenant consistency every 30 seconds
-  setInterval(async () => {
-    const isConsistent = await validateTenantConsistency()
-    if (!isConsistent) {
-      console.warn('🚨 Tenant inconsistency detected during periodic check')
-    }
-  }, 30000)
+  // ✅ OPTIMIZED: Removed periodic checks (every 30s)
+  // The auth store is the source of truth and is kept consistent by the server
+  // RLS policies enforce tenant isolation on the backend
   
   // Validate on page focus (when user returns to tab)
-  window.addEventListener('focus', async () => {
-    logger.debug('👁️ Page focused, validating tenant consistency')
-    await validateTenantConsistency()
-  })
+  if (process.client) {
+    window.addEventListener('focus', async () => {
+      logger.debug('👁️ Page focused, validating tenant consistency')
+      await validateTenantConsistency()
+    })
+  }
   
   // Setup router guard using app:mounted hook when router is ready
   if (process.client) {
@@ -49,7 +48,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     })
   }
   
-  logger.debug('✅ Tenant consistency monitoring initialized')
+  logger.debug('✅ Tenant consistency monitoring initialized (optimized)')
 })
 
 
