@@ -39,7 +39,9 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 interface Category {
   id: number
@@ -194,27 +196,19 @@ const loadCategories = async () => {
   
   try {
     const supabase = getSupabase()
+    const authStore = useAuthStore()
     
-    // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
+    // Get tenant_id from auth store
+    const tenantId = authStore.userProfile?.tenant_id
+    if (!tenantId) throw new Error('User has no tenant assigned')
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    logger.debug('🔍 Loading categories for tenant:', userProfile.tenant_id)
+    logger.debug('🔍 Loading categories for tenant:', tenantId)
 
     // Get tenant business_type
     const { data: tenantData, error: tenantError } = await supabase
       .from('tenants')
       .select('business_type')
-      .eq('id', userProfile.tenant_id)
+      .eq('id', tenantId)
       .single()
 
     if (tenantError) throw tenantError
@@ -222,7 +216,7 @@ const loadCategories = async () => {
     // Only load categories if business_type is driving_school
     if (tenantData?.business_type !== 'driving_school') {
       logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
-      categories.value = []
+      allCategories.value = []
       isLoading.value = false
       isInitializing.value = false
       return
@@ -244,7 +238,7 @@ const loadCategories = async () => {
         created_at
       `)
       .eq('is_active', true)
-      .eq('tenant_id', userProfile.tenant_id)
+      .eq('tenant_id', tenantId)
       .order('code', { ascending: true })
 
     // ✅ Dann Timeout definieren
@@ -256,7 +250,7 @@ const loadCategories = async () => {
     const result = await Promise.race([
       queryPromise,
       timeoutPromise
-    ])
+    ]) as any
 
     // ✅ KORREKTE PROPERTY-ZUGRIFFE
     if (result.error) {
