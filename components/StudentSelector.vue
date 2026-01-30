@@ -385,24 +385,16 @@ const loadStudents = async (editStudentId?: string | null) => {
 const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRefresh: boolean = false) => {
   try {
     logger.debug('📚 StudentSelector: Loading students via API...')
-    const supabase = getSupabase()
-
-    // Get auth session for API call
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      throw new Error('No authentication token found')
-    }
 
     // Call backend API to fetch students (bypasses RLS)
+    // No need to manually pass auth token - cookies are sent automatically
     const params = new URLSearchParams()
     params.append('showAllStudents', showAllStudentsLocal.value.toString())
 
     logger.debug('📡 Calling get-students API...')
     const response = await $fetch(`/api/admin/get-students?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      }
+      method: 'GET'
+      // Cookies are automatically sent by the browser
     }) as any
 
     if (!response?.success || !response?.data) {
