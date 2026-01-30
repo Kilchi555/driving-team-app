@@ -1,7 +1,5 @@
 // composables/useEventTypes.ts
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 
 export const useEventTypes = () => {
@@ -14,56 +12,53 @@ export const useEventTypes = () => {
     if (isEventTypesLoaded.value && !loadFullObjects) return eventTypesCache.value
     
     try {
-      const supabase = getSupabase()
-      const authStore = useAuthStore()
-      logger.debug('🔄 Loading event types from database...')
+      logger.debug('🔄 Loading event types via API...')
       
-      // Get tenant_id from auth store
-      const tenantId = authStore.userProfile?.tenant_id
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      // ✅ Use secure API endpoint instead of direct DB access
+      const response = await $fetch('/api/event-types/list', {
+        method: 'GET'
+      }) as any
+
+      if (!response?.data) {
+        throw new Error('No event types returned from API')
       }
-      
-      const { data, error } = await supabase
-        .from('event_types')
-        .select(loadFullObjects ? '*, require_payment' : 'code')
-        .eq('is_active', true)
-        .eq('tenant_id', tenantId)
-        .order('display_order')
-      
-      if (error) throw error
+
+      const data = response.data
+
+      logger.debug('🔍 All event type codes from API:', (data || []).map((et: any) => et.code))
       
       if (loadFullObjects) {
-        // ✅ DEBUG: Alle Event Type Codes anzeigen
-        logger.debug('🔍 All event type codes in DB:', (data || []).map(et => et.code))
-        
         // Filter anwenden für komplette Objekte
-        const filteredData = (data || []).filter(eventType => 
+        const filteredData = (data || []).filter((eventType: any) => 
           !excludeTypes.includes(eventType.code)
         )
         
         logger.debug('✅ Full event types loaded (filtered):', filteredData.length, 'of', data?.length, 'total')
+        eventTypesFullCache.value = filteredData
         return filteredData
         
       } else {
         // Original Code logic für nur Codes
         const allCodes = data?.map((et: any) => et.code) || []
-        logger.debug('🔍 All event type codes in DB:', allCodes)
+        logger.debug('🔍 All event type codes from API:', allCodes)
         
-        eventTypesCache.value = allCodes.filter(code => !excludeTypes.includes(code))
+        eventTypesCache.value = allCodes.filter((code: string) => !excludeTypes.includes(code))
         isEventTypesLoaded.value = true
         
         logger.debug('✅ Event types loaded:', eventTypesCache.value, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
         return eventTypesCache.value
       }
       
-    } catch (err) {
-      console.error('❌ Error loading event types from DB:', err)
+    } catch (err: any) {
+      console.error('❌ Error loading event types from API:', err)
       
       if (loadFullObjects) {
+        // Fallback: Return empty array - will use online fallback
+        logger.debug('⚠️ Using empty fallback for event types (loadFullObjects mode)')
         return []
       } else {
         // Fallback ohne excluded types
+        logger.debug('⚠️ Using fallback event types')
         eventTypesCache.value = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
         isEventTypesLoaded.value = true
         return eventTypesCache.value
@@ -73,6 +68,7 @@ export const useEventTypes = () => {
   
   return {
     eventTypesCache: computed(() => eventTypesCache.value),
+    eventTypesFullCache: computed(() => eventTypesFullCache.value),
     isEventTypesLoaded: computed(() => isEventTypesLoaded.value),
     loadEventTypes
   }
