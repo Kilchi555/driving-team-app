@@ -8,7 +8,7 @@ import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get user context from session
+    // Get user context from session - now includes tenant_id automatically
     const authUser = await getAuthenticatedUser(event)
     if (!authUser?.tenant_id) {
       throw createError({

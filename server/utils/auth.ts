@@ -2,6 +2,10 @@ import { H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
+/**
+ * Get authenticated user with full profile including tenant_id
+ * This is the main auth function - returns user with tenant_id resolved from database
+ */
 export async function getAuthenticatedUser(event: H3Event) {
   try {
     // ✅ First try to get token from Authorization header (for backward compatibility)
@@ -15,13 +19,10 @@ export async function getAuthenticatedUser(event: H3Event) {
       // ✅ If no Authorization header, try to get from cookies (HTTP-only)
       const cookies = event.node.req.headers.cookie
       if (cookies) {
-        logger.debug('🔍 Attempting to extract token from cookies...')
         // Parse cookies and look for auth token
         const cookieArray = cookies.split(';').map(c => c.trim())
         
         for (const cookie of cookieArray) {
-          logger.debug('🔍 Parsing cookie:', cookie.substring(0, 20) + '...')
-          
           if (!cookie.includes('=')) continue
           
           const [name, ...valueParts] = cookie.split('=')
@@ -32,7 +33,6 @@ export async function getAuthenticatedUser(event: H3Event) {
           if (cookieName.startsWith('sb-') && (cookieName.endsWith('-auth-token') || cookieName.includes('session'))) {
             try {
               const decoded = decodeURIComponent(value)
-              logger.debug('🔍 Decoded cookie value:', decoded.substring(0, 50) + '...')
               
               // Try parsing as JSON (Supabase format)
               try {
@@ -51,17 +51,10 @@ export async function getAuthenticatedUser(event: H3Event) {
                 }
               }
             } catch (e) {
-              logger.debug('⚠️ Failed to parse cookie:', e)
+              // Failed to parse cookie
             }
           }
         }
-        
-        if (!token) {
-          logger.debug('⚠️ No valid auth token found in cookies. Available cookies:', 
-            cookieArray.map(c => c.split('=')[0]).join(', '))
-        }
-      } else {
-        logger.debug('⚠️ No cookies header found')
       }
     }
     
@@ -92,9 +85,41 @@ export async function getAuthenticatedUser(event: H3Event) {
       return null
     }
 
-    const user = await response.json()
-    logger.debug(`✅ Token verified for auth user: ${user?.id}`)
-    return user
+    const authUser = await response.json()
+    logger.debug(`✅ Token verified for auth user: ${authUser?.id}`)
+    
+    // ✅ CRITICAL: Resolve tenant_id from database user record
+    if (authUser?.id) {
+      const supabase = getSupabaseAdmin()
+      const { data: dbUser, error: userError } = await supabase
+        .from('users')
+        .select('id, tenant_id, auth_user_id, role, email, first_name, last_name')
+        .eq('auth_user_id', authUser.id)
+        .single()
+      
+      if (dbUser) {
+        // Merge DB user info into auth user
+        return {
+          ...authUser,
+          tenant_id: dbUser.tenant_id,
+          db_user_id: dbUser.id,
+          role: dbUser.role,
+          profile: {
+            id: dbUser.id,
+            tenant_id: dbUser.tenant_id,
+            role: dbUser.role,
+            email: dbUser.email || authUser.email,
+            first_name: dbUser.first_name,
+            last_name: dbUser.last_name
+          }
+        }
+      } else if (userError) {
+        logger.debug('⚠️ Could not find user in database:', userError.message)
+      }
+    }
+    
+    // Return auth user even without DB profile (for cases like initial registration)
+    return authUser
 
   } catch (error: any) {
     console.error('❌ Error getting authenticated user:', error)
