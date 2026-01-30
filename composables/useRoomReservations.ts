@@ -54,8 +54,8 @@ export const useRoomReservations = () => {
 
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')

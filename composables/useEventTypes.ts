@@ -1,6 +1,8 @@
 // composables/useEventTypes.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 
 export const useEventTypes = () => {
   const eventTypesCache = ref<string[]>([])
@@ -13,17 +15,11 @@ export const useEventTypes = () => {
     
     try {
       const supabase = getSupabase()
+      const authStore = useAuthStore()
       logger.debug('🔄 Loading event types from database...')
       
-      // Get current user's tenant_id first
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
+      // Get tenant_id from auth store
+      const tenantId = authStore.userProfile?.tenant_id
       if (!tenantId) {
         throw new Error('User has no tenant assigned')
       }

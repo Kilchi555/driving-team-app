@@ -1,4 +1,5 @@
 import { ref, computed, readonly } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 export interface GeneralResource {
@@ -87,8 +88,8 @@ export function useGeneralResources() {
 
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -119,8 +120,8 @@ export function useGeneralResources() {
   const createResource = async (resourceData: CreateGeneralResourceData) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -156,8 +157,8 @@ export function useGeneralResources() {
   const updateResource = async (id: string, resourceData: UpdateGeneralResourceData) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
@@ -197,8 +198,8 @@ export function useGeneralResources() {
   const deleteResource = async (id: string) => {
     try {
       // Get current user's tenant_id
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Nicht angemeldet')
+      const authStore = useAuthStore()
+    if (!authStore.user) throw new Error('Not authenticated')
 
       const { data: userProfile } = await supabase
         .from('users')
