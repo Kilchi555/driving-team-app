@@ -4,16 +4,45 @@ import { logger } from '~/utils/logger'
 
 export async function getAuthenticatedUser(event: H3Event) {
   try {
-    // Get the Authorization header
+    // ✅ First try to get token from Authorization header (for backward compatibility)
+    let token = null
     const authHeader = event.node.req.headers.authorization
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+      logger.debug('🔐 Auth token from Authorization header')
+    } else {
+      // ✅ If no Authorization header, try to get from cookies (HTTP-only)
+      const cookies = event.node.req.headers.cookie
+      if (cookies) {
+        // Parse cookies and look for auth token
+        const cookieArray = cookies.split(';').map(c => c.trim())
+        for (const cookie of cookieArray) {
+          if (cookie.startsWith('sb-') && cookie.includes('=')) {
+            // Found a Supabase session cookie
+            const parts = cookie.split('=')
+            const value = parts.slice(1).join('=') // Handle cookies with = in value
+            try {
+              const decoded = decodeURIComponent(value)
+              const sessionData = JSON.parse(decoded)
+              if (sessionData?.access_token) {
+                token = sessionData.access_token
+                logger.debug('🔐 Auth token from HTTP-only cookie')
+                break
+              }
+            } catch (e) {
+              // Cookie might not be JSON, try next one
+            }
+          }
+        }
+      }
+    }
+    
+    if (!token) {
+      logger.debug('⚠️ No authentication token found')
       return null
     }
 
-    // Extract the token
-    const token = authHeader.substring(7)
-    
     // Verify the token with Supabase
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -32,11 +61,12 @@ export async function getAuthenticatedUser(event: H3Event) {
     })
 
     if (!response.ok) {
-      console.warn('⚠️ Token verification failed:', response.statusText)
+      logger.debug('⚠️ Token verification failed:', response.statusText)
       return null
     }
 
     const user = await response.json()
+    logger.debug(`✅ Token verified for auth user: ${user?.id}`)
     return user
 
   } catch (error: any) {
