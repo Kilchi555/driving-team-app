@@ -365,9 +365,9 @@ const submitEdit = async () => {
     // Show success toast
     showSuccessToast('Notizen erfolgreich gespeichert!')
 
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error editing transaction:', err)
-    showErrorToast('Fehler beim Speichern der Notizen', err.message || 'Unbekannter Fehler')
+    showErrorToast('Fehler beim Speichern der Notizen', err?.message || 'Unbekannter Fehler')
   } finally {
     isEditing.value = false
   }
