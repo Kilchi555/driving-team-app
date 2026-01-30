@@ -339,14 +339,14 @@ const submitEdit = async () => {
   isEditing.value = true
 
   try {
-    const { error: updateError } = await supabase
-      .from('cash_transactions')
-      .update({ 
+    const result = await $fetch('/api/staff/cash-transactions', {
+      method: 'POST',
+      body: {
+        action: 'update-notes',
+        transactionId: selectedTransaction.value.id,
         notes: editNotes.value
-      })
-      .eq('id', selectedTransaction.value.id)
-
-    if (updateError) throw updateError
+      }
+    })
 
     // Update local transaction data immediately
     const transactionIndex = cashTransactions.value.findIndex(t => t.id === selectedTransaction.value.id)
@@ -364,9 +364,9 @@ const submitEdit = async () => {
     // Show success toast
     showSuccessToast('Notizen erfolgreich gespeichert!')
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error editing transaction:', err)
-    showErrorToast('Fehler beim Speichern der Notizen', err.message)
+    showErrorToast('Fehler beim Speichern der Notizen', err.message || 'Unbekannter Fehler')
   } finally {
     isEditing.value = false
   }

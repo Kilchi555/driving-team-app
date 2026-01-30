@@ -1016,16 +1016,32 @@ const loadExamLocations = async () => {
   }
 }
 
-// Hilfsfunktionen für localStorage (falls noch nicht vorhanden)
-const getStaffExamPreferences = (staffId: string): string[] => {
-  const key = `staff_exam_preferences_${staffId}`
-  const stored = localStorage.getItem(key)
-  return stored ? JSON.parse(stored) : []
+// Exam preferences state
+const examPreferences = ref<string[]>([])
+
+// API-based exam preferences functions
+const getStaffExamPreferences = (): string[] => {
+  // Preferences sind jetzt server-side in der Session/API
+  // Diese Funktion gibt nur den aktuellen UI-State zurück
+  return examPreferences.value
 }
 
-const saveStaffExamPreferences = (staffId: string, locationIds: string[]) => {
-  const key = `staff_exam_preferences_${staffId}`
-  localStorage.setItem(key, JSON.stringify(locationIds))
+const saveStaffExamPreferences = async (staffId: string, locationIds: string[]) => {
+  try {
+    const result = await $fetch('/api/staff/exam-preferences', {
+      method: 'POST',
+      body: {
+        staffId,
+        locationIds
+      }
+    })
+    examPreferences.value = locationIds
+    logger.debug('✅ Exam preferences saved via API:', locationIds)
+    return result
+  } catch (err: any) {
+    logger.error('Error saving exam preferences:', err)
+    throw err
+  }
 }
 
 // Neue Funktion für das Toggling von Exam Locations
