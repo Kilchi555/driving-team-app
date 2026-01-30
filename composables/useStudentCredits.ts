@@ -28,10 +28,21 @@ export const useStudentCredits = () => {
       const supabase = getSupabase()
       const authStore = useAuthStore()
       
-      // Get tenant_id from auth store
-      const tenantId = authStore.userProfile?.tenant_id
+      // ✅ Wait for auth store to be initialized (max 3 seconds)
+      let tenantId = authStore.userProfile?.tenant_id
+      let attempts = 0
+      const maxAttempts = 30 // 3 seconds with 100ms intervals
+      
+      while (!tenantId && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        tenantId = authStore.userProfile?.tenant_id
+        attempts++
+      }
+      
       if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+        // ✅ Return null instead of throwing - let the UI handle missing data gracefully
+        console.warn('⚠️ User has no tenant assigned, skipping student credit load')
+        return null
       }
       
       // Verwende .maybeSingle() statt .single() um 406 Fehler zu vermeiden - FILTERED BY TENANT
@@ -62,10 +73,20 @@ export const useStudentCredits = () => {
       const supabase = getSupabase()
       const authStore = useAuthStore()
       
-      // Get tenant_id from auth store
-      const tenantId = authStore.userProfile?.tenant_id
+      // ✅ Wait for auth store to be initialized (max 3 seconds)
+      let tenantId = authStore.userProfile?.tenant_id
+      let attempts = 0
+      const maxAttempts = 30
+      
+      while (!tenantId && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        tenantId = authStore.userProfile?.tenant_id
+        attempts++
+      }
+      
       if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+        console.warn('⚠️ User has no tenant assigned, skipping student credits load')
+        return {}
       }
       
       const { data, error: fetchError } = await supabase
