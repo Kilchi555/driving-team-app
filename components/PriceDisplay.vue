@@ -550,6 +550,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
+import { useDiscounts } from '~/composables/useDiscounts'
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { getSupabase } from '~/utils/supabase'
 import { watch } from 'vue'
@@ -989,44 +990,25 @@ watch(() => ({ duration: props.durationMinutes, price: props.pricePerMinute }), 
   }
 }, { immediate: false })
 
-// ✅ NEUE METHODE: Lade verfügbare Gutscheine
+// ✅ NEUE METHODE: Lade verfügbare Gutscheine über useDiscounts Composable
 const loadAvailableDiscounts = async () => {
   try {
     logger.debug('🔄 Starting to load available discounts...')
     isLoadingDiscounts.value = true
-    const supabase = getSupabase()
     
-    logger.debug('🔍 Querying discounts table for fixed discounts...')
+    const { loadDiscounts, availableDiscounts: discountsFromComposable } = useDiscounts()
+    await loadDiscounts()
     
-    // ✅ Lade nur Gutscheine mit discount_type = 'fixed'
-    let query = supabase
-      .from('discounts')
-      .select('*')
-      .eq('is_active', true)
-      .eq('discount_type', 'fixed')
+    // ✅ Filter für nur 'fixed' Rabatte, nicht voucher
+    availableDiscounts.value = (discountsFromComposable.value || [])
+      .filter((d: any) => d.discount_type === 'fixed' && !d.is_voucher)
+      .sort((a: any, b: any) => parseFloat(a.discount_value) - parseFloat(b.discount_value))
     
-    // ✅ WICHTIG: Nach tenant_id filtern, falls verfügbar
-    if (props.currentUser?.tenant_id) {
-      query = query.eq('tenant_id', props.currentUser.tenant_id)
-      logger.debug('🏢 Filtering discounts by tenant_id:', props.currentUser.tenant_id)
-    }
-    
-    const { data, error } = await query.order('discount_value', { ascending: true })
-    
-    if (error) {
-      console.error('❌ Error loading discounts:', error)
-      return
-    }
-    
-    logger.debug('📊 Raw discounts data:', data)
-    logger.debug('📊 Fixed discounts found:', data)
-    
-    availableDiscounts.value = data || []
     logger.debug('✅ Loaded available fixed discounts:', availableDiscounts.value.length)
     logger.debug('🎫 Available discounts:', availableDiscounts.value)
     
   } catch (err: any) {
-    console.error('❌ Error loading discounts:', err)
+    logger.debug('ℹ️ Could not load discounts (normal in some modes):', err.message)
   } finally {
     isLoadingDiscounts.value = false
   }
