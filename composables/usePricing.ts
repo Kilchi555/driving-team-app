@@ -382,14 +382,6 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       // ✅ KORRIGIERT: Kombiniere base_price und admin_fee Regeln basierend auf rule_type
       const rulesByCategory = data.reduce((acc, rule) => {
-        logger.debug(`🔍 Verarbeite Regel für ${rule.category_code}:`, {
-          rule_type: rule.rule_type,
-          rule_name: rule.rule_name,
-          price_per_minute: rule.price_per_minute_rappen,
-          admin_fee: rule.admin_fee_rappen,
-          admin_fee_applies_from: rule.admin_fee_applies_from
-        })
-        
         if (!acc[rule.category_code]) {
           acc[rule.category_code] = {
             category_code: rule.category_code,
@@ -402,16 +394,10 @@ export const usePricing = (options: UsePricingOptions = {}) => {
             valid_from: rule.valid_from,
             valid_until: rule.valid_until
           }
-          logger.debug(`🆕 Neue Kategorie erstellt: ${rule.category_code}`)
         }
         
         // ✅ KORRIGIERT: Kombiniere die Werte basierend auf dem rule_type
         if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
-          // Base/Pricing Regeln für Grundpreis
-          logger.debug(`📊 Base/Pricing Regel für ${rule.category_code}:`, {
-            price_per_minute: rule.price_per_minute_rappen,
-            base_duration: rule.base_duration_minutes
-          })
           if (rule.price_per_minute_rappen) {
             acc[rule.category_code].price_per_minute_rappen = rule.price_per_minute_rappen
           }
@@ -424,56 +410,23 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         }
         
         if (rule.rule_type === 'admin_fee') {
-          // ✅ Admin-Fee spezifische Regeln
-          logger.debug(`💰 Admin-Fee Regel für ${rule.category_code}:`, {
-            admin_fee_rappen: rule.admin_fee_rappen,
-            admin_fee_applies_from: rule.admin_fee_applies_from
-          })
           if (rule.admin_fee_rappen !== undefined) {
             acc[rule.category_code].admin_fee_rappen = rule.admin_fee_rappen
-            logger.debug(`💰 Admin-Fee Regel geladen für ${rule.category_code}: ${rule.admin_fee_rappen} Rappen`)
           }
           if (rule.admin_fee_applies_from !== undefined) {
             acc[rule.category_code].admin_fee_applies_from = rule.admin_fee_applies_from
-            logger.debug(`🎯 Admin-Fee ab Termin ${rule.admin_fee_applies_from} für ${rule.category_code}`)
           }
           if (rule.rule_name) {
             acc[rule.category_code].rule_name = rule.rule_name
           }
         }
         
-        logger.debug(`📊 Aktueller Stand für ${rule.category_code}:`, {
-          price_per_minute: acc[rule.category_code].price_per_minute_rappen,
-          admin_fee: acc[rule.category_code].admin_fee_rappen,
-          admin_fee_applies_from: acc[rule.category_code].admin_fee_applies_from
-        })
-        
         return acc
       }, {} as Record<string, any>)
 
       const pricingRulesData = Object.values(rulesByCategory) as PricingRule[]
 
-      logger.debug('📊 Processed pricing rules (combined by rule_type):', pricingRulesData.map((r: PricingRule) => ({
-        category: r.category_code,
-        pricePerMinute: r.price_per_minute_rappen / 100,
-        adminFee: r.admin_fee_rappen / 100,
-        adminFeeAppliesFrom: r.admin_fee_applies_from,
-        ruleName: r.rule_name
-      })))
-
-      // ✅ SPEZIELLER DEBUG für Kategorie B
-      const categoryBRule = pricingRulesData.find(r => r.category_code === 'B')
-      if (categoryBRule) {
-        logger.debug('🎯 KATEGORIE B REGEL GELADEN:', {
-          category: categoryBRule.category_code,
-          pricePerMinute: categoryBRule.price_per_minute_rappen / 100,
-          adminFee: categoryBRule.admin_fee_rappen / 100,
-          adminFeeAppliesFrom: categoryBRule.admin_fee_applies_from,
-          ruleName: categoryBRule.rule_name
-        })
-      } else {
-        console.warn('⚠️ Keine Regel für Kategorie B gefunden!')
-      }
+      logger.debug('📊 Processed pricing rules:', pricingRulesData.length, 'categories loaded')
 
       pricingRules.value = pricingRulesData
       lastLoaded.value = new Date()
