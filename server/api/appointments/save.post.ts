@@ -292,6 +292,7 @@ export default defineEventHandler(async (event) => {
           const paymentData = {
             appointment_id: result.id,
             user_id: result.user_id,
+            staff_id: appointmentData.staff_id,  // ✅ ADD: Store staff_id for payment tracking
             tenant_id: appointmentData.tenant_id,
             lesson_price_rappen: finalBasePrice,
             admin_fee_rappen: adminFeeRappen || 0,
