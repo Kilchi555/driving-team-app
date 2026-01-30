@@ -90,11 +90,12 @@ export const useEventModalWatchers = ({
       })
 
       try {
-        // Load pricing composable
+        // Load pricing composable - only load once on mount
         const { calculatePrice, loadPricingRules } = usePricing()
         
-        // Ensure pricing rules are loaded
-        await loadPricingRules()
+        // Load pricing rules ONLY IF NOT ALREADY CACHED
+        // This prevents unnecessary re-loads on every watcher trigger
+        const pricingRules = await loadPricingRules()
         
         // Calculate new price
         const priceResult = await calculatePrice(
