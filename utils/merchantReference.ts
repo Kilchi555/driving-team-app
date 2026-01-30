@@ -1,12 +1,21 @@
 export interface MerchantReferenceDetails {
+  paymentId?: string | null       // ✅ NEW: Payment ID for webhook fallback
   appointmentId?: string | null
   eventTypeCode?: string | null
   categoryCode?: string | null
   categoryName?: string | null
   staffName?: string | null
+  customerName?: string | null    // Alias for staffName (backwards compat)
   startTime?: string | Date | null
   durationMinutes?: number | null
   fallback?: string | null
+  // Legacy fields for backwards compatibility
+  orderId?: string | null
+  type?: string | null
+  category?: string | null
+  date?: string | null
+  timeSlot?: string | null
+  duration?: string | null
 }
 
 const MAX_LENGTH = 190
@@ -58,31 +67,49 @@ const formatStartTime = (value?: string | Date | null): string | undefined => {
 }
 
 export const buildMerchantReference = (details: MerchantReferenceDetails = {}): string => {
-  // Standardized format: CUSTOMERNAME|DATE-TIME|DURATION|REF-TIMESTAMP
-  // Example: MAX-MUSTERMANN|20260104-0522|45MIN|REF-1767500558637
+  // ✅ NEW FORMAT: payment-{id}|CUSTOMERNAME|DATE-TIME|DURATION
+  // Example: payment-2431e95c-4fee-407b-a604-f2c55b08bc7e|MAX-MUSTERMANN|20260104-0522|45MIN
+  // The payment ID at the start allows the webhook to find the payment even if wallee_transaction_id is not set
   
   const segments: string[] = []
 
-  // 1. Customer Name (or fallback to appointment ID)
-  const customerName = details.staffName ? sanitize(details.staffName) : shortenId(details.appointmentId)
-  if (customerName) {
-    segments.push(customerName)
+  // 1. ✅ Payment ID (CRITICAL for webhook fallback!)
+  if (details.paymentId) {
+    segments.push(`payment-${details.paymentId}`)
   }
 
-  // 2. Date and Time (e.g., 20260104-0522)
-  const startLabel = formatStartTime(details.startTime)
-  if (startLabel) {
-    segments.push(startLabel)
+  // 2. Customer Name (staffName, customerName, or fallback to appointment ID)
+  const customerName = details.staffName || details.customerName
+  const nameSegment = customerName ? sanitize(customerName) : shortenId(details.appointmentId)
+  if (nameSegment) {
+    segments.push(nameSegment)
   }
 
-  // 3. Duration in minutes (e.g., 45MIN)
+  // 3. Date and Time (e.g., 20260104-0522)
+  // Support both startTime and legacy date/timeSlot
+  let dateTimeSegment: string | undefined
+  if (details.startTime) {
+    dateTimeSegment = formatStartTime(details.startTime)
+  } else if (details.date) {
+    dateTimeSegment = details.timeSlot ? `${details.date}-${details.timeSlot.replace(':', '')}` : details.date
+  }
+  if (dateTimeSegment) {
+    segments.push(dateTimeSegment)
+  }
+
+  // 4. Duration in minutes (e.g., 45MIN)
+  // Support both durationMinutes and legacy duration string
   if (details.durationMinutes && details.durationMinutes > 0) {
     segments.push(`${Math.round(details.durationMinutes)}MIN`)
+  } else if (details.duration) {
+    segments.push(details.duration)
   }
 
-  // 4. Unique reference (timestamp-based for uniqueness)
-  const timestamp = Date.now().toString(36).toUpperCase()
-  segments.push(`REF-${timestamp}`)
+  // 5. Fallback: Add unique timestamp if no segments yet
+  if (segments.length === 0) {
+    const timestamp = Date.now().toString(36).toUpperCase()
+    segments.push(`REF-${timestamp}`)
+  }
 
   // Return standardized format
   const joined = segments.join('|')

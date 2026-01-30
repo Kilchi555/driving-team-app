@@ -142,6 +142,7 @@ export default defineEventHandler(async (event) => {
       : undefined
 
     const orderId = buildMerchantReference({
+      paymentId: paymentId,  // ✅ CRITICAL: Include payment ID for webhook fallback
       appointmentId: payment.appointment_id,
       eventTypeCode: appointmentDetails?.event_type_code,
       categoryCode: appointmentDetails?.type,
