@@ -158,6 +158,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
 
 // Props
