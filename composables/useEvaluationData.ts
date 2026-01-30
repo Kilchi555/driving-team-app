@@ -2,6 +2,7 @@
 // This handles the fallback from tenant-specific to global defaults
 
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 const supabase = getSupabase()
@@ -46,7 +47,8 @@ const loadEvaluationData = async (tenantId?: string) => {
   try {
     // Get current user's tenant if not provided
     if (!tenantId) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')

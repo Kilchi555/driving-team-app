@@ -1,6 +1,7 @@
 // composables/useCompanyBilling.ts
 
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import type { 
   CompanyBillingAddress, 

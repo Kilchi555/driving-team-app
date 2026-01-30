@@ -143,7 +143,8 @@ export const useTenantConsistency = () => {
 
     try {
       // Skip validation if user is not authenticated or if we can't access the database
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) {
         logger.debug('⚠️ No authenticated user, skipping tenant consistency check')
         return true

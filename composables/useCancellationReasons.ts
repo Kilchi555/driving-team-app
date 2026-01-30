@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 const supabase = getSupabase()
@@ -28,7 +29,8 @@ export const useCancellationReasons = () => {
       error.value = null
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -69,7 +71,8 @@ export const useCancellationReasons = () => {
       error.value = null
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -110,7 +113,8 @@ export const useCancellationReasons = () => {
       error.value = null
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')

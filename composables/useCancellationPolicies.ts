@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 
 const supabase = getSupabase()
@@ -54,7 +55,8 @@ export const useCancellationPolicies = () => {
       error.value = null
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -167,7 +169,8 @@ export const useCancellationPolicies = () => {
       error.value = null
 
       // Prüfe zuerst, ob der Benutzer Admin-Rechte hat
-      const { data: { user } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const user = authStore.user
       if (!user) {
         throw new Error('Benutzer nicht authentifiziert')
       }
@@ -253,7 +256,8 @@ export const useCancellationPolicies = () => {
       error.value = null
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
@@ -355,7 +359,8 @@ export const useCancellationPolicies = () => {
       error.value = null
 
       // Get current user's tenant_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      const authStore = useAuthStore()
+      const currentUser = authStore.user
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')
