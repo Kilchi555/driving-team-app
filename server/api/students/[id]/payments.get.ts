@@ -188,22 +188,43 @@ export default defineEventHandler(async (event) => {
         for (const ds of discountSalesData) {
           discountSalesMap[ds.appointment_id] = ds
 
-          // Load product sales for this discount
+          // Load product sales for this discount (filter by discount_sale_id if linked)
+          // Note: product_sales might be directly linked to appointment_id or discount_sale_id
           const { data: productsData, error: productsError } = await supabaseAdmin
             .from('product_sales')
             .select(`
               id,
-              product_sale_id,
+              appointment_id,
               product_id,
               quantity,
               unit_price_rappen,
               total_price_rappen,
               products(id, name, price_rappen)
             `)
-            .eq('product_sale_id', ds.id)
+            // Try filtering by discount_sale_id if that column exists, otherwise by appointment_id
+            .eq('discount_sale_id', ds.id)
 
           if (productsError) {
-            logger.warn('⚠️ Error loading product sales:', productsError)
+            logger.warn('⚠️ Error loading product sales by discount_sale_id:', productsError)
+            // Fallback: try loading by appointment_id if discount_sale_id doesn't exist
+            const { data: productsDataFallback, error: productsErrorFallback } = await supabaseAdmin
+              .from('product_sales')
+              .select(`
+                id,
+                appointment_id,
+                product_id,
+                quantity,
+                unit_price_rappen,
+                total_price_rappen,
+                products(id, name, price_rappen)
+              `)
+              .eq('appointment_id', ds.appointment_id)
+            
+            if (productsErrorFallback) {
+              logger.warn('⚠️ Error loading product sales by appointment_id:', productsErrorFallback)
+            } else if (productsDataFallback) {
+              productSalesMap[ds.appointment_id] = productsDataFallback
+            }
           } else if (productsData) {
             productSalesMap[ds.appointment_id] = productsData
           }
