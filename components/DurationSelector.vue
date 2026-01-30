@@ -115,9 +115,10 @@ const getLastStudentDuration = async (studentId: string): Promise<number | null>
       .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
       .order('start_time', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') { // PGRST116 = keine Ergebnisse
+    // 406 Not Acceptable ist normal (keine Ergebnisse) - nicht als Fehler behandeln
+    if (error && error.code !== 'PGRST116' && error.status !== 406) {
       throw error
     }
     
@@ -130,7 +131,7 @@ const getLastStudentDuration = async (studentId: string): Promise<number | null>
     return null
     
   } catch (err) {
-    console.error('❌ Error loading last student duration:', err)
+    logger.debug('ℹ️ Could not load last student duration (normal if first appointment):', err)
     return null
   }
 }
@@ -228,7 +229,7 @@ const checkIfPaid = async (): Promise<boolean> => {
       .limit(1)
       .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') {
+    if (error && error.code !== 'PGRST116' && error.status !== 406) {
       console.error('❌ Error checking payment status:', error)
       return false
     }
@@ -236,10 +237,10 @@ const checkIfPaid = async (): Promise<boolean> => {
     const isPaid = payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')
     logger.debug('💳 Payment status check:', { isPaid, payment_status: payment?.payment_status })
     return isPaid || false
-  } catch (err) {
-    console.error('❌ Error in checkIfPaid:', err)
-    return false
-  }
+    } catch (err) {
+      logger.debug('ℹ️ Could not check payment status (normal if first appointment):', err)
+      return false
+    }
 }
 
 // Methods
