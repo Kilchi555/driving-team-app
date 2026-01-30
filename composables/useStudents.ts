@@ -300,14 +300,13 @@ export const useStudents = () => {
               tenantId: createdStudent.tenant_id  // ✅ FIX: Added missing tenantId
             }
           }) as any
-            
-            if (emailResponse?.success) {
-              logger.debug('✅ Onboarding email sent to:', cleanEmail)
-              emailSuccess = true
-            } else {
-              console.warn('⚠️ Email sending failed')
-              emailSuccess = false
-            }
+          
+          if (emailResponse?.success) {
+            logger.debug('✅ Onboarding email sent to:', cleanEmail)
+            emailSuccess = true
+          } else {
+            console.warn('⚠️ Email sending failed')
+            emailSuccess = false
           }
         }
         
