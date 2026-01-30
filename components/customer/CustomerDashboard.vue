@@ -2468,12 +2468,11 @@ onMounted(async () => {
     // First, load user data via secure API
     if (!userData.value && currentUser.value?.id) {
       try {
-        const response = await $fetch('/api/customer/get-user-profile')
-          
-          if (response.success && response.data) {
-            userData.value = response.data
-            logger.debug('✅ User data loaded via API:', response.data.id)
-          }
+        const response: any = await $fetch('/api/customer/get-user-profile')
+        
+        if (response.success && response.data) {
+          userData.value = response.data
+          logger.debug('✅ User data loaded via API:', response.data.id)
         }
       } catch (err: any) {
         console.warn('⚠️ Error loading user data:', err.message)
