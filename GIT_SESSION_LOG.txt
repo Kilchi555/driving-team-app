@@ -1,0 +1,20 @@
+10ba6f4 docs: add comprehensive documentation index and navigation guide
+59381ef docs: add deep dive completion report with full session summary
+cbe4100 docs: add executive summary of deep dive security refactoring session
+82a2f3b docs: add visual refactoring progress roadmap with metrics and effort estimates
+5d0b0e8 docs: add comprehensive refactoring guides and session summary
+c16ead7 refactor: migrate useInvoices.ts to use secure APIs
+bbdd19e feat: add comprehensive invoice management API endpoints
+d480c20 feat: add secure API endpoints for cancellation reasons management
+d7b6adb refactor: migrate useCancellationReasons.ts to secure APIs
+8cf6134 feat: add secure API endpoints for product operations
+a70c491 refactor: migrate useProducts.ts to use secure APIs
+38c4536 feat: add secure API endpoints for user management
+2fb9264 refactor: migrate all Supabase queries in useUsers.ts to secure APIs
+b390483 feat: add secure API endpoints for student credit operations
+ce9515b refactor: migrate all Supabase queries in useStudentCredits.ts to secure APIs
+096b3a0 feat: add new secure API endpoints for payments and user operations
+e6734a9 refactor: migrate all direct Supabase queries in usePayments.ts to secure APIs
+9fd6485 refactor: remove deprecated payment_items functionality from usePayments.ts
+6deb40a docs: add security audit and migration documentation
+51f237d fix: resolve calendar display and customer dashboard issues
