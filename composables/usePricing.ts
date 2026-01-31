@@ -451,51 +451,23 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     try {
       logger.debug(`🔍 Checking if admin fee already paid for user ${userId} in category ${categoryCode}`)
       
-      // ✅ KORRIGIERT: Verwende metadata um die Kategorie zu ermitteln (einfacher als JOIN)
-      const { data, error } = await supabase
-        .from('payments')
-        .select('id, admin_fee_rappen, metadata')
-        .eq('user_id', userId)
-        .gt('admin_fee_rappen', 0) // Admin-Fee wurde bereits bezahlt
-        .limit(100) // Lade alle relevanten Payments für diesen User
+      // ✅ KORRIGIERT: Verwende Backend-API (RLS-konform)
+      const response = await $fetch('/api/staff/check-admin-fee-paid', {
+        query: {
+          userId,
+          categoryCode
+        }
+      }) as any
       
-      if (error) {
-        console.error('❌ Error checking admin fee payments:', error)
-        return false
+      if (response?.success && response?.data !== undefined) {
+        const hasPaid = response.data.hasPaid
+        logger.debug(`📊 Admin fee payment check result: ${hasPaid ? 'Already paid' : 'Not yet paid'}`)
+        return hasPaid
       }
       
-      // ✅ Filtere nach Kategorie in den metadata
-      const paymentsWithAdminFee = data?.filter(payment => {
-        let metadataObj: any = {}
-        try {
-          if (payment.metadata == null) {
-            metadataObj = {}
-          } else if (typeof payment.metadata === 'string') {
-            metadataObj = JSON.parse(payment.metadata)
-          } else if (typeof payment.metadata === 'object') {
-            metadataObj = payment.metadata
-          } else {
-            metadataObj = {}
-          }
-        } catch (_e) {
-          // Nur String-Parsing-Fehler melden, Objekte nicht
-          console.warn('⚠️ Could not parse payment metadata string')
-          metadataObj = {}
-        }
-        return metadataObj?.category === categoryCode
-      }) || []
-      
-      const hasPaid = paymentsWithAdminFee.length > 0
-      logger.debug(`📊 Admin fee payment check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
-        totalPayments: data?.length || 0,
-        paymentsWithAdminFee: paymentsWithAdminFee.length,
-        category: categoryCode
-      })
-      
-      return hasPaid
-      
+      return false
     } catch (error) {
-      console.error('❌ Error in hasAdminFeeBeenPaid:', error)
+      logger.warn('❌ Error in hasAdminFeeBeenPaid:', error)
       return false
     }
   }
@@ -527,36 +499,31 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
 
     try {
-      // ✅ KORRIGIERT: Nur aktive Termine zählen (keine stornierten/abgebrochenen)
-      // Das ist wichtig, damit die AdminFee korrekt beim 2. aktiven Termin berechnet wird
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('type', categoryCode)
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
-        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
+      // ✅ KORRIGIERT: Verwende Backend-API für Termin-Zählung (RLS-konform)
+      const response = await $fetch('/api/staff/get-appointment-count', {
+        query: {
+          userId,
+          categoryCode
+        }
+      }) as any
 
-      if (error) {
-        console.error('❌ Error counting appointments for category:', error)
-        return 1
+      if (response?.success && response?.data) {
+        const appointmentNumber = response.data.count
+        
+        // Cache speichern
+        appointmentCountCache.value.set(cacheKey, {
+          count: appointmentNumber,
+          timestamp: Date.now()
+        })
+        
+        logger.debug(`📊 Appointment count for ${categoryCode}: ${appointmentNumber} (${response.data.active_count} active + 1 new)`)
+        
+        return appointmentNumber
       }
 
-      const appointmentNumber = (count || 0) + 1
-      
-      // Cache speichern
-      appointmentCountCache.value.set(cacheKey, {
-        count: appointmentNumber,
-        timestamp: Date.now()
-      })
-      
-      logger.debug(`📊 Appointment count for ${categoryCode}: ${appointmentNumber} (${count || 0} active + 1 new)`)
-      
-      return appointmentNumber
-
+      return 1
     } catch (error) {
-      console.error('❌ Error in getAppointmentCount:', error)
+      logger.warn('❌ Error in getAppointmentCount:', error)
       return 1
     }
   }
@@ -603,18 +570,25 @@ const roundToNearestFranken = (rappen: number): number => {
     if (isEditMode && appointmentId) {
       logger.debug(`📝 Edit-Mode: Loading existing price from payment for appointment ${appointmentId}`)
       
-      // Lade bestehenden Preis aus der payments Tabelle UND Original-Duration vom Appointment
-      const { data: existingPayment } = await supabase
-        .from('payments')
-        .select('lesson_price_rappen, admin_fee_rappen, total_amount_rappen')
-        .eq('appointment_id', appointmentId)
-        .maybeSingle()
+      // ✅ Lade bestehenden Preis via Backend-API (RLS-konform)
+      let existingPayment = null
+      let appointment = null
       
-      const { data: appointment } = await supabase
-        .from('appointments')
-        .select('duration_minutes')
-        .eq('id', appointmentId)
-        .single()
+      try {
+        const response = await $fetch('/api/staff/get-appointment-pricing', {
+          query: {
+            appointmentId: appointmentId
+          }
+        }) as any
+        
+        if (response?.success && response?.data) {
+          existingPayment = response.data.payment
+          appointment = response.data.appointment
+        }
+      } catch (error) {
+        logger.warn('⚠️ Error fetching appointment pricing data:', error)
+        // Continue without the data - will recalculate price
+      }
       
       if (existingPayment && existingPayment.lesson_price_rappen > 0 && appointment) {
         const originalDuration = appointment.duration_minutes
