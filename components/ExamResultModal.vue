@@ -300,35 +300,21 @@ const filteredExaminers = computed(() => {
 // Methods
 const loadExaminers = async () => {
   try {
-    const supabase = getSupabase()
+    logger.debug('🔍 Loading examiners from backend API')
     
-    // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
+    const response = await $fetch('/api/examiners/list') as any
     
-    if (!userProfile?.tenant_id) {
-      console.error('❌ User has no tenant assigned')
-      return
+    if (response?.data) {
+      logger.debug('✅ Examiners loaded:', response.data.length)
+      availableExaminers.value = response.data
+    } else {
+      logger.debug('⚠️ No examiners found')
+      availableExaminers.value = []
     }
-    
-    const { data, error } = await supabase
-      .from('examiners')
-      .select('*')
-      .eq('is_active', true)
-      .eq('tenant_id', userProfile.tenant_id)
-      .order('last_name')
-    
-    if (error) throw error
-    
-    logger.debug('🔍 Loaded examiners:', data)
-    availableExaminers.value = data || []
     
   } catch (err: any) {
     console.error('❌ Error loading examiners:', err)
+    logger.error('❌ Error loading examiners:', err.message)
   }
 }
 
@@ -447,8 +433,6 @@ const saveExamResult = async () => {
   isSaving.value = true
   
   try {
-    const supabase = getSupabase()
-    
     const examData = {
       appointment_id: props.appointment.id,
       examiner_id: examResult.value.examiner_id || null,
@@ -458,44 +442,28 @@ const saveExamResult = async () => {
       exam_date: props.appointment.start_time
     }
     
-    logger.debug('🔥 Inserting exam data:', examData)
-    logger.debug('🔥 examiner_behavior_rating in examData:', examData.examiner_behavior_rating)
-    logger.debug('🔥 examiner_behavior_rating in examResult:', examResult.value.examiner_behavior_rating)
+    logger.debug('🔥 Sending exam result to backend:', examData)
     
-    // Create exam result record
-    const { data, error } = await supabase
-      .from('exam_results')
-      .insert(examData)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('❌ Supabase insert error:', error)
-      throw error
+    // Call secure backend API
+    const response = await $fetch('/api/exams/save-result', {
+      method: 'POST',
+      body: examData
+    }) as any
+    
+    if (response?.data) {
+      logger.debug('✅ Exam result saved:', response.data)
+      
+      // Emit success
+      emit('exam-result-saved', props.appointment.id)
+      logger.debug('✅ Success event emitted')
+    } else {
+      throw new Error('Invalid response from server')
     }
-
-    logger.debug('✅ Exam result saved:', data)
-    
-    // Mark appointment as completed
-    const { error: updateError } = await supabase
-      .from('appointments')
-      .update({ status: 'completed' })
-      .eq('id', props.appointment.id)
-
-    if (updateError) {
-      console.error('❌ Appointment update error:', updateError)
-      throw updateError
-    }
-
-    logger.debug('✅ Appointment marked as completed')
-    
-    // Emit success
-    emit('exam-result-saved', props.appointment.id)
-    logger.debug('✅ Success event emitted')
 
   } catch (err: any) {
     console.error('❌ Error saving exam result:', err)
-    alert(`Fehler beim Speichern: ${err.message}`)
+    logger.error('❌ Error saving exam result:', err.message)
+    alert(`Fehler beim Speichern: ${err.message || 'Unknown error'}`)
   } finally {
     isSaving.value = false
     logger.debug('🔥 saveExamResult finished')

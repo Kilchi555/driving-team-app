@@ -205,31 +205,33 @@ const loadExamLocations = async () => {
     if (locationsError) throw locationsError
     availableExamLocations.value = allLocations || []
     
-    // 2. Staff-spezifische Exam-Preferences laden (wo currentStaffId in staff_ids array ist)
-    // ✅ WICHTIG: Mit Tenant-Filter um Locations von anderen Staffs nicht zu sehen
-    const { data: userProfile, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', props.currentStaffId)
-      .single();
+    // 2. Load exam locations from secure backend API (handles RLS)
+    logger.debug('🔍 Loading exam locations from backend API')
     
-    if (userError) throw userError;
-    const userTenantId = userProfile?.tenant_id;
-
-    const { data: allExamLocations, error: allExamError } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('location_type', 'exam')
-      .eq('is_active', true)
-      .eq('tenant_id', userTenantId) // ✅ TENANT FILTER
-      .order('name')
-
-    if (allExamError) throw allExamError
+    const examLocationsResponse = await $fetch('/api/staff/get-exam-locations') as any
+    const allExamLocations = examLocationsResponse?.data || []
+    
+    logger.debug('🔍 Exam locations loaded from backend:', {
+      count: allExamLocations.length,
+      locations: allExamLocations.map((l: any) => ({ id: l.id, name: l.name, staff_ids: l.staff_ids }))
+    })
     
     // Filter: nur die, wo currentStaffId in staff_ids ist
     staffExamLocations.value = (allExamLocations || []).filter((loc: any) => {
-      const staffIds = loc.staff_ids || []
-      return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
+      if (!loc.staff_ids) {
+        return false
+      }
+      
+      try {
+        const staffIds = typeof loc.staff_ids === 'string' 
+          ? JSON.parse(loc.staff_ids) 
+          : loc.staff_ids
+        
+        return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
+      } catch (e) {
+        logger.error('❌ Error parsing staff_ids for exam location:', loc.id, e)
+        return false
+      }
     })
 
     logger.debug('✅ Exam locations loaded for selector:', {
