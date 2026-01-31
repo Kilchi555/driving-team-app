@@ -411,26 +411,19 @@ const useEventModalForm = (currentUser?: any, refs?: {
     try {
       logger.debug('🏢 Loading student billing address for:', studentId)
       
-      const supabaseClient = getSupabase()
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/addresses/get-by-user', {
+        query: { user_id: studentId }
+      }) as any
       
-      // ✅ Lade die neueste Rechnungsadresse für diesen Student (user_id)
-      logger.debug('🔍 Looking for billing address with user_id =', studentId)
-      
-      const { data: addressData, error: addressError } = await supabaseClient
-        .from('company_billing_addresses')
-        .select('*')
-        .eq('user_id', studentId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      if (addressError) {
-        console.warn('⚠️ Error querying billing addresses:', addressError)
+      if (!response?.success) {
+        logger.debug('💡 No active billing address found for student')
         return null
       }
-
-      if (addressData && addressData.length > 0) {
-        const address = addressData[0]
+      
+      const address = response?.data
+      
+      if (address) {
         logger.debug('✅ Student billing address loaded:', address)
         return address
       }
@@ -451,8 +444,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
 
     try {
-      const supabase = getSupabase()
-      
       // ✅ Load via Backend-API instead of direct Supabase (RLS-konform)
       try {
         const response = await $fetch('/api/staff/get-appointment-payment', {
@@ -500,19 +491,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
     
     try {
-      const supabase = getSupabase()
-      
-      // First, check if discount already exists for this appointment
-      const { data: existingDiscount, error: checkError } = await supabase
-        .from('discount_sales')
-        .select('id')
-        .eq('appointment_id', appointmentId)
-        .single()
-      
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.warn('⚠️ Error checking existing discount:', checkError)
-      }
-      
       const discountData = {
         appointment_id: appointmentId,
         user_id: formData.value.user_id,
@@ -528,32 +506,21 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('💰 Saving discount data:', discountData)
       
-      let discountRecord = null
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/discounts/check-and-save', {
+        method: 'POST',
+        body: {
+          appointmentId,
+          discountData
+        }
+      }) as any
       
-      if (existingDiscount) {
-        // Update existing discount
-        const { data: updatedDiscount, error: updateError } = await supabase
-          .from('discount_sales')
-          .update(discountData)
-          .eq('id', existingDiscount.id)
-          .select()
-          .single()
-        
-        if (updateError) throw updateError
-        discountRecord = updatedDiscount
-        logger.debug('✅ Discount updated successfully')
-      } else {
-        // Create new discount
-        const { data: newDiscount, error: insertError } = await supabase
-          .from('discount_sales')
-          .insert(discountData)
-          .select()
-          .single()
-        
-        if (insertError) throw insertError
-        discountRecord = newDiscount
-        logger.debug('✅ Discount saved successfully')
+      if (!response?.success) {
+        throw new Error('Failed to save discount')
       }
+      
+      const discountRecord = response?.data
+      logger.debug('✅ Discount saved successfully:', discountRecord?.id)
       
       return discountRecord
       
@@ -613,31 +580,25 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
   
-  // ✅ Load existing products directly from appointment
-  // After refactor: products are directly linked to appointments, not via discount_sales
+  // ✅ Load existing products via secure API
   const loadExistingProducts = async (appointmentId: string) => {
     logger.debug('📦 Loading existing products for appointment:', appointmentId)
     try {
-      const supabase = getSupabase()
-      
-      // ✅ Load products directly by appointment_id (no more discount_sales indirection)
-      const { data: productItems, error } = await supabase
-        .from('product_sales')
-        .select(`
-          *,
-          products (
-            id,
-            name,
-            description,
-            price_rappen
-          )
-        `)
-        .eq('appointment_id', appointmentId)
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/appointments/manage-products', {
+        method: 'POST',
+        body: {
+          appointmentId,
+          action: 'get'
+        }
+      }) as any
 
-      if (error && error.code !== 'PGRST116') {
-        console.warn('⚠️ Error loading product_sales:', error)
+      if (!response?.success) {
+        logger.debug('📦 Error loading products')
         return []
       }
+
+      const productItems = response?.data || []
 
       if (!productItems || productItems.length === 0) {
         logger.debug('📦 No products found for appointment')
@@ -678,32 +639,32 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const loadInvitedStaffAndCustomers = async (appointmentId: string) => {
     logger.debug('👥 Loading invited staff and customers for appointment:', appointmentId)
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/appointments/get-invited-customers', {
+        query: { appointmentId }
+      }) as any
       
-      // Load invited customers
-      const { data: customers, error: customersError } = await supabase
-        .from('invited_customers')
-        .select('*')
-        .eq('appointment_id', appointmentId)
+      if (!response?.success) {
+        logger.debug('👥 Error loading invited customers')
+        return
+      }
       
-      if (customersError) {
-        console.warn('⚠️ Error loading invited customers:', customersError)
+      const customers = response?.data || []
+      
+      logger.debug('👥 Loaded invited customers:', customers.length || 0)
+      // Set invited customers in the form - convert to NewCustomer format
+      if (refs?.invitedCustomers) {
+        const newCustomers = (customers || []).map((customer: any) => ({
+          first_name: customer.first_name || '',
+          last_name: customer.last_name || '',
+          phone: customer.phone || '',
+          category: customer.category || '',
+          notes: customer.notes || ''
+        }))
+        refs.invitedCustomers.value = newCustomers
+        logger.debug('✅ Set invited customers in form:', newCustomers.length)
       } else {
-        logger.debug('👥 Loaded invited customers:', customers?.length || 0)
-        // Set invited customers in the form - convert to NewCustomer format
-        if (refs?.invitedCustomers) {
-          const newCustomers = (customers || []).map(customer => ({
-            first_name: customer.first_name || '',
-            last_name: customer.last_name || '',
-            phone: customer.phone || '',
-            category: customer.category || '',
-            notes: customer.notes || ''
-          }))
-          refs.invitedCustomers.value = newCustomers
-          logger.debug('✅ Set invited customers in form:', newCustomers.length)
-        } else {
-          console.warn('⚠️ invitedCustomers ref not available')
-        }
+        console.warn('⚠️ invitedCustomers ref not available')
       }
       
       // TODO: Load invited staff when invited_staff table is created
@@ -717,8 +678,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   
   // ✅ Note: Admin fee loading is now handled directly in usePricing for edit mode
   
-  // ✅ Save products to product_sales table if products exist
-  // Products are now directly linked to appointments (not via discount_sales)
+  // ✅ Save products to product_sales table if products exist (via API)
   const saveProductsIfExists = async (appointmentId: string, discountSaleId?: string) => {
     // Check if we have selected products (from refs or other sources)
     const selectedProducts = refs?.selectedProducts?.value || []
@@ -729,18 +689,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
     
     try {
-      const supabase = getSupabase()
-      
-      // Delete existing products for this appointment
-      const { error: deleteError } = await supabase
-        .from('product_sales')
-        .delete()
-        .eq('appointment_id', appointmentId)
-      
-      if (deleteError) {
-        console.warn('⚠️ Error deleting existing products:', deleteError)
-      }
-      
       // Prepare product data for insertion
       // ✅ Now using appointment_id directly instead of product_sale_id
       const productData = selectedProducts.map((item: any) => ({
@@ -753,12 +701,19 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('📦 Saving product data:', productData)
       
-      // Insert new products
-      const { error: insertError } = await supabase
-        .from('product_sales')
-        .insert(productData)
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/appointments/manage-products', {
+        method: 'POST',
+        body: {
+          appointmentId,
+          action: 'save',
+          productData
+        }
+      }) as any
       
-      if (insertError) throw insertError
+      if (!response?.success) {
+        throw new Error('Failed to save products')
+      }
       
       logger.debug('✅ Products saved successfully:', productData.length)
       
@@ -1046,47 +1001,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
         try {
           logger.debug('💰 Updating payment with products price:', (productResult.totalProductsPriceRappen / 100).toFixed(2))
           
-          const supabase = getSupabase()
-          const { data: { session } } = await supabase.auth.getSession()
-          
-          // Get the payment record for this appointment
-          const { data: payments, error: paymentFetchError } = await supabase
-            .from('payments')
-            .select('id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, discount_amount_rappen, payment_status')
-            .eq('appointment_id', result.id)
-            .single()
-          
-          if (!paymentFetchError && payments) {
-            // Recalculate total: lesson + admin_fee + products - discount
-            const newTotal = (payments.lesson_price_rappen || 0) 
-              + (payments.admin_fee_rappen || 0) 
-              + (productResult.totalProductsPriceRappen || 0) 
-              - (payments.discount_amount_rappen || 0)
+          // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+          try {
+            const paymentResponse = await $fetch('/api/appointments/update-payment-with-products', {
+              method: 'POST',
+              body: {
+                appointmentId: result.id,
+                productsPriceRappen: productResult.totalProductsPriceRappen
+              }
+            }) as any
             
-            // ✅ Prepare update data
-            const paymentUpdateData: any = {
-              products_price_rappen: productResult.totalProductsPriceRappen,
-              total_amount_rappen: Math.max(0, newTotal),
-              updated_at: new Date().toISOString()
+            if (paymentResponse?.success) {
+              logger.debug('✅ Payment updated with products price via API')
             }
-            
-            // ✅ IMMER den aktuellen payment_status beibehalten!
-            if (payments.payment_status) {
-              paymentUpdateData.payment_status = payments.payment_status
-              logger.debug('✅ Preserving payment status in products update:', payments.payment_status)
-            }
-            
-            // Update payment with products price
-            const { error: updateError } = await supabase
-              .from('payments')
-              .update(paymentUpdateData)
-              .eq('appointment_id', result.id)
-            
-            if (updateError) {
-              logger.warn('⚠️ Could not update payment with products price:', updateError)
-            } else {
-              logger.debug('✅ Payment updated with products price')
-            }
+          } catch (apiErr: any) {
+            logger.warn('⚠️ Could not update payment with products price via API:', apiErr.message)
+            // Don't throw - this is secondary update
           }
         } catch (err: any) {
           logger.warn('⚠️ Error updating payment with products:', err.message)
@@ -1126,13 +1056,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
     isLoading.value = true
     
     try {
-      const supabase = getSupabase()
-      const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', eventId)
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/appointments/delete', {
+        method: 'POST',
+        body: { appointmentId: eventId }
+      }) as any
       
-      if (error) throw error
+      if (!response?.success) {
+        throw new Error('Failed to delete appointment')
+      }
       
       logger.debug('✅ Appointment deleted:', eventId)
       
@@ -1151,15 +1083,15 @@ const useEventModalForm = (currentUser?: any, refs?: {
     if (!studentId) return 1
     
     try {
-      const supabase = getSupabase()
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', studentId)
-        .in('status', ['completed', 'confirmed'])
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/appointments/get-next-number', {
+        query: { user_id: studentId }
+      }) as any
       
-      if (error) throw error
-      return (count || 0) + 1
+      if (!response?.success) return 1
+      
+      const nextNumber = response?.data?.number || 1
+      return nextNumber
       
     } catch (err) {
       console.error('❌ Error counting appointments:', err)
@@ -1167,49 +1099,32 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
 
-  // ✅ NEUE FUNKTION: Lade letzte Kategorie aus Cloud Supabase
+  // ✅ NEUE FUNKTION: Lade letzte Kategorie via API
   const loadLastAppointmentCategory = async (studentId?: string): Promise<string | null> => {
     try {
-      logger.debug('🎯 Loading last appointment category from Cloud Supabase...')
+      logger.debug('🎯 Loading last appointment category...')
       
       if (!currentUser?.id) {
         logger.debug('🚫 No current user ID available')
         return null
       }
 
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/appointments/get-last-category', {
+        query: { student_id: studentId }
+      }) as any
       
-      let query = supabase
-        .from('appointments')
-        .select('type, start_time, user_id, title')
-        .eq('staff_id', currentUser.id)
-        .is('deleted_at', null)
-        .not('status', 'eq', 'cancelled')
-        .not('status', 'eq', 'aborted')
-        .order('start_time', { ascending: false })
-      
-      if (studentId) {
-        logger.debug('🎯 Loading last category for specific student:', studentId)
-        query = query.eq('user_id', studentId)
-      }
-      
-      const { data: lastAppointment, error } = await query.limit(1).maybeSingle()
-
-      if (error) {
-        console.error('❌ Error loading last appointment:', error)
+      if (!response?.success) {
         return null
       }
-
-      if (!lastAppointment) {
-        logger.debug('ℹ️ No last appointment category found (first appointment for this student)')
-        return null
-      }
-
-      if (lastAppointment?.type) {
-        logger.debug('✅ Last appointment category loaded:', lastAppointment.type)
-        return lastAppointment.type
+      
+      const category = response?.data?.category
+      
+      if (category) {
+        logger.debug('✅ Last appointment category loaded:', category)
+        return category
       } else {
-        logger.debug('ℹ️ No appointment type found')
+        logger.debug('ℹ️ No appointment category found (first appointment)')
         return null
       }
 
@@ -1222,8 +1137,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ Create payment entry for appointment
   const createPaymentEntry = async (appointmentId: string, discountSaleId?: string) => {
     try {
-      const supabase = getSupabase()
-      
       // ✅ KORRIGIERT: Verwende die korrekte Preisberechnung aus dynamicPricing
       const durationMinutes = formData.value.duration_minutes || 45
       const appointmentType = formData.value.appointment_type || 'lesson'
