@@ -220,23 +220,20 @@ const checkIfPaid = async (): Promise<boolean> => {
   }
   
   try {
-    const supabase = getSupabase()
-    const { data: payment, error } = await supabase
-      .from('payments')
-      .select('payment_status')
-      .eq('appointment_id', props.appointmentId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    
-    if (error && error.code !== 'PGRST116' && error.status !== 406) {
-      console.error('❌ Error checking payment status:', error)
-      return false
+    // ✅ Verwende Backend-API statt direkter Supabase-Query (RLS-konform)
+    const response = await $fetch('/api/staff/check-payment-status', {
+      query: {
+        appointmentId: props.appointmentId
+      }
+    }) as any
+
+    if (response?.success && response?.data !== undefined) {
+      const isPaid = response.data.isPaid
+      logger.debug('💳 Payment status check:', { isPaid, payment_status: response.data.paymentStatus })
+      return isPaid || false
     }
-    
-    const isPaid = payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')
-    logger.debug('💳 Payment status check:', { isPaid, payment_status: payment?.payment_status })
-    return isPaid || false
+
+    return false
     } catch (err) {
       logger.debug('ℹ️ Could not check payment status (normal if first appointment):', err)
       return false
