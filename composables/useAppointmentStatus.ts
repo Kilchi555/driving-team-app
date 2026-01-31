@@ -1,107 +1,67 @@
 // composables/useAppointmentStatus.ts - Status-Workflow Management
 import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { toLocalTimeString } from '~/utils/dateUtils'
+import logger from '~/utils/logger'
 
 export const useAppointmentStatus = () => {
-  const supabase = getSupabase()
   const isUpdating = ref(false)
   const updateError = ref<string | null>(null)
 
   /**
-   * Update appointments from 'confirmed' to 'completed' after end_time
+   * ✅ MIGRATED: Update appointments from 'confirmed' to 'completed' after end_time
    * Läuft automatisch und updated alle überfälligen Termine
+   * Now uses secure backend endpoint instead of direct Supabase
    */
-const updateOverdueAppointments = async () => {
-  isUpdating.value = true
-  updateError.value = null
-  try {
-    logger.debug('🔄 Checking for overdue appointments...')
-    
-    const now = toLocalTimeString(new Date())
-    
-    // 🆕 ERWEITERT: Finde ALLE Termine die bereits beendet sind
-    const { data: overdueAppointments, error: findError } = await supabase
-      .from('appointments')
-      .select('id, title, start_time, end_time, staff_id, status')
-      .in('status', ['confirmed', 'scheduled', 'booked']) // 🆕 Alle relevanten Status
-      .lt('end_time', now) // Termine die bereits vorbei sind
-      .is('deleted_at', null) // ✅ Soft Delete Filter
-    
-    if (findError) {
-      throw new Error(`Error finding overdue appointments: ${findError.message}`)
+  const updateOverdueAppointments = async () => {
+    isUpdating.value = true
+    updateError.value = null
+    try {
+      logger.debug('🔄 Checking for overdue appointments via backend API...')
+      
+      const response = await $fetch('/api/staff/update-overdue-appointments', {
+        method: 'POST'
+      }) as any
+      
+      logger.debug('✅ Overdue appointments updated:', response.message)
+      
+      return {
+        updated: response.data?.length || 0,
+        appointments: response.data || []
+      }
+    } catch (err: any) {
+      console.error('❌ Error updating overdue appointments:', err)
+      updateError.value = err.message || 'Failed to update overdue appointments'
+      throw err
+    } finally {
+      isUpdating.value = false
     }
-    
-    if (!overdueAppointments || overdueAppointments.length === 0) {
-      logger.debug('✅ No overdue appointments found')
-      return { updated: 0, appointments: [] }
-    }
-    
-    logger.debug(`📅 Found ${overdueAppointments.length} overdue appointments:`, overdueAppointments)
-    
-    // Update alle überfälligen Termine auf 'completed'
-    const appointmentIds = overdueAppointments.map(apt => apt.id)
-    
-    const { data: updatedAppointments, error: updateError } = await supabase
-      .from('appointments')
-      .update({ 
-        status: 'completed',
-        updated_at: toLocalTimeString(new Date())
-      })
-      .in('id', appointmentIds)
-      .select('id, title, status')
-    
-    if (updateError) {
-      throw new Error(`Error updating appointments: ${updateError.message}`)
-    }
-    
-    logger.debug(`✅ Successfully updated ${updatedAppointments?.length || 0} appointments to 'completed'`)
-    
-    return {
-      updated: updatedAppointments?.length || 0,
-      appointments: updatedAppointments || []
-    }
-  } catch (err: any) {
-    console.error('❌ Error updating overdue appointments:', err)
-    updateError.value = err.message
-    throw err
-  } finally {
-    isUpdating.value = false
   }
-}
 
   /**
-   * Update specific appointment to 'completed' status
+   * ✅ MIGRATED: Update specific appointment to 'completed' status
    * Für manuelles Update einzelner Termine
+   * Now uses secure backend endpoint
    */
   const markAppointmentCompleted = async (appointmentId: string) => {
     isUpdating.value = true
     updateError.value = null
 
     try {
-      logger.debug(`🔄 Marking appointment ${appointmentId} as completed...`)
+      logger.debug(`🔄 Marking appointment ${appointmentId} as completed via backend API...`)
 
-      const { data, error } = await supabase
-        .from('appointments')
-        .update({ 
-          status: 'completed',
-          updated_at: toLocalTimeString(new Date())
-        })
-        .eq('id', appointmentId)
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .select('id, title, status')
-        .single()
+      const response = await $fetch('/api/staff/batch-update-appointment-status', {
+        method: 'POST',
+        body: {
+          appointment_ids: [appointmentId],
+          status: 'completed'
+        }
+      }) as any
 
-      if (error) {
-        throw new Error(`Error updating appointment: ${error.message}`)
-      }
-
-      logger.debug('✅ Appointment marked as completed:', data)
-      return data
+      logger.debug('✅ Appointment marked as completed:', response.data?.[0])
+      return response.data?.[0]
 
     } catch (err: any) {
       console.error('❌ Error marking appointment completed:', err)
-      updateError.value = err.message
+      updateError.value = err.message || 'Failed to mark appointment as completed'
       throw err
     } finally {
       isUpdating.value = false
@@ -109,36 +69,31 @@ const updateOverdueAppointments = async () => {
   }
 
   /**
-   * Update appointment to 'evaluated' status after rating
+   * ✅ MIGRATED: Update appointment to 'evaluated' status after rating
    * Nach dem Speichern einer Bewertung
+   * Now uses secure backend endpoint
    */
   const markAppointmentEvaluated = async (appointmentId: string) => {
     isUpdating.value = true
     updateError.value = null
 
     try {
-      logger.debug(`🔄 Marking appointment ${appointmentId} as evaluated...`)
+      logger.debug(`🔄 Marking appointment ${appointmentId} as evaluated via backend API...`)
 
-      const { data, error } = await supabase
-        .from('appointments')
-        .update({ 
-          status: 'evaluated',
-          updated_at: toLocalTimeString(new Date())
-        })
-        .eq('id', appointmentId)
-        .select('id, title, status')
-        .single()
+      const response = await $fetch('/api/staff/batch-update-appointment-status', {
+        method: 'POST',
+        body: {
+          appointment_ids: [appointmentId],
+          status: 'evaluated'
+        }
+      }) as any
 
-      if (error) {
-        throw new Error(`Error updating appointment: ${error.message}`)
-      }
-
-      logger.debug('✅ Appointment marked as evaluated:', data)
-      return data
+      logger.debug('✅ Appointment marked as evaluated:', response.data?.[0])
+      return response.data?.[0]
 
     } catch (err: any) {
       console.error('❌ Error marking appointment evaluated:', err)
-      updateError.value = err.message
+      updateError.value = err.message || 'Failed to mark appointment as evaluated'
       throw err
     } finally {
       isUpdating.value = false
@@ -146,32 +101,18 @@ const updateOverdueAppointments = async () => {
   }
 
   /**
-   * Get appointment status statistics
+   * ✅ MIGRATED: Get appointment status statistics
    * Für Dashboard/Debugging
+   * Now uses secure backend endpoint
    */
   const getStatusStatistics = async (staffId?: string) => {
     try {
-      let query = supabase
-        .from('appointments')
-        .select('status')
-        .is('deleted_at', null) // ✅ Soft Delete Filter
+      logger.debug('📊 Fetching appointment statistics via backend API...')
+      
+      const response = await $fetch('/api/staff/get-appointment-statistics') as any
 
-      if (staffId) {
-        query = query.eq('staff_id', staffId)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      const stats = data?.reduce((acc: Record<string, number>, appointment) => {
-        const status = appointment.status || 'unknown'
-        acc[status] = (acc[status] || 0) + 1
-        return acc
-      }, {}) || {}
-
-      logger.debug('📊 Appointment status statistics:', stats)
-      return stats
+      logger.debug('📊 Appointment status statistics:', response.data?.breakdown)
+      return response.data?.breakdown || {}
 
     } catch (err: any) {
       console.error('❌ Error getting status statistics:', err)
@@ -180,58 +121,38 @@ const updateOverdueAppointments = async () => {
   }
 
   /**
-   * Batch status update with filters
+   * ✅ MIGRATED: Batch status update with filters
    * Erweiterte Update-Funktionen
+   * Now uses secure backend endpoint
    */
   const batchUpdateStatus = async (filters: {
-    fromStatus: string
+    appointmentIds: string[]
     toStatus: string
-    staffId?: string
-    beforeDate?: string
-    afterDate?: string
   }) => {
     isUpdating.value = true
     updateError.value = null
 
     try {
-      logger.debug('🔄 Batch updating appointment status...', filters)
+      logger.debug('🔄 Batch updating appointment status via backend API...', filters)
 
-      let query = supabase
-        .from('appointments')
-        .update({ 
-          status: filters.toStatus,
-          updated_at: toLocalTimeString(new Date())
-        })
-        .eq('status', filters.fromStatus)
+      const response = await $fetch('/api/staff/batch-update-appointment-status', {
+        method: 'POST',
+        body: {
+          appointment_ids: filters.appointmentIds,
+          status: filters.toStatus
+        }
+      }) as any
 
-      if (filters.staffId) {
-        query = query.eq('staff_id', filters.staffId)
-      }
-
-      if (filters.beforeDate) {
-        query = query.lt('end_time', filters.beforeDate)
-      }
-
-      if (filters.afterDate) {
-        query = query.gt('start_time', filters.afterDate)
-      }
-
-      const { data, error } = await query.select('id, title, status')
-
-      if (error) {
-        throw new Error(`Batch update error: ${error.message}`)
-      }
-
-      logger.debug(`✅ Batch updated ${data?.length || 0} appointments from '${filters.fromStatus}' to '${filters.toStatus}'`)
+      logger.debug(`✅ Batch updated ${response.data?.length || 0} appointments to '${filters.toStatus}'`)
       
       return {
-        updated: data?.length || 0,
-        appointments: data || []
+        updated: response.data?.length || 0,
+        appointments: response.data || []
       }
 
     } catch (err: any) {
       console.error('❌ Error in batch status update:', err)
-      updateError.value = err.message
+      updateError.value = err.message || 'Failed to batch update appointments'
       throw err
     } finally {
       isUpdating.value = false

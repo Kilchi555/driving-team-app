@@ -285,57 +285,45 @@ const saveCriteriaEvaluations = async (
   currentUserId?: string
 ) => {
   try {
-    const supabase = getSupabase();
-    
     // Validierung der übergebenen Daten
     if (!evaluations || evaluations.length === 0) {
       throw new Error('Es müssen Bewertungen für mindestens ein Kriterium angegeben werden.');
     }
 
-    const notesToInsert = evaluations.map(evalData => {
-      // Validierung für jede einzelne Kriterienbewertung
-      if (evalData.rating < 1 || evalData.rating > 6) {
-        throw new Error(`Bewertung für Kriterium ${evalData.criteria_id} muss zwischen 1 und 6 liegen.`);
-      }
-      if (typeof evalData.note !== 'string') { // Stellen Sie sicher, dass note ein String ist
-        evalData.note = String(evalData.note);
-      }
-      if (evalData.note.trim().length === 0) { // Eine Notiz ist nicht mehr zwingend
-        evalData.note = ''; // Sicherstellen, dass es ein leerer String ist
-      }
+    const notesToInsert = evaluations
+      .map(evalData => {
+        // Validierung für jede einzelne Kriterienbewertung
+        if (evalData.rating < 1 || evalData.rating > 6) {
+          throw new Error(`Bewertung für Kriterium ${evalData.criteria_id} muss zwischen 1 und 6 liegen.`);
+        }
+        if (typeof evalData.note !== 'string') {
+          evalData.note = String(evalData.note);
+        }
+        if (evalData.note.trim().length === 0) {
+          evalData.note = '';
+        }
 
-      return {
+        return {
+          evaluation_criteria_id: evalData.criteria_id,
+          notes: evalData.note.trim()
+        };
+      })
+
+    logger.debug('Saving criteria evaluations via backend API:', { appointmentId, count: notesToInsert.length });
+
+    // ✅ Call secure backend endpoint instead of direct Supabase
+    const response = await $fetch('/api/staff/save-criteria-evaluations', {
+      method: 'POST',
+      body: {
         appointment_id: appointmentId,
-        evaluation_criteria_id: evalData.criteria_id,
-        criteria_rating: evalData.rating,
-        criteria_note: evalData.note.trim(),
-        // staff_rating und staff_note bleiben NULL, da nicht mehr verwendet
-        staff_rating: null,
-        staff_note: '',
-        last_updated_by_user_id: currentUserId || null,
-        last_updated_at: toLocalTimeString(new Date)
-      };
-    });
+        evaluations: notesToInsert
+      }
+    }) as any
 
-    logger.debug('Attempting to save notes:', notesToInsert);
+    logger.debug('✅ Kriterien-Bewertungen erfolgreich gespeichert:', appointmentId);
 
-    // ✅ Step 1: Upsert the evaluation notes (update if exists, insert if not)
-    // This preserves old evaluations while updating new/modified ones
-    const { error: upsertError } = await supabase
-      .from('notes')
-      .upsert(notesToInsert, { 
-        onConflict: 'appointment_id,evaluation_criteria_id' // Compound unique key
-      });
-    
-    if (upsertError) throw upsertError;
-
-    // Nach erfolgreichem Speichern: Aktualisiere die Pendenzen
-    // Ein Termin ist NICHT mehr pending, wenn er mindestens eine Kriterien-Bewertung hat.
-    // Die fetchPendingTasks Funktion wird das übernehmen.
-    // TODO: Hier müsste die User-Rolle übergeben werden
-    await fetchPendingTasks(currentUserId || '', 'staff'); // Aktualisiere die Liste nach dem Speichern
-
-    logger.debug('✅ Kriterien-Bewertungen erfolgreich gespeichert und Pendenzen aktualisiert:', appointmentId);
+    // Aktualisiere die Pendenzen nach dem Speichern
+    await fetchPendingTasks(currentUserId || '', 'staff')
 
   } catch (err: any) {
     globalState.error = err?.message || 'Fehler beim Speichern der Kriterien-Bewertungen';
