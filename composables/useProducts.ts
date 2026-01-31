@@ -1,7 +1,5 @@
 // composables/useProducts.ts
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 
 export interface Product {
@@ -55,48 +53,24 @@ export const useProducts = () => {
     error.value = null
 
     try {
-      // Get tenant_id from auth store (avoids direct Supabase call)
-      const authStore = useAuthStore()
-      const tenantId = authStore.userProfile?.tenant_id
+      logger.debug('🔄 Loading products via secure API...')
       
-      if (!tenantId) {
-        // Fallback: try to get from API
-        const userResponse = await $fetch('/api/auth/current-user') as any
-        if (!userResponse?.profile?.tenant_id) {
-          throw new Error('User has no tenant assigned')
-        }
-        
-        // Use API to get products (handles auth via cookies)
-        const response = await $fetch('/api/staff/get-products') as any
-        if (response?.data) {
-          products.value = (response.data || []).map((product: any) => ({
-            ...product,
-            price_chf: product.price_rappen / 100
-          }))
-          logger.debug('✅ Products loaded via API:', products.value.length)
-          return
-        }
+      // Use secure API to get products
+      const response = await $fetch('/api/products/list', {
+        method: 'GET'
+      }) as any
+
+      if (!response?.data || !Array.isArray(response.data)) {
+        throw new Error('Invalid response from products API')
       }
 
-      // Direct Supabase query with tenant filter
-      const supabase = getSupabase()
-      const { data, error: fetchError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .eq('tenant_id', tenantId)
-        .order('display_order')
-        .order('name')
-
-      if (fetchError) throw fetchError
-
       // Convert price from rappen to CHF and add computed properties
-      products.value = (data || []).map(product => ({
+      products.value = (response.data || []).map((product: any) => ({
         ...product,
         price_chf: product.price_rappen / 100
       }))
 
-      logger.debug('✅ Products loaded for tenant:', tenantId, products.value.length)
+      logger.debug('✅ Products loaded via API:', products.value.length)
     } catch (err: any) {
       console.error('❌ Error loading products:', err)
       error.value = err.message
@@ -125,62 +99,30 @@ export const useProducts = () => {
   // Load products for an appointment from product_sales
   const loadAppointmentProducts = async (appointmentId: string): Promise<ProductItem[]> => {
     try {
-      const supabase = getSupabase()
-      
-      // Get tenant_id from auth store (avoids direct Supabase auth call)
-      const authStore = useAuthStore()
-      const tenantId = authStore.userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      const response = await $fetch('/api/products/get-appointment-products', {
+        method: 'GET',
+        query: { appointment_id: appointmentId }
+      }) as any
+
+      if (!response?.data || !Array.isArray(response.data)) {
+        return []
       }
-      
-      const { data, error } = await supabase
-        .from('product_sales')
-        .select(`
-          id,
-          product_sale_items (
-            id,
-            quantity,
-            unit_price_rappen,
-            total_price_rappen,
-            products (
-              id,
-              name,
-              price_rappen,
-              description,
-              category,
-              image_url
-            )
-          )
-        `)
-        .eq('appointment_id', appointmentId)
-        .eq('tenant_id', tenantId)
 
-      if (error) throw error
+      // Convert prices to CHF
+      const allProducts = response.data.map((item: any) => ({
+        product: {
+          ...item.product,
+          price_chf: item.product.price_rappen / 100
+        },
+        quantity: item.quantity,
+        total_rappen: item.total_rappen,
+        total_chf: item.total_rappen / 100
+      }))
 
-      // Sammle alle Produkte aus allen product_sales Einträgen
-      const allProducts: any[] = []
-      data?.forEach(sale => {
-        if (sale.product_sale_items && sale.product_sale_items.length > 0) {
-          sale.product_sale_items.forEach(item => {
-            allProducts.push({
-              product: {
-                ...item.products,
-                price_chf: item.products.price_rappen / 100
-              },
-              quantity: item.quantity,
-              total_rappen: item.total_price_rappen,
-              total_chf: item.total_price_rappen / 100
-            })
-          })
-        }
-      })
-
-      logger.debug('✅ Products loaded from product_sales:', allProducts.length)
+      logger.debug('✅ Products loaded from API:', allProducts.length)
       return allProducts
     } catch (err: any) {
-      console.error('❌ Error loading products from product_sales:', err)
+      console.error('❌ Error loading products from API:', err)
       return []
     }
   }
