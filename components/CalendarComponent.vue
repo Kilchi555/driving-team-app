@@ -838,7 +838,9 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         user: appointments[0].user,
         staff: appointments[0].staff,
         start_time: appointments[0].start_time,
-        duration_minutes: appointments[0].duration_minutes
+        duration_minutes: appointments[0].duration_minutes,
+        location_id: appointments[0].location_id,
+        location: appointments[0].location
       })
     } else {
       logger.debug('ℹ️ No appointments found')
@@ -849,28 +851,9 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
     
     logger.debug('✅ Filtered appointments:', filteredAppointments.length)
     
-    // ✅ Location-Daten für ALLE Termine mit location_id laden (nicht nur für alte Termine)
-    const locationIds = [...new Set(filteredAppointments
-      .filter(apt => apt.location_id) // Alle Termine mit location_id
-      .map(apt => apt.location_id)
-    )]
-    
-    let locationsMap: Record<string, {name: string, address: string}> = {}
-    if (locationIds.length > 0) {
-      logger.debug('🔄 Loading location data for', locationIds.length, 'locations')
-      const { data: locations, error: locError } = await supabase
-        .from('locations')
-        .select('id, name, address')
-        .in('id', locationIds)
-      
-      if (!locError && locations) {
-        locationsMap = Object.fromEntries(
-          locations.map(loc => [loc.id, { name: loc.name, address: loc.address }])
-        )
-        logger.debug('✅ Locations loaded:', Object.keys(locationsMap).length)
-        logger.debug('📍 Locations data:', locations)
-      }
-    }
+    // ✅ Location-Daten sind bereits vom Backend geladen! Keine zusätzliche Query nötig
+    // Das Backend sendet bereits das "location" Objekt für jeden Termin
+    logger.debug('📍 Location data already provided by backend')
     
     const convertedEvents = filteredAppointments.map((apt) => {
       const isTeamInvite = apt.type === 'team_invite'
@@ -894,25 +877,27 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         
         if (isOtherEventType) {
           // ✅ For other event types (VKU, Nothelfer, etc.), just use location (no student name)
+          const locationData = (apt as any).location
           const locationText = (apt as any).location_address || 
-              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              (locationData?.address) ||
               (apt as any).location_name || 
-              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || 'Termin'
+              (locationData?.name) || 'Termin'
           eventTitle = locationText
         } else {
           // ✅ For lessons/exams, use student name + location
           // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
+          const locationData = (apt as any).location
           const locationText = (apt as any).location_address || 
-              (apt.location_id ? locationsMap[apt.location_id]?.address : '') ||
+              (locationData?.address) ||
               (apt as any).location_name || 
-              (apt.location_id ? locationsMap[apt.location_id]?.name : '') || ''
+              (locationData?.name) || ''
           
           // ✅ Debug: Location-Daten loggen
           logger.debug('🔍 Location debug for appointment:', apt.id, {
             location_id: apt.location_id,
             location_name: (apt as any).location_name,
             location_address: (apt as any).location_address,
-            locationsMap_data: apt.location_id ? locationsMap[apt.location_id] : 'no location_id',
+            backend_location_data: locationData,
             final_locationText: locationText,
             userObj: userObj,
             studentName: studentName
@@ -997,8 +982,8 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         // ✅ Debug: Event-Farben direkt setzen
         classNames: [`category-${category}`, unpaidClass].filter(Boolean),
         extendedProps: {
-          // ✅ Location für 'other' Events wieder hinzufügen - gleiche Priorität wie im Titel
-          location: (apt.location_id ? locationsMap[apt.location_id]?.address : '') || '',
+          // ✅ Location für 'other' Events - use location data from backend
+          location: ((apt as any).location?.address || (apt as any).location?.name) || '',
           // ✅ Produktdaten für Wiederherstellung
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
@@ -1013,6 +998,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
           user_id: apt.user_id,
           staff_id: apt.staff_id,
           location_id: apt.location_id,
+          location: (apt as any).location || null, // ✅ Include full location object from backend
           duration_minutes: apt.duration_minutes,
           status: apt.status,
           appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
@@ -1748,7 +1734,9 @@ dateClick: (arg) => {
 
 eventContent: (arg) => {
   const extendedProps = arg.event.extendedProps
-  const location = extendedProps?.location || ''
+  const locationObj = extendedProps?.location
+  // Extract address or name from location object, or fallback to location string
+  const location = (locationObj?.address || locationObj?.name) || extendedProps?.location_address || ''
   const eventType = arg.event.extendedProps?.eventType || 'lesson'
   const student = extendedProps?.student || ''
   

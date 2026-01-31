@@ -1923,45 +1923,7 @@ const loadAppointments = async () => {
 
     logger.debug('✅ Appointments loaded:', appointmentsData?.length || 0)
 
-    const locationIds = [...new Set(appointmentsData?.map((a: any) => a.location_id).filter(Boolean))]
-    logger.debug('🔍 Location IDs found:', locationIds)
-    
-    let locationsMap: Record<string, { name: string; address?: string; formatted_address?: string }> = {}
-    
-    if (locationIds.length > 0) {
-      logger.debug('🔍 Loading locations for IDs:', locationIds)
-      
-      try {
-        // ✅ Use secure API instead of direct DB query
-        const response = await $fetch('/api/customer/get-locations', {
-          method: 'GET',
-          query: {
-            ids: locationIds.join(',')
-          }
-        }) as any
-
-        const locations = response?.data || response?.locations || []
-        
-        if (locations && locations.length > 0) {
-          logger.debug('✅ Locations loaded:', locations)
-          
-          locationsMap = locations.reduce((acc: any, loc: any) => {
-            acc[loc.id] = {
-              name: loc.name,
-              address: loc.address,
-              formatted_address: loc.formatted_address
-            }
-            return acc
-          }, {} as Record<string, any>)
-          
-          logger.debug('✅ LocationsMap created:', locationsMap)
-        }
-      } catch (error: any) {
-        console.error('❌ Error loading locations:', error)
-      }
-    } else {
-      logger.debug('⚠️ No location IDs found in appointments')
-    }
+    // ✅ Location data is already provided by backend API - no need to load separately!
 
     const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
     logger.debug('🔍 Extracting evaluations from API response for appointments:', appointmentIds.length)
@@ -2144,8 +2106,8 @@ const loadAppointments = async () => {
 
     const lessonsWithEvaluations = (appointmentsData || []).map((appointment: any) => ({
       ...appointment,
-      location_name: locationsMap[appointment.location_id]?.name || null,
-      location_details: locationsMap[appointment.location_id] || null,
+      location_name: appointment.location?.name || null,
+      location_details: appointment.location || null,
       criteria_evaluations: notesByAppointment[appointment.id] || []
     }))
 
