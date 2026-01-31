@@ -453,32 +453,34 @@ const useEventModalForm = (currentUser?: any, refs?: {
     try {
       const supabase = getSupabase()
       
-      const { data: paymentData, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .single()
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.warn('⚠️ Error loading existing payment:', error)
-        return null
-      }
-      
-      if (paymentData) {
-        logger.debug('✅ Existing payment loaded:', {
-          id: paymentData.id,
-          payment_method: paymentData.payment_method,
-          payment_status: paymentData.payment_status,
-          total_amount_chf: (paymentData.total_amount_rappen / 100).toFixed(2)
-        })
-        
-        // Update selectedPaymentMethod ref if available
-        if (refs?.selectedPaymentMethod) {
-          refs.selectedPaymentMethod.value = paymentData.payment_method
-          logger.debug('💳 Payment method set from existing payment:', paymentData.payment_method)
+      // ✅ Load via Backend-API instead of direct Supabase (RLS-konform)
+      try {
+        const response = await $fetch('/api/staff/get-appointment-payment', {
+          query: {
+            appointmentId: appointmentId
+          }
+        }) as any
+
+        if (response?.success && response?.data) {
+          const paymentData = response.data
+          logger.debug('✅ Existing payment loaded:', {
+            id: paymentData.id,
+            payment_method: paymentData.payment_method,
+            payment_status: paymentData.payment_status,
+            total_amount_chf: (paymentData.total_amount_rappen / 100).toFixed(2)
+          })
+          
+          // Update selectedPaymentMethod ref if available
+          if (refs?.selectedPaymentMethod) {
+            refs.selectedPaymentMethod.value = paymentData.payment_method
+            logger.debug('💳 Payment method set from existing payment:', paymentData.payment_method)
+          }
+          
+          return paymentData
         }
-        
-        return paymentData
+      } catch (err: any) {
+        logger.warn('⚠️ Error loading existing payment via API:', err)
+        return null
       }
       
       logger.debug('ℹ️ No existing payment found for appointment:', appointmentId)
