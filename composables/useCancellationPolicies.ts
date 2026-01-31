@@ -1,8 +1,5 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
-
-const supabase = getSupabase()
 
 export interface CancellationPolicy {
   id: string
@@ -104,79 +101,40 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // Prüfe zuerst, ob der Benutzer Admin-Rechte hat
-      const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) {
-        throw new Error('Benutzer nicht authentifiziert')
+      logger.debug('📋 Fetching ALL cancellation policies...')
+
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'fetch-all'
+        }
+      }) as any
+
+      if (!response?.success) {
+        throw new Error('Failed to fetch all policies')
       }
 
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role, tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (userError || userData?.role !== 'admin') {
-        throw new Error('Keine Admin-Berechtigung für Policy-Management')
-      }
-
-      if (!userData?.tenant_id) {
-        throw new Error('User has no tenant assigned')
-      }
-
-      logger.debug('🔍 All Cancellation Policies - Current tenant_id:', userData.tenant_id)
-
-      // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
-      // This allows admins to see and manage both their tenant policies and the global fallback policies
-      const { data: policiesData, error: policiesError } = await supabase
-        .from('cancellation_policies')
-        .select('*')
-        .or(`tenant_id.eq.${userData.tenant_id},tenant_id.is.null`) // Load tenant-specific OR global policies
-        .order('tenant_id', { ascending: false }) // Tenant-specific policies first
-        .order('created_at', { ascending: false })
-
-      if (policiesError) {
-        throw policiesError
-      }
-
-      policies.value = policiesData || []
-
-      // Fetch rules for each policy
-      const policiesWithRulesData: PolicyWithRules[] = []
+      const policiesWithRulesData = response?.data || []
       
-      for (const policy of policies.value) {
-        let rulesQuery = supabase
-          .from('cancellation_rules')
-          .select('*')
-          .eq('policy_id', policy.id)
-        
-        // ✅ IMPORTANT: Don't filter by tenant_id for rules
-        // Rules always belong to their policy via policy_id
-        // The tenant_id on rules is just metadata
-        
-        const { data: rulesData, error: rulesError } = await rulesQuery
-          .order('hours_before_appointment', { ascending: false })
+      // Extract just policies (without rules) for policies.value
+      const policiesOnly = policiesWithRulesData.map((p: any) => {
+        const { rules, ...policy } = p
+        return policy
+      })
+      
+      policies.value = policiesOnly
+      policiesWithRules.value = policiesWithRulesData
 
-        if (rulesError) {
-          console.warn(`Error fetching rules for policy ${policy.id}:`, rulesError)
-        }
-
-        policiesWithRulesData.push({
-          ...policy,
-          rules: rulesData || []
-        })
-
-        // Set default policy
-        if (policy.is_default) {
-          defaultPolicy.value = {
-            ...policy,
-            rules: rulesData || []
-          }
-        }
+      // Set default policy
+      const defaultPol = policiesWithRulesData.find((p: any) => p.is_default)
+      if (defaultPol) {
+        defaultPolicy.value = defaultPol
       }
 
-      policiesWithRules.value = policiesWithRulesData
+      logger.debug('📋 All policies loaded via API:', {
+        totalPolicies: policiesWithRulesData.length
+      })
     } catch (err) {
       console.error('Error fetching all cancellation policies:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation policies'
@@ -232,20 +190,23 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      const { data, error: updateError } = await supabase
-        .from('cancellation_policies')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'update-policy',
+          policyId: id,
+          updates
+        }
+      }) as any
 
-      if (updateError) {
-        throw updateError
+      if (!response?.success) {
+        throw new Error('Failed to update policy')
       }
 
       // Refresh the list
       await fetchAllPolicies()
-      return data
+      return response?.data
     } catch (err) {
       console.error('Error updating cancellation policy:', err)
       error.value = err instanceof Error ? err.message : 'Failed to update cancellation policy'
@@ -261,13 +222,17 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      const { error: deleteError } = await supabase
-        .from('cancellation_policies')
-        .update({ is_active: false })
-        .eq('id', id)
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'delete-policy',
+          policyId: id
+        }
+      }) as any
 
-      if (deleteError) {
-        throw deleteError
+      if (!response?.success) {
+        throw new Error('Failed to delete policy')
       }
 
       // Refresh the list
@@ -287,33 +252,22 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
-      }
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'create-rule',
+          ruleData
+        }
+      }) as any
 
-      const { data, error: createError } = await supabase
-        .from('cancellation_rules')
-        .insert([{ ...ruleData, tenant_id: tenantId }])
-        .select()
-        .single()
-
-      if (createError) {
-        throw createError
+      if (!response?.success) {
+        throw new Error('Failed to create rule')
       }
 
       // Refresh the list
       await fetchAllPolicies()
-      return data
+      return response?.data
     } catch (err) {
       console.error('Error creating cancellation rule:', err)
       error.value = err instanceof Error ? err.message : 'Failed to create cancellation rule'
@@ -329,20 +283,23 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      const { data, error: updateError } = await supabase
-        .from('cancellation_rules')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'update-rule',
+          ruleId: id,
+          updates
+        }
+      }) as any
 
-      if (updateError) {
-        throw updateError
+      if (!response?.success) {
+        throw new Error('Failed to update rule')
       }
 
       // Refresh the list
       await fetchAllPolicies()
-      return data
+      return response?.data
     } catch (err) {
       console.error('Error updating cancellation rule:', err)
       error.value = err instanceof Error ? err.message : 'Failed to update cancellation rule'
@@ -358,13 +315,17 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      const { error: deleteError } = await supabase
-        .from('cancellation_rules')
-        .delete()
-        .eq('id', id)
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'delete-rule',
+          ruleId: id
+        }
+      }) as any
 
-      if (deleteError) {
-        throw deleteError
+      if (!response?.success) {
+        throw new Error('Failed to delete rule')
       }
 
       // Refresh the list
@@ -384,31 +345,22 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // First, unset all other default policies
-      const { error: unsetError } = await supabase
-        .from('cancellation_policies')
-        .update({ is_default: false })
-        .neq('id', policyId)
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'set-default',
+          policyId
+        }
+      }) as any
 
-      if (unsetError) {
-        throw unsetError
-      }
-
-      // Then set the selected policy as default
-      const { data, error: setError } = await supabase
-        .from('cancellation_policies')
-        .update({ is_default: true })
-        .eq('id', policyId)
-        .select()
-        .single()
-
-      if (setError) {
-        throw setError
+      if (!response?.success) {
+        throw new Error('Failed to set default policy')
       }
 
       // Refresh the list
       await fetchAllPolicies()
-      return data
+      return response?.data
     } catch (err) {
       console.error('Error setting default policy:', err)
       error.value = err instanceof Error ? err.message : 'Failed to set default policy'
