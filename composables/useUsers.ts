@@ -1,7 +1,5 @@
 // composables/useUsers.ts
 import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { toLocalTimeString } from '~/utils/dateUtils'
 
 export const useUsers = () => {
   const users = ref<any[]>([])
@@ -11,18 +9,14 @@ export const useUsers = () => {
   // Soft Delete - User deaktivieren
   const deactivateUser = async (userId: string, reason?: string) => {
     try {
-      const supabase = getSupabase()
-      
-      const { error } = await supabase
-        .from('users')
-        .update({
-          is_active: false,
-          deleted_at: toLocalTimeString(new Date),
-          deletion_reason: reason || 'Deaktiviert'
-        })
-        .eq('id', userId)
-        
-      if (error) throw error
+      await $fetch('/api/users/deactivate', {
+        method: 'POST',
+        body: {
+          user_id: userId,
+          reason: reason || 'Deaktiviert'
+        }
+      })
+
       logger.debug('User deaktiviert (Soft Delete)')
       
       // Liste aktualisieren
@@ -37,18 +31,11 @@ export const useUsers = () => {
   // User reaktivieren
   const reactivateUser = async (userId: string) => {
     try {
-      const supabase = getSupabase()
-      
-      const { error } = await supabase
-        .from('users')
-        .update({
-          is_active: true,
-          deleted_at: null,
-          deletion_reason: null
-        })
-        .eq('id', userId)
-        
-      if (error) throw error
+      await $fetch('/api/users/reactivate', {
+        method: 'POST',
+        body: { user_id: userId }
+      })
+
       logger.debug('User reaktiviert')
       
       // Liste aktualisieren
@@ -66,19 +53,16 @@ export const useUsers = () => {
     error.value = null
     
     try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('is_active', true)
-        .order('last_name')
-        .order('first_name')
-        
-      if (fetchError) throw fetchError
-      
-      users.value = data || []
-      return data
+      const response = await $fetch('/api/users/list-active', {
+        method: 'GET'
+      }) as any
+
+      if (!response || !Array.isArray(response.data)) {
+        throw new Error('Invalid response from users API')
+      }
+
+      users.value = response.data
+      return response.data
       
     } catch (err: any) {
       error.value = err.message
@@ -94,19 +78,16 @@ export const useUsers = () => {
     error.value = null
     
     try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*, deleted_at')
-        .order('is_active', { ascending: false })
-        .order('last_name')
-        .order('first_name')
-        
-      if (fetchError) throw fetchError
-      
-      users.value = data || []
-      return data
+      const response = await $fetch('/api/users/list-all', {
+        method: 'GET'
+      }) as any
+
+      if (!response || !Array.isArray(response.data)) {
+        throw new Error('Invalid response from users API')
+      }
+
+      users.value = response.data
+      return response.data
       
     } catch (err: any) {
       error.value = err.message
@@ -119,16 +100,16 @@ export const useUsers = () => {
   // User nach ID suchen
   const getUserById = async (userId: string) => {
     try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
-        
-      if (fetchError) throw fetchError
-      return data
+      const response = await $fetch('/api/users/get-by-id', {
+        method: 'GET',
+        query: { user_id: userId }
+      }) as any
+
+      if (!response || !response.data) {
+        throw new Error('User not found')
+      }
+
+      return response.data
       
     } catch (err: any) {
       error.value = err.message
