@@ -78,41 +78,161 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation
-    let query_builder = supabaseAdmin
-      .from('locations')
-      .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      // Staff see all active locations (internal or not) - they can manage both
-
-    // Filter by specific IDs if provided
-    if (locationIds && locationIds.length > 0) {
-      query_builder = query_builder.in('id', locationIds)
-    }
-
-    const { data: locations, error } = await query_builder.order('name', { ascending: true })
-
-    if (error) {
-      logger.error('❌ Error fetching locations:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to fetch locations'
+    // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation and Role-based Filtering
+    
+    // Filter based on user role
+    if (userProfile.role === 'staff') {
+      // Staff sees:
+      // 1. Their own standard locations (location_type = 'standard' AND user_id = current staff)
+      // 2. Pickup locations of the selected client (if provided via query param)
+      const selectedClientId = query.selected_client_id as string | undefined
+      
+      if (selectedClientId) {
+        logger.debug('🔍 Staff fetching locations - staff locations + client pickups:', {
+          staffId: userProfile.id,
+          clientId: selectedClientId
+        })
+        
+        // Get staff's standard locations
+        const { data: staffLocations, error: staffError } = await supabaseAdmin
+          .from('locations')
+          .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .eq('user_id', userProfile.id)
+          .eq('location_type', 'standard')
+        
+        if (staffError) {
+          logger.error('❌ Error fetching staff locations:', staffError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to fetch staff locations'
+          })
+        }
+        
+        // Get client's pickup locations
+        const { data: clientPickups, error: clientError } = await supabaseAdmin
+          .from('locations')
+          .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .eq('user_id', selectedClientId)
+          .eq('location_type', 'pickup')
+        
+        if (clientError) {
+          logger.error('❌ Error fetching client pickups:', clientError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to fetch client pickup locations'
+          })
+        }
+        
+        // Combine and sort
+        const combined = [
+          ...(staffLocations || []),
+          ...(clientPickups || [])
+        ].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        
+        logger.debug('✅ Staff locations fetched (with client filter):', {
+          staffLocations: staffLocations?.length || 0,
+          clientPickups: clientPickups?.length || 0,
+          total: combined.length
+        })
+        
+        return {
+          success: true,
+          data: combined
+        }
+      } else {
+        // No client selected, show only standard locations where staff is registered
+        logger.debug('🔍 Staff fetching standard locations where staff is registered (no client selected):', {
+          staffId: userProfile.id
+        })
+        
+        // Get ALL standard locations first, then filter by staff_ids in memory
+        // (Supabase JSON filtering is limited, so we do it in memory)
+        const { data: allLocations, error } = await supabaseAdmin
+          .from('locations')
+          .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable, staff_ids')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .eq('location_type', 'standard')
+          .order('name', { ascending: true })
+        
+        if (error) {
+          logger.error('❌ Error fetching staff locations:', error)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to fetch locations'
+          })
+        }
+        
+        // Filter locations where current staff is in the staff_ids array
+        const filteredLocations = (allLocations || []).filter((location: any) => {
+          if (!location.staff_ids) {
+            return false
+          }
+          
+          try {
+            const staffIds = typeof location.staff_ids === 'string' 
+              ? JSON.parse(location.staff_ids) 
+              : location.staff_ids
+            
+            return Array.isArray(staffIds) && staffIds.includes(userProfile.id)
+          } catch (e) {
+            logger.error('❌ Error parsing staff_ids for location:', location.id, e)
+            return false
+          }
+        })
+        
+        logger.debug('✅ Staff locations fetched:', {
+          total: allLocations?.length || 0,
+          filtered: filteredLocations.length
+        })
+        
+        return {
+          success: true,
+          data: filteredLocations
+        }
+      }
+    } else if (['client', 'customer', 'student'].includes(userProfile.role)) {
+      // Clients see only their own pickup locations
+      logger.debug('🔍 Client fetching own pickup locations:', {
+        clientId: userProfile.id
       })
+      
+      const { data: locations, error } = await supabaseAdmin
+        .from('locations')
+        .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .eq('user_id', userProfile.id)
+        .eq('location_type', 'pickup')
+        .order('name', { ascending: true })
+      
+      if (error) {
+        logger.error('❌ Error fetching client locations:', error)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to fetch locations'
+        })
+      }
+      
+      logger.debug('✅ Client locations fetched:', {
+        count: locations?.length || 0
+      })
+      
+      return {
+        success: true,
+        data: locations || []
+      }
     }
-
-    // ✅ LAYER 5: AUDIT LOGGING
-    logger.debug('✅ Locations fetched successfully:', {
-      userId: userProfile.id,
-      tenantId: tenantId,
-      count: locations?.length || 0,
-      filtered: !!locationIds
+    
+    // Fallback: return empty
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Invalid user role for location access'
     })
-
-    return {
-      success: true,
-      data: locations || []
-    }
 
   } catch (error: any) {
     logger.error('❌ Staff get-locations API error:', error)
