@@ -199,10 +199,38 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // ✅ Load location data for appointments with location_id
+    const locationIds = [...new Set(
+      (appointmentsData || [])
+        .map((apt: any) => apt.location_id)
+        .filter((id: any) => id)
+    )] as string[]
+
+    let locationsMap: Record<string, any> = {}
+
+    if (locationIds.length > 0) {
+      const { data: locations, error: locationsError } = await serviceSupabase
+        .from('locations')
+        .select('id, name, address')
+        .in('id', locationIds)
+
+      if (locationsError) {
+        logger.warn('⚠️ Error fetching location data:', locationsError)
+      } else {
+        locationsMap = (locations || []).reduce((map: Record<string, any>, loc: any) => {
+          map[loc.id] = loc
+          return map
+        }, {})
+        
+        logger.debug(`✅ Fetched location data for ${Object.keys(locationsMap).length} locations`)
+      }
+    }
+
     // ✅ Load payments for all appointments
     const appointmentsWithPayments = (appointmentsWithNotes || []).map(appointment => ({
       ...appointment,
-      payment: paymentsMap[appointment.id] || null
+      payment: paymentsMap[appointment.id] || null,
+      location: appointment.location_id ? locationsMap[appointment.location_id] : null
     }))
 
     logger.info(`✅ Fetched ${appointmentsWithPayments.length} appointments for customer ${userProfile.id}`)
