@@ -54,105 +54,41 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      logger.debug('🔍 Cancellation Policies - Fetching policies...')
+
+      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'list',
+          appliesTo
+        }
+      }) as any
+
+      if (!response?.success) {
+        throw new Error('Failed to fetch policies')
       }
 
-      logger.debug('🔍 Cancellation Policies - Current tenant_id:', tenantId, 'appliesTo:', appliesTo)
-
-      // Build query
-      // ✅ IMPORTANT: Load both tenant-specific policies AND global policies (tenant_id = NULL)
-      let query = supabase
-        .from('cancellation_policies')
-        .select('*')
+      const policiesWithRulesData = response?.data || []
       
-      // Filter by applies_to if specified
-      if (appliesTo) {
-        query = query.eq('applies_to', appliesTo)
-      }
-      
-      // ✅ IMPORTANT: Don't filter by is_active - load all policies
-      // The is_active column might be stored as text 'true'/'false' instead of boolean
-      // We'll check is_active in the code below
-      
-      // Order: tenant-specific policies first (non-NULL tenant_id), then global policies
-      query = query.order('tenant_id', { ascending: false })
-      
-      const { data: policiesData, error: policiesError } = await query
-        .order('created_at', { ascending: false })
-
-      if (policiesError) {
-        logger.debug('❌ Error fetching policies:', policiesError)
-        console.error('Error fetching policies:', policiesError)
-        throw policiesError
-      }
-
-      logger.debug('✅ Raw policies data loaded:', { count: policiesData?.length || 0, policies: policiesData })
-
-      // Filter to get:
-      // 1. Active policies (is_active = true)
-      // 2. Both tenant-specific AND global policies
-      // Tenant-specific policies take precedence over global
-      const filteredPolicies = (policiesData || []).filter(p => {
-        // Check if policy is active (handle both boolean and string 'true'/'false')
-        const isActive = p.is_active === true || p.is_active === 'true'
-        
-        // Include if active AND (tenant-specific OR global)
-        return isActive && (p.tenant_id === null || p.tenant_id === tenantId)
+      // Extract just policies (without rules) for policies.value
+      const policiesOnly = policiesWithRulesData.map((p: any) => {
+        const { rules, ...policy } = p
+        return policy
       })
       
-      policies.value = filteredPolicies
-
-      // Fetch rules for each policy
-      const policiesWithRulesData: PolicyWithRules[] = []
-      
-      for (const policy of policies.value) {
-        let rulesQuery = supabase
-          .from('cancellation_rules')
-          .select('*')
-          .eq('policy_id', policy.id)
-        
-        // ✅ IMPORTANT: Don't filter by tenant_id for rules
-        // Rules always belong to their policy via policy_id
-        // The tenant_id on rules is just metadata
-        
-        const { data: rulesData, error: rulesError } = await rulesQuery
-          .order('hours_before_appointment', { ascending: false })
-
-        if (rulesError) {
-          console.warn(`Error fetching rules for policy ${policy.id}:`, rulesError)
-        }
-
-        policiesWithRulesData.push({
-          ...policy,
-          rules: rulesData || []
-        })
-
-        // Set default policy
-        if (policy.is_default) {
-          defaultPolicy.value = {
-            ...policy,
-            rules: rulesData || []
-          }
-        }
-      }
-
+      policies.value = policiesOnly
       policiesWithRules.value = policiesWithRulesData
+
+      // Set default policy
+      const defaultPol = policiesWithRulesData.find((p: any) => p.is_default)
+      if (defaultPol) {
+        defaultPolicy.value = defaultPol
+      }
       
-      logger.debug('📋 Policies loaded:', {
+      logger.debug('📋 Policies loaded via API:', {
         totalPolicies: policiesWithRulesData.length,
-        defaultPolicy: defaultPolicy.value?.name || 'NOT SET',
-        defaultPolicyRules: defaultPolicy.value?.rules?.length || 0
+        defaultPolicy: defaultPolicy.value?.name || 'NOT SET'
       })
     } catch (err) {
       console.error('Error fetching cancellation policies:', err)
@@ -255,19 +191,7 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
-      }
+      logger.debug('➕ Creating new cancellation policy...')
 
       // Ensure applies_to is set (default to 'appointments' for backward compatibility)
       const policyWithAppliesTo = {
@@ -275,19 +199,24 @@ export const useCancellationPolicies = () => {
         applies_to: policyData.applies_to || 'appointments'
       }
 
-      const { data, error: createError } = await supabase
-        .from('cancellation_policies')
-        .insert([{ ...policyWithAppliesTo, tenant_id: tenantId }])
-        .select()
-        .single()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/cancellation-policies/manage', {
+        method: 'POST',
+        body: {
+          action: 'create-policy',
+          policyData: policyWithAppliesTo
+        }
+      }) as any
 
-      if (createError) {
-        throw createError
+      if (!response?.success) {
+        throw new Error('Failed to create policy')
       }
+
+      logger.debug('✅ Policy created')
 
       // Refresh the list
       await fetchAllPolicies()
-      return data
+      return response?.data
     } catch (err) {
       console.error('Error creating cancellation policy:', err)
       error.value = err instanceof Error ? err.message : 'Failed to create cancellation policy'
