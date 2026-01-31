@@ -4,8 +4,6 @@ import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import type { Payment, Product, Discount, PaymentMethod } from '~/types/payment'
-import type { PaymentItem } from '~/types/payment'
-import { usePaymentItems } from '~/composables/usePaymentItems'
 import { useDiscounts } from '~/composables/useDiscounts'
 
 export const usePayments = () => {
@@ -18,7 +16,6 @@ export const usePayments = () => {
   }
 
   const supabase = getSupabase()
-  const { createPaymentItem, addAppointmentItem, addProductItem, addDiscountItem } = usePaymentItems()
   const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
   
   // State
@@ -49,42 +46,6 @@ export const usePayments = () => {
     }
   }
 
-  // Create payment items for a payment using the new structure
-  const createPaymentItems = async (paymentId: string, items: Partial<PaymentItem>[]): Promise<void> => {
-    try {
-      for (const item of items) {
-        if (item.item_type === 'appointment' && item.item_id) {
-          await addAppointmentItem(
-            paymentId,
-            item.item_id,
-            item.item_name || 'Fahrstunde',
-            item.unit_price_rappen || 0,
-            item.description
-          )
-        } else if (item.item_type === 'product' && item.item_id) {
-          await addProductItem(
-            paymentId,
-            item.item_id,
-            item.item_name || 'Produkt',
-            item.quantity || 1,
-            item.unit_price_rappen || 0,
-            item.description
-          )
-        } else if (item.item_type === 'discount' && item.item_id) {
-          await addDiscountItem(
-            paymentId,
-            item.item_id,
-            item.item_name || 'Rabatt',
-            Math.abs(item.total_price_rappen || 0),
-            item.description
-          )
-        }
-      }
-    } catch (error) {
-      console.error('Error creating payment items:', error)
-      throw error
-    }
-  }
 
   // Handle cash payment with new structure
   const processCashPayment = async (
@@ -146,51 +107,6 @@ export const usePayments = () => {
       }
 
       const payment = await createPaymentRecord(paymentData)
-
-      // Create payment items (mit gerundeten Preisen)
-      const paymentItems: any[] = [
-        {
-          item_type: 'appointment',
-          item_id: appointmentId,
-          item_name: `Fahrlektion ${price.category_code}`,
-          quantity: 1,
-          unit_price_rappen: roundedLessonPriceRappen,
-          total_price_rappen: roundedLessonPriceRappen,
-          description: `${price.duration_minutes} Minuten`
-        }
-      ]
-
-      // Add products if any
-      if (products && products.length > 0) {
-        products.forEach(product => {
-          paymentItems.push({
-            item_type: 'product',
-            item_id: product.id,
-            item_name: product.name,
-            quantity: 1, // Standard quantity
-            unit_price_rappen: product.price_rappen,
-            total_price_rappen: product.price_rappen,
-            description: product.description
-          })
-        })
-      }
-
-      // Add discounts if any
-      if (discounts && discounts.length > 0) {
-        discounts.forEach(discount => {
-          paymentItems.push({
-            item_type: 'discount',
-            item_id: discount.id,
-            item_name: discount.name,
-            quantity: 1,
-            unit_price_rappen: -discount.discount_value || 0,
-            total_price_rappen: -discount.discount_value || 0,
-            description: discount.name || ''
-          })
-        })
-      }
-
-      await createPaymentItems(payment.id, paymentItems)
 
       // Update appointment as paid
       await updateAppointmentPaymentStatus(appointmentId, true, 'cash')
@@ -264,49 +180,6 @@ export const usePayments = () => {
 
       const payment = await createPaymentRecord(paymentData)
 
-      // Create payment items (same logic as cash payment)
-      const paymentItems: Partial<PaymentItem>[] = [
-        {
-          item_type: 'appointment',
-          item_id: appointmentId,
-          item_name: `Fahrlektion ${price.category_code}`,
-          quantity: 1,
-          unit_price_rappen: roundedLessonPriceRappen,
-          total_price_rappen: roundedLessonPriceRappen,
-          description: `${price.duration_minutes} Minuten`
-        }
-      ]
-
-      if (products && products.length > 0) {
-        products.forEach(product => {
-          paymentItems.push({
-            item_type: 'product',
-            item_id: product.id,
-            item_name: product.name,
-            quantity: 1, // Standard quantity
-            unit_price_rappen: product.price_rappen,
-            total_price_rappen: product.price_rappen,
-            description: product.description
-          })
-        })
-      }
-
-      if (discounts && discounts.length > 0) {
-        discounts.forEach(discount => {
-          paymentItems.push({
-            item_type: 'discount',
-            item_id: discount.id,
-            item_name: discount.name,
-            quantity: 1,
-            unit_price_rappen: -discount.discount_value || 0,
-            total_price_rappen: -discount.discount_value || 0,
-            description: discount.name || ''
-          })
-        })
-      }
-
-      await createPaymentItems(payment.id, paymentItems)
-
       return payment
     } finally {
       isProcessing.value = false
@@ -367,9 +240,6 @@ export const usePayments = () => {
 
       // Create payment record
       const payment = await createPaymentRecord(paymentData)
-
-      // Create payment items
-      await createPaymentItems(payment.id, appointmentId, products, discounts)
 
       // Create Wallee transaction
       const walleeResponse = await $fetch('/api/wallee/create-transaction', {
@@ -672,37 +542,6 @@ export const usePayments = () => {
 
       const payment = await createPaymentRecord(paymentData)
 
-      // Create payment items
-      const paymentItems: Partial<PaymentItem>[] = []
-
-      // Add products
-      products.forEach(product => {
-        paymentItems.push({
-          item_type: 'product',
-          item_id: product.id,
-          item_name: product.name,
-          quantity: 1, // Standard quantity
-          unit_price_rappen: product.price_rappen,
-          total_price_rappen: product.price_rappen,
-          description: product.description
-        })
-      })
-
-      // Add discounts
-      discounts.forEach(discount => {
-        paymentItems.push({
-          item_type: 'discount',
-          item_id: discount.id,
-          item_name: discount.name,
-          quantity: 1,
-          unit_price_rappen: -discount.discount_value || 0,
-          total_price_rappen: -discount.discount_value || 0,
-          description: discount.name || ''
-        })
-      })
-
-      await createPaymentItems(payment.id, paymentItems)
-
       return payment
     } finally {
       isProcessing.value = false
@@ -827,7 +666,6 @@ export const usePayments = () => {
 
     // Methods
     createPaymentRecord,
-    createPaymentItems,
     processCashPayment,
     processInvoicePayment,
     processWalleePayment,
