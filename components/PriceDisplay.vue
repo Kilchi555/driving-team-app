@@ -36,6 +36,7 @@
           </div>
         </div>
 
+
         <!-- Student Credit Anzeige -->
         <div v-if="getUsedCredit() > 0 || (props.studentCredit && props.studentCredit.balance_rappen !== 0)" class="py-2 border-t border-blue-200">
           <div class="space-y-2">
@@ -136,7 +137,7 @@
           <!-- Gesamtpreis (nach Guthaben) -->
           <div class="flex justify-between text-lg font-bold">
             <span class="text-gray-700">Zu bezahlen</span>
-            <span class="text-blue-600">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice() * 100)) / 100).toFixed(2) }}</span>
+            <span class="text-blue-600">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice * 100)) / 100).toFixed(2) }}</span>
           </div>
           
           <!-- Gratis Info wenn vollständig durch Guthaben gedeckt -->
@@ -1057,9 +1058,19 @@ const removeProduct = (productId: string) => {
 
 // ✅ NEU: Base Price aus bestehender Payment oder berechnet
 const getBasePrice = () => {
-  // ✅ VEREINFACHT: Immer basierend auf aktueller Duration und pricePerMinute berechnen
-  // Im Edit-Mode wird der Preis durch den Watcher in existingPayment aktualisiert
-  return props.durationMinutes * props.pricePerMinute
+  // ✅ Im Edit-Modus: Verwende den gespeicherten Preis aus der Payment-Tabelle
+  if (props.isEditMode && existingPayment.value) {
+    const fromPayment = existingPayment.value.lesson_price_rappen
+    logger.debug('💰 getBasePrice from payment:', { fromPayment, isEditMode: props.isEditMode, hasExistingPayment: !!existingPayment.value })
+    if (typeof fromPayment === 'number' && fromPayment > 0) {
+      return fromPayment / 100
+    }
+  }
+  
+  // ✅ Im Create-Modus oder Fallback: Berechne basierend auf aktueller Duration und pricePerMinute
+  const calculated = props.durationMinutes * props.pricePerMinute
+  logger.debug('💰 getBasePrice calculated:', { durationMinutes: props.durationMinutes, pricePerMinute: props.pricePerMinute, calculated, isEditMode: props.isEditMode })
+  return calculated
 }
 
 // ✅ NEU: Discount Amount aus bestehender Payment oder Props
@@ -1090,8 +1101,10 @@ const getDiscountReason = () => {
 
 // ✅ NEU: Products aus bestehender Payment oder Props
 const getProducts = () => {
-  // ✅ FIXED: Auch im Edit-Modus props.products verwenden (aus selectedProducts)
-  // Products werden jetzt direkt aus appointment geladen, nicht aus payment
+  // ✅ FIXED: Im Edit-Modus, verwende existingPayment.products; sonst props.products
+  if (props.isEditMode && existingPayment.value?.products) {
+    return existingPayment.value.products || []
+  }
   return props.products || []
 }
 
@@ -1139,7 +1152,7 @@ const getUsedCredit = () => {
 // ✅ NEW: Expose usedCredit as computed for external access
 const usedCredit = computed(() => getUsedCredit())
 
-const calculateTotalPrice = () => {
+const calculateTotalPrice = computed(() => {
   const basePrice = getBasePrice()
   const discountAmount = getDiscountAmount()
   const productsTotal = getProducts().reduce((total: any, product: any) => {
@@ -1150,9 +1163,11 @@ const calculateTotalPrice = () => {
   
   const totalBeforeCredit = basePrice - discountAmount + productsTotal + adminFeeAmount
   
+  logger.debug('💰 calculateTotalPrice:', { basePrice, discountAmount, productsTotal, adminFeeAmount, creditUsed, totalBeforeCredit, final: Math.max(0, totalBeforeCredit - creditUsed) })
+  
   // Guthaben abziehen (entweder aus Payment-Tabelle oder aktuelles Guthaben)
   return Math.max(0, totalBeforeCredit - creditUsed)
-}
+})
 
 const calculatePriceBeforeCredit = () => {
   const basePrice = getBasePrice()
@@ -1366,40 +1381,15 @@ const loadExistingPayment = async () => {
   
   isLoadingPayment.value = true
   try {
-    const supabase = getSupabase()
-    const { data: paymentData, error } = await supabase
-      .from('payments')
-      .select(`
-        *,
-        company_billing_address:company_billing_addresses!company_billing_address_id (
-          id,
-          company_name,
-          contact_person,
-          email,
-          phone,
-          street,
-          street_number,
-          zip,
-          city,
-          country,
-          vat_number,
-          notes
-        ),
-        credit_transaction:credit_transactions!credit_transaction_id (
-          id,
-          amount_rappen,
-          transaction_type,
-          notes
-        )
-      `)
-      .eq('appointment_id', props.appointmentId)
-      .single()
-    
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.warn('⚠️ PriceDisplay - Error loading payment data:', error)
-      return
-    }
-    
+    // ✅ Verwende Backend-API statt direkter Supabase-Query (RLS-konform)
+    const response = await $fetch('/api/staff/get-appointment-payment', {
+      query: {
+        appointmentId: props.appointmentId
+      }
+    }) as any
+
+    const paymentData = response?.data
+
     if (paymentData) {
       // Initialize with empty products array to avoid stale data
       existingPayment.value = { ...paymentData, products: [] }
@@ -1413,119 +1403,37 @@ const loadExistingPayment = async () => {
         paid_at: paymentData.paid_at
       })
 
-      // 🔗 Produkte für genau diesen Termin laden (discount_sales -> product_sales)
+      // ✅ Produkte für diesen Termin laden via Backend-API (RLS-konform)
       try {
-        logger.debug('📦 Loading existing products for appointment:', props.appointmentId)
+        logger.debug('📦 Loading existing products for appointment via API:', props.appointmentId)
         
-        // ✅ DEBUG: Prüfe zuerst, ob es überhaupt eine discount_sale gibt
-        const { data: discountSale, error: dsError } = await supabase
-          .from('discount_sales')
-          .select('id')
-          .eq('appointment_id', props.appointmentId as string)
-          .single()
-
-        logger.debug('🔍 DEBUG - discount_sale query result:', {
-          discountSale,
-          dsError,
-          appointmentId: props.appointmentId
-        })
-
-        if (!dsError && discountSale?.id) {
-          logger.debug('✅ Found discount_sale, loading products with discount_sale_id:', discountSale.id)
-          
-          // ✅ FIX: Versuche verschiedene Verknüpfungsmöglichkeiten
-          let productsData = null
-          let psError = null
-          
-          // Versuche 1: Über discount_sale_id (falls die Spalte existiert)
-          try {
-            const result1 = await supabase
-              .from('product_sales')
-              .select(`
-                id,
-                quantity,
-                unit_price_rappen,
-                total_price_rappen,
-                products (
-                  name,
-                  description
-                )
-              `)
-              .eq('discount_sale_id', discountSale.id)
-            
-            if (!result1.error) {
-              productsData = result1.data
-              psError = result1.error
-              logger.debug('✅ Method 1 (discount_sale_id) worked')
-            } else {
-              logger.debug('❌ Method 1 failed:', result1.error.message)
-            }
-          } catch (e) {
-            logger.debug('❌ Method 1 exception:', e)
+        const response = await $fetch('/api/staff/get-appointment-products', {
+          query: {
+            appointmentId: props.appointmentId
           }
-          
-          // Versuche 2: Direkt über die product_sale_id aus der payment
-          if (!productsData) {
-            try {
-              logger.debug('🔄 Trying method 2: direct product_sale_id lookup from discount_sale.id:', discountSale.id)
-              const result2 = await supabase
-                .from('product_sales')
-                .select(`
-                  id,
-                  quantity,
-                  unit_price_rappen,
-                  total_price_rappen,
-                  products (
-                    name,
-                    description
-                  )
-                `)
-                .eq('product_sale_id', discountSale.id)
-              
-              if (!result2.error) {
-                productsData = result2.data
-                psError = result2.error
-                logger.debug('✅ Method 2 (direct product_sale_id) worked')
-              } else {
-                logger.debug('❌ Method 2 failed:', result2.error.message)
-              }
-            } catch (e) {
-              logger.debug('❌ Method 2 exception:', e)
-            }
-          }
+        }) as any
 
-          logger.debug('🔍 DEBUG - product_sales query result:', {
-            productsData,
-            psError,
-            discountSaleId: discountSale.id
-          })
-
-          if (!psError && Array.isArray(productsData)) {
-            const mapped = productsData.map((p: any) => ({
+        if (response?.success && Array.isArray(response?.data)) {
+          ;(existingPayment.value as any).products = response.data
+          logger.debug('📦 PriceDisplay - Loaded appointment products:', response.data.length)
+          response.data.forEach((p: any, idx: number) => {
+            logger.debug(`  📦 Product ${idx}:`, {
               id: p.id,
-              name: p.products?.name || 'Produkt',
-              description: p.products?.description || '',
-              quantity: p.quantity || 1,
-              price_rappen: typeof p.unit_price_rappen === 'number' ? p.unit_price_rappen : undefined,
-              total_price_rappen: typeof p.total_price_rappen === 'number' ? p.total_price_rappen : undefined,
-              price: undefined
-            }))
-            ;(existingPayment.value as any).products = mapped
-            logger.debug('📦 PriceDisplay - Loaded appointment products:', mapped.length, mapped)
-          } else {
-            // Ensure products cleared if query returns nothing
-            ;(existingPayment.value as any).products = []
-            logger.debug('📦 PriceDisplay - No products for this appointment, error:', psError)
-          }
+              name: p.name,
+              description: p.description,
+              quantity: p.quantity,
+              price_rappen: p.price_rappen,
+              total_price_rappen: p.total_price_rappen
+            })
+          })
         } else {
-          // No discount sale => no products
           ;(existingPayment.value as any).products = []
-          logger.debug('📦 PriceDisplay - No discount_sale found for this appointment, error:', dsError)
+          logger.debug('📦 PriceDisplay - No products found for this appointment')
         }
       } catch (prodErr) {
         // On error, still ensure products are empty
         ;(existingPayment.value as any).products = []
-        console.warn('⚠️ PriceDisplay - Could not load appointment products:', prodErr)
+        logger.warn('⚠️ PriceDisplay - Could not load appointment products:', prodErr)
       }
     }
   } catch (err) {

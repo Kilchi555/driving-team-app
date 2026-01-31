@@ -1054,6 +1054,18 @@ const handleSaveAppointment = async () => {
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)
       
+      // ✅ NEW: Save appointment products (if any were selected)
+      if (savedAppointment?.id && selectedProducts.value && selectedProducts.value.length > 0) {
+        try {
+          logger.debug('📦 Saving selected products for appointment:', savedAppointment.id)
+          await saveToProductSales(savedAppointment.id)
+          logger.debug('✅ Products saved successfully')
+        } catch (productError: any) {
+          logger.warn('⚠️ Failed to save products (non-critical):', productError.message)
+          // Don't fail the appointment save due to product error
+        }
+      }
+      
       // ✅ NEW: Check for auto-assignment (only on create mode for new appointments)
       if (props.mode === 'create' && savedAppointment?.id && selectedStudent.value?.id && currentUser.value?.id) {
         try {

@@ -323,27 +323,29 @@ const clearManualLocation = () => {
 
 const loadStandardLocations = async () => {
   try {
+    logger.debug('🔍 Loading standard locations...')
+    
+    // Build query parameters
+    const queryParams: any = {}
+    
+    // If a student/client is selected, send the client ID
+    // so staff can see their own locations + the client's pickup locations
+    if (props.selectedStudentId) {
+      queryParams.selected_client_id = props.selectedStudentId
+      logger.debug('📍 Loading locations for client:', props.selectedStudentId)
+    }
+    
     // Use secure API to load standard locations (handles auth server-side)
     const response = await $fetch('/api/staff/get-locations', {
-      query: {
-        location_type: 'standard'
-      }
+      query: queryParams
     }) as any
     
     if (response?.data) {
-      let filteredLocations = response.data.map((item: any) => ({
+      const filteredLocations = response.data.map((item: any) => ({
         ...item,
         address: item.address || '',
         source: 'standard' as const
       }))
-      
-      // Filter locations: if staff is specified, only show locations where staff is registered
-      if (props.currentStaffId) {
-        filteredLocations = filteredLocations.filter((l: any) => {
-          const staffIds = l.staff_ids || []
-          return Array.isArray(staffIds) && staffIds.includes(props.currentStaffId)
-        })
-      }
       
       standardLocations.value = filteredLocations
       logger.debug('✅ Standard locations loaded:', filteredLocations.length)
@@ -439,14 +441,24 @@ const loadStudentPickupLocations = async (studentId: string) => {
     if (props.modelValue && !selectedLocationId.value) {
       logger.debug('🎯 Location bereits gesetzt, zeige sie an:', props.modelValue)
       selectedLocationId.value = props.modelValue
+      return
     }
     
     // 3. Fallback: Ersten verfügbaren Standort wählen (Pickup oder Standard)
     if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
+      logger.debug('🔍 Auto-selection logic:', {
+        selectedLocationId: selectedLocationId.value,
+        modelValue: props.modelValue,
+        disableAutoSelection: props.disableAutoSelection,
+        pickupsAvailable: studentPickupLocations.value.length,
+        standardsAvailable: standardLocations.value.length
+      })
+      
       if (studentPickupLocations.value.length > 0) {
         // Erste Pickup-Location wählen
         const firstPickup = studentPickupLocations.value[0]
         selectedLocationId.value = firstPickup.id
+        useStandardLocations.value = false
         emit('update:modelValue', firstPickup.id)
         emit('locationSelected', firstPickup)
         logger.debug('📍 Auto-selected first pickup location:', firstPickup.name)
@@ -454,6 +466,7 @@ const loadStudentPickupLocations = async (studentId: string) => {
         // ✅ FALLBACK: Erste Standard-Location wählen wenn keine Pickup-Locations vorhanden
         const firstStandard = standardLocations.value[0]
         selectedLocationId.value = firstStandard.id
+        useStandardLocations.value = true
         emit('update:modelValue', firstStandard.id)
         emit('locationSelected', firstStandard)
         logger.debug('📍 Auto-selected first standard location (no pickup locations):', firstStandard.name)
@@ -504,6 +517,14 @@ const savePickupLocation = async (locationData: any, userId: string) => {
         place_id: locationData.place_id || null,
         userId: userId // Works for both students and staff
       }
+    }).catch((err: any) => {
+      // $fetch throws errors for non-2xx responses
+      console.error('❌ API request failed:', {
+        statusCode: err.statusCode,
+        message: err.message,
+        data: err.data
+      })
+      throw err
     })
 
     if (!response || response.error) {
@@ -534,8 +555,14 @@ const savePickupLocation = async (locationData: any, userId: string) => {
     
     // Try to extract better error message from response
     let errorMessage = err?.message || 'Failed to save location'
+    
+    // Check various error message locations
     if (err?.data?.message) {
       errorMessage = err.data.message
+    } else if (err?.data?.statusMessage) {
+      errorMessage = err.data.statusMessage
+    } else if (typeof err?.data === 'string') {
+      errorMessage = err.data
     } else if (err?.response?.status === 400) {
       errorMessage = 'Invalid location data. Please check the address and try again.'
     } else if (err?.response?.status === 403) {
@@ -878,14 +905,6 @@ watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
   }
 })
 
-watch(() => props.currentStaffId, async (newStaffId) => {
-  if (newStaffId) {
-    isLoadingLocations.value = true
-    await loadStandardLocations()
-    isLoadingLocations.value = false
-  }
-})
-
 watch(() => props.modelValue, (newValue) => {
   logger.debug('🔍 LocationSelector: modelValue changed:', newValue)
   if (newValue && newValue !== selectedLocationId.value) {
@@ -926,14 +945,23 @@ onMounted(async () => {
       selectedLocationId.value = props.modelValue
     }
     
-    // ✅ FALLBACK: Wenn kein Student ausgewählt und keine Location gesetzt, erste Standard-Location wählen
-    if (!props.selectedStudentId && !selectedLocationId.value && !props.modelValue && 
-        standardLocations.value.length > 0 && !props.disableAutoSelection) {
-      const firstStandard = standardLocations.value[0]
-      selectedLocationId.value = firstStandard.id
-      emit('update:modelValue', firstStandard.id)
-      emit('locationSelected', firstStandard)
-      logger.debug('📍 Auto-selected first standard location (no student):', firstStandard.name)
+    // ✅ AUTO-SELECT DEFAULT LOCATION:
+    // 1. Wenn kein Student ausgewählt -> erste Standard-Location
+    // 2. Wenn Student ausgewählt ABER keine Pickups -> erste Standard-Location
+    if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection && standardLocations.value.length > 0) {
+      const hasPickups = studentPickupLocations.value.length > 0
+      
+      if (!props.selectedStudentId || (props.selectedStudentId && !hasPickups)) {
+        const firstStandard = standardLocations.value[0]
+        selectedLocationId.value = firstStandard.id
+        useStandardLocations.value = true
+        emit('update:modelValue', firstStandard.id)
+        emit('locationSelected', firstStandard)
+        logger.debug('📍 Auto-selected first standard location:', {
+          reason: !props.selectedStudentId ? 'no student' : 'student has no pickups',
+          location: firstStandard.name
+        })
+      }
     }
   } catch (err) {
     console.error('Error loading initial location data:', err)
