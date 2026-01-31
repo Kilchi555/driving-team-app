@@ -1,8 +1,4 @@
 import { ref, computed } from 'vue'
-import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
-
-const supabase = getSupabase()
 
 export interface CancellationReason {
   id: string
@@ -28,34 +24,15 @@ export const useCancellationReasons = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      const response = await $fetch('/api/cancellation-reasons/list-active', {
+        method: 'GET'
+      }) as any
+
+      if (!response?.data || !Array.isArray(response.data)) {
+        throw new Error('Invalid response from API')
       }
 
-      logger.debug('🔍 Cancellation Reasons - Current tenant_id:', tenantId)
-
-      const { data, error: fetchError } = await supabase
-        .from('cancellation_reasons')
-        .select('*')
-        .eq('is_active', true)
-        .eq('tenant_id', tenantId) // Filter by current tenant
-        .order('sort_order', { ascending: true })
-
-      if (fetchError) {
-        throw fetchError
-      }
-
-      cancellationReasons.value = data || []
+      cancellationReasons.value = response.data
     } catch (err) {
       console.error('Error fetching cancellation reasons:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation reasons'
@@ -70,34 +47,16 @@ export const useCancellationReasons = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      const response = await $fetch('/api/cancellation-reasons/list-all', {
+        method: 'GET'
+      }) as any
+
+      if (!response?.data || !Array.isArray(response.data)) {
+        throw new Error('Invalid response from API')
       }
 
-      logger.debug('🔍 All Cancellation Reasons - Current tenant_id:', tenantId)
-
-      const { data, error: fetchError } = await supabase
-        .from('cancellation_reasons')
-        .select('*')
-        .eq('tenant_id', tenantId) // Filter by current tenant
-        .order('sort_order', { ascending: true })
-
-      if (fetchError) {
-        throw fetchError
-      }
-
-      allCancellationReasons.value = data || []
-      cancellationReasons.value = data?.filter(reason => reason.is_active) || []
+      allCancellationReasons.value = response.data
+      cancellationReasons.value = response.data.filter(reason => reason.is_active)
     } catch (err) {
       console.error('Error fetching all cancellation reasons:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation reasons'
@@ -112,33 +71,18 @@ export const useCancellationReasons = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
-      }
+      const response = await $fetch('/api/cancellation-reasons/create', {
+        method: 'POST',
+        body: reasonData
+      }) as any
 
-      const { data, error: createError } = await supabase
-        .from('cancellation_reasons')
-        .insert([{ ...reasonData, tenant_id: tenantId }])
-        .select()
-        .single()
-
-      if (createError) {
-        throw createError
+      if (!response?.data) {
+        throw new Error('Failed to create cancellation reason')
       }
 
       // Refresh the lists
       await fetchAllCancellationReasons()
-      return data
+      return response.data
     } catch (err) {
       console.error('Error creating cancellation reason:', err)
       error.value = err instanceof Error ? err.message : 'Failed to create cancellation reason'
@@ -154,20 +98,18 @@ export const useCancellationReasons = () => {
       isLoading.value = true
       error.value = null
 
-      const { data, error: updateError } = await supabase
-        .from('cancellation_reasons')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+      const response = await $fetch('/api/cancellation-reasons/update', {
+        method: 'POST',
+        body: { id, ...updates }
+      }) as any
 
-      if (updateError) {
-        throw updateError
+      if (!response?.data) {
+        throw new Error('Failed to update cancellation reason')
       }
 
       // Refresh the lists
       await fetchAllCancellationReasons()
-      return data
+      return response.data
     } catch (err) {
       console.error('Error updating cancellation reason:', err)
       error.value = err instanceof Error ? err.message : 'Failed to update cancellation reason'
@@ -183,14 +125,10 @@ export const useCancellationReasons = () => {
       isLoading.value = true
       error.value = null
 
-      const { error: deleteError } = await supabase
-        .from('cancellation_reasons')
-        .update({ is_active: false })
-        .eq('id', id)
-
-      if (deleteError) {
-        throw deleteError
-      }
+      await $fetch('/api/cancellation-reasons/delete', {
+        method: 'POST',
+        body: { id }
+      })
 
       // Refresh the lists
       await fetchAllCancellationReasons()
