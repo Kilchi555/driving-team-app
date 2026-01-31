@@ -1,7 +1,6 @@
 // composables/usePayments.ts - Gemeinsame Payment Logic
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import type { Payment, Product, Discount, PaymentMethod } from '~/types/payment'
 import { useDiscounts } from '~/composables/useDiscounts'
@@ -15,7 +14,6 @@ export const usePayments = () => {
     else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
   }
 
-  const supabase = getSupabase()
   const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
   
   // State
@@ -32,14 +30,15 @@ export const usePayments = () => {
   // Create payment record in database with new structure
   const createPaymentRecord = async (data: Partial<Payment>): Promise<Payment> => {
     try {
-      const { data: payment, error } = await supabase
-        .from('payments')
-        .insert(data)
-        .select()
-        .single()
+      const response = await $fetch('/api/staff/create-payment', {
+        method: 'POST',
+        body: data
+      }) as any
 
-      if (error) throw error
-      return payment
+      if (!response || !response.data) {
+        throw new Error('Invalid response from payment creation API')
+      }
+      return response.data
     } catch (error) {
       console.error('Error creating payment record:', error)
       throw error
@@ -261,21 +260,13 @@ export const usePayments = () => {
       }
 
       // Update payment with Wallee transaction ID
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          wallee_transaction_id: walleeResponse.transactionId, // ✅ Store in main field
-          metadata: {
-            ...paymentData.metadata,
-            wallee_transaction_id: walleeResponse.transactionId
-          },
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-
-      if (updateError) {
-        console.warn('⚠️ Could not update payment with Wallee transaction ID:', updateError)
-      }
+      await $fetch('/api/payments/update-wallee-id', {
+        method: 'POST',
+        body: {
+          payment_id: payment.id,
+          wallee_transaction_id: walleeResponse.transactionId
+        }
+      })
 
       // Return payment with Wallee URL
       return {
@@ -300,36 +291,31 @@ export const usePayments = () => {
     isProcessing.value = true
 
     try {
-      // ✅ NEW: Get tenant_id from current auth user
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      // ✅ Get tenant_id from secure API instead of direct queries
       let tenantId: string | null = null
       let actualUserId: string | null = userId
       
-      if (authUser) {
-        logger.debug('🔍 Auth user found:', authUser.id)
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, tenant_id')
-          .eq('auth_user_id', authUser.id)
-          .single()
+      if (!userId) {
+        // Try to get from current auth user via API
+        const userInfo = await $fetch('/api/users/current', {
+          method: 'GET'
+        }) as any
         
-        if (userError) {
-          console.error('❌ Error fetching user data:', userError)
-        } else if (userData) {
-          tenantId = userData.tenant_id
-          actualUserId = userData.id
-          logger.debug('✅ User data loaded:', { userId: userData.id, tenantId })
+        if (userInfo && userInfo.data) {
+          tenantId = userInfo.data.tenant_id
+          actualUserId = userInfo.data.id
         }
-      }
-      
-      // Fallback: try to get tenant_id from userId if provided
-      if (!tenantId && userId) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('tenant_id')
-          .eq('id', userId)
-          .single()
-        tenantId = userData?.tenant_id || null
+      } else {
+        // Get tenant info for provided userId
+        const userInfo = await $fetch('/api/users/get-tenant', {
+          method: 'GET',
+          query: { user_id: userId }
+        }) as any
+        
+        if (userInfo && userInfo.data) {
+          tenantId = userInfo.data.tenant_id
+          actualUserId = userInfo.data.id
+        }
       }
       
       logger.debug('💳 Creating payment with:', { userId: actualUserId, tenantId })
@@ -384,11 +370,11 @@ export const usePayments = () => {
         }
       }
 
-      // Create payment record directly with only columns that exist
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          user_id: actualUserId || null, // ✅ Use actualUserId instead of userId
+      // Create payment record via API instead of direct Supabase
+      const paymentResponse = await $fetch('/api/staff/create-payment', {
+        method: 'POST',
+        body: {
+          user_id: actualUserId || null,
           staff_id: staffId || null,
           appointment_id: null,
           lesson_price_rappen: 0,
@@ -401,16 +387,15 @@ export const usePayments = () => {
           currency: 'CHF',
           description: 'Produktkauf',
           metadata: paymentData.metadata,
-          tenant_id: tenantId // ✅ NEW: Include tenant_id for RLS
-        })
-        .select()
-        .single()
+          tenant_id: tenantId
+        }
+      }) as any
 
-      if (paymentError) {
-        console.error('❌ Error creating payment record:', paymentError)
-        throw paymentError
+      if (!paymentResponse || !paymentResponse.data) {
+        throw new Error('❌ Error creating payment record')
       }
 
+      const payment = paymentResponse.data
       logger.debug('✅ Payment record created:', payment.id)
 
       // Create Wallee transaction
@@ -434,22 +419,14 @@ export const usePayments = () => {
         throw new Error(walleeResponse.error || 'Wallee transaction failed')
       }
 
-      // Update payment with Wallee transaction ID
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          wallee_transaction_id: walleeResponse.transactionId, // ✅ Store in main field
-          metadata: {
-            ...paymentData.metadata,
-            wallee_transaction_id: walleeResponse.transactionId
-          },
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.id)
-
-      if (updateError) {
-        console.warn('⚠️ Could not update payment with Wallee transaction ID:', updateError)
-      }
+      // Update payment with Wallee transaction ID via API
+      await $fetch('/api/payments/update-wallee-id', {
+        method: 'POST',
+        body: {
+          payment_id: payment.id,
+          wallee_transaction_id: walleeResponse.transactionId
+        }
+      })
 
       // Return payment with Wallee URL
       return {
@@ -551,41 +528,15 @@ export const usePayments = () => {
   // Get payment details with items
   const getPaymentDetails = async (paymentId: string) => {
     try {
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          appointments (
-            id,
-            title,
-            start_time,
-            end_time,
-            duration_minutes,
-            type
-          ),
-          users!payments_user_id_fkey (
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq('id', paymentId)
-        .single()
+      const response = await $fetch('/api/payments/get-details', {
+        method: 'GET',
+        query: { payment_id: paymentId }
+      }) as any
 
-      if (paymentError) throw paymentError
-
-      // Get payment items
-      const { data: items, error: itemsError } = await supabase
-        .from('payment_items')
-        .select('*')
-        .eq('payment_id', paymentId)
-
-      if (itemsError) throw itemsError
-
-      return {
-        ...payment,
-        items: items || []
+      if (!response || !response.data) {
+        throw new Error('Invalid response from payment details API')
       }
+      return response.data
     } catch (error) {
       console.error('Error getting payment details:', error)
       throw error
@@ -599,18 +550,14 @@ export const usePayments = () => {
     paymentMethod?: string
   ) => {
     try {
-      const updateData: any = { is_paid: isPaid }
-      
-      if (paymentMethod) {
-        updateData.payment_method = paymentMethod
-      }
-
-      const { error } = await supabase
-        .from('appointments')
-        .update(updateData)
-        .eq('id', appointmentId)
-
-      if (error) throw error
+      await $fetch('/api/appointments/update-payment-status', {
+        method: 'POST',
+        body: {
+          appointment_id: appointmentId,
+          is_paid: isPaid,
+          payment_method: paymentMethod
+        }
+      })
     } catch (error) {
       console.error('Error updating appointment payment status:', error)
       throw error
@@ -637,19 +584,15 @@ export const usePayments = () => {
   // Get products
   const getProducts = async (category?: string) => {
     try {
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
+      const response = await $fetch('/api/products/list', {
+        method: 'GET',
+        query: category ? { category } : {}
+      }) as any
 
-      if (category) {
-        query = query.eq('category', category)
+      if (!response || !Array.isArray(response.data)) {
+        throw new Error('Invalid response from products API')
       }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      return data || []
+      return response.data
     } catch (error) {
       console.error('Error getting products:', error)
       return []
