@@ -442,7 +442,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 
 interface EventTypeRow {

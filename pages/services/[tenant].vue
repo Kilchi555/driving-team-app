@@ -110,7 +110,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { useTenant } from '~/composables/useTenant'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Ensure no auth middleware runs on this page
 definePageMeta({
@@ -118,7 +118,7 @@ definePageMeta({
 })
 
 const route = useRoute()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)

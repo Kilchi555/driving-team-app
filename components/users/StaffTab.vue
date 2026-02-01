@@ -608,7 +608,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useFeatures } from '~/composables/useFeatures'
@@ -627,7 +627,7 @@ const emit = defineEmits<{
 }>()
 
 // Supabase client
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Composables
 const uiStore = useUIStore()

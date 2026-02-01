@@ -854,7 +854,7 @@
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRuntimeConfig, navigateTo } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useRouter } from '#app'
 import { createClient } from '@supabase/supabase-js'
@@ -891,7 +891,7 @@ interface User {
 }
 
 // State
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 const authStore = useAuthStore()
 const activeTab = ref<string>('customers')
 const tabs = computed(() => {

@@ -183,7 +183,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 definePageMeta({
   layout: 'admin',
@@ -191,7 +191,7 @@ definePageMeta({
   // Keine Feature-Flag Prüfung für Test-Seite
 })
 
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Cron Job State
 const isRunningCron = ref(false)

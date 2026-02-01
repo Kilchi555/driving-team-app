@@ -624,7 +624,7 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
@@ -642,7 +642,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 const route = useRoute()
 const router = useRouter()
 const { showError, showSuccess } = useUIStore()

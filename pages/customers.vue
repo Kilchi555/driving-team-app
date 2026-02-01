@@ -385,7 +385,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui'
@@ -395,7 +395,7 @@ import LoadingLogo from '~/components/LoadingLogo.vue'
 
 
 // Supabase client
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Composables
 const { currentUser, fetchCurrentUser, isLoading: isUserLoading, userError } = useCurrentUser()

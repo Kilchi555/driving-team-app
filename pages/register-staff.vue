@@ -373,11 +373,11 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 const route = useRoute()
 const router = useRouter()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const isLoading = ref(true)

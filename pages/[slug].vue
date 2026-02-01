@@ -429,7 +429,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 logger.debug('📄 [slug].vue imports completed')
 
@@ -517,7 +517,7 @@ const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
 const { currentTenant, loadTenant: loadTenantComposable } = useTenant()
 const mfaFlow = useMFAFlow()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 
 // Methods

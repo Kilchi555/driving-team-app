@@ -585,7 +585,7 @@
 
 import { ref, onMounted, computed, watch } from 'vue'
 import { navigateTo } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import AdminPendencies from '~/components/admin/AdminPendencies.vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
@@ -652,7 +652,7 @@ interface PendingStudent {
 
 // State
 const isLoading = ref(true) // Start with true, load summary will set to false
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 const stats = ref<DashboardStats>({
   todayRevenue: 0,

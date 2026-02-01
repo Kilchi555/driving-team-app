@@ -750,7 +750,7 @@ import { ref, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 

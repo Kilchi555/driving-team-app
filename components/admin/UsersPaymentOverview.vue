@@ -324,7 +324,7 @@ v-if="!user.has_unpaid_appointments && !user.has_company_billing"
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { navigateTo } from '#app'
 
 // TypeScript Interfaces
@@ -343,7 +343,7 @@ interface UserPaymentSummary {
 }
 
 // Reactive state
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 const users = ref<UserPaymentSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)

@@ -151,7 +151,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 const route = useRoute()
 const saleId = route.params.id as string

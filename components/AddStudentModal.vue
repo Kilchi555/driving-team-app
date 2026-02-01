@@ -178,7 +178,7 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStudents } from '~/composables/useStudents'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'

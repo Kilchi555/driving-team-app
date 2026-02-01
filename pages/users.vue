@@ -111,14 +111,14 @@
 import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import CustomersTab from '~/components/users/CustomersTab.vue'
 import StaffTab from '~/components/users/StaffTab.vue'
 import AdminsTab from '~/components/users/AdminsTab.vue'
 
 // Supabase client
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Composables
 const { currentUser, fetchCurrentUser, isLoading: isUserLoading, userError } = useCurrentUser()

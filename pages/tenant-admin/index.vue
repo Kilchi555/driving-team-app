@@ -298,9 +298,9 @@ definePageMeta({
   layout: 'tenant-admin'
 })
 import { ref, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const stats = ref({
