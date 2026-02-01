@@ -78,28 +78,91 @@ export default defineEventHandler(async (event) => {
 
     // ========== GET PRICING RULES ==========
     if (action === 'get-pricing-rules') {
-      if (!body.categoryCode) {
-        throw new Error('Category code required')
-      }
+      // Can be called with tenantId (get all) or categoryCode (get specific)
+      logger.debug('💰 Getting pricing rules')
 
-      logger.debug('💰 Getting pricing rules for:', body.categoryCode)
-
-      const { data: rules, error } = await supabaseAdmin
+      let query = supabaseAdmin
         .from('pricing_rules')
         .select('*')
-        .eq('category_code', body.categoryCode)
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
-        .order('created_at', { ascending: false })
+        .order('category_code')
+
+      if (body.categoryCode) {
+        query = query.eq('category_code', body.categoryCode)
+      }
+
+      const { data: rawRules, error } = await query
 
       if (error) {
         logger.error('❌ Error fetching pricing rules:', error)
         throw new Error(error.message)
       }
 
+      if (!rawRules || rawRules.length === 0) {
+        return {
+          success: true,
+          data: []
+        }
+      }
+
+      // If getting all rules (no specific category), combine by category
+      if (!body.categoryCode) {
+        // Combine rules by category_code (merge base and admin_fee rules)
+        const rulesByCategory = rawRules.reduce((acc, rule) => {
+          if (!acc[rule.category_code]) {
+            acc[rule.category_code] = {
+              category_code: rule.category_code,
+              rule_name: rule.rule_name || `${rule.category_code} - Regel`,
+              price_per_minute_rappen: 0,
+              admin_fee_rappen: 0,
+              admin_fee_applies_from: 2,
+              base_duration_minutes: 45,
+              is_active: true,
+              valid_from: rule.valid_from,
+              valid_until: rule.valid_until
+            }
+          }
+
+          // Combine values based on rule_type
+          if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
+            if (rule.price_per_minute_rappen) {
+              acc[rule.category_code].price_per_minute_rappen = rule.price_per_minute_rappen
+            }
+            if (rule.base_duration_minutes) {
+              acc[rule.category_code].base_duration_minutes = rule.base_duration_minutes
+            }
+            if (rule.rule_name && !acc[rule.category_code].rule_name.includes('Admin-Fee')) {
+              acc[rule.category_code].rule_name = rule.rule_name
+            }
+          }
+
+          if (rule.rule_type === 'admin_fee') {
+            if (rule.admin_fee_rappen !== undefined) {
+              acc[rule.category_code].admin_fee_rappen = rule.admin_fee_rappen
+            }
+            if (rule.admin_fee_applies_from !== undefined) {
+              acc[rule.category_code].admin_fee_applies_from = rule.admin_fee_applies_from
+            }
+            if (rule.rule_name) {
+              acc[rule.category_code].rule_name = rule.rule_name
+            }
+          }
+
+          return acc
+        }, {} as Record<string, any>)
+
+        const combined = Object.values(rulesByCategory)
+        logger.debug('💰 Pricing rules combined:', combined.length, 'categories')
+        return {
+          success: true,
+          data: combined
+        }
+      }
+
       return {
         success: true,
-        data: rules || []
+        data: rawRules || []
       }
     }
 

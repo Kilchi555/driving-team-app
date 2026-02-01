@@ -305,9 +305,9 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     pricingError.value = ''
 
     try {
-      logger.debug('🔄 Loading pricing rules from Supabase...')
+      logger.debug('🔄 Loading pricing rules from API...')
       
-      // Get current user's tenant_id from auth store (avoids direct Supabase call)
+      // Get current user's tenant_id from auth store
       const authStore = useAuthStore()
       const tenantId = authStore.userProfile?.tenant_id
       
@@ -317,107 +317,38 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         return
       }
       
-      // Get tenant business_type
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('business_type')
-        .eq('id', tenantId)
-        .single()
+      // ✅ MIGRATED TO API - All processing now happens on backend
+      const response = await $fetch('/api/pricing/calculate', {
+        method: 'POST',
+        body: {
+          action: 'get-pricing-rules',
+          tenantId
+        }
+      }) as any
 
-      if (tenantError) throw tenantError
-      
-      // Only load pricing rules if business_type is driving_school
-      if (tenantData?.business_type !== 'driving_school') {
-        logger.debug('🚫 Pricing rules not available for business_type:', tenantData?.business_type)
-        await createFallbackPricingRules()
-        return
-      }
-      
-      logger.debug('🔍 Loading pricing rules for tenant:', tenantId)
-      
-      const { data, error } = await supabase
-        .from('pricing_rules')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
-        .order('category_code')
-
-      if (error) {
-        console.error('❌ Database error:', error)
-        throw new Error(`Database error: ${error.message}`)
+      if (!response?.success) {
+        console.error('❌ Failed to load pricing rules from API')
+        throw new Error(response?.error || 'Failed to load pricing rules')
       }
 
-      logger.debug('📊 Raw pricing rules from DB:', data?.length || 0, 'rules for tenant', tenantId)
-      logger.debug('📊 Pricing rules details:', data?.map(r => ({
-        id: r.id,
-        category: r.category_code,
-        rule_type: r.rule_type,
-        price: r.price_per_minute_rappen,
-        tenant_id: r.tenant_id
-      })))
+      const pricingRulesData = response.data || []
 
-      if (!data || data.length === 0) {
+      if (!pricingRulesData || pricingRulesData.length === 0) {
         console.warn('⚠️ No pricing rules found for tenant, using fallback')
         await createFallbackPricingRules()
         return
       }
 
-      // ✅ KORRIGIERT: Kombiniere base_price und admin_fee Regeln basierend auf rule_type
-      const rulesByCategory = data.reduce((acc, rule) => {
-        if (!acc[rule.category_code]) {
-          acc[rule.category_code] = {
-            category_code: rule.category_code,
-            rule_name: rule.rule_name || `${rule.category_code} - Regel`,
-            price_per_minute_rappen: 0,
-            admin_fee_rappen: 0,
-            admin_fee_applies_from: 2,
-            base_duration_minutes: 45,
-            is_active: true,
-            valid_from: rule.valid_from,
-            valid_until: rule.valid_until
-          }
-        }
-        
-        // ✅ KORRIGIERT: Kombiniere die Werte basierend auf dem rule_type
-        if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
-          if (rule.price_per_minute_rappen) {
-            acc[rule.category_code].price_per_minute_rappen = rule.price_per_minute_rappen
-          }
-          if (rule.base_duration_minutes) {
-            acc[rule.category_code].base_duration_minutes = rule.base_duration_minutes
-          }
-          if (rule.rule_name && !acc[rule.category_code].rule_name.includes('Admin-Fee')) {
-            acc[rule.category_code].rule_name = rule.rule_name
-          }
-        }
-        
-        if (rule.rule_type === 'admin_fee') {
-          if (rule.admin_fee_rappen !== undefined) {
-            acc[rule.category_code].admin_fee_rappen = rule.admin_fee_rappen
-          }
-          if (rule.admin_fee_applies_from !== undefined) {
-            acc[rule.category_code].admin_fee_applies_from = rule.admin_fee_applies_from
-          }
-          if (rule.rule_name) {
-            acc[rule.category_code].rule_name = rule.rule_name
-          }
-        }
-        
-        return acc
-      }, {} as Record<string, any>)
+      logger.debug('📊 Pricing rules loaded from API:', pricingRulesData.length, 'categories')
 
-      const pricingRulesData = Object.values(rulesByCategory) as PricingRule[]
-
-      logger.debug('📊 Processed pricing rules:', pricingRulesData.length, 'categories loaded')
-
-      pricingRules.value = pricingRulesData
+      pricingRules.value = pricingRulesData as PricingRule[]
       lastLoaded.value = new Date()
 
       // Cache invalidierung
       priceCalculationCache.value.clear()
       appointmentCountCache.value.clear()
 
-      logger.debug('✅ Pricing rules loaded:', pricingRulesData.length, 'categories (combined by rule_type)')
+      logger.debug('✅ Pricing rules loaded:', pricingRulesData.length, 'categories')
 
     } catch (err: any) {
       console.error('❌ Error loading pricing rules:', err)
