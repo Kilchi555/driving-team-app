@@ -38,90 +38,31 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      // ✅ MIGRATED TO API
+      // ✅ MIGRATED TO API - Using secure backend endpoint
       
       logger.debug('🔄 Creating appointment with integrated payment workflow...')
       
-      // 1. TERMIN in appointments Tabelle speichern
-      const { data: appointment, error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
+      // Use the appointment API endpoint to create both appointment and payment
+      const response = await $fetch('/api/appointments/save', {
+        method: 'POST',
+        body: {
           ...appointmentData,
-          // Keine Payment-Daten mehr in appointments!
-          price_per_minute: null,
-          is_paid: null,
-          discount: null,
-          discount_type: null,
-          discount_reason: null
-        })
-        .select()
-        .single()
+          paymentMethod,
+          products,
+          discounts,
+          createPayment: true
+        }
+      }) as any
 
-      if (appointmentError) throw appointmentError
-      logger.debug('✅ Appointment saved:', appointment.id)
-
-      // 2. PAYMENT ITEMS vorbereiten
-      const paymentItems: CreatePaymentItemRequest[] = []
-
-      // 2a. Termin als Payment Item hinzufügen
-      const appointmentPrice = calculateAppointmentPrice(appointmentData.type, appointmentData.duration_minutes)
-              paymentItems.push({
-          item_type: 'appointment',
-          item_id: appointment.id,
-          item_name: `Fahrstunde ${appointmentData.type}`,
-          quantity: 1,
-          unit_price_rappen: Math.round(appointmentPrice * 100),
-          description: `Fahrstunde ${appointmentData.type} - ${appointmentData.duration_minutes}min`
-        })
-
-      // 2b. Produkte als Payment Items hinzufügen
-      products.forEach(product => {
-        paymentItems.push({
-          item_type: 'product',
-          item_id: product.id,
-          item_name: product.name,
-          quantity: 1,
-          unit_price_rappen: product.price_rappen,
-          description: product.name
-        })
-      })
-
-      // 2c. Rabatte als Payment Items hinzufügen
-      const totalBeforeDiscounts = appointmentPrice + (products.reduce((sum, p) => sum + p.price_rappen / 100, 0))
-      discounts.forEach(discount => {
-        const discountAmount = discount.discount_type === 'percentage' 
-          ? (totalBeforeDiscounts * discount.discount_value / 100)
-          : discount.discount_value
-        
-        paymentItems.push({
-          item_type: 'discount',
-          item_id: discount.id,
-          item_name: discount.name,
-          quantity: 1,
-          unit_price_rappen: -Math.round(discountAmount * 100), // Negativ für Rabatte
-          description: `Rabatt: ${discount.name}`
-        })
-      })
-
-      // 3. PAYMENT in payments Tabelle erstellen
-      const paymentRequest: CreatePaymentRequest = {
-        user_id: appointmentData.user_id,
-        staff_id: appointmentData.staff_id,
-        appointment_id: appointment.id,
-        payment_method: paymentMethod,
-        items: paymentItems,
-        description: `Termin: ${appointmentData.title}`
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.error || 'Failed to create appointment with payment')
       }
 
-      const payment = await createPayment(paymentRequest)
-      
-      if (!payment) {
-        throw new Error('Failed to create payment record')
+      logger.debug('✅ Appointment and payment created:', response.data)
+      return {
+        appointment: response.data.appointment,
+        payment: response.data.payment
       }
-
-      logger.debug('✅ Payment created:', payment.id)
-
-      return { appointment, payment }
 
     } catch (err: any) {
       console.error('❌ Error in appointment with payment workflow:', err)
@@ -151,56 +92,8 @@ export const usePaymentsNew = () => {
         throw new Error('At least one product is required')
       }
 
-      // 1. PAYMENT ITEMS vorbereiten
-      const paymentItems: CreatePaymentItemRequest[] = []
-
-      // 1a. Produkte als Payment Items hinzufügen
-      products.forEach(product => {
-        paymentItems.push({
-          item_type: 'product',
-          item_id: product.id,
-          item_name: product.name,
-          quantity: 1,
-          unit_price_rappen: product.price_rappen,
-          description: product.name
-        })
-      })
-
-      // 1b. Rabatte als Payment Items hinzufügen
-      const totalBeforeDiscounts = products.reduce((sum, p) => sum + p.price_rappen / 100, 0)
-      discounts.forEach(discount => {
-        const discountAmount = discount.discount_type === 'percentage' 
-          ? (totalBeforeDiscounts * discount.discount_value / 100)
-          : discount.discount_value
-        
-        paymentItems.push({
-          item_type: 'discount',
-          item_id: discount.id,
-          item_name: `Rabatt: ${discount.name}`,
-          quantity: 1,
-          unit_price_rappen: -Math.round(discountAmount * 100), // Negativ für Rabatte
-          description: `Rabatt: ${discount.name}`
-        })
-      })
-
-      // 2. PAYMENT in payments Tabelle erstellen (ohne appointment_id)
-      const paymentRequest: CreatePaymentRequest = {
-        user_id: userId,
-        staff_id: staffId,
-        appointment_id: undefined, // Wichtig: undefined für standalone Zahlungen
-        payment_method: paymentMethod,
-        items: paymentItems,
-        description: description || `Produktzahlung: ${products.map(p => p.name).join(', ')}`
-      }
-
-      const payment = await createPayment(paymentRequest)
-      
-      if (!payment) {
-        throw new Error('Failed to create standalone payment record')
-      }
-
-      logger.debug('✅ Standalone payment created:', payment.id)
-      return payment
+      // Use the standalone product payment endpoint
+      return await createProductPayment(userId, staffId, paymentMethod, products, discounts)
 
     } catch (err: any) {
       console.error('❌ Error in standalone product payment workflow:', err)
@@ -217,7 +110,7 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      // ✅ MIGRATED TO API
+      // ✅ MIGRATED TO API - Using secure backend endpoint
       logger.debug('💳 Creating payment via API')
       
       const response = await $fetch('/api/payments/manage', {
@@ -254,67 +147,81 @@ export const usePaymentsNew = () => {
     discounts: Discount[] = []
   ): Promise<Payment | null> => {
     
-    // 1. Termin-Preis berechnen (45min = 1 Einheit)
-    const appointment = await getAppointment(appointmentId)
-    if (!appointment) {
-      error.value = 'Termin nicht gefunden'
+    try {
+      // Load appointment details via API
+      const appointmentResponse = await $fetch('/api/appointments/get-appointment-info', {
+        method: 'POST',
+        body: {
+          action: 'get-by-id',
+          appointmentId
+        }
+      }) as any
+
+      if (!appointmentResponse?.success || !appointmentResponse?.data) {
+        error.value = 'Termin nicht gefunden'
+        return null
+      }
+
+      const appointment = appointmentResponse.data
+      const durationUnits = Math.ceil(appointment.duration_minutes / 45)
+      const basePrice = getBasePriceForCategory(appointment.type) * durationUnits
+
+      // 2. Payment Items vorbereiten
+      const items: CreatePaymentItemRequest[] = []
+
+      // 2a. Termin als Payment Item
+      items.push({
+        item_type: 'appointment',
+        item_id: appointmentId,
+        item_name: `Fahrstunde ${appointment.type}`,
+        quantity: 1,
+        unit_price_rappen: Math.round(basePrice * 100),
+        description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`
+      })
+
+      // 2b. Produkte hinzufügen
+      products.forEach(product => {
+        items.push({
+          item_type: 'product',
+          item_id: product.id,
+          item_name: product.name,
+          quantity: 1,
+          unit_price_rappen: product.price_rappen,
+          description: product.name
+        })
+      })
+
+      // 2c. Rabatte hinzufügen
+      const totalBeforeDiscounts = basePrice + (products.reduce((sum, p) => sum + p.price_rappen / 100, 0))
+      discounts.forEach(discount => {
+        const discountAmount = discount.discount_type === 'percentage' 
+          ? (totalBeforeDiscounts * discount.discount_value / 100)
+          : discount.discount_value
+        
+        items.push({
+          item_type: 'discount',
+          item_id: discount.id,
+          item_name: `Rabatt: ${discount.name}`,
+          quantity: 1,
+          unit_price_rappen: -Math.round(discountAmount * 100),
+          description: `Rabatt: ${discount.name}`
+        })
+      })
+
+      // 3. Payment erstellen
+      return createPayment({
+        user_id: userId,
+        staff_id: staffId,
+        appointment_id: appointmentId,
+        payment_method: paymentMethod,
+        items,
+        description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`
+      })
+    } catch (err: any) {
+      console.error('❌ Error creating appointment payment:', err)
+      error.value = err.message
       return null
     }
-
-    const durationUnits = Math.ceil(appointment.duration_minutes / 45)
-    const basePrice = getBasePriceForCategory(appointment.type) * durationUnits
-
-    // 2. Payment Items vorbereiten
-    const items: CreatePaymentItemRequest[] = []
-
-    // 2a. Termin als Payment Item
-            items.push({
-          item_type: 'appointment',
-          item_id: appointmentId,
-          item_name: `Fahrstunde ${appointment.type}`,
-          quantity: 1,
-          unit_price_rappen: Math.round(basePrice * 100),
-          description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`
-        })
-
-    // 2b. Produkte hinzufügen
-    products.forEach(product => {
-      items.push({
-        item_type: 'product',
-        item_id: product.id,
-        item_name: product.name,
-        quantity: 1,
-        unit_price_rappen: product.price_rappen,
-        description: product.name
-      })
-    })
-
-    // 2c. Rabatte hinzufügen
-    const totalBeforeDiscounts = basePrice + (products.reduce((sum, p) => sum + p.price_rappen / 100, 0))
-    discounts.forEach(discount => {
-      const discountAmount = discount.discount_type === 'percentage' 
-        ? (totalBeforeDiscounts * discount.discount_value / 100)
-        : discount.discount_value
-      
-      items.push({
-        item_type: 'discount',
-        item_id: discount.id,
-        item_name: `Rabatt: ${discount.name}`,
-        quantity: 1,
-        unit_price_rappen: -Math.round(discountAmount * 100), // Negativ für Rabatte
-        description: `Rabatt: ${discount.name}`
-      })
-    })
-
-    // 3. Payment erstellen
-    return createPayment({
-      user_id: userId,
-      staff_id: staffId,
-      appointment_id: appointmentId,
-      payment_method: paymentMethod,
-      items,
-      description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`
-    })
   }
 
   // ✅ Standalone Produkt-Zahlung erstellen
@@ -344,8 +251,8 @@ export const usePaymentsNew = () => {
     const totalProductsValue = products.reduce((sum, p) => sum + p.price_rappen, 0)
     discounts.forEach(discount => {
       const discountAmount = discount.discount_type === 'percentage' 
-        ? (totalProductsValue * discount.discount_value / 10000) // price_rappen ist in Rappen
-        : (discount.discount_value * 100) // discount_value ist in CHF
+        ? (totalProductsValue * discount.discount_value / 10000)
+        : (discount.discount_value * 100)
 
       items.push({
         item_type: 'discount',
@@ -370,13 +277,16 @@ export const usePaymentsNew = () => {
   // ✅ Zahlung als bezahlt markieren
   const markPaymentAsCompleted = async (paymentId: string): Promise<boolean> => {
     try {
-      // ✅ MIGRATED TO API
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ payment_status: 'completed' })
-        .eq('id', paymentId)
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'mark-completed',
+          paymentId
+        }
+      }) as any
 
-      if (updateError) throw updateError
+      if (!response?.success) throw new Error(response?.error || 'Failed to mark payment as completed')
 
       logger.debug('✅ Payment marked as completed')
       return true
@@ -391,13 +301,16 @@ export const usePaymentsNew = () => {
   // ✅ Zahlung löschen
   const deletePayment = async (paymentId: string): Promise<boolean> => {
     try {
-      // ✅ MIGRATED TO API
-      const { error: deleteError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('id', paymentId)
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'delete',
+          paymentId
+        }
+      }) as any
 
-      if (deleteError) throw deleteError
+      if (!response?.success) throw new Error(response?.error || 'Failed to delete payment')
 
       logger.debug('✅ Payment deleted')
       return true
@@ -412,19 +325,20 @@ export const usePaymentsNew = () => {
   // ✅ Zahlungen für einen Benutzer laden
   const loadUserPayments = async (userId: string): Promise<PaymentWithItems[]> => {
     try {
-      // ✅ MIGRATED TO API
-      const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          payment_items (*)
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'load-user',
+          userId
+        }
+      }) as any
 
-      if (paymentsError) throw paymentsError
+      if (!response?.success || !Array.isArray(response?.data)) {
+        throw new Error(response?.error || 'Failed to load user payments')
+      }
 
-      return payments || []
+      return response.data
 
     } catch (err: any) {
       console.error('❌ Error loading user payments:', err)
@@ -436,18 +350,20 @@ export const usePaymentsNew = () => {
   // ✅ Zahlungen für einen Termin laden
   const loadAppointmentPayments = async (appointmentId: string): Promise<PaymentWithItems[]> => {
     try {
-      // ✅ MIGRATED TO API
-      const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          payment_items (*)
-        `)
-        .eq('appointment_id', appointmentId)
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'load-appointment',
+          appointmentId
+        }
+      }) as any
 
-      if (paymentsError) throw paymentsError
+      if (!response?.success || !Array.isArray(response?.data)) {
+        throw new Error(response?.error || 'Failed to load appointment payments')
+      }
 
-      return payments || []
+      return response.data
 
     } catch (err: any) {
       console.error('❌ Error loading appointment payments:', err)
@@ -459,16 +375,16 @@ export const usePaymentsNew = () => {
   // ✅ Alle aktiven Produkte laden
   const loadProducts = async (): Promise<Product[]> => {
     try {
-      // ✅ MIGRATED TO API
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/products/get-active', {
+        method: 'GET'
+      }) as any
 
-      if (productsError) throw productsError
+      if (!response?.success || !Array.isArray(response?.data)) {
+        throw new Error(response?.error || 'Failed to load products')
+      }
 
-      return products || []
+      return response.data
 
     } catch (err: any) {
       console.error('❌ Error loading products:', err)
@@ -480,16 +396,16 @@ export const usePaymentsNew = () => {
   // ✅ Alle aktiven Rabatte laden
   const loadDiscounts = async (): Promise<Discount[]> => {
     try {
-      // ✅ MIGRATED TO API
-      const { data: discounts, error: discountsError } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/discounts/get-active', {
+        method: 'GET'
+      }) as any
 
-      if (discountsError) throw discountsError
+      if (!response?.success || !Array.isArray(response?.data)) {
+        throw new Error(response?.error || 'Failed to load discounts')
+      }
 
-      return discounts || []
+      return response.data
 
     } catch (err: any) {
       console.error('❌ Error loading discounts:', err)
@@ -501,16 +417,17 @@ export const usePaymentsNew = () => {
   // ✅ Hilfsfunktionen
   const getAppointment = async (appointmentId: string) => {
     try {
-      // ✅ MIGRATED TO API
-      const { data: appointment, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('id', appointmentId)
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .single()
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/appointments/get-appointment-info', {
+        method: 'POST',
+        body: {
+          action: 'get-by-id',
+          appointmentId
+        }
+      }) as any
 
-      if (error) throw error
-      return appointment
+      if (!response?.success) return null
+      return response.data
 
     } catch (err: any) {
       console.error('❌ Error loading appointment:', err)
