@@ -313,7 +313,8 @@
 <script setup lang="ts">
 
 import { ref, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
@@ -327,8 +328,8 @@ const emit = defineEmits<{
   userUpdated: [updateData: any]
 }>()
 
-// Supabase client
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed Supabase client
+// const supabase = getSupabase()
 
 // Composables
 const uiStore = useUIStore()
@@ -357,44 +358,23 @@ const loadAdmins = async () => {
   error.value = null
   
   try {
-    logger.debug('🔄 Loading admins from database...')
+    logger.debug('🔄 Loading admins via API...')
     
-    // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
+    // ✅ MIGRATED TO API - Get admins
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'get-admins',
+        tenant_id: props.currentUser.tenant_id
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.message || 'Failed to load admins')
     }
 
-    // Load admins
-    const { data: adminData, error: adminError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        role,
-        is_active,
-        created_at,
-        last_sign_in_at
-      `)
-      .in('role', ['admin', 'sub_admin'])
-      .eq('tenant_id', tenantId)
-      .order('first_name', { ascending: true })
-
-    if (adminError) {
-      throw new Error(`Database error: ${adminError.message}`)
-    }
-
-    adminList.value = adminData || []
-    logger.debug('✅ Admins loaded successfully:', adminList.value.length)
+    adminList.value = response.data || []
+    logger.debug('✅ Admins loaded successfully via API:', adminList.value.length)
 
   } catch (err: any) {
     console.error('❌ Error loading admins:', err)
@@ -423,34 +403,27 @@ const createAdmin = async () => {
   try {
     logger.debug('🔄 Creating new admin...')
     
-    // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
+    // ✅ MIGRATED TO API - tenant_id comes from currentUser
+    // (Removed direct Supabase auth calls - now using currentUser prop)
 
-    // Create admin user
-    const { data: newAdminData, error: adminError } = await supabase
-      .from('users')
-      .insert({
-        first_name: newAdmin.value.first_name,
-        last_name: newAdmin.value.last_name,
-        email: newAdmin.value.email,
-        role: newAdmin.value.role,
-        tenant_id: tenantId,
-        is_active: true
-      })
-      .select()
-      .single()
+    // ✅ MIGRATED TO API - Create admin user
+    const createResponse = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'create-admin',
+        tenant_id: props.currentUser.tenant_id,
+        user_data: {
+          first_name: newAdmin.value.first_name,
+          last_name: newAdmin.value.last_name,
+          email: newAdmin.value.email,
+          role: newAdmin.value.role,
+          tenant_id: props.currentUser.tenant_id,
+          is_active: true
+        }
+      }
+    }) as any
 
-    if (adminError) throw adminError
+    if (!createResponse?.success) throw new Error(createResponse?.message)
 
     uiStore.addNotification({
       type: 'success',
@@ -484,20 +457,26 @@ const updateAdmin = async () => {
   isUpdatingAdmin.value = true
   
   try {
-    logger.debug('🔄 Updating admin:', editingAdmin.value.id)
+    logger.debug('🔄 Updating admin via API:', editingAdmin.value.id)
     
-    const { error } = await supabase
-      .from('users')
-      .update({
-        first_name: editingAdmin.value.first_name,
-        last_name: editingAdmin.value.last_name,
-        email: editingAdmin.value.email,
-        role: editingAdmin.value.role,
-        is_active: editingAdmin.value.is_active
-      })
-      .eq('id', editingAdmin.value.id)
+    // ✅ MIGRATED TO API - Update admin user
+    const updateResponse = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'update-admin',
+        tenant_id: props.currentUser.tenant_id,
+        user_id: editingAdmin.value.id,
+        user_data: {
+          first_name: editingAdmin.value.first_name,
+          last_name: editingAdmin.value.last_name,
+          email: editingAdmin.value.email,
+          role: editingAdmin.value.role,
+          is_active: editingAdmin.value.is_active
+        }
+      }
+    }) as any
 
-    if (error) throw error
+    if (!updateResponse?.success) throw new Error(updateResponse?.message)
 
     uiStore.addNotification({
       type: 'success',
@@ -523,16 +502,22 @@ const updateAdmin = async () => {
 
 const toggleAdminStatus = async (admin: any) => {
   try {
-    logger.debug('🔄 Toggling admin status:', admin.id, !admin.is_active)
+    logger.debug('🔄 Toggling admin status via API:', admin.id, !admin.is_active)
     
-    const { error } = await supabase
-      .from('users')
-      .update({
-        is_active: !admin.is_active
-      })
-      .eq('id', admin.id)
+    // ✅ MIGRATED TO API - Toggle admin status
+    const toggleResponse = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'update-admin',
+        tenant_id: props.currentUser.tenant_id,
+        user_id: admin.id,
+        user_data: {
+          is_active: !admin.is_active
+        }
+      }
+    }) as any
 
-    if (error) throw error
+    if (!toggleResponse?.success) throw new Error(toggleResponse?.message)
 
     uiStore.addNotification({
       type: 'success',
@@ -558,14 +543,19 @@ const deleteAdmin = async (admin: any) => {
   }
   
   try {
-    logger.debug('🔄 Deleting admin:', admin.id)
+    logger.debug('🔄 Deleting admin via API:', admin.id)
     
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', admin.id)
+    // ✅ MIGRATED TO API - Delete admin user
+    const deleteResponse = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'delete-admin',
+        tenant_id: props.currentUser.tenant_id,
+        user_id: admin.id
+      }
+    }) as any
 
-    if (error) throw error
+    if (!deleteResponse?.success) throw new Error(deleteResponse?.message)
 
     uiStore.addNotification({
       type: 'success',
