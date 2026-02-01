@@ -383,7 +383,7 @@ const loadCustomers = async (loadAppointments = true) => {
     logger.debug('🔄 Loading customers from database...')
     
     // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const authUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
@@ -530,7 +530,7 @@ const resendOnboardingSms = async () => {
     // Get tenant name for SMS sender
     let senderName = 'Fahrschule'
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const authUser = authStore.user // ✅ MIGRATED
       const { data: userProfile } = await supabase
         .from('users')
         .select('tenant_id')

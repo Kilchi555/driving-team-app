@@ -703,7 +703,7 @@ const loadStaff = async () => {
     logger.debug('🔄 Loading staff from database...')
     
     // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const authUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
@@ -1145,7 +1145,7 @@ const createLocation = async () => {
   isCreatingLocation.value = true
   
   try {
-    const authUser = await supabase.auth.getUser()
+    const authUser = { data: { user: authStore.user } } // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
@@ -1387,7 +1387,7 @@ const createStaff = async () => {
     logger.debug('🔄 Creating new staff member...')
     
     // Get current user's tenant_id
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const authUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')

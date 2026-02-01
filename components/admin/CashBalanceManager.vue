@@ -561,7 +561,7 @@ const loadStaffBalances = async () => {
   
   try {
     // Get current user's tenant_id first
-    const { data: currentUserData } = await supabase.auth.getUser()
+    const currentUserData = authStore.user // ✅ MIGRATED
     if (!currentUserData?.user) throw new Error('Not authenticated')
     
     const { data: userProfile, error: profileError } = await supabase
@@ -776,7 +776,7 @@ const submitTopUp = async () => {
     const newBalance = currentBalance + amountRappen
     
     // Get current admin user ID
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     
     // Insert movement
     const { error: movementError } = await supabase
@@ -911,7 +911,7 @@ const submitWithdraw = async () => {
     const newBalance = currentBalance - amountRappen
     
     // Get current admin user ID
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     
     // Insert movement
     const { error: movementError } = await supabase
@@ -953,7 +953,7 @@ const confirmTransaction = async (transaction) => {
       .from('cash_transactions')
       .update({
         status: 'confirmed',
-        confirmed_by: (await supabase.auth.getUser()).data.user?.id,
+        confirmed_by: authStore.user?.id,
         confirmed_at: new Date().toISOString()
       })
       .eq('id', transaction.id)

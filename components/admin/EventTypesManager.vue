@@ -519,7 +519,7 @@ const createEventType = async () => {
   isCreating.value = true
   try {
     const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: profile } = await supabase
@@ -590,7 +590,7 @@ const load = async () => {
   isLoading.value = true
   try {
     const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: profile } = await supabase
@@ -736,7 +736,7 @@ const onToggleRequirePayment = async (et: EventTypeRow, value: boolean) => {
 const setDefaultEventType = async (et: EventTypeRow) => {
   try {
     const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) return
 
     const { data: profile } = await supabase

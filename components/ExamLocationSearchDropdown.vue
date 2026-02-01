@@ -416,7 +416,7 @@ const addLocation = async (location: ExamLocation) => {
     const supabase = getSupabase()
     
     // Get current user's tenant
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Not authenticated')
     
     const { data: userData, error: userError } = await supabase
@@ -493,7 +493,7 @@ const removeLocation = async (location: ExamLocation) => {
     const supabase = getSupabase()
     
     // Get current user's tenant
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Not authenticated')
     
     const { data: userData, error: userError } = await supabase

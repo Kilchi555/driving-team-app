@@ -273,7 +273,7 @@ const canConnect = computed(() => {
 // Methods
 const loadExternalCalendars = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) return
 
     // Get internal user ID
@@ -315,7 +315,7 @@ const connectCalendar = async () => {
   success.value = null
 
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Nicht authentifiziert')
 
     // Get user's tenant_id and internal users.id (staff id)

@@ -351,7 +351,7 @@ const addExaminer = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const currentUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')

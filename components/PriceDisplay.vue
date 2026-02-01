@@ -1546,7 +1546,7 @@ const saveInvoiceAddress = async (): Promise<string | null> => {
   try {
     // Hole den aktuellen Benutzer für created_by
     const supabase = getSupabase()
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const authUser = authStore.user // ✅ MIGRATED
     
     if (!authUser?.id) {
       throw new Error('Benutzer nicht angemeldet')
