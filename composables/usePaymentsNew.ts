@@ -1,6 +1,5 @@
 // Neues, sauberes Payment Composable mit optimiertem Speicher-Workflow
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import type { 
   Payment, 
   PaymentItem, 
@@ -10,6 +9,7 @@ import type {
   Product,
   Discount
 } from '~/types/payment'
+import { logger } from '~/utils/logger'
 
 export const usePaymentsNew = () => {
   const isLoading = ref(false)
@@ -38,7 +38,7 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       
       logger.debug('🔄 Creating appointment with integrated payment workflow...')
       
@@ -217,81 +217,23 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
+      logger.debug('💳 Creating payment via API')
       
-      // ✅ Berechne Gesamtbeträge für neue Spalten
-      const lessonPriceRappen = request.items
-        .filter(item => item.item_type === 'appointment')
-        .reduce((sum, item) => sum + (item.unit_price_rappen * (item.quantity || 1)), 0)
-      
-      const productsPriceRappen = request.items
-        .filter(item => item.item_type === 'product')
-        .reduce((sum, item) => sum + (item.unit_price_rappen * (item.quantity || 1)), 0)
-      
-      const discountAmountRappen = request.items
-        .filter(item => item.item_type === 'discount')
-        .reduce((sum, item) => sum + Math.abs(item.unit_price_rappen * (item.quantity || 1)), 0)
-      
-      // ✅ Admin-Fee wird aus der Preisberechnung übernommen (nicht als separater Payment Item)
-      const adminFeeRappen = 0 // Wird aus der appointment Preisberechnung übernommen
-      
-      const subtotalRappen = lessonPriceRappen + productsPriceRappen
-      const totalAmountRappen = subtotalRappen - discountAmountRappen
+      const response = await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'create',
+          paymentData: request
+        }
+      }) as any
 
-      // 1. Payment erstellen mit neuen Spalten
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          user_id: request.user_id,
-          staff_id: request.staff_id,
-          appointment_id: request.appointment_id,
-          // ✅ Neue Spalten verwenden
-          lesson_price_rappen: lessonPriceRappen,
-          products_price_rappen: productsPriceRappen,
-          discount_amount_rappen: discountAmountRappen,
-          subtotal_rappen: subtotalRappen,
-          total_amount_rappen: totalAmountRappen,
-          // ✅ Alte Spalten für Kompatibilität
-          amount_rappen: lessonPriceRappen,
-          admin_fee_rappen: adminFeeRappen, // ✅ KORRIGIERT: Korrekte Admin-Fee verwenden
-          payment_method: request.payment_method,
-          payment_status: 'pending',
-          currency: 'CHF',
-          description: request.description
-        })
-        .select()
-        .single()
-
-      if (paymentError) throw paymentError
-
-      // 2. Payment Items erstellen
-      if (request.items.length > 0) {
-        const paymentItems = request.items.map(item => ({
-          payment_id: payment.id,
-          ...item
-        }))
-
-        const { error: itemsError } = await supabase
-          .from('payment_items')
-          .insert(paymentItems)
-
-        if (itemsError) throw itemsError
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.error || 'Failed to create payment')
       }
 
-      // 3. Finale Payment mit berechnetem Gesamtbetrag laden
-      const { data: finalPayment, error: finalError } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          payment_items (*)
-        `)
-        .eq('id', payment.id)
-        .single()
-
-      if (finalError) throw finalError
-
-      logger.debug('✅ Payment created successfully:', finalPayment)
-      return finalPayment
+      logger.debug('✅ Payment created successfully via API:', response.data)
+      return response.data
 
     } catch (err: any) {
       console.error('❌ Error creating payment:', err)
@@ -428,7 +370,7 @@ export const usePaymentsNew = () => {
   // ✅ Zahlung als bezahlt markieren
   const markPaymentAsCompleted = async (paymentId: string): Promise<boolean> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { error: updateError } = await supabase
         .from('payments')
         .update({ payment_status: 'completed' })
@@ -449,7 +391,7 @@ export const usePaymentsNew = () => {
   // ✅ Zahlung löschen
   const deletePayment = async (paymentId: string): Promise<boolean> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { error: deleteError } = await supabase
         .from('payments')
         .delete()
@@ -470,7 +412,7 @@ export const usePaymentsNew = () => {
   // ✅ Zahlungen für einen Benutzer laden
   const loadUserPayments = async (userId: string): Promise<PaymentWithItems[]> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select(`
@@ -494,7 +436,7 @@ export const usePaymentsNew = () => {
   // ✅ Zahlungen für einen Termin laden
   const loadAppointmentPayments = async (appointmentId: string): Promise<PaymentWithItems[]> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select(`
@@ -517,7 +459,7 @@ export const usePaymentsNew = () => {
   // ✅ Alle aktiven Produkte laden
   const loadProducts = async (): Promise<Product[]> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*')
@@ -538,7 +480,7 @@ export const usePaymentsNew = () => {
   // ✅ Alle aktiven Rabatte laden
   const loadDiscounts = async (): Promise<Discount[]> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { data: discounts, error: discountsError } = await supabase
         .from('discounts')
         .select('*')
@@ -559,7 +501,7 @@ export const usePaymentsNew = () => {
   // ✅ Hilfsfunktionen
   const getAppointment = async (appointmentId: string) => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API
       const { data: appointment, error } = await supabase
         .from('appointments')
         .select('*')
