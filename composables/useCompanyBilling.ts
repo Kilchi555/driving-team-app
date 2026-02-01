@@ -2,6 +2,7 @@
 
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 import type { 
   CompanyBillingAddress, 
   CompanyBillingAddressInsert,
@@ -14,7 +15,7 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 
 
 export const useCompanyBilling = () => {
-  const supabase = getSupabase()
+  // ✅ NO DIRECT SUPABASE ACCESS - All operations via APIs
   
   // State
   const isLoading = ref(false)
@@ -131,24 +132,6 @@ export const useCompanyBilling = () => {
       created_by: userId
     }
   }
-
-const debugAuth = async () => {
-  const { data: { user }, error } = await supabase.auth.getUser()
-  logger.debug('🔍 AUTH DEBUG:', {
-    user: user,
-    userId: user?.id,
-    email: user?.email,
-    isAuthenticated: !!user
-  })
-
-  // Teste auch RLS direkt
-  const { data: testData, error: testError } = await supabase
-    .rpc('auth.uid')
-  
-  logger.debug('🔍 RLS auth.uid():', testData, testError)
-  
-  return user?.id
-}
 
   // CRUD Operations
  const createCompanyBillingAddress = async (userId: string): Promise<CreateCompanyBillingResponse> => {

@@ -599,7 +599,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
@@ -719,7 +718,6 @@ const emit = defineEmits<{
 }>()
 
 // ============ REFS ============
-const supabase = getSupabase()
 const studentSelectorRef = ref()
 const categorySelectorRef = ref()
 const error = ref('')
