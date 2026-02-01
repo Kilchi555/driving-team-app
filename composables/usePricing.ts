@@ -215,7 +215,7 @@ const getEventTypeByCode = async (code: string, tenantId: string) => {
 
 // ===== HAUPT-COMPOSABLE =====
 export const usePricing = (options: UsePricingOptions = {}) => {
-  const supabase = getSupabase()
+  // ✅ NO DIRECT SUPABASE QUERIES - All database operations via APIs
 
   // ===== CORE STATE =====
   const pricingRules = ref<PricingRule[]>([])
@@ -602,20 +602,22 @@ const roundToNearestFranken = (rappen: number): number => {
   let isDrivingCategory = validDrivingCategories.includes(categoryCode)
   if (!isDrivingCategory && actualTenantId) {
     try {
-      const { data: categoryCheck } = await supabase
-        .from('categories')
-        .select('code')
-        .eq('code', categoryCode)
-        .eq('tenant_id', actualTenantId)
-        .eq('is_active', true)
-        .maybeSingle()
+      // ✅ MIGRATED TO API - Check category via secure backend endpoint
+      const response = await $fetch('/api/categories/check-exists', {
+        method: 'POST',
+        body: {
+          code: categoryCode,
+          tenant_id: actualTenantId,
+          active_only: true
+        }
+      }) as any
       
-      if (categoryCheck) {
+      if (response?.success && response?.data?.exists) {
         isDrivingCategory = true
         logger.debug(`✅ Category "${categoryCode}" found in categories table, treating as driving category`)
       }
     } catch (err) {
-      console.warn('⚠️ Could not check if category exists in DB:', err)
+      console.warn('⚠️ Could not check if category exists via API:', err)
     }
   }
   

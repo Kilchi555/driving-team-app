@@ -196,108 +196,34 @@ export const useAutoSave = <T>(
       isAutoSaving.value = true
       saveStatus.value = 'saving'
       
-      // ✅ MIGRATED TO API - No direct Supabase queries
-      
-      let result
-      if (draftId.value) {
-        // Update existing draft
-        result = await supabase
-          .from(config.tableName)
-          .update(draftData)
-          .eq('id', draftId.value)
-          .select()
-          .single()
-      } else {
-        // Check if record with same phone and tenant_id already exists (for shop orders)
-        if (config.formId === 'shop-order' && draftData.phone && draftData.tenant_id) {
-          const existingResult = await supabase
-            .from(config.tableName)
-            .select('id')
-            .eq('phone', draftData.phone)
-            .eq('tenant_id', draftData.tenant_id)
-            .eq('status', 'draft')
-            .single()
-          
-          if (existingResult.data) {
-            // Update existing record
-            logger.debug(`🔄 Found existing draft with phone ${draftData.phone}, updating...`)
-            draftId.value = existingResult.data.id
-            result = await supabase
-              .from(config.tableName)
-              .update(draftData)
-              .eq('id', existingResult.data.id)
-              .select()
-              .single()
-          } else {
-            // Create new draft
-            result = await supabase
-              .from(config.tableName)
-              .insert(draftData)
-              .select()
-              .single()
-          }
-        } else {
-          // Create new draft (non-shop orders or no phone)
-          result = await supabase
-            .from(config.tableName)
-            .insert(draftData)
-            .select()
-            .single()
+      // ✅ MIGRATED TO API - Using secure backend endpoint
+      const response = await $fetch('/api/drafts/autosave', {
+        method: 'POST',
+        body: {
+          action: 'save',
+          formId: config.formId,
+          tableName: config.tableName,
+          draftId: draftId.value,
+          draftData,
+          isShopOrder: config.formId === 'shop-order'
         }
+      }) as any
+      
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.message || 'Failed to save draft')
       }
       
-      if (result.error) throw result.error
-      
-      draftId.value = result.data.id
+      draftId.value = response.data.id
       lastSaved.value = new Date()
       saveStatus.value = 'saved'
       
       // Update localStorage with draft ID
       saveToLocalStorage()
       
-      finalConfig.onSave?.(result.data)
+      finalConfig.onSave?.(response.data)
       logger.debug(`✅ Database draft saved: ${config.formId} -> ${draftId.value}`)
       
     } catch (error: any) {
-      // Handle duplicate key error by finding and updating existing record
-      if (error.code === '23505' && config.formId === 'shop-order' && draftData.phone && draftData.tenant_id) {
-        logger.debug(`🔄 Duplicate phone ${draftData.phone} for tenant ${draftData.tenant_id}, finding existing record...`)
-        
-        try {
-          // ✅ MIGRATED TO API - No direct Supabase queries
-          const { data: existingData, error: findError } = await supabase
-            .from(config.tableName)
-            .select('id')
-            .eq('phone', draftData.phone)
-            .eq('tenant_id', draftData.tenant_id)
-            .eq('status', 'draft')
-            .single()
-          
-          if (existingData && !findError) {
-            logger.debug(`✅ Found existing record ${existingData.id}, updating...`)
-            draftId.value = existingData.id
-            
-            const updateResult = await supabase
-              .from(config.tableName)
-              .update(draftData)
-              .eq('id', existingData.id)
-              .select()
-              .single()
-            
-            if (updateResult.error) throw updateResult.error
-            
-            lastSaved.value = new Date()
-            saveStatus.value = 'saved'
-            saveToLocalStorage()
-            finalConfig.onSave?.(updateResult.data)
-            logger.debug(`✅ Database draft updated: ${config.formId} -> ${draftId.value}`)
-            return
-          }
-        } catch (retryError) {
-          console.error('❌ Retry failed:', retryError)
-        }
-      }
-      
       saveStatus.value = 'error'
       finalConfig.onError?.(error)
       console.error('❌ Database save failed:', error)
@@ -332,16 +258,21 @@ export const useAutoSave = <T>(
   
   const loadDraftFromDatabase = async (id: string): Promise<any | null> => {
     try {
-      // ✅ MIGRATED TO API - No direct Supabase queries
+      // ✅ MIGRATED TO API - Using secure backend endpoint
       
-      const { data, error } = await supabase
-        .from(config.tableName)
-        .select('*')
-        .eq('id', id)
-        .eq('status', 'draft')
-        .single()
+      const response = await $fetch('/api/drafts/autosave', {
+        method: 'POST',
+        body: {
+          action: 'load',
+          draftId: id,
+          tableName: config.tableName,
+          formId: config.formId
+        }
+      }) as any
       
-      if (error || !data) return null
+      if (!response?.success || !response?.data) return null
+      
+      const data = response.data
       
       // Transform data for restoration
       return finalConfig.transformForRestore 
@@ -394,18 +325,21 @@ export const useAutoSave = <T>(
     // 3. Check for existing draft by phone and tenant_id (for shop orders)
     if (config.formId === 'shop-order' && formData.value?.phone && formData.value?.tenant_id) {
       try {
-        // ✅ MIGRATED TO API - No direct Supabase queries
-        const { data, error } = await supabase
-          .from(config.tableName)
-          .select('*')
-          .eq('phone', formData.value.phone)
-          .eq('tenant_id', formData.value.tenant_id)
-          .eq('status', 'draft')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .single()
+        // ✅ MIGRATED TO API - Using secure backend endpoint
+        const response = await $fetch('/api/drafts/autosave', {
+          method: 'POST',
+          body: {
+            action: 'load',
+            tableName: config.tableName,
+            formId: config.formId,
+            phone: formData.value.phone,
+            tenant_id: formData.value.tenant_id,
+            byPhone: true
+          }
+        }) as any
         
-        if (data && !error) {
+        if (response?.success && response?.data) {
+          const data = response.data
           const transformedData = finalConfig.transformForRestore 
             ? finalConfig.transformForRestore(data)
             : data
@@ -468,29 +402,32 @@ export const useAutoSave = <T>(
     if (!draftId.value) return null
     
     try {
-      // ✅ MIGRATED TO API - No direct Supabase queries
+      // ✅ MIGRATED TO API - Using secure backend endpoint
       
       const finalData = finalConfig.transformForSave 
         ? finalConfig.transformForSave(formData.value)
         : formData.value
       
-      const { data, error } = await supabase
-        .from(config.tableName)
-        .update({
-          ...finalData,
-          status: finalStatus,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', draftId.value)
-        .select()
-        .single()
+      const response = await $fetch('/api/drafts/autosave', {
+        method: 'POST',
+        body: {
+          action: 'finalize',
+          draftId: draftId.value,
+          tableName: config.tableName,
+          formId: config.formId,
+          finalData,
+          finalStatus
+        }
+      }) as any
       
-      if (error) throw error
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.message || 'Failed to finalize draft')
+      }
       
       // Clear draft after successful finalization
       clearDraft()
       
-      return data
+      return response.data
       
     } catch (error) {
       finalConfig.onError?.(error)
