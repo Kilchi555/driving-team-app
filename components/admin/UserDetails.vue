@@ -667,33 +667,21 @@ const formatDate = (dateString?: string | null) => {
 
 const loadUserDetails = async () => {
   try {
-    const { data, error: userError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        role,
-        is_active,
-        created_at,
-        created_by,
-        tenant_id,
-        category,
-        tenants!inner(name)
-      `)
-      .eq('id', userId)
-      .single()
+    // ✅ MIGRATED TO API - Load user details via backend
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'get-user-by-id',
+        user_id: userId
+      }
+    }) as any
 
-    if (userError) {
-      throw new Error(userError.message)
+    if (!response?.success || !response?.data) {
+      throw new Error(response?.error || 'Failed to load user')
     }
 
-    // Extract tenant name if available
-    const tenantName = (data.tenants && Array.isArray(data.tenants) && data.tenants.length > 0) 
-      ? data.tenants[0].name 
-      : 'Unbekannter Tenant'
+    const data = response.data
+    const tenantName = data.tenant_name || 'Unbekannter Tenant'
     
     // Add tenant_name and ensure all required fields exist
     const userDetailsWithTenant = {
@@ -715,22 +703,30 @@ const loadUserDetails = async () => {
 
 const loadAppointmentStats = async () => {
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('status, start_time')
-      .eq('user_id', userId)
+    // ✅ MIGRATED TO API - Load appointment stats via backend
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'get-user-appointments',
+        user_id: userId
+      }
+    }) as any
 
-    if (error) throw error
+    if (!response?.success || !response?.data) {
+      console.warn('Could not load appointment stats')
+      return
+    }
 
+    const appointments = response.data
     const now = new Date()
     const stats = {
-      total: data?.length || 0,
+      total: appointments?.length || 0,
       upcoming: 0,
       completed: 0,
       cancelled: 0
     }
 
-    data?.forEach(appointment => {
+    appointments?.forEach((appointment: any) => {
       const startTime = new Date(appointment.start_time)
       
       if (appointment.status === 'completed') {
@@ -816,12 +812,19 @@ const saveChanges = async () => {
       updateData.category = selectedCategories.value.length > 0 ? selectedCategories.value : null
     }
     
-    const { error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', userId)
-    
-    if (error) throw error
+    // ✅ MIGRATED TO API - Update user via backend
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'update-user',
+        user_id: userId,
+        user_data: updateData
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to update user')
+    }
     
     successMessage.value = 'Benutzer erfolgreich aktualisiert!'
     
@@ -862,12 +865,19 @@ const toggleUserStatus = async () => {
   }
   
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({ is_active: newStatus })
-      .eq('id', userId)
-    
-    if (error) throw error
+    // ✅ MIGRATED TO API - Update user status via backend
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'update-user',
+        user_id: userId,
+        user_data: { is_active: newStatus }
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to update user')
+    }
     
     userDetails.value.is_active = newStatus
     logger.debug(`✅ User ${action} successful`)
@@ -940,16 +950,21 @@ const loadCategories = async () => {
   try {
     if (!userDetails.value?.tenant_id) return
     
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name, code, color')
-      .eq('tenant_id', userDetails.value.tenant_id)
-      .eq('is_active', true)
-      .order('name')
+    // ✅ MIGRATED TO API - Load categories via backend
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: {
+        action: 'get-tenant-categories',
+        tenant_id: userDetails.value.tenant_id
+      }
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      console.warn('Could not load categories')
+      return
+    }
     
-    if (error) throw error
-    
-    availableCategories.value = data || []
+    availableCategories.value = response.data || []
     
     // Initialize selected categories from user data
     if (userDetails.value.category) {
@@ -958,7 +973,7 @@ const loadCategories = async () => {
         : [userDetails.value.category]
     }
     
-    logger.debug('✅ Categories loaded:', data)
+    logger.debug('✅ Categories loaded:', response.data)
   } catch (err) {
     console.error('❌ Error loading categories:', err)
   }

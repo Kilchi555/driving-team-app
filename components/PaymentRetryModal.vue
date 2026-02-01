@@ -102,7 +102,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 // ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 
@@ -161,33 +161,22 @@ const loadPaymentDetails = async () => {
   if (!props.paymentId && !props.appointmentId) return
   
   try {
-    let query = supabase
-      .from('payments')
-      .select(`
-        *,
-        appointments (
-          id,
-          title,
-          start_time,
-          duration_minutes,
-          category,
-          location
-        )
-      `)
+    // ✅ MIGRATED TO API - Load payment details via backend
+    const response = await $fetch('/api/payments/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-payment-details',
+        payment_id: props.paymentId,
+        appointment_id: props.appointmentId
+      }
+    }) as any
     
-    if (props.paymentId) {
-      query = query.eq('id', props.paymentId)
-    } else if (props.appointmentId) {
-      query = query.eq('appointment_id', props.appointmentId)
-    }
-    
-    const { data: payment, error } = await query.single()
-    
-    if (error || !payment) {
-      console.error('❌ Failed to load payment:', error)
+    if (!response?.success || !response?.data) {
+      console.error('❌ Failed to load payment:', response?.error)
       return
     }
     
+    const payment = response.data
     failedPayment.value = payment
     appointment.value = payment.appointments
     
@@ -204,34 +193,25 @@ const retryPayment = async () => {
   try {
     logger.debug('🔄 Retrying payment with method:', selectedPaymentMethod.value)
     
-    // Create new payment record
-    const newPaymentData = {
-      appointment_id: failedPayment.value.appointment_id,
-      user_id: failedPayment.value.user_id,
-      staff_id: failedPayment.value.staff_id,
-      amount_rappen: failedPayment.value.amount_rappen,
-      admin_fee_rappen: failedPayment.value.admin_fee_rappen,
-      discount_rappen: failedPayment.value.discount_rappen,
-      total_amount_rappen: failedPayment.value.total_amount_rappen,
-      payment_method: selectedPaymentMethod.value,
-      payment_status: 'pending',
-      description: failedPayment.value.description,
-      metadata: {
-        ...failedPayment.value.metadata,
-        retry_of_payment_id: failedPayment.value.id,
-        retry_timestamp: new Date().toISOString()
+    // ✅ MIGRATED TO API - Create new payment via backend
+    const response = await $fetch('/api/payments/manage', {
+      method: 'POST',
+      body: {
+        action: 'retry-payment',
+        original_payment_id: failedPayment.value.id,
+        payment_method: selectedPaymentMethod.value,
+        appointment_id: failedPayment.value.appointment_id,
+        user_id: failedPayment.value.user_id,
+        staff_id: failedPayment.value.staff_id,
+        total_amount_rappen: failedPayment.value.total_amount_rappen
       }
+    }) as any
+    
+    if (!response?.success || !response?.data) {
+      throw new Error(response?.error || 'Failed to retry payment')
     }
     
-    const { data: newPayment, error: createError } = await supabase
-      .from('payments')
-      .insert(newPaymentData)
-      .select()
-      .single()
-    
-    if (createError || !newPayment) {
-      throw new Error('Failed to create retry payment')
-    }
+    const newPayment = response.data
     
     // Handle different payment methods
     if (selectedPaymentMethod.value === 'wallee') {
@@ -248,14 +228,16 @@ const retryPayment = async () => {
       })
       
       if (result.success && result.paymentUrl) {
-        // Update payment with Wallee transaction ID
-        await supabase
-          .from('payments')
-          .update({
-            wallee_transaction_id: result.transactionId,
-            payment_status: 'processing'
-          })
-          .eq('id', newPayment.id)
+        // Update payment with Wallee transaction ID via API
+        await $fetch('/api/payments/manage', {
+          method: 'POST',
+          body: {
+            action: 'update-payment-status',
+            payment_id: newPayment.id,
+            payment_status: 'processing',
+            wallee_transaction_id: result.transactionId
+          }
+        })
         
         // Redirect to payment
         window.location.href = result.paymentUrl
@@ -264,11 +246,15 @@ const retryPayment = async () => {
       }
       
     } else if (selectedPaymentMethod.value === 'cash') {
-      // Mark as cash payment
-      await supabase
-        .from('payments')
-        .update({ payment_status: 'pending' })
-        .eq('id', newPayment.id)
+      // Mark as cash payment via API
+      await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'update-payment-status',
+          payment_id: newPayment.id,
+          payment_status: 'pending'
+        }
+      })
       
       emit('payment-success', {
         type: 'cash',
@@ -276,11 +262,15 @@ const retryPayment = async () => {
       })
       
     } else if (selectedPaymentMethod.value === 'invoice') {
-      // Mark as invoice payment
-      await supabase
-        .from('payments')
-        .update({ payment_status: 'pending' })
-        .eq('id', newPayment.id)
+      // Mark as invoice payment via API
+      await $fetch('/api/payments/manage', {
+        method: 'POST',
+        body: {
+          action: 'update-payment-status',
+          payment_id: newPayment.id,
+          payment_status: 'pending'
+        }
+      })
       
       emit('payment-success', {
         type: 'invoice',

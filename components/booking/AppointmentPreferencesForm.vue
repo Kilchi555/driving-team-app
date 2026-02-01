@@ -305,14 +305,18 @@ const loadData = async () => {
     let tenantId = props.tenantId
     
     if (!tenantId && props.tenantSlug) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('slug', props.tenantSlug)
-        .eq('is_active', true)
-        .single()
-      
-      if (tenant) tenantId = tenant.id
+      // ✅ MIGRATED TO API - Get tenant ID from slug
+      const response = await $fetch('/api/booking/get-availability', {
+        method: 'POST',
+        body: {
+          action: 'get-tenant-data',
+          slug: props.tenantSlug
+        }
+      }) as any
+
+      if (response?.success && response?.data) {
+        tenantId = response.data.id
+      }
     }
     
     if (!tenantId) {
@@ -320,26 +324,19 @@ const loadData = async () => {
       return
     }
 
-    // Load categories
-    const { data: cats } = await supabase
-      .from('categories')
-      .select('code, name')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .order('code')
+    // ✅ MIGRATED TO API - Load categories and locations
+    const response = await $fetch('/api/booking/get-availability', {
+      method: 'POST',
+      body: {
+        action: 'get-booking-setup',
+        tenant_id: tenantId
+      }
+    }) as any
 
-    if (cats) categories.value = cats
-
-    // Load locations
-    const { data: locs } = await supabase
-      .from('locations')
-      .select('id, name, address')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .eq('location_type', 'standard')
-      .order('name')
-
-    if (locs) locations.value = locs
+    if (response?.success && response?.data) {
+      categories.value = response.data.categories || []
+      locations.value = response.data.locations || []
+    }
 
     // Pre-fill für angemeldete Benutzer
     if (isLoggedIn.value && currentUser.value) {
@@ -365,14 +362,18 @@ const submitPreferences = async () => {
     let tenantId = props.tenantId
     
     if (!tenantId && props.tenantSlug) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('slug', props.tenantSlug)
-        .eq('is_active', true)
-        .single()
-      
-      if (tenant) tenantId = tenant.id
+      // ✅ MIGRATED TO API - Get tenant ID from slug
+      const response = await $fetch('/api/booking/get-availability', {
+        method: 'POST',
+        body: {
+          action: 'get-tenant-data',
+          slug: props.tenantSlug
+        }
+      }) as any
+
+      if (response?.success && response?.data) {
+        tenantId = response.data.id
+      }
     }
     
     if (!tenantId) {
@@ -397,11 +398,18 @@ const submitPreferences = async () => {
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 Tage
     }
 
-    const { error: dbError } = await supabase
-      .from('appointment_preferences')
-      .insert(preferenceData)
+    // ✅ MIGRATED TO API - Save appointment preferences via backend
+    const response = await $fetch('/api/booking/get-availability', {
+      method: 'POST',
+      body: {
+        action: 'save-appointment-preferences',
+        preference_data: preferenceData
+      }
+    }) as any
 
-    if (dbError) throw dbError
+    if (!response?.success) {
+      throw new Error(response?.error || 'Fehler beim Speichern')
+    }
 
     // Wenn angemeldet → Erfolg anzeigen
     if (isLoggedIn.value) {
