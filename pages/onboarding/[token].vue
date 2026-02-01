@@ -679,7 +679,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, navigateTo, useFetch } from '#app'
 import { logger } from '~/utils/logger'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 
 const route = useRoute()

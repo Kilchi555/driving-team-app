@@ -191,9 +191,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 const eventTypes = ref<any[]>([])
 const showModal = ref(false)

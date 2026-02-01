@@ -424,7 +424,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useAuthStore } from '~/stores/auth'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'

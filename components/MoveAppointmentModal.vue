@@ -196,7 +196,7 @@ const props = defineProps<Props>()
 const emit = defineEmits(['close', 'moved', 'error'])
 
 // Supabase
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const newDate = ref('')

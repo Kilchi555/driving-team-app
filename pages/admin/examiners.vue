@@ -264,7 +264,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
 // Configure page meta for admin layout

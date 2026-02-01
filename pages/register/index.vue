@@ -98,7 +98,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 interface Tenant {
   id: string

@@ -290,7 +290,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui'
@@ -309,7 +309,7 @@ const emit = defineEmits<{
 }>()
 
 // Supabase client
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Composables
 const { sendSms } = useSmsService()

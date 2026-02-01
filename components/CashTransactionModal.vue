@@ -122,7 +122,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 
 // Props
@@ -137,7 +137,7 @@ const props = defineProps<Props>()
 const emit = defineEmits(['close', 'transaction-created'])
 
 // Supabase
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const formData = ref({

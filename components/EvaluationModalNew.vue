@@ -189,7 +189,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Props
 interface Props {
@@ -206,7 +206,7 @@ const emit = defineEmits<{
 }>()
 
 // Supabase
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const isLoading = ref(false)

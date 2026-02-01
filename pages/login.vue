@@ -392,7 +392,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 import { useMFAFlow } from '~/composables/useMFAFlow'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 // Meta
@@ -408,7 +408,7 @@ const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
 const mfaFlow = useMFAFlow()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Get tenant from URL parameter or route params
 const tenantParam = ref(

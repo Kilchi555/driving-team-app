@@ -498,7 +498,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#app'
 import { useStudentCredits } from '~/composables/useStudentCredits'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import StudentCreditManager from '~/components/StudentCreditManager.vue'
 import type { StudentCredit, CreditTransactionWithDetails } from '~/types/studentCredits'

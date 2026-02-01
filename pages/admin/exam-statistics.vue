@@ -434,7 +434,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 
@@ -446,7 +446,7 @@ definePageMeta({
 
 // Composables
 const { showSuccess, showError } = useUIStore()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const isLoading = ref(true)

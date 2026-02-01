@@ -172,7 +172,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 

@@ -38,7 +38,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'

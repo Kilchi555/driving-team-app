@@ -1633,7 +1633,7 @@
 
 import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
 import { useTenantBranding } from '~/composables/useTenantBranding'

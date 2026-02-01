@@ -9,7 +9,6 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import EventModal from './EventModal.vue'
 import EnhancedStudentModal from './EnhancedStudentModal.vue'
 // ✅ MIGRATED TO API - Removed direct Supabase import
-// import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
@@ -201,7 +200,6 @@ const switchView = () => {
 
 const calendar = ref()
 // ✅ MIGRATED TO API - Removed direct Supabase initialization
-// const supabase = getSupabase()
 const rootEl = ref<HTMLElement | null>(null)
 
 // Swipe navigation state
