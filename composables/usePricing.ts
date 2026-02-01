@@ -178,44 +178,27 @@ export const calculateOfflinePrice = (categoryCode: string, durationMinutes: num
 // ===== HELPER FUNCTIONS =====
 const getEventTypeByCode = async (code: string, tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    
-    // 1. Zuerst in event_types suchen
-    const { data: eventTypeData, error: eventTypeError } = await supabase
-      .from('event_types')
-      .select('code, name, default_price_rappen, default_fee_rappen, require_payment')
-      .eq('code', code)
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .maybeSingle()
-    
-    if (!eventTypeError && eventTypeData) {
-      return eventTypeData
-    }
-    
-    // 2. Fallback: In categories suchen, wenn event_type nicht gefunden wurde
-    logger.debug(`⚠️ Event type "${code}" not found in event_types, checking categories table...`)
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('categories')
-      .select('code, name')
-      .eq('code', code)
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .maybeSingle()
-    
-    if (!categoryError && categoryData) {
-      logger.debug(`✅ Found category "${code}" in categories table, using as fallback`)
-      // Konvertiere category zu event_type Format
-      // Categories haben keine default_price_rappen/default_fee_rappen, daher null
-      // Das Pricing wird dann über pricing_rules oder Staff-Preise berechnet
-      return {
-        code: categoryData.code,
-        name: categoryData.name,
-        default_price_rappen: null,
-        default_fee_rappen: null,
-        require_payment: true // Categories sind normalerweise kostenpflichtig
+    // ✅ MIGRATED TO API
+    const response = await $fetch('/api/pricing/calculate', {
+      method: 'POST',
+      body: {
+        action: 'get-event-type',
+        code,
+        tenantId
       }
+    }) as any
+
+    if (!response?.success) {
+      logger.warn(`⚠️ Event type "${code}" not found`)
+      return null
     }
+
+    return response?.data
+  } catch (error) {
+    logger.error('Error getting event type:', error)
+    return null
+  }
+}
     
     if (eventTypeError) {
       console.error('Error loading event type:', eventTypeError)
