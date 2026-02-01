@@ -718,7 +718,6 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
-import { getSupabase } from '~/utils/supabase'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
 import { useRoute, useRuntimeConfig } from '#app'
@@ -766,7 +765,6 @@ const isOnlineBookingEnabled = computed(() => {
 })
 
 const route = useRoute()
-const supabase = getSupabase()
 
 // ❌ REMOVED: checkBatchAvailability (replaced by backend API)
 // Old function did 22+ direct DB queries - now handled by availability-calculator service
@@ -2038,32 +2036,32 @@ const successMessage = ref({
 // Confirm booking
 const confirmBooking = async () => {
   try {
-    logger.debug('🎯 Starting booking confirmation...')
+    logger.debug('🎯 Starting booking confirmation via API...')
     
-    // Step 1: Check if user is authenticated
-    const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      logger.debug('ℹ️ User not authenticated, showing registration modal')
-      loginModalTab.value = 'register' // Show registration tab
-      showLoginModal.value = true
-      return
+    // Call API endpoint to confirm booking
+    // API handles: auth check, user data fetch, booking creation, payment processing
+    const response = await $fetch('/api/booking/confirm-booking', {
+      method: 'POST',
+      body: {
+        slot_id: selectedSlot.value?.id,
+        staff_id: staffId.value,
+        student_id: currentCustomer.value?.id,
+        // ... other booking data
+      }
+    }) as any
+
+    if (!response?.success) {
+      if (response?.message === 'NOT_AUTHENTICATED') {
+        logger.debug('ℹ️ User not authenticated, showing registration modal')
+        loginModalTab.value = 'register'
+        showLoginModal.value = true
+        return
+      }
+      throw new Error(response?.message || 'Booking confirmation failed')
     }
-    
-    logger.debug('✅ User authenticated:', user.id)
-    
-    // Step 2: Get user details
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    if (userError || !userData) {
-      console.error('Error loading user data:', userError)
-      alert('Fehler beim Laden der Benutzerdaten. Bitte versuchen Sie es erneut.')
-      return
+
+    logger.debug('✅ Booking confirmed:', response.booking_id)
+    // Handle success...
     }
     
     logger.debug('✅ User data loaded:', userData)
