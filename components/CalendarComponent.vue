@@ -8,7 +8,8 @@ import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import EventModal from './EventModal.vue'
 import EnhancedStudentModal from './EnhancedStudentModal.vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
@@ -199,7 +200,8 @@ const switchView = () => {
 
 
 const calendar = ref()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed direct Supabase initialization
+// const supabase = getSupabase()
 const rootEl = ref<HTMLElement | null>(null)
 
 // Swipe navigation state
@@ -658,26 +660,29 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
 }
 
 const loadStaffMeetings = async () => {
-  logger.debug('🔄 Loading staff meetings...')
+  logger.debug('🔄 Loading staff meetings via API...')
   try {
-    const supabase = getSupabase()
-    let query = supabase
-      .from('staff_meetings')
-      .select(`
-        *,
-        staff:staff_id(first_name, last_name),
-        location:location_id(name, address)
-      `)
-      .eq('staff_id', '091afa9b-e8a1-43b8-9cae-3195621619ae') // ✅ KORREKTE STAFF ID
-      .order('start_time')
+    // ✅ MIGRATED TO API - Get staff meetings from backend
+    const response = await $fetch('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-staff-meetings',
+        tenant_id: currentTenant.value?.id,
+        staff_id: currentUser.value?.id
+      }
+    }) as any
 
-    const { data: meetings, error } = await query
+    if (!response?.success) {
+      console.error('❌ Error loading staff meetings:', response?.message)
+      return []
+    }
 
-    logger.debug('📊 Raw staff meetings from DB:', meetings?.length || 0)
-    if (error) throw error
+    const meetings = response.data || []
+
+    logger.debug('📊 Staff meetings loaded:', meetings.length)
 
     // Convert zu Calendar Events Format
-    const convertedMeetings = (meetings || []).map((meeting) => {
+    const convertedMeetings = (meetings || []).map((meeting: any) => {
       // ✅ Location für den Titel bestimmen
       const locationText = meeting.location?.name || meeting.location?.address || 'Kein Ort'
       
@@ -708,7 +713,7 @@ const loadStaffMeetings = async () => {
       }
     })
 
-    logger.debug('✅ Staff meetings loaded:', convertedMeetings.length)
+    logger.debug('✅ Staff meetings converted:', convertedMeetings.length)
     return convertedMeetings
 
   } catch (error) {
@@ -1416,19 +1421,27 @@ const handleEventDrop = async (dropInfo: any) => {
 
   const moveAction = async () => {
     try {
-      logger.debug('✅ User confirmed move, updating database...')
+      logger.debug('✅ User confirmed move, updating via API...')
       
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          start_time: dropInfo.event.startStr,
-          end_time: dropInfo.event.endStr
-        })
-        .eq('id', dropInfo.event.id)
+      // ✅ MIGRATED TO API - Update appointment times
+      const updateResponse = await $fetch('/api/calendar/manage', {
+        method: 'POST',
+        body: {
+          action: 'update-appointment-status',
+          tenant_id: currentTenant.value?.id,
+          appointment_data: {
+            id: dropInfo.event.id,
+            start_time: dropInfo.event.startStr,
+            end_time: dropInfo.event.endStr
+          }
+        }
+      }) as any
 
-      if (error) throw error
+      if (!updateResponse?.success) {
+        throw new Error(updateResponse?.message || 'Failed to update appointment')
+      }
 
-      logger.debug('✅ Appointment moved in database:', dropInfo.event.title)
+      logger.debug('✅ Appointment moved via API:', dropInfo.event.title)
       
       // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
       // Stattdessen: Kalender neu laden um frische Daten zu bekommen
@@ -1559,19 +1572,27 @@ const handleEventResize = async (resizeInfo: any) => {
 
   const resizeAction = async () => {
     try {
-      logger.debug('✅ User confirmed resize, updating database...')
+      logger.debug('✅ User confirmed resize, updating via API...')
       
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          end_time: resizeInfo.event.endStr,
-          duration_minutes: durationMinutes
-        })
-        .eq('id', resizeInfo.event.id)
+      // ✅ MIGRATED TO API - Update appointment duration
+      const resizeResponse = await $fetch('/api/calendar/manage', {
+        method: 'POST',
+        body: {
+          action: 'update-appointment-status',
+          tenant_id: currentTenant.value?.id,
+          appointment_data: {
+            id: resizeInfo.event.id,
+            end_time: resizeInfo.event.endStr,
+            duration_minutes: durationMinutes
+          }
+        }
+      }) as any
 
-      if (error) throw error
+      if (!resizeResponse?.success) {
+        throw new Error(resizeResponse?.message || 'Failed to update appointment')
+      }
       
-      logger.debug('✅ Appointment resized in database:', resizeInfo.event.title)
+      logger.debug('✅ Appointment resized via API:', resizeInfo.event.title)
       
       if (isModalVisible.value && modalEventData.value?.id === resizeInfo.event.id) {
         modalEventData.value = {
@@ -2057,16 +2078,23 @@ const pasteAppointmentDirectly = async () => {
     // ✅ FINALE DEBUG-AUSGABE
     logger.debug('💾 FINAL appointmentData before save:', appointmentData)
     
-    // Direkt in Datenbank speichern
-    const { data: newAppointment, error } = await supabase
-      .from('appointments')
-      .insert(appointmentData)
-      .select()
-      .single()
+    // ✅ MIGRATED TO API - Create appointment via backend
+    const createResponse = await $fetch('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'create-appointment',
+        tenant_id: props.currentUser?.tenant_id || clipboardAppointment.value.tenant_id,
+        appointment_data: appointmentData
+      }
+    }) as any
     
-    if (error) throw error
-    
-    logger.debug('✅ Appointment pasted successfully:', newAppointment.id)
+    if (!createResponse?.success) {
+      throw new Error(createResponse?.message || 'Failed to create appointment')
+    }
+
+    const newAppointment = createResponse.data
+
+    logger.debug('✅ Appointment created via API:', newAppointment.id)
     
     // ✅ DEBUG: Zeige ganzen clipboard content
     logger.debug('🔍 DEBUG clipboardAppointment.value:', clipboardAppointment.value)
@@ -2086,28 +2114,38 @@ const pasteAppointmentDirectly = async () => {
     // ✅ NEU: Admin Fee basierend auf pricing_rules berechnen
     let adminFeeRappen = 0
     try {
-      // Zähle wie viele Termine dieser Kunde bereits hat (für diesen Staff)
-      const { data: existingAppointments, error: countError } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('user_id', newAppointment.user_id)
-        .eq('staff_id', newAppointment.staff_id)
-        .is('deleted_at', null)
-        .neq('id', newAppointment.id) // Exclude the one we just created
+      // ✅ MIGRATED TO API - Get existing appointments and pricing rules
+      const adminFeeResponse = await $fetch('/api/calendar/manage', {
+        method: 'POST',
+        body: {
+          action: 'get-existing-appointments',
+          tenant_id: props.currentUser?.tenant_id,
+          staff_id: newAppointment.staff_id,
+          start_date: null,
+          end_date: null
+        }
+      }) as any
+
+      const existingAppointments = adminFeeResponse?.data || []
+      const appointmentCount = existingAppointments?.filter((a: any) => 
+        a.user_id === newAppointment.user_id && 
+        a.staff_id === newAppointment.staff_id &&
+        a.id !== newAppointment.id
+      ).length || 0
       
-      const appointmentCount = existingAppointments?.length || 0
-      logger.debug('📊 Existing appointments for user:', appointmentCount)
+      logger.debug('📊 Existing appointments for user via API:', appointmentCount)
       
-      // Lade pricing rule für diese Kategorie
-      const { data: pricingRules, error: rulesError } = await supabase
-        .from('pricing_rules')
-        .select('admin_fee_rappen, admin_fee_applies_from')
-        .eq('category_code', category)
-        .eq('rule_type', 'admin_fee')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      // ✅ Get pricing rules via API
+      const pricingResponse = await $fetch('/api/calendar/manage', {
+        method: 'POST',
+        body: {
+          action: 'get-pricing-rules',
+          tenant_id: props.currentUser?.tenant_id,
+          category: category
+        }
+      }) as any
+
+      const pricingRules = pricingResponse?.data?.[0]
       
       if (pricingRules && pricingRules.admin_fee_applies_from) {
         // Admin Fee wird NUR bei Termin N verrechnet (z.B. nur beim 2. Termin)
@@ -2117,7 +2155,7 @@ const pasteAppointmentDirectly = async () => {
         
         if (newAppointmentNumber === pricingRules.admin_fee_applies_from) {
           adminFeeRappen = pricingRules.admin_fee_rappen || 0
-          logger.debug('✅ Admin fee applies (appointment #' + newAppointmentNumber + '):', adminFeeRappen)
+          logger.debug('✅ Admin fee applies (appointment #' + newAppointmentNumber + ') via API:', adminFeeRappen)
         } else {
           logger.debug('ℹ️ Admin fee does not apply (appointment #' + newAppointmentNumber + ', only applies at #' + pricingRules.admin_fee_applies_from + ')')
         }
@@ -2133,16 +2171,21 @@ const pasteAppointmentDirectly = async () => {
     let studentEmail = clipboardAppointment.value?.email
     let studentName = clipboardAppointment.value?.student
     
-    // ✅ If not found in clipboard, fetch from database
+    // ✅ If not found in clipboard, fetch from API
     if (!studentEmail || !studentName) {
       try {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('email, first_name, last_name')
-          .eq('id', newAppointment.user_id)
-          .single()
-        
-        if (userData) {
+        // ✅ MIGRATED TO API - Get user data
+        const userResponse = await $fetch('/api/calendar/manage', {
+          method: 'POST',
+          body: {
+            action: 'get-user-data',
+            tenant_id: props.currentUser?.tenant_id,
+            user_id: newAppointment.user_id
+          }
+        }) as any
+
+        if (userResponse?.success && userResponse.data) {
+          const userData = userResponse.data
           studentEmail = studentEmail || userData.email
           studentName = studentName || `${userData.first_name} ${userData.last_name}`.trim()
         }
@@ -2164,13 +2207,18 @@ const pasteAppointmentDirectly = async () => {
     let staffName = clipboardAppointment.value?.staff_first_name
     if (!staffName) {
       try {
-        const { data: staffData, error: staffError } = await supabase
-          .from('users')
-          .select('first_name, last_name')
-          .eq('id', newAppointment.staff_id)
-          .single()
-        
-        if (staffData) {
+        // ✅ MIGRATED TO API - Get staff data
+        const staffResponse = await $fetch('/api/calendar/manage', {
+          method: 'POST',
+          body: {
+            action: 'get-staff-data',
+            tenant_id: props.currentUser?.tenant_id,
+            staff_id: newAppointment.staff_id
+          }
+        }) as any
+
+        if (staffResponse?.success && staffResponse.data) {
+          const staffData = staffResponse.data
           staffName = `${staffData.first_name} ${staffData.last_name}`.trim()
         }
       } catch (err) {
@@ -2224,15 +2272,20 @@ const pasteAppointmentDirectly = async () => {
       credit_used_rappen: 0
     }
     
-    const { error: paymentError } = await supabase
-      .from('payments')
-      .insert(paymentData)
+    const { error: paymentError } = await $fetch('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'create-payment',
+        tenant_id: newAppointment.tenant_id,
+        payment_data: paymentData
+      }
+    }).catch(() => ({ error: 'API call failed' })) as any
     
     if (paymentError) {
       console.error('⚠️ Error creating payment for copied appointment:', paymentError)
       // Nicht kritisch, Termin wurde trotzdem erstellt
     } else {
-      logger.debug('✅ Payment created for copied appointment')
+      logger.debug('✅ Payment created for copied appointment via API')
     }
     
     // Cleanup
@@ -2345,25 +2398,30 @@ const handleCopyAppointment = async (copyData: any) => {
                               copyData.eventData.extendedProps?.type || 
                               'B' // Fallback
   
-  // ✅ Fetch payment_method vom Payment-Record
+  // ✅ Fetch payment_method vom Payment-Record via API
   let paymentMethod = 'invoice' // Default
-  logger.debug('🔍 Fetching payment for appointment:', copyData.eventData.id)
+  logger.debug('🔍 Fetching payment for appointment via API:', copyData.eventData.id)
   try {
-    const { data: payment, error } = await supabase
-      .from('payments')
-      .select('payment_method')
-      .eq('appointment_id', copyData.eventData.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // ✅ MIGRATED TO API - Get payment data
+    const paymentResponse = await $fetch('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-payment',
+        tenant_id: props.currentUser?.tenant_id,
+        payment_data: {
+          appointment_id: copyData.eventData.id
+        }
+      }
+    }) as any
     
-    logger.debug('💳 Payment fetch result:', { payment, error })
+    logger.debug('💳 Payment fetch result via API:', paymentResponse)
     
-    if (!error && payment) {
-      paymentMethod = payment.payment_method
-      logger.debug('✅ Payment method fetched from DB:', paymentMethod)
-    } else if (error) {
-      console.warn('⚠️ Error fetching payment:', error)
+    if (paymentResponse?.success && paymentResponse.data) {
+      paymentMethod = paymentResponse.data.payment_method
+      logger.debug('✅ Payment method fetched via API:', paymentMethod)
+    } else {
+      console.warn('⚠️ Error fetching payment:', paymentResponse?.message)
+    }
     } else {
       console.warn('⚠️ No payment found for appointment')
     }
@@ -2380,20 +2438,25 @@ const handleCopyAppointment = async (copyData: any) => {
   let studentEmail = copyData.eventData.extendedProps?.email
   let studentName = copyData.eventData.extendedProps?.student
   
-  // Falls nicht vorhanden, lade vom User
+  // Falls nicht vorhanden, lade vom User via API
   if (!studentEmail || !studentName) {
-    logger.debug('🔍 Email/Student not in extendedProps, loading from database...')
+    logger.debug('🔍 Email/Student not in extendedProps, loading from API...')
     try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('first_name, last_name, email')
-        .eq('id', copyData.eventData.user_id)
-        .single()
+      // ✅ MIGRATED TO API - Get user data
+      const userResponse = await $fetch('/api/calendar/manage', {
+        method: 'POST',
+        body: {
+          action: 'get-user-data',
+          tenant_id: props.currentUser?.tenant_id,
+          user_id: copyData.eventData.user_id
+        }
+      }) as any
       
-      if (userData) {
+      if (userResponse?.success && userResponse.data) {
+        const userData = userResponse.data
         studentEmail = studentEmail || userData.email
         studentName = studentName || `${userData.first_name} ${userData.last_name}`.trim()
-        logger.debug('✅ Loaded from DB:', { studentEmail, studentName })
+        logger.debug('✅ Loaded from API:', { studentEmail, studentName })
       }
     } catch (err) {
       console.warn('⚠️ Could not load user data:', err)
@@ -2456,19 +2519,22 @@ onMounted(async () => {
     // ✅ Load event type colors from DB
     await loadEventTypeColors()
     
-    // ✅ Load tenant name for SMS/Email
+    // ✅ Load tenant name for SMS/Email via API
     try {
       const tenantId = props.currentUser?.tenant_id
       if (tenantId) {
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('name')
-          .eq('id', tenantId)
-          .single()
+        // ✅ MIGRATED TO API - Get tenant data
+        const tenantResponse = await $fetch('/api/calendar/manage', {
+          method: 'POST',
+          body: {
+            action: 'get-tenant-data',
+            tenant_id: tenantId
+          }
+        }) as any
         
-        if (tenantData?.name) {
-          tenantName.value = tenantData.name
-          logger.debug('🏢 Tenant name loaded:', tenantName.value)
+        if (tenantResponse?.success && tenantResponse.data?.name) {
+          tenantName.value = tenantResponse.data.name
+          logger.debug('🏢 Tenant name loaded via API:', tenantName.value)
         }
       }
     } catch (error) {
