@@ -66,47 +66,22 @@ export const useVouchers = () => {
     error.value = null
 
     try {
-      const supabase = getSupabase()
-      
-      let query = supabase
-        .from('discounts')
-        .select(`
-          id,
-          code,
-          name,
-          description,
-          discount_value,
-          max_discount_rappen,
-          remaining_amount_rappen,
-          voucher_recipient_name,
-          voucher_recipient_email,
-          voucher_buyer_name,
-          voucher_buyer_email,
-          payment_id,
-          valid_until,
-          redeemed_at,
-          redeemed_by,
-          redeemed_for,
-          usage_count,
-          is_active,
-          created_at,
-          updated_at
-        `)
-        .eq('is_voucher', true)
-        .order('created_at', { ascending: false })
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/vouchers/manage', {
+        method: 'POST',
+        body: {
+          action: 'load',
+          userId
+        }
+      }) as any
 
-      // Filter by user if provided
-      if (userId) {
-        query = query.or(`voucher_buyer_name.eq.${userId},voucher_recipient_name.eq.${userId}`)
+      if (!response?.success) {
+        throw new Error('Failed to load vouchers')
       }
 
-      const { data, error: fetchError } = await query
-
-      if (fetchError) throw fetchError
-
-      vouchers.value = (data || []).map(voucher => ({
+      vouchers.value = (response.data || []).map((voucher: any) => ({
         ...voucher,
-        description: voucher.description || undefined, // Handle NULL description
+        description: voucher.description || undefined,
         amount_chf: voucher.discount_value,
         amount_rappen: voucher.max_discount_rappen,
         status: determineVoucherStatus(voucher)
@@ -134,49 +109,38 @@ export const useVouchers = () => {
     error.value = null
 
     try {
-      const supabase = getSupabase()
-      
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      
-      const tenantId = userProfile?.tenant_id
-      if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/vouchers/manage', {
+        method: 'POST',
+        body: {
+          action: 'create',
+          voucherData: {
+            name: voucherData.name,
+            discount_type: 'fixed',
+            discount_value: voucherData.amount_rappen / 100,
+            max_discount_rappen: voucherData.amount_rappen,
+            remaining_amount_rappen: voucherData.amount_rappen,
+            min_amount_rappen: 0,
+            usage_limit: 1,
+            usage_count: 0,
+            is_active: true,
+            is_voucher: true,
+            voucher_recipient_name: voucherData.recipient_name,
+            voucher_recipient_email: voucherData.recipient_email,
+            voucher_buyer_name: voucherData.buyer_name,
+            voucher_buyer_email: voucherData.buyer_email,
+            payment_id: voucherData.payment_id,
+            applies_to: 'appointments',
+            valid_until: voucherData.valid_until || new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        }
+      }) as any
+
+      if (!response?.success || !response?.data) {
+        throw new Error('Failed to create voucher')
       }
 
-      const { data, error: createError } = await supabase
-        .from('discounts')
-        .insert({
-          name: voucherData.name,
-          discount_type: 'fixed',
-          discount_value: voucherData.amount_rappen / 100,
-          max_discount_rappen: voucherData.amount_rappen,
-          remaining_amount_rappen: voucherData.amount_rappen,
-          min_amount_rappen: 0,
-          usage_limit: 1,
-          usage_count: 0,
-          is_active: true,
-          is_voucher: true,
-          voucher_recipient_name: voucherData.recipient_name,
-          voucher_recipient_email: voucherData.recipient_email,
-          voucher_buyer_name: voucherData.buyer_name,
-          voucher_buyer_email: voucherData.buyer_email,
-          payment_id: voucherData.payment_id,
-          applies_to: 'appointments',
-          valid_until: voucherData.valid_until || new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString(),
-          tenant_id: tenantId
-        })
-        .select()
-        .single()
-
-      if (createError) throw createError
-
+      const data = response.data
       const newVoucher: Voucher = {
         ...data,
         amount_chf: data.discount_value,
@@ -200,17 +164,20 @@ export const useVouchers = () => {
 
   const findVoucherByCode = async (code: string): Promise<Voucher | null> => {
     try {
-      const supabase = getSupabase()
-      
-      const { data, error: fetchError } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('code', code)
-        .eq('is_voucher', true)
-        .single()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/vouchers/manage', {
+        method: 'POST',
+        body: {
+          action: 'find-by-code',
+          code
+        }
+      }) as any
 
-      if (fetchError) return null
+      if (!response?.success || !response?.data) {
+        return null
+      }
 
+      const data = response.data
       return {
         ...data,
         amount_chf: data.discount_value,
