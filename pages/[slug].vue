@@ -1004,7 +1004,8 @@ onMounted(async () => {
       isCheckingSession.value = false
     }, 2000)
     
-    const { data: { session } } = await supabase.auth.getSession()
+    // ✅ MIGRATED TO API
+    const { data: { user: sessionUser } } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
     clearTimeout(sessionCheckTimeout)
     
     if (!session) {

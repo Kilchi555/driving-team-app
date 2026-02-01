@@ -587,6 +587,7 @@ const handleDeposit = async () => {
     const amountRappen = Math.round(depositForm.value.amount * 100)
     
     // Call the PostgreSQL function for office cash deposit
+    // ✅ TODO: MIGRATE TO API - RPC office_cash_deposit
     const { error } = await supabase.rpc('office_cash_deposit', {
       p_register_id: selectedRegister.value.id,
       p_amount_rappen: amountRappen,
@@ -617,6 +618,7 @@ const handleWithdraw = async () => {
     const amountRappen = Math.round(withdrawForm.value.amount * 100)
     
     // Call the PostgreSQL function for office cash withdrawal
+    // ✅ TODO: MIGRATE TO API - RPC office_cash_withdrawal
     const { error } = await supabase.rpc('office_cash_withdrawal', {
       p_register_id: selectedRegister.value.id,
       p_amount_rappen: amountRappen,

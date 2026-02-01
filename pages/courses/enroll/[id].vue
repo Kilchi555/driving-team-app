@@ -852,7 +852,8 @@ const loginAndEnroll = async () => {
   try {
     isSubmitting.value = true
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // ✅ MIGRATED TO API
+      const { data: authData, error: authError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signin-password',{
       email: emailCheck.value.email,
       password: loginForm.value.password
     })
@@ -881,7 +882,8 @@ const registerAndEnroll = async () => {
       return
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // ✅ MIGRATED TO API
+      const { data: authData, error: authError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signup',{
       email: registrationForm.value.email,
       password: registrationForm.value.password,
       options: {
@@ -962,7 +964,8 @@ const goBackToEmailCheck = () => {
 
 const forgotPassword = async () => {
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(emailCheck.value.email, {
+    // ✅ MIGRATED TO API
+        const { error } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'reset-password-email', email:emailCheck.value.email, {
       redirectTo: `${window.location.origin}/reset-password`
     })
     

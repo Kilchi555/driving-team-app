@@ -159,7 +159,8 @@ const updatePassword = async () => {
   isSubmitting.value = true
   
   try {
-    const { data, error: updateError } = await supabase.auth.updateUser({
+    // ✅ MIGRATED TO API
+    const { data, error: updateError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'update-user', attributes:{
       password: newPassword.value
     })
     
@@ -204,7 +205,8 @@ onMounted(async () => {
     
     if (accessToken && refreshToken) {
       // Set the session from URL tokens
-      const { data, error: setSessionError } = await supabase.auth.setSession({
+      // ✅ MIGRATED TO API
+    const { data, error: setSessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'set-session',{
         access_token: accessToken,
         refresh_token: refreshToken
       })
@@ -217,7 +219,8 @@ onMounted(async () => {
       isLoading.value = false
     } else {
       // Check if we already have a valid session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // ✅ MIGRATED TO API
+    const { data: { user: sessionUser }, error: sessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
       
       if (sessionError) {
         throw sessionError
