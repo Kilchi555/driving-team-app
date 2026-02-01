@@ -1,6 +1,5 @@
 // composables/useStaffWorkingHours.ts
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 // ===== TIMEZONE CONVERSION HELPERS =====
@@ -234,13 +233,19 @@ export const useStaffWorkingHours = () => {
   // Arbeitszeit löschen
   const deleteWorkingHour = async (staffId: string, dayOfWeek: number) => {
     try {
-      const { error: deleteError } = await supabase
-        .from('staff_working_hours')
-        .delete()
-        .eq('staff_id', staffId)
-        .eq('day_of_week', dayOfWeek)
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/staff/working-hours-manage', {
+        method: 'POST',
+        body: {
+          action: 'delete',
+          staffId,
+          dayOfWeek
+        }
+      }) as any
 
-      if (deleteError) throw deleteError
+      if (!response?.success) {
+        throw new Error('Failed to delete working hour')
+      }
       
       // Lokale Liste aktualisieren
       workingHours.value = workingHours.value.filter(
@@ -258,13 +263,20 @@ export const useStaffWorkingHours = () => {
   // Arbeitszeit aktivieren/deaktivieren
   const toggleWorkingHour = async (staffId: string, dayOfWeek: number, isActive: boolean) => {
     try {
-      const { error: updateError } = await supabase
-        .from('staff_working_hours')
-        .update({ is_active: isActive })
-        .eq('staff_id', staffId)
-        .eq('day_of_week', dayOfWeek)
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/staff/working-hours-manage', {
+        method: 'POST',
+        body: {
+          action: 'toggle',
+          staffId,
+          dayOfWeek,
+          isActive
+        }
+      }) as any
 
-      if (updateError) throw updateError
+      if (!response?.success) {
+        throw new Error('Failed to toggle working hour')
+      }
       
       // Lokale Liste aktualisieren
       const hour = workingHours.value.find(h => h.day_of_week === dayOfWeek)

@@ -1,6 +1,5 @@
 // composables/usePricing.ts - Vereinheitlichte und optimierte Pricing-Lösung
 import { ref, computed, watch, type Ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 
 // ===== INTERFACES =====
