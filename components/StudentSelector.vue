@@ -183,7 +183,8 @@
 
 import { logger } from '~/utils/logger'
 import { ref, computed, watch, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { 
   cacheStudents, 
   getCachedStudents, 

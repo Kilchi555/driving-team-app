@@ -54,7 +54,8 @@
 import { computed, watch, onMounted, ref } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase' 
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase' 
 
 interface Props {
   modelValue: number
@@ -100,31 +101,25 @@ const {
 // ✅ NEU: Funktion um die letzte Dauer eines Schülers zu laden
 const getLastStudentDuration = async (studentId: string): Promise<number | null> => {
   try {
-    const supabase = getSupabase()
     const authStore = useAuthStore()
     
     // ✅ Nutze Auth Store statt direkter Auth-Abfrage
     const userProfile = authStore.userProfile
     if (!userProfile?.tenant_id) throw new Error('Nicht angemeldet')
     
-    // ✅ TENANT-GEFILTERTE Suche nach dem letzten Termin des Schülers
-    const { data: lastAppointment, error } = await supabase
-      .from('appointments')
-      .select('duration_minutes')
-      .eq('user_id', studentId)
-      .eq('tenant_id', userProfile.tenant_id)  // ✅ TENANT FILTER
-      .order('start_time', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    
-    // 406 Not Acceptable ist normal (keine Ergebnisse) - nicht als Fehler behandeln
-    if (error && error.code !== 'PGRST116' && error.status !== 406) {
-      throw error
-    }
-    
-    if (lastAppointment && lastAppointment.duration_minutes) {
-      logger.debug('✅ Last student duration found:', lastAppointment.duration_minutes)
-      return lastAppointment.duration_minutes
+    // ✅ MIGRATED TO API - Load last student duration via backend
+    const response = await $fetch('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-last-appointment-duration',
+        user_id: studentId,
+        tenant_id: userProfile.tenant_id
+      }
+    }) as any
+
+    if (response?.success && response?.data?.duration_minutes) {
+      logger.debug('✅ Last student duration found:', response.data.duration_minutes)
+      return response.data.duration_minutes
     }
     
     logger.debug('ℹ️ No previous appointments found for student')
