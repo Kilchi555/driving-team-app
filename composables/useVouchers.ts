@@ -3,7 +3,6 @@
 
 import { ref, computed, readonly } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import { generateVoucherPDFContent, generateVoucherEmailContent } from '~/utils/voucherGenerator'
 
 export interface Voucher {
