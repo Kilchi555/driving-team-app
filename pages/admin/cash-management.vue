@@ -689,7 +689,7 @@ const loadManualCurrentUser = async () => {
   
   try {
     const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     
     if (!user) {
       throw new Error('Nicht authentifiziert')
@@ -744,7 +744,7 @@ const debugCurrentState = async () => {
   
   // Check what's in the database
   const supabase = getSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = authStore.user // ✅ MIGRATED
   logger.debug('🔑 Auth user:', user?.email)
   
   if (user) {

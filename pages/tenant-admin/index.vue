@@ -343,7 +343,7 @@ const loadStats = async () => {
     logger.debug('- Users count:', users?.length || 0)
     
     // Get current user role separately (use auth_user_id for matching)
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const currentUser = authStore.user // ✅ MIGRATED
     const currentUserRole = users?.find(u => u.auth_user_id === currentUser?.id)?.role
     logger.debug('- Current user role:', currentUserRole)
 

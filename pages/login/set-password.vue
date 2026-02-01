@@ -176,7 +176,7 @@ const setPassword = async () => {
     }
 
     // Create business user record if not exists
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (user && userInfo.value) {
       const { error: insertError } = await supabase
         .from('users')
@@ -215,7 +215,7 @@ const setPassword = async () => {
 onMounted(async () => {
   try {
     // Get user info from auth session
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const { data: { user }, error } = authStore.user // ✅ MIGRATED
     
     if (error || !user) {
       error.value = 'Ungültiger Einladungslink'

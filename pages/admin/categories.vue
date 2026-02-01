@@ -829,7 +829,7 @@ const loadCategories = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) {
       throw new Error('Nicht angemeldet')
     }
@@ -1038,7 +1038,7 @@ const loadStandardTemplatesList = async () => {
     }
 
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) {
       throw new Error('Nicht angemeldet')
     }
@@ -1095,7 +1095,7 @@ const loadStandardTemplates = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) {
       throw new Error('Nicht angemeldet')
     }
@@ -1262,7 +1262,7 @@ const saveCategory = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -1343,7 +1343,7 @@ const loadCategoryPricing = async (categoryCode: string) => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) return
 
     const { data: userProfile } = await supabase
@@ -1659,7 +1659,7 @@ const deleteCategory = async (category: Category) => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -1772,7 +1772,7 @@ const loadPricingData = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) return
 
     const { data: userProfile } = await supabase

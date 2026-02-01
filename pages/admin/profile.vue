@@ -1904,7 +1904,7 @@ const loadData = async () => {
     
     if (!tenantId) {
       const supabase = getSupabase()
-      const { data: authData } = await supabase.auth.getUser()
+      const { data: authData } = authStore.user // ✅ MIGRATED
       
       if (authData.user) {
         const { data: userData } = await supabase

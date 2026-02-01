@@ -146,7 +146,7 @@ const loadReminders = async () => {
     const supabase = getSupabase()
 
     // Get user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) {
       throw new Error('Not authenticated')
     }
