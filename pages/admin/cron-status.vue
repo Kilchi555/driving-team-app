@@ -234,7 +234,6 @@
 <script setup lang="ts">
 
 import { ref, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Meta
 definePageMeta({

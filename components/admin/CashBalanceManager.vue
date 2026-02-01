@@ -426,12 +426,10 @@ class="text-xl sm:text-lg font-semibold"
 <script setup>
 
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 import Toast from '~/components/Toast.vue'
 
 // Supabase
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const staffBalances = ref([])

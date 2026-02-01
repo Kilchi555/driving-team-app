@@ -32,7 +32,6 @@ export const useEventModalWatchers = ({
   // ✅ GET APPOINTMENT NUMBER HELPER - MIGRATED TO API
   const getAppointmentNumber = async (userId: string): Promise<number> => {
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/appointments/get-next-number', {
         method: 'GET',
         query: { user_id: userId }

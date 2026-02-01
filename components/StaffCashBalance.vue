@@ -156,7 +156,6 @@
 <script setup>
 
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
@@ -170,7 +169,6 @@ const props = defineProps({
 })
 
 // Supabase
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const currentBalance = ref(0)

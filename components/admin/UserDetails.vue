@@ -461,7 +461,6 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 import { useAdminHierarchy } from '~/composables/useAdminHierarchy'
 import StaffTab from '~/components/users/StaffTab.vue'
@@ -500,8 +499,6 @@ interface SystemActivity {
 
 // Get route params and setup
 const route = useRoute()
-// ✅ MIGRATED TO API - Removed Supabase client
-// const supabase = getSupabase()
 const userId = route.params.id as string
 
 // Admin hierarchy composable
@@ -667,7 +664,6 @@ const formatDate = (dateString?: string | null) => {
 
 const loadUserDetails = async () => {
   try {
-    // ✅ MIGRATED TO API - Load user details via backend
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -703,7 +699,6 @@ const loadUserDetails = async () => {
 
 const loadAppointmentStats = async () => {
   try {
-    // ✅ MIGRATED TO API - Load appointment stats via backend
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -812,7 +807,6 @@ const saveChanges = async () => {
       updateData.category = selectedCategories.value.length > 0 ? selectedCategories.value : null
     }
     
-    // ✅ MIGRATED TO API - Update user via backend
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -865,7 +859,6 @@ const toggleUserStatus = async () => {
   }
   
   try {
-    // ✅ MIGRATED TO API - Update user status via backend
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -950,7 +943,6 @@ const loadCategories = async () => {
   try {
     if (!userDetails.value?.tenant_id) return
     
-    // ✅ MIGRATED TO API - Load categories via backend
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {

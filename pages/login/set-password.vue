@@ -129,10 +129,8 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 const route = useRoute()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const password = ref('')
@@ -167,7 +165,6 @@ const setPassword = async () => {
 
   try {
     // Update password using the token from URL
-    // ✅ MIGRATED TO API
     const { error: updateError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'update-user', attributes:{
       password: password.value
     })

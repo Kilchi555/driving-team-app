@@ -194,7 +194,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch } from 'vue'
-// ✅ MIGRATED TO API - Removed unused direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 import { useProductSales } from '~/composables/useProductSales'
 import { useProductSale } from '~/composables/useProductSale'

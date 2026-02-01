@@ -53,7 +53,6 @@ export const useCancellationPolicies = () => {
 
       logger.debug('🔍 Cancellation Policies - Fetching policies...')
 
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -103,7 +102,6 @@ export const useCancellationPolicies = () => {
 
       logger.debug('📋 Fetching ALL cancellation policies...')
 
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -157,7 +155,6 @@ export const useCancellationPolicies = () => {
         applies_to: policyData.applies_to || 'appointments'
       }
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -190,7 +187,6 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -222,7 +218,6 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -252,7 +247,6 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -283,7 +277,6 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -315,7 +308,6 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {
@@ -345,7 +337,6 @@ export const useCancellationPolicies = () => {
       isLoading.value = true
       error.value = null
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/cancellation-policies/manage', {
         method: 'POST',
         body: {

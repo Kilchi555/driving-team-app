@@ -41,7 +41,6 @@ export const useEventModalHandlers = (
     logger.debug('⏱️ Checking last appointment duration for student:', studentId)
     
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/appointments/get-appointment-info', {
         method: 'POST',
         body: {
@@ -71,7 +70,6 @@ export const useEventModalHandlers = (
     logger.debug('🎯 Checking last appointment category for student:', studentId)
     
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/appointments/get-appointment-info', {
         method: 'POST',
         body: {
@@ -173,7 +171,6 @@ const handleCategorySelected = async (category: any) => {
   selectedCategory.value = category
   
   if (category) {
-    // ✅ MIGRATED TO API - Load category data from backend
     try {
       const response = await $fetch('/api/appointments/get-appointment-info', {
         method: 'POST',
@@ -538,7 +535,6 @@ const handleDurationsChanged = (durations: number[]) => {
     logger.debug('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
     
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/appointments/get-appointment-info', {
         method: 'POST',
         body: {

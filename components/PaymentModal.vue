@@ -296,7 +296,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
@@ -364,7 +363,6 @@ const isPaymentApiResponse = (result: unknown): result is PaymentApiResponse => 
 }
 
 // Supabase
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const selectedPaymentMethod = ref<string>('')

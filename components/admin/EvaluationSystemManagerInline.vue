@@ -1018,7 +1018,6 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 
@@ -1077,8 +1076,6 @@ interface Scale {
 }
 
 // State
-// ✅ MIGRATED TO API - Removed direct Supabase initialization
-// const supabase = getSupabase()
 const evaluationCategories = ref<EvaluationCategory[]>([])
 const drivingCategories = ref<DrivingCategory[]>([])
 const criteria = ref<Criteria[]>([])
@@ -2594,7 +2591,6 @@ const saveEducationalContent = async () => {
           const fileName = `${editingEducationalContent.value!.id}/section_${sectionIndex}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
           const filePath = `evaluation-content/${fileName}`
           
-          // ✅ TODO: MIGRATE TO API - Storage upload needed
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('evaluation-content')
             .upload(filePath, file, {

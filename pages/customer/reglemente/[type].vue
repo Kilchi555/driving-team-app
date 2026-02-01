@@ -54,7 +54,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 import DOMPurify from 'isomorphic-dompurify'
 

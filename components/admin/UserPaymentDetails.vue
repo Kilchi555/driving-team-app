@@ -1327,7 +1327,6 @@ v-if="(appointment.credit_used || 0) > 0"
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAccounto } from '~/composables/useAccounto'
 import { useInvoices } from '~/composables/useInvoices'
 import Toast from '~/components/Toast.vue'
@@ -1444,7 +1443,6 @@ interface PDFResult {
 
 // Get route params and setup
 const route = useRoute()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 const userId = route.params.id as string
 
 // Reactive state

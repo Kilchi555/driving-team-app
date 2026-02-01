@@ -648,7 +648,6 @@ import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useDiscounts } from '~/composables/useDiscounts'
 import type { Discount } from '~/types/payment'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Composables
 const { 

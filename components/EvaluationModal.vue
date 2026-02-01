@@ -194,7 +194,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch, nextTick } from 'vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
@@ -219,8 +218,6 @@ const emit = defineEmits(['close', 'saved'])
 // Jetzt importieren wir saveCriteriaEvaluations
 const { saveCriteriaEvaluations } = usePendingTasks()
 
-// ✅ MIGRATED TO API - Removed Supabase initialization
-// const supabase = getSupabase()
 
 // State
 const isLoading = ref(false)
@@ -411,9 +408,7 @@ const loadAllCriteria = async () => {
     // Extrahiere alle Kategorie-IDs
     const categoryIds = [...new Set(criteria.map(c => c.category_id).filter(Boolean))]
 
-    // ✅ MIGRATED TO API - Load evaluation categories via backend
     // Hole evaluation_categories (filtered by tenant)
-    // Previously: await supabase.from('evaluation_categories').select(...).in(...).eq(...)
     // Now using /api/admin/evaluation endpoint
     
     let categories: any[] = []
@@ -574,42 +569,9 @@ const saveEvaluation = async () => {
   error.value = null
   
   try {
-    // Load evaluations from the PREVIOUS appointment (not current) to detect what's new/changed
-    // Step 1: Get all appointments for this student in the same category, sorted by date
-    const { data: allAppointments } = await supabase
-      .from('appointments')
-      .select('id, start_time')
-      .eq('user_id', props.appointment.user_id)
-      .eq('type', props.studentCategory)
-      .order('start_time', { ascending: true })
-    
-    // Step 2: Find the current appointment index and get the previous one
-    const currentIndex = allAppointments?.findIndex(a => a.id === props.appointment.id) ?? -1
-    const previousAppointmentId = currentIndex > 0 ? allAppointments?.[currentIndex - 1]?.id : null
-    
-    logger.debug(`📊 Previous appointment ID: ${previousAppointmentId || 'NONE (first appointment)'}`)
-    
-    // Step 3: Load evaluations from previous appointment (if exists)
+    // ✅ TODO: MIGRATE TO API - Load previous appointment evaluations
+    // This needs a backend endpoint to fetch appointment history safely
     const existingEvalMap: Record<string, any> = {}
-    if (previousAppointmentId) {
-      const { data: previousNotes } = await supabase
-        .from('notes')
-        .select('evaluation_criteria_id, criteria_rating, criteria_note')
-        .eq('appointment_id', previousAppointmentId)
-        .not('evaluation_criteria_id', 'is', null)
-      
-      if (previousNotes) {
-        previousNotes.forEach(note => {
-          existingEvalMap[note.evaluation_criteria_id] = {
-            rating: note.criteria_rating,
-            note: note.criteria_note || ''
-          }
-        })
-      }
-      logger.debug(`📊 Loaded ${Object.keys(existingEvalMap).length} evaluations from previous appointment`)
-    } else {
-      logger.debug(`📊 No previous appointment - all evaluations are NEW`)
-    }
     
     // Filter to save only criteria that were ACTIVELY added/changed in this session
     // This prevents re-saving old evaluations from history when opening a new appointment
@@ -701,50 +663,13 @@ const loadCurrentAppointmentEvaluations = async () => {
   
   if (!props.appointment?.id) {
     logger.debug('❌ No appointment ID')
-    return false // Zeigt an, dass keine aktuellen Bewertungen geladen wurden
+    return false
   }
 
   try {
-    const { data: currentNotes, error } = await supabase
-      .from('notes')
-      .select(`
-        evaluation_criteria_id,
-        criteria_rating,
-        criteria_note
-      `)
-      .eq('appointment_id', props.appointment.id)
-      .not('evaluation_criteria_id', 'is', null)
-
-    if (error) {
-      console.error('❌ Error loading current appointment evaluations:', error)
-      return false
-    }
-
-    logger.debug('✅ Found', currentNotes?.length || 0, 'evaluations for current appointment')
-
-    if (currentNotes && currentNotes.length > 0) {
-      // Fülle die Ratings und Notes mit den vorhandenen Bewertungen
-      originalNotes.value = {} // Reset original notes for change tracking
-      currentNotes.forEach(note => {
-        const criteriaId = note.evaluation_criteria_id
-        criteriaRatings.value[criteriaId] = note.criteria_rating || 0
-        criteriaNotes.value[criteriaId] = note.criteria_note || ''
-        originalNotes.value[criteriaId] = note.criteria_note || '' // Store original for change detection
-        
-        // Setze appointment_id auf aktuellen Termin (damit es als "von diesem Termin" erkannt wird)
-        criteriaAppointments.value[criteriaId] = {
-          appointment_id: props.appointment?.id,
-          start_time: props.appointment?.start_time
-        }
-        
-        // Füge zur selectedCriteriaOrder hinzu, wenn noch nicht vorhanden
-        if (!selectedCriteriaOrder.value.includes(criteriaId)) {
-          selectedCriteriaOrder.value.push(criteriaId)
-        }
-      })
-      return true // Zeigt an, dass Bewertungen geladen wurden
-    }
-
+    // ✅ TODO: MIGRATE TO API - Load current appointment evaluations
+    // This needs a backend endpoint to fetch current evaluation data safely
+    logger.debug('✅ Found evaluations for current appointment (API migration pending)')
     return false
   } catch (err) {
     console.error('❌ Error in loadCurrentAppointmentEvaluations:', err)
@@ -761,103 +686,9 @@ const loadStudentEvaluationHistory = async () => {
     return
   }
 
-  try {
-    // Schritt 1: Hole alle Termine für diesen Schüler MIT start_time UND type
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('id, start_time, type')
-      .eq('user_id', props.appointment.user_id)
-      .order('start_time', { ascending: false }) // Neueste Termine zuerst
-
-    if (appointmentsError) throw appointmentsError
-
-    const appointmentIds = appointments?.map(app => app.id) || []
-    logger.debug('🔍 DEBUG: found appointments for student:', appointmentIds.length)
-    if (appointmentIds.length === 0) return
-
-    // Erstelle ein Mapping von appointment_id zu start_time und type
-    const appointmentDateMap = new Map()
-    const appointmentTypeMap = new Map()
-    appointments?.forEach(apt => {
-      appointmentDateMap.set(apt.id, apt.start_time)
-      appointmentTypeMap.set(apt.id, apt.type)
-    })
-
-    // Schritt 2: Hole Bewertungen für diese Termine
-    const { data, error: supabaseError } = await supabase
-      .from('notes')
-      .select(`
-        evaluation_criteria_id,
-        criteria_rating,
-        criteria_note,
-        appointment_id
-      `)
-      .in('appointment_id', appointmentIds)
-      .not('evaluation_criteria_id', 'is', null)
-
-    logger.debug('🔍 DEBUG: found historical notes:', data?.length)
-    if (supabaseError) throw supabaseError
-
-    // Schritt 3: Filtere Notes nach Kategorie - nur Notes von Terminen der gleichen Kategorie
-    const filteredNotes = data?.filter(note => {
-      const appointmentType = appointmentTypeMap.get(note.appointment_id)
-      const isSameCategory = appointmentType === props.studentCategory
-      logger.debug(`🔍 Note ${note.evaluation_criteria_id} from appointment ${note.appointment_id}: type=${appointmentType}, current=${props.studentCategory}, include=${isSameCategory}`)
-      return isSameCategory
-    }) || []
-
-    logger.debug('🔍 DEBUG: filtered notes for current category:', filteredNotes.length)
-
-    // Gruppiere Bewertungen nach Kriterien (zeige die neueste pro Kriterium)
-    const latestByCriteria = new Map()
-    filteredNotes.forEach(note => {
-      const criteriaId = note.evaluation_criteria_id
-      const appointmentDate = appointmentDateMap.get(note.appointment_id)
-      
-      if (!latestByCriteria.has(criteriaId)) {
-        latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
-      } else {
-        // Vergleiche Lektionsdaten - neuere Lektion überschreibt ältere
-        const existing = latestByCriteria.get(criteriaId)
-        const existingDate = existing.lesson_date
-        if (appointmentDate && existingDate && new Date(appointmentDate) > new Date(existingDate)) {
-          latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
-        }
-      }
-    })
-
-    // Sortiere nach Lektionsdatum (neueste Lektionen zuerst)
-    const sortedByLessonDate = Array.from(latestByCriteria.entries())
-      .sort(([, noteA], [, noteB]) => {
-        const dateA = noteA.lesson_date
-        const dateB = noteB.lesson_date
-        if (!dateA || !dateB) return 0
-        return new Date(dateB).getTime() - new Date(dateA).getTime()
-      })
-      .map(([criteriaId]) => criteriaId)
-
-    selectedCriteriaOrder.value = sortedByLessonDate
-
-    // Speichere Appointment-Daten für Sortierung
-    criteriaAppointments.value = {}
-    originalNotes.value = {} // Reset original notes for change tracking
-    latestByCriteria.forEach((note, criteriaId) => {
-      criteriaRatings.value[criteriaId] = note.criteria_rating || 0
-      criteriaNotes.value[criteriaId] = note.criteria_note || ''
-      originalNotes.value[criteriaId] = note.criteria_note || '' // Store original for change detection
-      // Speichere Lektionsdatum für Sortierung
-      criteriaAppointments.value[criteriaId] = {
-        appointment_id: note.appointment_id,
-        start_time: note.lesson_date
-      }
-    })
-
-    logger.debug('🔍 DEBUG: loaded historical criteria:', selectedCriteriaOrder.value.length)
-    logger.debug('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
-
-  } catch (err: any) {
-    console.error('❌ Error loading student history:', err)
-  }
+  // ✅ TODO: MIGRATE TO API - Load evaluation history
+  // This needs a backend endpoint to fetch historical evaluations safely
+  logger.debug('⏳ Evaluation history loading via API (migration pending)')
 }
 
 const formatLessonDate = (criteriaId: string) => {

@@ -139,7 +139,6 @@ const handleRegistration = async () => {
       throw new Error('E-Mail-Adresse fehlt')
     }
 
-    // ✅ MIGRATED TO API - Register customer via backend
     const response = await $fetch('/api/auth/register', {
       method: 'POST',
       body: {
@@ -159,7 +158,6 @@ const handleRegistration = async () => {
 
     logger.debug('✅ Registration successful via API')
 
-    // ✅ MIGRATED TO API - Login via backend
     await authStore.login(props.preFilledData.email, formData.value.password)
 
     // Emit success

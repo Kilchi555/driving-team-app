@@ -296,9 +296,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'tenant-admin' })
 import { ref, onMounted, onUnmounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const isLoading = ref(false)

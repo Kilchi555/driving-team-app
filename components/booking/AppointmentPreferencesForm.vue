@@ -226,7 +226,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useRoute } from 'vue-router'
@@ -237,8 +236,6 @@ const props = defineProps<{
   tenantId?: string
 }>()
 
-// ✅ MIGRATED TO API - Removed Supabase client
-// const supabase = getSupabase()
 const authStore = useAuthStore()
 const route = useRoute()
 
@@ -305,7 +302,6 @@ const loadData = async () => {
     let tenantId = props.tenantId
     
     if (!tenantId && props.tenantSlug) {
-      // ✅ MIGRATED TO API - Get tenant ID from slug
       const response = await $fetch('/api/booking/get-availability', {
         method: 'POST',
         body: {
@@ -324,7 +320,6 @@ const loadData = async () => {
       return
     }
 
-    // ✅ MIGRATED TO API - Load categories and locations
     const response = await $fetch('/api/booking/get-availability', {
       method: 'POST',
       body: {
@@ -362,7 +357,6 @@ const submitPreferences = async () => {
     let tenantId = props.tenantId
     
     if (!tenantId && props.tenantSlug) {
-      // ✅ MIGRATED TO API - Get tenant ID from slug
       const response = await $fetch('/api/booking/get-availability', {
         method: 'POST',
         body: {
@@ -398,7 +392,6 @@ const submitPreferences = async () => {
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 Tage
     }
 
-    // ✅ MIGRATED TO API - Save appointment preferences via backend
     const response = await $fetch('/api/booking/get-availability', {
       method: 'POST',
       body: {

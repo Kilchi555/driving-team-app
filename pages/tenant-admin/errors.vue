@@ -302,13 +302,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 definePageMeta({ 
   layout: 'tenant-admin'
 })
 
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const isLoading = ref(false)
@@ -394,7 +392,6 @@ const getTimeRangeQuery = (range: string) => {
 const loadErrors = async () => {
   isLoading.value = true
   try {
-    // ✅ MIGRATED TO API
     const { data: { user: sessionUser }, error: sessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
 
     if (!session?.user) {

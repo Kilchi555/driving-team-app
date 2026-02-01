@@ -518,7 +518,6 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import ProductStatisticsModal from '~/components/admin/ProductStatisticsModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'

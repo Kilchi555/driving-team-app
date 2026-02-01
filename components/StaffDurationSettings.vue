@@ -136,7 +136,6 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 interface Props {
   currentUser: any

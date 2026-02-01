@@ -411,7 +411,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
     try {
       logger.debug('🏢 Loading student billing address for:', studentId)
       
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/addresses/get-by-user', {
         query: { user_id: studentId }
       }) as any
@@ -506,7 +505,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('💰 Saving discount data:', discountData)
       
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/discounts/check-and-save', {
         method: 'POST',
         body: {
@@ -584,7 +582,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const loadExistingProducts = async (appointmentId: string) => {
     logger.debug('📦 Loading existing products for appointment:', appointmentId)
     try {
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/appointments/manage-products', {
         method: 'POST',
         body: {
@@ -639,7 +636,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const loadInvitedStaffAndCustomers = async (appointmentId: string) => {
     logger.debug('👥 Loading invited staff and customers for appointment:', appointmentId)
     try {
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/appointments/get-invited-customers', {
         query: { appointmentId }
       }) as any
@@ -701,7 +697,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('📦 Saving product data:', productData)
       
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/appointments/manage-products', {
         method: 'POST',
         body: {
@@ -1001,7 +996,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
         try {
           logger.debug('💰 Updating payment with products price:', (productResult.totalProductsPriceRappen / 100).toFixed(2))
           
-          // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
           try {
             const paymentResponse = await $fetch('/api/appointments/update-payment-with-products', {
               method: 'POST',
@@ -1056,7 +1050,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
     isLoading.value = true
     
     try {
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/appointments/delete', {
         method: 'POST',
         body: { appointmentId: eventId }
@@ -1083,7 +1076,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
     if (!studentId) return 1
     
     try {
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/appointments/get-next-number', {
         query: { user_id: studentId }
       }) as any
@@ -1109,7 +1101,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return null
       }
 
-      // ✅ MIGRATED TO API: Use secure endpoint instead of direct Supabase query
       const response = await $fetch('/api/appointments/get-last-category', {
         query: { student_id: studentId }
       }) as any

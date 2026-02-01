@@ -53,7 +53,6 @@ export const useReminderService = () => {
 
       logger.debug('✅ Email sent successfully via API')
       
-      // ✅ MIGRATED TO API - Log the reminder
       await $fetch('/api/reminders/manage', {
         method: 'POST',
         body: {
@@ -71,7 +70,6 @@ export const useReminderService = () => {
     } catch (error: any) {
       console.error('❌ Error sending email reminder:', error)
       
-      // ✅ MIGRATED TO API - Log failed attempt
       await $fetch('/api/reminders/manage', {
         method: 'POST',
         body: {

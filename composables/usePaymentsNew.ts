@@ -38,7 +38,6 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       
       logger.debug('🔄 Creating appointment with integrated payment workflow...')
       
@@ -110,7 +109,6 @@ export const usePaymentsNew = () => {
     error.value = null
 
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       logger.debug('💳 Creating payment via API')
       
       const response = await $fetch('/api/payments/manage', {
@@ -277,7 +275,6 @@ export const usePaymentsNew = () => {
   // ✅ Zahlung als bezahlt markieren
   const markPaymentAsCompleted = async (paymentId: string): Promise<boolean> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/payments/manage', {
         method: 'POST',
         body: {
@@ -301,7 +298,6 @@ export const usePaymentsNew = () => {
   // ✅ Zahlung löschen
   const deletePayment = async (paymentId: string): Promise<boolean> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/payments/manage', {
         method: 'POST',
         body: {
@@ -325,7 +321,6 @@ export const usePaymentsNew = () => {
   // ✅ Zahlungen für einen Benutzer laden
   const loadUserPayments = async (userId: string): Promise<PaymentWithItems[]> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/payments/manage', {
         method: 'POST',
         body: {
@@ -350,7 +345,6 @@ export const usePaymentsNew = () => {
   // ✅ Zahlungen für einen Termin laden
   const loadAppointmentPayments = async (appointmentId: string): Promise<PaymentWithItems[]> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/payments/manage', {
         method: 'POST',
         body: {
@@ -375,7 +369,6 @@ export const usePaymentsNew = () => {
   // ✅ Alle aktiven Produkte laden
   const loadProducts = async (): Promise<Product[]> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/products/get-active', {
         method: 'GET'
       }) as any
@@ -396,7 +389,6 @@ export const usePaymentsNew = () => {
   // ✅ Alle aktiven Rabatte laden
   const loadDiscounts = async (): Promise<Discount[]> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/discounts/get-active', {
         method: 'GET'
       }) as any
@@ -417,7 +409,6 @@ export const usePaymentsNew = () => {
   // ✅ Hilfsfunktionen
   const getAppointment = async (appointmentId: string) => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/appointments/get-appointment-info', {
         method: 'POST',
         body: {

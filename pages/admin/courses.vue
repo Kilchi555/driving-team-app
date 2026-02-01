@@ -3966,7 +3966,6 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { navigateTo, useNuxtApp } from '#app'
 import { useAuthStore } from '~/stores/auth'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
@@ -4002,7 +4001,6 @@ definePageMeta({
 })
 
 // Composables
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 const { currentUser, fetchCurrentUser } = useCurrentUser()
 const modal = useModal()
 

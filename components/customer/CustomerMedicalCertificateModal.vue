@@ -153,7 +153,6 @@ const upload = async () => {
   error.value = null
   
   try {
-    // ✅ MIGRATED TO API - Direct Supabase removed
     const appointment = Array.isArray(props.payment.appointments) 
       ? props.payment.appointments[0] 
       : props.payment.appointments

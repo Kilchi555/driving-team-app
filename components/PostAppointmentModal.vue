@@ -198,7 +198,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Props
 interface Props {

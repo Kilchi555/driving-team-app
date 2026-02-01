@@ -372,7 +372,6 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 
 interface Props {
@@ -513,7 +512,6 @@ const loadExamResults = async () => {
   error.value = null
   
   try {
-    // ✅ MIGRATED TO API - All queries now via backend
     
     try {
       // Load exam statistics via API

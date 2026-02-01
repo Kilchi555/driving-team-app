@@ -233,7 +233,6 @@ export const useStaffWorkingHours = () => {
   // Arbeitszeit löschen
   const deleteWorkingHour = async (staffId: string, dayOfWeek: number) => {
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/staff/working-hours-manage', {
         method: 'POST',
         body: {
@@ -263,7 +262,6 @@ export const useStaffWorkingHours = () => {
   // Arbeitszeit aktivieren/deaktivieren
   const toggleWorkingHour = async (staffId: string, dayOfWeek: number, isActive: boolean) => {
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/staff/working-hours-manage', {
         method: 'POST',
         body: {
