@@ -1,7 +1,7 @@
-// composables/useProductSale.ts - NEUE DATEI ERSTELLEN
+// composables/useProductSale.ts - MIGRIERT ZU APIS
 
 import { ref, computed, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 interface SimpleProduct {
   id: string
@@ -17,7 +17,7 @@ interface ProductItem {
 }
 
 export const useProductSale = (appointmentId?: any, initialProducts: ProductItem[] = []) => {
-  const supabase = getSupabase()
+  // ✅ FULLY MIGRATED TO APIS - No direct Supabase
   
   // State
   const selectedProducts = ref<ProductItem[]>([...initialProducts])

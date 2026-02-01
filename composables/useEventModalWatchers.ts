@@ -1,7 +1,7 @@
-// composables/useEventModalWatchers.ts - KORRIGIERTE VERSION
+// composables/useEventModalWatchers.ts - MIGRIERT ZU APIS
 import { watch, nextTick, type Ref } from 'vue'
 import { usePricing } from '~/composables/usePricing'
-import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 interface EventModalWatchersParams {
   formData: Ref<any>
@@ -29,25 +29,26 @@ export const useEventModalWatchers = ({
   props
 }: EventModalWatchersParams) => {
 
-  // ✅ GET APPOINTMENT NUMBER HELPER
+  // ✅ GET APPOINTMENT NUMBER HELPER - MIGRATED TO API
   const getAppointmentNumber = async (userId: string): Promise<number> => {
     try {
-      const supabase = getSupabase()
-      const { count, error } = await supabase
-        .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
-        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/appointments/get-next-number', {
+        method: 'GET',
+        query: { user_id: userId }
+      }) as any
 
-      if (error) {
-        console.error('❌ Error counting appointments:', error)
+      if (!response?.success || response?.number === undefined) {
+        logger.warn('Failed to get appointment number from API, defaulting to 1')
         return 1
       }
 
-      return (count || 0) + 1
+      return response.number
     } catch (error) {
+      logger.error('❌ Error getting appointment number from API:', error)
+      return 1
+    }
+  }
       console.error('❌ Error in getAppointmentCount:', error)
       return 1
     }
