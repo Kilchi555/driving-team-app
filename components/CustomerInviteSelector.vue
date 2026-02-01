@@ -283,7 +283,6 @@
 <script setup lang="ts">
 
 import { ref, computed } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useSmsService } from '~/composables/useSmsService'
 

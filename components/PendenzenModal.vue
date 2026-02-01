@@ -370,7 +370,6 @@ import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Props
 interface Props {

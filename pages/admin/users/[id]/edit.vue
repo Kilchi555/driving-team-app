@@ -213,7 +213,6 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 // definePageMeta is auto-imported
 import { useRoute } from '#app'
 import StaffTab from '~/components/users/StaffTab.vue'
@@ -255,7 +254,6 @@ interface EditForm {
 
 // Get route params and setup
 const route = useRoute()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 const userId = route.params.id as string
 
 // Reactive state

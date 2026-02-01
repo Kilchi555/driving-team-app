@@ -177,7 +177,6 @@ export const calculateOfflinePrice = (categoryCode: string, durationMinutes: num
 // ===== HELPER FUNCTIONS =====
 const getEventTypeByCode = async (code: string, tenantId: string) => {
   try {
-    // ✅ MIGRATED TO API
     const response = await $fetch('/api/pricing/calculate', {
       method: 'POST',
       body: {
@@ -317,7 +316,6 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         return
       }
       
-      // ✅ MIGRATED TO API - All processing now happens on backend
       const response = await $fetch('/api/pricing/calculate', {
         method: 'POST',
         body: {
@@ -602,7 +600,6 @@ const roundToNearestFranken = (rappen: number): number => {
   let isDrivingCategory = validDrivingCategories.includes(categoryCode)
   if (!isDrivingCategory && actualTenantId) {
     try {
-      // ✅ MIGRATED TO API - Check category via secure backend endpoint
       const response = await $fetch('/api/categories/check-exists', {
         method: 'POST',
         body: {

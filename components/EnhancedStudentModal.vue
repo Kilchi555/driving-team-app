@@ -1062,7 +1062,6 @@
 
 import { ref, computed, toRefs, watch } from 'vue'
 import { logger } from '~/utils/logger'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import EvaluationModal from '~/components/EvaluationModal.vue'
@@ -1111,7 +1110,6 @@ const emit = defineEmits<Emits>()
 const { selectedStudent } = toRefs(props)
 
 // Supabase client
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Tenant Branding
 const { primaryColor, secondaryColor } = useTenantBranding()

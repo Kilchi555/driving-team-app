@@ -8,7 +8,6 @@ import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import EventModal from './EventModal.vue'
 import EnhancedStudentModal from './EnhancedStudentModal.vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
@@ -199,7 +198,6 @@ const switchView = () => {
 
 
 const calendar = ref()
-// ✅ MIGRATED TO API - Removed direct Supabase initialization
 const rootEl = ref<HTMLElement | null>(null)
 
 // Swipe navigation state
@@ -660,7 +658,6 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
 const loadStaffMeetings = async () => {
   logger.debug('🔄 Loading staff meetings via API...')
   try {
-    // ✅ MIGRATED TO API - Get staff meetings from backend
     const response = await $fetch('/api/calendar/manage', {
       method: 'POST',
       body: {
@@ -1421,7 +1418,6 @@ const handleEventDrop = async (dropInfo: any) => {
     try {
       logger.debug('✅ User confirmed move, updating via API...')
       
-      // ✅ MIGRATED TO API - Update appointment times
       const updateResponse = await $fetch('/api/calendar/manage', {
         method: 'POST',
         body: {
@@ -1572,7 +1568,6 @@ const handleEventResize = async (resizeInfo: any) => {
     try {
       logger.debug('✅ User confirmed resize, updating via API...')
       
-      // ✅ MIGRATED TO API - Update appointment duration
       const resizeResponse = await $fetch('/api/calendar/manage', {
         method: 'POST',
         body: {
@@ -2076,7 +2071,6 @@ const pasteAppointmentDirectly = async () => {
     // ✅ FINALE DEBUG-AUSGABE
     logger.debug('💾 FINAL appointmentData before save:', appointmentData)
     
-    // ✅ MIGRATED TO API - Create appointment via backend
     const createResponse = await $fetch('/api/calendar/manage', {
       method: 'POST',
       body: {
@@ -2112,7 +2106,6 @@ const pasteAppointmentDirectly = async () => {
     // ✅ NEU: Admin Fee basierend auf pricing_rules berechnen
     let adminFeeRappen = 0
     try {
-      // ✅ MIGRATED TO API - Get existing appointments and pricing rules
       const adminFeeResponse = await $fetch('/api/calendar/manage', {
         method: 'POST',
         body: {
@@ -2172,7 +2165,6 @@ const pasteAppointmentDirectly = async () => {
     // ✅ If not found in clipboard, fetch from API
     if (!studentEmail || !studentName) {
       try {
-        // ✅ MIGRATED TO API - Get user data
         const userResponse = await $fetch('/api/calendar/manage', {
           method: 'POST',
           body: {
@@ -2205,7 +2197,6 @@ const pasteAppointmentDirectly = async () => {
     let staffName = clipboardAppointment.value?.staff_first_name
     if (!staffName) {
       try {
-        // ✅ MIGRATED TO API - Get staff data
         const staffResponse = await $fetch('/api/calendar/manage', {
           method: 'POST',
           body: {
@@ -2400,7 +2391,6 @@ const handleCopyAppointment = async (copyData: any) => {
   let paymentMethod = 'invoice' // Default
   logger.debug('🔍 Fetching payment for appointment via API:', copyData.eventData.id)
   try {
-    // ✅ MIGRATED TO API - Get payment data
     const paymentResponse = await $fetch('/api/calendar/manage', {
       method: 'POST',
       body: {
@@ -2440,7 +2430,6 @@ const handleCopyAppointment = async (copyData: any) => {
   if (!studentEmail || !studentName) {
     logger.debug('🔍 Email/Student not in extendedProps, loading from API...')
     try {
-      // ✅ MIGRATED TO API - Get user data
       const userResponse = await $fetch('/api/calendar/manage', {
         method: 'POST',
         body: {
@@ -2521,7 +2510,6 @@ onMounted(async () => {
     try {
       const tenantId = props.currentUser?.tenant_id
       if (tenantId) {
-        // ✅ MIGRATED TO API - Get tenant data
         const tenantResponse = await $fetch('/api/calendar/manage', {
           method: 'POST',
           body: {

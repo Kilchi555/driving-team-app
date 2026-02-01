@@ -214,7 +214,6 @@ const handleLogin = async () => {
   error.value = ''
 
   try {
-    // ✅ MIGRATED TO API - Using secure backend login
     const response = await $fetch('/api/auth/login', {
       method: 'POST',
       body: {
@@ -246,7 +245,6 @@ const handleRegister = async () => {
   error.value = ''
 
   try {
-    // ✅ MIGRATED TO API - Using secure backend registration
     const slug = route.params.slug as string
 
     const response = await $fetch('/api/auth/register', {

@@ -477,7 +477,6 @@ const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
 const { uploadFile } = useUserDocuments()
 const { primaryColor } = useTenantBranding()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Computed style for header background
 const headerStyle = computed(() => ({

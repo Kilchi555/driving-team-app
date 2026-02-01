@@ -373,11 +373,9 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 const route = useRoute()
 const router = useRouter()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const isLoading = ref(true)
@@ -549,7 +547,6 @@ const register = async () => {
     // Auto-login after successful registration
     try {
       logger.debug('🔑 Auto-login after registration...')
-      // ✅ MIGRATED TO API
       const { error: loginError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signin-password',{
         email: email.value,
         password: password.value

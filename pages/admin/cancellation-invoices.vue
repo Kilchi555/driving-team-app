@@ -282,7 +282,6 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // State
 const isLoading = ref(false)

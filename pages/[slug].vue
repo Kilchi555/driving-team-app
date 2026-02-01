@@ -429,7 +429,6 @@ import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 logger.debug('📄 [slug].vue imports completed')
 
@@ -517,7 +516,6 @@ const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
 const { currentTenant, loadTenant: loadTenantComposable } = useTenant()
 const mfaFlow = useMFAFlow()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 
 // Methods
@@ -1004,7 +1002,6 @@ onMounted(async () => {
       isCheckingSession.value = false
     }, 2000)
     
-    // ✅ MIGRATED TO API
     const { data: { user: sessionUser } } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
     clearTimeout(sessionCheckTimeout)
     

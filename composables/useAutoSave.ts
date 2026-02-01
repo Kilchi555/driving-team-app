@@ -196,7 +196,6 @@ export const useAutoSave = <T>(
       isAutoSaving.value = true
       saveStatus.value = 'saving'
       
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       const response = await $fetch('/api/drafts/autosave', {
         method: 'POST',
         body: {
@@ -258,7 +257,6 @@ export const useAutoSave = <T>(
   
   const loadDraftFromDatabase = async (id: string): Promise<any | null> => {
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       
       const response = await $fetch('/api/drafts/autosave', {
         method: 'POST',
@@ -325,7 +323,6 @@ export const useAutoSave = <T>(
     // 3. Check for existing draft by phone and tenant_id (for shop orders)
     if (config.formId === 'shop-order' && formData.value?.phone && formData.value?.tenant_id) {
       try {
-        // ✅ MIGRATED TO API - Using secure backend endpoint
         const response = await $fetch('/api/drafts/autosave', {
           method: 'POST',
           body: {
@@ -402,7 +399,6 @@ export const useAutoSave = <T>(
     if (!draftId.value) return null
     
     try {
-      // ✅ MIGRATED TO API - Using secure backend endpoint
       
       const finalData = finalConfig.transformForSave 
         ? finalConfig.transformForSave(formData.value)

@@ -317,7 +317,6 @@
 import { logger } from '~/utils/logger'
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo } from '#app'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { storeToRefs } from 'pinia'

@@ -136,7 +136,6 @@
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import VoucherDownloadModal from '~/components/VoucherDownloadModal.vue'
 
 const route = useRoute()

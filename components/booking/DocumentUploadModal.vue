@@ -219,7 +219,6 @@ const handleUpload = async () => {
       throw new Error('Nicht angemeldet')
     }
 
-    // ✅ MIGRATED TO API - Upload all documents
     for (const doc of props.requiredDocuments) {
       const frontFile = uploads.value[`${doc.id}_front`]
       const backFile = uploads.value[`${doc.id}_back`]

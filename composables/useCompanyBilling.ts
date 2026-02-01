@@ -150,7 +150,6 @@ export const useCompanyBilling = () => {
     
     logger.debug('💾 Creating company billing address via API')
 
-    // ✅ MIGRATED TO API
     const response = await $fetch('/api/company-billing/manage', {
       method: 'POST',
       body: {
@@ -193,7 +192,6 @@ export const useCompanyBilling = () => {
     try {
       logger.debug('🔄 Loading company addresses for user:', userId)
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/company-billing/manage', {
         method: 'POST',
         body: {
@@ -257,7 +255,6 @@ export const useCompanyBilling = () => {
 
       logger.debug('💾 Updating company billing address via API:', addressId)
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/company-billing/manage', {
         method: 'POST',
         body: {
@@ -300,7 +297,6 @@ export const useCompanyBilling = () => {
     try {
       logger.debug('🗑️ Deleting company billing address via API:', addressId)
 
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/company-billing/manage', {
         method: 'POST',
         body: {
@@ -364,7 +360,6 @@ export const useCompanyBilling = () => {
 
 const loadDefaultBillingAddress = async (userId: string): Promise<CompanyBillingAddress | null> => {
   try {
-    // ✅ MIGRATED TO API
     const response = await $fetch('/api/company-billing/manage', {
       method: 'POST',
       body: {

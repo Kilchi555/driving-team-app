@@ -218,9 +218,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const externalCalendars = ref<any[]>([])

@@ -553,7 +553,6 @@ import { ref, computed, onMounted } from 'vue'
 import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useEventModalForm } from '~/composables/useEventModalForm'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { watch } from 'vue'
 
 // ✅ Rundungsfunktion: Preise auf nächsten Franken runden

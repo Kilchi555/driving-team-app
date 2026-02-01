@@ -257,7 +257,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 interface ExamLocation {
   id: string

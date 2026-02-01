@@ -527,12 +527,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { formatDateTime, formatDate } from '~/utils/dateUtils'
 
 const route = useRoute()
 const router = useRouter()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Course State
 const course = ref<any>(null)
@@ -852,7 +850,6 @@ const loginAndEnroll = async () => {
   try {
     isSubmitting.value = true
 
-    // ✅ MIGRATED TO API
       const { data: authData, error: authError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signin-password',{
       email: emailCheck.value.email,
       password: loginForm.value.password
@@ -882,7 +879,6 @@ const registerAndEnroll = async () => {
       return
     }
 
-    // ✅ MIGRATED TO API
       const { data: authData, error: authError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signup',{
       email: registrationForm.value.email,
       password: registrationForm.value.password,
@@ -964,7 +960,6 @@ const goBackToEmailCheck = () => {
 
 const forgotPassword = async () => {
   try {
-    // ✅ MIGRATED TO API
         const { error } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'reset-password-email', email:emailCheck.value.email, {
       redirectTo: `${window.location.origin}/reset-password`
     })

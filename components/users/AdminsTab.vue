@@ -313,7 +313,6 @@
 <script setup lang="ts">
 
 import { ref, onMounted } from 'vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
@@ -328,8 +327,6 @@ const emit = defineEmits<{
   userUpdated: [updateData: any]
 }>()
 
-// ✅ MIGRATED TO API - Removed Supabase client
-// const supabase = getSupabase()
 
 // Composables
 const uiStore = useUIStore()
@@ -360,7 +357,6 @@ const loadAdmins = async () => {
   try {
     logger.debug('🔄 Loading admins via API...')
     
-    // ✅ MIGRATED TO API - Get admins
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -403,10 +399,8 @@ const createAdmin = async () => {
   try {
     logger.debug('🔄 Creating new admin...')
     
-    // ✅ MIGRATED TO API - tenant_id comes from currentUser
     // (Removed direct Supabase auth calls - now using currentUser prop)
 
-    // ✅ MIGRATED TO API - Create admin user
     const createResponse = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -459,7 +453,6 @@ const updateAdmin = async () => {
   try {
     logger.debug('🔄 Updating admin via API:', editingAdmin.value.id)
     
-    // ✅ MIGRATED TO API - Update admin user
     const updateResponse = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -504,7 +497,6 @@ const toggleAdminStatus = async (admin: any) => {
   try {
     logger.debug('🔄 Toggling admin status via API:', admin.id, !admin.is_active)
     
-    // ✅ MIGRATED TO API - Toggle admin status
     const toggleResponse = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
@@ -545,7 +537,6 @@ const deleteAdmin = async (admin: any) => {
   try {
     logger.debug('🔄 Deleting admin via API:', admin.id)
     
-    // ✅ MIGRATED TO API - Delete admin user
     const deleteResponse = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {

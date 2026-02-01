@@ -165,7 +165,6 @@
 <script setup lang="ts">
 
 import { ref, watch, onMounted, computed, nextTick } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Google Maps Types Declaration
 declare global {
@@ -235,7 +234,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'locationSelected'])
 
 // Supabase
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // Reactive state
 const useStandardLocations = ref(true)

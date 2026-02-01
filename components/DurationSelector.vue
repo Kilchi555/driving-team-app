@@ -54,7 +54,6 @@
 import { computed, watch, onMounted, ref } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'
 import { useAuthStore } from '~/stores/auth'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase' 
 
 interface Props {
@@ -107,7 +106,6 @@ const getLastStudentDuration = async (studentId: string): Promise<number | null>
     const userProfile = authStore.userProfile
     if (!userProfile?.tenant_id) throw new Error('Nicht angemeldet')
     
-    // ✅ MIGRATED TO API - Load last student duration via backend
     const response = await $fetch('/api/calendar/manage', {
       method: 'POST',
       body: {

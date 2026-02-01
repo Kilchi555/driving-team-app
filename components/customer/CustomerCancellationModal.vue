@@ -172,7 +172,6 @@ const emit = defineEmits<{
   cancelled: [appointmentId: string]
 }>()
 
-// ✅ MIGRATED TO API - Removed direct Supabase client
 
 // State
 const selectedReasonId = ref('')

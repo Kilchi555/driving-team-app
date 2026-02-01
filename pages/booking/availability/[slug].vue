@@ -787,7 +787,6 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
     
     logger.debug('🔍 Batch checking availability for staff:', staffId, 'from', minDate.toISOString(), 'to', maxDate.toISOString())
     
-    // ✅ MIGRATED TO API - All queries now handled server-side
     // Removed 8+ direct Supabase queries and consolidated into single API call
     
     // Load all availability data via comprehensive API endpoint
@@ -1231,7 +1230,6 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
     isLoadingLocations.value = true
     logger.debug('🔄 Loading locations for all staff via API...')
     
-    // ✅ MIGRATED TO API - Load all locations via backend
     // Replaces direct Supabase query at line 1239
     
     const response = await $fetch('/api/booking/get-availability', {
@@ -2334,7 +2332,6 @@ const proceedToRegistration = () => {
 
 const setTenantFromSlug = async (slugOrId: string) => {
   try {
-    // ✅ MIGRATED TO API - Get tenant from slug or ID
     // Replaces direct Supabase queries at lines 2382 & 2392
     
     // For now, load tenant by trying basic logic on client
@@ -2410,7 +2407,6 @@ const loadTenantSettings = async () => {
   try {
     if (!currentTenant.value) return
 
-    // ✅ MIGRATED TO API - Load tenant settings
     // Replaces direct Supabase query at line 2457
     
     const response = await $fetch('/api/booking/get-availability', {
@@ -2463,7 +2459,6 @@ const loadCategories = async () => {
       return
     }
 
-    // ✅ MIGRATED TO API - Load categories and locations
     // Replaces direct Supabase queries at lines 2510 & 2521
     
     const response = await $fetch('/api/booking/get-availability', {
@@ -2556,7 +2551,6 @@ const determineDayMode = async (staffId: string, targetDate: Date): Promise<'fre
     const dayEndLocal = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999))
     const dayEndUtc = new Date(dayEndLocal.getTime() - offsetMs)
     
-    // ✅ MIGRATED TO API - Check for appointments and busy times on this day
     // Replaces direct Supabase queries at lines 2604 & 2614
     
     const response = await $fetch('/api/booking/get-availability', {
@@ -2702,7 +2696,6 @@ const generateConstrainedSlots = async (staff: any, location: any, targetDate: D
     const dayEndLocal = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999))
     const dayEndUtc = new Date(dayEndLocal.getTime() - offsetMs)
     
-    // ✅ MIGRATED TO API - Get appointments and external busy times
     // Replaces direct Supabase queries at lines 2750 & 2762
     
     const response = await $fetch('/api/booking/get-availability', {

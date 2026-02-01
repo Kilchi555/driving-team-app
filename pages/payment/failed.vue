@@ -84,7 +84,6 @@
 
 import { ref, onMounted } from 'vue'
 import {  useRoute, useRouter } from '#app'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
 // Router
@@ -92,7 +91,6 @@ const route = useRoute()
 const router = useRouter()
 
 // Supabase
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 // State
 const errorDetails = ref<any>(null)

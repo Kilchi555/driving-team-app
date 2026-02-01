@@ -103,7 +103,6 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
-// ✅ MIGRATED TO API - Removed direct Supabase import
 // import { getSupabase } from '~/utils/supabase'
 
 // Props
@@ -121,8 +120,6 @@ const emit = defineEmits<{
 }>()
 
 // State
-// ✅ MIGRATED TO API - Removed Supabase client
-// const supabase = getSupabase()
 const isProcessing = ref(false)
 const selectedPaymentMethod = ref('wallee')
 const failedPayment = ref<any>(null)
@@ -161,7 +158,6 @@ const loadPaymentDetails = async () => {
   if (!props.paymentId && !props.appointmentId) return
   
   try {
-    // ✅ MIGRATED TO API - Load payment details via backend
     const response = await $fetch('/api/payments/manage', {
       method: 'POST',
       body: {
@@ -193,7 +189,6 @@ const retryPayment = async () => {
   try {
     logger.debug('🔄 Retrying payment with method:', selectedPaymentMethod.value)
     
-    // ✅ MIGRATED TO API - Create new payment via backend
     const response = await $fetch('/api/payments/manage', {
       method: 'POST',
       body: {

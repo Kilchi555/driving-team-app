@@ -66,7 +66,6 @@ export const useVouchers = () => {
     error.value = null
 
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/vouchers/manage', {
         method: 'POST',
         body: {
@@ -109,7 +108,6 @@ export const useVouchers = () => {
     error.value = null
 
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/vouchers/manage', {
         method: 'POST',
         body: {
@@ -164,7 +162,6 @@ export const useVouchers = () => {
 
   const findVoucherByCode = async (code: string): Promise<Voucher | null> => {
     try {
-      // ✅ MIGRATED TO API
       const response = await $fetch('/api/vouchers/manage', {
         method: 'POST',
         body: {

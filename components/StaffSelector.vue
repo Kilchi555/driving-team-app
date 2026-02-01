@@ -188,7 +188,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch, onMounted } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 
 // Staff Interface - nur Staff, keine Admins
 interface Staff {

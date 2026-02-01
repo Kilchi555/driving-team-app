@@ -361,7 +361,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-// ✅ MIGRATED TO API - import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { markRaw } from 'vue'
 import { loadTenantData, replacePlaceholders, getAvailablePlaceholders } from '~/utils/reglementPlaceholders'
@@ -406,7 +405,6 @@ const reglementTypes = [
 ]
 
 const authStore = useAuthStore()
-// ✅ MIGRATED TO API - const supabase = getSupabase()
 
 const isLoading = ref(false)
 const isSaving = ref(false)
