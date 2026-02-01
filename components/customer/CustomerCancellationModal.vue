@@ -160,7 +160,6 @@
 <script setup lang="ts">
 
 import { ref, computed, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 
 const props = defineProps<{
   isVisible: boolean
@@ -173,7 +172,7 @@ const emit = defineEmits<{
   cancelled: [appointmentId: string]
 }>()
 
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed direct Supabase client
 
 // State
 const selectedReasonId = ref('')

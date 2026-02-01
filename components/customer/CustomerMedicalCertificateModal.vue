@@ -88,7 +88,6 @@
 <script setup lang="ts">
 
 import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 
 interface Props {
   isVisible: boolean
@@ -154,7 +153,7 @@ const upload = async () => {
   error.value = null
   
   try {
-    const supabase = getSupabase()
+    // ✅ MIGRATED TO API - Direct Supabase removed
     const appointment = Array.isArray(props.payment.appointments) 
       ? props.payment.appointments[0] 
       : props.payment.appointments
