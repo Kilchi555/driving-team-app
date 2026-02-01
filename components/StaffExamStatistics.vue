@@ -372,7 +372,8 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 
 interface Props {
   currentUser: any
