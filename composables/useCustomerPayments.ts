@@ -1,13 +1,12 @@
 // composables/useCustomerPayments.ts
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
+import { logger } from '~/utils/logger'
 
 export const useCustomerPayments = () => {
   const authStore = useAuthStore()
   const { user: currentUser } = storeToRefs(authStore)
-  const supabase = getSupabase()
 
   const payments = ref<any[]>([])
   const isLoading = ref(false)

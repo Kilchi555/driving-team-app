@@ -1,7 +1,7 @@
 // composables/usePendingTasks.ts
 import { ref, computed, reactive } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { logger } from '~/utils/logger'
 
 // Typen für bessere Typsicherheit
 interface PendingAppointment {
