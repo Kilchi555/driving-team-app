@@ -194,7 +194,8 @@
 <script setup lang="ts">
 
 import { ref, computed, watch, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 // Importiere den CriteriaEvaluationData-Typ
@@ -218,8 +219,8 @@ const emit = defineEmits(['close', 'saved'])
 // Jetzt importieren wir saveCriteriaEvaluations
 const { saveCriteriaEvaluations } = usePendingTasks()
 
-// Supabase
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed Supabase initialization
+// const supabase = getSupabase()
 
 // State
 const isLoading = ref(false)
