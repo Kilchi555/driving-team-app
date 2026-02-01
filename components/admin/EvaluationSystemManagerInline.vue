@@ -1018,7 +1018,8 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 
 // Initialize UI store for toast notifications
@@ -1076,7 +1077,8 @@ interface Scale {
 }
 
 // State
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed direct Supabase initialization
+// const supabase = getSupabase()
 const evaluationCategories = ref<EvaluationCategory[]>([])
 const drivingCategories = ref<DrivingCategory[]>([])
 const criteria = ref<Criteria[]>([])
