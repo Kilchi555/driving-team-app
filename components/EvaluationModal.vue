@@ -558,7 +558,6 @@ const saveEvaluation = async () => {
   
   if (!isValid.value || !props.appointment?.id) {
     logger.debug('❌ Validation failed or no appointment ID')
-    // Fehler anzeigen, wenn isValid false ist, z.B. über ein Toast
     error.value = missingRequiredRatings.value.length > 0
       ? `Bitte bewerten Sie alle ausgewählten Kriterien: ${missingRequiredRatings.value.join(', ')}`
       : 'Bitte wählen Sie mindestens ein Kriterium und bewerten Sie es.';
@@ -569,9 +568,26 @@ const saveEvaluation = async () => {
   error.value = null
   
   try {
-    // ✅ TODO: MIGRATE TO API - Load previous appointment evaluations
-    // This needs a backend endpoint to fetch appointment history safely
+    // Load previous appointment evaluations via API
+    const prevResponse = await $fetch('/api/staff/evaluation-history', {
+      method: 'POST',
+      body: {
+        action: 'get-previous',
+        appointment_id: props.appointment.id,
+        user_id: props.appointment.user_id,
+        student_category: props.studentCategory
+      }
+    }) as any
+
     const existingEvalMap: Record<string, any> = {}
+    if (prevResponse?.data?.evaluations) {
+      prevResponse.data.evaluations.forEach((note: any) => {
+        existingEvalMap[note.evaluation_criteria_id] = {
+          rating: note.criteria_rating,
+          note: note.criteria_note || ''
+        }
+      })
+    }
     
     // Filter to save only criteria that were ACTIVELY added/changed in this session
     // This prevents re-saving old evaluations from history when opening a new appointment
@@ -667,9 +683,44 @@ const loadCurrentAppointmentEvaluations = async () => {
   }
 
   try {
-    // ✅ TODO: MIGRATE TO API - Load current appointment evaluations
-    // This needs a backend endpoint to fetch current evaluation data safely
-    logger.debug('✅ Found evaluations for current appointment (API migration pending)')
+    // Load current appointment evaluations via API
+    const response = await $fetch('/api/staff/evaluation-history', {
+      method: 'POST',
+      body: {
+        action: 'get-current',
+        appointment_id: props.appointment.id,
+        user_id: props.appointment.user_id,
+        student_category: props.studentCategory
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to load evaluations')
+    }
+
+    const currentNotes = response.data?.evaluations || []
+    logger.debug('✅ Found', currentNotes.length, 'evaluations for current appointment')
+
+    if (currentNotes.length > 0) {
+      originalNotes.value = {}
+      currentNotes.forEach((note: any) => {
+        const criteriaId = note.evaluation_criteria_id
+        criteriaRatings.value[criteriaId] = note.criteria_rating || 0
+        criteriaNotes.value[criteriaId] = note.criteria_note || ''
+        originalNotes.value[criteriaId] = note.criteria_note || ''
+        
+        criteriaAppointments.value[criteriaId] = {
+          appointment_id: props.appointment?.id,
+          start_time: props.appointment?.start_time
+        }
+        
+        if (!selectedCriteriaOrder.value.includes(criteriaId)) {
+          selectedCriteriaOrder.value.push(criteriaId)
+        }
+      })
+      return true
+    }
+
     return false
   } catch (err) {
     console.error('❌ Error in loadCurrentAppointmentEvaluations:', err)
@@ -681,14 +732,64 @@ const loadStudentEvaluationHistory = async () => {
   logger.debug('🔍 DEBUG: Loading student evaluation history')
   logger.debug('🔍 DEBUG: student ID:', props.appointment?.user_id)
   logger.debug('🔍 DEBUG: current category:', props.studentCategory)
+  
   if (!props.appointment?.user_id) {
     logger.debug('❌ No student ID')
     return
   }
 
-  // ✅ TODO: MIGRATE TO API - Load evaluation history
-  // This needs a backend endpoint to fetch historical evaluations safely
-  logger.debug('⏳ Evaluation history loading via API (migration pending)')
+  try {
+    // Load evaluation history via API
+    const response = await $fetch('/api/staff/evaluation-history', {
+      method: 'POST',
+      body: {
+        action: 'get-history',
+        appointment_id: props.appointment.id,
+        user_id: props.appointment.user_id,
+        student_category: props.studentCategory
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to load history')
+    }
+
+    const evaluations = response.data?.evaluations || []
+    const appointmentDateMap = response.data?.appointmentDateMap || {}
+
+    logger.debug('🔍 DEBUG: loaded historical criteria:', evaluations.length)
+
+    // Sort by lesson date (newest first)
+    const sortedByLessonDate = evaluations
+      .sort((a: any, b: any) => {
+        const dateA = a.lesson_date
+        const dateB = b.lesson_date
+        if (!dateA || !dateB) return 0
+        return new Date(dateB).getTime() - new Date(dateA).getTime()
+      })
+      .map((e: any) => e.evaluation_criteria_id)
+
+    selectedCriteriaOrder.value = sortedByLessonDate
+
+    // Setup appointment data for sorting
+    criteriaAppointments.value = {}
+    originalNotes.value = {}
+    evaluations.forEach((note: any) => {
+      const criteriaId = note.evaluation_criteria_id
+      criteriaRatings.value[criteriaId] = note.criteria_rating || 0
+      criteriaNotes.value[criteriaId] = note.criteria_note || ''
+      originalNotes.value[criteriaId] = note.criteria_note || ''
+      
+      criteriaAppointments.value[criteriaId] = {
+        appointment_id: note.appointment_id,
+        start_time: note.lesson_date
+      }
+    })
+
+    logger.debug('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
+
+  } catch (err: any) {
+    console.error('❌ Error loading student history:', err)
 }
 
 const formatLessonDate = (criteriaId: string) => {
