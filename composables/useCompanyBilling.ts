@@ -2,7 +2,6 @@
 
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import type { 
   CompanyBillingAddress, 
   CompanyBillingAddressInsert,
@@ -164,57 +163,30 @@ const debugAuth = async () => {
   error.value = ''
 
   try {
-    // ✅ DEBUG AUTH FIRST
-    const authUserId = await debugAuth()
-    logger.debug('🔍 DEBUG: Passed userId:', userId, 'Auth userId:', authUserId)
-    
     const insertData = convertFormToInsert(userId)
     
-    // ✅ WICHTIG: created_by muss die auth.uid() sein, nicht die User-Table ID!
-    const finalInsertData = {
-      ...insertData,
-      created_by: authUserId // ← VERWENDE AUTH USER ID STATT USER TABLE ID
-    }
-    
-    logger.debug('💾 Creating company billing address with auth ID:', finalInsertData)
+    logger.debug('💾 Creating company billing address via API')
 
-    const { data, error: supabaseError } = await supabase
-      .from('company_billing_addresses')
-      .insert(finalInsertData)
-      .select()
-      .single()
-
-    if (supabaseError) {
-      console.error('❌ Supabase error:', supabaseError)
-      throw new Error(supabaseError.message)
-    }
-
-    if (!data) {
-      throw new Error('Keine Daten von der Datenbank erhalten')
-    }
-
-    currentAddress.value = data
-    logger.debug('✅ Company billing address created:', data)
-
-    // ✅ NEU: Als Standard-Adresse für User setzen
-    try {
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ default_company_billing_address_id: data.id })
-        .eq('id', userId)
-
-      if (updateError) {
-        console.warn('⚠️ Could not set as default address:', updateError)
-      } else {
-        logger.debug('✅ Set as default billing address for user')
+    // ✅ MIGRATED TO API
+    const response = await $fetch('/api/company-billing/manage', {
+      method: 'POST',
+      body: {
+        action: 'create',
+        userId,
+        addressData: insertData
       }
-    } catch (updateErr) {
-      console.warn('⚠️ Could not set as default address:', updateErr)
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error(response?.error || 'Failed to create address')
     }
+
+    currentAddress.value = response.data
+    logger.debug('✅ Company billing address created:', response.data)
 
     return {
       success: true,
-      data: data
+      data: response.data
     }
 
   } catch (err: any) {
@@ -238,24 +210,25 @@ const debugAuth = async () => {
     try {
       logger.debug('🔄 Loading company addresses for user:', userId)
 
-      const { data, error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .select('*')
-        .eq('created_by', userId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/company-billing/manage', {
+        method: 'POST',
+        body: {
+          action: 'load',
+          userId
+        }
+      }) as any
 
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to load addresses')
       }
 
-      savedAddresses.value = data || []
+      savedAddresses.value = response.data || []
       logger.debug('✅ Company addresses loaded:', savedAddresses.value.length)
 
       return {
         success: true,
-        data: data || []
+        data: response.data || []
       }
 
     } catch (err: any) {
@@ -299,26 +272,28 @@ const debugAuth = async () => {
         updated_at: toLocalTimeString(new Date)
       }
 
-      logger.debug('💾 Updating company billing address:', addressId, updateData)
+      logger.debug('💾 Updating company billing address via API:', addressId)
 
-      const { data, error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .update(updateData)
-        .eq('id', addressId)
-        .select()
-        .single()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/company-billing/manage', {
+        method: 'POST',
+        body: {
+          action: 'update',
+          addressId,
+          addressData: updateData
+        }
+      }) as any
 
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
+      if (!response?.success || !response?.data) {
+        throw new Error(response?.error || 'Failed to update address')
       }
 
-      currentAddress.value = data
-      logger.debug('✅ Company billing address updated:', data)
+      currentAddress.value = response.data
+      logger.debug('✅ Company billing address updated:', response.data)
 
       return {
         success: true,
-        data: data
+        data: response.data
       }
 
     } catch (err: any) {
@@ -340,17 +315,42 @@ const debugAuth = async () => {
     error.value = ''
 
     try {
-      logger.debug('🗑️ Deleting company billing address:', addressId)
+      logger.debug('🗑️ Deleting company billing address via API:', addressId)
 
-      const { error: supabaseError } = await supabase
-        .from('company_billing_addresses')
-        .update({ is_active: false })
-        .eq('id', addressId)
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/company-billing/manage', {
+        method: 'POST',
+        body: {
+          action: 'delete',
+          addressId
+        }
+      }) as any
 
-      if (supabaseError) {
-        console.error('❌ Supabase error:', supabaseError)
-        throw new Error(supabaseError.message)
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to delete address')
       }
+
+      // Remove from local list
+      savedAddresses.value = savedAddresses.value.filter(addr => addr.id !== addressId)
+      logger.debug('✅ Company billing address deleted')
+
+      return {
+        success: true
+      }
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Fehler beim Löschen der Firmenadresse'
+      error.value = errorMessage
+      console.error('❌ Error deleting company billing address:', err)
+      
+      return {
+        success: false,
+        error: errorMessage
+      }
+    } finally {
+      isLoading.value = false
+    }
+  }
 
       // Remove from local state
       savedAddresses.value = savedAddresses.value.filter(addr => addr.id !== addressId)
@@ -381,33 +381,27 @@ const debugAuth = async () => {
 
 const loadDefaultBillingAddress = async (userId: string): Promise<CompanyBillingAddress | null> => {
   try {
-    // 1. User's Standard-Adresse ID holen
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('default_company_billing_address_id')
-      .eq('id', userId)
-      .single()
+    // ✅ MIGRATED TO API
+    const response = await $fetch('/api/company-billing/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-default',
+        userId
+      }
+    }) as any
 
-    if (userError || !userData?.default_company_billing_address_id) {
+    if (!response?.success) {
+      logger.debug('ℹ️ Failed to load default billing address')
+      return null
+    }
+
+    if (!response?.data) {
       logger.debug('ℹ️ No default billing address set for user')
       return null
     }
 
-    // 2. Standard-Adresse laden
-    const { data: addressData, error: addressError } = await supabase
-      .from('company_billing_addresses')
-      .select('*')
-      .eq('id', userData.default_company_billing_address_id)
-      .eq('is_active', true)
-      .single()
-
-    if (addressError || !addressData) {
-      logger.debug('ℹ️ Default billing address not found or inactive')
-      return null
-    }
-
-    logger.debug('✅ Default billing address loaded:', addressData.company_name)
-    return addressData
+    logger.debug('✅ Default billing address loaded:', response.data.company_name)
+    return response.data
 
   } catch (err) {
     console.error('❌ Error loading default billing address:', err)
