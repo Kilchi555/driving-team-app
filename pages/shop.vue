@@ -1878,7 +1878,7 @@ onMounted(async () => {
         const supabase = getSupabase()
         
         // Hole den aktuellen Benutzer und dessen Tenant
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = authStore.user // ✅ MIGRATED
         if (user) {
           const { data: userProfile } = await supabase
             .from('users')
@@ -1931,7 +1931,7 @@ onMounted(async () => {
     // ✅ NEW: Check auth status and skip step 0 if user is already logged in
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     
     if (user) {
       logger.debug('👤 User is already logged in, skipping customer type selection')

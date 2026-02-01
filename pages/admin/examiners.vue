@@ -312,7 +312,7 @@ const loadExaminers = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -400,7 +400,7 @@ const saveExaminer = async () => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -458,7 +458,7 @@ const toggleExaminerStatus = async (examiner: any) => {
     const supabase = getSupabase()
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase

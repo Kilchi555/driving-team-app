@@ -604,7 +604,7 @@ const refreshData = async () => {
   const { getSupabase } = await import('~/utils/supabase')
   const supabase = getSupabase()
   
-  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  const currentUser = authStore.user // ✅ MIGRATED
   const { data: userProfile } = await supabase
     .from('users')
     .select('tenant_id')

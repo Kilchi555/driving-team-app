@@ -189,7 +189,7 @@ const checkStatus = async () => {
     if (!paymentId && !transactionId) {
       logger.debug('🔍 No payment ID provided, trying to find recent payment for current user...')
       
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = authStore.user // ✅ MIGRATED
       if (user) {
         logger.debug('👤 Auth user:', user.id)
         

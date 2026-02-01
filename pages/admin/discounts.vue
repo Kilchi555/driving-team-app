@@ -830,7 +830,7 @@ const loadVouchers = async () => {
     const supabase = getSupabase()
     
     // Get tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Not authenticated')
     
     const { data: userData } = await supabase
@@ -889,7 +889,7 @@ const saveVoucher = async () => {
     const supabase = getSupabase()
     
     // Get tenant_id and user_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED
     if (!user) throw new Error('Not authenticated')
     
     const { data: userData } = await supabase

@@ -1130,7 +1130,7 @@ const loadUsers = async () => {
     }
 
     // Load current tenant info
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const currentUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
@@ -1201,7 +1201,7 @@ const loadUsers = async () => {
 const loadCategories = async () => {
   try {
     // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const currentUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
@@ -1563,7 +1563,7 @@ const createUser = async () => {
     logger.debug(`👨‍🏫 [CLIENT-${clientRequestId}] Creating new user:`, newUser.value.email)
 
     // Get current user's tenant_id
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const currentUser = authStore.user // ✅ MIGRATED
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id')
