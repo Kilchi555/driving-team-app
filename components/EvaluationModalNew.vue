@@ -281,7 +281,7 @@ const loadData = async () => {
     allCriteria.value = criteriaData || []
 
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase

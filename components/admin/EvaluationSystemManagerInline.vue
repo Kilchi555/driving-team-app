@@ -1226,7 +1226,8 @@ const filteredEvaluationCriteria = computed(() => {
 const loadData = async () => {
   try {
     // Get current user's tenant_id first
-    const { data: { user } } = await supabase.auth.getUser()
+    // ✅ MIGRATED: Use auth store instead
+    const user = authStore.user
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -1380,7 +1381,7 @@ const loadStandardEvaluationScale = async () => {
   
   try {
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -1446,7 +1447,7 @@ const loadStandardEvaluationCategories = async () => {
   
   try {
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -1578,7 +1579,7 @@ const loadStandardEvaluationCategories = async () => {
 const loadEvaluationDataForCategory = async (drivingCategoryCode: string) => {
   try {
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -2120,7 +2121,7 @@ const closeCriteriaModal = () => {
 const saveCriteria = async () => {
   try {
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase
@@ -2568,7 +2569,7 @@ const saveEducationalContent = async () => {
     isUploadingImage.value = true
     
     // Get current user's tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = authStore.user // ✅ MIGRATED: Use auth store
     if (!user) throw new Error('Nicht angemeldet')
 
     const { data: userProfile, error: profileError } = await supabase

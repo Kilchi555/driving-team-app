@@ -351,7 +351,7 @@ const loadCashTransactions = async () => {
 
   try {
     // Get current user's tenant_id first
-    const { data: currentUserData } = await supabase.auth.getUser()
+    const currentUserData = authStore.user // ✅ MIGRATED
     if (!currentUserData?.user) throw new Error('Not authenticated')
     
     const { data: userProfile, error: profileError } = await supabase

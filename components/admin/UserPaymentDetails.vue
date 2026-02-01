@@ -2600,7 +2600,7 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
   isUpdatingPayment.value = true
   try {
     // Get current user
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const authUser = authStore.user // ✅ MIGRATED
     const { data: businessUser } = await supabase
       .from('users')
       .select('id')
@@ -2935,7 +2935,7 @@ const executeHardDelete = async (appointment: Appointment) => {
   isUpdatingPayment.value = true
   try {
     // Get current user
-    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const authUser = authStore.user // ✅ MIGRATED
     const { data: businessUser } = await supabase
       .from('users')
       .select('id')
