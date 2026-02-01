@@ -447,7 +447,6 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
