@@ -108,8 +108,6 @@ interface MultiDayAvailabilityFilters {
 }
 
 export const useAvailabilitySystem = () => {
-  const supabase = getSupabase()
-  
   // State
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -133,49 +131,35 @@ export const useAvailabilitySystem = () => {
   // Methods
   const loadBaseData = async (tenantId?: string) => {
     try {
-      logger.debug('🔄 Loading base data for availability system...')
+      logger.debug('🔄 Loading base data for availability system via API...')
       
-      // Build queries with tenant filtering
-      let staffQuery = supabase.from('users').select('id, first_name, last_name, role, is_active, category, preferred_location_id, preferred_duration, assigned_staff_ids, tenant_id').eq('role', 'staff')
-      let categoriesQuery = supabase.from('categories').select('id, code, name, description, lesson_duration_minutes, is_active, tenant_id').eq('is_active', true)
-      let locationsQuery = supabase.from('locations').select('id, name, address, location_type, is_active, staff_ids, category, time_windows').eq('is_active', true).eq('location_type', 'standard')
-      let availabilityQuery = supabase.from('staff_availability_settings').select('staff_id, minimum_booking_lead_time_hours')
-      
-      if (tenantId) {
-        staffQuery = staffQuery.eq('tenant_id', tenantId)
-        categoriesQuery = categoriesQuery.eq('tenant_id', tenantId)
-      }
-      
-      // Load all required data in parallel
-      const [
-        { data: staffData, error: staffError },
-        { data: categoriesData, error: categoriesError },
-        { data: locationsData, error: locationsError },
-        { data: availabilityData, error: availabilityError }
-      ] = await Promise.all([
-        staffQuery,
-        categoriesQuery,
-        locationsQuery,
-        availabilityQuery
-      ])
+      // Call backend API endpoint to fetch all required data safely
+      const response = await $fetch('/api/system/availability-data', {
+        method: 'POST',
+        body: {
+          action: 'get-base-data',
+          tenant_id: tenantId
+        }
+      }) as any
 
-      if (staffError) throw staffError
-      if (categoriesError) throw categoriesError
-      if (locationsError) throw locationsError
-      if (availabilityError) console.warn('⚠️ Could not load availability settings:', availabilityError)
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to load base data')
+      }
+
+      const { staff, categories, locations, availability } = response.data
 
       // Enrich staff data with minimum_booking_lead_time_hours
-      staffCache.value = (staffData || []).map(staff => {
-        const availability = availabilityData?.find(a => a.staff_id === staff.id)
+      staffCache.value = (staff || []).map((staffMember: any) => {
+        const availabilityData = availability?.find((a: any) => a.staff_id === staffMember.id)
         return {
-          ...staff,
-          minimum_booking_lead_time_hours: availability?.minimum_booking_lead_time_hours || 24
+          ...staffMember,
+          minimum_booking_lead_time_hours: availabilityData?.minimum_booking_lead_time_hours || 24
         }
       })
-      categoriesCache.value = categoriesData || []
-      locationsCache.value = locationsData || []
+      categoriesCache.value = categories || []
+      locationsCache.value = locations || []
 
-      logger.debug('✅ Base data loaded:', {
+      logger.debug('✅ Base data loaded via API:', {
         staff: staffCache.value.length,
         categories: categoriesCache.value.length,
         locations: locationsCache.value.length
@@ -249,7 +233,7 @@ export const useAvailabilitySystem = () => {
 
   const loadWorkingHours = async () => {
     try {
-      logger.debug('🔄 Loading working hours...')
+      logger.debug('🔄 Loading working hours via API...')
       
       const staffIds = activeStaff.value.map(staff => staff.id)
       
@@ -258,26 +242,20 @@ export const useAvailabilitySystem = () => {
         return
       }
 
-      // Load from existing staff_working_hours table (prefer staff_id)
-      let workingHoursData: any[] | null = null
-      let workingHoursError: any = null
-      
-      const staffIdQuery = await supabase
-        .from('staff_working_hours')
-        .select('id, staff_id, day_of_week, start_time, end_time, is_active')
-        .in('staff_id', staffIds)
-        .eq('is_active', true)
-      workingHoursData = staffIdQuery.data
-      workingHoursError = staffIdQuery.error
+      // Load from API endpoint
+      const response = await $fetch('/api/system/availability-data', {
+        method: 'POST',
+        body: {
+          action: 'get-working-hours',
+          staff_ids: staffIds
+        }
+      }) as any
 
-      if (workingHoursError) {
-        console.error('❌ Error loading working hours (by staff_id):', workingHoursError)
-        throw workingHoursError
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to load working hours')
       }
 
-      // No fallback needed; table uses staff_id per schema
-
-      workingHoursCache.value = workingHoursData || []
+      workingHoursCache.value = response.data?.workingHours || []
 
       // If no working hours found, create default ones
       if (workingHoursCache.value.length === 0) {
@@ -300,7 +278,7 @@ export const useAvailabilitySystem = () => {
         workingHoursCache.value = defaultWorkingHours
       }
 
-      logger.debug('✅ Working hours loaded:', workingHoursCache.value.length)
+      logger.debug('✅ Working hours loaded via API:', workingHoursCache.value.length)
 
     } catch (err: any) {
       console.error('❌ Error loading working hours:', err)

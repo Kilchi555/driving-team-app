@@ -2589,33 +2589,46 @@ const saveEducationalContent = async () => {
           currentUploadingSection.value = sectionIndex
           const fileExt = file.name.split('.').pop()
           const fileName = `${editingEducationalContent.value!.id}/section_${sectionIndex}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-          const filePath = `evaluation-content/${fileName}`
           
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('evaluation-content')
-            .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-            })
-          
-          if (uploadError) {
-            console.error('❌ Error uploading image:', uploadError)
-            if (uploadError.message.includes('Bucket not found') || uploadError.message.includes('not found')) {
+          // Convert file to base64 for API transfer
+          const reader = new FileReader()
+          const fileData = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+
+          // Upload via API endpoint
+          try {
+            const response = await $fetch('/api/system/secure-operations', {
+              method: 'POST',
+              body: {
+                action: 'upload-evaluation-content',
+                file: {
+                  data: fileData.split(',')[1], // base64 part only
+                  name: fileName,
+                  type: file.type
+                },
+                fileName
+              }
+            }) as any
+
+            if (!response?.success) {
+              throw new Error(response?.error || 'Upload failed')
+            }
+
+            uploadedImageUrls.push(response.data.publicUrl)
+          } catch (err: any) {
+            console.error('❌ Error uploading image:', err)
+            if (err.message?.includes('Bucket not found') || err.message?.includes('not found')) {
               uiStore.showError(
                 'Storage-Bucket fehlt',
                 'Bitte erstelle den Bucket "evaluation-content" im Supabase Dashboard:\n\n1. Gehe zu Storage -> Buckets\n2. Klicke auf "New bucket"\n3. Name: evaluation-content\n4. Setze "Public bucket" auf Aktiviert\n5. Klicke auf "Create bucket"'
               )
               throw new Error(`Der Storage-Bucket "evaluation-content" wurde noch nicht erstellt. Bitte erstelle ihn im Supabase Dashboard unter Storage -> Buckets mit öffentlichem Zugriff.`)
             }
-            throw new Error(`Fehler beim Hochladen von ${file.name}: ${uploadError.message}`)
+            throw new Error(`Fehler beim Hochladen von ${file.name}: ${err.message}`)
           }
-          
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('evaluation-content')
-            .getPublicUrl(filePath)
-          
-          uploadedImageUrls.push(publicUrl)
         }
         
         // Combine existing and new images

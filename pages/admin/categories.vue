@@ -864,26 +864,21 @@ const loadCategories = async () => {
       return
     }
 
-    // Load categories for the user's tenant
-    let query = supabase.from('categories').select('*')
-    
-    if (userProfile.tenant_id) {
-      // Load categories for specific tenant
-      query = query.eq('tenant_id', userProfile.tenant_id)
-    } else {
-      // If no tenant_id, load standard templates
-      query = query.is('tenant_id', null)
+    // Load categories for the user's tenant via API endpoint
+    const response = await $fetch('/api/system/availability-data', {
+      method: 'POST',
+      body: {
+        action: 'get-categories-for-tenant',
+        tenant_id: userProfile.tenant_id
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to load categories')
     }
 
-    const { data, error: fetchError } = await query.order('code', { ascending: true })
-
-    if (fetchError) {
-      console.error('❌ Database error:', fetchError)
-      throw fetchError
-    }
-
-    categories.value = data || []
-    logger.debug('✅ Categories loaded:', categories.value.length, 'categories for tenant:', userProfile.tenant_id || 'standard templates')
+    categories.value = response.data?.categories || []
+    logger.debug('✅ Categories loaded via API:', categories.value.length, 'categories for tenant:', userProfile.tenant_id || 'standard templates')
   } catch (err: any) {
     console.error('❌ Error loading categories:', err)
     error.value = err.message || 'Fehler beim Laden der Kategorien'
