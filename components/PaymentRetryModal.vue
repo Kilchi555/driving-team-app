@@ -103,7 +103,8 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 
 // Props
 const props = defineProps<{
@@ -120,7 +121,8 @@ const emit = defineEmits<{
 }>()
 
 // State
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed Supabase client
+// const supabase = getSupabase()
 const isProcessing = ref(false)
 const selectedPaymentMethod = ref('wallee')
 const failedPayment = ref<any>(null)

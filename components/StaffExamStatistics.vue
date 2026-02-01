@@ -513,54 +513,50 @@ const loadExamResults = async () => {
   error.value = null
   
   try {
-    const supabase = getSupabase()
+    // ✅ MIGRATED TO API - All queries now via backend
     
-    // First, get all appointments for this staff member
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('id, title, type, start_time, user_id')
-      .eq('staff_id', props.currentUser.id)
-      .not('status', 'is', null)
-    
-    if (appointmentsError) throw appointmentsError
-    
-    // Then get exam results for these appointments
-    const appointmentIds = appointments?.map(apt => apt.id) || []
-    
-    if (appointmentIds.length === 0) {
-      examResults.value = []
-      logger.debug('✅ No appointments found for staff member')
-      return
-    }
-    
-    const { data: examResultsData, error: examError } = await supabase
-      .from('exam_results')
-      .select(`
-        id,
-        exam_date,
-        passed,
-        examiner_behavior_rating,
-        examiner_behavior_notes,
-        appointment_id,
-        examiner_id
-      `)
-      .in('appointment_id', appointmentIds)
-      .order('exam_date', { ascending: false })
-    
-    if (examError) throw examError
-    
-    // Get student names
-    const studentIds = [...new Set(appointments?.map(apt => apt.user_id).filter(Boolean) || [])]
-    let students: any[] = []
-    
-    if (studentIds.length > 0) {
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', studentIds)
+    try {
+      // Load exam statistics via API
+      const response = await $fetch('/api/staff/exam-stats', {
+        method: 'POST',
+        body: {
+          staff_id: props.currentUser.id,
+          tenant_id: props.currentUser.tenant_id
+        }
+      }) as any
+
+      if (!response?.success) {
+        throw new Error(response?.message || 'Failed to load exam statistics')
+      }
+
+      const { appointments, exam_results: examResultsData, students } = response.data || {}
       
-      if (studentsError) throw studentsError
-      students = studentsData || []
+      if (!appointments || appointments.length === 0) {
+        examResults.value = []
+        logger.debug('✅ No appointments found for staff member')
+        return
+      }
+
+      // Process data (same as before, just from API now)
+      const examData: ExamResult[] = (examResultsData || []).map((result: any) => {
+        const appointment = appointments.find((apt: any) => apt.id === result.appointment_id)
+        const student = students?.find((s: any) => s.id === appointment?.user_id)
+
+        return {
+          id: result.id,
+          exam_date: result.exam_date,
+          category: appointment?.type || 'Unbekannt',
+          student_name: student ? `${student.first_name} ${student.last_name}` : 'Unbekannt',
+          examiner_name: 'Examiner', // Would need additional data if needed
+          passed: result.passed,
+          score: result.score,
+          notes: result.examiner_behavior_notes,
+          staff_id: props.currentUser.id
+        }
+      })
+
+      examResults.value = examData
+      logger.debug('✅ Exam results loaded via API:', examData.length)
     }
     
     // Get examiner names (only for non-null examiner_ids)

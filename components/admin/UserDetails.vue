@@ -461,7 +461,8 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { useAdminHierarchy } from '~/composables/useAdminHierarchy'
 import StaffTab from '~/components/users/StaffTab.vue'
 import DeviceManager from '~/components/DeviceManager.vue'
@@ -499,7 +500,8 @@ interface SystemActivity {
 
 // Get route params and setup
 const route = useRoute()
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed Supabase client
+// const supabase = getSupabase()
 const userId = route.params.id as string
 
 // Admin hierarchy composable
