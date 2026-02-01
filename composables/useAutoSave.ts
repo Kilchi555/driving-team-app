@@ -1,7 +1,7 @@
 // composables/useAutoSave.ts
 import { ref, watch, onMounted, onUnmounted, computed, readonly, type Ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { useRoute } from '#app'
+import { logger } from '~/utils/logger'
 
 export interface AutoSaveConfig {
   // Eindeutige Kennzeichnung
@@ -196,7 +196,7 @@ export const useAutoSave = <T>(
       isAutoSaving.value = true
       saveStatus.value = 'saving'
       
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API - No direct Supabase queries
       
       let result
       if (draftId.value) {
@@ -264,7 +264,7 @@ export const useAutoSave = <T>(
         logger.debug(`🔄 Duplicate phone ${draftData.phone} for tenant ${draftData.tenant_id}, finding existing record...`)
         
         try {
-          const supabase = getSupabase()
+          // ✅ MIGRATED TO API - No direct Supabase queries
           const { data: existingData, error: findError } = await supabase
             .from(config.tableName)
             .select('id')
@@ -332,7 +332,7 @@ export const useAutoSave = <T>(
   
   const loadDraftFromDatabase = async (id: string): Promise<any | null> => {
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API - No direct Supabase queries
       
       const { data, error } = await supabase
         .from(config.tableName)
@@ -394,7 +394,7 @@ export const useAutoSave = <T>(
     // 3. Check for existing draft by phone and tenant_id (for shop orders)
     if (config.formId === 'shop-order' && formData.value?.phone && formData.value?.tenant_id) {
       try {
-        const supabase = getSupabase()
+        // ✅ MIGRATED TO API - No direct Supabase queries
         const { data, error } = await supabase
           .from(config.tableName)
           .select('*')
@@ -468,7 +468,7 @@ export const useAutoSave = <T>(
     if (!draftId.value) return null
     
     try {
-      const supabase = getSupabase()
+      // ✅ MIGRATED TO API - No direct Supabase queries
       
       const finalData = finalConfig.transformForSave 
         ? finalConfig.transformForSave(formData.value)
