@@ -1,6 +1,5 @@
 // composables/useEventModalHandlers.ts - VOLLSTÄNDIGE MIGRIERTE VERSION mit einheitlicher usePricing
 import { ref, computed, nextTick } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { usePaymentMethods } from '~/composables/usePaymentMethods'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { usePricing } from '~/composables/usePricing' // ✅ EINHEITLICHE PRICING-LÖSUNG
@@ -42,20 +41,20 @@ export const useEventModalHandlers = (
     logger.debug('⏱️ Checking last appointment duration for student:', studentId)
     
     try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('duration_minutes')
-        .eq('user_id', studentId)
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
-        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
-        .order('start_time', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/appointments/get-appointment-info', {
+        method: 'POST',
+        body: {
+          action: 'last-duration',
+          studentId
+        }
+      }) as any
 
-      if (error) throw error
+      if (!response?.success) {
+        throw new Error('Failed to get last duration')
+      }
       
-      const lastDuration = data?.duration_minutes || null
+      const lastDuration = response.data || null
       logger.debug('📊 Last appointment duration:', lastDuration, 'minutes')
       return lastDuration
 
@@ -72,20 +71,20 @@ export const useEventModalHandlers = (
     logger.debug('🎯 Checking last appointment category for student:', studentId)
     
     try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('type')
-        .eq('user_id', studentId)
-        .is('deleted_at', null) // ✅ Soft Delete Filter
-        .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
-        .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
-        .order('start_time', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/appointments/get-appointment-info', {
+        method: 'POST',
+        body: {
+          action: 'last-category',
+          studentId
+        }
+      }) as any
 
-      if (error) throw error
+      if (!response?.success) {
+        throw new Error('Failed to get last category')
+      }
       
-      const lastCategory = data?.type || null
+      const lastCategory = response.data || null
       logger.debug('📊 Last appointment category:', lastCategory)
       return lastCategory
 
@@ -174,23 +173,29 @@ const handleCategorySelected = async (category: any) => {
   selectedCategory.value = category
   
   if (category) {
-    // Load category data from categories table
+    // ✅ MIGRATED TO API - Load category data from backend
     try {
-      const { data: categoryData, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('code', category.code)
-        .eq('is_active', true)
-        .maybeSingle()
-        
-      if (categoryData) {
-        logger.debug('💰 Category data loaded from DB:', categoryData.price_per_lesson)
-        selectedCategory.value = { ...category, ...categoryData }
-      } else {
-        logger.debug('⚠️ Category not found in DB, fallback pricing will be used')
+      const response = await $fetch('/api/appointments/get-appointment-info', {
+        method: 'POST',
+        body: {
+          action: 'duration-by-category',
+          categoryCode: category.code,
+          staffId: formData.value.staff_id || currentUser?.id
+        }
+      }) as any
+
+      if (response?.success && response?.data) {
+        const durations = [response.data.lesson_duration, response.data.exam_duration]
+        logger.debug('💰 Category data loaded from API')
+        selectedCategory.value = { 
+          ...category, 
+          lesson_duration_minutes: response.data.lesson_duration,
+          exam_duration_minutes: response.data.exam_duration
+        }
+        availableDurations.value = durations
       }
     } catch (err) {
-      console.error('❌ Error loading category from DB:', err)
+      console.error('❌ Error loading category from API:', err)
     }
     
     // ✅ Load durations for this category and staff
@@ -533,42 +538,29 @@ const handleDurationsChanged = (durations: number[]) => {
     logger.debug('⏱️ Loading staff durations for category:', categoryCode, 'staff:', staffId)
     
     try {
-      // ✅ TENANT-FILTER: Get tenant_id from auth store
-      const authStore = useAuthStore()
-      const tenantId = authStore.userProfile?.tenant_id
-      
-      if (!tenantId) throw new Error('User has no tenant assigned')
+      // ✅ MIGRATED TO API
+      const response = await $fetch('/api/appointments/get-appointment-info', {
+        method: 'POST',
+        body: {
+          action: 'duration-by-category',
+          categoryCode,
+          staffId
+        }
+      }) as any
 
-      // ✅ TENANT-GEFILTERTE Kategorie-Dauern laden
-      const { data, error } = await supabase
-        .from('categories')
-        .select('lesson_duration_minutes')
-        .eq('code', categoryCode)
-        .eq('tenant_id', tenantId)  // ✅ TENANT FILTER
-        .eq('is_active', true)
-        .maybeSingle()
-
-      if (error) throw error
-      
-      let durations = data?.lesson_duration_minutes || [45]
-      
-      // ✅ CONVERT STRING ARRAYS TO NUMBER ARRAYS
-      if (Array.isArray(durations)) {
-        durations = durations.map((d: any) => {
-          const num = parseInt(d.toString(), 10)
-          return isNaN(num) ? 45 : num
-        })
-      } else {
-        const num = parseInt(durations.toString(), 10)
-        durations = [isNaN(num) ? 45 : num]
+      if (!response?.success || !response?.data) {
+        logger.warn('⚠️ Failed to load durations from API, using defaults')
+        return [45]
       }
+
+      const durations = [response.data.lesson_duration]
       
-      logger.debug('📊 Category durations loaded:', durations)
+      logger.debug('✅ Durations loaded for category:', categoryCode, 'durations:', durations)
       return durations
 
     } catch (err: any) {
-      console.error('❌ Error loading category durations:', err)
-      return [45] // Default fallback
+      console.error('❌ Error loading staff durations:', err)
+      return [45] // Fallback to default
     }
   }
 
