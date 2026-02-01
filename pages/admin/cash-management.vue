@@ -583,23 +583,24 @@ const handleDeposit = async () => {
   isProcessing.value = true
   
   try {
-    const supabase = getSupabase()
     const amountRappen = Math.round(depositForm.value.amount * 100)
     
-    // Call the PostgreSQL function for office cash deposit
-    const { error } = await supabase.rpc('office_cash_deposit', {
-      p_register_id: selectedRegister.value.id,
-      p_amount_rappen: amountRappen,
-      p_notes: depositForm.value.notes || null
+    // Call the backend API endpoint for office cash deposit
+    const response = await $fetch('/api/admin/cash-operations', {
+      method: 'POST',
+      body: {
+        action: 'deposit',
+        register_id: selectedRegister.value.id,
+        amount_rappen: amountRappen,
+        notes: depositForm.value.notes || null
+      }
     })
-    
-    if (error) throw error
     
     logger.debug('✅ Deposit successful')
     showDepositModal.value = false
     await refreshAllData()
     
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Error making deposit:', err)
     alert('Fehler beim Aufstocken: ' + (err.message || 'Unbekannter Fehler'))
   } finally {
@@ -613,23 +614,24 @@ const handleWithdraw = async () => {
   isProcessing.value = true
   
   try {
-    const supabase = getSupabase()
     const amountRappen = Math.round(withdrawForm.value.amount * 100)
     
-    // Call the PostgreSQL function for office cash withdrawal
-    const { error } = await supabase.rpc('office_cash_withdrawal', {
-      p_register_id: selectedRegister.value.id,
-      p_amount_rappen: amountRappen,
-      p_notes: withdrawForm.value.notes
+    // Call the backend API endpoint for office cash withdrawal
+    const response = await $fetch('/api/admin/cash-operations', {
+      method: 'POST',
+      body: {
+        action: 'withdraw',
+        register_id: selectedRegister.value.id,
+        amount_rappen: amountRappen,
+        notes: withdrawForm.value.notes
+      }
     })
-    
-    if (error) throw error
     
     logger.debug('✅ Withdrawal successful')
     showWithdrawModal.value = false
     await refreshAllData()
     
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Error making withdrawal:', err)
     alert('Fehler beim Abheben: ' + (err.message || 'Unbekannter Fehler'))
   } finally {
@@ -742,21 +744,7 @@ const debugCurrentState = async () => {
     logger.debug('🎭 User role:', currentUser.value.role)
   }
   
-  // Check what's in the database
-  const supabase = getSupabase()
-  const user = authStore.user // ✅ MIGRATED
-  logger.debug('🔑 Auth user:', user?.email)
-  
-  if (user) {
-    const { data: userProfile, error } = await supabase
-      .from('users')
-      .select('id, email, tenant_id, role')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    logger.debug('📊 DB user profile:', userProfile)
-    logger.debug('❌ DB error:', error)
-  }
+  logger.debug('🔑 Auth user initialized')
 }
 
 // Auth check
