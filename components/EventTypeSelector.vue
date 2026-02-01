@@ -59,7 +59,8 @@
 
 import { logger } from '~/utils/logger'
 import { ref, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed unused direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { useEventTypes } from '~/composables/useEventTypes'
 import { useUILabels } from '~/composables/useUILabels'
 
