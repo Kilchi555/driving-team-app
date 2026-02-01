@@ -1,9 +1,8 @@
 // composables/useSmsService.ts
-import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export const useSmsService = () => {
-  const supabase = getSupabase();
+  // ✅ FULLY MIGRATED TO API - No direct Supabase queries
 
   const sendSms = async (phoneNumber: string, message: string, senderName?: string) => {
     try {
