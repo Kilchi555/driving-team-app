@@ -179,7 +179,8 @@
 <script setup lang="ts">
 
 import { ref, computed, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
@@ -289,17 +290,19 @@ const moveAppointment = async () => {
     logger.debug('🔄 Moving appointment:', props.appointment.id)
     logger.debug('📅 New times:', newStartDateTime, newEndDateTime)
     
-    const { error } = await supabase
-      .from('appointments')
-      .update({
+    // ✅ MIGRATED TO API - Move appointment via backend
+    const response = await $fetch('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'update-appointment-times',
+        appointment_id: props.appointment.id,
         start_time: toLocalTimeString(newStartDateTime),
         end_time: toLocalTimeString(newEndDateTime)
-      })
-      .eq('id', props.appointment.id)
-    
-    if (error) {
-      console.error('❌ Error moving appointment:', error)
-      throw error
+      }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to move appointment')
     }
     
     logger.debug('✅ Appointment moved successfully')
