@@ -961,8 +961,20 @@ const confirmTransaction = async (transaction) => {
     // Update local data
     const transactionIndex = staffTransactions.value.findIndex(t => t.id === transaction.id)
     if (transactionIndex !== -1) {
+      // Get current user ID from API
+      const userResponse = await $fetch('/api/system/secure-operations', {
+        method: 'POST',
+        body: {
+          action: 'get-current-user-id'
+        }
+      }) as any
+
+      if (!userResponse?.success) {
+        throw new Error('Could not get current user ID')
+      }
+
       staffTransactions.value[transactionIndex].status = 'confirmed'
-      staffTransactions.value[transactionIndex].confirmed_by = supabase.auth.user()?.id
+      staffTransactions.value[transactionIndex].confirmed_by = userResponse.data.userId
       staffTransactions.value[transactionIndex].confirmed_at = new Date().toISOString()
     }
 
