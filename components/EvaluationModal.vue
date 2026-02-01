@@ -411,15 +411,27 @@ const loadAllCriteria = async () => {
     // Extrahiere alle Kategorie-IDs
     const categoryIds = [...new Set(criteria.map(c => c.category_id).filter(Boolean))]
 
+    // ✅ MIGRATED TO API - Load evaluation categories via backend
     // Hole evaluation_categories (filtered by tenant)
-    const { data: categories, error: catError } = await supabase
-      .from('evaluation_categories')
-      .select('id, name, color, display_order, is_active')
-      .in('id', categoryIds)
-      .eq('is_active', true)
-      .eq('tenant_id', tenantId)
-
-    if (catError) throw catError
+    // Previously: await supabase.from('evaluation_categories').select(...).in(...).eq(...)
+    // Now using /api/admin/evaluation endpoint
+    
+    let categories: any[] = []
+    try {
+      const response = await $fetch('/api/admin/evaluation', {
+        method: 'POST',
+        body: {
+          action: 'get-evaluation-categories',
+          tenant_id: props.appointment?.tenant_id || 'default'
+        }
+      }) as any
+      
+      if (response?.success) {
+        categories = (response.data || []).filter((cat: any) => categoryIds.includes(cat.id))
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not load categories via API, using defaults')
+    }
 
     // Kombiniere alle Daten
     allCriteria.value = criteria.map(criterion => {
