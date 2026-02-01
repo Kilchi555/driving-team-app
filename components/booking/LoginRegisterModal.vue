@@ -173,10 +173,10 @@
 </template>
 
 <script setup lang="ts">
-
 import { ref } from 'vue'
-import { getSupabase } from '~/utils/supabase'
-import { useRoute } from '#app'
+import { useRoute, useRouter } from '#app'
+import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 
 const emit = defineEmits(['close', 'success'])
 
@@ -189,7 +189,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const route = useRoute()
-const supabase = getSupabase()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const activeTab = ref<'login' | 'register'>(props.initialTab)
 const isLoading = ref(false)
@@ -213,14 +214,24 @@ const handleLogin = async () => {
   error.value = ''
 
   try {
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: loginForm.value.email,
-      password: loginForm.value.password
-    })
+    // ✅ MIGRATED TO API - Using secure backend login
+    const response = await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: loginForm.value.email,
+        password: loginForm.value.password
+      }
+    }) as any
 
-    if (authError) throw authError
+    if (!response?.success) {
+      throw new Error(response?.error || 'Login failed')
+    }
 
     logger.debug('✅ Login successful')
+    
+    // Update auth store
+    await authStore.refreshAuth()
+    
     emit('success')
   } catch (err: any) {
     console.error('Login error:', err)
@@ -235,44 +246,31 @@ const handleRegister = async () => {
   error.value = ''
 
   try {
-    // Get tenant_id from route
+    // ✅ MIGRATED TO API - Using secure backend registration
     const slug = route.params.slug as string
-    const { data: tenantData } = await supabase
-      .from('tenants')
-      .select('id')
-      .eq('slug', slug)
-      .single()
 
-    if (!tenantData) {
-      throw new Error('Fahrschule nicht gefunden')
-    }
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: registerForm.value.email,
-      password: registerForm.value.password
-    })
-
-    if (authError) throw authError
-    if (!authData.user) throw new Error('Fehler beim Erstellen des Accounts')
-
-    // Create user profile
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert({
-        auth_user_id: authData.user.id,
+    const response = await $fetch('/api/auth/register', {
+      method: 'POST',
+      body: {
+        action: 'register-customer',
         email: registerForm.value.email,
+        password: registerForm.value.password,
         first_name: registerForm.value.first_name,
         last_name: registerForm.value.last_name,
         phone: registerForm.value.phone,
-        role: 'client',
-        tenant_id: tenantData.id,
-        is_active: true
-      })
+        slug
+      }
+    }) as any
 
-    if (profileError) throw profileError
+    if (!response?.success) {
+      throw new Error(response?.error || 'Registration failed')
+    }
 
     logger.debug('✅ Registration successful')
+    
+    // Update auth store
+    await authStore.refreshAuth()
+    
     emit('success')
   } catch (err: any) {
     console.error('Registration error:', err)

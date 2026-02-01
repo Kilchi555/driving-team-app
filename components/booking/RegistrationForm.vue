@@ -87,9 +87,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { navigateTo } from '#app'
+import { logger } from '~/utils/logger'
 
 const props = defineProps<{
   tenantSlug: string
@@ -106,7 +106,6 @@ const emit = defineEmits<{
   back: []
 }>()
 
-const supabase = getSupabase()
 const authStore = useAuthStore()
 
 const formData = ref({
@@ -140,71 +139,31 @@ const handleRegistration = async () => {
       throw new Error('E-Mail-Adresse fehlt')
     }
 
-    // 1. Check ob E-Mail bereits existiert
-    const { data: existing } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', props.preFilledData.email)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    if (existing) {
-      throw new Error('Diese E-Mail-Adresse ist bereits registriert. Bitte loggen Sie sich ein.')
-    }
-
-    // 2. Get tenant ID from slug
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('id')
-      .eq('slug', props.tenantSlug)
-      .eq('is_active', true)
-      .single()
-
-    if (!tenant) {
-      throw new Error('Tenant nicht gefunden')
-    }
-
-    // 3. Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: props.preFilledData.email,
-      password: formData.value.password,
-      options: {
-        data: {
-          first_name: props.preFilledData.first_name,
-          last_name: props.preFilledData.last_name,
-          phone: props.preFilledData.phone
-        }
+    // ✅ MIGRATED TO API - Register customer via backend
+    const response = await $fetch('/api/auth/register', {
+      method: 'POST',
+      body: {
+        action: 'register-customer',
+        email: props.preFilledData.email,
+        password: formData.value.password,
+        first_name: props.preFilledData.first_name || '',
+        last_name: props.preFilledData.last_name || '',
+        phone: props.preFilledData.phone || '',
+        slug: props.tenantSlug
       }
-    })
+    }) as any
 
-    if (authError) throw authError
-
-    // 4. Wait a bit for trigger to create user in public.users
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 5. Update user with tenant and additional data
-    if (authData.user) {
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          tenant_id: tenant.id,
-          first_name: props.preFilledData.first_name,
-          last_name: props.preFilledData.last_name,
-          phone: props.preFilledData.phone || null,
-          role: 'client'
-        })
-        .eq('auth_user_id', authData.user.id)
-
-      if (updateError) {
-        console.error('Error updating user:', updateError)
-      }
-
-      // 6. Login user
-      await authStore.login(props.preFilledData.email, formData.value.password)
-
-      // 7. Emit success
-      emit('registrationComplete')
+    if (!response?.success) {
+      throw new Error(response?.error || 'Registrierung fehlgeschlagen')
     }
+
+    logger.debug('✅ Registration successful via API')
+
+    // ✅ MIGRATED TO API - Login via backend
+    await authStore.login(props.preFilledData.email, formData.value.password)
+
+    // Emit success
+    emit('registrationComplete')
   } catch (err: any) {
     console.error('Registration error:', err)
     error.value = err.message || 'Fehler bei der Registrierung'

@@ -137,7 +137,8 @@
 <script setup lang="ts">
 
 import { ref, computed } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 
 const props = defineProps<{
   requiredDocuments: any[]
@@ -145,7 +146,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'success'])
 
-const supabase = getSupabase()
+const authStore = useAuthStore()
 const uploads = ref<Record<string, File>>({})
 const isUploading = ref(false)
 const error = ref('')
@@ -196,47 +197,73 @@ const removeFile = (docId: string, side: 'front' | 'back') => {
   delete uploads.value[`${docId}_${side}`]
 }
 
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result as string
+      // Extract base64 data without the data URL prefix
+      resolve(base64.split(',')[1])
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 const handleUpload = async () => {
   isUploading.value = true
   error.value = ''
 
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Nicht angemeldet')
+    if (!authStore.user?.id) {
+      throw new Error('Nicht angemeldet')
+    }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (!userData) throw new Error('Benutzerdaten nicht gefunden')
-
-    // Upload all files
+    // ✅ MIGRATED TO API - Upload all documents
     for (const doc of props.requiredDocuments) {
       const frontFile = uploads.value[`${doc.id}_front`]
       const backFile = uploads.value[`${doc.id}_back`]
 
       if (frontFile) {
-        const frontPath = `${userData.id}/${doc.storage_prefix}/${doc.id}_front_${Date.now()}.${frontFile.name.split('.').pop()}`
-        const { error: uploadError } = await supabase.storage
-          .from('user-documents')
-          .upload(frontPath, frontFile)
+        const base64 = await fileToBase64(frontFile)
+        const response = await $fetch('/api/documents/upload', {
+          method: 'POST',
+          body: {
+            action: 'upload-document',
+            document_type: doc.id,
+            side: 'front',
+            file_data: base64,
+            file_name: frontFile.name,
+            user_id: authStore.user.id
+          }
+        }) as any
 
-        if (uploadError) throw uploadError
+        if (!response?.success) {
+          throw new Error(response?.error || `Failed to upload ${doc.title} front`)
+        }
       }
 
       if (backFile) {
-        const backPath = `${userData.id}/${doc.storage_prefix}/${doc.id}_back_${Date.now()}.${backFile.name.split('.').pop()}`
-        const { error: uploadError } = await supabase.storage
-          .from('user-documents')
-          .upload(backPath, backFile)
+        const base64 = await fileToBase64(backFile)
+        const response = await $fetch('/api/documents/upload', {
+          method: 'POST',
+          body: {
+            action: 'upload-document',
+            document_type: doc.id,
+            side: 'back',
+            file_data: base64,
+            file_name: backFile.name,
+            user_id: authStore.user.id
+          }
+        }) as any
 
-        if (uploadError) throw uploadError
+        if (!response?.success) {
+          throw new Error(response?.error || `Failed to upload ${doc.title} back`)
+        }
       }
     }
 
-    logger.debug('✅ Documents uploaded successfully')
+    logger.debug('✅ All documents uploaded successfully via API')
     emit('success')
   } catch (err: any) {
     console.error('Upload error:', err)
