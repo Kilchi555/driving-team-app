@@ -394,7 +394,8 @@ const getTimeRangeQuery = (range: string) => {
 const loadErrors = async () => {
   isLoading.value = true
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // ✅ MIGRATED TO API
+    const { data: { user: sessionUser }, error: sessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
 
     if (!session?.user) {
       console.error('No session found')

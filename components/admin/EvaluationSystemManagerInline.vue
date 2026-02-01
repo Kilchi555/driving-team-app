@@ -2594,6 +2594,7 @@ const saveEducationalContent = async () => {
           const fileName = `${editingEducationalContent.value!.id}/section_${sectionIndex}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
           const filePath = `evaluation-content/${fileName}`
           
+          // ✅ TODO: MIGRATE TO API - Storage upload needed
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('evaluation-content')
             .upload(filePath, file, {
