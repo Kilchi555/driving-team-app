@@ -226,7 +226,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+// ✅ MIGRATED TO API - Removed direct Supabase import
+// import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 import { useRoute } from 'vue-router'
 import RegistrationForm from './RegistrationForm.vue'
@@ -236,7 +237,8 @@ const props = defineProps<{
   tenantId?: string
 }>()
 
-const supabase = getSupabase()
+// ✅ MIGRATED TO API - Removed Supabase client
+// const supabase = getSupabase()
 const authStore = useAuthStore()
 const route = useRoute()
 
