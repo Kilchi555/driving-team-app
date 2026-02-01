@@ -1,9 +1,7 @@
 // composables/useReminderService.ts
-import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export const useReminderService = () => {
-  const supabase = getSupabase()
 
   /**
    * Process template variables with actual data
@@ -55,39 +53,38 @@ export const useReminderService = () => {
 
       logger.debug('✅ Email sent successfully via API')
       
-      // Log the reminder in database
-      const { error: logError } = await supabase
-        .from('reminder_logs')
-        .insert({
+      // ✅ MIGRATED TO API - Log the reminder
+      await $fetch('/api/reminders/manage', {
+        method: 'POST',
+        body: {
+          action: 'log-sent',
           channel: 'email',
           recipient: email,
           subject,
-          body,
-          status: result.success ? 'sent' : 'failed',
-          error_message: result.error || null,
-          sent_at: new Date().toISOString()
-        })
-
-      if (logError) {
-        console.error('❌ Error logging email reminder:', logError)
-      }
+          body
+        }
+      }).catch((err: any) => {
+        logger.error('Error logging email reminder:', err)
+      })
 
       return { success: true }
     } catch (error: any) {
       console.error('❌ Error sending email reminder:', error)
       
-      // Log failed attempt
-      await supabase
-        .from('reminder_logs')
-        .insert({
+      // ✅ MIGRATED TO API - Log failed attempt
+      await $fetch('/api/reminders/manage', {
+        method: 'POST',
+        body: {
+          action: 'log-failed',
           channel: 'email',
           recipient: email,
           subject,
           body,
-          status: 'failed',
-          error_message: error.message,
-          sent_at: new Date().toISOString()
-        })
+          error_message: error.message
+        }
+      }).catch((err: any) => {
+        logger.error('Error logging failed reminder:', err)
+      })
       
       return { success: false, error: error.message }
     }
