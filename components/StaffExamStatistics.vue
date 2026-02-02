@@ -512,7 +512,6 @@ const loadExamResults = async () => {
   error.value = null
   
   try {
-    
     try {
       // Load exam statistics via API
       const response = await $fetch('/api/staff/exam-stats', {
@@ -555,6 +554,9 @@ const loadExamResults = async () => {
 
       examResults.value = examData
       logger.debug('✅ Exam results loaded via API:', examData.length)
+    } catch (err) {
+      console.error('❌ Error loading exam statistics:', err)
+      examResults.value = []
     }
     
     // Get examiner names (only for non-null examiner_ids)
