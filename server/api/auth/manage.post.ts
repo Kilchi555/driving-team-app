@@ -1,7 +1,6 @@
 // api/auth/manage.post.ts
 import { defineEventHandler, readBody } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { getServerSession } from '#auth'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
