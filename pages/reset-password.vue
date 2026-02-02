@@ -157,8 +157,14 @@ const updatePassword = async () => {
   isSubmitting.value = true
   
   try {
-    const { data, error: updateError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'update-user', attributes:{
-      password: newPassword.value
+    const { data, error: updateError } = await $fetch('/api/auth/manage', { 
+      method: 'POST', 
+      body: { 
+        action: 'update-user', 
+        attributes: {
+          password: newPassword.value
+        }
+      }
     })
     
     if (updateError) {
@@ -202,9 +208,13 @@ onMounted(async () => {
     
     if (accessToken && refreshToken) {
       // Set the session from URL tokens
-    const { data, error: setSessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'set-session',{
-        access_token: accessToken,
-        refresh_token: refreshToken
+      const { data, error: setSessionError } = await $fetch('/api/auth/manage', { 
+        method: 'POST', 
+        body: { 
+          action: 'set-session',
+          access_token: accessToken,
+          refresh_token: refreshToken
+        }
       })
       
       if (setSessionError) {
@@ -215,7 +225,15 @@ onMounted(async () => {
       isLoading.value = false
     } else {
       // Check if we already have a valid session
-    const { data: { user: sessionUser }, error: sessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
+      const { data, error: sessionError } = await $fetch('/api/auth/manage', { 
+        method: 'POST', 
+        body: { 
+          action: 'get-session', 
+          access_token: authStore.session?.access_token 
+        }
+      })
+      
+      const session = data?.user ? { user: data.user } : null
       
       if (sessionError) {
         throw sessionError
@@ -229,9 +247,9 @@ onMounted(async () => {
       }
     }
     
-  } catch (err: any) {
+  } catch (err) {
     console.error('Reset page error:', err)
-    error.value = err.message
+    error.value = err?.message
     isLoading.value = false
   }
 })

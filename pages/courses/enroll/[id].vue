@@ -850,9 +850,13 @@ const loginAndEnroll = async () => {
   try {
     isSubmitting.value = true
 
-      const { data: authData, error: authError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signin-password',{
-      email: emailCheck.value.email,
-      password: loginForm.value.password
+    const { data: authData, error: authError } = await $fetch('/api/auth/manage', { 
+      method: 'POST', 
+      body: { 
+        action: 'signin-password',
+        email: emailCheck.value.email,
+        password: loginForm.value.password
+      }
     })
 
     if (authError) throw authError
@@ -861,7 +865,7 @@ const loginAndEnroll = async () => {
 
     alert('Anmeldung erfolgreich! Sie erhalten eine Bestätigungs-E-Mail.')
     goBack()
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error logging in and enrolling:', err)
     alert('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Daten.')
   } finally {
@@ -879,19 +883,23 @@ const registerAndEnroll = async () => {
       return
     }
 
-      const { data: authData, error: authError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signup',{
-      email: registrationForm.value.email,
-      password: registrationForm.value.password,
-      options: {
-        data: {
-          first_name: registrationForm.value.first_name,
-          last_name: registrationForm.value.last_name,
-          phone: registrationForm.value.phone,
-          birthdate: registrationForm.value.birthdate,
-          street: registrationForm.value.street,
-          street_nr: registrationForm.value.street_nr,
-          zip: registrationForm.value.zip,
-          city: registrationForm.value.city
+    const { data: authData, error: authError } = await $fetch('/api/auth/manage', { 
+      method: 'POST', 
+      body: { 
+        action: 'signup',
+        email: registrationForm.value.email,
+        password: registrationForm.value.password,
+        options: {
+          data: {
+            first_name: registrationForm.value.first_name,
+            last_name: registrationForm.value.last_name,
+            phone: registrationForm.value.phone,
+            birthdate: registrationForm.value.birthdate,
+            street: registrationForm.value.street,
+            street_nr: registrationForm.value.street_nr,
+            zip: registrationForm.value.zip,
+            city: registrationForm.value.city
+          }
         }
       }
     })
@@ -960,14 +968,19 @@ const goBackToEmailCheck = () => {
 
 const forgotPassword = async () => {
   try {
-        const { error } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'reset-password-email', email:emailCheck.value.email, {
-      redirectTo: `${window.location.origin}/reset-password`
+    const { error } = await $fetch('/api/auth/manage', { 
+      method: 'POST', 
+      body: { 
+        action: 'reset-password-email', 
+        email: emailCheck.value.email,
+        redirectTo: `${window.location.origin}/reset-password`
+      }
     })
     
     if (error) throw error
     
     alert('Passwort-Reset E-Mail wurde gesendet!')
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error sending password reset:', err)
     alert('Fehler beim Senden der Passwort-Reset E-Mail.')
   }

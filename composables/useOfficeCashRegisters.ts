@@ -1,9 +1,10 @@
 // composables/useOfficeCashRegisters.ts
 // Verwaltung von mehreren Bürokassen mit Staff-Zuweisungen
 
-import { ref, computed } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export interface OfficeCashRegister {
   id: string
