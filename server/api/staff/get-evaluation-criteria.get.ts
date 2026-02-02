@@ -71,12 +71,15 @@ export default defineEventHandler(async (event) => {
       criteria = [...(tenantTheory || []), ...(globalTheory || [])]
         // Remove duplicates: prefer tenant-specific over global defaults
         .reduce((acc: any[], current: any) => {
-          const exists = acc.some(item => 
+          const existingIndex = acc.findIndex(item => 
             item.name === current.name && 
             item.category_id === current.category_id
           )
-          if (!exists) {
+          if (existingIndex === -1) {
             acc.push(current)
+          } else if (current.evaluation_categories?.[0]?.tenant_id !== null) {
+            // Replace global with tenant-specific
+            acc[existingIndex] = current
           }
           return acc
         }, [])
@@ -138,12 +141,15 @@ export default defineEventHandler(async (event) => {
       criteria = [...(tenantPractical || []), ...(globalPractical || [])]
         // Remove duplicates: prefer tenant-specific over global defaults
         .reduce((acc: any[], current: any) => {
-          const exists = acc.some(item => 
+          const existingIndex = acc.findIndex(item => 
             item.name === current.name && 
             item.category_id === current.category_id
           )
-          if (!exists) {
+          if (existingIndex === -1) {
             acc.push(current)
+          } else if (current.evaluation_categories?.[0]?.tenant_id !== null) {
+            // Replace global with tenant-specific
+            acc[existingIndex] = current
           }
           return acc
         }, [])
