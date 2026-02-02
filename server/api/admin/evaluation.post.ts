@@ -3,7 +3,7 @@
 // Handles all evaluation-related CRUD operations
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -16,16 +16,30 @@ export default defineEventHandler(async (event) => {
     scale_data
   } = body
 
-  const supabase = serverSupabaseClient(event)
+  const supabase = createClient(
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  )
 
   try {
+    if (!action) {
+      throw createError({
+        statusCode: 400,
+        message: 'Action is required'
+      })
+    }
+
     if (action === 'get-evaluation-categories') {
-      // Get all evaluation categories for tenant
+      // Get all evaluation categories for tenant, sorted by display_order
+      if (!tenant_id) {
+        return { success: true, data: [] }
+      }
+      
       const { data, error } = await supabase
         .from('evaluation_categories')
         .select('*')
         .eq('tenant_id', tenant_id)
-        .order('name')
+        .order('display_order', { ascending: true })
 
       if (error) throw error
       return { success: true, data: data || [] }

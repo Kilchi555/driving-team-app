@@ -2,13 +2,16 @@
 // Staff exam statistics endpoint
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
   const body = readBody(event)
   const { staff_id, tenant_id } = await body
 
-  const supabase = serverSupabaseClient(event)
+  const supabase = createClient(
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  )
 
   try {
     // Get all appointments for this staff
@@ -48,12 +51,27 @@ export default defineEventHandler(async (event) => {
       students = studentsData || []
     }
 
+    // Get examiner names
+    const examinerIds = [...new Set(exam_results.map((exam: any) => exam.examiner_id).filter(Boolean))]
+    let examiners: any[] = []
+
+    if (examinerIds.length > 0) {
+      const { data: examinersData, error: examinersError } = await supabase
+        .from('examiners')
+        .select('id, first_name, last_name')
+        .in('id', examinerIds)
+
+      if (examinersError) throw examinersError
+      examiners = examinersData || []
+    }
+
     return {
       success: true,
       data: {
         appointments,
         exam_results,
-        students
+        students,
+        examiners
       }
     }
   } catch (err: any) {

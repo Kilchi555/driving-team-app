@@ -22,7 +22,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ 2. GET SUPABASE CLIENT
-    const supabase = await serverSupabaseClient(event)
+    const supabase = createClient(
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  )
 
     // ✅ 3. GET USER'S TENANT
     const { data: userProfile, error: profileError } = await supabase

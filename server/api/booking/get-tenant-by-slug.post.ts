@@ -3,7 +3,7 @@
 // This is used by the public booking page
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const supabase = serverSupabaseClient(event)
+  const supabase = createClient(
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  )
 
   try {
     let tenantData = null

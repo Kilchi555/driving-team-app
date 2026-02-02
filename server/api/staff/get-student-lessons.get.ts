@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
@@ -25,7 +25,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabaseAdmin = getSupabaseAdmin()
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    )
 
     // Get user's profile (for tenant_id validation)
     const { data: userProfile } = await supabaseAdmin

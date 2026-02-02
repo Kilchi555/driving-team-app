@@ -218,9 +218,11 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 
 // State
+const authStore = useAuthStore()
 const externalCalendars = ref<any[]>([])
 const isConnecting = ref(false)
 const isSyncing = ref(false)
@@ -274,33 +276,22 @@ const loadExternalCalendars = async () => {
     const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) return
 
-    // Get internal user ID
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', user.id)
-      .single()
+    logger.debug('🔍 Loading external calendars for user:', user.id)
 
-    if (userError || !userData?.id) {
-      console.error('Error loading user data:', userError)
-      return
+    const response = await $fetch<{ success: boolean; data: any[] }>('/api/staff/external-calendars', {
+      method: 'POST',
+      body: {
+        action: 'load',
+        data: {
+          authUserId: user.id
+        }
+      }
+    })
+
+    if (response.success) {
+      externalCalendars.value = response.data || []
+      logger.debug('✅ Loaded calendars:', response.data?.length || 0, response.data)
     }
-
-    logger.debug('🔍 Loading calendars for staff_id:', userData.id)
-
-    const { data: calendars, error } = await supabase
-      .from('external_calendars')
-      .select('*')
-      .eq('staff_id', userData.id)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('❌ Error loading calendars:', error)
-      throw error
-    }
-    
-    externalCalendars.value = calendars || []
-    logger.debug('✅ Loaded calendars:', calendars?.length || 0, calendars)
   } catch (err: any) {
     console.error('Error loading external calendars:', err)
     error.value = 'Fehler beim Laden der Kalender-Verbindungen'
@@ -316,48 +307,32 @@ const connectCalendar = async () => {
     const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Nicht authentifiziert')
 
-    // Get user's tenant_id and internal users.id (staff id)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
+    const response = await $fetch<{ success: boolean; message: string }>('/api/staff/external-calendars', {
+      method: 'POST',
+      body: {
+        action: 'connect',
+        data: {
+          authUserId: user.id,
+          provider: newCalendar.value.provider,
+          account_identifier: newCalendar.value.account_identifier,
+          calendar_name: newCalendar.value.calendar_name,
+          ics_url: newCalendar.value.ics_url
+        }
+      }
+    })
 
-    if (userError || !userData?.tenant_id || !userData?.id) {
-      throw new Error('Benutzer-Tenant nicht gefunden')
+    if (response.success) {
+      success.value = response.message || 'Kalender erfolgreich verbunden!'
+      await loadExternalCalendars()
+      
+      // Reset form
+      newCalendar.value = {
+        provider: '',
+        account_identifier: '',
+        calendar_name: '',
+        ics_url: ''
+      }
     }
-
-    const calendarData = {
-      tenant_id: userData.tenant_id,
-      staff_id: userData.id, // use internal users.id, not auth user id
-      provider: newCalendar.value.provider,
-      account_identifier: newCalendar.value.account_identifier,
-      calendar_name: newCalendar.value.calendar_name,
-      connection_type: newCalendar.value.provider === 'ics' ? 'ics_url' : 'oauth',
-      ics_url: newCalendar.value.ics_url,
-      sync_enabled: true
-    }
-
-    // Upsert: bei Duplikat aktualisieren statt Fehler
-    const { error: upsertError } = await supabase
-      .from('external_calendars')
-      .upsert(calendarData, {
-        onConflict: 'tenant_id,staff_id,provider,account_identifier'
-      })
-
-    if (upsertError) throw upsertError
-
-    success.value = 'Kalender erfolgreich verbunden!'
-    await loadExternalCalendars()
-    
-    // Reset form
-    newCalendar.value = {
-      provider: '',
-      account_identifier: '',
-      calendar_name: '',
-      ics_url: ''
-    }
-
   } catch (err: any) {
     console.error('Error connecting calendar:', err)
     error.value = err.message || 'Fehler beim Verbinden des Kalenders'
@@ -445,15 +420,20 @@ const disconnectCalendar = async (calendarId: string) => {
   if (!confirm('Möchten Sie diese Kalender-Verbindung wirklich trennen?')) return
 
   try {
-    const { error } = await supabase
-      .from('external_calendars')
-      .delete()
-      .eq('id', calendarId)
+    const response = await $fetch<{ success: boolean; message: string }>('/api/staff/external-calendars', {
+      method: 'POST',
+      body: {
+        action: 'disconnect',
+        data: {
+          calendarId
+        }
+      }
+    })
 
-    if (error) throw error
-
-    success.value = 'Kalender-Verbindung getrennt!'
-    await loadExternalCalendars()
+    if (response.success) {
+      success.value = response.message || 'Kalender-Verbindung getrennt!'
+      await loadExternalCalendars()
+    }
   } catch (err: any) {
     error.value = 'Fehler beim Trennen der Verbindung'
   }
