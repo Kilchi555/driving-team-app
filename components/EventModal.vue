@@ -198,7 +198,7 @@
               :selected-student-id="isLessonType(formData.eventType) ? selectedStudent?.id : undefined"
               :current-staff-id="formData.staff_id"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              :disable-auto-selection="false"
+              :disable-auto-selection="props.mode === 'edit' || props.mode === 'view'"
               :show-buttons="!(props.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props.mode === 'edit' && isPastAppointment"
               @update:model-value="updateLocationId"
@@ -2491,7 +2491,8 @@ const handleStudentSelected = async (student: Student | null) => {
   
   // ✅ NEU: Kategorie aus dem letzten Termin des Schülers laden via secure API
   // 🚫 ABER NICHT bei Freeslot-Modus - dort soll der User die Kategorie selbst wählen
-  if (student?.id && !(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')) {
+  // 🚫 ABER AUCH NICHT bei Edit/View Mode - dort sollten die bestehenden Werte erhalten bleiben
+  if (student?.id && props.mode === 'create' && !(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')) {
     try {
       logger.debug('🔄 Loading last appointment category for student via API:', student.first_name)
       
@@ -2538,25 +2539,28 @@ const handleStudentSelected = async (student: Student | null) => {
               availableDurations: availableDurations.value
             })
             
-            // ✅ NEU: Auch den letzten Standort des Schülers laden
-            try {
-              logger.debug('📍 Loading last location for student:', student.first_name)
-              const lastLocation = await modalForm.loadLastAppointmentLocation?.(student.id)
-              
-              if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
-                logger.debug('🔄 Updating location to student\'s last used location:', lastLocation.location_id)
-                formData.value.location_id = lastLocation.location_id
+            // ✅ NEU: Auch den letzten Standort des Schülers laden (NUR IM CREATE MODE!)
+            // 🚫 NICHT im Edit/View Mode - dort soll die bestehende Location behalten werden
+            if (props.mode === 'create') {
+              try {
+                logger.debug('📍 Loading last location for student:', student.first_name)
+                const lastLocation = await modalForm.loadLastAppointmentLocation?.(student.id)
                 
-                // ✅ Auch selectedLocation via secure API aktualisieren
-                const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
-                
-                if (locationData) {
-                  selectedLocation.value = locationData
-                  logger.debug('✅ Location updated via API:', locationData.name)
+                if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
+                  logger.debug('🔄 Updating location to student\'s last used location:', lastLocation.location_id)
+                  formData.value.location_id = lastLocation.location_id
+                  
+                  // ✅ Auch selectedLocation via secure API aktualisieren
+                  const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
+                  
+                  if (locationData) {
+                    selectedLocation.value = locationData
+                    logger.debug('✅ Location updated via API:', locationData.name)
+                  }
                 }
+              } catch (locationError) {
+                logger.debug('⚠️ Could not load student\'s last location:', locationError)
               }
-            } catch (locationError) {
-              logger.debug('⚠️ Could not load student\'s last location:', locationError)
             }
             
             // ✅ Preise neu berechnen nach Kategorie-Änderung

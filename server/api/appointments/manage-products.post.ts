@@ -21,18 +21,41 @@ export default defineEventHandler(async (event) => {
     logger.debug('📦 Managing products:', { appointmentId, action })
     
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
     
-    if (!token) {
-      throw new Error('No authorization token')
+    // Get current user from session (HTTP-only cookies)
+    // First try to get user from session
+    let user: any = null
+    let userError: any = null
+    
+    const sessionResult = await supabaseAdmin.auth.getUser()
+    if (!sessionResult.error && sessionResult.data?.user) {
+      user = sessionResult.data.user
+    } else {
+      // Try with auth header as fallback
+      userError = sessionResult.error
+      const authorization = getHeader(event, 'authorization')
+      const token = authorization?.replace('Bearer ', '')
+      
+      if (!token) {
+        logger.error('❌ No authentication available (no session, no Bearer token)')
+        throw new Error('No authentication available')
+      }
+      
+      logger.debug('🔑 Using Bearer token authentication')
+      const bearerResult = await supabaseAdmin.auth.getUser(token)
+      if (bearerResult.error || !bearerResult.data?.user) {
+        logger.error('❌ Bearer token invalid:', bearerResult.error?.message)
+        throw new Error('Invalid authentication')
+      }
+      user = bearerResult.data.user
     }
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
-      throw new Error('Unauthorized')
+    if (!user) {
+      logger.error('❌ Failed to get user from session or Bearer token:', userError?.message)
+      throw new Error('Unauthorized - no user found')
     }
+    
+    logger.debug('👤 Current user:', { userId: user.id, email: user.email })
     
     // Get user profile for role/tenant validation
     const { data: userProfile, error: profileError } = await supabaseAdmin
@@ -41,41 +64,84 @@ export default defineEventHandler(async (event) => {
       .eq('id', user.id)
       .single()
     
-    if (profileError || !userProfile) {
-      logger.warn('⚠️ User profile not found:', user.id)
-      throw new Error('User profile not found')
-    }
-    
-    // Verify user can access this appointment
-    const { data: appointment, error: appointmentError } = await supabaseAdmin
-      .from('appointments')
-      .select('id, staff_id, tenant_id')
-      .eq('id', appointmentId)
-      .single()
-    
-    if (appointmentError || !appointment) {
-      throw new Error('Appointment not found')
-    }
-    
-    // Authorization: Staff can only manage their own appointments
-    // Admin/Tenant Admin can manage any appointment in their tenant
-    const isStaff = userProfile.role === 'staff'
-    const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
-    const isOwnAppointment = appointment.staff_id === user.id
-    const isSameTenant = appointment.tenant_id === userProfile.tenant_id
-    
-    const isAuthorized = (isStaff && isOwnAppointment) || (isAdmin && isSameTenant)
-    
-    if (!isAuthorized) {
-      logger.warn('❌ Unauthorized access to appointment products:', {
+    if (profileError) {
+      logger.error('❌ Error fetching user profile:', {
         userId: user.id,
-        userRole: userProfile.role,
-        appointmentId,
-        staffId: appointment.staff_id,
-        userTenant: userProfile.tenant_id,
-        appointmentTenant: appointment.tenant_id
+        errorCode: profileError.code,
+        errorMessage: profileError.message
       })
-      throw new Error('Unauthorized to manage products for this appointment')
+      // Don't throw immediately - check if this is a missing profile issue
+      // We'll handle it below
+    }
+    
+    if (!userProfile && profileError) {
+      logger.warn('⚠️ User profile not found in users table:', {
+        authUserId: user.id,
+        authEmail: user.email,
+        errorMessage: profileError.message
+      })
+      
+      // Fallback: Try to verify appointment access without user profile
+      // This allows users to save their own appointments even if profile is incomplete
+      logger.debug('🔄 Attempting authorization without user profile...')
+      
+      const { data: appointment, error: appointmentError } = await supabaseAdmin
+        .from('appointments')
+        .select('id, user_id, staff_id, tenant_id')
+        .eq('id', appointmentId)
+        .single()
+      
+      if (appointmentError || !appointment) {
+        logger.error('❌ Appointment not found:', appointmentError?.message)
+        throw new Error('Appointment not found')
+      }
+      
+      // Allow if this is the appointment creator or staff member
+      if (appointment.user_id !== user.id && appointment.staff_id !== user.id) {
+        logger.error('❌ User not authorized for this appointment (profile missing):', {
+          userId: user.id,
+          appointmentUserId: appointment.user_id,
+          appointmentStaffId: appointment.staff_id
+        })
+        throw new Error('User profile not found in users table')
+      }
+      
+      logger.info('✅ User authorized via appointment relationship (profile missing)')
+    } else if (userProfile) {
+      logger.debug('✅ User profile found:', { role: userProfile.role, tenant_id: userProfile.tenant_id })
+      
+      // Verify user can access this appointment
+      const { data: appointment, error: appointmentError } = await supabaseAdmin
+        .from('appointments')
+        .select('id, staff_id, tenant_id')
+        .eq('id', appointmentId)
+        .single()
+      
+      if (appointmentError || !appointment) {
+        logger.error('❌ Appointment not found:', appointmentError?.message)
+        throw new Error('Appointment not found')
+      }
+      
+      // Authorization: Staff can only manage their own appointments
+      // Admin/Tenant Admin can manage any appointment in their tenant
+      const isStaff = userProfile.role === 'staff'
+      const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
+      const isOwnAppointment = appointment.staff_id === user.id
+      const isSameTenant = appointment.tenant_id === userProfile.tenant_id
+      
+      const isAuthorized = (isStaff && isOwnAppointment) || (isAdmin && isSameTenant)
+      
+      if (!isAuthorized) {
+        logger.warn('❌ Unauthorized access to appointment products:', {
+          userId: user.id,
+          userRole: userProfile.role,
+          appointmentId,
+          staffId: appointment.staff_id,
+          userTenant: userProfile.tenant_id,
+          appointmentTenant: appointment.tenant_id
+        })
+        throw new Error('Unauthorized to manage products for this appointment')
+      }
     }
     
     if (action === 'delete') {
