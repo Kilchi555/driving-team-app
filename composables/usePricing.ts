@@ -197,20 +197,6 @@ const getEventTypeByCode = async (code: string, tenantId: string) => {
     return null
   }
 }
-    
-    if (eventTypeError) {
-      console.error('Error loading event type:', eventTypeError)
-    }
-    if (categoryError) {
-      console.error('Error loading category (fallback):', categoryError)
-    }
-    
-    return null
-  } catch (err) {
-    console.error('Error in getEventTypeByCode:', err)
-    return null
-  }
-}
 
 // ===== HAUPT-COMPOSABLE =====
 export const usePricing = (options: UsePricingOptions = {}) => {
