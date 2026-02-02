@@ -56,8 +56,21 @@ export default defineEventHandler(async (event) => {
       return { data: null }
     }
 
-    logger.debug('✅ Last used location loaded:', data?.location_id)
-    return { data }
+    // ✅ Only return location_id if it exists (don't use custom locations for auto-selection)
+    // Custom locations should be manually re-entered by the user
+    if (data?.location_id) {
+      logger.debug('✅ Last used location loaded (from location_id):', data.location_id)
+      return { data: { location_id: data.location_id } }
+    } else if (data?.custom_location_name || data?.custom_location_address) {
+      logger.debug('⚠️ Last appointment used custom location (not auto-selecting):', {
+        name: data.custom_location_name,
+        address: data.custom_location_address
+      })
+      return { data: null }
+    }
+    
+    logger.debug('ℹ️ No completed appointments with location found')
+    return { data: null }
 
   } catch (error: any) {
     logger.error('❌ Error in get-last-used-location API:', error.message)
