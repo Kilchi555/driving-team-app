@@ -219,7 +219,6 @@ export default defineEventHandler(async (event) => {
             id,
             name,
             description,
-            unit,
             category
           )
         `)
