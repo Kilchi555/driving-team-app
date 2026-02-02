@@ -28,15 +28,20 @@ export default defineEventHandler(async (event) => {
       throw new Error('Unauthorized')
     }
     
-    // Get user's tenant_id
-    const { data: userData } = await supabaseAdmin
+    // Get user's tenant_id (the student's record)
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('tenant_id')
       .eq('id', user_id)
       .single()
     
-    if (!userData?.tenant_id) {
-      throw new Error('User tenant not found')
+    if (userError || !userData?.tenant_id) {
+      logger.warn('⚠️ Student user profile not found or no tenant:', { user_id, error: userError })
+      // Return empty address if student not found - this is OK
+      return {
+        success: true,
+        data: null
+      }
     }
     
     // Verify user has access to this user (same tenant or is admin)
