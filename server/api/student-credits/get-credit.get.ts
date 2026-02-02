@@ -29,14 +29,20 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get user profile
-    const { data: userProfile } = await supabaseAdmin
+    const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, role')
       .eq('id', authUser.id)
       .single()
 
-    if (!userProfile) {
-      throw new Error('User profile not found')
+    if (profileError || !userProfile) {
+      logger.warn('⚠️ Current user profile not found:', { userId: authUser.id, error: profileError })
+      // If user profile doesn't exist in users table, they might be in process of being created
+      // Return empty credit for now
+      return {
+        success: true,
+        data: null
+      }
     }
     
     // Verify access: can only access own credits or if admin
