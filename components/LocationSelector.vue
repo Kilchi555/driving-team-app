@@ -418,19 +418,23 @@ const loadStudentPickupLocations = async (studentId: string) => {
     }
     
     // 2. Lade letzten verwendeten Standort nur wenn staffId vorhanden UND keine Location bereits gesetzt ist
+    let lastLocationWasFound = false
     if (props.currentStaffId && !props.modelValue && !props.disableAutoSelection) {
       const lastLocation = await loadLastUsedLocation(studentId, props.currentStaffId)
       
-      if (lastLocation && !selectedLocationId.value) {
+      if (lastLocation?.location_id && !selectedLocationId.value) {
         // Suche die entsprechende Location in den geladenen Locations
         const matchingLocation = [...standardLocations.value, ...studentPickupLocations.value]
           .find(loc => loc.id === lastLocation.location_id)
         
         if (matchingLocation) {
           selectedLocationId.value = matchingLocation.id
+          lastLocationWasFound = true
           emit('update:modelValue', matchingLocation.id)
           emit('locationSelected', matchingLocation)
           logger.debug('🎯 Auto-selected last used location:', matchingLocation.name)
+        } else {
+          logger.debug('⚠️ Last location found in DB but not in current lists:', lastLocation.location_id)
         }
       }
     }
@@ -442,34 +446,22 @@ const loadStudentPickupLocations = async (studentId: string) => {
       return
     }
     
-    // 3. Fallback: Ersten verfügbaren Standort wählen (Pickup oder Standard)
+    // 3. ⚠️ WICHTIG: NUR AUTO-AUSWÄHLEN wenn die letzte Location gefunden wurde
+    // Nicht automatisch die erste Location wählen, wenn der User noch nie dort war!
     if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
-      logger.debug('🔍 Auto-selection logic:', {
+      logger.debug('🔍 Auto-selection decision:', {
         selectedLocationId: selectedLocationId.value,
         modelValue: props.modelValue,
         disableAutoSelection: props.disableAutoSelection,
+        lastLocationWasFound: lastLocationWasFound,
         pickupsAvailable: studentPickupLocations.value.length,
         standardsAvailable: standardLocations.value.length
       })
       
-      if (studentPickupLocations.value.length > 0) {
-        // Erste Pickup-Location wählen
-        const firstPickup = studentPickupLocations.value[0]
-        selectedLocationId.value = firstPickup.id
-        useStandardLocations.value = false
-        emit('update:modelValue', firstPickup.id)
-        emit('locationSelected', firstPickup)
-        logger.debug('📍 Auto-selected first pickup location:', firstPickup.name)
-      } else if (standardLocations.value.length > 0) {
-        // ✅ FALLBACK: Erste Standard-Location wählen wenn keine Pickup-Locations vorhanden
-        const firstStandard = standardLocations.value[0]
-        selectedLocationId.value = firstStandard.id
-        useStandardLocations.value = true
-        emit('update:modelValue', firstStandard.id)
-        emit('locationSelected', firstStandard)
-        logger.debug('📍 Auto-selected first standard location (no pickup locations):', firstStandard.name)
-      } else {
-        logger.debug('⚠️ No locations available for auto-selection')
+      if (!lastLocationWasFound) {
+        // ⚠️ Die letzte verwendete Location wurde nicht gefunden
+        // → Keine Auto-Auswahl! Der User muss manuell wählen
+        logger.debug('⚠️ CREATE MODE: No last location found - user must choose manually')
       }
     }
     
