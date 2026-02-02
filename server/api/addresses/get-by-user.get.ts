@@ -42,11 +42,13 @@ export default defineEventHandler(async (event) => {
     // Verify user has access to this user (same tenant or is admin)
     const { data: currentUserData } = await supabaseAdmin
       .from('users')
-      .select('tenant_id, is_admin')
+      .select('tenant_id, role')
       .eq('id', user.id)
       .single()
     
-    if (currentUserData?.tenant_id !== userData.tenant_id && !currentUserData?.is_admin) {
+    const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(currentUserData?.role)
+    
+    if (currentUserData?.tenant_id !== userData.tenant_id && !isAdmin) {
       throw new Error('Unauthorized to access this user')
     }
     

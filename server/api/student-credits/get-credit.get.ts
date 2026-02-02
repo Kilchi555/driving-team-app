@@ -21,12 +21,34 @@ export default defineEventHandler(async (event) => {
   // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
-    .select('id, tenant_id')
-    .eq('auth_user_id', authUser.id)
+    .select('id, tenant_id, role')
+    .eq('id', authUser.id)
     .single()
 
   if (!userProfile) {
     throw createError({ statusCode: 403, message: 'User profile not found' })
+  }
+  
+  // Verify access: can only access own credits or if admin
+  const requestedUserId = user_id as string
+  const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
+  const isOwnCredit = authUser.id === requestedUserId
+  
+  if (!isOwnCredit && !isAdmin) {
+    throw createError({ statusCode: 403, message: 'Unauthorized to access this student credit' })
+  }
+  
+  // Verify student is in same tenant (for non-admins)
+  if (!isAdmin) {
+    const { data: studentProfile } = await supabase
+      .from('users')
+      .select('tenant_id')
+      .eq('id', requestedUserId)
+      .single()
+    
+    if (!studentProfile || studentProfile.tenant_id !== userProfile.tenant_id) {
+      throw createError({ statusCode: 403, message: 'Student not in your tenant' })
+    }
   }
 
   // Get query parameters
