@@ -120,18 +120,21 @@ export default defineEventHandler(async (event) => {
 
     // Filter pending appointments (those without evaluation or exam result)
     const pendingAppointments = (appointmentsData || []).filter((appointment: any) => {
-      // Check if it has criteria evaluation
+      // Check if it has ANY criteria evaluation
+      // A valid evaluation requires BOTH evaluation_criteria_id AND criteria_rating to be set
       const hasCriteriaEvaluation = appointment.notes && 
         appointment.notes.some((note: any) => 
           note.evaluation_criteria_id !== null && 
-          note.criteria_rating !== null && note.criteria_rating !== undefined
+          note.evaluation_criteria_id !== undefined &&
+          note.criteria_rating !== null && 
+          note.criteria_rating !== undefined
         )
 
       // Check if it has exam result
       const hasExamResult = appointment.exam_results && 
         appointment.exam_results.length > 0
 
-      // It's pending if it has neither evaluation nor exam result
+      // It's pending if it has NEITHER a valid evaluation NOR an exam result
       return !hasCriteriaEvaluation && !hasExamResult
     }).map((appointment: any) => ({
       id: appointment.id,
