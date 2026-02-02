@@ -446,8 +446,8 @@ const loadStudentPickupLocations = async (studentId: string) => {
       return
     }
     
-    // 3. ⚠️ WICHTIG: NUR AUTO-AUSWÄHLEN wenn die letzte Location gefunden wurde
-    // Nicht automatisch die erste Location wählen, wenn der User noch nie dort war!
+    // 3. ✅ FALLBACK: Wähle erste Standard-Location des Staffs wenn keine letzte Location gefunden
+    // Das ist der sinnvolle Fallback, wenn der Kunde noch keine Termine hat
     if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
       logger.debug('🔍 Auto-selection decision:', {
         selectedLocationId: selectedLocationId.value,
@@ -458,10 +458,17 @@ const loadStudentPickupLocations = async (studentId: string) => {
         standardsAvailable: standardLocations.value.length
       })
       
-      if (!lastLocationWasFound) {
-        // ⚠️ Die letzte verwendete Location wurde nicht gefunden
-        // → Keine Auto-Auswahl! Der User muss manuell wählen
-        logger.debug('⚠️ CREATE MODE: No last location found - user must choose manually')
+      if (!lastLocationWasFound && standardLocations.value.length > 0) {
+        // ✅ Keine letzte Location gefunden, aber wir haben Standard-Locations des Staffs
+        // → Wähle die erste Standard-Location (Fallback)
+        const firstStandard = standardLocations.value[0]
+        selectedLocationId.value = firstStandard.id
+        useStandardLocations.value = true
+        emit('update:modelValue', firstStandard.id)
+        emit('locationSelected', firstStandard)
+        logger.debug('📍 Auto-selected first standard location (no last location found):', firstStandard.name)
+      } else if (!lastLocationWasFound) {
+        logger.debug('⚠️ CREATE MODE: No last location and no standard locations available - user must choose manually')
       }
     }
     
