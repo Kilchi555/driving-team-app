@@ -56,6 +56,18 @@ export default defineEventHandler(async (event) => {
       return { data: null }
     }
 
+    // ✅ Debug: Log exactly what we found
+    if (data) {
+      logger.debug('📊 Last completed appointment for student-staff pair:', {
+        hasLocationId: !!data.location_id,
+        locationIdValue: data.location_id || 'null',
+        hasCustomLocationName: !!data.custom_location_name,
+        hasCustomLocationAddress: !!data.custom_location_address,
+        customLocationName: data.custom_location_name || 'null',
+        customLocationAddress: data.custom_location_address || 'null'
+      })
+    }
+
     // ✅ Only return location_id if it exists (don't use custom locations for auto-selection)
     // Custom locations should be manually re-entered by the user
     if (data?.location_id) {
