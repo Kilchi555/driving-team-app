@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     let criteria: any[] = []
     
     if (isTheoryLesson) {
-      // Load tenant-specific theory criteria with proper ordering
+      // Load only tenant-specific theory criteria
       const { data: tenantTheory, error: tenantError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -42,61 +42,16 @@ export default defineEventHandler(async (event) => {
         .eq('is_active', true)
         .eq('evaluation_categories.tenant_id', user.tenant_id)
         .eq('evaluation_categories.is_theory', true)
+        .order('evaluation_categories(display_order), display_order', { ascending: true })
       
       if (tenantError) {
         console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading tenant theory criteria:`, tenantError)
       }
       
-      // Load global theory criteria with proper ordering
-      const { data: globalTheory, error: globalError } = await supabase
-        .from('evaluation_criteria')
-        .select(`
-          id, 
-          name, 
-          description, 
-          is_active,
-          display_order,
-          category_id,
-          driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
-        `)
-        .eq('is_active', true)
-        .is('evaluation_categories.tenant_id', null)
-        .eq('evaluation_categories.is_theory', true)
-      
-      if (globalError) {
-        console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading global theory criteria:`, globalError)
-      }
-      
-      criteria = [...(tenantTheory || []), ...(globalTheory || [])]
-        // Remove duplicates: prefer tenant-specific over global defaults
-        .reduce((acc: any[], current: any) => {
-          const existingIndex = acc.findIndex(item => 
-            item.name === current.name && 
-            item.category_id === current.category_id
-          )
-          if (existingIndex === -1) {
-            acc.push(current)
-          } else if (current.evaluation_categories?.[0]?.tenant_id !== null) {
-            // Replace global with tenant-specific
-            acc[existingIndex] = current
-          }
-          return acc
-        }, [])
-        .sort((a, b) => {
-          // Primary sort by category display_order (Schulungstyp)
-          const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
-          const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
-          if (catOrderA !== catOrderB) {
-            return catOrderA - catOrderB
-          }
-          // Secondary sort by criteria display_order (order Feld) within the same category
-          return (a.display_order ?? 999) - (b.display_order ?? 999)
-        })
-      
-      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded theory criteria - tenant: ${tenantTheory?.length || 0}, global: ${globalTheory?.length || 0}`)
+      criteria = tenantTheory || []
+      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded theory criteria - tenant only: ${criteria.length}`)
     } else {
-      // Load tenant-specific practical criteria with proper ordering
+      // Load only tenant-specific practical criteria
       const { data: tenantPractical, error: tenantError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -112,60 +67,29 @@ export default defineEventHandler(async (event) => {
         .eq('is_active', true)
         .eq('evaluation_categories.tenant_id', user.tenant_id)
         .eq('evaluation_categories.is_theory', false)
+        .order('evaluation_categories(display_order), display_order', { ascending: true })
       
       if (tenantError) {
         console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading tenant practical criteria:`, tenantError)
       }
       
-      // Load global practical criteria with proper ordering
-      const { data: globalPractical, error: globalError } = await supabase
-        .from('evaluation_criteria')
-        .select(`
-          id, 
-          name, 
-          description, 
-          is_active,
-          display_order,
-          category_id,
-          driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
-        `)
-        .eq('is_active', true)
-        .is('evaluation_categories.tenant_id', null)
-        .eq('evaluation_categories.is_theory', false)
-      
-      if (globalError) {
-        console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading global practical criteria:`, globalError)
-      }
-      
-      criteria = [...(tenantPractical || []), ...(globalPractical || [])]
-        // Remove duplicates: prefer tenant-specific over global defaults
-        .reduce((acc: any[], current: any) => {
-          const existingIndex = acc.findIndex(item => 
-            item.name === current.name && 
-            item.category_id === current.category_id
-          )
-          if (existingIndex === -1) {
-            acc.push(current)
-          } else if (current.evaluation_categories?.[0]?.tenant_id !== null) {
-            // Replace global with tenant-specific
-            acc[existingIndex] = current
-          }
-          return acc
-        }, [])
-        .sort((a, b) => {
-          // Primary sort by category display_order (Schulungstyp)
-          const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
-          const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
-          if (catOrderA !== catOrderB) {
-            return catOrderA - catOrderB
-          }
-          // Secondary sort by criteria display_order (order Feld) within the same category
-          return (a.display_order ?? 999) - (b.display_order ?? 999)
-        })
-      
-      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded practical criteria - tenant: ${tenantPractical?.length || 0}, global: ${globalPractical?.length || 0}`)
+      criteria = tenantPractical || []
+      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded practical criteria - tenant only: ${criteria.length}`)
     }
+    
+    // Sort by category display_order, then by criteria display_order
+    criteria.sort((a, b) => {
+      // Primary sort by category display_order
+      const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
+      const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
+      if (catOrderA !== catOrderB) {
+        return catOrderA - catOrderB
+      }
+      // Secondary sort by criteria display_order
+      return (a.display_order ?? 999) - (b.display_order ?? 999)
+    })
+    
+    console.log(`[${new Date().toLocaleTimeString()}] 🎯 Returning ${criteria.length} criteria for tenant ${user.tenant_id}`)
     
     return {
       success: true,
