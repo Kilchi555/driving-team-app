@@ -305,6 +305,7 @@ const saveCriteriaEvaluations = async (
 
         return {
           evaluation_criteria_id: evalData.criteria_id,
+          rating: evalData.rating,
           notes: evalData.note.trim()
         };
       })

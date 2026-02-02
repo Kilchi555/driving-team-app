@@ -81,11 +81,12 @@ export default defineEventHandler(async (event) => {
 
     // ✅ 4. PREPARE NOTES FOR UPSERT
     const notesToInsert = evaluations
-      .filter((e: any) => e.evaluation_criteria_id && e.notes)
+      .filter((e: any) => e.evaluation_criteria_id && (e.notes || e.rating !== null && e.rating !== undefined))
       .map((e: any) => ({
         appointment_id,
         evaluation_criteria_id: e.evaluation_criteria_id,
-        notes: String(e.notes).substring(0, 5000), // Sanitize
+        criteria_rating: e.rating || null,
+        criteria_note: String(e.notes || '').substring(0, 5000), // Sanitize
         tenant_id: tenantId
       }))
 
