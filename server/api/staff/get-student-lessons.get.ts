@@ -121,16 +121,17 @@ export default defineEventHandler(async (event) => {
 
         // Group notes by appointment_id and attach criteria
         notesData.forEach(note => {
-          if (!evaluationsMap[note.appointment_id]) {
-            evaluationsMap[note.appointment_id] = []
+          // Only include notes that have both evaluation_criteria_id and criteria_rating
+          if (note.evaluation_criteria_id && note.criteria_rating) {
+            if (!evaluationsMap[note.appointment_id]) {
+              evaluationsMap[note.appointment_id] = []
+            }
+            evaluationsMap[note.appointment_id].push({
+              ...note,
+              // Attach criteria details
+              evaluation_criteria: criteriaMap[note.evaluation_criteria_id] || null
+            })
           }
-          evaluationsMap[note.appointment_id].push({
-            ...note,
-            // Attach criteria if this note has both criteria_id and rating
-            evaluation_criteria: (note.evaluation_criteria_id && note.criteria_rating && criteriaMap[note.evaluation_criteria_id])
-              ? criteriaMap[note.evaluation_criteria_id]
-              : null
-          })
         })
       }
     }
