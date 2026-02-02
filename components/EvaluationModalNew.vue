@@ -302,16 +302,51 @@ const loadData = async () => {
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
-    // Load criteria for the student category with tenant filter
-    const { data: criteriaData, error: criteriaError } = await supabase
-      .from('v_evaluation_matrix')
-      .select('*')
-      .contains('driving_categories', [props.studentCategory])
+    // Load evaluation categories (tenant-specific + global defaults)
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from('evaluation_categories')
+      .select('id, name, color, display_order, is_active, tenant_id')
+      .eq('is_active', true)
       .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
-      .order('category_order, criteria_order')
+      .order('display_order', { ascending: true })
+
+    if (categoriesError) throw categoriesError
+
+    // Load evaluation criteria for these categories (tenant-specific + global defaults)
+    const { data: criteriaData, error: criteriaError } = await supabase
+      .from('evaluation_criteria')
+      .select('id, name, description, category_id, display_order, is_active')
+      .eq('is_active', true)
+      .in('category_id', (categoriesData || []).map(c => c.id))
+      .order('category_id, display_order', { ascending: true })
 
     if (criteriaError) throw criteriaError
-    allCriteria.value = criteriaData || []
+
+    // Build the evaluation matrix by joining categories and criteria
+    const matrix = (categoriesData || []).flatMap(category => {
+      const categoryName = category.name
+      const categoryOrder = category.display_order
+      const categoryId = category.id
+      
+      return (criteriaData || [])
+        .filter(criteria => criteria.category_id === categoryId)
+        .map(criteria => ({
+          category_id: categoryId,
+          category_name: categoryName,
+          category_color: category.color,
+          category_order: categoryOrder,
+          driving_categories: [props.studentCategory], // Filter will be client-side if needed
+          tenant_id: category.tenant_id,
+          criteria_id: criteria.id,
+          criteria_name: criteria.name,
+          criteria_description: criteria.description,
+          criteria_order: criteria.display_order,
+          is_required: false,
+          is_active: criteria.is_active
+        }))
+    })
+
+    allCriteria.value = matrix
 
     // Load evaluation scale (filtered by tenant)
     const { data: scaleData, error: scaleError } = await supabase
