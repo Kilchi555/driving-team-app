@@ -317,20 +317,6 @@ export const useCompanyBilling = () => {
         success: true
       }
 
-    } catch (err: any) {
-      const errorMessage = err.message || 'Fehler beim Löschen der Firmenadresse'
-      error.value = errorMessage
-      console.error('❌ Error deleting company billing address:', err)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    } finally {
-      isLoading.value = false
-    }
-  }
-
       // Remove from local state
       savedAddresses.value = savedAddresses.value.filter(addr => addr.id !== addressId)
       
