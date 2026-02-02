@@ -1,18 +1,14 @@
-import { defineEventHandler, readBody } from 'h3'
-import { getServerSession } from '#auth'
-import { useSupabaseAdmin } from '~/composables/useSupabaseAdmin'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Authenticate user
-    const session = await getServerSession(event)
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    // Get Supabase admin
-    const supabase = useSupabaseAdmin()
+    // Get Supabase admin client
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Parse request body
     const body = await readBody<{
