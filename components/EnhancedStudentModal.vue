@@ -1614,96 +1614,39 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     logger.debug(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
     logger.debug(`Payment IDs: ${selectedPayments.value.join(', ')}`)
     
-    const supabase = getSupabase()
-    
-    // Update payment_method for all selected payments
-    for (const paymentId of selectedPayments.value) {
-      // Get the full payment to check if cancelled
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('payments')
-        .select(`
-          id,
-          appointment_id,
-          total_amount_rappen,
-          admin_fee_rappen,
-          appointments(id, status, cancellation_charge_percentage)
-        `)
-        .eq('id', paymentId)
-        .single()
-      
-      if (paymentError) {
-        console.error(`❌ Error fetching payment ${paymentId}:`, paymentError)
-        continue
+    // ✅ Use secure backend API instead of direct Supabase
+    const response = await $fetch('/api/staff/process-bulk-payment', {
+      method: 'POST',
+      body: {
+        payment_ids: selectedPayments.value,
+        method
       }
-      
-      logger.debug(`📊 Payment data loaded:`, {
-        paymentId,
-        total_amount_rappen: paymentData.total_amount_rappen,
-        admin_fee_rappen: paymentData.admin_fee_rappen,
-        appointments: paymentData.appointments
-      })
-      
-      // ✅ NEW: For cancelled appointments, calculate actual charge to collect
-      let amountToMarkAsPaid = paymentData.total_amount_rappen
-      
-      if (paymentData.appointments?.status === 'cancelled') {
-        const chargePercentage = paymentData.appointments.cancellation_charge_percentage ?? 100
-        const appointmentCost = (paymentData.total_amount_rappen || 0) - (paymentData.admin_fee_rappen || 0)
-        const chargeAmount = Math.round(appointmentCost * chargePercentage / 100)
-        amountToMarkAsPaid = chargeAmount
-        
-        logger.debug(`💰 Cancelled payment - calculating charge:`, {
-          chargePercentage,
-          originalAmount: paymentData.total_amount_rappen,
-          chargeAmount,
-          appointmentCost
-        })
-      }
-      
-      // Update payment
-      const { error: updatePaymentError } = await supabase
-        .from('payments')
-        .update({ 
-          payment_method: method === 'cash' ? 'cash' : 'wallee',
-          payment_status: method === 'cash' ? 'completed' : 'pending',
-          paid_at: method === 'cash' ? new Date().toISOString() : null,
-          // ✅ NEW: Set total_amount_rappen to actual charge for cancelled appointments
-          total_amount_rappen: amountToMarkAsPaid
-        })
-        .eq('id', paymentId)
-      
-      if (updatePaymentError) {
-        console.error(`❌ Error updating payment ${paymentId}:`, updatePaymentError)
-        continue
-      }
-      
-      // If payment is being marked as paid (cash), also confirm the appointment if it's pending
-      if (method === 'cash' && paymentData?.appointment_id) {
-        const { error: updateAppointmentError } = await supabase
-          .from('appointments')
-          .update({ status: 'confirmed' })
-          .eq('id', paymentData.appointment_id)
-          .eq('status', 'pending_confirmation') // Only update if still pending
-        
-        if (updateAppointmentError) {
-          console.error(`❌ Error confirming appointment ${paymentData.appointment_id}:`, updateAppointmentError)
-        } else {
-          logger.debug(`✅ Appointment ${paymentData.appointment_id} confirmed`)
-        }
-      }
-      
-      logger.debug(`✅ Payment ${paymentId} updated to ${method}`)
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to process payments')
     }
+
+    logger.debug('✅ Bulk payment processing results:', response.summary)
+
+    // Log individual results
+    response.results.forEach((result: any) => {
+      if (result.success) {
+        logger.debug(`✅ Payment ${result.payment_id} updated to ${method}`)
+      } else {
+        logger.warn(`⚠️ Payment ${result.payment_id} failed: ${result.error}`)
+      }
+    })
     
     // Reload payments and lessons to reflect changes
-    const processedCount = selectedPayments.value.length
+    const processedCount = response.summary.successful
     await loadPayments()
     await loadLessons()
     
     // Clear selection after processing
     selectedPayments.value = []
     
-    logger.debug(`✅ Successfully processed ${processedCount} payments as ${method}`)
+    logger.debug(`✅ Successfully processed ${processedCount} out of ${selectedPayments.value.length} payments as ${method}`)
   } catch (error) {
     console.error('❌ Error processing bulk payment:', error)
   } finally {
