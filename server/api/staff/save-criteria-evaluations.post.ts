@@ -24,11 +24,16 @@ import logger from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
+    logger.debug('🔥 save-criteria-evaluations API called')
+    
     // ✅ 1. AUTHENTIFIZIERUNG
     const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
+      logger.error('❌ No authenticated user')
       throw createError({ statusCode: 401, message: 'Unauthorized' })
     }
+    
+    logger.debug('✅ User authenticated:', authUser.id)
 
     const supabase = getSupabaseAdmin()
 
@@ -48,6 +53,8 @@ export default defineEventHandler(async (event) => {
     // ✅ 2. INPUT VALIDATION
     const body = await readBody(event)
     const { appointment_id, evaluations } = body
+    
+    logger.debug('📝 save-criteria-evaluations input:', { appointment_id, evaluationCount: evaluations?.length })
 
     if (!appointment_id || typeof appointment_id !== 'string') {
       throw createError({
@@ -81,7 +88,14 @@ export default defineEventHandler(async (event) => {
 
     // ✅ 4. PREPARE NOTES FOR UPSERT
     const notesToInsert = evaluations
-      .filter((e: any) => e.evaluation_criteria_id && (e.notes || e.rating !== null && e.rating !== undefined))
+      .filter((e: any) => {
+        // Must have criteria_id
+        if (!e.evaluation_criteria_id) return false
+        // Must have either rating or notes
+        const hasRating = e.rating !== null && e.rating !== undefined
+        const hasNotes = e.notes && String(e.notes).trim().length > 0
+        return hasRating || hasNotes
+      })
       .map((e: any) => ({
         appointment_id,
         evaluation_criteria_id: e.evaluation_criteria_id,
@@ -91,18 +105,22 @@ export default defineEventHandler(async (event) => {
       }))
 
     if (notesToInsert.length === 0) {
-      logger.debug('⚠️ No valid evaluations to save')
+      logger.debug('⚠️ No valid evaluations to save (all filtered out)')
+      logger.debug('📊 Original evaluations:', JSON.stringify(evaluations.slice(0, 2)))
       return {
         success: true,
         data: []
       }
     }
+    
+    logger.debug('💾 Saving', notesToInsert.length, 'evaluations:', JSON.stringify(notesToInsert.slice(0, 1)))
 
     // ✅ 5. UPSERT NOTES
+    // Use the unique constraint name for upsert
     const { data: savedNotes, error: upsertError } = await supabase
       .from('notes')
       .upsert(notesToInsert, {
-        onConflict: 'appointment_id,evaluation_criteria_id'
+        onConflict: 'unique_appointment_criteria'
       })
       .select()
 
