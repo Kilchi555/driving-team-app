@@ -512,91 +512,48 @@ const loadExamResults = async () => {
   error.value = null
   
   try {
-    try {
-      // Load exam statistics via API
-      const response = await $fetch('/api/staff/exam-stats', {
-        method: 'POST',
-        body: {
-          staff_id: props.currentUser.id,
-          tenant_id: props.currentUser.tenant_id
-        }
-      }) as any
-
-      if (!response?.success) {
-        throw new Error(response?.message || 'Failed to load exam statistics')
+    // Load exam statistics via API
+    const response = await $fetch('/api/staff/exam-stats', {
+      method: 'POST',
+      body: {
+        staff_id: props.currentUser.id,
+        tenant_id: props.currentUser.tenant_id
       }
+    }) as any
 
-      const { appointments, exam_results: examResultsData, students } = response.data || {}
-      
-      if (!appointments || appointments.length === 0) {
-        examResults.value = []
-        logger.debug('✅ No appointments found for staff member')
-        return
-      }
+    if (!response?.success) {
+      throw new Error(response?.message || 'Failed to load exam statistics')
+    }
 
-      // Process data (same as before, just from API now)
-      const examData: ExamResult[] = (examResultsData || []).map((result: any) => {
-        const appointment = appointments.find((apt: any) => apt.id === result.appointment_id)
-        const student = students?.find((s: any) => s.id === appointment?.user_id)
-
-        return {
-          id: result.id,
-          exam_date: result.exam_date,
-          category: appointment?.type || 'Unbekannt',
-          student_name: student ? `${student.first_name} ${student.last_name}` : 'Unbekannt',
-          examiner_name: 'Examiner', // Would need additional data if needed
-          passed: result.passed,
-          score: result.score,
-          notes: result.examiner_behavior_notes,
-          staff_id: props.currentUser.id
-        }
-      })
-
-      examResults.value = examData
-      logger.debug('✅ Exam results loaded via API:', examData.length)
-    } catch (err) {
-      console.error('❌ Error loading exam statistics:', err)
+    const { appointments, exam_results: examResultsData, students, examiners } = response.data || {}
+    
+    if (!appointments || appointments.length === 0) {
       examResults.value = []
+      logger.debug('✅ No appointments found for staff member')
+      return
     }
-    
-    // Get examiner names (only for non-null examiner_ids)
-    const examinerIds = [...new Set(examResultsData?.map(exam => exam.examiner_id).filter(Boolean) || [])]
-    let examiners: any[] = []
-    
-    if (examinerIds.length > 0) {
-      const { data: examinersData, error: examinersError } = await supabase
-        .from('examiners')
-        .select('id, first_name, last_name')
-        .in('id', examinerIds)
-      
-      if (examinersError) throw examinersError
-      examiners = examinersData || []
-    }
-    
-    // Combine the data
-    examResults.value = (examResultsData || []).map((exam: any) => {
-      const appointment = appointments?.find(apt => apt.id === exam.appointment_id)
-      const student = students.find(stu => stu.id === appointment?.user_id)
-      const examiner = examiners.find(exp => exp.id === exam.examiner_id)
-      
+
+    // Process data (same as before, just from API now)
+    const examData: ExamResult[] = (examResultsData || []).map((result: any) => {
+      const appointment = appointments.find((apt: any) => apt.id === result.appointment_id)
+      const student = students?.find((s: any) => s.id === appointment?.user_id)
+      const examiner = examiners?.find((e: any) => e.id === result.examiner_id)
+
       return {
-        id: exam.id,
-        exam_date: exam.exam_date,
+        id: result.id,
+        exam_date: result.exam_date,
         category: appointment?.type || 'Unbekannt',
-        student_name: student ? 
-          `${student.first_name || ''} ${student.last_name || ''}`.trim() : 
-          'Unbekannt',
-        examiner_name: examiner ? 
-          `${examiner.first_name || ''} ${examiner.last_name || ''}`.trim() : 
-          (exam.examiner_id ? 'Unbekannt' : 'Nicht zugewiesen'),
-        passed: exam.passed,
-        score: exam.examiner_behavior_rating,
-        notes: exam.examiner_behavior_notes,
+        student_name: student ? `${student.first_name} ${student.last_name}` : 'Unbekannt',
+        examiner_name: examiner ? `${examiner.first_name} ${examiner.last_name}` : (result.examiner_id ? 'Unbekannt' : 'Nicht zugewiesen'),
+        passed: result.passed,
+        score: result.examiner_behavior_rating,
+        notes: result.examiner_behavior_notes,
         staff_id: props.currentUser.id
       }
     })
-    
-    logger.debug('✅ Exam results loaded:', examResults.value.length)
+
+    examResults.value = examData
+    logger.debug('✅ Exam results loaded via API:', examData.length)
     
   } catch (err: any) {
     console.error('❌ Error loading exam results:', err)

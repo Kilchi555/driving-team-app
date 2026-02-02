@@ -1186,22 +1186,31 @@ const filteredEvaluationCategories = computed(() => {
   logger.debug('🔍 filteredEvaluationCategories - currentDrivingCategory:', currentDrivingCategory.value)
   logger.debug('🔍 filteredEvaluationCategories - evaluationCategories:', evaluationCategories.value.length)
   
+  let filtered: any[] = []
+  
   if (!currentDrivingCategory.value) {
     logger.debug('🔍 filteredEvaluationCategories - no driving category, returning all:', evaluationCategories.value.length)
-    return evaluationCategories.value
+    filtered = evaluationCategories.value
+  } else {
+    // Filter categories: show all theory categories + categories for current driving category
+    filtered = evaluationCategories.value.filter(category => {
+      // Always show theory categories in all driving categories
+      if (category.is_theory) {
+        logger.debug('📚 Showing theory category:', category.name)
+        return true
+      }
+      
+      // For non-theory categories, check if they apply to current driving category
+      if (!category.driving_categories) return true
+      return category.driving_categories.includes(currentDrivingCategory.value!.code)
+    })
   }
   
-  // Filter categories: show all theory categories + categories for current driving category
-  const filtered = evaluationCategories.value.filter(category => {
-    // Always show theory categories in all driving categories
-    if (category.is_theory) {
-      logger.debug('📚 Showing theory category:', category.name)
-      return true
-    }
-    
-    // For non-theory categories, check if they apply to current driving category
-    if (!category.driving_categories) return true
-    return category.driving_categories.includes(currentDrivingCategory.value!.code)
+  // Sort by display_order
+  filtered.sort((a, b) => {
+    const aOrder = a.display_order ?? 999
+    const bOrder = b.display_order ?? 999
+    return aOrder - bOrder
   })
   
   logger.debug('🔍 filteredEvaluationCategories - filtered result:', filtered.length)
@@ -1774,6 +1783,13 @@ const getCriteriaForCategoryAndDrivingCategory = (categoryId: string, drivingCat
     const matches = c.driving_categories.some(dc => possibleMatches.includes(dc))
     
     return matches
+  })
+  
+  // Sort by display_order
+  filtered.sort((a, b) => {
+    const aOrder = a.display_order ?? 999
+    const bOrder = b.display_order ?? 999
+    return aOrder - bOrder
   })
   
   logger.debug(`📊 getCriteriaForCategoryAndDrivingCategory(${categoryId}, ${drivingCategory}):`, filtered.length, 'criteria found')

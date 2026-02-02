@@ -830,6 +830,8 @@ const loadCalendarToken = async () => {
     const { query } = useDatabaseQuery()
     
     const tokenData = await query({
+     action: 'select',
+      action: 'select',
       table: 'calendar_tokens',
       select: 'token',
       filters: [
@@ -971,6 +973,7 @@ const loadExamLocations = async () => {
 
     // 1. Alle verfügbaren globalen Prüfungsstandorte laden (tenant_id = null, staff_ids = empty/null)
     const allLocations = await query({
+      action: 'select',
       table: 'locations',
       select: '*',
       filters: [
@@ -986,6 +989,7 @@ const loadExamLocations = async () => {
     const userTenantId = props.currentUser.tenant_id;
 
     const staffExamLocationsData = await query({
+      action: 'select',
       table: 'locations',
       select: '*',
       filters: [
@@ -1060,6 +1064,7 @@ const toggleExamLocation = async (location: any) => {
 
     // Wir identifizieren einen Standort nicht nur über die ID, sondern auch über Name & Adresse
     const existingPreference = await query({
+     action: 'select',
       action: 'select',
       table: 'locations',
       select: 'id',
@@ -1075,6 +1080,7 @@ const toggleExamLocation = async (location: any) => {
     if (existingPreference) {
       // Wenn die Präferenz-Zeile existiert, löschen wir sie
       await query({
+       action: 'select',
         action: 'delete',
         table: 'locations',
         filters: [{ column: 'id', operator: 'eq', value: existingPreference.id }]
@@ -1084,6 +1090,7 @@ const toggleExamLocation = async (location: any) => {
     } else {
       // Wenn keine Präferenz-Zeile existiert, erstellen wir eine neue
       await query({
+       action: 'select',
         action: 'insert',
         table: 'locations',
         data: {
@@ -1167,6 +1174,7 @@ const removeExamLocation = async (location: any) => {
 
     // Remove from database
     await query({
+     action: 'select',
       action: 'delete',
       table: 'locations',
       filters: [
@@ -1266,6 +1274,7 @@ const addExamLocation = async () => {
     
     // Insert via secure API
     const data = await query({
+     action: 'select',
       action: 'insert',
       table: 'locations',
       data: {
@@ -1311,6 +1320,7 @@ const createNewLocation = async () => {
     
     // Insert via secure API
     const data = await query({
+     action: 'select',
       action: 'insert',
       table: 'locations',
       data: {
@@ -1378,6 +1388,7 @@ const toggleLocationAssignment = async (locationId: string) => {
 
     // Update via secure API
     await query({
+     action: 'select',
       action: 'update',
       table: 'locations',
       filters: [{ column: 'id', operator: 'eq', value: locationId }],
@@ -1414,6 +1425,7 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
 
     // Step 1: Prüfe ob diese Location bereits im Tenant existiert via secure API
     const existingLocations = await query({
+     action: 'select',
       action: 'select',
       table: 'locations',
       select: '*',
@@ -1443,6 +1455,7 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
       }
 
       await query({
+       action: 'select',
         action: 'update',
         table: 'locations',
         filters: [{ column: 'id', operator: 'eq', value: existingLocation.id }],
@@ -1454,6 +1467,7 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
       // Step 2b: Location existiert nicht → Neuen Eintrag erstellen via secure API
       logger.debug(`📍 Location doesn't exist, creating new one`)
       await query({
+       action: 'select',
         action: 'insert',
         table: 'locations',
         data: {
@@ -1539,6 +1553,7 @@ const loadData = async () => {
 
     // Kategorien laden (nur für aktuellen Tenant)
     const categories = await query({
+      action: 'select',
       table: 'categories',
       select: '*',
       filters: [
@@ -1551,6 +1566,7 @@ const loadData = async () => {
 
     // Alle Standard-Standorte des Tenants laden (mit allen staff_ids)
     const allLocations = await query({
+      action: 'select',
       table: 'locations',
       select: '*',
       filters: [
@@ -1604,6 +1620,7 @@ const loadWorkingHoursData = async () => {
     logger.debug('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
     
     const appointments = await query({
+      action: 'select',
       table: 'appointments',
       select: '*',
       filters: [
@@ -2115,6 +2132,7 @@ const clearWorkingHours = async () => {
     
     // Delete all working hours for this staff
     await query({
+     action: 'select',
       action: 'delete',
       table: 'staff_working_hours',
       filters: [{ column: 'staff_id', operator: 'eq', value: props.currentUser.id }]

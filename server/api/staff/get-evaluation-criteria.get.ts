@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     let criteria: any[] = []
     
     if (isTheoryLesson) {
-      // Load tenant-specific theory criteria
+      // Load tenant-specific theory criteria with proper ordering
       const { data: tenantTheory, error: tenantError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
+          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
         .eq('evaluation_categories.tenant_id', user.tenant_id)
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
         console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading tenant theory criteria:`, tenantError)
       }
       
-      // Load global theory criteria
+      // Load global theory criteria with proper ordering
       const { data: globalTheory, error: globalError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
+          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
         .is('evaluation_categories.tenant_id', null)
@@ -69,10 +69,20 @@ export default defineEventHandler(async (event) => {
       }
       
       criteria = [...(tenantTheory || []), ...(globalTheory || [])]
+        .sort((a, b) => {
+          // Primary sort by category display_order (Schulungstyp)
+          const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
+          const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
+          if (catOrderA !== catOrderB) {
+            return catOrderA - catOrderB
+          }
+          // Secondary sort by criteria display_order (order Feld) within the same category
+          return (a.display_order ?? 999) - (b.display_order ?? 999)
+        })
       
       console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded theory criteria - tenant: ${tenantTheory?.length || 0}, global: ${globalTheory?.length || 0}`)
     } else {
-      // Load tenant-specific practical criteria
+      // Load tenant-specific practical criteria with proper ordering
       const { data: tenantPractical, error: tenantError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -83,7 +93,7 @@ export default defineEventHandler(async (event) => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
+          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
         .eq('evaluation_categories.tenant_id', user.tenant_id)
@@ -93,7 +103,7 @@ export default defineEventHandler(async (event) => {
         console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading tenant practical criteria:`, tenantError)
       }
       
-      // Load global practical criteria
+      // Load global practical criteria with proper ordering
       const { data: globalPractical, error: globalError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -104,7 +114,7 @@ export default defineEventHandler(async (event) => {
           display_order,
           category_id,
           driving_categories,
-          evaluation_categories!inner(tenant_id, is_theory, name)
+          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
         .is('evaluation_categories.tenant_id', null)
@@ -115,6 +125,16 @@ export default defineEventHandler(async (event) => {
       }
       
       criteria = [...(tenantPractical || []), ...(globalPractical || [])]
+        .sort((a, b) => {
+          // Primary sort by category display_order (Schulungstyp)
+          const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
+          const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
+          if (catOrderA !== catOrderB) {
+            return catOrderA - catOrderB
+          }
+          // Secondary sort by criteria display_order (order Feld) within the same category
+          return (a.display_order ?? 999) - (b.display_order ?? 999)
+        })
       
       console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded practical criteria - tenant: ${tenantPractical?.length || 0}, global: ${globalPractical?.length || 0}`)
     }

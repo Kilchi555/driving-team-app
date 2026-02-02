@@ -1,144 +1,62 @@
 <!-- components/StaffCashBalance.vue -->
 <template>
-  <div class="bg-white rounded-lg shadow-sm border p-4">
-    <div class="flex items-center justify-between mb-6">
-      <div class="text-sm text-gray-500">
-        Letzte Aktualisierung: {{ lastUpdated }}
+  <div class="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-lg overflow-hidden">
+    <!-- Header with Balance -->
+    <div class="text-white px-6 py-6" :style="{ backgroundColor: tenantPrimaryColor }">
+      <div>
+        <p class="text-xs font-medium mb-1" :style="{ color: 'rgba(255, 255, 255, 0.6)' }">Aktueller Kassenstand</p>
+        <h1 class="text-4xl font-bold">
+          {{ (currentBalance / 100).toFixed(2) }} <span class="text-2xl font-semibold">CHF</span>
+        </h1>
       </div>
     </div>
 
-    <!-- Current Balance -->
-    <div class="text-center mb-8">
-      <div class="text-4xl font-bold text-green-600 mb-2">
-        {{ (currentBalance / 100).toFixed(2) }} CHF
-      </div>
-      <div class="text-gray-600">Aktueller Kassenstand</div>
-    </div>
-
-    <!-- Filter -->
-    <div class="mb-6">
-      <div class="flex items-center space-x-4">
-        <label class="flex items-center space-x-2">
-          <input
-            v-model="showOnlyDeposits"
-            type="checkbox"
-            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-          />
-          <span class="text-sm font-medium text-gray-700">Nur Auf-/Abstockungen</span>
-        </label>
-        
-        <div class="text-sm text-gray-500">
-          {{ filteredFeed.length }} von {{ allFeedItems.length }} Einträgen
-        </div>
-      </div>
-    </div>
-
-    <!-- Combined Feed -->
-    <div class="space-y-4">
-      <div 
-        v-for="item in filteredFeed" 
-        :key="item.id"
-        class="border rounded-lg p-4 hover:shadow-sm transition-shadow"
-        :class="getItemBackgroundClass(item)"
-      >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
-                 :class="getItemStatusClass(item)">
-              {{ getItemStatusIcon(item) }}
-            </div>
-            <div>
-              <div class="font-medium text-gray-900">
-                {{ getItemTitle(item) }}
+    <!-- Main Content -->
+    <div class="p-1">
+      <!-- Two Column Layout -->
+      <div v-if="filteredFeed.length > 0" class="space-y-1">
+        <div 
+          v-for="item in filteredFeed" 
+          :key="item.id"
+          class="border-b border-gray-200 p-2"
+          :class="getItemBackgroundClass(item)"
+        >
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center space-x-3 flex-1">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold flex-shrink-0"
+                   :class="item.type === 'transaction' ? '' : getItemStatusClass(item)"
+                   :style="item.type === 'transaction' ? { backgroundColor: tenantPrimaryColor + '20', color: tenantPrimaryColor } : {}">
+                {{ getItemStatusIcon(item) }}
               </div>
-              <div class="text-sm text-gray-500">
-                {{ formatDateTime(item.data.created_at) }}
-              </div>
-              <div v-if="item.type === 'transaction'" class="text-xs text-gray-400">
-                Student: {{ item.data.student_name }}
+              <div class="flex-1 min-w-0">
+                <h4 class="font-semibold text-gray-900 truncate">
+                  {{ getItemTitle(item) }}
+                </h4>
+                <p class="text-xs text-gray-500">
+                  {{ formatDateTime(item.data.created_at) }}
+                </p>
               </div>
             </div>
           </div>
           
           <div class="text-right">
-            <div class="text-lg font-semibold"
-                 :class="getItemAmountClass(item)">
+            <p class="text-lg font-bold whitespace-nowrap"
+               :class="getItemAmountClass(item)"
+               :style="item.type === 'transaction' ? { color: tenantPrimaryColor } : {}">
               {{ getItemAmountText(item) }}
-            </div>
-            <div class="text-sm text-gray-500">
-              {{ getItemSubtitle(item) }}
-            </div>
+            </p>
           </div>
-        </div>
-        
-        <div v-if="item.data.notes" class="mt-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-          {{ item.data.notes }}
-        </div>
-
-        <!-- Action Buttons for Pending Transactions -->
-        <div v-if="item.type === 'transaction' && item.data.status === 'pending'" class="mt-3 flex space-x-2">
-          <button
-            @click="editTransaction(item.data)"
-            class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-          >
-            ✏️ Notizen bearbeiten
-          </button>
+          
         </div>
       </div>
 
-      <div v-if="filteredFeed.length === 0" class="text-center py-8">
-        <div class="text-4xl mb-4">📊</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Einträge gefunden</h3>
+      <!-- Empty State -->
+      <div v-else class="text-center py-12">
+        <div class="text-6xl mb-4">📊</div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Einträge gefunden</h3>
         <p class="text-gray-600">
           {{ showOnlyDeposits ? 'Keine Auf-/Abstockungen vorhanden' : 'Keine Kassenbewegungen oder Transaktionen vorhanden' }}
         </p>
-      </div>
-    </div>
-
-    <!-- Edit Transaction Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Notizen bearbeiten</h3>
-        
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Betrag (CHF)</label>
-            <input
-              :value="(selectedTransaction?.amount_rappen / 100).toFixed(2)"
-              type="text"
-              readonly
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
-            />
-            <p class="text-xs text-gray-500 mt-1">Betrag kann nicht bearbeitet werden</p>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Notizen</label>
-            <textarea
-              v-model="editNotes"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Details zur Bargeldzahlung..."
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="flex space-x-3 mt-6">
-          <button
-            @click="closeEditModal"
-            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-          >
-            Abbrechen
-          </button>
-          <button
-            @click="submitEdit"
-            :disabled="!editNotes || isEditing"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span v-if="isEditing">Speichere...</span>
-            <span v-else>Speichern</span>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -159,6 +77,7 @@ import { ref, computed, onMounted } from 'vue'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
+import { useTenant } from '~/composables/useTenant'
 
 // Props
 const props = defineProps({
@@ -168,6 +87,9 @@ const props = defineProps({
   }
 })
 
+// Tenant
+const { tenantPrimaryColor } = useTenant()
+
 // Supabase
 
 // State
@@ -175,12 +97,6 @@ const currentBalance = ref(0)
 const cashMovements = ref([])
 const cashTransactions = ref([])
 const showOnlyDeposits = ref(false)
-
-// Edit Modal State
-const showEditModal = ref(false)
-const selectedTransaction = ref(null)
-const editNotes = ref('')
-const isEditing = ref(false)
 
 // Toast State
 const showToast = ref(false)
@@ -284,15 +200,22 @@ const loadCashBalance = async () => {
 // Load cash movements
 const loadCashMovements = async () => {
   try {
-    const { data, error } = await supabase
-      .from('cash_movements')
-      .select('*')
-      .eq('instructor_id', props.currentUser.id)
-      .order('created_at', { ascending: false })
+    const response = await $fetch(
+      '/api/staff/cash-balance',
+      {
+        method: 'POST',
+        body: {
+          action: 'loadMovements',
+          data: {
+            instructorId: props.currentUser.id
+          }
+        }
+      }
+    )
 
-    if (error) throw error
-    cashMovements.value = data || []
-
+    if (response && response.success) {
+      cashMovements.value = response.data || []
+    }
   } catch (err) {
     console.error('Error loading cash movements:', err)
     cashMovements.value = []
@@ -302,80 +225,26 @@ const loadCashMovements = async () => {
 // Load cash transactions
 const loadCashTransactions = async () => {
   try {
-    const { data, error } = await supabase
-      .from('cash_transactions')
-      .select(`
-        *,
-        student:student_id(id, first_name, last_name)
-      `)
-      .eq('instructor_id', props.currentUser.id)
-      .order('created_at', { ascending: false })
+    const response = await $fetch(
+      '/api/staff/cash-balance',
+      {
+        method: 'POST',
+        body: {
+          action: 'loadTransactions',
+          data: {
+            instructorId: props.currentUser.id
+          }
+        }
+      }
+    )
 
-    if (error) throw error
-
-    cashTransactions.value = (data || []).map(transaction => ({
-      ...transaction,
-      student_name: transaction.student ? `${transaction.student.first_name} ${transaction.student.last_name}` : 'Unbekannt'
-    }))
-
+    if (response && response.success) {
+      cashTransactions.value = response.data || []
+    }
   } catch (err) {
     console.error('Error loading cash transactions:', err)
     cashTransactions.value = []
   }
-}
-
-// Edit transaction
-const editTransaction = (transaction) => {
-  selectedTransaction.value = transaction
-  editNotes.value = transaction.notes || ''
-  showEditModal.value = true
-}
-
-// Submit edit
-const submitEdit = async () => {
-  if (!selectedTransaction.value) return
-
-  isEditing.value = true
-
-  try {
-    const result = await $fetch('/api/staff/cash-transactions', {
-      method: 'POST',
-      body: {
-        action: 'update-notes',
-        transactionId: selectedTransaction.value.id,
-        notes: editNotes.value
-      }
-    })
-
-    // Update local transaction data immediately
-    const transactionIndex = cashTransactions.value.findIndex(t => t.id === selectedTransaction.value.id)
-    if (transactionIndex !== -1) {
-      cashTransactions.value[transactionIndex].notes = editNotes.value
-    }
-
-    // Force reactivity by creating a new array
-    cashTransactions.value = [...cashTransactions.value]
-
-    // Also refresh from database to ensure consistency
-    await loadCashTransactions()
-    closeEditModal()
-
-    // Show success toast
-    showSuccessToast('Notizen erfolgreich gespeichert!')
-
-  } catch (err) {
-    console.error('Error editing transaction:', err)
-    showErrorToast('Fehler beim Speichern der Notizen', err?.message || 'Unbekannter Fehler')
-  } finally {
-    isEditing.value = false
-  }
-}
-
-// Close edit modal
-const closeEditModal = () => {
-  showEditModal.value = false
-  selectedTransaction.value = null
-  editNotes.value = ''
 }
 
 // Toast functions
@@ -402,7 +271,6 @@ const getMovementTypeClass = (type) => {
   const classes = {
     'deposit': 'bg-green-100 text-green-600',
     'withdrawal': 'bg-red-100 text-red-600',
-    'cash_transaction': 'bg-blue-100 text-blue-600',
     'adjustment': 'bg-yellow-100 text-yellow-600'
   }
   return classes[type] || 'bg-gray-100 text-gray-600'
@@ -478,7 +346,7 @@ const getItemTitle = (item) => {
   if (item.type === 'movement') {
     return getMovementTypeText(item.data.movement_type)
   } else if (item.type === 'transaction') {
-    return 'Bargeldtransaktion'
+    return item.data.student_name || 'Unbekannter Schüler'
   }
   return item.data.title || 'Unbekannter Eintrag'
 }
@@ -486,8 +354,6 @@ const getItemTitle = (item) => {
 const getItemAmountClass = (item) => {
   if (item.type === 'movement') {
     return item.data.movement_type === 'deposit' ? 'text-green-600' : 'text-red-600'
-  } else if (item.type === 'transaction') {
-    return 'text-blue-600'
   }
   return ''
 }

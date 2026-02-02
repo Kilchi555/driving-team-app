@@ -751,41 +751,26 @@ const loadStudents = async (loadAppointments = true) => {
       logger.debug(`✅ Showing all ${studentsToProcess.length} students in tenant`)
     }
 
-    // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten in EINER Abfrage
-    logger.debug('🚀 Loading all staff data in one query...')
+    // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten via API Endpoint
+    logger.debug('🚀 Loading all staff data via API...')
     
     // Alle Schüler-IDs sammeln
     const studentIds = studentsToProcess.map((s: any) => s.id)
     
-    // EINE Abfrage für alle Fahrlehrer aller Schüler
-    const { data: allLessonInstructors, error: lessonError } = await supabase
-      .from('appointments')
-      .select('user_id, staff_id')
-      .in('user_id', studentIds)
-      .not('staff_id', 'is', null)
+    // Call API endpoint instead of direct Supabase queries
+    const instructorResponse = await $fetch('/api/admin/get-student-instructors', {
+      method: 'POST',
+      body: { studentIds }
+    }) as any
 
-    if (lessonError) {
-      console.error('❌ Error loading lesson instructors:', lessonError)
+    if (!instructorResponse?.success) {
+      throw new Error('Failed to load student instructors via API')
     }
 
-    // EINE Abfrage für alle Fahrlehrer-Details
-    let instructorData: any[] = []
-    if (allLessonInstructors && allLessonInstructors.length > 0) {
-      const uniqueInstructorIds = [...new Set(allLessonInstructors.map((l: any) => l.staff_id))]
-      logger.debug('🔍 Unique instructor IDs for all students:', uniqueInstructorIds)
-      
-      const { data: instructors, error: instructorError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', uniqueInstructorIds)
-
-      if (instructorError) {
-        console.error('❌ Error loading instructor data:', instructorError)
-      } else {
-        instructorData = instructors || []
-        logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
-      }
-    }
+    const allLessonInstructors = instructorResponse.data?.allLessonInstructors || []
+    const instructorData = instructorResponse.data?.instructorData || []
+    
+    logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
 
     // Erweiterte Schüler-Daten mit zusätzlichen Informationen
     const enrichedStudents = studentsToProcess.map((student: any) => {
@@ -856,29 +841,17 @@ const loadStudents = async (loadAppointments = true) => {
     logger.debug('📊 Sample student:', students.value[0])
     logger.debug('🔍 Final students list:', students.value.map((s: any) => ({ name: `${s.first_name} ${s.last_name}`, instructor: s.assignedInstructor })))
 
-    // Load billing addresses for students
+    // Load billing addresses for students via API
     logger.debug('📋 Loading billing addresses for students')
-    const { data: billingAddresses, error: billingError } = await supabase
-      .from('company_billing_addresses')
-      .select('id, contact_person, email, phone, street, street_number, zip, city, country')
-      // Don't filter by tenant_id - billing addresses may have null tenant_id
-      .order('created_at', { ascending: false })
-      .limit(1) // Get the most recent one
+    const billingResponse = await $fetch('/api/admin/get-billing-addresses', {
+      method: 'POST',
+      body: { studentIds }
+    }) as any
 
-    logger.debug('📋 Billing addresses result:', { billingAddresses, billingError })
+    const companyBillingAddresses = billingResponse?.data || []
+    logger.debug('📋 Billing addresses result:', { count: companyBillingAddresses.length })
 
-    // Load billing addresses for students
-    logger.debug('📋 Loading billing addresses for each user')
-    const { data: companyBillingAddresses, error: billingAddressError } = await supabase
-      .from('company_billing_addresses')
-      .select('*')
-      .in('user_id', studentIds)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-
-    logger.debug('📋 Billing addresses result:', { count: companyBillingAddresses?.length, billingAddressError })
-
-    if (!billingAddressError && companyBillingAddresses && companyBillingAddresses.length > 0) {
+    if (companyBillingAddresses && companyBillingAddresses.length > 0) {
       logger.debug('📋 Found', companyBillingAddresses.length, 'billing addresses')
       
       // Group addresses by user_id
@@ -912,7 +885,7 @@ const loadStudents = async (loadAppointments = true) => {
       })
       students.value = enrichedStudents
     } else {
-      logger.debug('⚠️ No billing addresses found or error:', billingAddressError?.message)
+      logger.debug('⚠️ No billing addresses found')
     }
 
 

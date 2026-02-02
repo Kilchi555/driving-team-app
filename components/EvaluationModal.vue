@@ -197,6 +197,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { useTenant } from '~/composables/useTenant'
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 
@@ -217,6 +218,9 @@ const emit = defineEmits(['close', 'saved'])
 // WICHTIG: Verwende das zentrale usePendingTasks Composable
 // Jetzt importieren wir saveCriteriaEvaluations
 const { saveCriteriaEvaluations } = usePendingTasks()
+
+// Tenant
+const { currentTenant } = useTenant()
 
 
 // State
@@ -275,9 +279,9 @@ const filteredCriteria = computed(() => {
   return filtered
 })
 
-// Gruppierte Kriterien nach Kategorien
+// Gruppierte Kriterien nach Kategorien - mit Sortierung nach display_order
 const groupedCriteria = computed(() => {
-  const groups: Record<string, any[]> = {}
+  const groups: Record<string, { order: number, criteria: any[] }> = {}
   
   logger.debug('📚 groupedCriteria - filteredCriteria.value:', filteredCriteria.value.length)
   logger.debug('📚 groupedCriteria - first criterion:', filteredCriteria.value[0])
@@ -286,13 +290,33 @@ const groupedCriteria = computed(() => {
     const categoryName = criteria.evaluation_categories?.name || 'Unbekannte Kategorie'
     logger.debug('📚 groupedCriteria - processing:', criteria.name, 'categoryName:', categoryName)
     if (!groups[categoryName]) {
-      groups[categoryName] = []
+      groups[categoryName] = {
+        order: criteria.category_order ?? 999,
+        criteria: []
+      }
     }
-    groups[categoryName].push(criteria)
+    groups[categoryName].criteria.push(criteria)
   })
   
-  logger.debug('📚 groupedCriteria - final groups:', Object.keys(groups))
-  return groups
+  // Sortiere Kriterien innerhalb jeder Kategorie nach criteria_order
+  Object.keys(groups).forEach(categoryName => {
+    groups[categoryName].criteria.sort((a, b) => {
+      const aOrder = a.criteria_order ?? 999
+      const bOrder = b.criteria_order ?? 999
+      return aOrder - bOrder
+    })
+  })
+  
+  // Konvertiere zu Array und sortiere nach Kategorie-Reihenfolge
+  const sortedGroups = Object.entries(groups)
+    .sort((a, b) => a[1].order - b[1].order)
+    .reduce((acc, [key, value]) => {
+      acc[key] = value.criteria
+      return acc
+    }, {} as Record<string, any[]>)
+  
+  logger.debug('📚 groupedCriteria - final groups:', Object.keys(sortedGroups))
+  return sortedGroups
 })
 
 const isValid = computed(() => {
@@ -386,7 +410,8 @@ const loadAllCriteria = async () => {
     // Load criteria via backend API (uses auth token automatically)
     const response = await $fetch<{ success: boolean, criteria: any[], tenantId: string, error?: string }>('/api/staff/get-evaluation-criteria', {
       query: {
-        isTheoryLesson: isTheoryLesson.toString()
+        isTheoryLesson: isTheoryLesson.toString(),
+        studentCategory: props.studentCategory || ''
       }
     })
     
@@ -395,7 +420,7 @@ const loadAllCriteria = async () => {
     }
     
     const criteria = response.criteria || []
-    const tenantId = response.tenantId
+    const tenantIdFromResponse = response.tenantId
     
     logger.debug('✅ Loaded', criteria.length, 'evaluation criteria')
     
@@ -413,19 +438,30 @@ const loadAllCriteria = async () => {
     
     let categories: any[] = []
     try {
-      const response = await $fetch('/api/admin/evaluation', {
-        method: 'POST',
-        body: {
-          action: 'get-evaluation-categories',
-          tenant_id: props.appointment?.tenant_id || 'default'
-        }
-      }) as any
+      // Nutze tenant_id aus der API Response (bereits authentifiziert)
+      const tenantId = tenantIdFromResponse || props.appointment?.tenant_id || currentTenant.value?.id
       
-      if (response?.success) {
-        categories = (response.data || []).filter((cat: any) => categoryIds.includes(cat.id))
+      logger.debug('🔍 Loading categories with tenant_id:', tenantId)
+      
+      // Nur API aufrufen, wenn wir eine tenant_id haben
+      if (tenantId) {
+        const response = await $fetch('/api/admin/evaluation', {
+          method: 'POST',
+          body: {
+            action: 'get-evaluation-categories',
+            tenant_id: tenantId
+          }
+        }) as any
+        
+        if (response?.success) {
+          categories = (response.data || []).filter((cat: any) => categoryIds.includes(cat.id))
+          logger.debug('✅ Loaded', categories.length, 'categories from API')
+        }
+      } else {
+        logger.warn('⚠️ No tenant_id found, skipping category API call')
       }
     } catch (err) {
-      console.warn('⚠️ Could not load categories via API, using defaults')
+      logger.warn('⚠️ Could not load categories via API, using defaults', err)
     }
 
     // Kombiniere alle Daten
@@ -440,7 +476,7 @@ const loadAllCriteria = async () => {
         category_name: category?.name || '',
         category_color: category?.color || '#gray',
         evaluation_categories: criterion.evaluation_categories || { name: category?.name || 'Unbekannte Kategorie' },
-        category_order: category?.display_order || 0,
+        category_order: category?.display_order ?? 999, // Use category's display_order, default to 999 if not found
         criteria_order: criterion.display_order || 0,
         is_required: false, // Wird nicht mehr verwendet, aber für Kompatibilität beibehalten
         min_rating: 1,
@@ -449,10 +485,11 @@ const loadAllCriteria = async () => {
     })
     .filter(item => item.name) // Nur gültige Einträge
     .sort((a, b) => {
-      // Sortiere nach Kategorie-Reihenfolge, dann nach Kriterien-Reihenfolge
+      // Sortiere primär nach Kategorie-Reihenfolge (display_order)
       if (a.category_order !== b.category_order) {
         return a.category_order - b.category_order
       }
+      // Sekundär nach Kriterien-Reihenfolge innerhalb der Kategorie
       return a.criteria_order - b.criteria_order
     })
 
@@ -790,6 +827,7 @@ const loadStudentEvaluationHistory = async () => {
 
   } catch (err: any) {
     console.error('❌ Error loading student history:', err)
+  }
 }
 
 const formatLessonDate = (criteriaId: string) => {

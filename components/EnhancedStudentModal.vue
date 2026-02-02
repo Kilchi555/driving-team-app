@@ -1191,18 +1191,17 @@ const loadDocumentRequirements = async () => {
   try {
     logger.debug('🔍 Loading document requirements for categories:', props.selectedStudent.category)
 
-    // Load categories with their document requirements from database
-    const { data: categories, error } = await supabase
-      .from('categories')
-      .select('code, name, document_requirements')
-      .in('code', props.selectedStudent.category)
-      .eq('is_active', true)
+    // Load categories with their document requirements via API
+    const docResponse = await $fetch('/api/staff/get-document-requirements', {
+      method: 'POST',
+      body: { categoryCodes: props.selectedStudent.category }
+    }) as any
 
-    if (error) {
-      console.error('❌ Error loading categories:', error)
-      throw error
+    if (!docResponse?.success) {
+      throw new Error('Failed to load document requirements')
     }
 
+    const categories = docResponse.data
     logger.debug('✅ Categories loaded:', categories)
 
     const allRequirements: DocumentRequirement[] = []
@@ -1982,37 +1981,23 @@ const loadRatingPoints = async () => {
     
     logger.debug('📊 Loading evaluation scale for tenant:', tenantId)
     
-    let ratingPoints: any[] | null = null
+    // Load rating points via API
+    logger.debug('📊 Loading evaluation scale for tenant:', tenantId)
     
-    // Try with tenant_id first (if the column exists)
-    // The example data shows tenant_id exists
-    const { data: dataWithTenant, error: errorWithTenant } = await supabase
-      .from('evaluation_scale')
-      .select('rating, color, label')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-    
-    if (!errorWithTenant && dataWithTenant) {
-      ratingPoints = dataWithTenant
-    } else {
-      console.warn('⚠️ Error loading with tenant_id, trying without:', errorWithTenant)
-      // Fallback: try without tenant_id filter (for backwards compatibility)
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('evaluation_scale')
-        .select('rating, color, label')
-        .eq('is_active', true)
-      
-      if (fallbackError) {
-        console.error('❌ Error loading evaluation scale (fallback):', fallbackError)
-        return
-      }
-      
-      ratingPoints = fallbackData
+    const ratingResponse = await $fetch('/api/staff/get-rating-points', {
+      method: 'POST',
+      body: { tenantId }
+    }) as any
+
+    if (!ratingResponse?.success) {
+      throw new Error('Failed to load rating points')
     }
+
+    const ratingPoints = ratingResponse.data
     
     // Create map from rating to color and label
     const map: Record<number, { color: string; label: string }> = {}
-    ratingPoints?.forEach(rp => {
+    ratingPoints?.forEach((rp: any) => {
       map[rp.rating] = {
         color: rp.color || '#3B82F6',
         label: rp.label || ''
@@ -2388,6 +2373,14 @@ const uploadCurrentFile = async (file: File) => {
 // Watch for student changes
 watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
+    // Load tenant branding first
+    const { loadTenantBrandingById } = useTenantBranding()
+    const authStore = useAuthStore()
+    const tenantId = authStore.userProfile?.tenant_id || newStudent.tenant_id
+    if (tenantId) {
+      loadTenantBrandingById(tenantId)
+    }
+    
     loadRatingPoints() // Load rating points first
     loadLessons()
     loadExamResults()

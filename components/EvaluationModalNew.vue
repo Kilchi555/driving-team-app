@@ -241,15 +241,36 @@ const filteredCriteria = computed(() => {
 })
 
 const groupedCriteria = computed(() => {
-  const groups: Record<string, any[]> = {}
+  const groups: Record<string, { order: number, criteria: any[] }> = {}
   filteredCriteria.value.forEach(criteria => {
     const categoryName = criteria.category_name || 'Sonstiges'
     if (!groups[categoryName]) {
-      groups[categoryName] = []
+      groups[categoryName] = {
+        order: criteria.category_order ?? 999,
+        criteria: []
+      }
     }
-    groups[categoryName].push(criteria)
+    groups[categoryName].criteria.push(criteria)
   })
-  return groups
+  
+  // Sortiere Kriterien innerhalb jeder Kategorie nach criteria_order
+  Object.keys(groups).forEach(categoryName => {
+    groups[categoryName].criteria.sort((a, b) => {
+      const aOrder = a.criteria_order ?? 999
+      const bOrder = b.criteria_order ?? 999
+      return aOrder - bOrder
+    })
+  })
+  
+  // Konvertiere zu Array und sortiere nach Kategorie-Reihenfolge
+  const sortedGroups = Object.entries(groups)
+    .sort((a, b) => a[1].order - b[1].order)
+    .reduce((acc, [key, value]) => {
+      acc[key] = value.criteria
+      return acc
+    }, {} as Record<string, any[]>)
+  
+  return sortedGroups
 })
 
 const sortedSelectedCriteria = computed(() => {
