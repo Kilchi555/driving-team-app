@@ -124,7 +124,7 @@ export default defineEventHandler(async (event) => {
       const hasCriteriaEvaluation = appointment.notes && 
         appointment.notes.some((note: any) => 
           note.evaluation_criteria_id !== null && 
-          note.criteria_rating !== null
+          note.criteria_rating !== null && note.criteria_rating !== undefined
         )
 
       // Check if it has exam result
