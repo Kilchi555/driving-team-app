@@ -297,7 +297,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       const tenantId = authStore.userProfile?.tenant_id
       
       if (!tenantId) {
-        console.warn('⚠️ User has no tenant_id, using fallback pricing')
+        logger.debug('ℹ️ User has no tenant_id, using fallback pricing')
         await createFallbackPricingRules()
         return
       }
@@ -311,14 +311,14 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       }) as any
 
       if (!response?.success) {
-        console.error('❌ Failed to load pricing rules from API')
+        logger.debug('ℹ️ Failed to load pricing rules from API')
         throw new Error(response?.error || 'Failed to load pricing rules')
       }
 
       const pricingRulesData = response.data || []
 
       if (!pricingRulesData || pricingRulesData.length === 0) {
-        console.warn('⚠️ No pricing rules found for tenant, using fallback')
+        logger.debug('ℹ️ No pricing rules found for tenant, using fallback')
         await createFallbackPricingRules()
         return
       }
@@ -335,7 +335,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       logger.debug('✅ Pricing rules loaded:', pricingRulesData.length, 'categories')
 
     } catch (err: any) {
-      console.error('❌ Error loading pricing rules:', err)
+      logger.debug('ℹ️ Error loading pricing rules:', err)
       pricingError.value = err.message || 'Fehler beim Laden der Preisregeln'
       await createFallbackPricingRules()
     } finally {
