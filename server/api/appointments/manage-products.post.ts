@@ -106,7 +106,11 @@ export default defineEventHandler(async (event) => {
         throw new Error('User profile not found in users table')
       }
       
-      logger.info('✅ User authorized via appointment relationship (profile missing)')
+      logger.info('✅ User authorized via appointment relationship (profile missing):', {
+        userId: user.id,
+        isAppointmentCreator: appointment.user_id === user.id,
+        isStaff: appointment.staff_id === user.id
+      })
     } else if (userProfile) {
       logger.debug('✅ User profile found:', { role: userProfile.role, tenant_id: userProfile.tenant_id })
       
@@ -126,7 +130,7 @@ export default defineEventHandler(async (event) => {
       // Admin/Tenant Admin can manage any appointment in their tenant
       const isStaff = userProfile.role === 'staff'
       const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
-      const isOwnAppointment = appointment.staff_id === user.id
+      const isOwnAppointment = appointment.staff_id === userProfile.id  // ✅ Compare with userProfile.id (DB ID), not user.id (Auth ID)
       const isSameTenant = appointment.tenant_id === userProfile.tenant_id
       
       const isAuthorized = (isStaff && isOwnAppointment) || (isAdmin && isSameTenant)
