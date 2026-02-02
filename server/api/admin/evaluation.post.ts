@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-evaluation-categories') {
-      // Get all evaluation categories for tenant, sorted by display_order
+      // Get all evaluation categories for tenant (tenant-specific + global defaults)
       if (!tenant_id) {
         return { success: true, data: [] }
       }
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
       const { data, error } = await supabase
         .from('evaluation_categories')
         .select('*')
-        .eq('tenant_id', tenant_id)
+        .or(`tenant_id.eq.${tenant_id},tenant_id.is.null`)
         .order('display_order', { ascending: true })
 
       if (error) throw error
@@ -82,11 +82,12 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-evaluation-criteria') {
-      // Get evaluation criteria for category, sorted by display_order
+      // Get evaluation criteria for category (tenant-specific + global defaults)
       const { data, error } = await supabase
         .from('evaluation_criteria')
         .select('*')
         .eq('category_id', category_data?.id)
+        .or(`tenant_id.eq.${category_data?.tenant_id},tenant_id.is.null`)
         .order('display_order', { ascending: true })
 
       if (error) throw error
