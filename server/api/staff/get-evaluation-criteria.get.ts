@@ -20,8 +20,9 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const query = getQuery(event)
     const isTheoryLesson = query.isTheoryLesson === 'true'
+    const studentCategory = (query.studentCategory || '') as string
     
-    console.log(`[${new Date().toLocaleTimeString()}] 📚 Loading evaluation criteria for user:`, user.id, 'isTheory:', isTheoryLesson)
+    console.log(`[${new Date().toLocaleTimeString()}] 📚 Loading evaluation criteria for user:`, user.id, 'isTheory:', isTheoryLesson, 'category:', studentCategory)
     
     let criteria: any[] = []
     
@@ -88,6 +89,16 @@ export default defineEventHandler(async (event) => {
       // Secondary sort by criteria display_order
       return (a.display_order ?? 999) - (b.display_order ?? 999)
     })
+    
+    // Filter by driving_categories if studentCategory is provided
+    if (studentCategory) {
+      criteria = criteria.filter(criterion => {
+        const drivingCategories = criterion.driving_categories || []
+        // Include if driving_categories is empty (applies to all) or contains the student category
+        return drivingCategories.length === 0 || drivingCategories.includes(studentCategory)
+      })
+      console.log(`[${new Date().toLocaleTimeString()}] 🚗 Filtered criteria by category ${studentCategory}: ${criteria.length}`)
+    }
     
     console.log(`[${new Date().toLocaleTimeString()}] 🎯 Returning ${criteria.length} criteria for tenant ${user.tenant_id}`)
     
