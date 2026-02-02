@@ -56,7 +56,7 @@
                   >
                     <div class="flex items-center justify-between">
                       <div>
-                        <h4 class="font-medium text-gray-900">{{ criteria.name }}</h4>
+                        <h4 class="font-medium text-gray-900">{{ criteria.criteria_name }}</h4>
                       </div>
                     </div>
                   </div>
@@ -82,7 +82,7 @@
                 class="bg-gray-50 rounded-lg p-3"
               >
                 <div class="flex items-center justify-between mb-2">
-                  <h4 class="font-medium text-gray-900">{{ getCriteriaById(criteriaId)?.name }}</h4>
+                  <h4 class="font-medium text-gray-900">{{ getCriteriaById(criteriaId)?.criteria_name }}</h4>
                   <button
                     @click="removeCriteria(criteriaId)"
                     class="text-red-600 hover:text-red-800"
@@ -92,7 +92,7 @@
                     </svg>
                   </button>
                 </div>
-                <p class="text-sm text-gray-600">{{ getCriteriaById(criteriaId)?.description }}</p>
+                <p class="text-sm text-gray-600">{{ getCriteriaById(criteriaId)?.criteria_description }}</p>
               </div>
             </div>
           </div>
@@ -117,8 +117,8 @@
                 class="border border-gray-200 rounded-lg p-4"
               >
                 <div class="mb-4">
-                  <h4 class="font-semibold text-gray-900 text-lg">{{ getCriteriaById(criteriaId)?.name }}</h4>
-                  <p class="text-gray-600">{{ getCriteriaById(criteriaId)?.description }}</p>
+                  <h4 class="font-semibold text-gray-900 text-lg">{{ getCriteriaById(criteriaId)?.criteria_name }}</h4>
+                  <p class="text-gray-600">{{ getCriteriaById(criteriaId)?.criteria_description }}</p>
                 </div>
 
                 <!-- Rating Scale -->
@@ -234,8 +234,8 @@ const filteredCriteria = computed(() => {
   
   const query = searchQuery.value.toLowerCase()
   return unratedCriteria.filter(criteria => 
-    criteria.name?.toLowerCase().includes(query) ||
-    criteria.description?.toLowerCase().includes(query) ||
+    criteria.criteria_name?.toLowerCase().includes(query) ||
+    criteria.criteria_description?.toLowerCase().includes(query) ||
     criteria.category_name?.toLowerCase().includes(query)
   )
 })
@@ -315,9 +315,10 @@ const loadData = async () => {
     // Load evaluation criteria for these categories (tenant-specific + global defaults)
     const { data: criteriaData, error: criteriaError } = await supabase
       .from('evaluation_criteria')
-      .select('id, name, description, category_id, display_order, is_active')
+      .select('id, name, description, category_id, display_order, is_active, tenant_id')
       .eq('is_active', true)
       .in('category_id', (categoriesData || []).map(c => c.id))
+      .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
       .order('category_id, display_order', { ascending: true })
 
     if (criteriaError) throw criteriaError
@@ -342,7 +343,8 @@ const loadData = async () => {
           criteria_description: criteria.description,
           criteria_order: criteria.display_order,
           is_required: false,
-          is_active: criteria.is_active
+          is_active: criteria.is_active,
+          criteria_tenant_id: criteria.tenant_id
         }))
     })
 
@@ -393,7 +395,7 @@ const removeCriteria = (criteriaId: string) => {
 }
 
 const getCriteriaById = (criteriaId: string) => {
-  return allCriteria.value.find(c => c.id === criteriaId)
+  return allCriteria.value.find(c => c.criteria_id === criteriaId)
 }
 
 const setCriteriaRating = (criteriaId: string, rating: number) => {
