@@ -116,11 +116,11 @@ export default defineEventHandler(async (event) => {
     logger.debug('💾 Saving', notesToInsert.length, 'evaluations:', JSON.stringify(notesToInsert.slice(0, 1)))
 
     // ✅ 5. UPSERT NOTES
-    // Use the unique constraint name for upsert
+    // Use the column names that form the unique constraint for upsert
     const { data: savedNotes, error: upsertError } = await supabase
       .from('notes')
       .upsert(notesToInsert, {
-        onConflict: 'unique_appointment_criteria'
+        onConflict: 'appointment_id,evaluation_criteria_id'  // Column names for the unique constraint
       })
       .select()
 
