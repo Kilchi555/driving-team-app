@@ -3256,7 +3256,8 @@ const resetForm = () => {
   })
   
   selectedStudent.value = null
-  selectedLocation.value = null
+  // ⚠️ DON'T reset selectedLocation - let LocationSelector auto-select it
+  // selectedLocation.value = null
   selectedProducts.value = [] // ✅ Produkte zurücksetzen
   showEventTypeSelection.value = false
 
