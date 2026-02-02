@@ -34,10 +34,22 @@ export default defineEventHandler(async (event) => {
       throw new Error('Unauthorized')
     }
     
+    // Get user profile for role/tenant validation
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('id, role, tenant_id')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !userProfile) {
+      logger.warn('⚠️ User profile not found:', user.id)
+      throw new Error('User profile not found')
+    }
+    
     // Verify user can access this appointment
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
-      .select('id, staff_id')
+      .select('id, staff_id, tenant_id')
       .eq('id', appointmentId)
       .single()
     
@@ -45,7 +57,24 @@ export default defineEventHandler(async (event) => {
       throw new Error('Appointment not found')
     }
     
-    if (appointment.staff_id !== user.id) {
+    // Authorization: Staff can only manage their own appointments
+    // Admin/Tenant Admin can manage any appointment in their tenant
+    const isStaff = userProfile.role === 'staff'
+    const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
+    const isOwnAppointment = appointment.staff_id === user.id
+    const isSameTenant = appointment.tenant_id === userProfile.tenant_id
+    
+    const isAuthorized = (isStaff && isOwnAppointment) || (isAdmin && isSameTenant)
+    
+    if (!isAuthorized) {
+      logger.warn('❌ Unauthorized access to appointment products:', {
+        userId: user.id,
+        userRole: userProfile.role,
+        appointmentId,
+        staffId: appointment.staff_id,
+        userTenant: userProfile.tenant_id,
+        appointmentTenant: appointment.tenant_id
+      })
       throw new Error('Unauthorized to manage products for this appointment')
     }
     
