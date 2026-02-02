@@ -75,14 +75,17 @@ export default defineEventHandler(async (event) => {
         .select('type')
         .eq('user_id', body.studentId)
         .is('deleted_at', null)
-        .not('status', 'eq', 'cancelled')
-        .not('status', 'eq', 'aborted')
+        .in('status', ['completed', 'confirmed'])
         .order('start_time', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (error) {
-        throw new Error(error.message)
+        logger.warn('⚠️ Error fetching last category:', error)
+        return {
+          success: true,
+          data: null
+        }
       }
 
       logger.debug('✅ Last category found:', data?.type)

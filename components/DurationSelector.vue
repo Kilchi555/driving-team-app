@@ -100,18 +100,11 @@ const {
 // ✅ NEU: Funktion um die letzte Dauer eines Schülers zu laden
 const getLastStudentDuration = async (studentId: string): Promise<number | null> => {
   try {
-    const authStore = useAuthStore()
+    logger.debug('📊 Getting last student duration for:', studentId)
     
-    // ✅ Nutze Auth Store statt direkter Auth-Abfrage
-    const userProfile = authStore.userProfile
-    if (!userProfile?.tenant_id) throw new Error('Nicht angemeldet')
-    
-    const response = await $fetch('/api/calendar/manage', {
-      method: 'POST',
-      body: {
-        action: 'get-last-appointment-duration',
-        user_id: studentId,
-        tenant_id: userProfile.tenant_id
+    const response = await $fetch('/api/staff/get-last-student-duration', {
+      query: {
+        user_id: studentId
       }
     }) as any
 
