@@ -45,11 +45,20 @@ export default defineEventHandler(async (event) => {
     }
     
     // Verify user has access to this user (same tenant or is admin)
-    const { data: currentUserData } = await supabaseAdmin
+    const { data: currentUserData, error: currentUserError } = await supabaseAdmin
       .from('users')
       .select('tenant_id, role')
       .eq('id', user.id)
       .single()
+    
+    if (currentUserError || !currentUserData) {
+      logger.warn('⚠️ Current user profile not found:', { userId: user.id, error: currentUserError })
+      // If user profile doesn't exist, return null (graceful)
+      return {
+        success: true,
+        data: null
+      }
+    }
     
     const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(currentUserData?.role)
     
@@ -60,7 +69,7 @@ export default defineEventHandler(async (event) => {
       targetUserId: user_id,
       targetUserTenant: userData?.tenant_id,
       isAdmin,
-      sameTenantt: currentUserData?.tenant_id === userData?.tenant_id
+      sameTenant: currentUserData?.tenant_id === userData?.tenant_id
     })
     
     if (currentUserData?.tenant_id !== userData.tenant_id && !isAdmin) {

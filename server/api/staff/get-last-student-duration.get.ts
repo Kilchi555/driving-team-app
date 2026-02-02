@@ -36,7 +36,12 @@ export default defineEventHandler(async (event) => {
       .single()
     
     if (profileError || !userProfile) {
-      throw new Error('User profile not found')
+      logger.warn('⚠️ Current user profile not found:', { userId: user.id, error: profileError })
+      // If user profile doesn't exist, return null (user might be in creation process)
+      return {
+        success: true,
+        data: null
+      }
     }
     
     // Get the student's tenant to validate access
