@@ -1,7 +1,6 @@
 // api/admin/manage.post.ts
 import { defineEventHandler, readBody } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { getServerSession } from '#auth'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -15,11 +14,6 @@ interface AdminRequest {
 
 export default defineEventHandler(async (event) => {
   try {
-    const session = await getServerSession(event)
-    if (!session?.user?.id) {
-      throw new Error('Unauthorized')
-    }
-
     const body = await readBody<AdminRequest>(event)
     const { action } = body
 
