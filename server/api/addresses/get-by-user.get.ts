@@ -29,14 +29,14 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get user's tenant_id (the student's record)
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: studentError } = await supabaseAdmin
       .from('users')
       .select('tenant_id')
       .eq('id', user_id)
       .single()
     
-    if (userError || !userData?.tenant_id) {
-      logger.warn('⚠️ Student user profile not found or no tenant:', { user_id, error: userError })
+    if (studentError || !userData?.tenant_id) {
+      logger.warn('⚠️ Student user profile not found or no tenant:', { user_id, error: studentError })
       // Return empty address if student not found - this is OK
       return {
         success: true,
