@@ -198,7 +198,7 @@
               :selected-student-id="isLessonType(formData.eventType) ? selectedStudent?.id : undefined"
               :current-staff-id="formData.staff_id"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              :disable-auto-selection="true"
+              :disable-auto-selection="false"
               :show-buttons="!(props.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props.mode === 'edit' && isPastAppointment"
               @update:model-value="updateLocationId"
