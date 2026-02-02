@@ -69,6 +69,17 @@ export default defineEventHandler(async (event) => {
       }
       
       criteria = [...(tenantTheory || []), ...(globalTheory || [])]
+        // Remove duplicates: prefer tenant-specific over global defaults
+        .reduce((acc: any[], current: any) => {
+          const exists = acc.some(item => 
+            item.name === current.name && 
+            item.category_id === current.category_id
+          )
+          if (!exists) {
+            acc.push(current)
+          }
+          return acc
+        }, [])
         .sort((a, b) => {
           // Primary sort by category display_order (Schulungstyp)
           const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
@@ -125,6 +136,17 @@ export default defineEventHandler(async (event) => {
       }
       
       criteria = [...(tenantPractical || []), ...(globalPractical || [])]
+        // Remove duplicates: prefer tenant-specific over global defaults
+        .reduce((acc: any[], current: any) => {
+          const exists = acc.some(item => 
+            item.name === current.name && 
+            item.category_id === current.category_id
+          )
+          if (!exists) {
+            acc.push(current)
+          }
+          return acc
+        }, [])
         .sort((a, b) => {
           // Primary sort by category display_order (Schulungstyp)
           const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
