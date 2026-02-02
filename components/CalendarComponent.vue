@@ -2410,9 +2410,6 @@ const handleCopyAppointment = async (copyData: any) => {
     } else {
       console.warn('⚠️ Error fetching payment:', paymentResponse?.message)
     }
-    } else {
-      console.warn('⚠️ No payment found for appointment')
-    }
   } catch (err) {
     console.warn('⚠️ Could not fetch payment method:', err)
   }
