@@ -101,6 +101,7 @@ export default defineEventHandler(async (event) => {
         evaluation_criteria_id: e.evaluation_criteria_id,
         criteria_rating: e.rating || null,
         criteria_note: String(e.notes || '').substring(0, 5000), // Sanitize
+        last_updated_by_user_id: user.id,  // ← REQUIRED: NOT NULL column
         tenant_id: tenantId
       }))
 
