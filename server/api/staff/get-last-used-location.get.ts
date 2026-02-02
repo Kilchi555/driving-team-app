@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
     // Load last used location for this student-staff pair
     const { data, error } = await supabase
       .from('appointments')
-      .select('location_id, custom_location_name, custom_location_address')
+      .select('location_id, custom_location_name, custom_location_address, status, staff_id')
       .eq('user_id', userId)
       .eq('staff_id', staffId)
       .eq('tenant_id', userData.tenant_id)
@@ -56,9 +56,16 @@ export default defineEventHandler(async (event) => {
       return { data: null }
     }
 
+    logger.debug('📊 Query results for student-staff pair:', {
+      userId,
+      staffId,
+      foundAppointment: !!data,
+      appointmentStatus: data?.status
+    })
+
     // ✅ Debug: Log exactly what we found
     if (data) {
-      logger.debug('📊 Last completed appointment for student-staff pair:', {
+      logger.debug('📊 Last completed appointment found:', {
         hasLocationId: !!data.location_id,
         locationIdValue: data.location_id || 'null',
         hasCustomLocationName: !!data.custom_location_name,
@@ -66,6 +73,8 @@ export default defineEventHandler(async (event) => {
         customLocationName: data.custom_location_name || 'null',
         customLocationAddress: data.custom_location_address || 'null'
       })
+    } else {
+      logger.debug('⚠️ No completed appointments found for this student-staff pair')
     }
 
     // ✅ Only return location_id if it exists (don't use custom locations for auto-selection)
