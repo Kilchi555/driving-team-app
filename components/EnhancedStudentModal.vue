@@ -2424,9 +2424,9 @@ const handleDocumentUpload = async (event: Event) => {
     
     logger.debug('📝 FormData prepared with keys:', Array.from(formData.keys()))
     
-    // Upload via API
-    logger.debug('🌐 Sending request to /api/students/upload-document')
-    const response = await $fetch('/api/students/upload-document', {
+    // Upload via secure API (not onboarding, but admin API)
+    logger.debug('🌐 Sending request to /api/admin/upload-student-document')
+    const response = await $fetch('/api/admin/upload-student-document', {
       method: 'POST',
       body: formData
     }) as any
