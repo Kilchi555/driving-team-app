@@ -289,17 +289,7 @@ const loadData = async () => {
   error.value = null
   
   try {
-    // Load criteria for the student category
-    const { data: criteriaData, error: criteriaError } = await supabase
-      .from('v_evaluation_matrix')
-      .select('*')
-      .contains('driving_categories', [props.studentCategory])
-      .order('category_order, criteria_order')
-
-    if (criteriaError) throw criteriaError
-    allCriteria.value = criteriaData || []
-
-    // Get current user's tenant_id
+    // Get current user's tenant_id FIRST
     const user = authStore.user // ✅ MIGRATED: Use auth store instead
     if (!user) throw new Error('Nicht angemeldet')
 
@@ -311,6 +301,17 @@ const loadData = async () => {
 
     if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+
+    // Load criteria for the student category with tenant filter
+    const { data: criteriaData, error: criteriaError } = await supabase
+      .from('v_evaluation_matrix')
+      .select('*')
+      .contains('driving_categories', [props.studentCategory])
+      .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
+      .order('category_order, criteria_order')
+
+    if (criteriaError) throw criteriaError
+    allCriteria.value = criteriaData || []
 
     // Load evaluation scale (filtered by tenant)
     const { data: scaleData, error: scaleError } = await supabase

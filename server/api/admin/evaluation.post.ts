@@ -82,12 +82,12 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-evaluation-criteria') {
-      // Get evaluation criteria for category
+      // Get evaluation criteria for category, sorted by display_order
       const { data, error } = await supabase
         .from('evaluation_criteria')
         .select('*')
-        .eq('evaluation_category_id', category_data?.id)
-        .order('order')
+        .eq('category_id', category_data?.id)
+        .order('display_order', { ascending: true })
 
       if (error) throw error
       return { success: true, data: data || [] }
