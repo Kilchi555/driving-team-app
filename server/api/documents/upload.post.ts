@@ -1,8 +1,9 @@
 // api/documents/upload.post.ts
-import { defineEventHandler, readBody } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { getServerSession } from '#auth'
+import { logger } from '~/utils/logger'
 
+// Create Supabase admin client
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
