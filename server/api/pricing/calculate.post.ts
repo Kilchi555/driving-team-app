@@ -24,28 +24,38 @@ export default defineEventHandler(async (event) => {
     const authorization = getHeader(event, 'authorization')
     const token = authorization?.replace('Bearer ', '')
 
-    if (!token) {
-      throw new Error('No authorization token')
+    // IMPORTANT: Token is optional for most pricing actions
+    // We only need tenant_id for certain operations
+    let user: any = null
+    let tenantId: string | null = null
+
+    if (token) {
+      try {
+        // Get current user
+        const { data: { user: authUser }, error: userError } = await supabaseAdmin.auth.getUser(token)
+        if (!userError && authUser) {
+          user = authUser
+
+          // Get user profile for tenant_id
+          const { data: userProfile, error: profileError } = await supabaseAdmin
+            .from('users')
+            .select('tenant_id')
+            .eq('id', user.id)
+            .single()
+
+          if (!profileError && userProfile?.tenant_id) {
+            tenantId = userProfile.tenant_id
+            logger.debug('👤 User authenticated:', { userId: user.id, tenantId })
+          } else {
+            logger.debug('👤 User authenticated but no tenant_id')
+          }
+        }
+      } catch (err: any) {
+        logger.warn('⚠️ Failed to authenticate user, using fallback pricing')
+      }
+    } else {
+      logger.debug('ℹ️ No authorization token provided, using fallback pricing')
     }
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
-      throw new Error('Unauthorized')
-    }
-
-    // Get user profile for tenant_id
-    const { data: userProfile, error: profileError } = await supabaseAdmin
-      .from('users')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !userProfile?.tenant_id) {
-      throw new Error('User profile not found')
-    }
-
-    const tenantId = userProfile.tenant_id
 
     // ========== GET EVENT TYPE ==========
     if (action === 'get-event-type') {
@@ -79,7 +89,16 @@ export default defineEventHandler(async (event) => {
     // ========== GET PRICING RULES ==========
     if (action === 'get-pricing-rules') {
       // Can be called with tenantId (get all) or categoryCode (get specific)
-      logger.debug('💰 Getting pricing rules')
+      logger.debug('💰 Getting pricing rules', { tenantId })
+
+      // If no tenant_id, return empty and let client use fallback
+      if (!tenantId) {
+        logger.debug('ℹ️ No tenant_id available, returning empty pricing rules')
+        return {
+          success: true,
+          data: []
+        }
+      }
 
       let query = supabaseAdmin
         .from('pricing_rules')
@@ -96,7 +115,11 @@ export default defineEventHandler(async (event) => {
 
       if (error) {
         logger.error('❌ Error fetching pricing rules:', error)
-        throw new Error(error.message)
+        // Gracefully return empty, client will use fallback
+        return {
+          success: true,
+          data: []
+        }
       }
 
       if (!rawRules || rawRules.length === 0) {
@@ -280,8 +303,18 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('💰 Calculating price:', {
         categoryCode: body.categoryCode,
-        durationMinutes: body.durationMinutes
+        durationMinutes: body.durationMinutes,
+        hasTenantId: !!tenantId
       })
+
+      // If no tenant_id, return empty data to signal client should use fallback
+      if (!tenantId) {
+        logger.debug('ℹ️ No tenant_id for price calculation, returning empty')
+        return {
+          success: true,
+          data: null
+        }
+      }
 
       // Get pricing rule
       const { data: rules, error: rulesError } = await supabaseAdmin
@@ -294,7 +327,12 @@ export default defineEventHandler(async (event) => {
         .limit(1)
 
       if (rulesError || !rules || rules.length === 0) {
-        throw new Error('No pricing rule found for this category')
+        // Return null to signal client should use fallback
+        logger.debug('ℹ️ No pricing rule found, client will use fallback')
+        return {
+          success: true,
+          data: null
+        }
       }
 
       const rule = rules[0]
