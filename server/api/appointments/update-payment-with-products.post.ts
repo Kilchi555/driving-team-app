@@ -30,6 +30,18 @@ export default defineEventHandler(async (event) => {
       throw new Error('Unauthorized')
     }
     
+    // 1b. Get user profile to get the DB user ID
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('id, role, tenant_id')
+      .eq('auth_user_id', user.id)
+      .single()
+    
+    if (profileError || !userProfile) {
+      logger.error('❌ User profile not found:', user.id)
+      throw new Error('User profile not found')
+    }
+    
     // 2. Get existing payment
     const { data: existingPayment, error: fetchError } = await supabaseAdmin
       .from('payments')
@@ -59,7 +71,12 @@ export default defineEventHandler(async (event) => {
     }
     
     // Verify staff owns this appointment
-    if (appointment.staff_id !== user.id) {
+    if (appointment.staff_id !== userProfile.id) {
+      logger.error('❌ User not authorized for this appointment:', {
+        staffId: appointment.staff_id,
+        userProfileId: userProfile.id,
+        userAuthId: user.id
+      })
       throw new Error('Unauthorized to update this appointment')
     }
     
