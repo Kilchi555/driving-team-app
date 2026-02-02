@@ -907,8 +907,23 @@ watch(() => props.modelValue, (newValue) => {
   logger.debug('🔍 LocationSelector: modelValue changed:', newValue)
   if (newValue && newValue !== selectedLocationId.value) {
     selectedLocationId.value = newValue
-    useStandardLocations.value = true
-    selectedCustomLocation.value = null
+    
+    // ✅ Prüfe ob diese Location eine Custom/Manual Location ist
+    const isCustomLocation = newValue && (
+      newValue.includes('temp_') || 
+      newValue.includes('manual_') ||
+      selectedCustomLocation.value?.id === newValue
+    )
+    
+    if (isCustomLocation) {
+      useStandardLocations.value = false
+      logger.debug('🔍 LocationSelector: Custom location detected, showing custom tab')
+    } else {
+      useStandardLocations.value = true
+      selectedCustomLocation.value = null
+      logger.debug('🔍 LocationSelector: Standard location, showing standard tab')
+    }
+    
     logger.debug('✅ LocationSelector: Location updated from modelValue:', newValue)
   }
 })

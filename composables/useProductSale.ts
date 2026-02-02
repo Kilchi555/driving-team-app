@@ -155,44 +155,32 @@ const saveToProductSales = async (appointmentId: string) => {
   }
 
   try {
-    // ✅ NEUE LOGIK: Verwende product_sales statt appointment_products
-    const { createProductSale } = useProductSales()
-    
-    // Erstelle Produktverkauf
-    const saleData = {
+    // ✅ Use API endpoint instead of direct Supabase access
+    // This ensures proper authorization and avoids RLS issues
+    const productData = selectedProducts.value.map(item => ({
       appointment_id: appointmentId,
-      user_id: '', // Wird aus dem Termin geladen
-      staff_id: '', // Wird aus dem Termin geladen
-      items: selectedProducts.value.map(item => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price_rappen: Math.round(item.product.price * 100),
-        total_price_rappen: Math.round(item.total * 100)
-      }))
+      product_id: item.product.id,
+      quantity: item.quantity,
+      unit_price_rappen: Math.round(item.product.price * 100),
+      total_price_rappen: Math.round(item.total * 100)
+    }))
+    
+    logger.debug('📦 Saving products via API:', productData.length)
+    
+    const response = await $fetch('/api/appointments/manage-products', {
+      method: 'POST',
+      body: {
+        appointmentId,
+        action: 'save',
+        productData
+      }
+    }) as any
+    
+    if (!response?.success) {
+      throw new Error('Failed to save products via API')
     }
     
-    // Lade Termin-Daten für user_id und staff_id
-    const supabase = getSupabase()
-    const { data: appointment, error: appointmentError } = await supabase
-      .from('appointments')
-      .select('user_id, staff_id')
-      .eq('id', appointmentId)
-      .is('deleted_at', null) // ✅ Soft Delete Filter
-      .single()
-    
-    if (appointmentError) throw appointmentError
-    
-    saleData.user_id = appointment.user_id
-    saleData.staff_id = appointment.staff_id
-    
-    // Erstelle Produktverkauf
-    const result = await createProductSale(saleData)
-    
-    if (result) {
-      logger.debug('✅ Product sale created successfully:', result.id)
-    } else {
-      throw new Error('Failed to create product sale')
-    }
+    logger.debug('✅ Product sale created successfully via API')
     
   } catch (err: any) {
     console.error('❌ Error saving products to product_sales:', err)
