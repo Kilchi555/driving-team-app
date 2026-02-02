@@ -1,85 +1,107 @@
 import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
+  try {
+    // Get query parameters FIRST
+    const query = getQuery(event)
+    const { user_id } = query
 
-  // Get auth token from headers
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Missing or invalid authorization header' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-
-  // Get current user
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  // Get user profile
-  const { data: userProfile } = await supabase
-    .from('users')
-    .select('id, tenant_id, role')
-    .eq('id', authUser.id)
-    .single()
-
-  if (!userProfile) {
-    throw createError({ statusCode: 403, message: 'User profile not found' })
-  }
-  
-  // Verify access: can only access own credits or if admin
-  const requestedUserId = user_id as string
-  const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
-  const isOwnCredit = authUser.id === requestedUserId
-  
-  if (!isOwnCredit && !isAdmin) {
-    throw createError({ statusCode: 403, message: 'Unauthorized to access this student credit' })
-  }
-  
-  // Verify student is in same tenant (for non-admins)
-  if (!isAdmin) {
-    const { data: studentProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', requestedUserId)
-      .single()
-    
-    if (!studentProfile || studentProfile.tenant_id !== userProfile.tenant_id) {
-      throw createError({ statusCode: 403, message: 'Student not in your tenant' })
+    if (!user_id) {
+      throw new Error('Missing required parameter: user_id')
     }
-  }
 
-  // Get query parameters
-  const query = getQuery(event)
-  const { user_id } = query
+    const supabaseAdmin = getSupabaseAdmin()
 
-  if (!user_id) {
-    throw createError({
-      statusCode: 400,
-      message: 'Missing required parameter: user_id'
+    // Get auth token from headers
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new Error('Missing or invalid authorization header')
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+
+    // Get current user
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    if (authError || !authUser) {
+      throw new Error('Unauthorized')
+    }
+
+    // Get user profile
+    const { data: userProfile } = await supabaseAdmin
+      .from('users')
+      .select('id, tenant_id, role')
+      .eq('id', authUser.id)
+      .single()
+
+    if (!userProfile) {
+      throw new Error('User profile not found')
+    }
+    
+    // Verify access: can only access own credits or if admin
+    const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
+    const isOwnCredit = authUser.id === user_id
+    const isStaff = userProfile.role === 'staff'
+    
+    logger.debug('🔐 Student credit access check:', {
+      currentUserId: authUser.id,
+      requestedUserId: user_id,
+      userRole: userProfile.role,
+      isOwnCredit,
+      isAdmin,
+      isStaff
     })
-  }
+    
+    // Access rules:
+    // 1. User can access their own credits
+    // 2. Admin can access any credits
+    // 3. Staff can access their students' credits (same tenant)
+    if (!isOwnCredit && !isAdmin && !isStaff) {
+      throw new Error('Unauthorized to access this student credit')
+    }
+    
+    // If staff: Verify student is in same tenant
+    if (isStaff && !isOwnCredit) {
+      const { data: studentProfile } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user_id)
+        .single()
+      
+      if (!studentProfile || studentProfile.tenant_id !== userProfile.tenant_id) {
+        logger.warn('❌ Student not in staff tenant:', {
+          studentTenant: studentProfile?.tenant_id,
+          staffTenant: userProfile.tenant_id
+        })
+        throw new Error('Student not in your tenant')
+      }
+    }
 
-  // Fetch student credit with tenant isolation
-  const { data: credit, error } = await supabase
-    .from('student_credits')
-    .select('*')
-    .eq('user_id', user_id)
-    .eq('tenant_id', userProfile.tenant_id)
-    .maybeSingle()
+    // Fetch student credit with tenant isolation
+    const { data: credit, error } = await supabaseAdmin
+      .from('student_credits')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('tenant_id', userProfile.tenant_id)
+      .maybeSingle()
 
-  if (error) {
-    console.error('Error fetching student credit:', error)
+    if (error) {
+      logger.error('❌ Error fetching student credit:', error)
+      throw new Error(error.message)
+    }
+
+    logger.debug('✅ Student credit loaded:', credit?.id || 'none')
+
+    return {
+      success: true,
+      data: credit
+    }
+  } catch (error: any) {
+    logger.error('❌ Error in get-credit:', error)
     throw createError({
-      statusCode: 500,
-      message: 'Failed to fetch student credit'
+      statusCode: error.statusCode || 400,
+      statusMessage: error.message || 'Failed to fetch student credit'
     })
-  }
-
-  return {
-    success: true,
-    data: credit
   }
 })

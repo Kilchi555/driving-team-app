@@ -48,7 +48,21 @@ export default defineEventHandler(async (event) => {
     
     const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(currentUserData?.role)
     
+    logger.debug('🔐 Access control check:', {
+      currentUserId: user.id,
+      currentUserTenant: currentUserData?.tenant_id,
+      currentUserRole: currentUserData?.role,
+      targetUserId: user_id,
+      targetUserTenant: userData?.tenant_id,
+      isAdmin,
+      sameTenantt: currentUserData?.tenant_id === userData?.tenant_id
+    })
+    
     if (currentUserData?.tenant_id !== userData.tenant_id && !isAdmin) {
+      logger.warn('❌ Access denied - tenant mismatch:', {
+        currentUserTenant: currentUserData?.tenant_id,
+        targetUserTenant: userData?.tenant_id
+      })
       throw new Error('Unauthorized to access this user')
     }
     
