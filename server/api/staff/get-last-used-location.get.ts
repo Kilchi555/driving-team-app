@@ -40,13 +40,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // Load last used location for this student-staff pair
+    // Include completed, confirmed, and even pending appointments to find location patterns
+    // But prefer completed/confirmed over pending
     const { data, error } = await supabase
       .from('appointments')
-      .select('location_id, custom_location_name, custom_location_address, status, staff_id')
+      .select('location_id, custom_location_name, custom_location_address, status, staff_id, start_time')
       .eq('user_id', userId)
       .eq('staff_id', staffId)
       .eq('tenant_id', userData.tenant_id)
-      .eq('status', 'completed')
+      .in('status', ['completed', 'confirmed', 'pending_confirmation'])
       .order('start_time', { ascending: false })
       .limit(1)
       .maybeSingle()
