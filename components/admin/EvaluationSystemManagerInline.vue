@@ -1339,10 +1339,9 @@ const loadData = async () => {
         driving_categories,
         educational_content,
         tenant_id,
-        evaluation_categories!inner(tenant_id, is_theory)
+        evaluation_categories!inner(tenant_id, is_theory, id, display_order)
       `)
       .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-      .order('display_order')
     
     // Second: Load global theory criteria
     const { data: theoryCritData } = await supabase
@@ -1357,14 +1356,31 @@ const loadData = async () => {
         driving_categories,
         educational_content,
         tenant_id,
-        evaluation_categories!inner(tenant_id, is_theory)
+        evaluation_categories!inner(tenant_id, is_theory, id, display_order)
       `)
       .is('evaluation_categories.tenant_id', null)
       .eq('evaluation_categories.is_theory', true)
-      .order('display_order')
     
-    // Combine both results
+    // Combine and properly sort both results:
+    // 1. Primary: By evaluation_categories display_order (Schulungstyp)
+    // 2. Secondary: By evaluation_criteria display_order (within each category)
     const allCriteria = [...(tenantCritData || []), ...(theoryCritData || [])]
+      .sort((a, b) => {
+        // Get category display_order
+        const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
+        const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
+        
+        // Primary sort: by category display_order
+        if (catOrderA !== catOrderB) {
+          return catOrderA - catOrderB
+        }
+        
+        // Secondary sort: by criteria display_order within same category
+        const critOrderA = a.display_order ?? 999
+        const critOrderB = b.display_order ?? 999
+        return critOrderA - critOrderB
+      })
+    
     criteria.value = allCriteria
     logger.debug('📊 Loaded evaluation criteria:', allCriteria.length, { tenant: tenantCritData?.length || 0, theory: theoryCritData?.length || 0 })
 

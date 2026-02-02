@@ -101,7 +101,8 @@ async function loadAllEvaluationData(userId: string) {
       .select('*')
       .or(`tenant_id.eq.${tenantId},is_theory.eq.true`)
       .eq('is_active', true)
-      .order('category_id'),
+      .order('category_id')
+      .order('display_order'),
     
     supabase
       .from('evaluation_scale')
