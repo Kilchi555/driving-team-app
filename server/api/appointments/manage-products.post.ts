@@ -182,6 +182,29 @@ export default defineEventHandler(async (event) => {
       
       logger.debug('💾 Saving products:', productData.length)
       
+      // Get appointment to extract tenant_id
+      const { data: appointment, error: appointmentError } = await supabaseAdmin
+        .from('appointments')
+        .select('id, tenant_id')
+        .eq('id', appointmentId)
+        .single()
+      
+      if (appointmentError || !appointment) {
+        logger.error('❌ Appointment not found for products:', appointmentError?.message)
+        throw new Error('Appointment not found')
+      }
+      
+      // Add tenant_id to each product
+      const productsWithTenant = productData.map((item: any) => ({
+        ...item,
+        tenant_id: appointment.tenant_id
+      }))
+      
+      logger.debug('📝 Products with tenant_id:', {
+        count: productsWithTenant.length,
+        tenant_id: appointment.tenant_id
+      })
+      
       // First delete existing products
       await supabaseAdmin
         .from('product_sales')
@@ -191,7 +214,7 @@ export default defineEventHandler(async (event) => {
       // Then insert new ones
       const { data: saved, error: insertError } = await supabaseAdmin
         .from('product_sales')
-        .insert(productData)
+        .insert(productsWithTenant)
         .select()
       
       if (insertError) {
