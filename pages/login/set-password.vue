@@ -165,8 +165,14 @@ const setPassword = async () => {
 
   try {
     // Update password using the token from URL
-    const { error: updateError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'update-user', attributes:{
-      password: password.value
+    const { error: updateError } = await $fetch('/api/auth/manage', { 
+      method: 'POST', 
+      body: { 
+        action: 'update-user', 
+        attributes: {
+          password: password.value
+        }
+      }
     })
 
     if (updateError) {

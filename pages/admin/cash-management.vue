@@ -453,10 +453,13 @@
 
 <script setup>
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, readonly } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useOfficeCashRegisters } from '~/composables/useOfficeCashRegisters'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import AdminCashBalanceManager from '~/components/admin/CashBalanceManager.vue'
 
 // Layout
@@ -464,6 +467,9 @@ definePageMeta({
   layout: 'admin',
   middleware: 'admin'
 })
+
+// Auth check - must be first
+const authStore = useAuthStore()
 
 // Composables
 const { currentUser } = useCurrentUser()
@@ -600,9 +606,9 @@ const handleDeposit = async () => {
     showDepositModal.value = false
     await refreshAllData()
     
-  } catch (err: any) {
+  } catch (err) {
     console.error('❌ Error making deposit:', err)
-    alert('Fehler beim Aufstocken: ' + (err.message || 'Unbekannter Fehler'))
+    alert('Fehler beim Aufstocken: ' + (err?.message || 'Unbekannter Fehler'))
   } finally {
     isProcessing.value = false
   }
@@ -631,9 +637,9 @@ const handleWithdraw = async () => {
     showWithdrawModal.value = false
     await refreshAllData()
     
-  } catch (err: any) {
+  } catch (err) {
     console.error('❌ Error making withdrawal:', err)
-    alert('Fehler beim Abheben: ' + (err.message || 'Unbekannter Fehler'))
+    alert('Fehler beim Abheben: ' + (err?.message || 'Unbekannter Fehler'))
   } finally {
     isProcessing.value = false
   }
@@ -746,9 +752,6 @@ const debugCurrentState = async () => {
   
   logger.debug('🔑 Auth user initialized')
 }
-
-// Auth check
-const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {

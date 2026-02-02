@@ -547,9 +547,13 @@ const register = async () => {
     // Auto-login after successful registration
     try {
       logger.debug('🔑 Auto-login after registration...')
-      const { error: loginError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'signin-password',{
-        email: email.value,
-        password: password.value
+      const { error: loginError } = await $fetch('/api/auth/manage', { 
+        method: 'POST', 
+        body: { 
+          action: 'signin-password',
+          email: email.value,
+          password: password.value
+        }
       })
       
       if (loginError) {
