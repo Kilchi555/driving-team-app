@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('tenant_id', tenantId)
       .lt('start_time', now)
-      .in('status', ['completed', 'confirmed', 'scheduled'])
+      .in('status', ['completed', 'confirmed', 'scheduled', 'pending_confirmation'])
       .is('deleted_at', null)
       .in('event_type_code', ['lesson', 'exam', 'theory'])
       .order('start_time', { ascending: true })
