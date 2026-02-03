@@ -53,8 +53,8 @@
               </span>
             </div>
             <!-- Telefon unter dem Namen -->
-            <div v-if="selectedStudent.phone" class="text-xs mt-1">
-              <a :href="`tel:${selectedStudent.phone}`" class="inline-flex items-center gap-1 px-2 py-1 bg-green-200 text-green-800 rounded hover:bg-green-300 hover:shadow transition-all cursor-pointer font-medium">
+            <div v-if="selectedStudent.phone" class="text-xs mt-2">
+              <a :href="`tel:${selectedStudent.phone}`" class="text-blue-600 hover:text-blue-800 hover:underline">
                 📞 {{ selectedStudent.phone }}
               </a>
             </div>
