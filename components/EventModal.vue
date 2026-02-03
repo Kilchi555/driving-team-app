@@ -4185,21 +4185,37 @@ const goToPolicySelection = async () => {
     await fetchPolicies(appliesTo)
   }
   
-  // ✅ NEW: If no policies loaded, show the charge decision modal instead
-  if (!defaultPolicy.value || policiesWithRules.value.length === 0) {
-    logger.debug('⚠️ No cancellation policies found - showing charge decision modal instead')
+  // ✅ NEW: If no policies loaded, only show the charge decision modal if within 24h
+  if (!defaultPolicy.value) {
+    logger.debug('⚠️ No cancellation policies found')
     
-    pendingCancellationReason.value = selectedReason
+    // Check if within 24h
+    const appointmentTime = new Date(props.eventData?.start || props.eventData?.start_time)
+    const now = new Date()
+    const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const isWithin24h = hoursUntilAppointment < 24 && hoursUntilAppointment >= 0
     
-    // Load appointment price
-    if (props.eventData?.id) {
-      const price = await loadAppointmentPrice(props.eventData.id)
-      appointmentPrice.value = price
+    logger.debug('⏰ Hours until appointment:', hoursUntilAppointment, 'isWithin24h:', isWithin24h)
+    
+    // Only show charge modal if within 24h
+    if (isWithin24h) {
+      logger.debug('⚠️ No policies found AND within 24h - showing charge decision modal instead')
+      
+      pendingCancellationReason.value = selectedReason
+      
+      // Load appointment price
+      if (props.eventData?.id) {
+        const price = await loadAppointmentPrice(props.eventData.id)
+        appointmentPrice.value = price
+      }
+      
+      // Show charge modal instead of policy selection
+      showNoPolicyModal.value = true
+      return
+    } else {
+      logger.debug('✅ No policies found but > 24h away - proceeding without charge modal')
+      // Continue normally without showing charge modal
     }
-    
-    // Show charge modal instead of policy selection
-    showNoPolicyModal.value = true
-    return
   }
   
   // Load appointment price from payments table
