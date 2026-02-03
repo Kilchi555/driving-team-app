@@ -31,12 +31,12 @@ export default defineEventHandler(async (event) => {
 
   // Read and validate body
   const body = await readBody(event)
-  const { appointment_id, is_paid, payment_method } = body
+  const { appointment_id, payment_method } = body
 
-  if (!appointment_id || typeof is_paid !== 'boolean') {
+  if (!appointment_id) {
     throw createError({
       statusCode: 400,
-      message: 'Missing required fields: appointment_id, is_paid'
+      message: 'Missing required field: appointment_id'
     })
   }
 
@@ -62,10 +62,18 @@ export default defineEventHandler(async (event) => {
   }
 
   // Build update data
-  const updateData: any = { is_paid }
+  const updateData: any = {}
 
   if (payment_method) {
     updateData.payment_method = payment_method
+  }
+  
+  // Only update if there's something to update
+  if (Object.keys(updateData).length === 0) {
+    throw createError({
+      statusCode: 400,
+      message: 'No fields to update'
+    })
   }
 
   // Update appointment

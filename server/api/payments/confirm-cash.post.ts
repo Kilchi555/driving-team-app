@@ -206,7 +206,6 @@ export default defineEventHandler(async (event) => {
         .from('appointments')
         .update({
           payment_status: 'paid',
-          is_paid: true,
           updated_at: now
         })
         .eq('id', payment.appointment_id)
