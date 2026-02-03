@@ -201,7 +201,11 @@ export default defineEventHandler(async (event) => {
         .not('confirmation_token', 'is', null)
         .is('deleted_at', null)
         .in('event_type_code', ['lesson', 'exam', 'theory'])
-        .order('start_time', { ascending: true })
+        // ✅ NEU: Nur Termine in der Vergangenheit ODER in den nächsten 24h
+        // (start_time <= now) OR (start_time <= now + 24h)
+        // Wir laden alle Termine bis 24h in die Zukunft und filtern dann in JavaScript
+        .lt('start_time', toLocalTimeString(new Date(new Date().getTime() + (24 * 60 * 60 * 1000)))) // ← Alle bis zu 24h in Zukunft
+        .order('start_time', { ascending: true }) // ← Die Composable sortiert nach Status
 
       // Filter by staff_id if the user is a staff member
       if (userRole === 'staff') {
@@ -213,30 +217,44 @@ export default defineEventHandler(async (event) => {
       if (unconfirmedError) {
         logger.warn(`⚠️ Error fetching unconfirmed appointments: ${unconfirmedError.message}`)
       } else {
-        unconfirmedAppointments = (unconfirmedData || []).map((appointment: any) => ({
-          id: appointment.id,
-          title: appointment.title,
-          start_time: appointment.start_time,
-          end_time: appointment.end_time,
-          user_id: appointment.user_id,
-          status: appointment.status,
-          type: appointment.type,
-          event_type_code: appointment.event_type_code || appointment.type || 'lesson',
-          created_by: appointment.created_by,
-          confirmation_token: appointment.confirmation_token,
-          users: appointment.users || {
-            first_name: 'Unknown',
-            last_name: 'Unknown',
-            category: null
-          },
-          created_by_user: appointment.created_by_user || {
-            first_name: 'Unknown',
-            last_name: 'Unknown'
-          },
-          payments: appointment.payments || []
-        }))
+        // ✅ NEU: Filtere nur unbezahlte Termine (kein Payment oder payment_status !== 'completed')
+        unconfirmedAppointments = (unconfirmedData || [])
+          .filter((apt: any) => {
+            // Zeige nur Termine, die nicht bezahlt wurden
+            // Ein Termin gilt als unbezahlt wenn:
+            // 1. Es kein Payment gibt, ODER
+            // 2. Es ein Payment gibt, aber nicht completed
+            const hasPayment = apt.payments && apt.payments.length > 0
+            const hasCompletedPayment = hasPayment && apt.payments.some((p: any) => p.payment_status === 'completed')
+            const isUnpaid = !hasPayment || !hasCompletedPayment
+            
+            logger.debug(`🔍 Unconfirmed appointment ${apt.id}: hasPayment=${hasPayment}, hasCompleted=${hasCompletedPayment}, isUnpaid=${isUnpaid}, payments=${apt.payments?.map((p: any) => p.payment_status).join(',')}`)
+            return isUnpaid
+          })
+          .map((appointment: any) => ({
+            id: appointment.id,
+            title: appointment.title,
+            start_time: appointment.start_time,
+            end_time: appointment.end_time,
+            user_id: appointment.user_id,
+            status: appointment.status,
+            type: appointment.type,
+            event_type_code: appointment.event_type_code || appointment.type || 'lesson',
+            created_by: appointment.created_by,
+            confirmation_token: appointment.confirmation_token,
+            users: appointment.users || {
+              first_name: 'Unknown',
+              last_name: 'Unknown',
+              category: null
+            },
+            created_by_user: appointment.created_by_user || {
+              first_name: 'Unknown',
+              last_name: 'Unknown'
+            },
+            payments: appointment.payments || []
+          }))
 
-        logger.debug(`✅ Fetched ${unconfirmedAppointments.length} unconfirmed appointments`)
+        logger.debug(`✅ Fetched ${unconfirmedAppointments.length} unconfirmed appointments (only unpaid)`)
       }
     }
 

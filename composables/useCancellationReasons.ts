@@ -28,13 +28,17 @@ export const useCancellationReasons = () => {
         method: 'GET'
       }) as any
 
-      if (!response?.data || !Array.isArray(response.data)) {
+      // Handle response format: { success: true, data: [...] }
+      const reasons = response?.data
+      if (!reasons || !Array.isArray(reasons)) {
+        console.warn('⚠️ Invalid response structure:', response)
         throw new Error('Invalid response from API')
       }
 
-      cancellationReasons.value = response.data
+      cancellationReasons.value = reasons
+      console.debug('✅ Fetched cancellation reasons:', reasons.length)
     } catch (err) {
-      console.error('Error fetching cancellation reasons:', err)
+      console.error('❌ Error fetching cancellation reasons:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation reasons'
     } finally {
       isLoading.value = false
@@ -51,14 +55,18 @@ export const useCancellationReasons = () => {
         method: 'GET'
       }) as any
 
-      if (!response?.data || !Array.isArray(response.data)) {
+      // Handle response format: { success: true, data: [...] }
+      const reasons = response?.data
+      if (!reasons || !Array.isArray(reasons)) {
+        console.warn('⚠️ Invalid response structure:', response)
         throw new Error('Invalid response from API')
       }
 
-      allCancellationReasons.value = response.data
-      cancellationReasons.value = response.data.filter(reason => reason.is_active)
+      allCancellationReasons.value = reasons
+      cancellationReasons.value = reasons.filter(reason => reason.is_active)
+      console.debug('✅ Fetched all cancellation reasons:', reasons.length)
     } catch (err) {
-      console.error('Error fetching all cancellation reasons:', err)
+      console.error('❌ Error fetching all cancellation reasons:', err)
       error.value = err instanceof Error ? err.message : 'Failed to fetch cancellation reasons'
     } finally {
       isLoading.value = false

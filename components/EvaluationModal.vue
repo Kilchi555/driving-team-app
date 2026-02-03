@@ -253,9 +253,27 @@ const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly 
 
 const filteredCriteria = computed(() => {
   // Zeige nur Kriterien, die NICHT bereits ausgewählt/bewertet sind
-  const unratedCriteria = allCriteria.value.filter(criteria => 
+  let unratedCriteria = allCriteria.value.filter(criteria => 
     !selectedCriteriaOrder.value.includes(criteria.id)
   )
+  
+  // ✅ NEU: Filtere nach Fahrkategorie des Schülers
+  if (props.studentCategory) {
+    logger.debug('🎓 Filtering criteria by student category:', props.studentCategory)
+    unratedCriteria = unratedCriteria.filter(criteria => {
+      // Prüfe ob das Kriterium die Fahrkategorie des Schülers enthält
+      const drivingCategories = criteria.driving_categories || []
+      const includesStudentCategory = Array.isArray(drivingCategories) 
+        ? drivingCategories.includes(props.studentCategory)
+        : false
+      
+      if (!includesStudentCategory) {
+        logger.debug('🚫 Skipping criterion (not for category', props.studentCategory + '):', criteria.name)
+      }
+      return includesStudentCategory
+    })
+    logger.debug('✅ After category filter:', unratedCriteria.length, 'criteria remain')
+  }
   
   logger.debug('📚 filteredCriteria - allCriteria.value:', allCriteria.value.length)
   logger.debug('📚 filteredCriteria - unratedCriteria:', unratedCriteria.length)
@@ -480,7 +498,9 @@ const loadAllCriteria = async () => {
         criteria_order: criterion.display_order || 0,
         is_required: false, // Wird nicht mehr verwendet, aber für Kompatibilität beibehalten
         min_rating: 1,
-        max_rating: 6
+        max_rating: 6,
+        // ✅ NEU: Fahrkategorien für Filterung
+        driving_categories: criterion.driving_categories || []
       }
     })
     .filter(item => item.name) // Nur gültige Einträge

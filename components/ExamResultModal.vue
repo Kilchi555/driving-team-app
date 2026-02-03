@@ -236,6 +236,9 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
+import { useCurrentUser } from '~/composables/useCurrentUser'
 
 // Props
 interface Props {
@@ -245,6 +248,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// ✅ Get current user from composable (has tenant_id)
+const { currentUser: authUser, fetchCurrentUser } = useCurrentUser()
 
 // Emits
 const emit = defineEmits<{
@@ -347,32 +353,25 @@ const addExaminer = async () => {
       return
     }
 
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    if (!userProfile?.tenant_id) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    const { data, error } = await supabase
-      .from('examiners')
-      .insert({
-        first_name: newExaminer.value.first_name.trim(),
-        last_name: newExaminer.value.last_name.trim(),
-        is_active: true,
-        tenant_id: userProfile.tenant_id
-      })
-      .select()
-      .single()
+    logger.debug('📝 Creating new examiner via API:', {
+      first_name: newExaminer.value.first_name,
+      last_name: newExaminer.value.last_name
+    })
 
-    if (error) throw error
+    // ✅ Use secure backend API instead of direct Supabase insert
+    const response = await $fetch('/api/examiners/create', {
+      method: 'POST',
+      body: {
+        first_name: newExaminer.value.first_name.trim(),
+        last_name: newExaminer.value.last_name.trim()
+      }
+    }) as any
+
+    if (!response?.data?.id) {
+      throw new Error('Invalid response from server')
+    }
+
+    const newExaminerData = response.data
 
     // Reset form
     newExaminer.value = {
@@ -385,13 +384,14 @@ const addExaminer = async () => {
     await loadExaminers()
 
     // Auto-select the new examiner
-    examResult.value.examiner_id = data.id
+    examResult.value.examiner_id = newExaminerData.id
 
-    logger.debug('✅ New examiner added:', data)
+    logger.debug('✅ New examiner added via API:', newExaminerData)
 
   } catch (err: any) {
     console.error('❌ Error adding examiner:', err)
-    alert(`Fehler beim Hinzufügen des Experten: ${err.message}`)
+    logger.error('❌ Error adding examiner:', err.message)
+    alert(`Fehler beim Hinzufügen des Experten: ${err.message || 'Unknown error'}`)
   }
 }
 
@@ -499,6 +499,7 @@ const getRatingText = (rating: number | null) => {
 
 // Lifecycle
 onMounted(() => {
+  fetchCurrentUser()
   loadExaminers()
 })
 

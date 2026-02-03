@@ -746,7 +746,8 @@ const showNoPolicyModal = ref(false) // ✅ NEW: Modal when no policy found
 const manualChargePercentage = ref<number | null>(null) // ✅ NEW: Staff choice when no policy
 const customerInviteSelectorRef = ref()
 const authStore = useAuthStore()
-// ✅ NEU: Verwende useProductSale Composable für Produktverwaltung
+// ✅ NEU: Track ob der Titel vom Benutzer manuell bearbeitet wurde
+const titleManuallyEdited = ref(false)
 const { 
   selectedProducts, 
   availableProducts, 
@@ -1657,6 +1658,9 @@ watch(
 // ============ HANDLERS ============
 const handleTitleUpdate = (newTitle: string) => {
   formData.value.title = newTitle
+  // ✅ Markiere dass der Titel vom Benutzer manuell bearbeitet wurde
+  titleManuallyEdited.value = true
+  logger.debug('✏️ Title manually edited by user - will not auto-update anymore')
 }
 
 // Staff change handler
@@ -2661,10 +2665,10 @@ const handleStudentSelected = async (student: Student | null) => {
           selectedLocation.value = locationData
           logger.debug('✅ Location updated via API:', locationData.name)
           
-          // ✅ Titel neu generieren nach Standort-Änderung
+          // ✅ Titel neu generieren nach Standort-Änderung (nur wenn nicht manuell bearbeitet)
           nextTick(() => {
-            if (selectedStudent.value && locationData) {
-              logger.debug('🔄 Regenerating title after location change...')
+            if (selectedStudent.value && locationData && !titleManuallyEdited.value) {
+              logger.debug('🔄 Regenerating title after location change (title not manually edited)...')
               // Der TitleInput wird automatisch aktualisiert, da er an selectedLocation gebunden ist
               
               // ✅ NEU: Titel explizit neu generieren mit vollständigen Location-Daten
@@ -2680,10 +2684,17 @@ const handleStudentSelected = async (student: Student | null) => {
                   logger.debug('📍 Using location address for title:', locationText)
                 }
                 
+                // ✅ Ignoriere "Treffpunkt" Namen
+                if (locationText === 'Treffpunkt' && locationData.address) {
+                  locationText = locationData.address
+                }
+                
                 const newTitle = `${studentName} - ${locationText}`
                 formData.value.title = newTitle
                 logger.debug('✅ Title regenerated with full location:', newTitle)
               }
+            } else if (titleManuallyEdited.value) {
+              logger.debug('⚠️ Title was manually edited - skipping auto-update')
             }
           })
         }
@@ -2953,7 +2964,10 @@ const handleLessonTypeSelected = async (lessonType: any) => {
   // ✅ NEU: Title automatisch aktualisieren basierend auf neuem Lesson Type
   if (selectedStudent.value && selectedLocation.value) {
     const studentName = selectedStudent.value.first_name
-    const locationName = selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort'
+    // ✅ Verwende address statt name, wenn name "Treffpunkt" ist
+    const locationName = selectedLocation.value.name === 'Treffpunkt' 
+      ? (selectedLocation.value.address || 'Unbekannter Ort')
+      : (selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort')
     const lessonTypeText = getLessonTypeText(lessonType.code)
     formData.value.title = `${studentName} - ${locationName} (${lessonTypeText})`
     logger.debug('✅ Title updated with new lesson type:', formData.value.title)
@@ -4003,7 +4017,7 @@ const proceedWithCancellation = async (selectedReason: any) => {
       : (props.currentUser?.email || 'unbekannt')
     
     // Erstelle einen detaillierten Lösch-Grund
-    const deletionReason = `Termin abgesagt: ${selectedReason.name_de} - ${cancellerName} (${cancellerEmail})`
+    const deletionReason = `Termin abgesagt von ${cancellerName} wegen ${selectedReason.name_de}`
     
     // ✅ NEW: Determine withCosts based on cancellation policy
     const withCosts = (cancellationPolicyResult.value?.chargeAmountRappen || 0) > 0
@@ -4171,6 +4185,23 @@ const goToPolicySelection = async () => {
     await fetchPolicies(appliesTo)
   }
   
+  // ✅ NEW: If no policies loaded, show the charge decision modal instead
+  if (!defaultPolicy.value || policiesWithRules.value.length === 0) {
+    logger.debug('⚠️ No cancellation policies found - showing charge decision modal instead')
+    
+    pendingCancellationReason.value = selectedReason
+    
+    // Load appointment price
+    if (props.eventData?.id) {
+      const price = await loadAppointmentPrice(props.eventData.id)
+      appointmentPrice.value = price
+    }
+    
+    // Show charge modal instead of policy selection
+    showNoPolicyModal.value = true
+    return
+  }
+  
   // Load appointment price from payments table
   if (props.eventData?.id) {
     const price = await loadAppointmentPrice(props.eventData.id)
@@ -4273,12 +4304,18 @@ const confirmDeleteWithCosts = async (withCosts: boolean) => {
     withCosts: withCosts
   })
   
-  // ✅ Verwende den gespeicherten Absage-Grund falls vorhanden
-  let deletionReason
+  // ✅ Build deletion reason message
+  const userName = props.currentUser?.first_name || 'Benutzer'
+  const userEmail = props.currentUser?.email || 'unbekannt'
+  const costInfo = withCosts ? 'mit Kostenverrechnung' : 'ohne Kostenverrechnung'
+  
+  let deletionReason: string
   if (pendingCancellationReason.value) {
-    deletionReason = `Termin abgesagt: ${pendingCancellationReason.value.name_de} - ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ${withCosts ? 'mit Kostenverrechnung' : 'ohne Kostenverrechnung'}`
+    const reasonName = pendingCancellationReason.value.name_de
+    deletionReason = `Termin abgesagt von ${userName} wegen "${reasonName}" (${userEmail}) - ${costInfo}`
   } else {
-    deletionReason = `Termin gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ${withCosts ? 'mit Kostenverrechnung' : 'ohne Kostenverrechnung'} - ursprünglicher Status: ${props.eventData.status}`
+    const statusInfo = props.eventData.status ? ` - ursprünglicher Status: ${props.eventData.status}` : ''
+    deletionReason = `Termin gelöscht durch ${userName} (${userEmail}) - ${costInfo}${statusInfo}`
   }
   
   // ✅ Wenn Kosten verrechnet werden sollen, logge das nur (keine automatische Rechnung)
@@ -4767,8 +4804,10 @@ const handleCreateMode = async () => {
     
     // ✅ NEU: Standard-Titel für Create-Mode setzen
     if (selectedStudent.value?.first_name && selectedLocation.value) {
-      // ✅ Vollständiger Titel: Vorname + Name/Adresse des Treffpunkts
-      const locationName = selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort'
+      // ✅ Verwende address statt name, wenn name "Treffpunkt" ist
+      const locationName = selectedLocation.value.name === 'Treffpunkt'
+        ? (selectedLocation.value.address || 'Unbekannter Ort')
+        : (selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort')
       formData.value.title = `${selectedStudent.value.first_name} - ${locationName}`
       logger.debug('🎯 CREATE MODE: Set default title with student and location')
     } else if (selectedStudent.value?.first_name) {
@@ -5572,6 +5611,17 @@ const loadUserPaymentPreferences = async (userId: string) => {
 onMounted(async () => {
   // ✅ Reset showEventTypeSelection when modal opens
   showEventTypeSelection.value = false
+  
+  // ✅ Set titleManuallyEdited based on mode
+  // Im Create-Mode: title kann noch automatisch aktualisiert werden
+  // Im Edit-Mode: title sollte nicht automatisch geändert werden (wurde bereits erstellt)
+  if (props.mode === 'edit') {
+    titleManuallyEdited.value = true
+    logger.debug('📝 Edit mode: title is considered manually edited')
+  } else {
+    titleManuallyEdited.value = false
+    logger.debug('📝 Create mode: title can be auto-updated')
+  }
   
   // ✅ Load available staff members (even without full time data)
   await loadAvailableStaff()
