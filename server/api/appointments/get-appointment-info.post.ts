@@ -104,10 +104,22 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('⏱️ Getting duration for category:', body.categoryCode)
 
+      // Get user's tenant first
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle()
+
+      if (userError || !userData?.tenant_id) {
+        throw new Error('User tenant not found')
+      }
+
       const { data, error } = await supabaseAdmin
         .from('categories')
         .select('lesson_duration_minutes, exam_duration_minutes')
         .eq('code', body.categoryCode)
+        .eq('tenant_id', userData.tenant_id)
         .eq('is_active', true)
         .maybeSingle()
 
@@ -134,10 +146,22 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('⏱️ Getting lesson duration for category:', body.categoryCode)
 
+      // Get user's tenant first
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle()
+
+      if (userError || !userData?.tenant_id) {
+        throw new Error('User tenant not found')
+      }
+
       const { data, error } = await supabaseAdmin
         .from('categories')
         .select('lesson_duration_minutes')
         .eq('code', body.categoryCode)
+        .eq('tenant_id', userData.tenant_id)
         .eq('is_active', true)
         .maybeSingle()
 
