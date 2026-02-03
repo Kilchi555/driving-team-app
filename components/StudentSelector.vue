@@ -62,11 +62,6 @@
               <span v-if="selectedStudent.phone" class="text-green-700">
                 📞 {{ selectedStudent.phone }}
               </span>
-              
-              <!-- Email wenn kein Phone -->
-              <span v-if="!selectedStudent.phone && selectedStudent.email" class="text-green-700 text-xs">
-                {{ selectedStudent.email }}
-              </span>
             </div>
           </div>
           <button 
