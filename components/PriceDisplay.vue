@@ -553,6 +553,9 @@ import { ref, computed, onMounted } from 'vue'
 import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useEventModalForm } from '~/composables/useEventModalForm'
+import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { watch } from 'vue'
 
 // ✅ Rundungsfunktion: Preise auf nächsten Franken runden
@@ -619,6 +622,8 @@ const emit = defineEmits<{
 // Composables
 const { loadPaymentMethods, activePaymentMethods, isLoading: isLoadingPaymentMethods } = usePaymentMethods()
 const { createBillingAddress } = useCompanyBilling()
+const authStore = useAuthStore()
+const supabase = getSupabase()
 
 // Computed Properties
 const isStaffUser = computed(() => {
