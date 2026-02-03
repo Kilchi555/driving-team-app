@@ -90,15 +90,9 @@ export default defineEventHandler(async (event) => {
       return (a.display_order ?? 999) - (b.display_order ?? 999)
     })
     
-    // Filter by driving_categories if studentCategory is provided
-    if (studentCategory) {
-      criteria = criteria.filter(criterion => {
-        const drivingCategories = criterion.driving_categories || []
-        // Include if driving_categories is empty (applies to all) or contains the student category
-        return drivingCategories.length === 0 || drivingCategories.includes(studentCategory)
-      })
-      console.log(`[${new Date().toLocaleTimeString()}] 🚗 Filtered criteria by category ${studentCategory}: ${criteria.length}`)
-    }
+    // Don't filter here - let the frontend handle category filtering
+    // This prevents double-filtering and allows flexibility
+    // console.log(`[${new Date().toLocaleTimeString()}] 🚗 Filtered criteria by category ${studentCategory}: ${criteria.length}`)
     
     console.log(`[${new Date().toLocaleTimeString()}] 🎯 Returning ${criteria.length} criteria for tenant ${user.tenant_id}`)
     

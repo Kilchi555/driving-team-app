@@ -50,7 +50,6 @@ const {
 } = pendingTasksComposable
 
 const { 
-  updateOverdueAppointments, 
   markAppointmentEvaluated,
   isUpdating: isUpdatingStatus,
   updateError: statusUpdateError 
@@ -127,13 +126,7 @@ const refreshPendingData = async () => {
   try {
     logger.debug('🔄 Refreshing pending data...')
     
-    // 1. Erst überfällige Termine updaten
-    const result = await updateOverdueAppointments()
-    if (result.updated > 0) {
-      logger.debug(`✅ Updated ${result.updated} appointments to 'completed'`)
-    }
-    
-    // 2. Dann Pending Tasks neu laden
+    // Pending Tasks neu laden
     await fetchPendingTasks(currentUser.value.id, currentUser.value.role)
     logger.debug('✅ Pending tasks refreshed, count:', pendingCount.value)
     
