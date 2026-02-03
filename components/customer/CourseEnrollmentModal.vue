@@ -1012,9 +1012,21 @@ const getCourseInfoStyle = () => {
 }
 
 const getGermanErrorMessage = (error: any): string => {
-  // Try multiple error message locations
-  const message = error.data?.message || error.message || error.statusMessage || error.data || ''
+  // Try multiple error message locations (H3 errors use statusMessage, fetch errors use data)
+  const message = error.data?.statusMessage || 
+                  error.data?.message || 
+                  error.statusMessage || 
+                  error.message || 
+                  error.data || 
+                  ''
   const statusCode = error.data?.statusCode || error.statusCode
+  
+  logger.debug('🔍 Error message extraction:', { 
+    message: message.substring(0, 100), 
+    statusCode,
+    hasData: !!error.data,
+    errorKeys: Object.keys(error).slice(0, 10)
+  })
   
   // License errors from SARI
   if (message.includes('Lizenz') || message.includes('Fahrerlaubnis') || message.includes('Category')) {

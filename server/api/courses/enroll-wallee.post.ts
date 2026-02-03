@@ -120,7 +120,8 @@ const handler = defineEventHandler(async (event) => {
     try {
       validateLicense(course, customerData)
     } catch (error: any) {
-      logger.error('❌ License validation failed:', error.message)
+      logger.error('❌ License validation failed:', error.statusMessage || error.message)
+      // ✅ Re-throw the H3Error as-is (it already has proper statusCode and statusMessage)
       throw error
     }
 
@@ -433,13 +434,15 @@ const handler = defineEventHandler(async (event) => {
   } catch (error: any) {
     logger.error('❌ Wallee enrollment error:', error)
     
-    if (error.statusCode || error.statusMessage) {
+    // ✅ If it's already an H3Error with statusCode, let it pass through as-is
+    if (error?.statusCode && (error?.statusMessage || error?.message)) {
       throw error
     }
     
+    // Otherwise, wrap in a generic error
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Enrollment failed'
+      statusMessage: error?.message || 'Enrollment failed'
     })
   }
 })
