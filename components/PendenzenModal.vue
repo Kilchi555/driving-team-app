@@ -591,20 +591,22 @@ const getAppointmentFormattedTime = (appointment: any, type: 'start' | 'end') =>
 
 // Hilfsfunktion für Student Category
 const getStudentCategory = (appointment: any) => {
-  // Priorität: 1. Termin-Typ, 2. Erste Kategorie aus User-Kategorien, 3. Fallback 'A'
-  let category = appointment?.type || 'A'
+  // Priorität: 1. appointment_type, 2. type, 3. Erste Kategorie aus User-Kategorien, 4. Fallback 'A'
+  let category = appointment?.appointment_type || appointment?.type || 'A'
   
   // Wenn der User mehrere Kategorien hat (z.B. 'B,A'), verwende den Termin-Typ
   // oder die erste Kategorie aus der User-Kategorie-Liste
-  if (appointment?.users?.category && !appointment?.type) {
-    const userCategories = appointment.users.category.split(',')
-    category = userCategories[0] // Verwende die erste Kategorie
+  if (!category || category === 'A') {
+    if (appointment?.users?.category) {
+      const userCategories = appointment.users.category.split(',')
+      category = userCategories[0] // Verwende die erste Kategorie
+    }
   }
   
   logger.debug('🔥 getStudentCategory called:', {
     userCategory: appointment?.users?.category,
-    appointmentType: appointment?.type,
-    appointmentTypeField: appointment?.appointment_type,
+    appointmentType: appointment?.appointment_type,
+    appointmentTypeField: appointment?.type,
     eventTypeCode: appointment?.event_type_code,
     finalCategory: category
   })

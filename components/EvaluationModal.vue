@@ -253,6 +253,7 @@ const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly 
 
 const filteredCriteria = computed(() => {
   // Zeige nur Kriterien, die NICHT bereits ausgewählt/bewertet sind
+  // ODER zeige die bereits bewerteten auch wenn der Benutzer sie nochmal hinzufügen möchte
   let unratedCriteria = allCriteria.value.filter(criteria => 
     !selectedCriteriaOrder.value.includes(criteria.id)
   )
@@ -260,19 +261,29 @@ const filteredCriteria = computed(() => {
   // ✅ NEU: Filtere nach Fahrkategorie des Schülers
   if (props.studentCategory) {
     logger.debug('🎓 Filtering criteria by student category:', props.studentCategory)
+    const beforeFilter = unratedCriteria.length
+    
     unratedCriteria = unratedCriteria.filter(criteria => {
       // Prüfe ob das Kriterium die Fahrkategorie des Schülers enthält
       const drivingCategories = criteria.driving_categories || []
-      const includesStudentCategory = Array.isArray(drivingCategories) 
-        ? drivingCategories.includes(props.studentCategory)
-        : false
       
-      if (!includesStudentCategory) {
-        logger.debug('🚫 Skipping criterion (not for category', props.studentCategory + '):', criteria.name)
+      // Include if:
+      // 1. driving_categories is empty (applies to all categories)
+      // 2. driving_categories contains the student category
+      const includesStudentCategory = 
+        drivingCategories.length === 0 || 
+        (Array.isArray(drivingCategories) && drivingCategories.includes(props.studentCategory))
+      
+      if (drivingCategories.length === 0) {
+        logger.debug('✅ Including criterion (NO category restriction):', criteria.name)
+      } else if (!includesStudentCategory) {
+        logger.debug('🚫 Skipping criterion (not for category', props.studentCategory + '):', criteria.name, 'categories:', drivingCategories)
+      } else {
+        logger.debug('✅ Including criterion (matching category):', criteria.name)
       }
       return includesStudentCategory
     })
-    logger.debug('✅ After category filter:', unratedCriteria.length, 'criteria remain')
+    logger.debug('✅ After category filter: ', beforeFilter, '→', unratedCriteria.length, 'criteria remain')
   }
   
   logger.debug('📚 filteredCriteria - allCriteria.value:', allCriteria.value.length)
@@ -442,6 +453,18 @@ const loadAllCriteria = async () => {
     
     logger.debug('✅ Loaded', criteria.length, 'evaluation criteria')
     
+    // DEBUG: Analyse der Kriterien
+    const beIncluded = criteria.filter((c: any) => !c.driving_categories || c.driving_categories.length === 0 || c.driving_categories.includes('BE'))
+    const beExcluded = criteria.filter((c: any) => c.driving_categories && c.driving_categories.length > 0 && !c.driving_categories.includes('BE'))
+    
+    logger.debug(`🔍 ANALYSIS: ${beIncluded.length} will be shown for BE, ${beExcluded.length} will be hidden`)
+    logger.debug('🔍 CHECKING FOR RAMPEFAHREN AND SPURVERSATZ:')
+    const rampefahren = criteria.find((c: any) => c.name === 'Rampefahren')
+    const spurversatz = criteria.find((c: any) => c.name === 'Spurversatz')
+    logger.debug('  Rampefahren:', rampefahren ? '✅ FOUND' : '❌ NOT FOUND', rampefahren)
+    logger.debug('  Spurversatz:', spurversatz ? '✅ FOUND' : '❌ NOT FOUND', spurversatz)
+    logger.debug('🚫 HIDDEN (not for BE):', beExcluded.map(c => `${c.name} [${(c.driving_categories || []).join(',')}]`))
+    
     if (!criteria || criteria.length === 0) {
       const categoryType = isTheoryLesson ? 'Theorie' : props.studentCategory
       error.value = `Keine Bewertungskriterien gefunden für ${categoryType}`
@@ -483,7 +506,9 @@ const loadAllCriteria = async () => {
     }
 
     // Kombiniere alle Daten
-    allCriteria.value = criteria.map(criterion => {
+    logger.debug('🔍 PRE-FILTER: Processing', criteria.length, 'raw criteria from API')
+    
+    const processedCriteria = criteria.map(criterion => {
       const category = categories?.find(cat => cat.id === criterion.category_id)
       
       return {
@@ -494,17 +519,29 @@ const loadAllCriteria = async () => {
         category_name: category?.name || '',
         category_color: category?.color || '#gray',
         evaluation_categories: criterion.evaluation_categories || { name: category?.name || 'Unbekannte Kategorie' },
-        category_order: category?.display_order ?? 999, // Use category's display_order, default to 999 if not found
+        category_order: category?.display_order ?? 999,
         criteria_order: criterion.display_order || 0,
-        is_required: false, // Wird nicht mehr verwendet, aber für Kompatibilität beibehalten
+        is_required: false,
         min_rating: 1,
         max_rating: 6,
-        // ✅ NEU: Fahrkategorien für Filterung
         driving_categories: criterion.driving_categories || []
       }
     })
-    .filter(item => item.name) // Nur gültige Einträge
-    .sort((a, b) => {
+    
+    logger.debug('🔍 POST-MAP: After mapping', processedCriteria.length, 'criteria')
+    
+    const filtered = processedCriteria.filter(item => {
+      if (!item.name) {
+        logger.debug(`⚠️ FILTERED OUT - no name: id=${item.id} driving_categories=${JSON.stringify(item.driving_categories)}`)
+        return false
+      }
+      return true
+    })
+    
+    logger.debug('🔍 POST-FILTER: After name filter', filtered.length, 'criteria')
+    logger.debug('🔍 DROPPED:', processedCriteria.length - filtered.length, 'criteria')
+    
+    allCriteria.value = filtered.sort((a, b) => {
       // Sortiere primär nach Kategorie-Reihenfolge (display_order)
       if (a.category_order !== b.category_order) {
         return a.category_order - b.category_order
@@ -513,7 +550,7 @@ const loadAllCriteria = async () => {
       return a.criteria_order - b.criteria_order
     })
 
-    logger.debug('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria')
+    logger.debug('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria (after filtering out items with no name)')
 
   } catch (err: any) {
     console.error('❌ Error loading criteria:', err)

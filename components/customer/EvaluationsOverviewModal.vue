@@ -1,78 +1,77 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+    <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
       
-      <!-- Header -->
-      <div class="sticky top-0 bg-white border-b px-6 py-4 rounded-t-lg">
+      <!-- Header with Gradient -->
+      <div class="sticky top-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 px-6 py-6 rounded-t-2xl">
         <div class="flex justify-between items-center">
-          <div>
-            <h3 class="text-xl font-semibold text-gray-900">
-              Meine Bewertungen
-            </h3>
-          </div>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">
-            ✕
+          <h3 class="text-2xl font-bold text-white">
+            Meine Bewertungen
+          </h3>
+          <button 
+            @click="$emit('close')" 
+            class="text-white hover:bg-blue-700 rounded-full p-2 transition-all duration-200 hover:scale-110"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-6">
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-gray-50">
 
         <!-- Empty States -->
-        <div v-if="allEvaluations.length === 0" class="text-center py-12">
-          <div class="text-4xl mb-4">📊</div>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Bewertungen</h3>
-          <p class="text-gray-500">Ihre Bewertungen werden hier angezeigt, sobald der Fahrlehrer sie erstellt hat.</p>
+        <div v-if="allEvaluations.length === 0" class="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-gray-300">
+          <div class="text-6xl mb-4">📊</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Noch keine Bewertungen</h3>
+          <p class="text-gray-500 px-4">Deine Bewertungen werden hier angezeigt, sobald der Fahrlehrer sie erstellt hat.</p>
         </div>
 
-        <div v-else-if="groupedByLesson.length === 0 && filterCategory !== 'all'" class="text-center py-12">
-          <div class="text-4xl mb-4">🔍</div>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Bewertungen gefunden</h3>
+        <div v-else-if="groupedByLesson.length === 0 && filterCategory !== 'all'" class="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-gray-300">
+          <div class="text-6xl mb-4">🔍</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Keine Bewertungen gefunden</h3>
           <p class="text-gray-500 mb-4">Für die ausgewählte Kategorie "{{ filterCategory }}" wurden keine Bewertungen gefunden.</p>
           <button
             @click="filterCategory = 'all'"
-            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium"
           >
             Alle Kategorien anzeigen
           </button>
         </div>
 
         <!-- Bewertungsliste gruppiert nach Terminen -->
-        <div v-else class="space-y-6">
+        <div v-else class="space-y-4">
           <div 
             v-for="lessonGroup in groupedByLesson" 
             :key="lessonGroup.lesson_id"
-            class="bg-white rounded-lg border border-gray-200 overflow-hidden"
+            class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:border-blue-300"
           >
-            <!-- Termin Header -->
-              <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+            <!-- Termin Header mit Gradient -->
+            <div class="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-4 border-b border-gray-200">
               <div class="flex items-start justify-between">
                 <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <h4 class="font-semibold text-gray-900">
-                      {{ lessonGroup.is_exam ? '🎓 Prüfungsfahrt' : 'Fahrlektion' }}
+                  <div class="flex items-center gap-3 mb-2">
+                    <h4 class="font-bold text-gray-900 text-base">
+                      {{ lessonGroup.is_exam ? 'Prüfungsfahrt' : 'Fahrlektion' }}
                     </h4>
                     <div 
                       v-if="lessonGroup.staff?.first_name"
                       class="text-sm text-gray-600"
                     >
-                      mit {{ lessonGroup.staff.first_name }}
-                    </div>
-                    <div 
-                      v-if="lessonGroup.driving_category" 
-                      class="inline-flex items-center px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded-full"
-                    >
-                      Kategorie {{ lessonGroup.driving_category }}
+                      mit <span class="font-semibold">{{ lessonGroup.staff.first_name }}</span>
                     </div>
                   </div>
-                  <div class="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                    <span>{{ formatCompactDate(lessonGroup.lesson_date) }}</span>
-                    <span>🕐 {{ formatTimeRange(lessonGroup.start_time, lessonGroup.end_time) }}</span>
-                    <span v-if="lessonGroup.duration_minutes">⏱️ {{ lessonGroup.duration_minutes }}min</span>
+                  <div class="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+                    <span class="flex items-center gap-1">📅 {{ formatCompactDate(lessonGroup.lesson_date) }}</span>
+                    <span class="flex items-center gap-1">🕐 {{ formatTimeRange(lessonGroup.start_time, lessonGroup.end_time) }}</span>
+                    <span v-if="lessonGroup.duration_minutes" class="flex items-center gap-1">⏱️ {{ lessonGroup.duration_minutes }}min</span>
+                    <span v-if="lessonGroup.driving_category" class="ml-auto px-3 py-1 text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full">
+                      Kategorie {{ lessonGroup.driving_category }}
+                    </span>
                   </div>
                 </div>
-                <div class="text-sm text-gray-100 ml-4 flex-shrink-0">{{ lessonGroup.evaluations.length }}</div>
               </div>
             </div>
 
@@ -83,27 +82,28 @@
                 <div 
                   v-for="(evaluation, index) in lessonGroup.evaluations" 
                   :key="`${evaluation.criteria_id}-${index}`"
+                  class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200"
                 >
-                  <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                      <h5 class="font-medium text-gray-900">
+                  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <h5 class="font-bold text-gray-900 text-sm break-words">
                         {{ evaluation.criteria_name }}
                       </h5>
-                      <p v-if="evaluation.criteria_category_name" class="text-sm text-gray-600">
-                        {{ evaluation.criteria_category_name }}
+                      <p v-if="evaluation.criteria_category_name" class="text-xs text-gray-600 mt-1 font-semibold break-words">
+                        📋 {{ evaluation.criteria_category_name }}
                       </p>
                     </div>
 
                     <div :class="[
-                      'px-3 py-1 text-sm font-medium',
+                      'px-3 py-1 text-xs font-bold rounded-full flex-shrink-0 transition-all duration-200 whitespace-nowrap',
                       getRatingColor(evaluation.criteria_rating)
                     ]">
                       {{ evaluation.criteria_rating }} - {{ getRatingText(evaluation.criteria_rating) }}
                     </div>
                   </div>
 
-                  <div v-if="evaluation.criteria_note">
-                    <p class="text-sm text-gray-700">{{ evaluation.criteria_note }}</p>
+                  <div v-if="evaluation.criteria_note" class="mt-3 p-3 bg-white rounded-lg border-l-4 border-blue-400">
+                    <p class="text-xs text-gray-700 italic break-words">💬 "{{ evaluation.criteria_note }}"</p>
                   </div>
                 </div>
               </template>
@@ -113,45 +113,45 @@
                 <div 
                   v-for="(evaluation, index) in lessonGroup.evaluations" 
                   :key="`exam-${index}`"
-                  class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200"
+                  class="bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-300 shadow-lg"
                 >
                   <!-- Exam Pass/Fail Status -->
-                  <div class="flex items-center justify-between mb-4">
-                    <h5 class="text-lg font-bold text-gray-900">
-                      Prüfungsergebnis
+                  <div class="flex items-center justify-between mb-6">
+                    <h5 class="text-xl font-bold text-gray-900">
+                      🎓 Prüfungsergebnis
                     </h5>
                     <div :class="[
-                      'px-4 py-2 rounded-full text-sm font-bold border-2',
+                      'px-6 py-2 rounded-full text-lg font-bold border-2 transition-all duration-200',
                       evaluation.exam_passed 
-                        ? 'bg-green-100 text-green-800 border-green-300' 
-                        : 'bg-red-100 text-red-800 border-red-300'
+                        ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white border-green-600 shadow-lg' 
+                        : 'bg-gradient-to-r from-red-400 to-rose-500 text-white border-red-600 shadow-lg'
                     ]">
                       {{ evaluation.exam_passed ? '✅ BESTANDEN' : '❌ NICHT BESTANDEN' }}
                     </div>
                   </div>
 
                   <!-- Examiner Behavior Rating -->
-                  <div v-if="evaluation.examiner_behavior_rating" class="bg-white rounded-md p-3 border border-blue-100 mb-3">
+                  <div v-if="evaluation.examiner_behavior_rating" class="bg-white rounded-xl p-4 border-2 border-blue-200 mb-4 hover:shadow-md transition-all duration-200">
                     <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium text-gray-700">Verhalten während Prüfung:</span>
+                      <span class="text-sm font-bold text-gray-800">👤 Verhalten während Prüfung:</span>
                       <div :class="[
-                        'px-3 py-1 rounded-full text-sm font-medium border',
+                        'px-4 py-2 rounded-lg text-sm font-bold border-2 transition-all duration-200',
                         getRatingColor(evaluation.examiner_behavior_rating)
                       ]">
-                        {{ evaluation.examiner_behavior_rating }} - {{ getRatingText(evaluation.examiner_behavior_rating) }}
+                        ⭐ {{ evaluation.examiner_behavior_rating }} - {{ getRatingText(evaluation.examiner_behavior_rating) }}
                       </div>
                     </div>
                   </div>
 
                   <!-- Examiner Notes -->
-                  <div v-if="evaluation.examiner_behavior_notes" class="bg-white rounded-md p-3 border border-blue-100">
-                    <p class="text-sm font-medium text-gray-700 mb-2">Notizen vom Experten:</p>
-                    <p class="text-sm text-gray-600">{{ evaluation.examiner_behavior_notes }}</p>
+                  <div v-if="evaluation.examiner_behavior_notes" class="bg-white rounded-xl p-4 border-2 border-blue-200 shadow-md">
+                    <p class="text-sm font-bold text-gray-800 mb-2">📝 Notizen vom Experten:</p>
+                    <p class="text-sm text-gray-700 italic bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-lg">{{ evaluation.examiner_behavior_notes }}</p>
                   </div>
 
                   <!-- No notes/rating -->
-                  <div v-if="!evaluation.examiner_behavior_rating && !evaluation.examiner_behavior_notes" class="bg-white rounded-md p-3 border border-blue-100">
-                    <p class="text-sm text-gray-600 italic">Keine zusätzlichen Notizen vom Experten</p>
+                  <div v-if="!evaluation.examiner_behavior_rating && !evaluation.examiner_behavior_notes" class="bg-white rounded-xl p-4 border-2 border-blue-200">
+                    <p class="text-sm text-gray-600 italic">ℹ️ Keine zusätzlichen Notizen vom Experten</p>
                   </div>
                 </div>
               </template>

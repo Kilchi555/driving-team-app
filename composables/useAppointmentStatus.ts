@@ -7,36 +7,6 @@ export const useAppointmentStatus = () => {
   const updateError = ref<string | null>(null)
 
   /**
-   * ✅ MIGRATED: Update appointments from 'confirmed' to 'completed' after end_time
-   * Läuft automatisch und updated alle überfälligen Termine
-   * Now uses secure backend endpoint instead of direct Supabase
-   */
-  const updateOverdueAppointments = async () => {
-    isUpdating.value = true
-    updateError.value = null
-    try {
-      logger.debug('🔄 Checking for overdue appointments via backend API...')
-      
-      const response = await $fetch('/api/staff/update-overdue-appointments', {
-        method: 'POST'
-      }) as any
-      
-      logger.debug('✅ Overdue appointments updated:', response.message)
-      
-      return {
-        updated: response.data?.length || 0,
-        appointments: response.data || []
-      }
-    } catch (err: any) {
-      console.error('❌ Error updating overdue appointments:', err)
-      updateError.value = err.message || 'Failed to update overdue appointments'
-      throw err
-    } finally {
-      isUpdating.value = false
-    }
-  }
-
-  /**
    * ✅ MIGRATED: Update specific appointment to 'completed' status
    * Für manuelles Update einzelner Termine
    * Now uses secure backend endpoint
@@ -165,7 +135,6 @@ export const useAppointmentStatus = () => {
     updateError,
     
     // Core Functions
-    updateOverdueAppointments,
     markAppointmentCompleted,
     markAppointmentEvaluated,
     
