@@ -381,6 +381,7 @@ const loadStudents = async (editStudentId?: string | null) => {
 // ✅ Backend API: Load students via API endpoint (bypasses RLS)
 const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRefresh: boolean = false) => {
   try {
+    console.log('📚 StudentSelector: Loading students via API...')
     logger.debug('📚 StudentSelector: Loading students via API...')
 
     // Call backend API to fetch students (bypasses RLS)
