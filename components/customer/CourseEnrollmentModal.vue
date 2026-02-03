@@ -1012,6 +1012,16 @@ const getCourseInfoStyle = () => {
 }
 
 const getGermanErrorMessage = (error: any): string => {
+  // Debug: Log the full error structure
+  logger.debug('🔍 Full error object:', {
+    keys: Object.keys(error),
+    data: error.data,
+    statusMessage: error.statusMessage,
+    message: error.message,
+    status: error.status,
+    response: error.response
+  })
+
   // Try multiple error message locations (H3 errors use statusMessage, fetch errors use data)
   const message = error.data?.statusMessage || 
                   error.data?.message || 
@@ -1019,17 +1029,17 @@ const getGermanErrorMessage = (error: any): string => {
                   error.message || 
                   error.data || 
                   ''
-  const statusCode = error.data?.statusCode || error.statusCode
+  const statusCode = error.data?.statusCode || error.status || error.statusCode
   
-  logger.debug('🔍 Error message extraction:', { 
-    message: message.substring(0, 100), 
+  logger.debug('🔍 Extracted error info:', { 
+    message: message?.substring(0, 150), 
     statusCode,
-    hasData: !!error.data,
-    errorKeys: Object.keys(error).slice(0, 10)
+    messageLength: message?.length || 0
   })
   
-  // License errors from SARI
-  if (message.includes('Lizenz') || message.includes('Fahrerlaubnis') || message.includes('Category')) {
+  // License errors from SARI - return the exact message if it contains license info
+  if (message && (message.includes('Lizenz') || message.includes('Fahrerlaubnis') || message.includes('Category'))) {
+    logger.debug('✅ License error detected, returning exact message')
     return message
   }
   if (message.includes('Dieser Kurs ist leider ausgebucht.')) {
@@ -1093,16 +1103,24 @@ const getGermanErrorMessage = (error: any): string => {
   
   switch (statusCode) {
     case 400:
+      logger.warn('❌ 400 Error, returning generic message. Original message was:', message?.substring(0, 100))
       return 'Überprüfen Sie Ihre Angaben. Diese scheinen ungültig zu sein.'
     case 401:
       return 'Sie sind nicht autorisiert. Bitte melden Sie sich an.'
+    case 403:
+      logger.warn('❌ 403 Error (Forbidden). Message:', message?.substring(0, 100))
+      // For 403, try to return the message if available
+      if (message) return message
+      return 'Zugriff verweigert. Bitte überprüfen Sie Ihre Angaben.'
     case 404:
       return 'Die angefragten Daten wurden nicht gefunden.'
     case 409:
       return 'Konflikt: Die Aktion konnte nicht ausgeführt werden (z.B. bereits angemeldet).'
     case 500:
+      logger.warn('❌ 500 Error. Message:', message?.substring(0, 100))
       return 'Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
     default:
+      logger.warn('❌ Unknown error code:', statusCode, 'Message:', message?.substring(0, 100))
       return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
   }
 }
