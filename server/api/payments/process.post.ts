@@ -374,14 +374,24 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
-    // ✅ Use FINAL amount (after credit deduction) for Wallee transaction
-    const walleeAmount = finalAmountToPay
+    // ✅ SWISS ROUNDING: Round to nearest Franken (50 Rappen boundary) before sending to Wallee
+    const roundToNearestFranken = (rappen: number): number => {
+      const remainder = rappen % 100
+      if (remainder === 0) return rappen
+      if (remainder < 50) return rappen - remainder      // Round down if < 50 Rappen
+      else return rappen + (100 - remainder)             // Round up if >= 50 Rappen
+    }
+
+    // ✅ Use FINAL amount (after credit deduction) and ROUNDED for Wallee transaction
+    const walleeAmount = roundToNearestFranken(finalAmountToPay)
 
     logger.debug('💰 Creating Wallee transaction with amount after credit:', {
       original_amount_rappen: payment.total_amount_rappen,
       original_amount_chf: (payment.total_amount_rappen / 100).toFixed(2),
       credit_deducted_rappen: creditToDeduct,
       credit_deducted_chf: (creditToDeduct / 100).toFixed(2),
+      before_rounding_rappen: finalAmountToPay,
+      before_rounding_chf: (finalAmountToPay / 100).toFixed(2),
       wallee_amount_rappen: walleeAmount,
       wallee_amount_chf: (walleeAmount / 100).toFixed(2),
       orderId: body.orderId,

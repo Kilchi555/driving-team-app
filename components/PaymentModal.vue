@@ -424,6 +424,18 @@ const invoiceData = ref<InvoiceData>({
   address: ''
 })
 
+// ✅ SWISS ROUNDING: Runde auf nächsten Franken (50 Rappen Grenze)
+const roundToNearestFranken = (rappen: number): number => {
+  const remainder = rappen % 100
+  if (remainder === 0) return rappen
+  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
+  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
+}
+
+const formatAmount = (rappen: number): string => {
+  return (roundToNearestFranken(rappen) / 100).toFixed(2)
+}
+
 // Computed
 const getStudentName = () => {
   const extendedProps = props.appointment?.extendedProps
@@ -519,13 +531,19 @@ const calculatePrice = async () => {
       adminFeeRappen = 12000 // 120 CHF
     }
     
+    // ✅ SWISS ROUNDING: Round individual amounts before summing
+    const basePriceRappen = 9500
+    const roundedBasePrice = roundToNearestFranken(basePriceRappen)
+    const roundedAdminFee = roundToNearestFranken(adminFeeRappen)
+    const roundedTotal = roundedBasePrice + roundedAdminFee
+    
     const mockPrice = {
-      base_price_rappen: 9500,
+      base_price_rappen: basePriceRappen,
       admin_fee_rappen: adminFeeRappen,
-      total_rappen: 9500 + adminFeeRappen,
-      base_price_chf: '95.00',
-      admin_fee_chf: (adminFeeRappen / 100).toFixed(2),
-      total_chf: ((9500 + adminFeeRappen) / 100).toFixed(2),
+      total_rappen: roundedTotal,
+      base_price_chf: (roundedBasePrice / 100).toFixed(2),
+      admin_fee_chf: (roundedAdminFee / 100).toFixed(2),
+      total_chf: (roundedTotal / 100).toFixed(2),
       category_code: category,
       duration_minutes: duration
     }
@@ -608,11 +626,15 @@ const handleWalleePayment = async () => {
   try {
     logger.debug('🔄 Creating Wallee payment...')
     
+    // ✅ Use rounded total amount for Wallee
+    const roundedTotalRappen = calculatedPrice.value?.total_rappen || 0
+    const roundedTotalCHF = (roundToNearestFranken(roundedTotalRappen) / 100).toFixed(2)
+    
     const paymentRequest = {
       appointmentId: props.appointment.id,
       userId: props.appointment.extendedProps?.user_id || props.currentUser?.id || 'guest',
       staffId: props.appointment.extendedProps?.staff_id || props.currentUser?.id,
-      amount: Number(calculatedPrice.value?.total_chf || 0),
+      amount: Number(roundedTotalCHF),
       currency: 'CHF',
       customerEmail: props.currentUser?.email || 'test@example.com',
       customerName: getStudentName(),
