@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
     // Layer 4: Ownership - User must be in same tenant
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('id, email, first_name, last_name, birthdate, faberid, tenant_id, preferred_payment_method, role')
+      .select('id, email, first_name, last_name, phone, category, birthdate, faberid, tenant_id, preferred_payment_method, role')
       .eq('id', userId)
       .eq('tenant_id', requestingUser.tenant_id)
       .single()
