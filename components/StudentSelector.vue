@@ -419,7 +419,7 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
       
       // DEBUG: Log first student to check data
       if (typedStudents.length > 0) {
-        logger.debug('🔍 DEBUG First student:', {
+        console.log('🔍 DEBUG First student:', {
           name: typedStudents[0].first_name,
           phone: typedStudents[0].phone,
           category: typedStudents[0].category,
@@ -469,6 +469,16 @@ const filterStudents = () => {
 }
 
 const selectStudent = (student: Student, isUserClick = false) => {
+  console.log('🔍 DEBUG SELECT - Student data:', {
+    isUserClick: isUserClick,
+    isFreeslotMode: props.isFreeslotMode,
+    studentName: student.first_name + ' ' + student.last_name,
+    phone: student.phone,
+    category: student.category,
+    categoryType: typeof student.category,
+    categoryIsArray: Array.isArray(student.category),
+    fullStudent: student
+  })
   logger.debug('🔍 DEBUG VALUES:', {
     isUserClick: isUserClick,
     isFreeslotMode: props.isFreeslotMode,
