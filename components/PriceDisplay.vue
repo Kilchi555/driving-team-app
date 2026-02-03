@@ -1549,28 +1549,14 @@ const saveInvoiceAddress = async (): Promise<string | null> => {
   
   try {
     // Hole den aktuellen Benutzer für created_by
-    const supabase = getSupabase()
-    const authUser = authStore.user // ✅ MIGRATED
+    // ✅ WICHTIG: Verwende props.currentUser.id (Business User ID) statt authStore
+    const currentUserId = props.currentUser?.id
     
-    if (!authUser?.id) {
+    if (!currentUserId) {
       throw new Error('Benutzer nicht angemeldet')
     }
     
-    // ✅ WICHTIG: Hole die Business User ID aus der users Tabelle (nicht die Auth User ID)
-    // Der Foreign Key created_by verweist auf users.id, nicht auf auth.users.id
-    const { data: businessUser, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', authUser.id)
-      .single()
-    
-    if (userError || !businessUser) {
-      console.error('❌ Error fetching business user:', userError)
-      throw new Error('Benutzerprofil nicht gefunden. Bitte melden Sie sich erneut an.')
-    }
-    
-    const currentUserId = businessUser.id
-    logger.debug('🔍 Using business user ID for created_by:', currentUserId, '(auth user ID:', authUser.id, ')')
+    logger.debug('🔍 Using business user ID for created_by:', currentUserId)
     
     let result
     
