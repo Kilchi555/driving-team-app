@@ -4225,6 +4225,13 @@ const goToPolicySelection = async () => {
   }
   
   // ✅ NEW: Calculate the policy charges based on the loaded policy
+  logger.debug('📊 Calculating cancellation charges:', {
+    hasDefaultPolicy: !!defaultPolicy.value,
+    hasEventData: !!props.eventData,
+    eventDataStart: props.eventData?.start,
+    appointmentPrice: appointmentPrice.value
+  })
+  
   if (defaultPolicy.value && props.eventData) {
     const appointmentData = {
       id: props.eventData.id,
@@ -4243,8 +4250,41 @@ const goToPolicySelection = async () => {
     
     logger.debug('✅ Policy calculation result:', result)
     cancellationPolicyResult.value = result
+  } else if (!defaultPolicy.value && props.eventData) {
+    // ✅ NEW: No policy found - set 0% charge (free cancellation)
+    logger.warn('⚠️ No default policy found - setting 0% charge (free cancellation)')
+    
+    const appointmentTime = new Date(props.eventData.start)
+    const now = new Date()
+    const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const isWithin24h = hoursUntilAppointment < 24 && hoursUntilAppointment >= 0
+    
+    // Set 0% charge for cancellations > 24h or when no policy exists
+    const chargePercentage = isWithin24h ? 100 : 0
+    
+    cancellationPolicyResult.value = {
+      calculation: {
+        chargePercentage: chargePercentage,
+        creditHours: chargePercentage === 0,
+        hoursBeforeAppointment: Math.floor(hoursUntilAppointment),
+        description: chargePercentage === 0 
+          ? 'Kostenlose Stornierung (keine Richtlinie definiert, > 24h vor Termin)' 
+          : 'Volle Gebühr (keine Richtlinie definiert, < 24h vor Termin)'
+      },
+      chargeAmountRappen: Math.round((appointmentPrice.value || 0) * chargePercentage / 100),
+      shouldCreateInvoice: chargePercentage > 0 && appointmentPrice.value > 0,
+      shouldCreditHours: chargePercentage === 0,
+      invoiceDescription: chargePercentage > 0 
+        ? `Stornogebühr für Termin (${chargePercentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
+        : ''
+    }
+    
+    logger.debug('✅ Set default cancellation result (no policy):', cancellationPolicyResult.value)
   } else {
-    logger.warn('⚠️ No default policy or event data available for calculation')
+    logger.error('❌ No event data available for cancellation calculation', {
+      hasDefaultPolicy: !!defaultPolicy.value,
+      hasEventData: !!props.eventData
+    })
   }
 }
 
