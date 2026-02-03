@@ -4,12 +4,12 @@
     <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[95vh] overflow-hidden flex flex-col">
       
       <!-- Header -->
-      <div class="bg-blue-600 text-white px-6 py-4 flex-shrink-0">
+      <div class="text-white px-6 py-4 flex-shrink-0" :style="{ backgroundColor: primaryColor || '#2563eb' }">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-lg font-semibold">Prüfungsergebnis eintragen</h3>
           </div>
-          <button @click="$emit('close')" class="text-white hover:text-blue-200 transition-colors">
+          <button @click="$emit('close')" class="text-white hover:opacity-80 transition-opacity">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -33,7 +33,8 @@
                 v-model="examinerSearch" 
                 type="text" 
                 placeholder="Experten suchen..." 
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 transition-all"
+                :style="{ '--tw-ring-color': primaryColor || '#2563eb' }"
                 @focus="showExaminerDropdown = true"
                 @input="showExaminerDropdown = true"
                 @blur="showExaminerDropdown = false"
@@ -49,9 +50,10 @@
                     :class="[
                       'px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0',
                       examResult.examiner_id === examiner.id 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'hover:bg-blue-50'
+                        ? 'text-white' 
+                        : 'hover:bg-gray-50'
                     ]"
+                    :style="examResult.examiner_id === examiner.id ? { backgroundColor: primaryColor || '#2563eb' } : {}"
                   >
                     <div class="font-medium text-gray-700">
                       {{ (examiner.first_name ? examiner.first_name + ' ' : '') + (examiner.last_name || '') }}
@@ -89,7 +91,8 @@
             
             <button 
               @click="showAddExaminerModal = true" 
-              class="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors h-10 shrink-0"
+              class="px-3 py-2 text-white rounded-md hover:opacity-90 transition-opacity h-10 shrink-0"
+              :style="{ backgroundColor: primaryColor || '#2563eb' }"
               title="Neuen Experten hinzufügen"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,7 +164,8 @@
               <label class="block text-xs text-gray-600 mb-1">Kommentar zum Experten-Verhalten</label>
               <textarea 
                 v-model="examResult.examiner_behavior_notes" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 transition-all" 
+                :style="{ '--tw-ring-color': primaryColor || '#2563eb' }"
                 rows="3"
                 placeholder="Wie war das Verhalten des Experten? Fair, freundlich, professionell?"
                 required
@@ -187,7 +191,8 @@
         <button 
           @click="saveExamResult" 
           :disabled="isSaving"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="px-4 py-2 text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          :style="{ backgroundColor: primaryColor || '#2563eb' }"
         >
           <span v-if="isSaving" class="flex items-center">
             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -211,12 +216,12 @@
         <div class="p-6 space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Vorname (optional)</label>
-            <input v-model="newExaminer.first_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input v-model="newExaminer.first_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 transition-all" :style="{ '--tw-ring-color': primaryColor || '#2563eb' }">
           </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
-            <input v-model="newExaminer.last_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <input v-model="newExaminer.last_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 transition-all" :style="{ '--tw-ring-color': primaryColor || '#2563eb' }" required>
           </div>
         </div>
         
@@ -224,7 +229,7 @@
           <button @click="showAddExaminerModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
             Abbrechen
           </button>
-          <button @click="addExaminer" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          <button @click="addExaminer" class="px-4 py-2 text-white rounded-md hover:opacity-90 transition-opacity" :style="{ backgroundColor: primaryColor || '#2563eb' }">
             Hinzufügen
           </button>
         </div>
@@ -239,6 +244,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 // Props
 interface Props {
@@ -251,6 +257,9 @@ const props = defineProps<Props>()
 
 // ✅ Get current user from composable (has tenant_id)
 const { currentUser: authUser, fetchCurrentUser } = useCurrentUser()
+
+// ✅ Get tenant branding colors
+const { primaryColor } = useTenantBranding()
 
 // Emits
 const emit = defineEmits<{
@@ -385,8 +394,11 @@ const addExaminer = async () => {
 
     // Auto-select the new examiner
     examResult.value.examiner_id = newExaminerData.id
+    
+    // Update the visual display with the new examiner's name
+    selectedExaminerName.value = `${newExaminerData.first_name || ''} ${newExaminerData.last_name || ''}`.trim()
 
-    logger.debug('✅ New examiner added via API:', newExaminerData)
+    logger.debug('✅ New examiner added via API and auto-selected:', newExaminerData)
 
   } catch (err: any) {
     console.error('❌ Error adding examiner:', err)
