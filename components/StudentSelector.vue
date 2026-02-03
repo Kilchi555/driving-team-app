@@ -42,21 +42,31 @@
       <!-- Ausgewählter Schüler Anzeige (oben) -->
       <div v-if="selectedStudent" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
         <div class="flex justify-between items-start">
-          <div>
+          <div class="flex-1">
             <div class="font-semibold text-green-800">
               {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
             </div>
-            <div class="text-sm text-green-600 flex items-center gap-2">
-              <span 
+            <div class="text-sm text-green-600 flex items-center gap-2 flex-wrap mt-1">
+              <!-- Kategorie Badge -->
+              <span v-if="selectedStudent.category"
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
-                :title="`Kategorie: ${Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : (selectedStudent.category || '-')}`"
+                :title="`Kategorie: ${Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : selectedStudent.category}`"
               >
-                <span>
-                  {{ Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : (selectedStudent.category || '-') }}
-                </span>
+                {{ Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : selectedStudent.category }}
               </span>
-              <span class="text-green-700">•</span>
-              <span>{{ selectedStudent.phone }}</span>
+              
+              <!-- Separator -->
+              <span v-if="selectedStudent.category && selectedStudent.phone" class="text-green-700">•</span>
+              
+              <!-- Telefon -->
+              <span v-if="selectedStudent.phone" class="text-green-700">
+                📞 {{ selectedStudent.phone }}
+              </span>
+              
+              <!-- Email wenn kein Phone -->
+              <span v-if="!selectedStudent.phone && selectedStudent.email" class="text-green-700 text-xs">
+                {{ selectedStudent.email }}
+              </span>
             </div>
           </div>
           <button 
