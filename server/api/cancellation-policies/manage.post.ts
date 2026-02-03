@@ -1,7 +1,7 @@
 // server/api/cancellation-policies/manage.post.ts
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getHeader, defineEventHandler, readBody, createError } from 'h3'
 
 interface ManageBody {
   action: 'list' | 'fetch-all' | 'create-policy' | 'update-policy' | 'delete-policy' | 'create-rule' | 'update-rule' | 'delete-rule' | 'set-default'
@@ -38,10 +38,11 @@ export default defineEventHandler(async (event) => {
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('tenant_id, role')
-      .eq('id', user.id)
+      .eq('auth_user_id', user.id)
       .single()
 
     if (profileError || !userProfile?.tenant_id) {
+      logger.error('❌ User profile not found:', { auth_user_id: user.id, profileError })
       throw new Error('User profile not found')
     }
 
@@ -51,20 +52,45 @@ export default defineEventHandler(async (event) => {
     if (action === 'list') {
       logger.debug('📋 Fetching policies by type:', appliesTo)
 
-      const query = supabaseAdmin
+      let query = supabaseAdmin
         .from('cancellation_policies')
         .select('*')
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
 
       if (appliesTo) {
-        query.eq('applies_to', appliesTo)
+        query = query.eq('applies_to', appliesTo)
       }
 
-      const { data: policies, error: policiesError } = await query
+      let { data: policies, error: policiesError } = await query
 
-      if (policiesError) {
-        throw new Error(policiesError.message)
+      // ✅ Fallback: If no active policies, try to fetch any policies
+      if (policiesError || !policies || policies.length === 0) {
+        logger.debug('⚠️ No active policies found, trying to fetch any policies...')
+        
+        let fallbackQuery = supabaseAdmin
+          .from('cancellation_policies')
+          .select('*')
+          .eq('tenant_id', tenantId)
+        
+        if (appliesTo) {
+          fallbackQuery = fallbackQuery.eq('applies_to', appliesTo)
+        }
+        
+        const { data: fallbackPolicies, error: fallbackError } = await fallbackQuery
+        
+        if (!fallbackError && fallbackPolicies && fallbackPolicies.length > 0) {
+          logger.debug('✅ Found inactive policies, using them:', fallbackPolicies.length)
+          policies = fallbackPolicies
+        }
+      }
+
+      if (!policies || policies.length === 0) {
+        logger.warn('⚠️ No policies found for tenant')
+        return {
+          success: true,
+          data: []
+        }
       }
 
       // Fetch rules for each policy

@@ -6,7 +6,8 @@
 //         create-payment, get-payment, get-tenant-data
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -18,15 +19,15 @@ export default defineEventHandler(async (event) => {
     appointment_data,
     payment_data,
     start_date,
-    end_date
+    end_date,
+    category
   } = body
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  )
+  const supabase = getSupabaseAdmin()
 
   try {
+    logger.debug('📋 Calendar API action:', action)
+    
     if (action === 'get-staff-meetings') {
       // Get all staff meetings for a tenant/staff
       const { data: meetings, error } = await supabase
@@ -78,16 +79,30 @@ export default defineEventHandler(async (event) => {
 
     if (action === 'get-existing-appointments') {
       // Get existing appointments for conflict checking
-      const { data: appointments, error } = await supabase
+      logger.debug('🔍 Getting existing appointments:', { staff_id, start_date, end_date })
+      
+      let query = supabase
         .from('appointments')
         .select('*')
         .eq('staff_id', staff_id)
-        .gte('start_time', start_date)
-        .lte('end_time', end_date)
         .neq('status', 'cancelled')
+      
+      // ✅ Only add date filters if they're provided
+      if (start_date) {
+        query = query.gte('start_time', start_date)
+      }
+      if (end_date) {
+        query = query.lte('end_time', end_date)
+      }
+      
+      const { data: appointments, error } = await query
 
-      if (error) throw error
+      if (error) {
+        logger.error('❌ Error fetching appointments:', error)
+        throw error
+      }
 
+      logger.debug('✅ Appointments fetched:', appointments?.length || 0)
       return {
         success: true,
         data: appointments || []
@@ -96,13 +111,26 @@ export default defineEventHandler(async (event) => {
 
     if (action === 'get-pricing-rules') {
       // Get pricing rules for appointment
-      const { data: rules, error } = await supabase
+      logger.debug('📊 Getting pricing rules for category:', category)
+      
+      let query = supabase
         .from('pricing_rules')
         .select('*')
         .eq('tenant_id', tenant_id)
+      
+      // ✅ Filter by category_code if provided (note: column is category_code, not category)
+      if (category) {
+        query = query.eq('category_code', category)
+      }
+      
+      const { data: rules, error } = await query
 
-      if (error) throw error
+      if (error) {
+        logger.error('❌ Error fetching pricing rules:', error)
+        throw error
+      }
 
+      logger.debug('✅ Pricing rules fetched:', rules?.length || 0)
       return {
         success: true,
         data: rules || []
@@ -159,15 +187,25 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-payment') {
-      // Get payment record
+      // Get payment record by appointment_id
+      logger.debug('💳 Getting payment for appointment:', payment_data?.appointment_id)
+      
+      // ✅ FIXED: Use appointment_id, not id
       const { data: payment, error } = await supabase
         .from('payments')
         .select('*')
-        .eq('id', payment_data?.id)
+        .eq('appointment_id', payment_data?.appointment_id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        logger.warn('⚠️ Payment not found:', error.message)
+        return {
+          success: true,
+          data: null
+        }
+      }
 
+      logger.debug('✅ Payment found:', payment?.id)
       return {
         success: true,
         data: payment
@@ -192,14 +230,14 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 400,
-      message: `Unknown action: ${action}`
+      statusMessage: `Unknown action: ${action}`
     })
 
   } catch (err: any) {
-    console.error('❌ Calendar API error:', err)
+    logger.error('❌ Calendar API error:', err.message || err)
     throw createError({
       statusCode: err.statusCode || 500,
-      message: err.message || 'Calendar operation failed'
+      statusMessage: err.message || 'Calendar operation failed'
     })
   }
 })
