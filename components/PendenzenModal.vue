@@ -495,14 +495,11 @@ const evaluationAppointments = computed(() => {
   return (formattedAppointments.value || []).filter((apt: any) => apt.status !== 'pending_confirmation')
 })
 
-// ✅ NEU: Gefilterte unbestätigte Termine - nur die fällig, überfällig oder vorbei sind
+// ✅ NEU: Gefilterte unbestätigte Termine - zeige ALLE unbestätigten Termine (Vergangenheit und Zukunft)
 const filteredUnconfirmedAppointments = computed(() => {
   const all = unconfirmedWithStatus.value || []
-  return all.filter(apt => {
-    // Nur zeigen wenn: overdue_past, overdue_24h, oder due
-    // Ausschließen: upcoming (noch Zeit)
-    return apt.dueStatus === 'overdue_past' || apt.dueStatus === 'overdue_24h' || apt.dueStatus === 'due'
-  })
+  // Zeige ALLE unbestätigten Termine - keine Filterung nach dueStatus
+  return all
 })
 
 // ✅ Hilfsfunktion: Status-Label und Farbe
