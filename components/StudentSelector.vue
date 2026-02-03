@@ -46,6 +46,15 @@
             <div class="font-semibold text-green-800">
               {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
             </div>
+            <!-- Debug: Show what we have -->
+            <div v-if="selectedStudent.category" class="text-xs text-green-600 mt-1">
+              <span class="inline-block px-2 py-1 bg-green-100 rounded">
+                {{ Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : selectedStudent.category }}
+              </span>
+            </div>
+            <div v-if="selectedStudent.phone" class="text-xs text-green-600 mt-1">
+              📞 {{ selectedStudent.phone }}
+            </div>
           </div>
           <button 
             v-if="showClearButton" 
