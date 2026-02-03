@@ -416,6 +416,18 @@ const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRef
 
       availableStudents.value = typedStudents
       logger.debug('✅ Students loaded via API:', availableStudents.value.length)
+      
+      // DEBUG: Log first student to check data
+      if (typedStudents.length > 0) {
+        logger.debug('🔍 DEBUG First student:', {
+          name: typedStudents[0].first_name,
+          phone: typedStudents[0].phone,
+          category: typedStudents[0].category,
+          categoryType: typeof typedStudents[0].category,
+          categoryIsArray: Array.isArray(typedStudents[0].category),
+          rawData: typedStudents[0]
+        })
+      }
 
       // Cache for staff-specific loads
       const staffId = props.currentUser?.id
@@ -460,7 +472,11 @@ const selectStudent = (student: Student, isUserClick = false) => {
   logger.debug('🔍 DEBUG VALUES:', {
     isUserClick: isUserClick,
     isFreeslotMode: props.isFreeslotMode,
-    studentName: student.first_name + ' ' + student.last_name
+    studentName: student.first_name + ' ' + student.last_name,
+    phone: student.phone,
+    category: student.category,
+    categoryType: typeof student.category,
+    categoryIsArray: Array.isArray(student.category)
   })
   
   // ✅ Block automatische Selections bei Free-Slots
