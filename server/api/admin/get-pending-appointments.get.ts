@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
     const now = toLocalTimeString(new Date())
 
-    // Query 1: Completed appointments without evaluation
+    // Query 1: Completed/Confirmed appointments without evaluation (for ratings tab)
     let appointmentsQuery = serviceSupabase
       .from('appointments')
       .select(`
@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
         )
       `)
       .eq('tenant_id', tenantId)
-      .lt('start_time', now)
+      // ✅ REMOVED: .lt('start_time', now) - we want ALL appointments, not just past ones
       .in('status', ['completed', 'confirmed', 'scheduled'])
       .is('deleted_at', null)
       .in('event_type_code', ['lesson', 'exam', 'theory'])
