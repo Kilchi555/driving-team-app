@@ -279,6 +279,59 @@ export const formatDate = (date: Date): string => {
 }
 
 /**
+ * Calculate refundable and non-refundable product amounts
+ * Takes into account the is_refundable flag on products
+ */
+export interface ProductRefundCalculation {
+  totalProductAmount: number
+  refundableAmount: number
+  nonRefundableAmount: number
+  refundableProducts: Array<{ name: string; amount: number }>
+  nonRefundableProducts: Array<{ name: string; amount: number }>
+}
+
+export const calculateProductRefunds = (productSales: any[]): ProductRefundCalculation => {
+  let refundableAmount = 0
+  let nonRefundableAmount = 0
+  const refundableProducts: Array<{ name: string; amount: number }> = []
+  const nonRefundableProducts: Array<{ name: string; amount: number }> = []
+
+  for (const sale of productSales) {
+    const product = sale.product || sale.products // Handle both naming conventions
+    const amount = sale.total_amount_rappen || (sale.quantity * sale.unit_price_rappen) || 0
+    const productName = product?.name || 'Unknown Product'
+
+    // Default to refundable if flag not set (backward compatibility)
+    const isRefundable = product?.is_refundable !== false
+
+    if (isRefundable) {
+      refundableAmount += amount
+      refundableProducts.push({ name: productName, amount })
+    } else {
+      nonRefundableAmount += amount
+      nonRefundableProducts.push({ name: productName, amount })
+    }
+  }
+
+  logger.debug('📦 Product refund calculation:', {
+    totalProducts: productSales.length,
+    refundableAmount,
+    nonRefundableAmount,
+    refundableCount: refundableProducts.length,
+    nonRefundableCount: nonRefundableProducts.length,
+    refundableProducts: refundableProducts.map(p => `${p.name} (${formatCurrency(p.amount)})`)
+  })
+
+  return {
+    totalProductAmount: refundableAmount + nonRefundableAmount,
+    refundableAmount,
+    nonRefundableAmount,
+    refundableProducts,
+    nonRefundableProducts
+  }
+}
+
+/**
  * Calculate the time remaining until appointment
  */
 export const getTimeUntilAppointment = (appointmentDate: Date, currentDate: Date = new Date()): {
