@@ -201,11 +201,8 @@ export default defineEventHandler(async (event) => {
         .not('confirmation_token', 'is', null)
         .is('deleted_at', null)
         .in('event_type_code', ['lesson', 'exam', 'theory'])
-        // ✅ FIXED: Zeige ALLE unbestätigten Termine:
-        // - Vergangene Termine (in der Vergangenheit)
-        // - Termine in den nächsten 24h
-        // Condition: start_time <= now + 24h (zeigt alle historischen + nächste 24h)
-        .lt('start_time', toLocalTimeString(new Date(new Date().getTime() + (24 * 60 * 60 * 1000))))
+        // ✅ FIXED: Zeige ALLE unbestätigten Termine (egal wie weit in der Vergangenheit oder Zukunft)
+        // Keine zeitliche Einschränkung - wir filtern später in der Composable
         .order('start_time', { ascending: false }) // Neueste zuerst
 
       // Filter by staff_id if the user is a staff member
@@ -255,7 +252,7 @@ export default defineEventHandler(async (event) => {
             payments: appointment.payments || []
           }))
 
-        logger.debug(`✅ Fetched ${unconfirmedAppointments.length} unconfirmed appointments (including past and next 24h, only unpaid)`)
+        logger.debug(`✅ Fetched ${unconfirmedAppointments.length} unconfirmed appointments (all time, only unpaid)`)
       }
     }
 
