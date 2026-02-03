@@ -42,16 +42,17 @@
       <!-- Ausgewählter Schüler Anzeige (oben) -->
       <div v-if="selectedStudent" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
         <div class="flex justify-between items-center">
-          <div>
-            <div class="font-semibold text-green-800">
-              {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
-            </div>
-            <!-- Debug: Show what we have -->
-            <div v-if="selectedStudent.category" class="text-xs text-green-600 mt-1">
-              <span class="inline-block px-2 py-1 bg-green-100 rounded">
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <div class="font-semibold text-green-800">
+                {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
+              </div>
+              <!-- Category Badge rechts vom Namen -->
+              <span v-if="selectedStudent.category" class="inline-block px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">
                 {{ Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : selectedStudent.category }}
               </span>
             </div>
+            <!-- Telefon unter dem Namen -->
             <div v-if="selectedStudent.phone" class="text-xs text-green-600 mt-1">
               📞 {{ selectedStudent.phone }}
             </div>
