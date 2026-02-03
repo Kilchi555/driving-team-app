@@ -962,12 +962,12 @@ const confirmTransaction = async (transaction) => {
     const transactionIndex = staffTransactions.value.findIndex(t => t.id === transaction.id)
     if (transactionIndex !== -1) {
       // Get current user ID from API
-      const userResponse = await $fetch('/api/system/secure-operations', {
+      const userResponse = await $fetch<any>('/api/system/secure-operations', {
         method: 'POST',
         body: {
           action: 'get-current-user-id'
         }
-      }) as any
+      })
 
       if (!userResponse?.success) {
         throw new Error('Could not get current user ID')
