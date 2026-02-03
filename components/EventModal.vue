@@ -1559,8 +1559,8 @@ const shouldAutoLoadStudents = computed(() => {
     return true  // Schüler laden, aber nicht automatisch auswählen
   }
   
-  // ✅ NUR für Lektionen und NUR wenn EventTypeSelector nicht angezeigt wird
-  return isLessonType(formData.value.eventType) && props.mode === 'create' && !showEventTypeSelection.value
+  // ✅ NUR für Lektionen UND für CREATE und EDIT mode (damit phone/category verfügbar sind)
+  return isLessonType(formData.value.eventType) && (props.mode === 'create' || props.mode === 'edit') && !showEventTypeSelection.value
 })
 
 
