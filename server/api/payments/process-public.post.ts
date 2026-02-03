@@ -228,6 +228,7 @@ export default defineEventHandler(async (event) => {
     const actualUserId = enrollmentUser?.user_id || null
     
     // Build payment record - only include columns that exist in the table
+    // ✅ IMPORTANT: Only store primitive values in metadata to avoid circular references
     const paymentInsertData: any = {
       user_id: actualUserId,
       appointment_id: null, // No appointment for course registrations
@@ -242,8 +243,14 @@ export default defineEventHandler(async (event) => {
       metadata: {
         enrollment_id: enrollmentId,
         course_id: courseId,
-        course_start_date: enrollment.courses?.course_start_date, // Add course start date for display
-        ...metadata // Include sari_faberid, sari_birthdate, etc.
+        course_name: metadata?.course_name || null,
+        course_location: metadata?.course_location || null,
+        course_start_date: typeof enrollment.courses?.course_start_date === 'string' 
+          ? enrollment.courses.course_start_date 
+          : null, // Only store string date, not complex object
+        sari_faberid: metadata?.sari_faberid || null,
+        sari_birthdate: metadata?.sari_birthdate || null
+        // ❌ REMOVED: ...metadata (could contain complex objects)
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
