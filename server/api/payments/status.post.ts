@@ -184,7 +184,6 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
         .from('appointments')
         .update({
           payment_status: 'paid',
-          is_paid: true,
           updated_at: toLocalTimeString(new Date())
         })
         .eq('id', payment.appointment_id)
