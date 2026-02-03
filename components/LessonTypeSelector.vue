@@ -7,7 +7,6 @@
     <template v-if="showButtons">
       <!-- Nur kostenpflichtige Typen als Dropdown -->
       <div>
-        <div class="text-xs font-semibold text-gray-500 mb-1">Kostenpflichtig</div>
         <select
           v-model="selectedPaidCode"
           @change="onSelectPaid()"
