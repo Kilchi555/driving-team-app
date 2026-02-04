@@ -413,7 +413,6 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     // Build merchant reference with payment ID (CRITICAL for webhook fallback!), customer name, date, time, duration
     const merchantReference = body.orderId || buildMerchantReference({
-      paymentId: payment.id,  // ✅ CRITICAL: Include payment ID for webhook fallback
       staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
       startTime: payment.appointments?.start_time,
       durationMinutes: payment.appointments?.duration_minutes,
