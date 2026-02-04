@@ -2,6 +2,7 @@
 
 import { setHeader, send, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import chromium from '@sparticuz/chromium'
 import { logger } from '~/utils/logger'
 
@@ -786,6 +787,14 @@ export default defineEventHandler(async (event) => {
     logger.debug('📄 Generating receipt(s) for payment(s):', ids)
 
     const supabase = getSupabaseAdmin()
+    
+    // ✅ SECURITY: Get authenticated user
+    const user = await getAuthUserFromRequest(event)
+    if (!user?.id) {
+      logger.warn('⚠️ Unauthorized: User not authenticated')
+      throw new Error('Unauthorized: User not authenticated')
+    }
+    logger.debug('👤 User authenticated:', user.id)
 
     // Load all payments
     const { data: payments, error: pErr } = await supabase
@@ -801,6 +810,17 @@ export default defineEventHandler(async (event) => {
     if (!payments || payments.length === 0) {
       throw new Error('Payments not found')
     }
+    
+    // ✅ SECURITY: Verify that all payments belong to the authenticated user
+    const unauthorizedPayments = payments.filter(p => p.user_id !== user.id)
+    if (unauthorizedPayments.length > 0) {
+      logger.warn('⚠️ Unauthorized payment access attempt:', {
+        userId: user.id,
+        unauthorizedPaymentIds: unauthorizedPayments.map(p => p.id)
+      })
+      throw new Error('Unauthorized: You do not have access to these payments')
+    }
+    logger.debug('✅ All payments authorized for user:', user.id)
 
     // Load tenant branding (once for all payments)
     const firstPayment = payments[0]
