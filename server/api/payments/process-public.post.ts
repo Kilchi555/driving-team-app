@@ -149,7 +149,8 @@ export default defineEventHandler(async (event) => {
     const lastName = customerName.split(' ').slice(1).join(' ') || customerName
     const course = enrollment.courses
     
-    let merchantRef = `${firstName.charAt(0)}. ${lastName}`
+    // Build clean merchant reference: "FirstName LastName | CourseName | Location | Date"
+    let merchantRef = `${firstName} ${lastName}`
     if (course?.name) {
       merchantRef += ` | ${course.name.replace(/[^\x20-\x7E]/g, '')}`  // Remove non-ASCII (Umlaute, etc)
     }
@@ -172,17 +173,12 @@ export default defineEventHandler(async (event) => {
     }
     
     // Enforce max length (Wallee limit is 100 chars for merchant reference)
-    // Account for the "payment-{UUID}|" prefix that will be added later (48 chars)
-    // So we need: paymentMerchantRef (48 + merchantRef) <= 100
-    // Therefore: merchantRef <= 100 - 48 = 52 chars
-    const maxMerchantRefLength = 52
+    const maxMerchantRefLength = 100
     if (merchantRef.length > maxMerchantRefLength) {
       merchantRef = merchantRef.substring(0, maxMerchantRefLength - 3) + '...'
     }
-    // ✅ REMOVED: enrollment ID from merchant ref (redundant with payment ID)
-    // This saves space for more meaningful info like course name and location
     
-    logger.debug('📝 Merchant reference (before payment ID):', merchantRef)
+    logger.debug('📝 Merchant reference:', merchantRef)
 
     logger.debug('📝 Merchant reference:', merchantRef)
 
@@ -278,14 +274,12 @@ export default defineEventHandler(async (event) => {
     
     logger.info('✅ Payment record created:', paymentRecord.id)
 
-    // ✅ STEP 2: Update merchantReference to include payment ID (CRITICAL for webhook fallback!)
-    const paymentMerchantRef = `payment-${paymentRecord.id}|${merchantRef}`
-    transactionCreate.merchantReference = paymentMerchantRef.length <= 200 
-      ? paymentMerchantRef 
-      : paymentMerchantRef.substring(0, 200)
-    transactionCreate.invoiceMerchantReference = transactionCreate.merchantReference
+    // ✅ STEP 2: Use clean merchant reference directly (no payment UUID prefix)
+    // The payment record is already linked via course_registration_id in the database
+    transactionCreate.merchantReference = merchantRef
+    transactionCreate.invoiceMerchantReference = merchantRef
 
-    logger.debug('📝 Updated merchant reference with payment ID:', transactionCreate.merchantReference)
+    logger.debug('📝 Final merchant reference for Wallee:', transactionCreate.merchantReference)
 
     // ✅ STEP 3: Create Wallee transaction
     logger.debug('🔄 Creating Wallee transaction:', {
