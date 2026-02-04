@@ -71,29 +71,13 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event) as WalleeWebhookPayload
     const signature = event.headers['x-wallee-signature'] as string
     
-    transactionId = body.entityId?.toString()
-    
-    if (signature) {
-      const expectedSecret = process.env.WALLEE_WEBHOOK_SECRET || 'wh_dT8kP2mX9qR4vL7nJ3bY6cZ1fH5'
-      if (signature !== expectedSecret) {
-        logger.error('❌ Invalid webhook signature - token mismatch')
-        throw createError({
-          statusCode: 401,
-          statusMessage: 'Invalid webhook signature'
-        })
-      }
-      logger.debug('✅ Webhook signature validated')
-    } else {
-      logger.warn('⚠️ No webhook signature provided - proceeding with Wallee API verification')
-    }
-    
     // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
     if (!body.entityId || !body.state) {
       logger.warn('❌ Invalid webhook payload - missing entityId or state')
       return { success: false, error: 'Invalid webhook payload' }
     }
     
-    const transactionId = body.entityId.toString()
+    transactionId = body.entityId.toString()
     const walleeState = body.state
     const spaceId = body.spaceId
     
