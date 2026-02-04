@@ -301,8 +301,8 @@ export default defineEventHandler(async (event) => {
       logger.error('❌ Wallee API error creating transaction:', {
         message: walleeError?.message,
         body: walleeError?.body,
-        statusCode: walleeError?.statusCode,
-        fullError: JSON.stringify(walleeError, null, 2).substring(0, 500)
+        statusCode: walleeError?.statusCode
+        // ❌ REMOVED: fullError: JSON.stringify(...) - causes circular reference error
       })
       
       // Clean up: Delete the payment record we just created
