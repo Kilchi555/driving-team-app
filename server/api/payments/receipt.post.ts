@@ -137,7 +137,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
             name,
             description,
             course_start_date,
-            price_rappen
+            price_per_participant_rappen
           )
         `)
         .eq('id', courseRegId)
@@ -236,6 +236,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       if (dsError) {
         logger.warn('⚠️ discount_sales query error:', dsError)
       } else if (discountSale?.id) {
+        logger.debug('📦 Found discount_sale:', discountSale.id)
         const { data: ps, error: psError } = await supabase
           .from('product_sales')
           .select(`id, quantity, unit_price_rappen, total_price_rappen, products ( name, description )`)
