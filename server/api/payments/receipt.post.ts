@@ -118,36 +118,45 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   
   // Try to load course if it's a course registration
   let courseData: any = null
-  if (payment.course_registration_id || (payment.metadata && typeof payment.metadata === 'string' && JSON.parse(payment.metadata).course_id)) {
+  const courseRegId = payment.course_registration_id || 
+    (payment.metadata && typeof payment.metadata === 'string' 
+      ? (() => { try { return JSON.parse(payment.metadata).enrollment_id || JSON.parse(payment.metadata).course_registration_id; } catch { return null; } })()
+      : payment.metadata?.enrollment_id)
+  
+  if (courseRegId) {
     try {
-      const courseRegId = payment.course_registration_id || (payment.metadata ? JSON.parse(payment.metadata).enrollment_id : null)
-      if (courseRegId) {
-        const { data: courseRegData } = await supabase
-          .from('course_registrations')
-          .select(`
+      logger.debug('📚 Loading course registration:', courseRegId)
+      const { data: courseRegData, error: courseRegError } = await supabase
+        .from('course_registrations')
+        .select(`
+          id,
+          course_id,
+          status,
+          courses (
             id,
-            course_id,
-            status,
-            courses (
-              id,
-              name,
-              description,
-              course_start_date,
-              price_rappen
-            )
-          `)
-          .eq('id', courseRegId)
-          .maybeSingle()
-        
-        if (courseRegData?.courses) {
-          courseData = courseRegData
-          course = courseRegData.courses
-          logger.debug('✅ Course loaded for payment:', course?.name)
-        }
+            name,
+            description,
+            course_start_date,
+            price_rappen
+          )
+        `)
+        .eq('id', courseRegId)
+        .maybeSingle()
+      
+      if (courseRegError) {
+        logger.warn('⚠️ Course query error:', courseRegError)
+      } else if (courseRegData?.courses) {
+        courseData = courseRegData
+        course = courseRegData.courses
+        logger.debug('✅ Course loaded for payment:', course?.name)
+      } else {
+        logger.debug('ℹ️ No course found for registration:', courseRegId)
       }
     } catch (courseErr) {
       logger.warn('⚠️ Could not load course:', courseErr)
     }
+  } else {
+    logger.debug('ℹ️ No course_registration_id found in payment')
   }
 
   if (payment.appointment_id) {
@@ -217,27 +226,46 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   // Load products from appointment if available
   if (payment.appointment_id) {
     try {
-      const { data: discountSale } = await supabase
+      logger.debug('📦 Loading products for appointment:', payment.appointment_id)
+      const { data: discountSale, error: dsError } = await supabase
         .from('discount_sales')
         .select('id')
         .eq('appointment_id', payment.appointment_id)
         .maybeSingle()
 
-      if (discountSale?.id) {
-        const { data: ps } = await supabase
+      if (dsError) {
+        logger.warn('⚠️ discount_sales query error:', dsError)
+      } else if (discountSale?.id) {
+        const { data: ps, error: psError } = await supabase
           .from('product_sales')
           .select(`id, quantity, unit_price_rappen, total_price_rappen, products ( name, description )`)
           .eq('product_sale_id', discountSale.id)
 
-        products = (ps || []).map((row: any) => ({
-          name: row.products?.name || 'Produkt',
-          description: row.products?.description || '',
-          quantity: row.quantity || 1,
-          totalCHF: (row.total_price_rappen || 0) / 100
-        }))
+        if (psError) {
+          logger.warn('⚠️ product_sales query error:', psError)
+        } else {
+          products = (ps || []).map((row: any) => ({
+            name: row.products?.name || 'Produkt',
+            description: row.products?.description || '',
+            quantity: row.quantity || 1,
+            totalCHF: (row.total_price_rappen || 0) / 100
+          }))
+          logger.debug('✅ Products loaded:', products.length)
+        }
+      } else {
+        logger.debug('ℹ️ No discount_sale found for appointment')
       }
     } catch (productErr) {
       console.warn('⚠️ Could not load products:', productErr)
+    }
+  } else if (courseRegId) {
+    try {
+      logger.debug('📦 Loading products for course registration:', courseRegId)
+      // For courses, we might have course-related products
+      // For now, courses typically don't have product_sales, just the course itself
+      logger.debug('ℹ️ Courses typically have no additional products')
+    } catch (productErr) {
+      console.warn('⚠️ Could not load course products:', productErr)
     }
   }
 
@@ -283,7 +311,24 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   const discountAmount = (payment.discount_amount_rappen || 0) / 100
   const voucherDiscountAmount = (payment.voucher_discount_rappen || 0) / 100
   const productsTotal = products.reduce((sum, p) => sum + p.totalCHF, 0)
-  const total = lesson + adminFee + productsTotal - discountAmount - voucherDiscountAmount
+  
+  // For courses: if lesson_price is 0 but there's a total_amount, use that as the course price
+  const coursePrice = course && lesson === 0 ? ((payment.total_amount_rappen || 0) / 100) : 0
+  const lessonOrCoursePrice = lesson > 0 ? lesson : coursePrice
+  
+  const total = lessonOrCoursePrice + adminFee + productsTotal - discountAmount - voucherDiscountAmount
+  
+  logger.debug('💰 Amount breakdown:', {
+    lesson,
+    coursePrice,
+    lessonOrCoursePrice,
+    adminFee,
+    productsTotal,
+    discountAmount,
+    voucherDiscountAmount,
+    total,
+    paymentTotal: (payment.total_amount_rappen || 0) / 100
+  })
   
   // Load credit information
   let creditInfo = undefined
@@ -374,7 +419,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     appointmentTitle,
     appointmentTimestamp,
     amounts: {
-      lesson,
+      lesson: lessonOrCoursePrice,
       adminFee,
       productsTotal,
       discount: discountAmount,
