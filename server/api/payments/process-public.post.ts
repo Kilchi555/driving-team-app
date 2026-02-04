@@ -171,12 +171,21 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Enforce max length (Wallee limit is typically 100-200 chars, be safe with 80)
-    const maxRefLength = 80 - 39 // Leave room for " [UUID]"
-    if (merchantRef.length > maxRefLength) {
-      merchantRef = merchantRef.substring(0, maxRefLength - 3) + '...'
+    // Enforce max length (Wallee limit is 100 chars for merchant reference)
+    // Account for the "payment-{UUID}|" prefix that will be added later (48 chars)
+    // So we need: paymentMerchantRef (48 + merchantRef) <= 100
+    // Therefore: merchantRef <= 100 - 48 = 52 chars
+    const maxMerchantRefLength = 52
+    if (merchantRef.length > maxMerchantRefLength) {
+      merchantRef = merchantRef.substring(0, maxMerchantRefLength - 3) + '...'
     }
     merchantRef += ` [${enrollmentId}]`
+    
+    // Make sure final merchantRef is still under 52 chars
+    if (merchantRef.length > maxMerchantRefLength) {
+      // If still too long, just use the enrollment ID
+      merchantRef = `Enrollment [${enrollmentId}]`
+    }
 
     logger.debug('📝 Merchant reference:', merchantRef)
 
