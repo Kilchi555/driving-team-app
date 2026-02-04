@@ -149,8 +149,67 @@ export default defineEventHandler(async (event) => {
     const lastName = customerName.split(' ').slice(1).join(' ') || customerName
     const course = enrollment.courses
     
-    // Build clean merchant reference: "FirstName LastName | CourseName | Location | Date"
-    let merchantRef = `${firstName} ${lastName}`
+    // ✅ STEP 0: Create Payment record FIRST - so we have the ID for merchantReference fallback
+    logger.debug('💾 Creating payment record in database FIRST...')
+    
+    // Get the actual user_id from the enrollment (enrollment has user_id from guest user creation)
+    const { data: enrollmentUser } = await supabase
+      .from('course_registrations')
+      .select('user_id')
+      .eq('id', enrollmentId)
+      .single()
+    
+    const actualUserId = enrollmentUser?.user_id || null
+    
+    // Build payment record - only include columns that exist in the table
+    // ✅ IMPORTANT: Only store primitive values in metadata to avoid circular references
+    const paymentInsertData: any = {
+      user_id: actualUserId,
+      appointment_id: null, // No appointment for course registrations
+      course_registration_id: enrollmentId, // Link to course registration
+      payment_method: 'wallee',
+      payment_status: 'pending',
+      total_amount_rappen: amount,
+      currency: currency,
+      description: `Course: ${metadata?.course_name || 'Unknown'}`,
+      // wallee_transaction_id will be set AFTER Wallee transaction is created
+      tenant_id: tenantId,
+      metadata: {
+        enrollment_id: enrollmentId,
+        course_id: courseId,
+        course_name: metadata?.course_name || null,
+        course_location: metadata?.course_location || null,
+        course_start_date: typeof enrollment.courses?.course_start_date === 'string' 
+          ? enrollment.courses.course_start_date 
+          : null, // Only store string date, not complex object
+        sari_faberid: metadata?.sari_faberid || null,
+        sari_birthdate: metadata?.sari_birthdate || null
+        // ❌ REMOVED: ...metadata (could contain complex objects)
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
+    const { data: paymentRecord, error: paymentCreateError } = await supabase
+      .from('payments')
+      .insert(paymentInsertData)
+      .select('id')
+      .single()
+
+    if (paymentCreateError || !paymentRecord) {
+      logger.error('❌ Could not create payment record:', paymentCreateError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to create payment record'
+      })
+    }
+    
+    logger.debug('✅ Payment record created:', paymentRecord.id)
+    
+    // Build clean merchant reference: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
+    // ✅ CRITICAL: Include payment ID as fallback for webhook search!
+    let merchantRef = `payment-${paymentRecord.id}`
+    merchantRef += ` | ${firstName} ${lastName}`
     if (course?.name) {
       merchantRef += ` | ${course.name.replace(/[^\x20-\x7E]/g, '')}`  // Remove non-ASCII (Umlaute, etc)
     }
@@ -173,13 +232,12 @@ export default defineEventHandler(async (event) => {
     }
     
     // Enforce max length (Wallee limit is 100 chars for merchant reference)
+    // ✅ Reserve space for "payment-{uuid} | " prefix (about 45 chars)
     const maxMerchantRefLength = 100
     if (merchantRef.length > maxMerchantRefLength) {
       merchantRef = merchantRef.substring(0, maxMerchantRefLength - 3) + '...'
     }
     
-    logger.debug('📝 Merchant reference:', merchantRef)
-
     logger.debug('📝 Merchant reference:', merchantRef)
 
     // 8. Create Wallee transaction
@@ -368,7 +426,9 @@ export default defineEventHandler(async (event) => {
         paymentId: paymentRecord.id,
         transactionId: transactionId.toString()
       })
-      // Continue anyway - webhook will use merchantReference fallback (payment-{id})
+      // IMPORTANT: Don't throw - webhook will use merchantReference fallback (payment-{paymentId})
+      // The merchantReference now includes the payment ID, so the webhook can find it
+      logger.info('✅ Fallback: Webhook will use merchantReference pattern to find this payment')
     }
 
     // ✅ STEP 5: Get payment page URL
