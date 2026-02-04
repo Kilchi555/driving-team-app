@@ -813,23 +813,39 @@ export default defineEventHandler(async (event) => {
     
     // ✅ SECURITY: Verify that all payments belong to the authenticated user
     const unauthorizedPayments = payments.filter(p => p.user_id !== user.id)
-    if (unauthorizedPayments.length > 0) {
+    
+    // Check if user is admin (can access any payment)
+    let isAdmin = false
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      
+      isAdmin = userData?.role === 'admin' || userData?.role === 'super_admin'
+      logger.debug('👤 User role check:', { userId: user.id, role: userData?.role, isAdmin })
+    } catch (roleErr) {
+      logger.warn('⚠️ Could not check user role:', roleErr)
+    }
+    
+    // Filter: Only include payments that belong to user OR user is admin
+    const authorizedPayments = payments.filter(p => p.user_id === user.id || isAdmin)
+    
+    if (unauthorizedPayments.length > 0 && !isAdmin) {
       logger.warn('⚠️ Unauthorized payment access attempt - filtering to authorized payments:', {
         userId: user.id,
         requestedPaymentCount: payments.length,
         unauthorizedPaymentCount: unauthorizedPayments.length,
-        authorizedPaymentCount: payments.filter(p => p.user_id === user.id).length
+        authorizedPaymentCount: authorizedPayments.length
       })
-      // Filter to only authorized payments instead of rejecting all
-      // This is safer - generate receipts only for payments user owns
     }
     
-    const authorizedPayments = payments.filter(p => p.user_id === user.id)
     if (authorizedPayments.length === 0) {
       logger.warn('❌ No authorized payments found for user:', user.id)
       throw new Error('Unauthorized: You do not have access to any of these payments')
     }
-    logger.debug('✅ Authorized payments for user:', { userId: user.id, count: authorizedPayments.length })
+    logger.debug('✅ Authorized payments for user:', { userId: user.id, count: authorizedPayments.length, isAdmin })
 
     // Load tenant branding (once for all payments)
     const firstPayment = authorizedPayments[0]
