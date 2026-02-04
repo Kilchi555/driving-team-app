@@ -67,25 +67,20 @@ const formatStartTime = (value?: string | Date | null): string | undefined => {
 }
 
 export const buildMerchantReference = (details: MerchantReferenceDetails = {}): string => {
-  // ✅ NEW FORMAT: payment-{id}|CUSTOMERNAME|DATE-TIME|DURATION
-  // Example: payment-2431e95c-4fee-407b-a604-f2c55b08bc7e|MAX-MUSTERMANN|20260104-0522|45MIN
-  // The payment ID at the start allows the webhook to find the payment even if wallee_transaction_id is not set
+  // ✅ FORMAT: CUSTOMERNAME|DATE-TIME|DURATION
+  // Example: MAX-MUSTERMANN|20260104-0522|45MIN
+  // Clean, simple format for Wallee merchant reference
   
   const segments: string[] = []
 
-  // 1. ✅ Payment ID (CRITICAL for webhook fallback!)
-  if (details.paymentId) {
-    segments.push(`payment-${details.paymentId}`)
-  }
-
-  // 2. Customer Name (staffName, customerName, or fallback to appointment ID)
+  // 1. Customer Name (staffName, customerName, or fallback to appointment ID)
   const customerName = details.staffName || details.customerName
   const nameSegment = customerName ? sanitize(customerName) : shortenId(details.appointmentId)
   if (nameSegment) {
     segments.push(nameSegment)
   }
 
-  // 3. Date and Time (e.g., 20260104-0522)
+  // 2. Date and Time (e.g., 20260104-0522)
   // Support both startTime and legacy date/timeSlot
   let dateTimeSegment: string | undefined
   if (details.startTime) {
@@ -97,7 +92,7 @@ export const buildMerchantReference = (details: MerchantReferenceDetails = {}): 
     segments.push(dateTimeSegment)
   }
 
-  // 4. Duration in minutes (e.g., 45MIN)
+  // 3. Duration in minutes (e.g., 45MIN)
   // Support both durationMinutes and legacy duration string
   if (details.durationMinutes && details.durationMinutes > 0) {
     segments.push(`${Math.round(details.durationMinutes)}MIN`)
@@ -105,7 +100,7 @@ export const buildMerchantReference = (details: MerchantReferenceDetails = {}): 
     segments.push(details.duration)
   }
 
-  // 5. Fallback: Add unique timestamp if no segments yet
+  // 4. Fallback: Add unique timestamp if no segments yet
   if (segments.length === 0) {
     const timestamp = Date.now().toString(36).toUpperCase()
     segments.push(`REF-${timestamp}`)
