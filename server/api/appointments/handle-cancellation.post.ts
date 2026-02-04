@@ -125,24 +125,29 @@ export default defineEventHandler(async (event) => {
       }
     }
     
+    // ✅ Get voucher discount (refundable) from payment
+    const voucherDiscountAmount = payment?.voucher_discount_rappen || 0
+    
     if (shouldCreditHours && chargePercentage === 0) {
-      // Staff cancellation (no charge) - refund original prices + refundable products
+      // Staff cancellation (no charge) - refund original prices + refundable products + voucher discount
       const originalLesson = originalLessonPrice || (lessonPriceRappen || 0)
       const originalAdmin = originalAdminFee || (adminFeeRappen || 0)
-      refundableAmount = originalLesson + originalAdmin + refundableProductsAmount
-      logger.debug('💚 Staff cancellation - refunding full original prices + refundable products:', {
+      refundableAmount = originalLesson + originalAdmin + refundableProductsAmount + voucherDiscountAmount
+      logger.debug('💚 Staff cancellation - refunding full original prices + refundable products + voucher discount:', {
         originalLesson: (originalLesson / 100).toFixed(2),
         originalAdmin: (originalAdmin / 100).toFixed(2),
         refundableProducts: (refundableProductsAmount / 100).toFixed(2),
+        voucherDiscount: (voucherDiscountAmount / 100).toFixed(2),
         total: (refundableAmount / 100).toFixed(2)
       })
     } else {
-      // Regular cancellation - use the passed amounts + refundable products
-      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0) + refundableProductsAmount
+      // Regular cancellation - use the passed amounts + refundable products + voucher discount
+      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0) + refundableProductsAmount + voucherDiscountAmount
       logger.debug('💰 Regular cancellation refund calculation:', {
         lessonPrice: ((lessonPriceRappen || 0) / 100).toFixed(2),
         adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
         refundableProducts: (refundableProductsAmount / 100).toFixed(2),
+        voucherDiscount: (voucherDiscountAmount / 100).toFixed(2),
         totalRefund: (refundableAmount / 100).toFixed(2),
         chargePercentage
       })
