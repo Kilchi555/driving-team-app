@@ -42,6 +42,8 @@ interface AppointmentInfo {
   cancellationDate: string
   cancellationReason: string
   isCharged: boolean
+  isCourse?: boolean
+  courseLocation?: string
 }
 
 interface AmountBreakdown {
@@ -109,9 +111,44 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
 
 async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
   let appointment: any = null
+  let course: any = null
   let user: any = null
   let products: ProductInfo[] = []
   let eventTypeName = ''
+  
+  // Try to load course if it's a course registration
+  let courseData: any = null
+  if (payment.course_registration_id || (payment.metadata && typeof payment.metadata === 'string' && JSON.parse(payment.metadata).course_id)) {
+    try {
+      const courseRegId = payment.course_registration_id || (payment.metadata ? JSON.parse(payment.metadata).enrollment_id : null)
+      if (courseRegId) {
+        const { data: courseRegData } = await supabase
+          .from('course_registrations')
+          .select(`
+            id,
+            course_id,
+            status,
+            courses (
+              id,
+              name,
+              description,
+              course_start_date,
+              price_rappen
+            )
+          `)
+          .eq('id', courseRegId)
+          .maybeSingle()
+        
+        if (courseRegData?.courses) {
+          courseData = courseRegData
+          course = courseRegData.courses
+          logger.debug('✅ Course loaded for payment:', course?.name)
+        }
+      }
+    } catch (courseErr) {
+      logger.warn('⚠️ Could not load course:', courseErr)
+    }
+  }
 
   if (payment.appointment_id) {
     const { data: appointmentData } = await supabase
@@ -290,15 +327,16 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     }
   }
 
-  const appointmentDateObj = appointment?.start_time ? new Date(appointment.start_time) : null
+  const appointmentDateObj = appointment?.start_time ? new Date(appointment.start_time) : (course?.course_start_date ? new Date(course.course_start_date) : null)
   const appointmentDate = appointmentDateObj ? appointmentDateObj.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' }) : ''
   const appointmentTime = appointmentDateObj ? appointmentDateObj.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }) : ''
   const appointmentDuration = appointment?.duration_minutes || 0
-  const appointmentTitle = appointment?.title || payment.description || translateFn('eventType.lesson')
+  const appointmentTitle = appointment?.title || course?.name || payment.description || translateFn('eventType.lesson')
   const appointmentTimestamp = appointmentDateObj ? appointmentDateObj.getTime() : null
 
-  const eventTypeKey = appointment?.event_type_code || appointment?.type || 'lesson'
-  const eventTypeTranslated = translateFn(`eventType.${eventTypeKey}`)
+  const isCourse = !!course && !appointment
+  const eventTypeKey = appointment?.event_type_code || appointment?.type || (isCourse ? 'course' : 'lesson')
+  const eventTypeTranslated = isCourse ? (course?.name || translateFn('eventType.course')) : translateFn(`eventType.${eventTypeKey}`)
   const statusKey = appointment?.status || payment.payment_status || 'pending'
   const statusTranslated = translateFn(`status.${statusKey}`)
   const isCancelled = appointment && (appointment.status === 'cancelled' || appointment.deleted_at)
@@ -320,7 +358,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
-      eventTypeCode: eventTypeName || appointment?.event_type_code || '',
+      eventTypeCode: eventTypeName || appointment?.event_type_code || course?.name || '',
       staffFirstName: appointment?.staff?.first_name || '',
       categoryCode: appointment?.type || '',
       date: appointmentDate,
@@ -329,7 +367,9 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       isCancelled: Boolean(isCancelled),
       cancellationDate,
       cancellationReason,
-      isCharged
+      isCharged,
+      isCourse,
+      courseLocation: isCourse && payment.metadata ? (typeof payment.metadata === 'string' ? JSON.parse(payment.metadata).course_location : payment.metadata.course_location) : undefined
     },
     appointmentTitle,
     appointmentTimestamp,
@@ -385,15 +425,16 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
       ${renderHeader(customer, 'receipt.date', paymentDate, tenant, assets, translateFn)}
       
       <div class="section">
-        <div class="section-title">${translateFn('receipt.serviceDetails')}</div>
+        <div class="section-title">${appointmentInfo.isCourse ? translateFn('receipt.courseDetails') : translateFn('receipt.serviceDetails')}</div>
         <div class="row">
           <div class="label">
-            ${appointmentInfo.eventTypeLabel} - ${appointmentInfo.date} ${appointmentInfo.time} - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}
+            ${appointmentInfo.eventTypeLabel}${appointmentInfo.date ? ` - ${appointmentInfo.date}` : ''}${appointmentInfo.time ? ` ${appointmentInfo.time}` : ''}${appointmentInfo.duration ? ` - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}` : ''}
           </div>
           <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
         </div>
-        ${appointmentInfo.staffFirstName ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
-        ${appointmentInfo.isCancelled ? `
+        ${appointmentInfo.courseLocation ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Ort</div><div class="value">${appointmentInfo.courseLocation}</div></div>` : ''}
+        ${appointmentInfo.staffFirstName && !appointmentInfo.isCourse ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
+        ${appointmentInfo.isCancelled && !appointmentInfo.isCourse ? `
           <div class="row" style="background:#fee2e2; padding:8px 12px; margin:8px 0; border-radius:6px; border-left:3px solid #dc2626;">
             <div style="font-size:12px; color:#991b1b;">
               <div style="font-weight:600;">${translateFn('receipt.cancellation')}</div>
@@ -758,6 +799,7 @@ export default defineEventHandler(async (event) => {
         'receipt.customer': 'Kunde',
         'receipt.date': 'Datum',
         'receipt.serviceDetails': 'Leistungsdetails',
+        'receipt.courseDetails': 'Kursdetails',
         'receipt.costBreakdown': 'Kostenaufstellung',
         'receipt.baseAmount': 'Basisbetrag',
         'receipt.adminFee': 'Administrationsgebühr',
@@ -797,6 +839,7 @@ export default defineEventHandler(async (event) => {
         'receipt.transactionType': 'Typ',
         'receipt.amount': 'Betrag',
         'eventType.lesson': 'Fahrlektion',
+        'eventType.course': 'Kurs',
         'status.pending': 'Ausstehend',
         'status.authorized': 'Reserviert',
         'status.scheduled': 'Geplant',
