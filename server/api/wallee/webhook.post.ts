@@ -139,17 +139,18 @@ export default defineEventHandler(async (event) => {
           logger.debug('📋 merchantReference from Wallee:', merchantRef)
           
           // Try different patterns:
-          // 1. payment-{uuid}
+          // 1. payment-{uuid} (NEW: Course enrollment with payment ID)
           // 2. appointment-{uuid}-{timestamp}
           // 3. Direct payment ID in merchantRef
           
           let paymentId: string | null = null
           
-          // Pattern 1: payment-{uuid}
-          const paymentMatch = merchantRef.match(/payment-([a-f0-9-]{36})/)
+          // Pattern 1: payment-{uuid} - NEW FORMAT from course enrollments
+          // Format: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
+          const paymentMatch = merchantRef.match(/^payment-([a-f0-9-]{36})/)
           if (paymentMatch) {
             paymentId = paymentMatch[1]
-            logger.debug('✅ Found payment ID from merchantRef (payment-uuid):', paymentId)
+            logger.debug('✅ Found payment ID from merchantRef (payment-uuid format):', paymentId)
           }
           
           // Pattern 2: Just a UUID (36 chars)
