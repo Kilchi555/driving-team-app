@@ -179,13 +179,10 @@ export default defineEventHandler(async (event) => {
     if (merchantRef.length > maxMerchantRefLength) {
       merchantRef = merchantRef.substring(0, maxMerchantRefLength - 3) + '...'
     }
-    merchantRef += ` [${enrollmentId}]`
+    // ✅ REMOVED: enrollment ID from merchant ref (redundant with payment ID)
+    // This saves space for more meaningful info like course name and location
     
-    // Make sure final merchantRef is still under 52 chars
-    if (merchantRef.length > maxMerchantRefLength) {
-      // If still too long, just use the enrollment ID
-      merchantRef = `Enrollment [${enrollmentId}]`
-    }
+    logger.debug('📝 Merchant reference (before payment ID):', merchantRef)
 
     logger.debug('📝 Merchant reference:', merchantRef)
 
