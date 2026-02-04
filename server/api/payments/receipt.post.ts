@@ -814,16 +814,25 @@ export default defineEventHandler(async (event) => {
     // ✅ SECURITY: Verify that all payments belong to the authenticated user
     const unauthorizedPayments = payments.filter(p => p.user_id !== user.id)
     if (unauthorizedPayments.length > 0) {
-      logger.warn('⚠️ Unauthorized payment access attempt:', {
+      logger.warn('⚠️ Unauthorized payment access attempt - filtering to authorized payments:', {
         userId: user.id,
-        unauthorizedPaymentIds: unauthorizedPayments.map(p => p.id)
+        requestedPaymentCount: payments.length,
+        unauthorizedPaymentCount: unauthorizedPayments.length,
+        authorizedPaymentCount: payments.filter(p => p.user_id === user.id).length
       })
-      throw new Error('Unauthorized: You do not have access to these payments')
+      // Filter to only authorized payments instead of rejecting all
+      // This is safer - generate receipts only for payments user owns
     }
-    logger.debug('✅ All payments authorized for user:', user.id)
+    
+    const authorizedPayments = payments.filter(p => p.user_id === user.id)
+    if (authorizedPayments.length === 0) {
+      logger.warn('❌ No authorized payments found for user:', user.id)
+      throw new Error('Unauthorized: You do not have access to any of these payments')
+    }
+    logger.debug('✅ Authorized payments for user:', { userId: user.id, count: authorizedPayments.length })
 
     // Load tenant branding (once for all payments)
-    const firstPayment = payments[0]
+    const firstPayment = authorizedPayments[0]
     const tenantId = firstPayment.tenant_id || firstPayment.metadata?.tenant_id || null
     let tenant: any = null
     if (tenantId) {
@@ -909,7 +918,7 @@ export default defineEventHandler(async (event) => {
 
     const tenantAssets = await loadTenantAssets(tenant, supabase)
     const contexts = await Promise.all(
-      payments.map(payment => loadPaymentContext(payment, supabase, translateFn))
+      authorizedPayments.map(payment => loadPaymentContext(payment, supabase, translateFn))
     )
 
     const bodyHtml = contexts.length === 1
@@ -965,8 +974,8 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       // Upload PDF to Supabase Storage
-      const filename = payments.length === 1 
-        ? `Quittung_${payments[0].id}_${new Date().toISOString().split('T')[0]}.pdf`
+      const filename = authorizedPayments.length === 1 
+        ? `Quittung_${authorizedPayments[0].id}_${new Date().toISOString().split('T')[0]}.pdf`
         : `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
       
       // Don't include 'receipts/' in path since bucket is already named 'receipts'
