@@ -52,6 +52,7 @@ const STATUS_PRIORITY: Record<string, number> = {
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
+  const supabase = getSupabaseAdmin()
   
   // Auto-detect environment based on request host
   const host = event.headers['host'] || ''
@@ -59,12 +60,18 @@ export default defineEventHandler(async (event) => {
   const isPreview = host.includes('preview.simy.ch')
   
   logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview})`)
+  
+  let webhookLogId: string | undefined
+  let transactionId: string | undefined
+  
   try {
     // ============ LAYER 0: OPTIONAL SIGNATURE CHECK ============
     // Note: Real security comes from Wallee API verification in Layer 3
     // The signature header is optional - if present, we validate it
     const body = await readBody(event) as WalleeWebhookPayload
     const signature = event.headers['x-wallee-signature'] as string
+    
+    transactionId = body.entityId?.toString()
     
     if (signature) {
       const expectedSecret = process.env.WALLEE_WEBHOOK_SECRET || 'wh_dT8kP2mX9qR4vL7nJ3bY6cZ1fH5'
@@ -96,6 +103,29 @@ export default defineEventHandler(async (event) => {
       spaceId,
       timestamp: body.timestamp
     })
+    
+    // 🔍 Log webhook receipt
+    try {
+      const { data: logRecord } = await supabase
+        .from('webhook_logs')
+        .insert({
+          transaction_id: transactionId,
+          entity_id: body.entityId,
+          space_id: body.spaceId,
+          wallee_state: walleeState,
+          listener_entity_id: body.listenerEntityId,
+          listener_entity_technical_name: body.listenerEntityTechnicalName,
+          timestamp: body.timestamp,
+          raw_payload: body
+        })
+        .select('id')
+        .single()
+      
+      webhookLogId = logRecord?.id
+      logger.debug('✅ Webhook logged with ID:', webhookLogId)
+    } catch (logErr: any) {
+      logger.warn('⚠️ Could not log webhook:', logErr.message)
+    }
     
     // ============ LAYER 2: MAP STATUS ============
     let paymentStatus = STATUS_MAPPING[walleeState] || 'pending'
@@ -253,6 +283,21 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.info('✅ Found payments:', payments.length)
+    
+    // 🔍 Update webhook log with payment info
+    if (webhookLogId && payments.length > 0) {
+      try {
+        await supabase
+          .from('webhook_logs')
+          .update({
+            payment_id: payments[0].id,
+            payment_status_before: payments[0].payment_status
+          })
+          .eq('id', webhookLogId)
+      } catch (logErr: any) {
+        logger.warn('⚠️ Could not update webhook log:', logErr.message)
+      }
+    }
     
     // ============ LAYER 6: PREVENT STATUS DOWNGRADES ============
     const newPriority = STATUS_PRIORITY[paymentStatus] ?? -1
@@ -436,6 +481,22 @@ export default defineEventHandler(async (event) => {
     const duration = Date.now() - startTime
     logger.info(`🎉 Webhook processed in ${duration}ms`)
     
+    // 🔍 Update webhook log with success
+    if (webhookLogId && paymentsToUpdate.length > 0) {
+      try {
+        await supabase
+          .from('webhook_logs')
+          .update({
+            payment_status_after: paymentStatus,
+            success: true,
+            processing_duration_ms: duration
+          })
+          .eq('id', webhookLogId)
+      } catch (logErr: any) {
+        logger.warn('⚠️ Could not finalize webhook log:', logErr.message)
+      }
+    }
+    
     return {
       success: true,
       message: 'Webhook processed successfully',
@@ -447,6 +508,36 @@ export default defineEventHandler(async (event) => {
     
   } catch (error: any) {
     logger.error('❌ Webhook processing error:', error)
+    
+    // 🔍 Log error to webhook_logs
+    if (webhookLogId) {
+      try {
+        await supabase
+          .from('webhook_logs')
+          .update({
+            success: false,
+            error_message: error.message || error.toString(),
+            processing_duration_ms: Date.now() - startTime
+          })
+          .eq('id', webhookLogId)
+      } catch (logErr: any) {
+        logger.warn('⚠️ Could not log webhook error:', logErr.message)
+      }
+    } else if (transactionId) {
+      // Create error log if we don't have a log ID yet
+      try {
+        await supabase
+          .from('webhook_logs')
+          .insert({
+            transaction_id: transactionId,
+            success: false,
+            error_message: error.message || error.toString(),
+            processing_duration_ms: Date.now() - startTime
+          })
+      } catch (logErr: any) {
+        logger.warn('⚠️ Could not create webhook error log:', logErr.message)
+      }
+    }
     
     // Return 200 to prevent Wallee from retrying infinitely
     return {
