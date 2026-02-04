@@ -24,7 +24,7 @@
         <button
           v-for="(item, index) in reglementItems"
           :key="index"
-          @click="navigateToReglement(item.type)"
+          @click="openReglementModal(item.type)"
           class="w-full bg-white rounded-xl shadow-lg hover:shadow-xl transition-all p-6 text-left border border-transparent hover:border-blue-300"
         >
           <div class="flex items-center justify-between">
@@ -44,17 +44,28 @@
         </button>
       </div>
     </div>
+
+    <!-- Reglement Modal -->
+    <ReglementModal
+      :is-open="showReglementModal"
+      :type="selectedReglementType"
+      @close="closeReglementModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import ReglementModal from '~/components/customer/ReglementModal.vue'
 
 // Meta
 definePageMeta({
   layout: 'customer',
   middleware: 'auth'
 })
+
+const showReglementModal = ref(false)
+const selectedReglementType = ref<string>('')
 
 // Icons as simple SVG components
 const LockIcon = 'svg'
@@ -101,8 +112,14 @@ const reglementItems = ref([
   }
 ])
 
-const navigateToReglement = async (type: string) => {
-  await navigateTo(`/customer/reglemente/${type}`)
+const openReglementModal = (type: string) => {
+  selectedReglementType.value = type
+  showReglementModal.value = true
+}
+
+const closeReglementModal = () => {
+  showReglementModal.value = false
+  selectedReglementType.value = ''
 }
 </script>
 
