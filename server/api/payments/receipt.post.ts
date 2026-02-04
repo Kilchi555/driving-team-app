@@ -829,6 +829,27 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Could not check user role:', roleErr)
     }
     
+    // For payments without user_id, check if user owns the course_registration
+    for (const payment of unauthorizedPayments) {
+      if (payment.user_id === null && payment.course_registration_id) {
+        try {
+          const { data: courseReg } = await supabase
+            .from('course_registrations')
+            .select('user_id')
+            .eq('id', payment.course_registration_id)
+            .maybeSingle()
+          
+          if (courseReg?.user_id === user.id) {
+            logger.debug('✅ User owns this course registration:', payment.course_registration_id)
+            // Remove from unauthorized list since user actually owns it
+            unauthorizedPayments.splice(unauthorizedPayments.indexOf(payment), 1)
+          }
+        } catch (err) {
+          logger.warn('⚠️ Could not check course registration ownership:', err)
+        }
+      }
+    }
+    
     // Filter: Only include payments that belong to user OR user is admin
     const authorizedPayments = payments.filter(p => p.user_id === user.id || isAdmin)
     
