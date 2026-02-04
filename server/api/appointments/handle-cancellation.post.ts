@@ -85,24 +85,64 @@ export default defineEventHandler(async (event) => {
 
     // 2. Determine refund amount
     // ✅ NEW: If shouldCreditHours is true, use original prices for full refund
+    // ✅ IMPORTANT: Exclude non-refundable products from refund!
     let refundableAmount: number
+    let refundableProductsAmount = 0
+    
+    // Check if payment has products and if any are non-refundable
+    if (payment && payment.metadata?.products && Array.isArray(payment.metadata.products)) {
+      logger.debug('🛍️ Checking products for refundability:', {
+        productsCount: payment.metadata.products.length
+      })
+      
+      // Load product details to check is_refundable flag
+      const productIds = payment.metadata.products.map((p: any) => p.id)
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, is_refundable, price_rappen')
+        .in('id', productIds)
+      
+      if (!productsError && products) {
+        // Calculate refundable products only
+        for (const product of products) {
+          const productMetadata = payment.metadata.products.find((p: any) => p.id === product.id)
+          if (productMetadata) {
+            if (product.is_refundable === false) {
+              logger.debug('❌ Non-refundable product:', {
+                id: product.id,
+                price: (product.price_rappen / 100).toFixed(2)
+              })
+              // Don't add to refund
+            } else {
+              logger.debug('✅ Refundable product:', {
+                id: product.id,
+                price: (productMetadata.price_rappen / 100).toFixed(2)
+              })
+              refundableProductsAmount += (productMetadata.price_rappen || 0)
+            }
+          }
+        }
+      }
+    }
     
     if (shouldCreditHours && chargePercentage === 0) {
-      // Staff cancellation (no charge) - refund original prices
+      // Staff cancellation (no charge) - refund original prices + refundable products
       const originalLesson = originalLessonPrice || (lessonPriceRappen || 0)
       const originalAdmin = originalAdminFee || (adminFeeRappen || 0)
-      refundableAmount = originalLesson + originalAdmin
-      logger.debug('💚 Staff cancellation - refunding full original prices:', {
+      refundableAmount = originalLesson + originalAdmin + refundableProductsAmount
+      logger.debug('💚 Staff cancellation - refunding full original prices + refundable products:', {
         originalLesson: (originalLesson / 100).toFixed(2),
         originalAdmin: (originalAdmin / 100).toFixed(2),
+        refundableProducts: (refundableProductsAmount / 100).toFixed(2),
         total: (refundableAmount / 100).toFixed(2)
       })
     } else {
-      // Regular cancellation - use the passed amounts
-      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0)
+      // Regular cancellation - use the passed amounts + refundable products
+      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0) + refundableProductsAmount
       logger.debug('💰 Regular cancellation refund calculation:', {
         lessonPrice: ((lessonPriceRappen || 0) / 100).toFixed(2),
         adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
+        refundableProducts: (refundableProductsAmount / 100).toFixed(2),
         totalRefund: (refundableAmount / 100).toFixed(2),
         chargePercentage
       })
