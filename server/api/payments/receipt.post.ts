@@ -49,6 +49,7 @@ interface AmountBreakdown {
   adminFee: number
   productsTotal: number
   discount: number
+  voucherDiscount: number
   total: number
 }
 
@@ -71,6 +72,14 @@ interface PaymentContext {
       date: string
       description: string
     }>
+  }
+  refundInfo?: {
+    totalRefunded: number
+    refundedComponents: Array<{
+      label: string
+      amount: number
+    }>
+    refundDate: string
   }
 }
 
@@ -235,8 +244,9 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   const lesson = (payment.lesson_price_rappen || 0) / 100
   const adminFee = (payment.admin_fee_rappen || 0) / 100
   const discountAmount = (payment.discount_amount_rappen || 0) / 100
+  const voucherDiscountAmount = (payment.voucher_discount_rappen || 0) / 100
   const productsTotal = products.reduce((sum, p) => sum + p.totalCHF, 0)
-  const total = lesson + adminFee + productsTotal - discountAmount
+  const total = lesson + adminFee + productsTotal - discountAmount - voucherDiscountAmount
   
   // Load credit information
   let creditInfo = undefined
@@ -328,6 +338,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       adminFee,
       productsTotal,
       discount: discountAmount,
+      voucherDiscount: voucherDiscountAmount,
       total
     },
     creditInfo
@@ -374,29 +385,54 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
       ${renderHeader(customer, 'receipt.date', paymentDate, tenant, assets, translateFn)}
       
       <div class="section">
-        <div class="section-title">${translateFn('receipt.costBreakdown')}</div>
+        <div class="section-title">${translateFn('receipt.serviceDetails')}</div>
         <div class="row">
           <div class="label">
             ${appointmentInfo.eventTypeLabel} - ${appointmentInfo.date} ${appointmentInfo.time} - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}
-            ${appointmentInfo.isCancelled ? `<br/><span style="font-size:12px; color:#6b7280;">${translateFn('receipt.cancelled')}: ${appointmentInfo.cancellationDate} | ${translateFn('receipt.reason')}: ${appointmentInfo.cancellationReason} | ${translateFn('receipt.charged')}: ${appointmentInfo.isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</span>` : ''}
           </div>
           <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
         </div>
-        ${amounts.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${amounts.adminFee.toFixed(2)}</div></div>` : ''}
-        ${products && products.length > 0 ? products.map(p => `
-          <div class="row">
-            <div class="label">${p.name} × ${p.quantity}</div>
-            <div class="value">CHF ${p.totalCHF.toFixed(2)}</div>
+        ${appointmentInfo.staffFirstName ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
+        ${appointmentInfo.isCancelled ? `
+          <div class="row" style="background:#fee2e2; padding:8px 12px; margin:8px 0; border-radius:6px; border-left:3px solid #dc2626;">
+            <div style="font-size:12px; color:#991b1b;">
+              <div style="font-weight:600;">${translateFn('receipt.cancellation')}</div>
+              <div>${translateFn('receipt.date')}: ${appointmentInfo.cancellationDate}</div>
+              <div>${translateFn('receipt.reason')}: ${appointmentInfo.cancellationReason}</div>
+              <div>${translateFn('receipt.charged')}: ${appointmentInfo.isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</div>
+            </div>
           </div>
-        `).join('') : ''}
+        ` : ''}
+      </div>
+      
+      <div class="section">
+        <div class="section-title">${translateFn('receipt.costBreakdown')}</div>
+        ${amounts.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${amounts.adminFee.toFixed(2)}</div></div>` : ''}
+        ${products && products.length > 0 ? `
+          <div style="margin:12px 0; padding:12px; background:#f9fafb; border-radius:6px;">
+            <div class="label" style="margin-bottom:8px; font-weight:600;">${translateFn('receipt.products')}</div>
+            ${products.map(p => `
+              <div class="row" style="font-size:13px; margin:4px 0;">
+                <div class="label">${p.name}${p.description ? ` (${p.description})` : ''}</div>
+                <div class="value">CHF ${p.totalCHF.toFixed(2)}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
         ${amounts.discount > 0 ? `
-          <div class="row" style="color:#059669;">
-            <div class="label">${translateFn('receipt.discount')}</div>
+          <div class="row" style="color:#059669; font-weight:600;">
+            <div class="label">${translateFn('receipt.staffDiscount')}</div>
             <div class="value">- CHF ${amounts.discount.toFixed(2)}</div>
           </div>
         ` : ''}
+        ${amounts.voucherDiscount > 0 ? `
+          <div class="row" style="color:#059669; font-weight:600;">
+            <div class="label">${translateFn('receipt.voucherDiscount')}</div>
+            <div class="value">- CHF ${amounts.voucherDiscount.toFixed(2)}</div>
+          </div>
+        ` : ''}
         ${creditInfo && creditInfo.creditUsed > 0 ? `
-          <div class="row" style="color:#059669;">
+          <div class="row" style="color:#059669; font-weight:600;">
             <div class="label">${translateFn('receipt.creditUsed')}</div>
             <div class="value">- CHF ${creditInfo.creditUsed.toFixed(2)}</div>
           </div>
@@ -471,6 +507,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
       acc.adminFee += ctx.amounts.adminFee
       acc.products += ctx.amounts.productsTotal
       acc.discount += ctx.amounts.discount
+      acc.voucherDiscount += ctx.amounts.voucherDiscount
       acc.total += ctx.amounts.total
       // Sum up all credit used across all payments
       if (ctx.creditInfo?.creditUsed) {
@@ -478,7 +515,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
       }
       return acc
     },
-    { lesson: 0, adminFee: 0, products: 0, discount: 0, total: 0, creditUsed: 0 }
+    { lesson: 0, adminFee: 0, products: 0, discount: 0, voucherDiscount: 0, total: 0, creditUsed: 0 }
   )
 
   const lessonsTable = sorted
@@ -495,7 +532,10 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         meta.push(`${translateFn('receipt.products')}: ${productList} – CHF ${ctx.amounts.productsTotal.toFixed(2)}`)
       }
       if (ctx.amounts.discount > 0) {
-        meta.push(`${translateFn('receipt.discount')}: - CHF ${ctx.amounts.discount.toFixed(2)}`)
+        meta.push(`${translateFn('receipt.staffDiscount')}: - CHF ${ctx.amounts.discount.toFixed(2)}`)
+      }
+      if (ctx.amounts.voucherDiscount > 0) {
+        meta.push(`${translateFn('receipt.voucherDiscount')}: - CHF ${ctx.amounts.voucherDiscount.toFixed(2)}`)
       }
       if (ctx.creditInfo?.creditUsed && ctx.creditInfo.creditUsed > 0) {
         meta.push(`${translateFn('receipt.creditUsed')}: - CHF ${ctx.creditInfo.creditUsed.toFixed(2)}`)
@@ -564,7 +604,8 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
         <div class="row"><div class="label">${translateFn('receipt.totalLessons')}</div><div class="value">CHF ${summary.lesson.toFixed(2)}</div></div>
         ${summary.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalAdminFees')}</div><div class="value">CHF ${summary.adminFee.toFixed(2)}</div></div>` : ''}
         ${summary.products > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalProducts')}</div><div class="value">CHF ${summary.products.toFixed(2)}</div></div>` : ''}
-        ${summary.discount > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalDiscounts')}</div><div class="value">- CHF ${summary.discount.toFixed(2)}</div></div>` : ''}
+        ${summary.discount > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalStaffDiscounts')}</div><div class="value">- CHF ${summary.discount.toFixed(2)}</div></div>` : ''}
+        ${summary.voucherDiscount > 0 ? `<div class="row"><div class="label">${translateFn('receipt.totalVoucherDiscounts')}</div><div class="value">- CHF ${summary.voucherDiscount.toFixed(2)}</div></div>` : ''}
         ${summary.creditUsed > 0 ? `<div class="row" style="color:#059669;"><div class="label">${translateFn('receipt.totalCreditUsed')}</div><div class="value">- CHF ${summary.creditUsed.toFixed(2)}</div></div>` : ''}
         <div class="row" style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb;">
           <div class="label">${translateFn('receipt.totalAmount')}</div>
@@ -716,14 +757,18 @@ export default defineEventHandler(async (event) => {
         'receipt.title': 'Quittung',
         'receipt.customer': 'Kunde',
         'receipt.date': 'Datum',
+        'receipt.serviceDetails': 'Leistungsdetails',
         'receipt.costBreakdown': 'Kostenaufstellung',
         'receipt.baseAmount': 'Basisbetrag',
         'receipt.adminFee': 'Administrationsgebühr',
         'receipt.discount': 'Rabatt',
+        'receipt.staffDiscount': 'Personalrabatt (nicht erstattet)',
+        'receipt.voucherDiscount': 'Gutschein-Rabatt (erstattbar)',
         'receipt.creditUsed': 'Verwendetes Guthaben',
         'receipt.totalAmount': 'Gesamtbetrag',
         'receipt.minutes': 'Minuten',
         'receipt.products': 'Produkte',
+        'receipt.cancellation': 'Stornierung',
         'receipt.cancelled': 'Storniert',
         'receipt.reason': 'Grund',
         'receipt.charged': 'Berechnet',
@@ -738,6 +783,8 @@ export default defineEventHandler(async (event) => {
         'receipt.totalAdminFees': 'Total Administrationsgebühren',
         'receipt.totalProducts': 'Total Produkte',
         'receipt.totalDiscounts': 'Total Rabatte',
+        'receipt.totalStaffDiscounts': 'Total Personalrabatte',
+        'receipt.totalVoucherDiscounts': 'Total Gutschein-Rabatte',
         'receipt.totalCreditUsed': 'Total Verwendetes Guthaben',
         'receipt.generatedOn': 'Erstellt am',
         'receipt.table.header.service': 'Leistung',
