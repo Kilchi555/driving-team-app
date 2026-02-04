@@ -192,6 +192,7 @@ export default defineEventHandler(async (event) => {
               admin_fee_rappen: adminFeeRappen || 0,
               products_price_rappen: productsPriceRappen || 0,
               discount_amount_rappen: discountAmountRappen || 0,
+              voucher_discount_rappen: 0, // Will be set if discount is from voucher
               total_amount_rappen: remainingAmountRappen,
               credit_used_rappen: creditUsedRappen || 0,
               updated_at: new Date().toISOString()
@@ -298,6 +299,7 @@ export default defineEventHandler(async (event) => {
             admin_fee_rappen: adminFeeRappen || 0,
             products_price_rappen: productsPriceRappen || 0,
             discount_amount_rappen: discountAmountRappen || 0,
+            voucher_discount_rappen: 0, // Will be set if discount is from voucher
             // ✅ FIX: total_amount_rappen is the REMAINING amount after credit is deducted
             total_amount_rappen: remainingAmountRappen,
             payment_method: paymentMethodForPayment || 'wallee',
