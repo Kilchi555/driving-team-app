@@ -275,62 +275,6 @@ export default defineEventHandler(async (event) => {
       ...metadata
     }
 
-    // ✅ STEP 1: Create Payment record FIRST (so we have the ID for merchantReference)
-    logger.debug('💾 Creating payment record in database FIRST...')
-    
-    // Get the actual user_id from the enrollment (enrollment has user_id from guest user creation)
-    const { data: enrollmentUser } = await supabase
-      .from('course_registrations')
-      .select('user_id')
-      .eq('id', enrollmentId)
-      .single()
-    
-    const actualUserId = enrollmentUser?.user_id || null
-    
-    // Build payment record - only include columns that exist in the table
-    // ✅ IMPORTANT: Only store primitive values in metadata to avoid circular references
-    const paymentInsertData: any = {
-      user_id: actualUserId,
-      appointment_id: null, // No appointment for course registrations
-      course_registration_id: enrollmentId, // Link to course registration
-      payment_method: 'wallee',
-      payment_status: 'pending',
-      total_amount_rappen: amount,
-      currency: currency,
-      description: `Course: ${metadata?.course_name || 'Unknown'}`,
-      // wallee_transaction_id will be set AFTER Wallee transaction is created
-      tenant_id: tenantId,
-      metadata: {
-        enrollment_id: enrollmentId,
-        course_id: courseId,
-        course_name: metadata?.course_name || null,
-        course_location: metadata?.course_location || null,
-        course_start_date: typeof enrollment.courses?.course_start_date === 'string' 
-          ? enrollment.courses.course_start_date 
-          : null, // Only store string date, not complex object
-        sari_faberid: metadata?.sari_faberid || null,
-        sari_birthdate: metadata?.sari_birthdate || null
-        // ❌ REMOVED: ...metadata (could contain complex objects)
-      },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-    
-    const { data: paymentRecord, error: paymentCreateError } = await supabase
-      .from('payments')
-      .insert(paymentInsertData)
-      .select('id')
-      .single()
-
-    if (paymentCreateError || !paymentRecord) {
-      logger.error('❌ Could not create payment record:', paymentCreateError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to create payment record'
-      })
-    }
-    
-    logger.info('✅ Payment record created:', paymentRecord.id)
 
     // ✅ STEP 2: Use clean merchant reference directly (no payment UUID prefix)
     // The payment record is already linked via course_registration_id in the database
