@@ -227,34 +227,21 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   if (payment.appointment_id) {
     try {
       logger.debug('📦 Loading products for appointment:', payment.appointment_id)
-      const { data: discountSale, error: dsError } = await supabase
-        .from('discount_sales')
-        .select('id')
+      const { data: ps, error: psError } = await supabase
+        .from('product_sales')
+        .select(`id, quantity, unit_price_rappen, total_price_rappen, products ( name, description )`)
         .eq('appointment_id', payment.appointment_id)
-        .maybeSingle()
 
-      if (dsError) {
-        logger.warn('⚠️ discount_sales query error:', dsError)
-      } else if (discountSale?.id) {
-        logger.debug('📦 Found discount_sale:', discountSale.id)
-        const { data: ps, error: psError } = await supabase
-          .from('product_sales')
-          .select(`id, quantity, unit_price_rappen, total_price_rappen, products ( name, description )`)
-          .eq('product_sale_id', discountSale.id)
-
-        if (psError) {
-          logger.warn('⚠️ product_sales query error:', psError)
-        } else {
-          products = (ps || []).map((row: any) => ({
-            name: row.products?.name || 'Produkt',
-            description: row.products?.description || '',
-            quantity: row.quantity || 1,
-            totalCHF: (row.total_price_rappen || 0) / 100
-          }))
-          logger.debug('✅ Products loaded:', products.length)
-        }
+      if (psError) {
+        logger.warn('⚠️ product_sales query error:', psError)
       } else {
-        logger.debug('ℹ️ No discount_sale found for appointment')
+        products = (ps || []).map((row: any) => ({
+          name: row.products?.name || 'Produkt',
+          description: row.products?.description || '',
+          quantity: row.quantity || 1,
+          totalCHF: (row.total_price_rappen || 0) / 100
+        }))
+        logger.debug('✅ Products loaded:', products.length)
       }
     } catch (productErr) {
       console.warn('⚠️ Could not load products:', productErr)
