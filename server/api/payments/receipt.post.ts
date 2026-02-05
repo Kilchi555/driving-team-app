@@ -487,6 +487,16 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   const cancellationDate = appointment?.deleted_at ? new Date(appointment.deleted_at).toLocaleDateString('de-CH') : '-'
   const cancellationReason = appointment?.deletion_reason || appointment?.cancellation_type || appointment?.cancellation_reason_id || '-'
   const isCharged = appointment ? (Number(appointment.cancellation_charge_percentage || 0) > 0 || appointment.cancellation_policy_applied) : false
+  
+  logger.debug('📋 Cancellation info calculated:', {
+    appointment_exists: !!appointment,
+    appointment_status: appointment?.status,
+    appointment_deleted_at: appointment?.deleted_at,
+    isCancelled,
+    cancellationDate,
+    cancellationReason,
+    isCharged
+  })
 
   return {
     payment,
@@ -498,7 +508,15 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       email: user?.email || '',
       phone: user?.phone || ''
     },
-    paymentDate: new Date(payment.paid_at || payment.created_at).toLocaleDateString('de-CH'),
+    paymentDate: (() => {
+      const pd = new Date(payment.paid_at || payment.created_at).toLocaleDateString('de-CH')
+      logger.debug('📅 Payment date calculated:', {
+        paid_at: payment.paid_at,
+        created_at: payment.created_at,
+        paymentDate: pd
+      })
+      return pd
+    })(),
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
@@ -1115,6 +1133,8 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('📋 Payment contexts loaded:', contexts.map(ctx => ({
       paymentDate: ctx.paymentDate,
+      payment_id: ctx.payment?.id,
+      appointment_id: ctx.payment?.appointment_id,
       appointmentInfo_isCancelled: ctx.appointmentInfo.isCancelled,
       appointmentInfo_cancellationDate: ctx.appointmentInfo.cancellationDate,
       appointmentInfo_cancellationReason: ctx.appointmentInfo.cancellationReason,
