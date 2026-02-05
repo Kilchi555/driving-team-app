@@ -2,7 +2,7 @@
 
 import { setHeader, send, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
+import { verifyAuth } from '~/server/utils/auth-helper'
 import chromium from '@sparticuz/chromium'
 import { logger } from '~/utils/logger'
 
@@ -788,13 +788,15 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
     
-    // ✅ SECURITY: Get authenticated user
-    const user = await getAuthUserFromRequest(event)
-    if (!user?.id) {
-      logger.warn('⚠️ Unauthorized: User not authenticated')
+    // ✅ SECURITY: Get authenticated user (returns both userId and authUserId)
+    const authData = await verifyAuth(event)
+    if (!authData?.userId) {
+      logger.warn('⚠️ Unauthorized: User not authenticated or not found in database')
       throw new Error('Unauthorized: User not authenticated')
     }
-    logger.debug('👤 User authenticated:', user.id)
+    logger.debug('👤 User authenticated:', { userId: authData.userId, authUserId: authData.authUserId })
+    
+    const user = { id: authData.userId }
 
     // Load all payments
     const { data: payments, error: pErr } = await supabase
@@ -815,7 +817,8 @@ export default defineEventHandler(async (event) => {
       id: p.id,
       user_id: p.user_id,
       course_registration_id: p.course_registration_id,
-      appointment_id: p.appointment_id
+      appointment_id: p.appointment_id,
+      metadata: p.metadata
     })))
     
     // ✅ SECURITY: Verify that all payments belong to the authenticated user
@@ -843,8 +846,8 @@ export default defineEventHandler(async (event) => {
       logger.debug('🔍 Checking payment:', { 
         paymentId: payment.id, 
         payment_user_id: payment.user_id, 
-        course_registration_id: payment.course_registration_id,
-        current_user_id: user.id
+        current_user_id: user.id,
+        match: payment.user_id === user.id
       })
       
       // User is admin - can access any payment
@@ -852,41 +855,15 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ User is admin - payment authorized')
         isAuthorized = true
       }
-      // Payment directly belongs to user
+      // Payment belongs to user
       else if (payment.user_id === user.id) {
         logger.debug('✅ Payment belongs to user directly')
         isAuthorized = true
-      }
-      // Payment has no user_id but belongs to a course registration owned by user
-      else if (payment.user_id === null && payment.course_registration_id) {
-        logger.debug('🔍 Checking course registration ownership for:', payment.course_registration_id)
-        try {
-          const { data: courseReg, error: crError } = await supabase
-            .from('course_registrations')
-            .select('user_id')
-            .eq('id', payment.course_registration_id)
-            .maybeSingle()
-          
-          if (crError) {
-            logger.warn('⚠️ Error checking course registration:', crError)
-          } else if (courseReg) {
-            logger.debug('📋 Course registration found:', { 
-              course_reg_user_id: courseReg.user_id, 
-              current_user_id: user.id,
-              matches: courseReg.user_id === user.id
-            })
-            if (courseReg.user_id === user.id) {
-              logger.debug('✅ User owns this course registration:', payment.course_registration_id)
-              isAuthorized = true
-            }
-          } else {
-            logger.warn('⚠️ Course registration not found:', payment.course_registration_id)
-          }
-        } catch (err) {
-          logger.warn('⚠️ Could not check course registration ownership:', err)
-        }
       } else {
-        logger.debug('❌ Payment not authorized - no match found')
+        logger.warn('⚠️ Payment user_id mismatch:', { 
+          payment_user_id: payment.user_id, 
+          current_user_id: user.id
+        })
       }
       
       if (isAuthorized) {
