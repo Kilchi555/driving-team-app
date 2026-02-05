@@ -812,8 +812,6 @@ export default defineEventHandler(async (event) => {
     }
     
     // ✅ SECURITY: Verify that all payments belong to the authenticated user
-    const unauthorizedPayments = payments.filter(p => p.user_id !== user.id)
-    
     // Check if user is admin (can access any payment)
     let isAdmin = false
     try {
@@ -829,9 +827,23 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Could not check user role:', roleErr)
     }
     
-    // For payments without user_id, check if user owns the course_registration
-    for (const payment of unauthorizedPayments) {
-      if (payment.user_id === null && payment.course_registration_id) {
+    // Build list of authorized payments
+    const authorizedPayments: typeof payments = []
+    const unauthorizedPayments: typeof payments = []
+    
+    for (const payment of payments) {
+      let isAuthorized = false
+      
+      // User is admin - can access any payment
+      if (isAdmin) {
+        isAuthorized = true
+      }
+      // Payment directly belongs to user
+      else if (payment.user_id === user.id) {
+        isAuthorized = true
+      }
+      // Payment has no user_id but belongs to a course registration owned by user
+      else if (payment.user_id === null && payment.course_registration_id) {
         try {
           const { data: courseReg } = await supabase
             .from('course_registrations')
@@ -841,17 +853,19 @@ export default defineEventHandler(async (event) => {
           
           if (courseReg?.user_id === user.id) {
             logger.debug('✅ User owns this course registration:', payment.course_registration_id)
-            // Remove from unauthorized list since user actually owns it
-            unauthorizedPayments.splice(unauthorizedPayments.indexOf(payment), 1)
+            isAuthorized = true
           }
         } catch (err) {
           logger.warn('⚠️ Could not check course registration ownership:', err)
         }
       }
+      
+      if (isAuthorized) {
+        authorizedPayments.push(payment)
+      } else {
+        unauthorizedPayments.push(payment)
+      }
     }
-    
-    // Filter: Only include payments that belong to user OR user is admin
-    const authorizedPayments = payments.filter(p => p.user_id === user.id || isAdmin)
     
     if (unauthorizedPayments.length > 0 && !isAdmin) {
       logger.warn('⚠️ Unauthorized payment access attempt - filtering to authorized payments:', {
