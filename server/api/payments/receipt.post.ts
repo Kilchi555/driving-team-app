@@ -203,6 +203,14 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
 }
 
 async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
+  logger.debug('🔍 Starting loadPaymentContext for payment:', {
+    payment_id: payment.id,
+    appointment_id: payment.appointment_id,
+    course_registration_id: payment.course_registration_id,
+    paid_at: payment.paid_at,
+    created_at: payment.created_at
+  })
+  
   let appointment: any = null
   let course: any = null
   let user: any = null
@@ -253,7 +261,8 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   }
 
   if (payment.appointment_id) {
-    const { data: appointmentData } = await supabase
+    logger.debug('📅 Loading appointment:', payment.appointment_id)
+    const { data: appointmentData, error: apptError } = await supabase
       .from('appointments')
       .select(`
         id,
@@ -280,7 +289,16 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       .eq('id', payment.appointment_id)
       .maybeSingle()
 
-    if (appointmentData) {
+    if (apptError) {
+      logger.warn('⚠️ Error loading appointment:', apptError)
+    } else if (appointmentData) {
+      logger.debug('✅ Appointment loaded:', {
+        id: appointmentData.id,
+        status: appointmentData.status,
+        deleted_at: appointmentData.deleted_at,
+        deletion_reason: appointmentData.deletion_reason,
+        cancellation_type: appointmentData.cancellation_type
+      })
       appointment = appointmentData
       
       // Load event type name separately if event_type_code exists
