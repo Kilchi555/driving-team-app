@@ -180,13 +180,17 @@ export default defineEventHandler(async (event) => {
 
       if (setError) throw setError
 
-      // 6. Get staff locations
-      const { data: staffLocations, error: slError } = await supabase
-        .from('staff_locations')
-        .select('id, location_id')
-        .eq('staff_id', staff_id)
+      // 6. Get staff locations (only if staff_id is valid)
+      let staffLocations = []
+      if (staff_id && staff_id !== 'placeholder') {
+        const { data: sl, error: slError } = await supabase
+          .from('staff_locations')
+          .select('id, location_id')
+          .eq('staff_id', staff_id)
 
-      if (slError) throw slError
+        if (slError) throw slError
+        staffLocations = sl || []
+      }
 
       return {
         success: true,
@@ -196,7 +200,7 @@ export default defineEventHandler(async (event) => {
           event_types: eventTypes || [],
           locations: locations || [],
           settings: settings || [],
-          staff_locations: staffLocations || []
+          staff_locations: staffLocations
         }
       }
     }
