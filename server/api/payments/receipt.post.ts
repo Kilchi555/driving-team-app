@@ -100,13 +100,39 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     return { logoSrc: null, logoDataUrl: null }
   }
 
-  logger.debug('📷 Using logo URL directly:', logoUrl)
+  logger.debug('📷 Loading logo from URL:', logoUrl)
   
-  // Simply use the public URL directly - no need to download and convert to base64
-  // The PDF generator can fetch it directly
-  return {
-    logoSrc: logoUrl,
-    logoDataUrl: logoUrl
+  try {
+    // Try to fetch and convert to base64 for better PDF compatibility
+    const response = await fetch(logoUrl)
+    if (!response.ok) {
+      logger.warn('⚠️ Logo fetch failed with status:', response.status)
+      return { logoSrc: logoUrl, logoDataUrl: logoUrl }
+    }
+    
+    const buffer = await response.arrayBuffer()
+    const base64 = Buffer.from(buffer).toString('base64')
+    
+    // Determine mime type from URL or content-type header
+    let mimeType = response.headers.get('content-type') || 'image/png'
+    if (logoUrl.includes('.png')) mimeType = 'image/png'
+    else if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) mimeType = 'image/jpeg'
+    else if (logoUrl.includes('.svg')) mimeType = 'image/svg+xml'
+    else if (logoUrl.includes('.webp')) mimeType = 'image/webp'
+    
+    const dataUrl = `data:${mimeType};base64,${base64}`
+    logger.debug('✅ Logo converted to base64, size:', base64.length)
+    
+    return {
+      logoSrc: logoUrl,
+      logoDataUrl: dataUrl
+    }
+  } catch (err) {
+    logger.warn('⚠️ Could not load logo as base64, using URL directly:', err)
+    return {
+      logoSrc: logoUrl,
+      logoDataUrl: logoUrl
+    }
   }
 }
 
