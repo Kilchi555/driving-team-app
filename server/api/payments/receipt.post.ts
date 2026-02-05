@@ -95,8 +95,15 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   // Try logo_square_url first, then logo_url, then logo_wide_url
   const logoUrl = tenant?.logo_square_url || tenant?.logo_url || tenant?.logo_wide_url
   
+  logger.debug('🔍 Tenant data for logo:', {
+    logo_square_url: tenant?.logo_square_url,
+    logo_url: tenant?.logo_url,
+    logo_wide_url: tenant?.logo_wide_url,
+    resolved_logoUrl: logoUrl
+  })
+  
   if (!logoUrl) {
-    console.warn('⚠️ No logo URL found in tenant data')
+    logger.warn('⚠️ No logo URL found in tenant data')
     return { logoSrc: null, logoDataUrl: null }
   }
 
@@ -104,14 +111,25 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   
   try {
     // Try to fetch and convert to base64 for better PDF compatibility
+    logger.debug('📡 Fetching logo...')
     const response = await fetch(logoUrl)
+    
+    logger.debug('📊 Logo fetch response:', { 
+      ok: response.ok, 
+      status: response.status,
+      contentType: response.headers.get('content-type')
+    })
+    
     if (!response.ok) {
       logger.warn('⚠️ Logo fetch failed with status:', response.status)
       return { logoSrc: logoUrl, logoDataUrl: logoUrl }
     }
     
     const buffer = await response.arrayBuffer()
+    logger.debug('✅ Logo buffer received, size:', buffer.byteLength)
+    
     const base64 = Buffer.from(buffer).toString('base64')
+    logger.debug('✅ Logo converted to base64, size:', base64.length)
     
     // Determine mime type from URL or content-type header
     let mimeType = response.headers.get('content-type') || 'image/png'
@@ -121,14 +139,14 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     else if (logoUrl.includes('.webp')) mimeType = 'image/webp'
     
     const dataUrl = `data:${mimeType};base64,${base64}`
-    logger.debug('✅ Logo converted to base64, size:', base64.length)
+    logger.debug('✅ Logo data URL created with mimeType:', mimeType)
     
     return {
       logoSrc: logoUrl,
       logoDataUrl: dataUrl
     }
   } catch (err) {
-    logger.warn('⚠️ Could not load logo as base64, using URL directly:', err)
+    logger.error('❌ Could not load logo as base64:', err)
     return {
       logoSrc: logoUrl,
       logoDataUrl: logoUrl
@@ -923,9 +941,12 @@ export default defineEventHandler(async (event) => {
     // Load tenant branding (once for all payments)
     const firstPayment = authorizedPayments[0]
     const tenantId = firstPayment.tenant_id || firstPayment.metadata?.tenant_id || null
+    logger.debug('🏢 Looking for tenant:', { tenantId, firstPaymentId: firstPayment.id })
+    
     let tenant: any = null
     if (tenantId) {
       try {
+        logger.debug('📥 Fetching tenant from database...')
         const { data, error } = await supabase
           .from('tenants')
           .select('name, legal_company_name, primary_color, secondary_color, logo_url, logo_square_url, logo_wide_url, address, contact_email, contact_phone')
@@ -934,10 +955,19 @@ export default defineEventHandler(async (event) => {
         if (error) {
           console.error('❌ Tenant fetch error:', error)
         }
+        logger.debug('✅ Tenant data loaded:', {
+          name: data?.name,
+          logo_url: data?.logo_url,
+          logo_square_url: data?.logo_square_url,
+          logo_wide_url: data?.logo_wide_url
+        })
         tenant = data
       } catch (tErr) {
         console.error('❌ Tenant fetch exception:', tErr)
+        logger.error('❌ Tenant fetch exception:', tErr)
       }
+    } else {
+      logger.warn('⚠️ No tenant ID found in payment or metadata')
     }
 
     const primary = tenant?.primary_color || '#2563eb'
