@@ -88,52 +88,107 @@
           </div>
         </div>
 
-        <!-- Step 1: Category Selection -->
+        <!-- Step 1: Main Category Selection -->
         <div v-if="currentStep === 1" class="space-y-4">
-          <!-- Category Selection Card -->
+          <!-- Main Category Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Kategorie</h2>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Hauptkategorie</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.name }}</span>
+                <span class="font-semibold">{{ selectedMainCategory?.name }}</span>
               </div>
             </div>
           
+          <!-- Show only main categories (where parent_category_id is null) -->
           <div :class="`grid ${getGridClasses(categories.length)} gap-3`">
             <div 
-              v-for="category in categories" 
-              :key="category.id"
-              @click="selectCategory(category)"
+              v-for="mainCategory in categories.filter((c: any) => !c.parent_category_id)" 
+              :key="mainCategory.id"
+              @click="selectMainCategory(mainCategory)"
               class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
               :style="getInteractiveCardStyle(
-                selectedCategory?.id === category.id || hoveredCategoryId === category.id,
-                hoveredCategoryId === category.id
+                selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id,
+                hoveredCategoryId === mainCategory.id
               )"
-              @mouseenter="hoveredCategoryId = category.id"
+              @mouseenter="hoveredCategoryId = mainCategory.id"
               @mouseleave="hoveredCategoryId = null"
             >
               <div class="text-center">
                 <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors border"
                      :style="getInteractiveBadgeStyle(
-                       selectedCategory?.id === category.id || hoveredCategoryId === category.id
+                       selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
                      )">
-                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ category.code }}</span>
+                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ mainCategory.code }}</span>
                 </div>
-                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ category.name }}</h3>
-                <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ category.description }}</p>
+                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ mainCategory.name }}</h3>
+                <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ mainCategory.description }}</p>
               </div>
             </div>
           </div>
           </div>
         </div>
 
-        <!-- Step 2: Lesson Duration Selection -->
-        <div v-if="currentStep === 2" class="space-y-4">
-          <!-- Duration Selection Card -->
+        <!-- Step 2: Subcategory Selection -->
+        <div v-if="currentStep === 2 && selectedMainCategory" class="space-y-4">
+          <!-- Subcategory Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Unterkategorie</h2>
+              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
+                <span class="font-semibold">{{ selectedMainCategory?.name }}</span>
+                <span v-if="selectedCategory" class="font-semibold"> • {{ selectedCategory?.name }}</span>
+              </div>
+            </div>
+
+            <!-- Back button -->
+            <button 
+              @click="currentStep = 1; selectedMainCategory = null"
+              class="mb-4 inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              ← Zurück
+            </button>
+          
+          <!-- Show only subcategories for selected main category -->
+          <div :class="`grid ${getGridClasses(selectedMainCategory?.children?.length || 1)} gap-3`">
+            <div 
+              v-for="subCategory in selectedMainCategory?.children || []" 
+              :key="subCategory.id"
+              @click="selectSubcategory(subCategory)"
+              class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
+              :style="getInteractiveCardStyle(
+                selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id,
+                hoveredCategoryId === subCategory.id
+              )"
+              @mouseenter="hoveredCategoryId = subCategory.id"
+              @mouseleave="hoveredCategoryId = null"
+            >
+              <div class="text-center">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors border"
+                     :style="getInteractiveBadgeStyle(
+                       selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id
+                     )">
+                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
+                </div>
+                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ subCategory.name }}</h3>
+                <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ subCategory.description }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="!selectedMainCategory?.children?.length" class="text-center py-6">
+            <p class="text-sm text-gray-600">Für diese Kategorie sind noch keine Unterkategorien verfügbar.</p>
+          </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Lesson Duration Selection (was Step 2) -->
+        <div v-if="currentStep === 4" class="space-y-4">
+          <!-- Duration Selection Card -->
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 3</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
                 Wähle deine Dauer
               </h2>
@@ -180,7 +235,7 @@
         </div>
 
         <!-- Step 3: Location Selection -->
-        <div v-if="currentStep === 3" class="space-y-4">
+        <div v-if="currentStep === 4" class="space-y-4">
           <!-- Location Selection Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
@@ -299,7 +354,7 @@
         </div>
 
         <!-- Step 4: Instructor Selection -->
-        <div v-if="currentStep === 4" class="space-y-4">
+        <div v-if="currentStep === 5" class="space-y-4">
           <!-- Instructor Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -351,7 +406,7 @@
         </div>
 
         <!-- Step 5: Time Slot Selection -->
-        <div v-if="currentStep === 5" class="space-y-4">
+        <div v-if="currentStep === 6" class="space-y-4">
           <!-- Time Slot Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -463,7 +518,7 @@
         </div>
 
         <!-- Step 6: Pickup Address (nur wenn Pickup gewählt) -->
-        <div v-if="currentStep === 6 && selectedLocation?.isPickup" class="space-y-4">
+        <div v-if="currentStep === 7 && selectedLocation?.isPickup" class="space-y-4">
           <!-- Pickup Address Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
@@ -592,7 +647,7 @@
         </div>
 
         <!-- Step 6: Direct Confirmation (wenn kein Pickup) -->
-        <div v-if="currentStep === 6 && !selectedLocation?.isPickup" class="space-y-4">
+        <div v-if="currentStep === 7 && !selectedLocation?.isPickup" class="space-y-4">
           <!-- Direct Confirmation Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
           <div class="text-center mb-6">
@@ -994,7 +1049,8 @@ const reservedUntil = ref<Date | null>(null)
 
 // New flow state
 const currentStep = ref(1)
-const selectedCategory = ref<any>(null)
+const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
+const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
 const selectedInstructor = ref<any>(null)
 const availableLocations = ref<any[]>([])
@@ -1062,13 +1118,14 @@ const isPickupAvailableForCategory = computed(() => {
 
 const bookingSteps = computed(() => {
   return [
-    { id: 1, label: 'Kategorie' },
-    { id: 2, label: 'Dauer' },
-    { id: 3, label: 'Standort' },
-    { id: 4, label: 'Fahrlehrer' },
-    { id: 5, label: 'Termin' },
+    { id: 1, label: 'Hauptkat.' },
+    { id: 2, label: 'Unterkat.' },
+    { id: 3, label: 'Dauer' },
+    { id: 4, label: 'Standort' },
+    { id: 5, label: 'Fahrlehrer' },
+    { id: 6, label: 'Termin' },
     { 
-      id: 6, 
+      id: 7, 
       label: selectedLocation.value?.isPickup ? 'Adresse' : 'Bestätigung' 
     }
   ]
@@ -1539,7 +1596,7 @@ const selectDurationOption = async (duration: number) => {
   selectedDuration.value = duration
   filters.value.duration_minutes = duration
   await waitForPressEffect()
-  currentStep.value = 3
+  currentStep.value = 4
 }
 
 const getDurationButtonStyle = (isSelected: boolean, isHover = false) => 
@@ -1547,8 +1604,17 @@ const getDurationButtonStyle = (isSelected: boolean, isHover = false) =>
 
 const getDurationBadgeStyle = (isSelected: boolean) => getInteractiveBadgeStyle(isSelected)
 
-const selectCategory = async (category: any) => {
-  logger.debug('🎯 selectCategory called:', category.code)
+// NEW: Select main category and move to step 2
+const selectMainCategory = (category: any) => {
+  logger.debug('🎯 selectMainCategory called:', category.name)
+  selectedMainCategory.value = category
+  selectedCategory.value = null // Reset subcategory
+  currentStep.value = 2 // Move to subcategory selection
+}
+
+// MODIFIED: Select subcategory (was selectCategory, now step 2)
+const selectSubcategory = async (category: any) => {
+  logger.debug('🎯 selectSubcategory called:', category.code)
   
   selectedCategory.value = category
   filters.value.category_code = category.code
@@ -1751,13 +1817,13 @@ const selectLocation = async (location: any) => {
   availableInstructors.value = location.available_staff || []
   
   await waitForPressEffect()
-  currentStep.value = 4
+  currentStep.value = 5
 }
 
 const selectInstructor = async (instructor: any) => {
   selectedInstructor.value = instructor
   await waitForPressEffect()
-  currentStep.value = 5 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
+  currentStep.value = 6 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
   
   // Generate time slots for this specific instructor-location combination
   await generateTimeSlotsForSpecificCombination()
@@ -2089,7 +2155,7 @@ const createAppointmentSecure = async (userData: any) => {
       // Reservation expired
       error.value = 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie erneut einen Zeitslot.'
       // Go back to slot selection
-      currentStep.value = 4
+      currentStep.value = 5
     } else {
       error.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
@@ -2908,7 +2974,7 @@ onMounted(async () => {
                 logger.debug('✅ Pre-filled all data, jumped to step 5 (time selection)')
               } else {
                 console.warn('⚠️ Instructor not found, staying at step 3')
-                currentStep.value = 3
+                currentStep.value = 4
               }
             } else {
               console.warn('⚠️ Location not found, staying at step 2')
