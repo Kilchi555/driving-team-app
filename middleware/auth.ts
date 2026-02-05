@@ -73,12 +73,12 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       user: authStore.user ? 'PRESENT' : 'NULL'
     })
     
-    // ✅ Block protected routes (dashboard, staff, admin, customer)
+  // ✅ Block protected routes (dashboard, staff, admin, customer)
     if (to.path.startsWith('/dashboard') || 
         to.path.startsWith('/staff/') || 
         to.path.startsWith('/admin/') || 
         to.path.startsWith('/customer/')) {
-      logger.debug('🔒 Auth middleware: Blocking protected route, redirecting to login:', to.path)
+      logger.debug('🔒 Auth middleware: Blocking protected route, need tenant login:', to.path)
       
       // Try to save the intended destination
       try {
@@ -87,6 +87,21 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
         logger.warn('Could not save redirect destination:', e)
       }
       
+      // Try to get tenant slug for redirect to tenant login page
+      let lastSlug = null
+      try {
+        lastSlug = localStorage.getItem('last_tenant_slug')
+      } catch (e) {
+        logger.warn('Could not read localStorage:', e)
+      }
+      
+      if (lastSlug) {
+        logger.debug('🔄 Redirecting to tenant login:', `/${lastSlug}`)
+        return navigateTo(`/${lastSlug}`)
+      }
+      
+      // Fallback to generic login
+      logger.debug('🔄 No tenant slug found, redirecting to generic login')
       return navigateTo('/login')
     }
     
@@ -97,16 +112,18 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       return
     }
     
-    // ✅ Versuche zur Slug-Route weiterzuleiten, ansonsten zum Login
+    // ✅ Fallback: Try to redirect to last tenant slug instead of generic /login
+    logger.debug('Auth middleware: User not logged in, need to redirect to tenant login')
+    
     // Extract slug from current path if available
     const slugMatch = to.path.match(/^\/([^\/]+)/)
     if (slugMatch && slugMatch[1]) {
       const slug = slugMatch[1]
-      logger.debug('Auth middleware: Redirecting to slug route:', `/${slug}`)
+      logger.debug('Auth middleware: Found slug in path:', `/${slug}`)
       return navigateTo(`/${slug}`)
     }
     
-    // ✅ Try to get last tenant slug from localStorage
+    // Try to get last tenant slug from localStorage
     let lastTenantSlug: string | null = null
     if (process.client) {
       try {
@@ -121,7 +138,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
     
     // Fallback: Leite zum Login weiter
-    logger.debug('Auth middleware: No slug found, redirecting to login')
+    logger.debug('Auth middleware: No tenant slug found, redirecting to generic login')
     return navigateTo('/login')
   }
   
