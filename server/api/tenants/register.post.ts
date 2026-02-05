@@ -526,16 +526,32 @@ async function uploadTenantLogo(file: File, tenantSlug: string): Promise<string>
 async function deleteTenantLogo(logoUrl: string): Promise<void> {
   const supabase = getSupabaseAdmin()
   
-  // Pfad aus URL extrahieren
-  const url = new URL(logoUrl)
-  const pathParts = url.pathname.split('/storage/v1/object/public/public/')
-  if (pathParts.length < 2) return
-  
-  const filePath = pathParts[1]
-  
-  const { error } = await supabase.storage
-    .from('public')
-    .remove([filePath])
+  try {
+    // Pfad aus URL extrahieren
+    const url = new URL(logoUrl)
+    let filePath: string | null = null
+    
+    // Try different path patterns
+    if (url.pathname.includes('/storage/v1/object/public/public/')) {
+      const pathParts = url.pathname.split('/storage/v1/object/public/public/')
+      if (pathParts.length >= 2) {
+        filePath = pathParts[1]
+      }
+    } else if (url.pathname.includes('/public/tenant-logos/')) {
+      const pathParts = url.pathname.split('/public/tenant-logos/')
+      if (pathParts.length >= 2) {
+        filePath = `tenant-logos/${pathParts[1]}`
+      }
+    }
+    
+    if (!filePath) {
+      logger.warn('⚠️ Could not extract file path from logo URL:', logoUrl)
+      return
+    }
+    
+    const { error } = await supabase.storage
+      .from('public')
+      .remove([filePath])
 
   if (error) {
     throw new Error(`Logo-Löschung fehlgeschlagen: ${error.message}`)

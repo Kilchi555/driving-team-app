@@ -87,14 +87,27 @@ export const useLogoUpload = () => {
     try {
       const supabase = getSupabase()
       
-      // Extrahiere Pfad aus URL
+      // Extrahiere Pfad aus URL - Supabase returns full public URL
       const url = new URL(logoUrl)
-      const pathParts = url.pathname.split('/storage/v1/object/public/public/')
-      if (pathParts.length < 2) {
-        throw new Error('Ungültige Logo-URL')
+      let filePath: string | null = null
+      
+      // Try different path patterns
+      if (url.pathname.includes('/storage/v1/object/public/public/')) {
+        const pathParts = url.pathname.split('/storage/v1/object/public/public/')
+        if (pathParts.length >= 2) {
+          filePath = pathParts[1]
+        }
+      } else if (url.pathname.includes('/public/tenant-logos/')) {
+        const pathParts = url.pathname.split('/public/tenant-logos/')
+        if (pathParts.length >= 2) {
+          filePath = `tenant-logos/${pathParts[1]}`
+        }
       }
       
-      const filePath = pathParts[1]
+      if (!filePath) {
+        throw new Error('Ungültige Logo-URL - kann Pfad nicht extrahieren')
+      }
+      
       logger.debug('🗑️ Deleting logo:', filePath)
 
       const { error: deleteError } = await supabase.storage
