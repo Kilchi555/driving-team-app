@@ -121,15 +121,25 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   try {
     // Extract bucket and path from Supabase Storage URL
     // URL format: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
+    // But sometimes just: https://{project}.supabase.co/storage/v1/object/public/{path}
     let bucketName = 'logos'
     let filePath = logoUrl
     
     if (logoUrl.includes('supabase.co') && logoUrl.includes('/storage/v1/object/public/')) {
       const match = logoUrl.match(/\/storage\/v1\/object\/public\/([^\/]+)\/(.+)/)
       if (match) {
+        // Has bucket name
         bucketName = match[1]
         filePath = match[2]
-        logger.debug('🔗 Extracted from Supabase URL:', { bucketName, filePath })
+        logger.debug('🔗 Extracted bucket and path from URL:', { bucketName, filePath })
+      } else {
+        // Missing bucket name - assume it's just the filename
+        const fileMatch = logoUrl.match(/\/storage\/v1\/object\/public\/(.+)$/)
+        if (fileMatch) {
+          filePath = fileMatch[1]
+          bucketName = 'logos' // Default bucket
+          logger.debug('🔗 Extracted filename (no bucket in URL, using default):', { bucketName, filePath })
+        }
       }
     }
     
