@@ -96,9 +96,9 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   const logoUrl = tenant?.logo_square_url || tenant?.logo_url || tenant?.logo_wide_url
   
   logger.debug('🔍 Tenant data for logo:', {
-    logo_square_url: tenant?.logo_square_url,
+    logo_square_url: tenant?.logo_square_url?.substring(0, 100),
     logo_url: tenant?.logo_url?.substring(0, 100),
-    logo_wide_url: tenant?.logo_wide_url,
+    logo_wide_url: tenant?.logo_wide_url?.substring(0, 100),
     resolved_logoUrl: logoUrl?.substring(0, 100)
   })
   
@@ -121,41 +121,80 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   try {
     // Try to fetch and convert to base64 for better PDF compatibility
     logger.debug('📡 Fetching logo...')
-    const response = await fetch(logoUrl)
     
-    logger.debug('📊 Logo fetch response:', { 
-      ok: response.ok, 
-      status: response.status,
-      contentType: response.headers.get('content-type')
-    })
-    
-    if (!response.ok) {
-      logger.warn('⚠️ Logo fetch failed with status:', response.status)
-      return { logoSrc: logoUrl, logoDataUrl: logoUrl }
+    // For Supabase Storage URLs, try to use Storage API directly
+    if (logoUrl.includes('supabase.co') && logoUrl.includes('storage')) {
+      logger.debug('🔗 Detected Supabase Storage URL, using Storage API...')
+      try {
+        const { data: buffer, error: storageError } = await supabase.storage
+          .from('logos')
+          .download(logoUrl.split('/storage/v1/object/public/logos/')[1] || logoUrl)
+        
+        if (!storageError && buffer) {
+          logger.debug('✅ Logo downloaded via Storage API, size:', buffer.size)
+          const base64 = Buffer.from(await buffer.arrayBuffer()).toString('base64')
+          return {
+            logoSrc: logoUrl,
+            logoDataUrl: `data:image/png;base64,${base64}`
+          }
+        }
+      } catch (storageErr) {
+        logger.warn('⚠️ Storage API failed, trying direct fetch:', storageErr)
+      }
     }
     
-    const buffer = await response.arrayBuffer()
-    logger.debug('✅ Logo buffer received, size:', buffer.byteLength)
+    // Fallback: Try direct fetch with various options
+    const fetchOptions = [
+      { headers: {} }, // No special headers
+      { headers: { 'Accept': 'image/*' } },
+      { headers: { 'Accept': '*/*' } }
+    ]
     
-    const base64 = Buffer.from(buffer).toString('base64')
-    logger.debug('✅ Logo converted to base64, size:', base64.length)
-    
-    // Determine mime type from URL or content-type header
-    let mimeType = response.headers.get('content-type') || 'image/png'
-    if (logoUrl.includes('.png')) mimeType = 'image/png'
-    else if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) mimeType = 'image/jpeg'
-    else if (logoUrl.includes('.svg')) mimeType = 'image/svg+xml'
-    else if (logoUrl.includes('.webp')) mimeType = 'image/webp'
-    
-    const dataUrl = `data:${mimeType};base64,${base64}`
-    logger.debug('✅ Logo data URL created with mimeType:', mimeType)
-    
-    return {
-      logoSrc: logoUrl,
-      logoDataUrl: dataUrl
+    for (const opts of fetchOptions) {
+      try {
+        logger.debug('📡 Fetch attempt with options:', opts)
+        const response = await fetch(logoUrl, opts)
+        
+        logger.debug('📊 Logo fetch response:', { 
+          ok: response.ok, 
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          contentLength: response.headers.get('content-length')
+        })
+        
+        if (response.ok) {
+          const buffer = await response.arrayBuffer()
+          logger.debug('✅ Logo buffer received, size:', buffer.byteLength)
+          
+          const base64 = Buffer.from(buffer).toString('base64')
+          logger.debug('✅ Logo converted to base64, size:', base64.length)
+          
+          // Determine mime type
+          let mimeType = response.headers.get('content-type') || 'image/png'
+          if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) mimeType = 'image/jpeg'
+          else if (logoUrl.includes('.svg')) mimeType = 'image/svg+xml'
+          else if (logoUrl.includes('.webp')) mimeType = 'image/webp'
+          
+          const dataUrl = `data:${mimeType};base64,${base64}`
+          logger.debug('✅ Logo data URL created with mimeType:', mimeType)
+          
+          return {
+            logoSrc: logoUrl,
+            logoDataUrl: dataUrl
+          }
+        }
+      } catch (err) {
+        logger.warn('⚠️ Fetch attempt failed:', err)
+        continue
+      }
     }
+    
+    logger.warn('⚠️ All fetch attempts failed, using URL directly')
+    return { logoSrc: logoUrl, logoDataUrl: logoUrl }
+    
   } catch (err) {
-    logger.error('❌ Could not load logo as base64:', err)
+    logger.error('❌ Could not load logo:', err)
     return {
       logoSrc: logoUrl,
       logoDataUrl: logoUrl
