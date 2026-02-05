@@ -97,9 +97,9 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   
   logger.debug('🔍 Tenant data for logo:', {
     logo_square_url: tenant?.logo_square_url,
-    logo_url: tenant?.logo_url,
+    logo_url: tenant?.logo_url?.substring(0, 100),
     logo_wide_url: tenant?.logo_wide_url,
-    resolved_logoUrl: logoUrl
+    resolved_logoUrl: logoUrl?.substring(0, 100)
   })
   
   if (!logoUrl) {
@@ -107,7 +107,16 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     return { logoSrc: null, logoDataUrl: null }
   }
 
-  logger.debug('📷 Loading logo from URL:', logoUrl)
+  // If it's already a data URL, use it directly
+  if (logoUrl.startsWith('data:')) {
+    logger.debug('✅ Logo is already a data URL, using directly')
+    return {
+      logoSrc: logoUrl,
+      logoDataUrl: logoUrl
+    }
+  }
+
+  logger.debug('📷 Loading logo from URL:', logoUrl.substring(0, 100))
   
   try {
     // Try to fetch and convert to base64 for better PDF compatibility
@@ -512,7 +521,7 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
         </div>
         ${appointmentInfo.courseLocation ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Ort</div><div class="value">${appointmentInfo.courseLocation}</div></div>` : ''}
         ${appointmentInfo.staffFirstName && !appointmentInfo.isCourse ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
-        ${appointmentInfo.isCancelled && !appointmentInfo.isCourse ? `
+        ${appointmentInfo.isCancelled ? `
           <div class="row" style="background:#fee2e2; padding:8px 12px; margin:8px 0; border-radius:6px; border-left:3px solid #dc2626;">
             <div style="font-size:12px; color:#991b1b;">
               <div style="font-weight:600;">${translateFn('receipt.cancellation')}</div>
