@@ -771,6 +771,12 @@ function wrapHtml(body: string, primary: string, secondary: string) {
 }
 
 export default defineEventHandler(async (event) => {
+  // Set global timeout for the entire handler (5 minutes max)
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Receipt generation timed out after 5 minutes')), 300000)
+  )
+  
+  const mainPromise = (async () => {
   try {
     logger.debug('📄 Receipt API called')
     
@@ -1016,14 +1022,41 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ Browser launched successfully with options:', { isVercel: !!process.env.VERCEL })
       
       const page = await browser.newPage()
-      await page.setContent(finalHtml, { waitUntil: 'networkidle0' })
+      
+      // Set timeout for page load
+      page.setDefaultNavigationTimeout(30000) // 30 seconds
+      page.setDefaultTimeout(30000)
+      
+      logger.debug('📄 Setting page content...')
+      try {
+        await page.setContent(finalHtml, { 
+          waitUntil: 'load',  // Changed from 'networkidle0' to 'load' to avoid hanging
+          timeout: 30000 
+        })
+      } catch (contentErr) {
+        logger.warn('⚠️ Page content timeout or error (continuing anyway):', contentErr)
+        // Continue anyway - the content might be partially loaded
+      }
       
       logger.debug('📄 Converting to PDF...')
-      const pdfBuffer = await page.pdf({ 
-        format: 'A4', 
-        printBackground: true, 
-        margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } 
-      })
+      let pdfBuffer: Buffer | null = null
+      try {
+        pdfBuffer = await page.pdf({ 
+          format: 'A4', 
+          printBackground: true, 
+          margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
+          timeout: 30000
+        })
+      } catch (pdfErr) {
+        logger.error('❌ PDF generation timeout:', pdfErr)
+        throw new Error('PDF generation timed out or failed')
+      }
+      
+      if (!pdfBuffer || pdfBuffer.length === 0) {
+        throw new Error('PDF generation resulted in empty buffer')
+      }
+      
+      logger.debug('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       await page.close()
       await browser.close()
@@ -1078,8 +1111,12 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error('❌ Receipt generation failed:', error)
     setHeader(event, 'Content-Type', 'application/json')
-    return { success:false, error: error.message || 'Receipt generation failed' }
+    return { success: false, error: error.message || 'Receipt generation failed' }
   }
+  })()
+  
+  // Race between main promise and timeout
+  return Promise.race([mainPromise, timeoutPromise])
 })
 
 // .env Variables für Wallee
