@@ -119,7 +119,9 @@
                      :style="getInteractiveBadgeStyle(
                        selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
                      )">
-                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ mainCategory.code }}</span>
+                  <!-- SVG Icon if available, otherwise show code -->
+                  <div v-if="mainCategory.icon_svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" v-html="mainCategory.icon_svg"></div>
+                  <span v-else class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ mainCategory.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ mainCategory.name }}</h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ mainCategory.description }}</p>
@@ -169,7 +171,9 @@
                      :style="getInteractiveBadgeStyle(
                        selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id
                      )">
-                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
+                  <!-- SVG Icon if available, otherwise show code -->
+                  <div v-if="subCategory.icon_svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" v-html="subCategory.icon_svg"></div>
+                  <span v-else class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ subCategory.name }}</h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ subCategory.description }}</p>
