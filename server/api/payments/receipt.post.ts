@@ -509,7 +509,7 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
 
   return `
     <div class="doc" style="page-break-after: always;">
-      ${renderHeader(customer, 'receipt.date', paymentDate, tenant, assets, translateFn)}
+      ${renderHeader(customer, 'receipt.paidDate', paymentDate, tenant, assets, translateFn)}
       
       <div class="section">
         <div class="section-title">${appointmentInfo.isCourse ? translateFn('receipt.courseDetails') : translateFn('receipt.serviceDetails')}</div>
@@ -988,6 +988,7 @@ export default defineEventHandler(async (event) => {
         'receipt.title': 'Quittung',
         'receipt.customer': 'Kunde',
         'receipt.date': 'Datum',
+        'receipt.paidDate': 'Bezahlt am',
         'receipt.serviceDetails': 'Leistungsdetails',
         'receipt.courseDetails': 'Kursdetails',
         'receipt.costBreakdown': 'Kostenaufstellung',
