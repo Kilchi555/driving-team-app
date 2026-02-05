@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
       console.log('📋 Querying by slug:', slug)
       const { data, error: slErr } = await supabase
         .from('tenants')
-        .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, description')
+        .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url')
         .eq('slug', slug)
         .single()
 
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
       console.log('📋 Querying by id:', id)
       const { data, error: idErr } = await supabase
         .from('tenants')
-        .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, description')
+        .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url')
         .eq('id', id)
         .single()
 

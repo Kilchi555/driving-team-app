@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
       // Try to find tenant - handle both UUID and slug
       let query = supabase
         .from('tenants')
-        .select('*')
+        .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url')
       
       // Check if tenant_id looks like a UUID or is a slug
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenant_id)
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
       }
 
       const { data: settings, error: setErr } = await supabase
-        .from('settings')
+        .from('tenant_settings')
         .select('*')
         .eq('tenant_id', tenant.id)
 
@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
 
       // 5. Get settings
       const { data: settings, error: setError } = await supabase
-        .from('settings')
+        .from('tenant_settings')
         .select('setting_key, setting_value')
         .eq('tenant_id', tenant_id)
 
