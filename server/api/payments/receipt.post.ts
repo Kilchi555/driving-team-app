@@ -109,7 +109,10 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
 
   // If it's already a data URL, use it directly
   if (logoUrl.startsWith('data:')) {
-    logger.debug('✅ Logo is already a data URL, using directly')
+    logger.debug('✅ Logo is already a data URL', {
+      dataUrl_length: logoUrl.length,
+      dataUrl_starts_with: logoUrl.substring(0, 100)
+    })
     return {
       logoSrc: logoUrl,
       logoDataUrl: logoUrl
