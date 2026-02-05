@@ -1046,15 +1046,37 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantAssets = await loadTenantAssets(tenant, supabase)
+    logger.debug('📊 Tenant Assets loaded:', {
+      logoDataUrl_exists: !!tenantAssets.logoDataUrl,
+      logoDataUrl_length: tenantAssets.logoDataUrl?.length || 0,
+      logoDataUrl_starts_with: tenantAssets.logoDataUrl?.substring(0, 50)
+    })
+    
     const contexts = await Promise.all(
       authorizedPayments.map(payment => loadPaymentContext(payment, supabase, translateFn))
     )
+    
+    logger.debug('📋 Payment contexts loaded:', contexts.map(ctx => ({
+      paymentDate: ctx.paymentDate,
+      appointmentInfo_isCancelled: ctx.appointmentInfo.isCancelled,
+      appointmentInfo_cancellationDate: ctx.appointmentInfo.cancellationDate,
+      appointmentInfo_cancellationReason: ctx.appointmentInfo.cancellationReason,
+      appointmentInfo_isCharged: ctx.appointmentInfo.isCharged
+    })))
 
     const bodyHtml = contexts.length === 1
       ? renderSingleReceipt(contexts[0], tenant, tenantAssets, translateFn)
       : renderCombinedReceipt(contexts, tenant, tenantAssets, translateFn)
 
     const finalHtml = wrapHtml(bodyHtml, primary, secondary)
+    
+    logger.debug('📄 Final HTML generated:', {
+      length: finalHtml.length,
+      includes_logo: finalHtml.includes('data:image') || finalHtml.includes('logoDataUrl'),
+      includes_paid_date: finalHtml.includes('Bezahlt am') || finalHtml.includes('receipt.paidDate'),
+      includes_cancellation: finalHtml.includes('Stornierung') || finalHtml.includes('Cancelled'),
+      first_500_chars: finalHtml.substring(0, 500)
+    })
 
     logger.debug('📄 Generating PDF with Puppeteer...')
     
