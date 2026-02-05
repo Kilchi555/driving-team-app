@@ -148,7 +148,7 @@ export default defineEventHandler(async (event) => {
       // 2. Get categories (with hierarchy support)
       const { data: allCategories, error: catError } = await supabase
         .from('categories')
-        .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color')
+        .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color, icon_svg')
         .eq('tenant_id', tenant_id)
         .eq('is_active', true)
         .order('parent_category_id', { ascending: true })
