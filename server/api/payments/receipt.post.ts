@@ -119,33 +119,54 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   logger.debug('📷 Loading logo from URL:', logoUrl.substring(0, 100))
   
   try {
-    // Try to fetch and convert to base64 for better PDF compatibility
-    logger.debug('📡 Fetching logo...')
+    // Extract bucket and path from Supabase Storage URL
+    // URL format: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
+    let bucketName = 'logos'
+    let filePath = logoUrl
     
-    // For Supabase Storage URLs, try to use Storage API directly
-    if (logoUrl.includes('supabase.co') && logoUrl.includes('storage')) {
-      logger.debug('🔗 Detected Supabase Storage URL, using Storage API...')
-      try {
-        const { data: buffer, error: storageError } = await supabase.storage
-          .from('logos')
-          .download(logoUrl.split('/storage/v1/object/public/logos/')[1] || logoUrl)
-        
-        if (!storageError && buffer) {
-          logger.debug('✅ Logo downloaded via Storage API, size:', buffer.size)
-          const base64 = Buffer.from(await buffer.arrayBuffer()).toString('base64')
-          return {
-            logoSrc: logoUrl,
-            logoDataUrl: `data:image/png;base64,${base64}`
-          }
-        }
-      } catch (storageErr) {
-        logger.warn('⚠️ Storage API failed, trying direct fetch:', storageErr)
+    if (logoUrl.includes('supabase.co') && logoUrl.includes('/storage/v1/object/public/')) {
+      const match = logoUrl.match(/\/storage\/v1\/object\/public\/([^\/]+)\/(.+)/)
+      if (match) {
+        bucketName = match[1]
+        filePath = match[2]
+        logger.debug('🔗 Extracted from Supabase URL:', { bucketName, filePath })
       }
     }
     
-    // Fallback: Try direct fetch with various options
+    // Try Supabase Storage API first
+    logger.debug('📥 Attempting to download from Supabase Storage:', { bucketName, filePath })
+    try {
+      const { data: buffer, error: storageError } = await supabase.storage
+        .from(bucketName)
+        .download(filePath)
+      
+      if (!storageError && buffer) {
+        logger.debug('✅ Logo downloaded via Storage API, size:', buffer.size)
+        const arrayBuffer = await buffer.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        
+        // Determine mime type
+        let mimeType = 'image/png'
+        if (filePath.includes('.jpg') || filePath.includes('.jpeg')) mimeType = 'image/jpeg'
+        else if (filePath.includes('.svg')) mimeType = 'image/svg+xml'
+        else if (filePath.includes('.webp')) mimeType = 'image/webp'
+        
+        const dataUrl = `data:${mimeType};base64,${base64}`
+        logger.debug('✅ Logo converted to data URL, size:', dataUrl.length)
+        return {
+          logoSrc: logoUrl,
+          logoDataUrl: dataUrl
+        }
+      } else {
+        logger.warn('⚠️ Storage API error:', storageError)
+      }
+    } catch (storageErr) {
+      logger.warn('⚠️ Storage API download failed:', storageErr)
+    }
+    
+    // Fallback: Try fetch with various options
     const fetchOptions = [
-      { headers: {} }, // No special headers
+      { headers: {} },
       { headers: { 'Accept': 'image/*' } },
       { headers: { 'Accept': '*/*' } }
     ]
@@ -153,14 +174,13 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     for (const opts of fetchOptions) {
       try {
         logger.debug('📡 Fetch attempt with options:', opts)
-        const response = await fetch(logoUrl, opts)
+        const response = await fetch(logoUrl, { ...opts, timeout: 10000 })
         
         logger.debug('📊 Logo fetch response:', { 
           ok: response.ok, 
           status: response.status,
           statusText: response.statusText,
-          contentType: response.headers.get('content-type'),
-          contentLength: response.headers.get('content-length')
+          contentType: response.headers.get('content-type')
         })
         
         if (response.ok) {
@@ -168,9 +188,7 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
           logger.debug('✅ Logo buffer received, size:', buffer.byteLength)
           
           const base64 = Buffer.from(buffer).toString('base64')
-          logger.debug('✅ Logo converted to base64, size:', base64.length)
           
-          // Determine mime type
           let mimeType = response.headers.get('content-type') || 'image/png'
           if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) mimeType = 'image/jpeg'
           else if (logoUrl.includes('.svg')) mimeType = 'image/svg+xml'
