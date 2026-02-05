@@ -25,44 +25,52 @@ export default defineEventHandler(async (event) => {
     let tenantData = null
     let error = null
 
+    console.log('🔍 Looking up tenant by slug/id:', { slug, id })
+
     // First try to find by slug
     if (slug) {
+      console.log('📋 Querying by slug:', slug)
       const { data, error: slErr } = await supabase
         .from('tenants')
         .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, description')
         .eq('slug', slug)
-        .eq('is_active', true)
         .single()
 
-      if (!slErr && data) {
+      if (slErr) {
+        console.warn('⚠️ Slug lookup error:', slErr)
+        error = slErr
+      } else if (data) {
+        console.log('✅ Tenant found by slug:', data.id)
         tenantData = data
         error = null
-      } else {
-        error = slErr
       }
     }
 
     // If not found by slug and id provided, try by ID
     if (!tenantData && id) {
+      console.log('📋 Querying by id:', id)
       const { data, error: idErr } = await supabase
         .from('tenants')
         .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, description')
         .eq('id', id)
-        .eq('is_active', true)
         .single()
 
-      if (!idErr && data) {
+      if (idErr) {
+        console.warn('⚠️ ID lookup error:', idErr)
+        error = idErr
+      } else if (data) {
+        console.log('✅ Tenant found by id:', data.id)
         tenantData = data
         error = null
-      } else {
-        error = idErr
       }
     }
 
     if (error || !tenantData) {
+      const errorMsg = `Tenant not found: ${slug || id}`
+      console.error('❌ ' + errorMsg, error)
       throw createError({
         statusCode: 404,
-        message: `Tenant not found: ${slug || id}`
+        message: errorMsg
       })
     }
 

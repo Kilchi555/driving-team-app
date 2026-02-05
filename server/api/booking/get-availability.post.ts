@@ -14,11 +14,11 @@ export default defineEventHandler(async (event) => {
     action = 'get-availability-data'
   } = body
 
-  // Validate inputs
-  if (!tenant_id || !staff_id || !start_date || !end_date) {
+  // Validate action parameter
+  if (!action) {
     throw createError({
       statusCode: 400,
-      message: 'Missing required parameters: tenant_id, staff_id, start_date, end_date'
+      message: 'Missing required parameter: action'
     })
   }
 
@@ -28,9 +28,64 @@ export default defineEventHandler(async (event) => {
   )
 
   try {
+    if (action === 'get-tenant-data') {
+      // ✅ Get tenant configuration (tenant_id could be ID or slug)
+      console.log('🔍 get-tenant-data requested with:', { tenant_id })
+      
+      if (!tenant_id) {
+        throw createError({ statusCode: 400, message: 'Missing tenant_id' })
+      }
+
+      // Try to find tenant - handle both UUID and slug
+      let query = supabase
+        .from('tenants')
+        .select('*')
+      
+      // Check if tenant_id looks like a UUID or is a slug
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenant_id)
+      
+      if (isUUID) {
+        query = query.eq('id', tenant_id)
+      } else {
+        query = query.eq('slug', tenant_id)
+      }
+      
+      const { data: tenant, error: tenantErr } = await query.single()
+
+      if (tenantErr) {
+        console.error('❌ Tenant lookup error:', tenantErr)
+        throw tenantErr
+      }
+
+      const { data: settings, error: setErr } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+
+      if (setErr) {
+        console.error('❌ Settings lookup error:', setErr)
+        throw setErr
+      }
+
+      return {
+        success: true,
+        data: {
+          tenant,
+          settings: settings || []
+        }
+      }
+    }
+
     if (action === 'get-availability-data') {
       // ✅ CONSOLIDATED: Load all availability data for booking page
       // Replaces 8+ direct queries from the booking page
+
+      if (!staff_id || !start_date || !end_date) {
+        throw createError({
+          statusCode: 400,
+          message: 'Missing required parameters: staff_id, start_date, end_date'
+        })
+      }
 
       // 1. Load appointments for staff in date range
       const { data: appointments, error: appointmentsError } = await supabase
@@ -76,6 +131,10 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-booking-setup') {
       // ✅ CONSOLIDATED: Get tenant, categories, event types, locations, settings
       // Replaces 5+ direct queries
+
+      if (!tenant_id) {
+        throw createError({ statusCode: 400, message: 'Missing tenant_id' })
+      }
 
       // 1. Get tenant data
       const { data: tenant, error: tenantError } = await supabase
@@ -186,8 +245,8 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-staff-for-category') {
       // ✅ Get all staff available for a category
       const { category_code } = body
-      if (!category_code) {
-        throw createError({ statusCode: 400, message: 'Missing category_code' })
+      if (!category_code || !tenant_id) {
+        throw createError({ statusCode: 400, message: 'Missing category_code or tenant_id' })
       }
 
       const { data: category, error: catErr } = await supabase
@@ -228,8 +287,8 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-locations-for-staff') {
       // ✅ Get all locations available for a specific staff member
       const { staff_id: queryStaffId, category_code } = body
-      if (!queryStaffId) {
-        throw createError({ statusCode: 400, message: 'Missing staff_id' })
+      if (!queryStaffId || !tenant_id) {
+        throw createError({ statusCode: 400, message: 'Missing staff_id or tenant_id' })
       }
 
       const { data: locations, error: locErr } = await supabase
@@ -247,35 +306,11 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    if (action === 'get-tenant-data') {
-      // ✅ Get tenant configuration and settings
-      const { data: tenant, error: tenantErr } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', tenant_id)
-        .single()
-
-      if (tenantErr) throw tenantErr
-
-      const { data: settings, error: setErr } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('tenant_id', tenant_id)
-
-      if (setErr) throw setErr
-
-      return {
-        success: true,
-        tenant,
-        settings: settings || []
-      }
-    }
-
     if (action === 'check-documents') {
       // ✅ Check if user has required documents uploaded
       const { user_id } = body
-      if (!user_id) {
-        throw createError({ statusCode: 400, message: 'Missing user_id' })
+      if (!user_id || !tenant_id) {
+        throw createError({ statusCode: 400, message: 'Missing user_id or tenant_id' })
       }
 
       // Get required document types from tenant settings
@@ -343,7 +378,7 @@ export default defineEventHandler(async (event) => {
   } catch (err: any) {
     console.error('❌ Booking API error:', err)
     throw createError({
-      statusCode: 500,
+      statusCode: err.statusCode || 500,
       message: err.message || 'Booking availability error'
     })
   }
