@@ -25,7 +25,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       // Handle 401 - Session expired or invalid token
       if (status === 401 && !isRedirecting) {
         isRedirecting = true
-        console.warn('⚠️ Session expired (401) - Redirecting to login')
+        console.warn('⚠️ Session expired (401) - Redirecting to tenant login')
 
         try {
           const authStore = useAuthStore()
@@ -34,18 +34,21 @@ export default defineNuxtPlugin((nuxtApp) => {
           let redirectPath = '/login'
           const tenantId = authStore.userProfile?.tenant_id
           
+          // Try to get tenant slug for redirect to /:slug page
           if (tenantId) {
-            // Try to get tenant slug for redirect
             try {
               const { data: tenant } = await $fetch(`/api/tenants/get-slug?id=${tenantId}`)
               if (tenant?.slug) {
                 redirectPath = `/${tenant.slug}`
+                console.log('✅ Redirecting to tenant login:', redirectPath)
               }
-            } catch {
+            } catch (e) {
+              console.warn('❌ Could not fetch tenant slug:', e)
               // Fallback: try localStorage
               const lastSlug = localStorage.getItem('last_tenant_slug')
               if (lastSlug) {
                 redirectPath = `/${lastSlug}`
+                console.log('✅ Using last tenant slug from localStorage:', redirectPath)
               }
             }
           } else {
@@ -53,6 +56,7 @@ export default defineNuxtPlugin((nuxtApp) => {
             const lastSlug = localStorage.getItem('last_tenant_slug')
             if (lastSlug) {
               redirectPath = `/${lastSlug}`
+              console.log('✅ Using last tenant slug from localStorage:', redirectPath)
             }
           }
 
@@ -79,7 +83,8 @@ export default defineNuxtPlugin((nuxtApp) => {
             // Ignore logout errors
           }
 
-          // Redirect to login
+          // Redirect to tenant login page (/:slug will show login form if not authenticated)
+          console.log('🔄 Redirecting to:', redirectPath)
           await navigateTo(redirectPath)
         } finally {
           // Reset flag after a delay to prevent rapid re-triggers
