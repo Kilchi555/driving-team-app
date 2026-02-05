@@ -811,6 +811,13 @@ export default defineEventHandler(async (event) => {
       throw new Error('Payments not found')
     }
     
+    logger.debug('📋 Payments loaded:', payments.map(p => ({
+      id: p.id,
+      user_id: p.user_id,
+      course_registration_id: p.course_registration_id,
+      appointment_id: p.appointment_id
+    })))
+    
     // ✅ SECURITY: Verify that all payments belong to the authenticated user
     // Check if user is admin (can access any payment)
     let isAdmin = false
@@ -833,31 +840,53 @@ export default defineEventHandler(async (event) => {
     
     for (const payment of payments) {
       let isAuthorized = false
+      logger.debug('🔍 Checking payment:', { 
+        paymentId: payment.id, 
+        payment_user_id: payment.user_id, 
+        course_registration_id: payment.course_registration_id,
+        current_user_id: user.id
+      })
       
       // User is admin - can access any payment
       if (isAdmin) {
+        logger.debug('✅ User is admin - payment authorized')
         isAuthorized = true
       }
       // Payment directly belongs to user
       else if (payment.user_id === user.id) {
+        logger.debug('✅ Payment belongs to user directly')
         isAuthorized = true
       }
       // Payment has no user_id but belongs to a course registration owned by user
       else if (payment.user_id === null && payment.course_registration_id) {
+        logger.debug('🔍 Checking course registration ownership for:', payment.course_registration_id)
         try {
-          const { data: courseReg } = await supabase
+          const { data: courseReg, error: crError } = await supabase
             .from('course_registrations')
             .select('user_id')
             .eq('id', payment.course_registration_id)
             .maybeSingle()
           
-          if (courseReg?.user_id === user.id) {
-            logger.debug('✅ User owns this course registration:', payment.course_registration_id)
-            isAuthorized = true
+          if (crError) {
+            logger.warn('⚠️ Error checking course registration:', crError)
+          } else if (courseReg) {
+            logger.debug('📋 Course registration found:', { 
+              course_reg_user_id: courseReg.user_id, 
+              current_user_id: user.id,
+              matches: courseReg.user_id === user.id
+            })
+            if (courseReg.user_id === user.id) {
+              logger.debug('✅ User owns this course registration:', payment.course_registration_id)
+              isAuthorized = true
+            }
+          } else {
+            logger.warn('⚠️ Course registration not found:', payment.course_registration_id)
           }
         } catch (err) {
           logger.warn('⚠️ Could not check course registration ownership:', err)
         }
+      } else {
+        logger.debug('❌ Payment not authorized - no match found')
       }
       
       if (isAuthorized) {
