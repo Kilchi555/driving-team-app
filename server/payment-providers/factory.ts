@@ -9,13 +9,15 @@ import { logger } from '~/utils/logger'
 
 /**
  * Lädt die Payment Provider Konfiguration für einen Tenant aus der Datenbank
+ * ✅ SECURITY: wallee_secret_key comes from environment variable only
  */
 export async function getPaymentProviderConfig(tenantId: string): Promise<PaymentProviderConfig> {
   const supabase = getSupabaseAdmin()
 
+  // ✅ SECURITY: Only load non-sensitive IDs from database
   const { data: tenant, error } = await supabase
     .from('tenants')
-    .select('wallee_space_id, wallee_user_id, wallee_secret_key')
+    .select('wallee_space_id, wallee_user_id')
     .eq('id', tenantId)
     .single()
 
@@ -23,17 +25,26 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
     throw new Error(`Failed to load payment provider config for tenant ${tenantId}: ${error?.message}`)
   }
 
+  // ✅ SECURITY: API Secret ALWAYS comes from environment variable (never from DB)
+  const apiSecret = process.env.WALLEE_SECRET_KEY
+  if (!apiSecret) {
+    throw new Error('WALLEE_SECRET_KEY environment variable is required')
+  }
+
   // Default zu Wallee
-  if (!tenant.wallee_space_id || !tenant.wallee_user_id || !tenant.wallee_secret_key) {
+  const spaceId = tenant.wallee_space_id || parseInt(process.env.WALLEE_SPACE_ID || '82592')
+  const userId = tenant.wallee_user_id || parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+
+  if (!spaceId || !userId) {
     throw new Error('Wallee credentials not configured for tenant')
   }
 
   return {
     provider: 'wallee',
     apiKey: '', // Nicht verwendet für Wallee
-    spaceId: tenant.wallee_space_id,
-    userId: tenant.wallee_user_id,
-    apiSecret: tenant.wallee_secret_key,
+    spaceId,
+    userId,
+    apiSecret,
     isActive: true
   }
 }
