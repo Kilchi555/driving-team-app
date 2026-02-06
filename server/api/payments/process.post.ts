@@ -570,16 +570,20 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const statusCode = error.statusCode || 500
 
     // Log with user_id if available (after user lookup), otherwise use auth_user_id
-    await logAudit({
-      user_id: userData?.id,  // Will be undefined if user lookup failed
-      auth_user_id: authenticatedUserId,  // Always available
-      action: 'process_payment',
-      status: 'error',
-      error_message: errorMessage,
-      ip_address: ipAddress,
-      tenant_id: tenantId,
-      details: { ...auditDetails, duration_ms: Date.now() - startTime }
-    })
+    try {
+      await logAudit({
+        user_id: userData?.id || null,  // Will be undefined if user lookup failed
+        auth_user_id: authenticatedUserId || null,  // Always available
+        action: 'process_payment',
+        status: 'error',
+        error_message: errorMessage,
+        ip_address: ipAddress,
+        tenant_id: tenantId || null,
+        details: { ...auditDetails, duration_ms: Date.now() - startTime }
+      })
+    } catch (auditErr) {
+      logger.error('Failed to log audit entry:', auditErr)
+    }
 
     throw createError({ statusCode, statusMessage: errorMessage })
   }
