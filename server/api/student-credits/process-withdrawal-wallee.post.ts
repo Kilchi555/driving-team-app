@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
         const walleeConfig = {
           space_id: tenant.wallee_space_id,
           user_id: tenant.wallee_user_id,
-          api_secret: process.env.WALLEE_API_KEY
+          api_secret: process.env.WALLEE_SECRET_KEY
         }
 
         const refundService = new (Wallee as any).api.RefundService(walleeConfig)

@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json;charset=utf-8',
-              'Authorization': `Bearer ${process.env.WALLEE_API_KEY}`
+              'Authorization': `Bearer ${process.env.WALLEE_SECRET_KEY}`
             }
           }
         )
