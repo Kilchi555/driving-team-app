@@ -1,7 +1,7 @@
 import { H3Event, setCookie, getCookie, deleteCookie } from 'h3'
 
-const COOKIE_NAME = 'sb-session'
-const REFRESH_COOKIE_NAME = 'sb-refresh'
+const COOKIE_NAME = 'sb-auth-token'
+const REFRESH_COOKIE_NAME = 'sb-refresh-token'
 
 const isProduction = process.env.NODE_ENV === 'production'
 
