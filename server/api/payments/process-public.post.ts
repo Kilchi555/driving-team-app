@@ -96,10 +96,10 @@ export default defineEventHandler(async (event) => {
     let apiSecret: string | null = null
     
     try {
-      // Load from tenants table (where they're currently stored)
+      // Load tenant config (Space ID and User ID only - never read secret from DB!)
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('wallee_space_id, wallee_user_id, wallee_secret_key')
+        .select('wallee_space_id, wallee_user_id')
         .eq('id', tenantId)
         .single()
 
@@ -115,9 +115,8 @@ export default defineEventHandler(async (event) => {
         spaceId: parseInt(tenant.wallee_space_id),
         userId: parseInt(tenant.wallee_user_id || '1')
       }
-      apiSecret = tenant.wallee_secret_key
       
-      logger.debug('✅ Wallee config loaded from tenants table:', { 
+      logger.debug('✅ Wallee config loaded:', { 
         spaceId: walleeConfig.spaceId,
         userId: walleeConfig.userId
       })
@@ -130,10 +129,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. Ensure we have API secret
-    if (!apiSecret) {
-      apiSecret = process.env.WALLEE_API_KEY
-    }
+    // 4. Load API secret from environment variables (NEVER from database!)
+    apiSecret = process.env.WALLEE_API_KEY
 
     if (!apiSecret) {
       throw createError({

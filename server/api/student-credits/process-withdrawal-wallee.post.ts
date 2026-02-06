@@ -136,7 +136,7 @@ export default defineEventHandler(async (event) => {
 
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('wallee_space_id, wallee_user_id, wallee_secret_key')
+          .select('wallee_space_id, wallee_user_id')
           .eq('id', user.tenant_id)
           .single()
 
@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
         const walleeConfig = {
           space_id: tenant.wallee_space_id,
           user_id: tenant.wallee_user_id,
-          api_secret: tenant.wallee_secret_key
+          api_secret: process.env.WALLEE_API_KEY
         }
 
         const refundService = new (Wallee as any).api.RefundService(walleeConfig)

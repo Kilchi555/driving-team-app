@@ -1,10 +1,12 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
 import { getPaymentProviderForTenant } from '~/server/payment-providers/factory'
 import { sendEmail } from '~/server/utils/email'
 import { generateSARIEnrollmentConfirmationEmail, generateNonSARIEnrollmentConfirmationEmail } from '~/server/utils/email-templates'
 import { SARIClient } from '~/utils/sariClient'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -46,24 +48,31 @@ export default defineEventHandler(async (event) => {
 
     if (isSARI) {
       // 3. For SARI courses: Create enrollment via SARI API
-      // Get tenant SARI config
+      // Get tenant SARI config - environment flag from tenants, credentials from tenant_secrets
       const { data: tenantSettings, error: settingsError } = await supabase
-        .from('tenant_settings')
-        .select('sari_environment, sari_client_id, sari_client_secret, sari_username, sari_password')
-        .eq('tenant_id', course.tenant_id)
+        .from('tenants')
+        .select('sari_environment')
+        .eq('id', course.tenant_id)
         .single()
 
       if (settingsError || !tenantSettings) {
         throw new Error('SARI configuration not found for tenant')
       }
 
+      // Load encrypted credentials from tenant_secrets
+      const sariSecrets = await getTenantSecretsSecure(
+        course.tenant_id,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'enroll-complete'
+      )
+
       // Initialize SARI client
       const sariClient = new SARIClient({
         environment: tenantSettings.sari_environment || 'test',
-        clientId: tenantSettings.sari_client_id,
-        clientSecret: tenantSettings.sari_client_secret,
-        username: tenantSettings.sari_username,
-        password: tenantSettings.sari_password
+        clientId: sariSecrets.SARI_CLIENT_ID,
+        clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+        username: sariSecrets.SARI_USERNAME,
+        password: sariSecrets.SARI_PASSWORD
       })
 
       const syncEngine = new SARISyncEngine(supabase, sariClient, course.tenant_id)
