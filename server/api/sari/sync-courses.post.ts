@@ -1,12 +1,8 @@
-/**
- * POST /api/sari/sync-courses
- * Trigger course sync for a specific course type (VKU or PGS)
- */
-
 import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient } from '~/utils/sariClient'
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -64,35 +60,37 @@ export default defineEventHandler(async (event) => {
       user_id: user.id
     })
 
-    // 4. Get tenant SARI config
-    const { data: tenant } = await supabaseAdmin
+    // 4. Get tenant SARI config (only env, no credentials)
+    const { data: tenantConfig } = await supabaseAdmin
       .from('tenants')
-      .select(
-        'id, sari_enabled, sari_environment, sari_client_id, sari_client_secret, sari_username, sari_password'
-      )
+      .select('id, sari_enabled, sari_environment')
       .eq('id', userProfile.tenant_id)
       .single()
 
-    if (!tenant) {
+    if (!tenantConfig) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Tenant not found'
       })
     }
 
-    if (!tenant.sari_enabled) {
+    if (!tenantConfig.sari_enabled) {
       throw createError({
         statusCode: 400,
         statusMessage: 'SARI is not enabled for this tenant'
       })
     }
 
-    if (
-      !tenant.sari_client_id ||
-      !tenant.sari_client_secret ||
-      !tenant.sari_username ||
-      !tenant.sari_password
-    ) {
+    // ✅ Load SARI credentials securely
+    let sariSecrets
+    try {
+      sariSecrets = await getTenantSecretsSecure(
+        userProfile.tenant_id,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'SARI_SYNC_COURSES'
+      )
+    } catch (secretsErr: any) {
+      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
       throw createError({
         statusCode: 400,
         statusMessage: 'SARI credentials not configured for this tenant'
@@ -101,11 +99,11 @@ export default defineEventHandler(async (event) => {
 
     // 5. Create SARI client
     const sari = new SARIClient({
-      environment: (tenant.sari_environment || 'test') as 'test' | 'production',
-      clientId: tenant.sari_client_id,
-      clientSecret: tenant.sari_client_secret,
-      username: tenant.sari_username,
-      password: tenant.sari_password
+      environment: (tenantConfig.sari_environment || 'test') as 'test' | 'production',
+      clientId: sariSecrets.SARI_CLIENT_ID,
+      clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+      username: sariSecrets.SARI_USERNAME,
+      password: sariSecrets.SARI_PASSWORD
     })
 
     // 6. Create sync engine and sync courses

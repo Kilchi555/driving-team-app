@@ -553,8 +553,12 @@ async function deleteTenantLogo(logoUrl: string): Promise<void> {
       .from('public')
       .remove([filePath])
 
-  if (error) {
-    throw new Error(`Logo-Löschung fehlgeschlagen: ${error.message}`)
+    if (error) {
+      throw new Error(`Logo-Löschung fehlgeschlagen: ${error.message}`)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Could not delete tenant logo:', err)
+    // Non-critical, continue
   }
 }
 

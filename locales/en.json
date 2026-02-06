@@ -53,6 +53,20 @@
     "no": "No",
     "close": "Close",
     "confirm": "Confirm"
+  },
+  "admin": {
+    "branding": {
+      "logoUpload": "Logo Management",
+      "logoSquare": "Square Logo",
+      "logoWide": "Wide Logo",
+      "favicon": "Favicon",
+      "uploading": "Uploading...",
+      "uploadSuccess": "Logo uploaded successfully!",
+      "uploadFailed": "Logo upload failed",
+      "deleteSuccess": "Logo deleted successfully",
+      "deleteFailed": "Logo deletion failed",
+      "fileTooLarge": "File is too large (max. 5MB)"
+    }
   }
 }
 

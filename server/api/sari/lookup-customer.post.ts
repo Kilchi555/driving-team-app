@@ -1,5 +1,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient } from '~/utils/sariClient'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import { logger } from '~/utils/logger'
 
 /**
  * Lookup customer data from SARI by faberid and birthdate
@@ -30,21 +32,30 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   try {
-    // Get tenant's SARI configuration
-    const { data: tenant, error: tenantError } = await supabase
+    // Get tenant's SARI configuration (only env, no credentials)
+    const { data: tenantConfig, error: tenantError } = await supabase
       .from('tenants')
-      .select('sari_client_id, sari_client_secret, sari_username, sari_password, sari_environment')
+      .select('sari_environment')
       .eq('id', tenantId)
       .single()
 
-    if (tenantError || !tenant) {
+    if (tenantError || !tenantConfig) {
       throw createError({
         statusCode: 404,
-        message: 'Tenant not found or SARI not configured'
+        message: 'Tenant not found'
       })
     }
 
-    if (!tenant.sari_client_id || !tenant.sari_client_secret) {
+    // ✅ Load SARI credentials securely
+    let sariSecrets
+    try {
+      sariSecrets = await getTenantSecretsSecure(
+        tenantId,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'SARI_LOOKUP'
+      )
+    } catch (secretsErr: any) {
+      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
       throw createError({
         statusCode: 400,
         message: 'SARI credentials not configured for this tenant'
@@ -53,11 +64,11 @@ export default defineEventHandler(async (event) => {
 
     // Create SARI client
     const sari = new SARIClient({
-      environment: tenant.sari_environment || 'production',
-      clientId: tenant.sari_client_id,
-      clientSecret: tenant.sari_client_secret,
-      username: tenant.sari_username || '',
-      password: tenant.sari_password || ''
+      environment: tenantConfig.sari_environment || 'production',
+      clientId: sariSecrets.SARI_CLIENT_ID,
+      clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+      username: sariSecrets.SARI_USERNAME || '',
+      password: sariSecrets.SARI_PASSWORD || ''
     })
 
     // Lookup customer in SARI

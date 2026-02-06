@@ -16,6 +16,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
 import { logger } from '~/utils/logger'
 import { verifyCronToken, checkCronRateLimit, logCronExecution } from '~/server/utils/cron'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 
 interface CronResult {
   success: boolean
@@ -64,12 +65,10 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
 
     logger.debug('🔄 SARI Cron Job started')
 
-    // 1. Get all tenants with SARI enabled
+    // 1. Get all tenants with SARI enabled (nur config, keine credentials!)
     const { data: tenants, error: tenantsError } = await supabaseAdmin
       .from('tenants')
-      .select(
-        'id, name, sari_enabled, sari_environment, sari_client_id, sari_client_secret, sari_username, sari_password'
-      )
+      .select('id, name, sari_enabled, sari_environment')
       .eq('sari_enabled', true)
 
     if (tenantsError) {
@@ -116,14 +115,22 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
     // 2. Process each tenant
     for (const tenant of tenants) {
       try {
-        // Validate credentials
-        if (
-          !tenant.sari_client_id ||
-          !tenant.sari_client_secret ||
-          !tenant.sari_username ||
-          !tenant.sari_password
-        ) {
-          throw new Error('Incomplete SARI credentials')
+        // ✅ Load SARI credentials securely
+        let sariSecrets
+        try {
+          sariSecrets = await getTenantSecretsSecure(
+            tenant.id,
+            ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+            'CRON_SYNC_SARI_COURSES'
+          )
+        } catch (secretsErr: any) {
+          logger.warn(`⚠️ Failed to load SARI credentials for tenant ${tenant.name}:`, secretsErr.message)
+          failedTenants.push({
+            tenant_id: tenant.id,
+            tenant_name: tenant.name,
+            error: `SARI credentials not configured: ${secretsErr.message}`
+          })
+          continue
         }
 
         logger.debug(`🔄 Syncing tenant: ${tenant.name}`, {
@@ -133,10 +140,10 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
         // Create SARI client for this tenant
         const sari = new SARIClient({
           environment: (tenant.sari_environment || 'test') as 'test' | 'production',
-          clientId: tenant.sari_client_id,
-          clientSecret: tenant.sari_client_secret,
-          username: tenant.sari_username,
-          password: tenant.sari_password
+          clientId: sariSecrets.SARI_CLIENT_ID,
+          clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+          username: sariSecrets.SARI_USERNAME,
+          password: sariSecrets.SARI_PASSWORD
         })
 
         // Create sync engine

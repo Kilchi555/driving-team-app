@@ -17,6 +17,8 @@ import { SARIClient } from '~/utils/sariClient'
 import { checkSARIRateLimit, formatRateLimitError, validateSARIInput, sanitizeSARIInput } from '~/server/utils/sari-rate-limit'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -106,24 +108,40 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get tenant SARI credentials
-    const { data: tenant, error: tenantError } = await supabase
+    // Get tenant SARI settings
+    const { data: tenantSettings, error: tenantError } = await supabase
       .from('tenants')
-      .select('sari_enabled, sari_environment, sari_client_id, sari_client_secret, sari_username, sari_password')
+      .select('sari_enabled, sari_environment')
       .eq('id', userProfile.tenant_id)
       .single()
 
-    if (tenantError || !tenant || !tenant.sari_enabled) {
+    if (tenantError || !tenantSettings || !tenantSettings.sari_enabled) {
       throw createError({ statusCode: 400, statusMessage: 'SARI integration not enabled' })
+    }
+
+    // ✅ Load SARI credentials securely
+    let sariSecrets
+    try {
+      sariSecrets = await getTenantSecretsSecure(
+        userProfile.tenant_id,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'SARI_VALIDATE_STUDENT'
+      )
+    } catch (secretsErr: any) {
+      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'SARI credentials not properly configured'
+      })
     }
 
     // Create SARI client
     const sari = new SARIClient({
-      environment: tenant.sari_environment || 'test',
-      clientId: tenant.sari_client_id,
-      clientSecret: tenant.sari_client_secret,
-      username: tenant.sari_username,
-      password: tenant.sari_password
+      environment: tenantSettings.sari_environment || 'test',
+      clientId: sariSecrets.SARI_CLIENT_ID,
+      clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+      username: sariSecrets.SARI_USERNAME,
+      password: sariSecrets.SARI_PASSWORD
     })
 
     console.log(`🔍 [${userProfile.auth_user_id}] Validating student ${student.id} with SARI`)

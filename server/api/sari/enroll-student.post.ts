@@ -17,6 +17,8 @@ import { SARIClient } from '~/utils/sariClient'
 import { checkSARIRateLimit, formatRateLimitError, validateSARIInput, sanitizeSARIInput } from '~/server/utils/sari-rate-limit'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -160,32 +162,44 @@ export default defineEventHandler(async (event) => {
 
     const sariCourseId = parseInt(sariSession.sari_session_id)
 
-    // Get tenant SARI credentials
-    const { data: tenant, error: tenantError } = await supabase
+    // Get tenant SARI settings and check if enabled
+    const { data: tenantSettings, error: tenantError } = await supabase
       .from('tenants')
-      .select('sari_enabled, sari_environment, sari_client_id, sari_client_secret, sari_username, sari_password')
+      .select('sari_enabled, sari_environment')
       .eq('id', userProfile.tenant_id)
       .single()
 
-    if (tenantError || !tenant) {
+    if (tenantError || !tenantSettings) {
       throw createError({ statusCode: 500, statusMessage: 'Tenant configuration not found' })
     }
 
-    if (!tenant.sari_enabled) {
+    if (!tenantSettings.sari_enabled) {
       throw createError({ statusCode: 400, statusMessage: 'SARI integration is not enabled for this tenant' })
     }
 
-    if (!tenant.sari_client_id || !tenant.sari_client_secret || !tenant.sari_username || !tenant.sari_password) {
-      throw createError({ statusCode: 500, statusMessage: 'SARI credentials not properly configured' })
+    // ✅ Load SARI credentials securely from tenant_secrets
+    let sariSecrets
+    try {
+      sariSecrets = await getTenantSecretsSecure(
+        userProfile.tenant_id,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'SARI_ENROLLMENT'
+      )
+    } catch (secretsErr: any) {
+      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'SARI credentials not properly configured'
+      })
     }
 
     // Create SARI client (don't expose credentials in error messages)
     const sariClient = new SARIClient({
-      environment: tenant.sari_environment || 'test',
-      clientId: tenant.sari_client_id,
-      clientSecret: tenant.sari_client_secret,
-      username: tenant.sari_username,
-      password: tenant.sari_password
+      environment: tenantSettings.sari_environment || 'test',
+      clientId: sariSecrets.SARI_CLIENT_ID,
+      clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+      username: sariSecrets.SARI_USERNAME,
+      password: sariSecrets.SARI_PASSWORD
     })
 
     // Format birthdate as YYYY-MM-DD

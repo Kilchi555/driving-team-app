@@ -122,59 +122,68 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
   logger.debug('📷 Loading logo from URL:', logoUrl.substring(0, 100))
   
   try {
-    // Extract bucket and path from Supabase Storage URL
-    // URL format: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
-    // But sometimes just: https://{project}.supabase.co/storage/v1/object/public/{path}
-    let bucketName = 'logos'
-    let filePath = logoUrl
-    
-    if (logoUrl.includes('supabase.co') && logoUrl.includes('/storage/v1/object/public/')) {
+    // Check if it's a relative Storage path (starts with /storage/)
+    if (logoUrl.startsWith('/storage/v1/object/public/')) {
+      logger.debug('🔗 Detected relative storage path')
+      
+      // Extract bucket and path from relative path
+      // Format: /storage/v1/object/public/{bucket}/{path} or /storage/v1/object/public/{path}
       const match = logoUrl.match(/\/storage\/v1\/object\/public\/([^\/]+)\/(.+)/)
+      let bucketName = 'tenant-assets'
+      let filePath = logoUrl
+      
       if (match) {
         // Has bucket name
         bucketName = match[1]
         filePath = match[2]
-        logger.debug('🔗 Extracted bucket and path from URL:', { bucketName, filePath })
+        logger.debug('🔗 Extracted bucket and path from relative URL:', { bucketName, filePath })
       } else {
-        // Missing bucket name - assume it's just the filename
+        // Try to extract just the path without bucket
         const fileMatch = logoUrl.match(/\/storage\/v1\/object\/public\/(.+)$/)
         if (fileMatch) {
           filePath = fileMatch[1]
-          bucketName = 'logos' // Default bucket
-          logger.debug('🔗 Extracted filename (no bucket in URL, using default):', { bucketName, filePath })
+          logger.debug('🔗 Extracted filename (no bucket in URL, using default tenant-assets):', { filePath })
         }
+      }
+      
+      // Try Supabase Storage API
+      logger.debug('📥 Attempting to download from Supabase Storage:', { bucketName, filePath })
+      try {
+        const { data: buffer, error: storageError } = await supabase.storage
+          .from(bucketName)
+          .download(filePath)
+        
+        if (!storageError && buffer) {
+          logger.debug('✅ Logo downloaded via Storage API, size:', buffer.size)
+          const arrayBuffer = await buffer.arrayBuffer()
+          const base64 = Buffer.from(arrayBuffer).toString('base64')
+          
+          // Determine mime type
+          let mimeType = 'image/png'
+          if (filePath.includes('.jpg') || filePath.includes('.jpeg')) mimeType = 'image/jpeg'
+          else if (filePath.includes('.svg')) mimeType = 'image/svg+xml'
+          else if (filePath.includes('.webp')) mimeType = 'image/webp'
+          
+          const dataUrl = `data:${mimeType};base64,${base64}`
+          logger.debug('✅ Logo converted to data URL, size:', dataUrl.length)
+          return {
+            logoSrc: logoUrl,
+            logoDataUrl: dataUrl
+          }
+        } else {
+          logger.warn('⚠️ Storage API error, will fallback to fetch:', storageError)
+        }
+      } catch (storageErr) {
+        logger.warn('⚠️ Storage API download failed, will fallback to fetch:', storageErr)
       }
     }
     
-    // Try Supabase Storage API first
-    logger.debug('📥 Attempting to download from Supabase Storage:', { bucketName, filePath })
-    try {
-      const { data: buffer, error: storageError } = await supabase.storage
-        .from(bucketName)
-        .download(filePath)
-      
-      if (!storageError && buffer) {
-        logger.debug('✅ Logo downloaded via Storage API, size:', buffer.size)
-        const arrayBuffer = await buffer.arrayBuffer()
-        const base64 = Buffer.from(arrayBuffer).toString('base64')
-        
-        // Determine mime type
-        let mimeType = 'image/png'
-        if (filePath.includes('.jpg') || filePath.includes('.jpeg')) mimeType = 'image/jpeg'
-        else if (filePath.includes('.svg')) mimeType = 'image/svg+xml'
-        else if (filePath.includes('.webp')) mimeType = 'image/webp'
-        
-        const dataUrl = `data:${mimeType};base64,${base64}`
-        logger.debug('✅ Logo converted to data URL, size:', dataUrl.length)
-        return {
-          logoSrc: logoUrl,
-          logoDataUrl: dataUrl
-        }
-      } else {
-        logger.warn('⚠️ Storage API error:', storageError)
-      }
-    } catch (storageErr) {
-      logger.warn('⚠️ Storage API download failed:', storageErr)
+    // Fallback: Construct full public URL if it's a relative path and try fetch
+    let fullUrl = logoUrl
+    if (logoUrl.startsWith('/storage/v1/object/public/')) {
+      const projectRef = 'unyjaetebnaexaflpyoc' // Your Supabase project ref
+      fullUrl = `https://${projectRef}.supabase.co${logoUrl}`
+      logger.debug('🔗 Constructed full URL from relative path:', fullUrl.substring(0, 100))
     }
     
     // Fallback: Try fetch with various options
@@ -187,7 +196,7 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
     for (const opts of fetchOptions) {
       try {
         logger.debug('📡 Fetch attempt with options:', opts)
-        const response = await fetch(logoUrl, { ...opts, timeout: 10000 })
+        const response = await fetch(fullUrl, { ...opts, timeout: 10000 })
         
         logger.debug('📊 Logo fetch response:', { 
           ok: response.ok, 
@@ -203,9 +212,9 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
           const base64 = Buffer.from(buffer).toString('base64')
           
           let mimeType = response.headers.get('content-type') || 'image/png'
-          if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) mimeType = 'image/jpeg'
-          else if (logoUrl.includes('.svg')) mimeType = 'image/svg+xml'
-          else if (logoUrl.includes('.webp')) mimeType = 'image/webp'
+          if (fullUrl.includes('.jpg') || fullUrl.includes('.jpeg')) mimeType = 'image/jpeg'
+          else if (fullUrl.includes('.svg')) mimeType = 'image/svg+xml'
+          else if (fullUrl.includes('.webp')) mimeType = 'image/webp'
           
           const dataUrl = `data:${mimeType};base64,${base64}`
           logger.debug('✅ Logo data URL created with mimeType:', mimeType)
