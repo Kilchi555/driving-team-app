@@ -98,9 +98,10 @@ export default defineEventHandler(async (event) => {
     
     try {
       // ✅ Load Wallee IDs and Secret from tenant_secrets table
+      // The secrets are stored with lowercase secret_name: wallee_space_id, wallee_user_id, wallee_secret_key
       const walleeSecrets = await getTenantSecretsSecure(
         tenantId,
-        ['WALLEE_SPACE_ID', 'WALLEE_APPLICATION_USER_ID', 'WALLEE_SECRET_KEY'],
+        ['wallee_space_id', 'wallee_user_id', 'wallee_secret_key'],
         'WALLEE_PAYMENT_PUBLIC'
       )
       
@@ -114,7 +115,7 @@ export default defineEventHandler(async (event) => {
 
       walleeConfig = {
         spaceId: parseInt(walleeSecrets.WALLEE_SPACE_ID),
-        userId: parseInt(walleeSecrets.WALLEE_APPLICATION_USER_ID || '1')
+        userId: parseInt(walleeSecrets.WALLEE_USER_ID || '1')
       }
       
       apiSecret = walleeSecrets.WALLEE_SECRET_KEY
