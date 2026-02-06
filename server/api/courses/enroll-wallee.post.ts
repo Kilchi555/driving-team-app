@@ -13,7 +13,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
-import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 
@@ -76,8 +76,15 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 3. Get SARI credentials
-    const credentials = await getSARICredentialsSecure(tenantId, 'COURSE_ENROLLMENT_WALLEE')
-    if (!credentials) {
+    let sariSecrets
+    try {
+      sariSecrets = await getTenantSecretsSecure(
+        tenantId,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'COURSE_ENROLLMENT_WALLEE'
+      )
+    } catch (secretsErr: any) {
+      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
       throw createError({
         statusCode: 500,
         statusMessage: 'SARI not configured for this tenant'
@@ -85,7 +92,13 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 4. Validate with SARI
-    const sari = new SARIClient(credentials)
+    const sari = new SARIClient({
+      environment: 'production',
+      clientId: sariSecrets.SARI_CLIENT_ID,
+      clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+      username: sariSecrets.SARI_USERNAME || '',
+      password: sariSecrets.SARI_PASSWORD || ''
+    })
     const faberidClean = faberid.replace(/\./g, '')
     
     let customerData: any
