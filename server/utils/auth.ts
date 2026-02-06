@@ -29,8 +29,8 @@ export async function getAuthenticatedUser(event: H3Event) {
           const cookieName = name.trim()
           const value = valueParts.join('=') // Handle cookies with = in value
           
-          // Look for Supabase session cookies (sb-{project-id}-auth-token or sb-*-session)
-          if (cookieName.startsWith('sb-') && (cookieName.endsWith('-auth-token') || cookieName.includes('session'))) {
+          // Look for Supabase session cookies (sb-session, sb-refresh, etc)
+          if (cookieName.startsWith('sb-') && (cookieName.includes('session') || cookieName.includes('auth') || cookieName.includes('refresh'))) {
             try {
               const decoded = decodeURIComponent(value)
               
