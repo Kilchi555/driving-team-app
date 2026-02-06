@@ -27,21 +27,9 @@ export default defineEventHandler(async (event) => {
     // ✅ Use Admin client to bypass RLS
     const supabase = getSupabaseAdmin()
 
-    // ✅ GET WALLEE CONFIG FOR TENANT (Multi-Tenant Support!)
+    // ✅ GET WALLEE CONFIG FOR TENANT (from Vercel environment only - no fallbacks)
     logger.debug('🔍 Fetching Wallee config for tenant:', tenantId)
-    let walleeConfig: any
-    try {
-      walleeConfig = await getWalleeConfigForTenant(tenantId)
-    } catch (configError: any) {
-      console.error('❌ Error loading Wallee config for tenant:', tenantId, configError)
-      // Fallback zu globaler Konfiguration
-      logger.debug('⚠️ Falling back to global Wallee config')
-      walleeConfig = {
-        spaceId: parseInt(process.env.WALLEE_SPACE_ID || '82592'),
-        userId: parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525'),
-        apiSecret: process.env.WALLEE_SECRET_KEY || (() => { throw new Error('WALLEE_SECRET_KEY is required') })()
-      }
-    }
+    const walleeConfig = getWalleeConfigForTenant(tenantId)
     const spaceId = walleeConfig.spaceId
     
     logger.debug('🔧 Wallee Config loaded:', {

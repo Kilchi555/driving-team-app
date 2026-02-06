@@ -151,8 +151,8 @@ export default defineEventHandler(async (event) => {
       durationMinutes: appointmentDetails?.duration_minutes
     })
 
-    // ✅ GET WALLEE CONFIG FOR TENANT (with fallback to env variables)
-    const walleeConfig = await getWalleeConfigForTenant(tenantId)
+    // ✅ GET WALLEE CONFIG FOR TENANT (from Vercel environment variables only)
+    const walleeConfig = getWalleeConfigForTenant(tenantId)
     logger.debug('🔧 Wallee Config:', { 
       spaceId: walleeConfig.spaceId, 
       userId: walleeConfig.userId,

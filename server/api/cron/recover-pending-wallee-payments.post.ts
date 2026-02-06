@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
         logger.debug(`🔍 Checking transaction ${payment.wallee_transaction_id} for payment ${payment.id}`)
 
         // Get tenant config
-        const walleeConfig = await getWalleeConfigForTenant(payment.tenant_id)
+        const walleeConfig = getWalleeConfigForTenant(payment.tenant_id)
         const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
         const transactionService = new Wallee.api.TransactionService(config)
 
