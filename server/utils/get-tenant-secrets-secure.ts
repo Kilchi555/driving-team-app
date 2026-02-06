@@ -76,6 +76,56 @@ export async function getTenantSecretsSecure(
         context,
         requestedTypes: secretTypes
       })
+      
+      // Try fallback to legacy tenants table for backward compatibility
+      logger.debug(`🔄 Attempting fallback to legacy tenants table for tenant ${tenantId}`, { context })
+      
+      const legacySariTypes = secretTypes.filter(t => t.startsWith('SARI_'))
+      if (legacySariTypes.length > 0) {
+        const legacyColumns = legacySariTypes.map(t => {
+          switch(t) {
+            case 'SARI_CLIENT_ID': return 'sari_client_id'
+            case 'SARI_CLIENT_SECRET': return 'sari_client_secret'
+            case 'SARI_USERNAME': return 'sari_username'
+            case 'SARI_PASSWORD': return 'sari_password'
+            case 'SARI_ENVIRONMENT': return 'sari_environment'
+            default: return null
+          }
+        }).filter(Boolean).join(', ')
+        
+        if (legacyColumns) {
+          const { data: legacyTenant, error: legacyError } = await supabaseAdmin
+            .from('tenants')
+            .select(legacyColumns)
+            .eq('id', tenantId)
+            .single()
+          
+          if (!legacyError && legacyTenant) {
+            logger.debug(`✅ Loaded SARI secrets from legacy tenants table for tenant ${tenantId}`, { context })
+            const result: TenantSecrets = {}
+            
+            legacySariTypes.forEach(type => {
+              const legacyKey = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() // Convert to camelCase
+              const columnName = {
+                'SARI_CLIENT_ID': 'sari_client_id',
+                'SARI_CLIENT_SECRET': 'sari_client_secret',
+                'SARI_USERNAME': 'sari_username',
+                'SARI_PASSWORD': 'sari_password',
+                'SARI_ENVIRONMENT': 'sari_environment'
+              }[type]
+              
+              if (columnName && (legacyTenant as any)[columnName]) {
+                result[type] = (legacyTenant as any)[columnName]
+              }
+            })
+            
+            if (Object.keys(result).length > 0) {
+              return result
+            }
+          }
+        }
+      }
+      
       throw new Error(`No secrets configured for tenant ${tenantId}. Requested: ${secretTypes.join(', ')}`)
     }
 
