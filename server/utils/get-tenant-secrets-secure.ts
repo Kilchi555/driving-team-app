@@ -56,20 +56,40 @@ export async function getTenantSecretsSecure(
 
     const supabaseAdmin = getSupabaseAdmin()
 
-    // 1. Lade Secrets aus tenant_secrets Table (NUR diese Spalten!)
-    const { data: secrets, error: secretsError } = await supabaseAdmin
+    // 1. Lade Secrets aus tenant_secrets Table - both by secret_type AND secret_name
+    logger.debug(`🔍 Searching for secrets:`, { secretTypes })
+    
+    // Try to find secrets by secret_type first
+    const { data: secretsByType, error: typeError } = await supabaseAdmin
       .from('tenant_secrets')
-      .select('secret_type, secret_value, updated_at')
+      .select('secret_type, secret_name, secret_value, updated_at')
       .eq('tenant_id', tenantId)
       .in('secret_type', secretTypes)
 
-    if (secretsError) {
-      logger.error(`❌ Failed to load secrets from DB for tenant ${tenantId}:`, {
-        context,
-        error: secretsError.message
-      })
-      throw secretsError
+    if (typeError && typeError.code !== 'PGRST116') {
+      logger.error(`❌ Failed to load secrets by type from DB:`, { context, error: typeError.message })
+      throw typeError
     }
+
+    // Also try to find secrets by secret_name (lowercase versions of secretTypes)
+    const secretNameVariants = secretTypes.map(st => st.toLowerCase())
+    const { data: secretsByName, error: nameError } = await supabaseAdmin
+      .from('tenant_secrets')
+      .select('secret_type, secret_name, secret_value, updated_at')
+      .eq('tenant_id', tenantId)
+      .in('secret_name', secretNameVariants)
+
+    if (nameError && nameError.code !== 'PGRST116') {
+      logger.error(`❌ Failed to load secrets by name from DB:`, { context, error: nameError.message })
+      throw nameError
+    }
+
+    // Combine results (deduplicate by secret_type + secret_name)
+    const secretsMap = new Map()
+    ;[...(secretsByType || []), ...(secretsByName || [])].forEach(s => {
+      secretsMap.set(s.secret_type + ':' + (s.secret_name || ''), s)
+    })
+    const secrets = Array.from(secretsMap.values())
 
     if (!secrets || secrets.length === 0) {
       logger.warn(`⚠️ No secrets found for tenant ${tenantId}`, {
@@ -105,7 +125,6 @@ export async function getTenantSecretsSecure(
             const result: TenantSecrets = {}
             
             legacySariTypes.forEach(type => {
-              const legacyKey = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() // Convert to camelCase
               const columnName = {
                 'SARI_CLIENT_ID': 'sari_client_id',
                 'SARI_CLIENT_SECRET': 'sari_client_secret',
@@ -130,14 +149,15 @@ export async function getTenantSecretsSecure(
     }
 
     // 2. Überprüfe, ob alle geforderten Secrets vorhanden sind
-    const loadedTypes = secrets.map(s => s.secret_type)
-    const missingTypes = secretTypes.filter(st => !loadedTypes.includes(st))
+    // Secrets can be matched by secret_type or secret_name
+    const loadedKeys = secrets.map(s => (s.secret_name || s.secret_type).toUpperCase())
+    const missingTypes = secretTypes.filter(st => !loadedKeys.includes(st.toUpperCase()))
 
     if (missingTypes.length > 0) {
       logger.warn(`⚠️ Missing secrets for tenant ${tenantId}:`, {
         context,
         missing: missingTypes,
-        loaded: loadedTypes
+        loaded: loadedKeys
       })
       throw new Error(`Missing secrets: ${missingTypes.join(', ')}`)
     }
@@ -148,18 +168,22 @@ export async function getTenantSecretsSecure(
     for (const secret of secrets) {
       try {
         const decrypted = decryptSecret(secret.secret_value)
-        result[secret.secret_type] = decrypted
+        // Use secret_name if available (more specific), otherwise secret_type
+        const keyName = (secret.secret_name || secret.secret_type).toUpperCase()
+        result[keyName] = decrypted
 
-        logger.debug(`✅ Decrypted secret: ${secret.secret_type}`, {
+        logger.debug(`✅ Decrypted secret: ${keyName}`, {
           context,
+          secretType: secret.secret_type,
+          secretName: secret.secret_name,
           updatedAt: secret.updated_at
         })
       } catch (decryptErr: any) {
-        logger.error(`❌ Failed to decrypt secret ${secret.secret_type}:`, {
+        logger.error(`❌ Failed to decrypt secret ${secret.secret_name || secret.secret_type}:`, {
           context,
           error: decryptErr.message
         })
-        throw new Error(`Corrupted secret: ${secret.secret_type}. ${decryptErr.message}`)
+        throw new Error(`Corrupted secret: ${secret.secret_name || secret.secret_type}. ${decryptErr.message}`)
       }
     }
 
