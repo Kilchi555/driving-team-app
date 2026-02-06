@@ -62,6 +62,7 @@ export async function encryptAllPlaintextSecrets(): Promise<EncryptionStats> {
   try {
     const supabaseAdmin = getSupabaseAdmin()
 
+    logger.info('📥 Fetching secrets from database...')
     // Get all secrets from tenant_secrets table
     const { data: secrets, error: fetchError } = await supabaseAdmin
       .from('tenant_secrets')
@@ -80,12 +81,16 @@ export async function encryptAllPlaintextSecrets(): Promise<EncryptionStats> {
     stats.total = secrets.length
     logger.info(`🔒 Starting encryption migration for ${stats.total} secrets...`)
 
-    // Process each secret
-    for (const secret of secrets) {
+    // Process each secret sequentially with small delays to avoid timeout
+    for (let i = 0; i < secrets.length; i++) {
+      const secret = secrets[i]
+      
       try {
+        logger.debug(`[${i + 1}/${stats.total}] Processing ${secret.secret_type} for tenant ${secret.tenant_id}`)
+        
         // Check if already encrypted
         if (isEncrypted(secret.secret_value)) {
-          logger.debug(`✅ Secret already encrypted: ${secret.secret_type} for tenant ${secret.tenant_id}`)
+          logger.debug(`✅ Already encrypted: ${secret.secret_type}`)
           stats.skipped++
           stats.details.push({
             id: secret.id,
@@ -97,28 +102,36 @@ export async function encryptAllPlaintextSecrets(): Promise<EncryptionStats> {
         }
 
         // Encrypt the plaintext secret
-        logger.debug(`🔒 Encrypting: ${secret.secret_type} for tenant ${secret.tenant_id}`)
+        logger.debug(`🔒 Encrypting plaintext secret: ${secret.secret_type}`)
         const encrypted = encryptSecret(secret.secret_value)
+        logger.debug(`✅ Encrypted successfully, updating database...`)
 
-        // Update in database
-        const { error: updateError } = await supabaseAdmin
+        // Update in database with explicit error handling
+        const { error: updateError, data: updateData } = await supabaseAdmin
           .from('tenant_secrets')
-          .update({ secret_value: encrypted })
+          .update({ secret_value: encrypted, updated_at: new Date().toISOString() })
           .eq('id', secret.id)
+          .select()
 
         if (updateError) {
+          logger.error(`❌ Update failed: ${updateError.message}`)
           throw updateError
         }
 
-        logger.info(`✅ Encrypted: ${secret.secret_type} for tenant ${secret.tenant_id}`)
+        logger.info(`✅ [${i + 1}/${stats.total}] Encrypted: ${secret.secret_type}`)
         stats.encrypted++
         stats.details.push({
           id: secret.id,
           secret_type: secret.secret_type,
           status: 'encrypted'
         })
+        
+        // Small delay to prevent overwhelming the database
+        if (i < secrets.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
       } catch (error: any) {
-        logger.error(`❌ Failed to encrypt secret ${secret.id} (${secret.secret_type}):`, error.message)
+        logger.error(`❌ [${i + 1}/${stats.total}] Failed to encrypt ${secret.id}:`, error.message)
         stats.errors++
         stats.details.push({
           id: secret.id,
