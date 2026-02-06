@@ -130,14 +130,17 @@ export default defineEventHandler(async (event) => {
     }
 
     // 4. Load API secret from environment variables (NEVER from database!)
-    apiSecret = process.env.WALLEE_API_KEY
+    apiSecret = process.env.WALLEE_SECRET_KEY
 
     if (!apiSecret) {
+      logger.error('❌ WALLEE_SECRET_KEY environment variable not configured')
       throw createError({
         statusCode: 500,
         statusMessage: 'Wallee API key not configured'
       })
     }
+    
+    logger.debug('✅ Wallee API secret loaded from environment')
 
     // 5. Create Wallee API client config (same as process.post.ts)
     const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, apiSecret)
