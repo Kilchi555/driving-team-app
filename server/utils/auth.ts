@@ -29,8 +29,10 @@ export async function getAuthenticatedUser(event: H3Event) {
           const cookieName = name.trim()
           const value = valueParts.join('=') // Handle cookies with = in value
           
-          // Look for Supabase session cookies (sb-session, sb-refresh, etc)
-          if (cookieName.startsWith('sb-') && (cookieName.includes('session') || cookieName.includes('auth') || cookieName.includes('refresh'))) {
+          // Look for Supabase session cookies (sb-session, sb-auth-token, sb-refresh, etc)
+          // Support both old (sb-auth-token) and new (sb-session) naming conventions
+          if (cookieName === 'sb-session' || cookieName === 'sb-auth-token' || 
+              (cookieName.startsWith('sb-') && (cookieName.includes('session') || cookieName.includes('auth') || cookieName.includes('refresh')))) {
             try {
               const decoded = decodeURIComponent(value)
               
