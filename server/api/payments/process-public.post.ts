@@ -19,6 +19,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { getWalleeSDKConfig } from '~/server/utils/wallee-config'
 
 export default defineEventHandler(async (event) => {
@@ -96,14 +97,14 @@ export default defineEventHandler(async (event) => {
     let apiSecret: string | null = null
     
     try {
-      // Load tenant config (Space ID and User ID only - never read secret from DB!)
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('wallee_space_id, wallee_user_id')
-        .eq('id', tenantId)
-        .single()
-
-      if (!tenant?.wallee_space_id) {
+      // ✅ Load Wallee IDs and Secret from tenant_secrets table
+      const walleeSecrets = await getTenantSecretsSecure(
+        tenantId,
+        ['WALLEE_SPACE_ID', 'WALLEE_APPLICATION_USER_ID', 'WALLEE_SECRET_KEY'],
+        'WALLEE_PAYMENT_PUBLIC'
+      )
+      
+      if (!walleeSecrets.WALLEE_SPACE_ID) {
         logger.error('❌ Wallee configuration not found for tenant:', tenantId)
         throw createError({
           statusCode: 500,
@@ -112,35 +113,36 @@ export default defineEventHandler(async (event) => {
       }
 
       walleeConfig = {
-        spaceId: parseInt(tenant.wallee_space_id),
-        userId: parseInt(tenant.wallee_user_id || '1')
+        spaceId: parseInt(walleeSecrets.WALLEE_SPACE_ID),
+        userId: parseInt(walleeSecrets.WALLEE_APPLICATION_USER_ID || '1')
       }
       
-      logger.debug('✅ Wallee config loaded:', { 
+      apiSecret = walleeSecrets.WALLEE_SECRET_KEY
+      
+      logger.debug('✅ Wallee config loaded from secrets:', { 
         spaceId: walleeConfig.spaceId,
-        userId: walleeConfig.userId
+        userId: walleeConfig.userId,
+        hasSecret: !!apiSecret
       })
     } catch (error: any) {
       if (error.statusCode) throw error
-      logger.error('❌ Failed to load Wallee config:', error)
+      logger.error('❌ Failed to load Wallee config:', error.message)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Payment configuration error'
+        statusMessage: error.message || 'Payment configuration error'
       })
     }
 
-    // 4. Load API secret from environment variables (NEVER from database!)
-    apiSecret = process.env.WALLEE_SECRET_KEY
-
+    // 4. Validate API secret
     if (!apiSecret) {
-      logger.error('❌ WALLEE_SECRET_KEY environment variable not configured')
+      logger.error('❌ WALLEE_SECRET_KEY not found in secrets')
       throw createError({
         statusCode: 500,
         statusMessage: 'Wallee API key not configured'
       })
     }
     
-    logger.debug('✅ Wallee API secret loaded from environment')
+    logger.debug('✅ Wallee credentials loaded successfully')
 
     // 5. Create Wallee API client config (same as process.post.ts)
     const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, apiSecret)
