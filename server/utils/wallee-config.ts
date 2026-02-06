@@ -2,20 +2,31 @@ import { getSupabase } from '~/utils/supabase'
 
 /**
  * Get Wallee configuration for a specific tenant
- * Each tenant can have its own Space ID for Wallee sub-accounts
+ * 
+ * Security Model:
+ * - API_SECRET always comes from Vercel env vars (WALLEE_SECRET_KEY)
+ * - Space ID and User ID can come from DB (they're not sensitive IDs)
+ * - Never retrieves secrets from database
  */
 export async function getWalleeConfigForTenant(tenantId?: string) {
-  // Default: Use environment variables (for backwards compatibility and default space)
-  const defaultConfig = {
-    spaceId: parseInt(process.env.WALLEE_SPACE_ID || '82592'),
-    userId: parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525'),
-    apiSecret: process.env.WALLEE_SECRET_KEY || (() => { throw new Error('WALLEE_SECRET_KEY is required') })()
+  // ✅ API Secret ALWAYS from environment (never from DB)
+  const apiSecret = process.env.WALLEE_SECRET_KEY
+  if (!apiSecret) {
+    throw new Error('WALLEE_SECRET_KEY environment variable is required')
   }
 
-  // If no tenant ID provided, return default
+  // Default Wallee Space/User (from Vercel env)
+  const defaultSpaceId = parseInt(process.env.WALLEE_SPACE_ID || '82592')
+  const defaultUserId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+
+  // If no tenant ID provided, return default config
   if (!tenantId) {
     console.log('⚠️ No tenantId provided, using default Wallee config from env')
-    return defaultConfig
+    return {
+      spaceId: defaultSpaceId,
+      userId: defaultUserId,
+      apiSecret
+    }
   }
 
   try {
@@ -26,62 +37,64 @@ export async function getWalleeConfigForTenant(tenantId?: string) {
 
     if (!serviceRoleKey) {
       console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not configured, using default Wallee config')
-      return defaultConfig
+      return {
+        spaceId: defaultSpaceId,
+        userId: defaultUserId,
+        apiSecret
+      }
     }
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Fetch Wallee config for this tenant
+    // ✅ Load ONLY Space ID and User ID (not secrets!)
     console.log(`🔍 Querying tenants table for tenant ${tenantId}...`)
     const { data: tenant, error } = await serviceSupabase
       .from('tenants')
-      .select('id, wallee_space_id, wallee_user_id, wallee_secret_key')
+      .select('id, wallee_space_id, wallee_user_id')
       .eq('id', tenantId)
       .single()
 
     if (error) {
       console.error(`❌ Database query error for tenant ${tenantId}:`, error)
-      return defaultConfig
+      return {
+        spaceId: defaultSpaceId,
+        userId: defaultUserId,
+        apiSecret
+      }
     }
     
     if (!tenant) {
       console.warn(`⚠️ Tenant ${tenantId} not found`)
-      return defaultConfig
-    }
-
-    console.log(`🔍 Tenant data fetched:`, {
-      id: tenant.id,
-      hasSpaceId: !!tenant.wallee_space_id,
-      hasUserId: !!tenant.wallee_user_id,
-      hasSecretKey: !!tenant.wallee_secret_key,
-      spaceId: tenant.wallee_space_id,
-      userId: tenant.wallee_user_id
-    })
-
-    // If tenant has custom Wallee config, use it
-    if (tenant.wallee_space_id && tenant.wallee_user_id && tenant.wallee_secret_key) {
-      console.log(`✅ Using tenant-specific Wallee config for tenant ${tenantId}:`, {
-        spaceId: tenant.wallee_space_id,
-        userId: tenant.wallee_user_id
-      })
       return {
-        spaceId: tenant.wallee_space_id,
-        userId: tenant.wallee_user_id,
-        apiSecret: tenant.wallee_secret_key
+        spaceId: defaultSpaceId,
+        userId: defaultUserId,
+        apiSecret
       }
     }
 
-    // Otherwise fall back to default
-    console.warn(`⚠️ Tenant ${tenantId} has incomplete Wallee config, using default:`, {
-      spaceId: !!tenant.wallee_space_id,
-      userId: !!tenant.wallee_user_id,
-      secretKey: !!tenant.wallee_secret_key
+    // If tenant has custom Space/User IDs, use them
+    const spaceId = tenant.wallee_space_id || defaultSpaceId
+    const userId = tenant.wallee_user_id || defaultUserId
+
+    console.log(`✅ Using Wallee config for tenant ${tenantId}:`, {
+      spaceId,
+      userId,
+      secretSource: 'Vercel environment'
     })
-    return defaultConfig
+
+    return {
+      spaceId,
+      userId,
+      apiSecret  // ✅ Always from Vercel env
+    }
 
   } catch (error) {
     console.error('❌ Error fetching Wallee config for tenant:', error)
-    return defaultConfig
+    return {
+      spaceId: defaultSpaceId,
+      userId: defaultUserId,
+      apiSecret
+    }
   }
 }
 

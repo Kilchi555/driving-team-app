@@ -1,12 +1,17 @@
-/**
- * POST /api/sari/save-settings
- * Save SARI credentials for a tenant
- */
-
-import { getSupabaseServerWithSession } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getSupabaseServerWithSession } from '~/utils/supabase'
+import { encryptSecret } from '~/server/utils/encryption'
+import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
 
+/**
+ * POST /api/sari/save-settings
+ * Save SARI configuration and credentials for a tenant
+ * 
+ * ✅ Credentials are encrypted and stored in tenant_secrets table
+ * ✅ Configuration flags are stored in tenants table
+ */
 export default defineEventHandler(async (event) => {
   try {
     // Get Supabase client with session from Authorization header
@@ -62,26 +67,91 @@ export default defineEventHandler(async (event) => {
       sari_environment
     })
 
-    const updateData: Record<string, any> = { sari_enabled, sari_environment }
+    // ✅ Update configuration in tenants table
+    const configData: Record<string, any> = { sari_enabled, sari_environment }
 
-    // Only update credentials if provided
-    if (sari_client_id) updateData.sari_client_id = sari_client_id
-    if (sari_client_secret) updateData.sari_client_secret = sari_client_secret
-    if (sari_username) updateData.sari_username = sari_username
-    if (sari_password) updateData.sari_password = sari_password
-
-    const { error: updateError } = await supabaseAdmin
+    const { error: configError } = await supabaseAdmin
       .from('tenants')
-      .update(updateData)
+      .update(configData)
       .eq('id', userProfile.tenant_id)
 
-    if (updateError) {
-      throw new Error(`Failed to update settings: ${updateError.message}`)
+    if (configError) {
+      throw new Error(`Failed to update SARI config: ${configError.message}`)
     }
 
-    logger.debug('✅ SARI settings saved', {
-      tenant_id: userProfile.tenant_id
-    })
+    logger.debug('✅ SARI config updated', { tenant_id: userProfile.tenant_id })
+
+    // ✅ If credentials provided, save them encrypted in tenant_secrets
+    if (sari_client_id || sari_client_secret || sari_username || sari_password) {
+      const secretsToUpsert: any[] = []
+
+      if (sari_client_id) {
+        secretsToUpsert.push({
+          tenant_id: userProfile.tenant_id,
+          secret_type: 'SARI_CLIENT_ID',
+          secret_value: encryptSecret(sari_client_id),
+          updated_by: userProfile.id
+        })
+      }
+
+      if (sari_client_secret) {
+        secretsToUpsert.push({
+          tenant_id: userProfile.tenant_id,
+          secret_type: 'SARI_CLIENT_SECRET',
+          secret_value: encryptSecret(sari_client_secret),
+          updated_by: userProfile.id
+        })
+      }
+
+      if (sari_username) {
+        secretsToUpsert.push({
+          tenant_id: userProfile.tenant_id,
+          secret_type: 'SARI_USERNAME',
+          secret_value: encryptSecret(sari_username),
+          updated_by: userProfile.id
+        })
+      }
+
+      if (sari_password) {
+        secretsToUpsert.push({
+          tenant_id: userProfile.tenant_id,
+          secret_type: 'SARI_PASSWORD',
+          secret_value: encryptSecret(sari_password),
+          updated_by: userProfile.id
+        })
+      }
+
+      if (secretsToUpsert.length > 0) {
+        const { error: secretsError } = await supabaseAdmin
+          .from('tenant_secrets')
+          .upsert(secretsToUpsert, {
+            onConflict: 'tenant_id,secret_type'
+          })
+
+        if (secretsError) {
+          throw new Error(`Failed to save secrets: ${secretsError.message}`)
+        }
+
+        logger.info(`✅ Saved ${secretsToUpsert.length} SARI secrets (encrypted)`, {
+          tenant_id: userProfile.tenant_id
+        })
+      }
+    }
+
+    // Audit log
+    await logAudit({
+      user_id: userProfile.id,
+      action: 'save_sari_settings',
+      resource_type: 'tenant_settings',
+      resource_id: userProfile.tenant_id,
+      status: 'success',
+      details: {
+        sari_enabled,
+        sari_environment,
+        credentials_provided: !!sari_client_id
+      },
+      ip_address: getHeader(event, 'x-forwarded-for') || 'unknown'
+    }).catch(auditErr => logger.warn('⚠️ Audit logging failed:', auditErr))
 
     return {
       success: true,

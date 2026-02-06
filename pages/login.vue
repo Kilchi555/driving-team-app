@@ -578,6 +578,25 @@ const handleLogin = async () => {
     // Normales Login erfolgreich
     logger.debug('✅ Login successful')
     
+    // 💾 WICHTIG: Speichere Supabase Session für Token Refresh Interceptor
+    if (response?.session?.access_token && response?.session?.refresh_token) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const sessionData = {
+            access_token: response.session.access_token,
+            refresh_token: response.session.refresh_token,
+            timestamp: Date.now()
+          }
+          localStorage.setItem('supabase-session-cache', JSON.stringify(sessionData))
+          logger.debug('💾 Supabase session saved to localStorage')
+        }
+      } catch (err) {
+        logger.warn('⚠️ Failed to save session to localStorage:', err)
+      }
+    } else {
+      logger.warn('⚠️ No session tokens in response')
+    }
+    
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
     
@@ -620,25 +639,34 @@ const handleLogin = async () => {
     } else if (user.tenant_id) {
       logger.debug('🏢 Loading tenant info for tenant_id:', user.tenant_id)
       
-      const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .select('slug')
-        .eq('id', user.tenant_id)
-        .single()
-      
-      if (tenantError) {
-        console.error('❌ Error loading tenant:', tenantError)
-      } else if (tenant?.slug) {
-        logger.debug('✅ Found tenant slug:', tenant.slug)
+      try {
+        const { getSupabase } = await import('~/utils/supabase')
+        const supabase = getSupabase()
         
-        // Weiterleitung basierend auf Rolle
-        if (user.role === 'admin' || user.role === 'tenant_admin') {
-          redirectPath = '/admin'
-        } else if (user.role === 'staff') {
-          redirectPath = '/dashboard'
-        } else {
-          redirectPath = '/customer-dashboard'
+        if (supabase) {
+          const { data: tenant, error: tenantError } = await supabase
+            .from('tenants')
+            .select('slug')
+            .eq('id', user.tenant_id)
+            .single()
+          
+          if (tenantError) {
+            console.error('❌ Error loading tenant:', tenantError)
+          } else if (tenant?.slug) {
+            logger.debug('✅ Found tenant slug:', tenant.slug)
+            
+            // Weiterleitung basierend auf Rolle
+            if (user.role === 'admin' || user.role === 'tenant_admin') {
+              redirectPath = '/admin'
+            } else if (user.role === 'staff') {
+              redirectPath = '/dashboard'
+            } else {
+              redirectPath = '/customer-dashboard'
+            }
+          }
         }
+      } catch (err) {
+        console.error('❌ Error initializing Supabase:', err)
       }
     }
     

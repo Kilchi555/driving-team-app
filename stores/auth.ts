@@ -149,7 +149,7 @@ const isAdmin = computed(() => {
 
       // Session tokens are in HTTP-Only cookies (for server API calls)
       // AND returned in response (for client-side Supabase)
-      if (backendResponse.user) {
+        if (backendResponse.user) {
         user.value = {
           id: backendResponse.user.id,
           email: backendResponse.user.email,
@@ -166,6 +166,10 @@ const isAdmin = computed(() => {
           await fetchUserProfile(backendResponse.user.id)
         }
         
+        // 🔐 DEBUG: Log what we got from backend
+        console.log('🔐 DEBUG backendResponse.session:', backendResponse.session)
+        console.log('🔐 DEBUG backendResponse.rememberMe:', backendResponse.rememberMe)
+        
         // ✅ KRITISCH: Setze die Supabase Client Session mit den echten Tokens
         logger.debug('🔐 Backend session response:', {
           hasAccessToken: !!backendResponse.session?.access_token,
@@ -177,6 +181,21 @@ const isAdmin = computed(() => {
           try {
             const supabaseClient = getSupabase()
             if (supabaseClient) {
+              // Save to localStorage for token refresh interceptor
+              try {
+                if (typeof localStorage !== 'undefined') {
+                  const sessionData = {
+                    access_token: backendResponse.session.access_token,
+                    refresh_token: backendResponse.session.refresh_token,
+                    timestamp: Date.now()
+                  }
+                  localStorage.setItem('supabase-session-cache', JSON.stringify(sessionData))
+                  logger.debug('💾 Supabase session saved to localStorage')
+                }
+              } catch (storageErr) {
+                logger.warn('⚠️ Failed to save session to localStorage:', storageErr)
+              }
+
               const { error: sessionError } = await supabaseClient.auth.setSession({
                 access_token: backendResponse.session.access_token,
                 refresh_token: backendResponse.session.refresh_token
