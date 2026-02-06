@@ -57,39 +57,40 @@ export async function getTenantSecretsSecure(
     const supabaseAdmin = getSupabaseAdmin()
 
     // 1. Lade Secrets aus tenant_secrets Table - both by secret_type AND secret_name
-    logger.debug(`🔍 Searching for secrets:`, { secretTypes })
+    logger.debug(`🔍 Searching for secrets by tenant_id:`, { tenantId, secretTypes, context })
     
-    // Try to find secrets by secret_type first
-    const { data: secretsByType, error: typeError } = await supabaseAdmin
+    // Fetch ALL secrets for this tenant first, then filter in code (more reliable)
+    const { data: allSecrets, error: fetchError } = await supabaseAdmin
       .from('tenant_secrets')
       .select('secret_type, secret_name, secret_value, updated_at')
       .eq('tenant_id', tenantId)
-      .in('secret_type', secretTypes)
 
-    if (typeError && typeError.code !== 'PGRST116') {
-      logger.error(`❌ Failed to load secrets by type from DB:`, { context, error: typeError.message })
-      throw typeError
+    if (fetchError) {
+      logger.error(`❌ Failed to load secrets from DB:`, { context, error: fetchError.message })
+      throw fetchError
     }
 
-    // Also try to find secrets by secret_name (lowercase versions of secretTypes)
-    const secretNameVariants = secretTypes.map(st => st.toLowerCase())
-    const { data: secretsByName, error: nameError } = await supabaseAdmin
-      .from('tenant_secrets')
-      .select('secret_type, secret_name, secret_value, updated_at')
-      .eq('tenant_id', tenantId)
-      .in('secret_name', secretNameVariants)
-
-    if (nameError && nameError.code !== 'PGRST116') {
-      logger.error(`❌ Failed to load secrets by name from DB:`, { context, error: nameError.message })
-      throw nameError
+    if (!allSecrets || allSecrets.length === 0) {
+      logger.warn(`⚠️ No secrets at all found for tenant ${tenantId} in database`, { context })
+    } else {
+      logger.debug(`📦 Found ${allSecrets.length} total secrets in database for tenant`, {
+        context,
+        secretCount: allSecrets.length,
+        secretTypes: allSecrets.map(s => ({ type: s.secret_type, name: s.secret_name }))
+      })
     }
 
-    // Combine results (deduplicate by secret_type + secret_name)
-    const secretsMap = new Map()
-    ;[...(secretsByType || []), ...(secretsByName || [])].forEach(s => {
-      secretsMap.set(s.secret_type + ':' + (s.secret_name || ''), s)
+    // Filter to only those we need (match by secret_type OR secret_name)
+    const secrets = (allSecrets || []).filter(s => {
+      const typeMatch = secretTypes.includes(s.secret_type)
+      const nameMatch = s.secret_name && secretTypes.includes(s.secret_name.toUpperCase())
+      return typeMatch || nameMatch
     })
-    const secrets = Array.from(secretsMap.values())
+
+    logger.debug(`🔎 Filtered to ${secrets.length} matching secrets`, {
+      context,
+      matched: secrets.map(s => ({ type: s.secret_type, name: s.secret_name }))
+    })
 
     if (!secrets || secrets.length === 0) {
       logger.warn(`⚠️ No secrets found for tenant ${tenantId}`, {
