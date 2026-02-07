@@ -470,6 +470,11 @@
                     {{ passwordChecks.number ? '✓' : '○' }} Zahl
                   </span>
                 </div>
+                <div class="flex items-center space-x-2">
+                  <span :class="passwordChecks.special ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    {{ passwordChecks.special ? '✓' : '○' }} Sonderzeichen (!@#$%^&*)
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -793,14 +798,16 @@ const passwordChecks = computed(() => ({
   length: formData.value.password.length >= 12,
   uppercase: /[A-Z]/.test(formData.value.password),
   lowercase: /[a-z]/.test(formData.value.password),
-  number: /[0-9]/.test(formData.value.password)
+  number: /[0-9]/.test(formData.value.password),
+  special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.value.password)
 }))
 
 const passwordIsValid = computed(() => {
   return passwordChecks.value.length && 
          passwordChecks.value.uppercase && 
          passwordChecks.value.lowercase &&
-         passwordChecks.value.number
+         passwordChecks.value.number &&
+         passwordChecks.value.special
 })
 
 // Field-specific errors

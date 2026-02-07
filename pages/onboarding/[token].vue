@@ -138,6 +138,13 @@
                     <span class="text-sm">Mindestens eine Zahl (0-9)</span>
                   </div>
 
+                  <div class="flex items-center space-x-2" :class="/[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ /[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(form.password) ? '✓' : '-' }}
+                    </div>
+                    <span class="text-sm">Mindestens ein Sonderzeichen (!@#$%^&*)</span>
+                  </div>
+
                   <div class="flex items-center space-x-2" :class="form.password.length <= 500 ? 'text-green-600' : 'text-gray-400'">
                     <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="form.password.length <= 500 ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
                       {{ form.password.length <= 500 ? '✓' : '-' }}
@@ -1115,7 +1122,8 @@ const handleNextStep = async () => {
     // 2. At least one uppercase letter [A-Z]
     // 3. At least one lowercase letter [a-z]
     // 4. At least one digit [0-9]
-    // 5. Max 500 characters
+    // 5. At least one special character [!@#$%^&*()_+-=[]{}...] 
+    // 6. Max 500 characters
     
     if (form.password.length < 12) {
       passwordError.value = 'Passwort muss mindestens 12 Zeichen lang sein'
@@ -1135,6 +1143,10 @@ const handleNextStep = async () => {
     }
     if (!/[0-9]/.test(form.password)) {
       passwordError.value = 'Passwort muss mindestens eine Zahl enthalten'
+      return
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.password)) {
+      passwordError.value = 'Passwort muss mindestens ein Sonderzeichen enthalten'
       return
     }
     if (form.password !== form.confirmPassword) {
@@ -1281,7 +1293,7 @@ const completeOnboarding = async () => {
       if (errorMessage.includes('duplicate') || errorMessage.includes('Email')) {
         errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder kontaktiere die Fahrschule.'
       } else if (errorMessage.includes('password') || errorMessage.includes('Passwort')) {
-        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 12 Zeichen, Gross- und Kleinbuchstaben, Zahlen)'
+        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 12 Zeichen, Gross- und Kleinbuchstaben, Zahlen, Sonderzeichen)'
       } else if (errorMessage.includes('Token')) {
         errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
       }
