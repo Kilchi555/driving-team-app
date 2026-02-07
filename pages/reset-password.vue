@@ -62,12 +62,12 @@
               type="password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Mindestens 8 Zeichen"
+              placeholder="Mindestens 12 Zeichen"
             />
             <div class="mt-2 space-y-1">
               <div class="flex items-center space-x-2">
                 <span :class="passwordChecks.length ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                  {{ passwordChecks.length ? '✓' : '○' }} Mindestens 8 Zeichen
+                  {{ passwordChecks.length ? '✓' : '○' }} Mindestens 12 Zeichen
                 </span>
               </div>
               <div class="flex items-center space-x-2">
@@ -132,7 +132,7 @@ const confirmPassword = ref('')
 
 // Computed
 const passwordChecks = computed(() => ({
-  length: newPassword.value.length >= 8,
+  length: newPassword.value.length >= 12,
   uppercase: /[A-Z]/.test(newPassword.value),
   number: /[0-9]/.test(newPassword.value)
 }))
