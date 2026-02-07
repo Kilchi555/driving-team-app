@@ -790,15 +790,21 @@ const handlePasswordStrengthUpdated = async () => {
   // Show success message
   showSuccess('Passwort aktualisiert', 'Ihr Passwort erfüllt nun alle Sicherheitsanforderungen!')
   
+  // Wait a bit for the success notification to be visible
+  await new Promise(resolve => setTimeout(resolve, 1500))
+  
   // Redirect based on role
   const user = authStore.userProfile
   
   if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-    router.push('/admin')
+    logger.debug('🔄 Redirecting to admin dashboard')
+    await router.push('/admin')
   } else if (user?.role === 'staff') {
-    router.push('/dashboard')
+    logger.debug('🔄 Redirecting to staff dashboard')
+    await router.push('/dashboard')
   } else {
-    router.push('/customer-dashboard')
+    logger.debug('🔄 Redirecting to customer dashboard')
+    await router.push('/customer-dashboard')
   }
 }
 
