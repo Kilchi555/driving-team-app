@@ -719,10 +719,13 @@ const handleLogin = async () => {
           rateLimitCountdown.value = 0
         }
       }, 1000)
+    } else if (errorMsg?.includes('Account wurde temporär gesperrt') || errorMsg?.includes('temporarily locked')) {
+      // Account locked due to too many failed attempts
+      loginError.value = errorMsg
     } else if (errorMsg?.includes('Invalid login credentials')) {
       loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
     } else {
-      loginError.value = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
   } finally {
     isLoading.value = false
