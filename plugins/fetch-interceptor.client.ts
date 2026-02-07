@@ -19,10 +19,29 @@ export default defineNuxtPlugin((nuxtApp) => {
     fetchOptions: {
       credentials: 'include' as const // Send cookies with every request
     },
-    onResponseError: async ({ response, error }) => {
+    onResponseError: async ({ response, error, request }) => {
       const status = response?.status
+      const url = request?.url || ''
 
-      // Handle 401 - Session expired or invalid token
+      // ✅ FIX: Don't treat login/logout endpoints 401 as session expiry
+      // Those are credential errors, not session errors
+      const isAuthEndpoint = url.includes('/api/auth/login') || 
+                             url.includes('/api/auth/logout') ||
+                             url.includes('/api/auth/register') ||
+                             url.includes('/api/auth/refresh')
+
+      // 🚨 CRITICAL: If auth endpoint returns 401, it's a credential error - NEVER redirect
+      // This prevents users from being redirected to wrong tenants
+      if (isAuthEndpoint && status === 401) {
+        console.debug('ℹ️ Login/Auth endpoint returned 401 - credential error, not session expiry')
+        // Let the error propagate to the component - it will show proper error message
+        throw createError({
+          statusCode: status,
+          statusMessage: response?.statusText || 'Request failed'
+        })
+      }
+
+      // Handle 401 - Session expired or invalid token (for non-auth endpoints)
       if (status === 401 && !isRedirecting) {
         isRedirecting = true
         console.warn('⚠️ Session expired (401) - Redirecting to tenant login')
