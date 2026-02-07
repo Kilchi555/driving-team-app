@@ -17,7 +17,21 @@
     
     <!-- Loading State -->
     <div v-if="isLoadingBranding" class="text-center">
-      <div class="w-16 h-16 mx-auto mb-4 animate-pulse bg-gray-200 rounded-lg"></div>
+      <!-- Show tenant logo while loading branding -->
+      <div class="mb-6">
+        <img 
+          v-if="headerLogo" 
+          :src="headerLogo" 
+          class="h-16 w-auto mx-auto drop-shadow-lg animate-pulse" 
+          :alt="`${brandName} Logo`"
+        >
+        <div 
+          v-else 
+          class="w-16 h-16 mx-auto bg-gray-200 rounded-lg flex items-center justify-center animate-pulse"
+        >
+          <span class="text-2xl font-bold text-gray-400">{{ brandName.charAt(0).toUpperCase() }}</span>
+        </div>
+      </div>
       <p class="text-gray-600">Lade...</p>
     </div>
 
@@ -74,14 +88,11 @@
 
       <!-- Login Form -->
       <div class="p-6">
-        <!-- Session Check Loading -->
-        <div v-if="isCheckingSession" class="text-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderColor: primaryColor }"></div>
-          <p class="text-gray-600">Überprüfe Session...</p>
-        </div>
+        <!-- Session Check Loading - hide form while checking -->
+        <!-- No spinner shown - silently check session -->
 
         <!-- Login Form -->
-        <form @submit.prevent="handleLogin" class="space-y-4" novalidate>
+        <form v-show="!isCheckingSession" @submit.prevent="handleLogin" class="space-y-4" novalidate>
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
