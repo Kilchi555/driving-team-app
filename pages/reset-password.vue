@@ -224,19 +224,12 @@ onMounted(async () => {
       logger.debug('Session set successfully:', data.session?.user?.email)
       isLoading.value = false
     } else {
-      // Check if we already have a valid session
-      const { data, error: sessionError } = await $fetch('/api/auth/manage', { 
-        method: 'POST', 
-        body: { 
-          action: 'get-session', 
-          access_token: authStore.session?.access_token 
-        }
-      })
+      // Check if we already have a valid session using httpOnly cookies
+      const currentUserResponse = await $fetch('/api/auth/current-user').catch(() => null)
+      const session = currentUserResponse?.user ? { user: currentUserResponse.user } : null
       
-      const session = data?.user ? { user: data.user } : null
-      
-      if (sessionError) {
-        throw sessionError
+      if (!session) {
+        throw new Error('No valid session found')
       }
       
       if (session) {

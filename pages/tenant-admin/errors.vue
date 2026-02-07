@@ -392,7 +392,10 @@ const getTimeRangeQuery = (range: string) => {
 const loadErrors = async () => {
   isLoading.value = true
   try {
-    const { data: { user: sessionUser }, error: sessionError } = await $fetch('/api/auth/manage', { method: 'POST', body: { action: 'get-session', access_token: authStore.session?.access_token } }); const session = sessionUser ? { user: sessionUser } : null
+    // Use /api/auth/current-user which reads httpOnly cookies automatically
+    const currentUserResponse = await $fetch('/api/auth/current-user').catch(() => null)
+    const sessionUser = currentUserResponse?.user
+    const session = sessionUser ? { user: sessionUser } : null
 
     if (!session?.user) {
       console.error('No session found')
