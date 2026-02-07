@@ -31,14 +31,14 @@ export default defineEventHandler(async (event) => {
     // Parse request body
     const { oldPassword, newPassword } = await readBody(event)
 
-    // Validate inputs
-    if (!oldPassword || !newPassword) {
+    // Validate inputs - oldPassword optional if just authenticated
+    if (!newPassword) {
       logger.warn('⚠️ [UPDATE-PASSWORD-STRENGTH] Missing password fields', {
         userId: authUser.id
       })
       throw createError({
         statusCode: 400,
-        statusMessage: 'oldPassword und newPassword sind erforderlich'
+        statusMessage: 'newPassword ist erforderlich'
       })
     }
 
@@ -87,28 +87,35 @@ export default defineEventHandler(async (event) => {
 
     const { createClient } = await import('@supabase/supabase-js')
     
-    // First verify old password by attempting login
-    const anonSupabase = createClient(supabaseUrl, supabaseAnonKey)
-    const email = authUser.email
+    // If oldPassword is provided, verify it (extra security)
+    // If not provided, we assume user just authenticated (from modal after login)
+    if (oldPassword) {
+      const anonSupabase = createClient(supabaseUrl, supabaseAnonKey)
+      const email = authUser.email
 
-    logger.debug('🔐 [UPDATE-PASSWORD-STRENGTH] Verifying old password', {
-      userId: authUser.id,
-      email: email?.substring(0, 3) + '***'
-    })
-
-    const { error: verifyError } = await anonSupabase.auth.signInWithPassword({
-      email: email!,
-      password: oldPassword
-    })
-
-    if (verifyError) {
-      logger.warn('❌ [UPDATE-PASSWORD-STRENGTH] Old password verification failed', {
+      logger.debug('🔐 [UPDATE-PASSWORD-STRENGTH] Verifying old password', {
         userId: authUser.id,
         email: email?.substring(0, 3) + '***'
       })
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Aktuelles Passwort ist falsch'
+
+      const { error: verifyError } = await anonSupabase.auth.signInWithPassword({
+        email: email!,
+        password: oldPassword
+      })
+
+      if (verifyError) {
+        logger.warn('❌ [UPDATE-PASSWORD-STRENGTH] Old password verification failed', {
+          userId: authUser.id,
+          email: email?.substring(0, 3) + '***'
+        })
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Aktuelles Passwort ist falsch'
+        })
+      }
+    } else {
+      logger.debug('🔐 [UPDATE-PASSWORD-STRENGTH] Skipping old password verification (user just logged in)', {
+        userId: authUser.id
       })
     }
 
