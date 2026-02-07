@@ -22,14 +22,14 @@
         <img 
           v-if="headerLogo" 
           :src="headerLogo" 
-          class="h-16 w-auto mx-auto drop-shadow-lg animate-pulse" 
+          class="h-8 w-auto mx-auto drop-shadow-lg animate-pulse" 
           :alt="`${brandName} Logo`"
         >
         <div 
           v-else 
-          class="w-16 h-16 mx-auto bg-gray-200 rounded-lg flex items-center justify-center animate-pulse"
+          class="w-8 h-8 mx-auto bg-gray-200 rounded-lg flex items-center justify-center animate-pulse"
         >
-          <span class="text-2xl font-bold text-gray-400">{{ brandName.charAt(0).toUpperCase() }}</span>
+          <span class="text-sm font-bold text-gray-400">{{ brandName.charAt(0).toUpperCase() }}</span>
         </div>
       </div>
       <p class="text-gray-600">Lade...</p>
