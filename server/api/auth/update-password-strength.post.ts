@@ -87,11 +87,13 @@ export default defineEventHandler(async (event) => {
 
     const { createClient } = await import('@supabase/supabase-js')
     
+    // Get email for logging early
+    const email = authUser.email
+    
     // If oldPassword is provided, verify it (extra security)
     // If not provided, we assume user just authenticated (from modal after login)
     if (oldPassword) {
       const anonSupabase = createClient(supabaseUrl, supabaseAnonKey)
-      const email = authUser.email
 
       logger.debug('🔐 [UPDATE-PASSWORD-STRENGTH] Verifying old password', {
         userId: authUser.id,
@@ -115,7 +117,8 @@ export default defineEventHandler(async (event) => {
       }
     } else {
       logger.debug('🔐 [UPDATE-PASSWORD-STRENGTH] Skipping old password verification (user just logged in)', {
-        userId: authUser.id
+        userId: authUser.id,
+        email: email?.substring(0, 3) + '***'
       })
     }
 
