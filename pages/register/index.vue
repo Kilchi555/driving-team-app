@@ -83,7 +83,7 @@
         <p class="text-sm text-gray-600">
           Bereits registriert?
           <button
-            @click="navigateTo('/login')"
+            @click="async () => { const { getLoginPath } = await import('~/utils/redirect-to-login'); await navigateTo(getLoginPath()) }"
             class="text-blue-600 hover:text-blue-800 font-semibold ml-1"
           >
             Jetzt anmelden

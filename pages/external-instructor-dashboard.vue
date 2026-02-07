@@ -250,7 +250,8 @@ const redirectToSlugOrLogin = async () => {
   }
   
   logger.debug('Auth: No slug found, redirecting to login')
-  return await navigateTo('/login')
+  const { getLoginPath } = await import('~/utils/redirect-to-login')
+  return await navigateTo(getLoginPath())
 }
 
 onMounted(async () => {

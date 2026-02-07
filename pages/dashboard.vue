@@ -285,11 +285,8 @@ watch(userError, async (error) => {
       // Ignore localStorage errors
     }
     
-    if (tenantSlug) {
-      await navigateTo(`/${tenantSlug}`)
-    } else {
-      await navigateTo('/login')
-    }
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
+    await navigateTo(getLoginPath(tenantSlug))
   }
 }, { immediate: true })
 
@@ -329,7 +326,8 @@ onMounted(async () => {
     }
     
     logger.debug('Auth: No last tenant slug found, redirecting to login')
-    return await navigateTo('/login')
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
+    return await navigateTo(getLoginPath())
   }
 
 

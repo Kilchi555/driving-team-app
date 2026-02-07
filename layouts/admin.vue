@@ -737,19 +737,16 @@ const handleLogout = async () => {
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     
     // Weiterleitung zur Tenant-Login-Seite (immer tenant-spezifisch)
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
     const slug = currentTenantBranding.value?.slug
-    if (slug) {
-      await navigateTo(`/${slug}`)
-    } else {
-      // Fallback: generische Login-Seite
-      await navigateTo('/login')
-    }
+    await navigateTo(getLoginPath(slug))
   } catch (error) {
     console.error('❌ Logout error:', error)
     showError('Fehler', 'Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
     // Trotzdem weiterleiten (Tenant falls verfügbar)
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
     const slug = currentTenantBranding.value?.slug
-    await navigateTo(slug ? `/${slug}` : '/login')
+    await navigateTo(getLoginPath(slug))
   }
 }
 

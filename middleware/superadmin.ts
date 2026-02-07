@@ -1,8 +1,9 @@
-export default defineRouteMiddleware((to, from) => {
+export default defineRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore()
   
   if (!authStore.isLoggedIn) {
-    return navigateTo('/login')
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
+    return navigateTo(getLoginPath())
   }
   
   // Check if user is super_admin
