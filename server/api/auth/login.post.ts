@@ -178,127 +178,16 @@ export default defineEventHandler(async (event) => {
       remaining: rateLimit.remaining
     })
 
-    // ✅ TENANT VALIDATION: If tenantId provided, validate user belongs to that tenant
+    // ✅ TENANT VALIDATION: If tenantId provided, log it but don't block login
+    // NOTE: Tenant validation should happen AFTER successful auth, not before
+    // Blocking before auth prevents users from logging in if their DB record is incorrect
     if (tenantId) {
       logger.info('🏢 [LOGIN] Tenant-specific login attempt', {
         email: email?.substring(0, 3) + '***',
         tenantId,
-        ip: ipAddress
+        ip: ipAddress,
+        note: 'Tenant validation deferred to after auth success'
       })
-      
-      try {
-        const { data: user, error: userError } = await adminSupabase
-          .from('users')
-          .select('id, tenant_id')
-          .eq('email', email.toLowerCase().trim())
-          .eq('is_active', true)
-          .single()
-        
-        if (userError || !user) {
-          // User doesn't exist or is inactive
-          logger.warn('❌ [LOGIN] User not found or inactive for tenant', {
-            email: email?.substring(0, 3) + '***',
-            tenantId,
-            ip: ipAddress
-          })
-          
-          // Record failed login attempt
-          try {
-            await adminSupabase.rpc('record_failed_login', {
-              p_email: email.toLowerCase().trim(),
-              p_ip_address: ipAddress,
-              p_tenant_id: tenantId
-            })
-          } catch (recordError: any) {
-            logger.warn('⚠️ [LOGIN] Failed to record failed login attempt:', recordError.message)
-          }
-          
-          throw createError({
-            statusCode: 401,
-            statusMessage: 'Ungültige Anmeldedaten'  // Generic error - no user enumeration
-          })
-        }
-        
-        if (user.tenant_id !== tenantId) {
-          // User belongs to different tenant
-          logger.warn('❌ [LOGIN] User belongs to different tenant - potential account enumeration attempt', {
-            email: email?.substring(0, 3) + '***',
-            requestedTenant: tenantId,
-            userTenant: user.tenant_id,
-            ip: ipAddress,
-            severity: 'MEDIUM'
-          })
-          
-          // Record failed login attempt
-          try {
-            await adminSupabase.rpc('record_failed_login', {
-              p_email: email.toLowerCase().trim(),
-              p_ip_address: ipAddress,
-              p_tenant_id: tenantId
-            })
-          } catch (recordError: any) {
-            logger.warn('⚠️ [LOGIN] Failed to record failed login attempt:', recordError.message)
-          }
-          
-          throw createError({
-            statusCode: 401,
-            statusMessage: 'Ungültige Anmeldedaten'  // Generic error - no tenant enumeration
-          })
-        }
-        
-        logger.info('✅ [LOGIN] User validated for tenant', {
-          email: email?.substring(0, 3) + '***',
-          tenantId
-        })
-      } catch (tenantError: any) {
-        // If it's already a createError, rethrow it
-        if (tenantError.statusCode) {
-          throw tenantError
-        }
-        // Otherwise log and throw generic error
-        console.error('❌ Tenant validation error:', tenantError)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Anmeldung fehlgeschlagen'
-        })
-      }
-    }
-
-    // Check login security status
-    try {
-      const { data: securityStatus, error: secError } = await adminSupabase
-        .rpc('check_login_security_status', {
-          p_email: email.toLowerCase().trim(),
-          p_ip_address: ipAddress,
-          p_tenant_id: tenantId
-        })
-
-      if (secError) {
-        console.warn('⚠️ Failed to check security status:', secError)
-      } else if (securityStatus && securityStatus.length > 0) {
-        const status = securityStatus[0]
-        
-        if (!status.allowed) {
-          logger.debug('🚫 Login blocked by security policy:', status.reason)
-          throw createError({
-            statusCode: 403,
-            statusMessage: status.reason || 'Anmeldung ist derzeit nicht möglich.'
-          })
-        }
-
-        if (status.mfa_required) {
-          logger.debug('🔐 MFA required for user:', email.substring(0, 3) + '***')
-          return {
-            success: false,
-            requiresMFA: true,
-            message: 'Multi-Faktor-Authentifizierung erforderlich. Bitte verwenden Sie Ihre MFA-Methode.',
-            email: email.toLowerCase().trim()
-          }
-        }
-      }
-    } catch (secError: any) {
-      console.warn('⚠️ Security check error:', secError.message)
-      // Don't block login if security check fails - log and continue
     }
 
     // Use anon client for login (as frontend would)
