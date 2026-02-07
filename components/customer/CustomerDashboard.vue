@@ -1572,23 +1572,43 @@ const loadAllData = async () => {
       return
     }
 
-    // Load appointments first, then course registrations (which merges with appointments)
-    await loadAppointments()
-    
-    // These can run in parallel
-    await Promise.all([
-      loadCourseRegistrations(), // Must run after loadAppointments to merge correctly
+    // 🚀 PRIORITY 1: Load pending confirmations FIRST (most important for customer)
+    logger.debug('🎯 Loading pending confirmations first (priority)...')
+    await loadPendingConfirmations()
+
+    // 🔄 LAZY LOAD: Load everything else in background without blocking
+    logger.debug('⏳ Lazy loading other data in background...')
+    Promise.allSettled([
+      loadAppointments(),
+      loadCourseRegistrations(),
       loadLocations(),
       loadStaff(),
-      loadPendingConfirmations()
-    ])
+      loadPayments()
+    ]).then((results) => {
+      // Process results but don't block UI
+      const failed = results.filter(r => r.status === 'rejected')
+      if (failed.length > 0) {
+        logger.warn(`⚠️ ${failed.length} background task(s) failed`)
+        failed.forEach((r, idx) => {
+          if (r.status === 'rejected') {
+            console.error(`❌ Background task ${idx} failed:`, r.reason)
+          }
+        })
+      } else {
+        logger.debug('✅ All background data loaded successfully')
+      }
+      
+      // Load instructors after appointments are loaded
+      if (appointments.value.length > 0) {
+        loadInstructors()
+      }
+    }).catch(err => {
+      console.error('❌ Error in lazy loading:', err)
+    })
 
-    // Load instructors after appointments are loaded
-    loadInstructors()
-
-    logger.debug('✅ Customer dashboard data loaded successfully')
+    logger.debug('✅ Pending confirmations loaded, background tasks started')
   } catch (err: any) {
-    console.error('❌ Error loading customer dashboard:', err)
+    console.error('❌ Error loading pending confirmations:', err)
     error.value = err.message
   } finally {
     isLoading.value = false
