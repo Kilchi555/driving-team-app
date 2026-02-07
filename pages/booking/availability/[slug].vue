@@ -114,14 +114,17 @@
               @mouseenter="hoveredCategoryId = mainCategory.id"
               @mouseleave="hoveredCategoryId = null"
             >
-              <div class="text-center">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors border"
+              <div class="text-center pt-2 sm:pt-3 md:pt-4">
+                <!-- SVG Icon without circle background -->
+                <div v-if="mainCategory.icon_svg" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5">
+                  <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="mainCategory.icon_svg"></div>
+                </div>
+                <!-- Fallback: code letter with circle -->
+                <div v-else class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5 transition-colors border"
                      :style="getInteractiveBadgeStyle(
                        selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
                      )">
-                  <!-- SVG Icon if available, otherwise show code -->
-                  <div v-if="mainCategory.icon_svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" v-html="mainCategory.icon_svg"></div>
-                  <span v-else class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ mainCategory.code }}</span>
+                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ mainCategory.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ mainCategory.name }}</h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ mainCategory.description }}</p>
@@ -166,14 +169,17 @@
               @mouseenter="hoveredCategoryId = subCategory.id"
               @mouseleave="hoveredCategoryId = null"
             >
-              <div class="text-center">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 md:mb-4 transition-colors border"
+              <div class="text-center pt-2 sm:pt-3 md:pt-4">
+                <!-- SVG Icon without circle background -->
+                <div v-if="subCategory.icon_svg" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5">
+                  <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="subCategory.icon_svg"></div>
+                </div>
+                <!-- Fallback: code letter with circle -->
+                <div v-else class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5 transition-colors border"
                      :style="getInteractiveBadgeStyle(
                        selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id
                      )">
-                  <!-- SVG Icon if available, otherwise show code -->
-                  <div v-if="subCategory.icon_svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" v-html="subCategory.icon_svg"></div>
-                  <span v-else class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
+                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ subCategory.name }}</h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ subCategory.description }}</p>

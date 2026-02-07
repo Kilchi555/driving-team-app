@@ -1,4 +1,5 @@
 import { H3Event, setCookie, getCookie, deleteCookie } from 'h3'
+import { logger } from '~/utils/logger'
 
 const COOKIE_NAME = 'sb-auth-token'
 const REFRESH_COOKIE_NAME = 'sb-refresh-token'
@@ -21,9 +22,12 @@ export function setAuthCookies(
 ) {
   const { rememberMe = false, maxAge } = options
   
-  // Calculate maxAge
+  // Calculate maxAge (ALWAYS use provided maxAge if given, otherwise calculate default)
   // Remember Me: 7 days, Otherwise: 1 hour
-  const cookieMaxAge = maxAge || (rememberMe ? 7 * 24 * 60 * 60 : 60 * 60)
+  // FIX: Use maxAge directly if provided, else calculate from rememberMe
+  const cookieMaxAge = maxAge !== undefined ? maxAge : (rememberMe ? 7 * 24 * 60 * 60 : 60 * 60)
+  
+  logger.debug('🍪 Setting auth cookies with maxAge:', cookieMaxAge, 'seconds (', Math.round(cookieMaxAge / 3600), 'hours )')
   
   // Set Access Token cookie
   setCookie(event, COOKIE_NAME, accessToken, {
@@ -35,7 +39,11 @@ export function setAuthCookies(
   })
   
   // Set Refresh Token cookie (longer lived)
-  const refreshMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60
+  // FIX: Refresh token should live 1 day longer than access token
+  const refreshMaxAge = maxAge ? (maxAge * 2) : (rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60)
+  
+  logger.debug('🍪 Setting refresh token with maxAge:', refreshMaxAge, 'seconds (', Math.round(refreshMaxAge / 3600), 'hours )')
+  
   setCookie(event, REFRESH_COOKIE_NAME, refreshToken, {
     httpOnly: true,
     secure: isProduction,
