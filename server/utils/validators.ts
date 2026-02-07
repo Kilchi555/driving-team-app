@@ -52,7 +52,7 @@ export function validateEmail(email: string | null | undefined): { valid: boolea
  * Validate password strength
  * - Min: 12 characters
  * - Max: 500 characters (prevent DoS attacks)
- * - Must contain uppercase, lowercase, numbers
+ * - Must contain uppercase, lowercase, numbers, and special characters
  */
 export function validatePassword(password: string | null | undefined): { valid: boolean; message?: string } {
   if (!password) return { valid: false, message: 'Passwort ist erforderlich' }
@@ -61,6 +61,7 @@ export function validatePassword(password: string | null | undefined): { valid: 
   if (!/[A-Z]/.test(password)) return { valid: false, message: 'Passwort muss Großbuchstaben enthalten' }
   if (!/[a-z]/.test(password)) return { valid: false, message: 'Passwort muss Kleinbuchstaben enthalten' }
   if (!/[0-9]/.test(password)) return { valid: false, message: 'Passwort muss Zahlen enthalten' }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return { valid: false, message: 'Passwort muss Sonderzeichen enthalten' }
   return { valid: true }
 }
 
