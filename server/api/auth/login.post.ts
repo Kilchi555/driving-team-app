@@ -33,7 +33,10 @@ export default defineEventHandler(async (event) => {
                       event.node.req.socket.remoteAddress || 
                       'unknown'
     
-    logger.debug('🔐 Login attempt from IP:', ipAddress)
+    logger.info('🔐 [LOGIN] New login attempt', {
+      ip: ipAddress,
+      timestamp: new Date().toISOString()
+    })
     
     const supabaseUrl = process.env.SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -57,7 +60,10 @@ export default defineEventHandler(async (event) => {
         .single()
       
       if (blockedIp && !error) {
-        logger.debug('🚫 Blocked IP detected:', ipAddress)
+        logger.warn('🚫 [LOGIN] Blocked IP attempted login', {
+          ip: ipAddress,
+          timestamp: new Date().toISOString()
+        })
         throw createError({
           statusCode: 429,
           statusMessage: 'Diese IP-Adresse wurde blockiert. Bitte kontaktieren Sie den Support.'
@@ -72,6 +78,13 @@ export default defineEventHandler(async (event) => {
     
     // Parse request body FIRST
     const { email, password, tenantId, rememberMe, captchaToken } = await readBody(event)
+
+    logger.debug('📧 [LOGIN] Parsing credentials', {
+      email: email?.substring(0, 3) + '***',
+      hasPassword: !!password,
+      tenantId: tenantId || 'none',
+      hasCaptcha: !!captchaToken
+    })
 
     // Validate input
     const errors: Record<string, string> = {}
@@ -91,15 +104,20 @@ export default defineEventHandler(async (event) => {
     }
     
     if (Object.keys(errors).length > 0) {
+      logger.warn('❌ [LOGIN] Validation failed', {
+        email: email?.substring(0, 3) + '***',
+        errors: Object.keys(errors),
+        ip: ipAddress
+      })
       throwValidationError(errors)
     }
     
     // Verify hCaptcha token if provided
     if (captchaToken) {
-      logger.debug('🔐 Verifying hCaptcha token...')
+      logger.debug('🔐 [LOGIN] Verifying hCaptcha token...')
       const hcaptchaSecret = process.env.HCAPTCHA_SECRET_KEY
       if (!hcaptchaSecret) {
-        console.error('❌ HCAPTCHA_SECRET_KEY not configured')
+        logger.error('❌ [LOGIN] HCAPTCHA_SECRET_KEY not configured')
         throw createError({
           statusCode: 500,
           statusMessage: 'Server configuration error'
@@ -119,25 +137,34 @@ export default defineEventHandler(async (event) => {
 
       const captchaData = await captchaResponse.json()
       if (!captchaData.success) {
-        console.warn('⚠️ hCaptcha verification failed:', captchaData['error-codes'])
+        logger.warn('⚠️ [LOGIN] Captcha verification failed', {
+          email: email?.substring(0, 3) + '***',
+          errors: captchaData['error-codes'],
+          ip: ipAddress
+        })
         throw createError({
           statusCode: 400,
           statusMessage: 'Captcha-Verifikation fehlgeschlagen. Bitte versuchen Sie es erneut.'
         })
       }
-      logger.debug('✅ hCaptcha verified successfully')
+      logger.debug('✅ [LOGIN] Captcha verified successfully')
     }
     
     // Remember Me: Adjust session duration
     // Default: 1 hour (3600 seconds)
     // Remember Me: 7 days (604800 seconds)
     const sessionDuration = rememberMe ? 604800 : 3600
-    logger.debug('🔐 Session duration:', rememberMe ? '7 days' : '1 hour')
+    logger.debug('🔐 [LOGIN] Session duration:', rememberMe ? '7 days' : '1 hour')
     
     // Apply rate limiting (max 10 attempts per minute) - AFTER parsing email
     const rateLimit = await checkRateLimit(ipAddress, 'login', undefined, undefined, email.toLowerCase().trim(), tenantId)
     if (!rateLimit.allowed) {
-      console.warn('⚠️ Login rate limit exceeded for IP:', ipAddress)
+      logger.warn('🚫 [LOGIN] Rate limit exceeded', {
+        email: email?.substring(0, 3) + '***',
+        ip: ipAddress,
+        remaining: rateLimit.remaining,
+        resetTime: rateLimit.reset
+      })
       throw createError({
         statusCode: 429,
         statusMessage: 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.',
@@ -146,11 +173,18 @@ export default defineEventHandler(async (event) => {
         }
       })
     }
-    logger.debug('✅ Rate limit check passed. Remaining attempts:', rateLimit.remaining)
+    logger.debug('✅ [LOGIN] Rate limit check passed', {
+      email: email?.substring(0, 3) + '***',
+      remaining: rateLimit.remaining
+    })
 
     // ✅ TENANT VALIDATION: If tenantId provided, validate user belongs to that tenant
     if (tenantId) {
-      logger.debug('🏢 Tenant-specific login, validating user belongs to tenant:', tenantId)
+      logger.info('🏢 [LOGIN] Tenant-specific login attempt', {
+        email: email?.substring(0, 3) + '***',
+        tenantId,
+        ip: ipAddress
+      })
       
       try {
         const { data: user, error: userError } = await adminSupabase
@@ -162,7 +196,11 @@ export default defineEventHandler(async (event) => {
         
         if (userError || !user) {
           // User doesn't exist or is inactive
-          logger.debug('❌ User not found or inactive')
+          logger.warn('❌ [LOGIN] User not found or inactive for tenant', {
+            email: email?.substring(0, 3) + '***',
+            tenantId,
+            ip: ipAddress
+          })
           
           // Record failed login attempt
           try {
@@ -172,7 +210,7 @@ export default defineEventHandler(async (event) => {
               p_tenant_id: tenantId
             })
           } catch (recordError: any) {
-            console.warn('⚠️ Failed to record failed login:', recordError.message)
+            logger.warn('⚠️ [LOGIN] Failed to record failed login attempt:', recordError.message)
           }
           
           throw createError({
@@ -183,7 +221,13 @@ export default defineEventHandler(async (event) => {
         
         if (user.tenant_id !== tenantId) {
           // User belongs to different tenant
-          logger.debug('❌ User belongs to different tenant:', user.tenant_id, '!==', tenantId)
+          logger.warn('❌ [LOGIN] User belongs to different tenant - potential account enumeration attempt', {
+            email: email?.substring(0, 3) + '***',
+            requestedTenant: tenantId,
+            userTenant: user.tenant_id,
+            ip: ipAddress,
+            severity: 'MEDIUM'
+          })
           
           // Record failed login attempt
           try {
@@ -193,7 +237,7 @@ export default defineEventHandler(async (event) => {
               p_tenant_id: tenantId
             })
           } catch (recordError: any) {
-            console.warn('⚠️ Failed to record failed login:', recordError.message)
+            logger.warn('⚠️ [LOGIN] Failed to record failed login attempt:', recordError.message)
           }
           
           throw createError({
@@ -202,7 +246,10 @@ export default defineEventHandler(async (event) => {
           })
         }
         
-        logger.debug('✅ User belongs to tenant, proceeding with login')
+        logger.info('✅ [LOGIN] User validated for tenant', {
+          email: email?.substring(0, 3) + '***',
+          tenantId
+        })
       } catch (tenantError: any) {
         // If it's already a createError, rethrow it
         if (tenantError.statusCode) {
@@ -267,7 +314,11 @@ export default defineEventHandler(async (event) => {
     })
 
     if (error) {
-      logger.debug('❌ Login failed for email:', email.substring(0, 3) + '***')
+      logger.warn('❌ [LOGIN] Login failed - invalid credentials', {
+        email: email?.substring(0, 3) + '***',
+        ip: ipAddress,
+        tenantId: tenantId || 'none'
+      })
       
       // Record failed login and check if MFA/lockout needed
       try {
@@ -292,14 +343,23 @@ export default defineEventHandler(async (event) => {
                   blocked_at: new Date().toISOString()
                 })
                 .throwOnError()
-              logger.debug('🚫 IP blocked due to suspicious activity:', ipAddress)
+              logger.warn('🚫 [LOGIN] IP blocked due to suspicious activity', {
+                ip: ipAddress,
+                reason: 'Multiple failed attempts',
+                severity: 'HIGH'
+              })
             } catch (blockError) {
-              console.warn('⚠️ Failed to block IP:', blockError)
+              logger.warn('⚠️ [LOGIN] Failed to block IP:', blockError)
             }
           }
           
           // If account should be locked
           if (updateResult.lock_account) {
+            logger.warn('🔒 [LOGIN] Account locked due to failed attempts', {
+              email: email?.substring(0, 3) + '***',
+              ip: ipAddress,
+              severity: 'HIGH'
+            })
             throw createError({
               statusCode: 423,
               statusMessage: 'Ihr Account wurde temporär gesperrt aufgrund zu vieler fehlgeschlagener Anmeldeversuche. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
@@ -308,6 +368,10 @@ export default defineEventHandler(async (event) => {
 
           // If MFA is required
           if (updateResult.require_mfa) {
+            logger.info('🔐 [LOGIN] MFA required for user', {
+              email: email?.substring(0, 3) + '***',
+              ip: ipAddress
+            })
             return {
               success: false,
               requiresMFA: true,
@@ -320,7 +384,7 @@ export default defineEventHandler(async (event) => {
         if (secError.statusCode) {
           throw secError
         }
-        console.warn('⚠️ Failed to record failed login:', secError.message)
+        logger.warn('⚠️ [LOGIN] Failed to record failed login:', secError.message)
       }
       
       // Log failed attempt for security monitoring
@@ -352,7 +416,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('✅ Login successful for user:', data.user.id)
+    logger.info('✅ [LOGIN] Successful login', {
+      email: email?.substring(0, 3) + '***',
+      userId: data.user.id,
+      ip: ipAddress,
+      tenantId: tenantId || 'none',
+      rememberMe,
+      timestamp: new Date().toISOString()
+    })
 
     // Get user agent and IP for device verification
     const userAgent = getHeader(event, 'user-agent') || 'Unknown'
@@ -366,7 +437,7 @@ export default defineEventHandler(async (event) => {
       rememberMe,
       maxAge: sessionDuration
     })
-    logger.debug('✅ Session cookies set (httpOnly, secure, sameSite)')
+    logger.debug('🍪 [LOGIN] Session cookies set (httpOnly, secure, sameSite)')
 
     // Queue device verification email (run in background, don't block response)
     // Generate simple MAC-like fingerprint from user agent hash
