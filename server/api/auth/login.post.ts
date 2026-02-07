@@ -255,18 +255,15 @@ export default defineEventHandler(async (event) => {
             })
           }
 
-          // If MFA is required
+          // If MFA is required - but only AFTER successful authentication!
+          // If credentials are wrong, we should never return requiresMFA
+          // This check happens in the error block, so just log and continue to throw 401
           if (updateResult.require_mfa) {
-            logger.info('🔐 [LOGIN] MFA required for user', {
+            logger.warn('⚠️ [LOGIN] MFA would be required but credentials are invalid', {
               email: email?.substring(0, 3) + '***',
               ip: ipAddress
             })
-            return {
-              success: false,
-              requiresMFA: true,
-              message: 'Multi-Faktor-Authentifizierung erforderlich. Bitte verwenden Sie Ihre MFA-Methode.',
-              email: email.toLowerCase().trim()
-            }
+            // Don't return - credentials are wrong, so throw 401 error
           }
         }
       } catch (secError: any) {
