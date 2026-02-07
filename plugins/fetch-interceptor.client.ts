@@ -42,7 +42,10 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
 
       // Handle 401 - Session expired or invalid token (for non-auth endpoints)
-      if (status === 401 && !isRedirecting) {
+      // DON'T redirect for login attempts - 401 is expected when credentials are wrong
+      const isLoginRequest = request?.url?.includes('/api/auth/login')
+      
+      if (status === 401 && !isRedirecting && !isLoginRequest) {
         isRedirecting = true
         console.warn('⚠️ Session expired (401) - Redirecting to tenant login')
 
