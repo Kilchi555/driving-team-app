@@ -110,7 +110,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { useTenant } from '~/composables/useTenant'
-import { useSupabaseClient } from '#app'
 import { logger } from '~/utils/logger'
 
 // Ensure no auth middleware runs on this page
@@ -119,9 +118,6 @@ definePageMeta({
 })
 
 const route = useRoute()
-
-// Get Supabase client
-const supabase = useSupabaseClient()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
@@ -184,51 +180,10 @@ onMounted(async () => {
   if (tenantSlug.value) {
     logger.debug('🏢 Loading services for tenant slug:', tenantSlug.value)
     try {
-      // First, get the tenant ID from the slug
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('id, name')
-        .eq('slug', tenantSlug.value)
-        .single()
-      
-      if (tenantError || !tenantData) {
-        console.warn('⚠️ Tenant not found for slug:', tenantSlug.value, tenantError)
-        isLoading.value = false
-        return
-      }
-      
-      logger.debug('✅ Tenant found:', tenantData)
-      
-      // Load pricing_rules for this tenant to determine available services
-      const { data: pricingRules, error: pricingError } = await supabase
-        .from('pricing_rules')
-        .select('rule_type')
-        .eq('tenant_id', tenantData.id)
-        .eq('is_active', true)
-      
-      if (pricingError) {
-        console.warn('⚠️ Failed to load pricing rules:', pricingError)
-        isLoading.value = false
-        return
-      }
-      
-      logger.debug('📊 Pricing rules found:', pricingRules)
-      
-      // Extract unique service types from pricing rules
-      const uniqueServiceTypes = [...new Set(pricingRules?.map(r => r.rule_type) || [])]
-      logger.debug('🔍 Unique service types:', uniqueServiceTypes)
-      
-      // Map rule_types to service identifiers
-      const services: string[] = []
-      if (uniqueServiceTypes.includes('base_price')) {
-        services.push('fahrlektion')
-      }
-      if (uniqueServiceTypes.includes('theory')) {
-        services.push('theorie')
-      }
-      if (uniqueServiceTypes.includes('consultation')) {
-        services.push('beratung')
-      }
+      // Use API to get available services for this tenant
+      const services = await $fetch('/api/tenants/available-services', {
+        query: { slug: tenantSlug.value }
+      }) as string[]
       
       logger.debug('✅ Available services:', services)
       
@@ -247,7 +202,7 @@ onMounted(async () => {
       await loadTenant(tenantSlug.value)
       
     } catch (error) {
-      console.warn('⚠️ Error loading tenant or pricing rules:', error)
+      logger.warn('⚠️ Error loading services:', error)
     } finally {
       isLoading.value = false
     }
