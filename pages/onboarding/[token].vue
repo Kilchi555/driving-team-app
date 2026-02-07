@@ -138,9 +138,9 @@
                     <span class="text-sm">Mindestens eine Zahl (0-9)</span>
                   </div>
 
-                  <div class="flex items-center space-x-2" :class="/[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ /[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(form.password) ? '✓' : '-' }}
+                  <div class="flex items-center space-x-2" :class="hasSpecialChar(form.password) ? 'text-green-600' : 'text-gray-400'">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="hasSpecialChar(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
+                      {{ hasSpecialChar(form.password) ? '✓' : '-' }}
                     </div>
                     <span class="text-sm">Mindestens ein Sonderzeichen (!@#$%^&*)</span>
                   </div>
@@ -690,6 +690,9 @@ import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholde
 
 const route = useRoute()
 const token = route.params.token as string
+
+// Helper function for password validation
+const hasSpecialChar = (password: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)
 
 const step = ref(0)
 const steps = ['Passwort', 'Profil', 'Dokumente', 'AGB']
