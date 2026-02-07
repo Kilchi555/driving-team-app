@@ -29,7 +29,7 @@
       <div class="p-6">
         <!-- Loading State -->
         <div v-if="isLoading" class="text-center py-12">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: primaryColor || '#2563eb' }"></div>
           <p class="text-gray-600">Wird überprüft...</p>
         </div>
 
@@ -70,8 +70,9 @@
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 required
-                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent focus:ring-blue-600"
-                placeholder="Mindestens 8 Zeichen"
+                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                :style="{ '--tw-ring-color': primaryColor || '#2563eb' }"
+                placeholder="Mindestens 12 Zeichen"
                 :disabled="isSubmitting"
               >
               <button
@@ -119,7 +120,8 @@
                 v-model="form.confirmPassword"
                 :type="showConfirmPassword ? 'text' : 'password'"
                 required
-                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent focus:ring-blue-600"
+                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                :style="{ '--tw-ring-color': primaryColor || '#2563eb' }"
                 placeholder="Passwort wiederholen"
                 :disabled="isSubmitting"
               >
