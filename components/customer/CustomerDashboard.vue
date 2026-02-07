@@ -439,7 +439,7 @@
       </div>
     </div>
     <div v-else class="min-h-screen flex items-center justify-center">
-      <LoadingLogo size="xl" />
+      <LoadingLogo size="lg" />
     </div>
 
     <!-- Reglemente Modal -->
