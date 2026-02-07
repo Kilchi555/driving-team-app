@@ -81,33 +81,39 @@ describe('String Validators', () => {
   })
 
   describe('validatePassword', () => {
-    it('should accept strong passwords', () => {
-      const result = validatePassword('SecurePass123')
+    it('should accept strong passwords with special characters', () => {
+      const result = validatePassword('SecurePass123!')
       expect(result.valid).toBe(true)
     })
 
     it('should reject passwords without uppercase', () => {
-      const result = validatePassword('securepass123')
+      const result = validatePassword('securepass123!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Großbuchstaben')
     })
 
     it('should reject passwords without lowercase', () => {
-      const result = validatePassword('SECUREPASS123')
+      const result = validatePassword('SECUREPASS123!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Kleinbuchstaben')
     })
 
     it('should reject passwords without numbers', () => {
-      const result = validatePassword('SecurePassword')
+      const result = validatePassword('SecurePassword!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Zahlen')
     })
 
-    it('should reject passwords shorter than 8 chars', () => {
-      const result = validatePassword('Pass123')
+    it('should reject passwords without special characters', () => {
+      const result = validatePassword('SecurePassword123')
       expect(result.valid).toBe(false)
-      expect(result.message).toContain('mindestens 8')
+      expect(result.message).toContain('Sonderzeichen')
+    })
+
+    it('should reject passwords shorter than 12 chars', () => {
+      const result = validatePassword('Pass12!')
+      expect(result.valid).toBe(false)
+      expect(result.message).toContain('mindestens 12')
     })
 
     it('should reject null/undefined', () => {
