@@ -90,14 +90,20 @@
           <div class="text-xs text-gray-500">
             <p class="font-medium mb-1">Passwort-Anforderungen:</p>
             <ul class="list-disc list-inside space-y-1">
-              <li :class="password.length >= 8 ? 'text-green-600' : 'text-gray-500'">
-                Mindestens 8 Zeichen
+              <li :class="password.length >= 12 ? 'text-green-600' : 'text-gray-500'">
+                Mindestens 12 Zeichen
               </li>
               <li :class="hasUppercase ? 'text-green-600' : 'text-gray-500'">
                 Mindestens ein Großbuchstabe
               </li>
+              <li :class="hasLowercase ? 'text-green-600' : 'text-gray-500'">
+                Mindestens ein Kleinbuchstabe
+              </li>
               <li :class="hasNumber ? 'text-green-600' : 'text-gray-500'">
                 Mindestens eine Zahl
+              </li>
+              <li :class="hasSpecial ? 'text-green-600' : 'text-gray-500'">
+                Mindestens ein Sonderzeichen (!@#$%^&*)
               </li>
               <li :class="passwordsMatch ? 'text-green-600' : 'text-gray-500'">
                 Passwörter stimmen überein
@@ -143,13 +149,17 @@ const tenantSlug = ref('')
 
 // Computed
 const hasUppercase = computed(() => /[A-Z]/.test(password.value))
+const hasLowercase = computed(() => /[a-z]/.test(password.value))
 const hasNumber = computed(() => /\d/.test(password.value))
+const hasSpecial = computed(() => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password.value))
 const passwordsMatch = computed(() => password.value === confirmPassword.value && password.value.length > 0)
 
 const isValidPassword = computed(() => {
-  return password.value.length >= 8 && 
+  return password.value.length >= 12 && 
          hasUppercase.value && 
+         hasLowercase.value &&
          hasNumber.value && 
+         hasSpecial.value &&
          passwordsMatch.value
 })
 

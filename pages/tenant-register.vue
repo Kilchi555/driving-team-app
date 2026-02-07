@@ -773,14 +773,21 @@ const passwordMismatch = computed(() => adminForm.value.password !== adminForm.v
 
 const passwordValid = computed(() => {
   const password = adminForm.value.password
-  return password.length >= 8 && /\d/.test(password)
+  return password.length >= 12 && 
+         /[A-Z]/.test(password) &&
+         /[a-z]/.test(password) &&
+         /\d/.test(password) &&
+         /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
 })
 
 const passwordError = computed(() => {
   const password = adminForm.value.password
   if (!password) return ''
-  if (password.length < 8) return 'Mindestens 8 Zeichen erforderlich'
+  if (password.length < 12) return 'Mindestens 12 Zeichen erforderlich'
+  if (!/[A-Z]/.test(password)) return 'Mindestens ein Großbuchstabe erforderlich'
+  if (!/[a-z]/.test(password)) return 'Mindestens ein Kleinbuchstabe erforderlich'
   if (!/\d/.test(password)) return 'Mindestens eine Zahl erforderlich'
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return 'Mindestens ein Sonderzeichen erforderlich'
   return ''
 })
 

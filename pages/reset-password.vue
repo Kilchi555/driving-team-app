@@ -80,6 +80,16 @@
                   {{ passwordChecks.number ? '✓' : '○' }} Zahl
                 </span>
               </div>
+              <div class="flex items-center space-x-2">
+                <span :class="passwordChecks.special ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                  {{ passwordChecks.special ? '✓' : '○' }} Sonderzeichen (!@#$%^&*)
+                </span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span :class="passwordChecks.lowercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                  {{ passwordChecks.lowercase ? '✓' : '○' }} Kleinbuchstabe
+                </span>
+              </div>
             </div>
           </div>
 
@@ -134,13 +144,17 @@ const confirmPassword = ref('')
 const passwordChecks = computed(() => ({
   length: newPassword.value.length >= 12,
   uppercase: /[A-Z]/.test(newPassword.value),
-  number: /[0-9]/.test(newPassword.value)
+  lowercase: /[a-z]/.test(newPassword.value),
+  number: /[0-9]/.test(newPassword.value),
+  special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword.value)
 }))
 
 const passwordIsValid = computed(() => {
   return passwordChecks.value.length && 
          passwordChecks.value.uppercase && 
-         passwordChecks.value.number
+         passwordChecks.value.lowercase &&
+         passwordChecks.value.number &&
+         passwordChecks.value.special
 })
 
 const canSubmit = computed(() => {

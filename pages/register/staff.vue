@@ -313,6 +313,9 @@
               <p class="text-xs" :class="passwordChecks.number ? 'text-green-600' : 'text-gray-500'">
                 {{ passwordChecks.number ? '✓' : '○' }} Mindestens 1 Zahl
               </p>
+              <p class="text-xs" :class="passwordChecks.special ? 'text-green-600' : 'text-gray-500'">
+                {{ passwordChecks.special ? '✓' : '○' }} Mindestens 1 Sonderzeichen (!@#$%^&*)
+              </p>
             </div>
           </div>
 
@@ -413,14 +416,16 @@ const passwordChecks = computed(() => ({
   length: password.value.length >= 12,
   uppercase: /[A-Z]/.test(password.value),
   lowercase: /[a-z]/.test(password.value),
-  number: /[0-9]/.test(password.value)
+  number: /[0-9]/.test(password.value),
+  special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password.value)
 }))
 
 const passwordIsValid = computed(() => {
   return passwordChecks.value.length && 
          passwordChecks.value.uppercase && 
          passwordChecks.value.lowercase &&
-         passwordChecks.value.number
+         passwordChecks.value.number &&
+         passwordChecks.value.special
 })
 
 const canSubmit = computed(() => {
