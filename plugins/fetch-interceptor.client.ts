@@ -6,6 +6,7 @@
 
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useRoute } from '#app'
 
 // Prevent multiple redirects happening at once
 let isRedirecting = false
@@ -53,8 +54,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         try {
           const authStore = useAuthStore()
           
-          // Get tenant slug before clearing state
-          let redirectPath = '/login'
+          // IMMER zu tenant-specific login redirecten, NIEMALS zu /login!
+          let redirectPath = null
           const tenantId = authStore.userProfile?.tenant_id
           
           // Try to get tenant slug for redirect to /:slug page
@@ -67,20 +68,33 @@ export default defineNuxtPlugin((nuxtApp) => {
               }
             } catch (e) {
               console.warn('❌ Could not fetch tenant slug:', e)
-              // Fallback: try localStorage
-              const lastSlug = localStorage.getItem('last_tenant_slug')
-              if (lastSlug) {
-                redirectPath = `/${lastSlug}`
-                console.log('✅ Using last tenant slug from localStorage:', redirectPath)
-              }
             }
-          } else {
-            // No tenant in profile, try localStorage
+          }
+          
+          // Fallback: try localStorage (ALWAYS required as backup)
+          if (!redirectPath) {
             const lastSlug = localStorage.getItem('last_tenant_slug')
             if (lastSlug) {
               redirectPath = `/${lastSlug}`
               console.log('✅ Using last tenant slug from localStorage:', redirectPath)
             }
+          }
+          
+          // If we still don't have a slug, try to extract from current URL or use fallback
+          if (!redirectPath) {
+            // Try to get from current route if available
+            const route = useRoute()
+            const slugFromRoute = route.params.slug as string
+            if (slugFromRoute) {
+              redirectPath = `/${slugFromRoute}`
+              console.log('✅ Using slug from current route:', redirectPath)
+            }
+          }
+          
+          // Last resort: if nothing worked, we have a problem - but we should never reach here
+          if (!redirectPath) {
+            console.error('❌ No tenant slug found for redirect! This should not happen.')
+            redirectPath = '/'
           }
 
           // Clear auth state
