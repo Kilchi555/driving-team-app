@@ -788,23 +788,21 @@ const handlePasswordStrengthUpdated = async () => {
   showPasswordStrengthModal.value = false
   
   // Show success message
-  showSuccess('Passwort aktualisiert', 'Ihr Passwort erfüllt nun alle Sicherheitsanforderungen!')
+  showSuccess('Passwort aktualisiert', 'Ihr Passwort erfüllt nun alle Sicherheitsanforderungen! Bitte melden Sie sich erneut an.')
   
-  // Wait a bit for the success notification to be visible
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  // Wait for success notification
+  await new Promise(resolve => setTimeout(resolve, 2000))
   
-  // Redirect based on role
-  const user = authStore.userProfile
+  // After password change in Supabase Auth, the session is invalidated for security
+  // User must re-login with the new password
+  logger.debug('🔄 Redirecting to tenant login after password update')
   
-  if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-    logger.debug('🔄 Redirecting to admin dashboard')
-    await router.push('/admin')
-  } else if (user?.role === 'staff') {
-    logger.debug('🔄 Redirecting to staff dashboard')
-    await router.push('/dashboard')
+  // Use tenant-specific login instead of generic /login
+  const slug = route.params.slug as string
+  if (slug) {
+    await router.push(`/${slug}`)
   } else {
-    logger.debug('🔄 Redirecting to customer dashboard')
-    await router.push('/customer-dashboard')
+    await router.push('/')
   }
 }
 

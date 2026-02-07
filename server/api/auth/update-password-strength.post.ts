@@ -191,13 +191,15 @@ export default defineEventHandler(async (event) => {
     logger.info('✅ [UPDATE-PASSWORD-STRENGTH] Password successfully updated', {
       userId: authUser.id,
       email: email?.substring(0, 3) + '***',
-      ip: ipAddress
+      ip: ipAddress,
+      note: 'Session will be invalidated - user must re-login with new password'
     })
 
     return {
       success: true,
-      message: 'Passwort erfolgreich aktualisiert',
-      requiresUpdate: false
+      message: 'Passwort erfolgreich aktualisiert. Bitte melden Sie sich mit Ihrem neuen Passwort an.',
+      requiresUpdate: false,
+      sessionInvalidated: true
     }
 
   } catch (error: any) {
