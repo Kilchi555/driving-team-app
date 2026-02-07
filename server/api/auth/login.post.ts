@@ -598,7 +598,7 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
     try {
       const { data: profileData, error: profileError } = await adminSupabase
         .from('users')
-        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method')
+        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method, password_strength_version')
         .eq('auth_user_id', data.user.id)
         .eq('is_active', true)
         .single()
@@ -606,6 +606,35 @@ Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       if (!profileError && profileData) {
         userProfile = profileData
         logger.debug('✅ User profile loaded:', profileData.email)
+        
+        // ✅ NEW: If password meets new strength requirements, auto-upgrade version
+        const hasUppercase = /[A-Z]/.test(password)
+        const hasLowercase = /[a-z]/.test(password)
+        const hasNumbers = /[0-9]/.test(password)
+        const hasSpecialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+        const isLongEnough = password.length >= 12
+        
+        const meetsStrictRequirements = hasUppercase && hasLowercase && hasNumbers && hasSpecialChars && isLongEnough
+        
+        if (meetsStrictRequirements && (!profileData.password_strength_version || profileData.password_strength_version < 2)) {
+          logger.info('🚀 [LOGIN] Auto-upgrading password strength version to 2 (password meets all requirements)', {
+            userId: data.user.id,
+            email: email?.substring(0, 3) + '***'
+          })
+          
+          try {
+            await adminSupabase
+              .from('users')
+              .update({ password_strength_version: 2 })
+              .eq('auth_user_id', data.user.id)
+            
+            // Update the profile object for frontend
+            userProfile.password_strength_version = 2
+          } catch (upgradeError: any) {
+            logger.warn('⚠️ [LOGIN] Failed to auto-upgrade password version:', upgradeError.message)
+            // Don't fail login for this
+          }
+        }
       }
     } catch (profileFetchError: any) {
       console.warn('⚠️ Failed to fetch user profile:', profileFetchError.message)
