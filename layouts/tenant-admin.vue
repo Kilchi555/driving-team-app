@@ -121,7 +121,8 @@ const handleLogout = async () => {
   try {
     await logout()
     showSuccess('Erfolgreich abgemeldet')
-    await navigateTo('/login')
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
+    await navigateTo(getLoginPath())
   } catch (error) {
     showError('Fehler beim Abmelden: ' + (error?.message || 'Unbekannter Fehler'))
   }

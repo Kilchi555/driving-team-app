@@ -1309,8 +1309,9 @@ const completeOnboarding = async () => {
         logger.debug('✅ Redirecting to driving-team login')
         await navigateTo('/driving-team')
       } else {
-        logger.debug('✅ Redirecting to general login')
-        await navigateTo('/login')
+        logger.debug('✅ Redirecting to login')
+        const { getLoginPath } = await import('~/utils/redirect-to-login')
+        await navigateTo(getLoginPath())
       }
     }, 2000)
 
