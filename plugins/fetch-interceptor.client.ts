@@ -61,6 +61,20 @@ export default defineNuxtPlugin((nuxtApp) => {
 
         try {
           const authStore = useAuthStore()
+          const route = useRoute()
+          
+          // ✅ CHECK: Sind wir bereits auf einer /{slug} Login-Seite? Dann NICHT redirect!
+          // Das verhindert Redirect-Schleifen
+          const currentPath = route.path
+          const currentSlug = route.params.slug as string
+          if (currentSlug && (currentPath === `/${currentSlug}` || currentPath.startsWith(`/${currentSlug}/`))) {
+            console.log('ℹ️ Already on tenant login page - no redirect needed')
+            isRedirecting = false
+            throw createError({
+              statusCode: status,
+              statusMessage: response?.statusText || 'Request failed'
+            })
+          }
           
           // IMMER zu tenant-specific login redirecten, NIEMALS zu /login!
           let redirectPath = null
@@ -91,7 +105,6 @@ export default defineNuxtPlugin((nuxtApp) => {
           // If we still don't have a slug, try to extract from current URL or use fallback
           if (!redirectPath) {
             // Try to get from current route if available
-            const route = useRoute()
             const slugFromRoute = route.params.slug as string
             if (slugFromRoute) {
               redirectPath = `/${slugFromRoute}`
