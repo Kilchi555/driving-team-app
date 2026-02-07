@@ -82,10 +82,7 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center py-8">
-      <LoadingLogo size="xl" />
-    </div>
+    <!-- Loading State - removed large spinner, uses small one in content area instead -->
 
     <!-- Error State -->
     <div v-else-if="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
