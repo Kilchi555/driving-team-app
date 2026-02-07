@@ -321,6 +321,12 @@
       </div>
     </div>
 
+    <!-- Password Strength Upgrade Modal -->
+    <PasswordStrengthUpgradeModal 
+      v-model="showPasswordStrengthModal"
+      @success="handlePasswordStrengthUpdated"
+    />
+
     <!-- Passwort Vergessen Modal -->
     <div v-if="showForgotPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
@@ -624,6 +630,24 @@ const handleLogin = async () => {
     } catch (e) {
       logger.warn('⚠️ Could not save tenant slug to localStorage:', e)
     }
+
+    // Check password strength after successful login
+    try {
+      logger.debug('🔐 Checking password strength...')
+      const strengthResponse = await $fetch('/api/auth/check-password-strength', {
+        method: 'GET'
+      })
+
+      if (strengthResponse?.requiresUpdate) {
+        logger.debug('⚠️ Password strength update required')
+        showPasswordStrengthModal.value = true
+        // Don't redirect yet - user needs to update password or skip
+        return
+      }
+    } catch (err) {
+      logger.warn('⚠️ Could not check password strength:', err)
+      // Continue with redirect even if check fails
+    }
     
     // Show success message and redirect
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
@@ -755,6 +779,26 @@ const handleMFAVerify = async () => {
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
     logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
+  }
+}
+
+// Helper function to redirect after password strength update
+const handlePasswordStrengthUpdated = async () => {
+  // Close modal
+  showPasswordStrengthModal.value = false
+  
+  // Show success message
+  showSuccess('Passwort aktualisiert', 'Ihr Passwort erfüllt nun alle Sicherheitsanforderungen!')
+  
+  // Redirect based on role
+  const user = authStore.userProfile
+  
+  if (user?.role === 'admin' || user?.role === 'tenant_admin') {
+    router.push('/admin')
+  } else if (user?.role === 'staff') {
+    router.push('/dashboard')
+  } else {
+    router.push('/customer-dashboard')
   }
 }
 
@@ -932,6 +976,7 @@ const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
 
 // Password Reset State
 const showForgotPasswordModal = ref(false)
+const showPasswordStrengthModal = ref(false)
 const resetContactMethod = ref<'email' | 'phone'>('email')
 const resetIsLoading = ref(false)
 const resetError = ref<string | null>(null)
