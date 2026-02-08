@@ -125,21 +125,32 @@ export default defineEventHandler(async (event) => {
     // Add admin fee if applicable (always include for simplicity in booking)
     priceRappen += combined.admin_fee_rappen
 
-    const priceCHF = (priceRappen / 100).toFixed(2)
+    // ✅ SWISS ROUNDING: Round to nearest Franken (50 Rappen boundary)
+    const roundToNearestFranken = (rappen: number): number => {
+      const remainder = rappen % 100
+      if (remainder === 0) return rappen
+      if (remainder < 50) return rappen - remainder      // Round down if < 50 Rappen
+      else return rappen + (100 - remainder)             // Round up if >= 50 Rappen
+    }
+
+    const roundedPriceRappen = roundToNearestFranken(priceRappen)
+    const priceCHF = (roundedPriceRappen / 100).toFixed(2)
 
     logger.debug('✅ Pricing loaded:', {
       category_code,
       duration_minutes: durationMinutes,
       price_per_minute: combined.price_per_minute_rappen,
       admin_fee: combined.admin_fee_rappen,
-      total_rappen: priceRappen,
+      before_rounding_rappen: priceRappen,
+      before_rounding_chf: (priceRappen / 100).toFixed(2),
+      rounded_rappen: roundedPriceRappen,
       total_chf: priceCHF
     })
 
     return {
       success: true,
       pricing: combined,
-      price_rappen: priceRappen,
+      price_rappen: roundedPriceRappen,
       price_chf: priceCHF,
       duration_minutes: durationMinutes
     }
