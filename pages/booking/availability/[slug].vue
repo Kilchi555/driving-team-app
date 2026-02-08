@@ -373,7 +373,6 @@
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
                 <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
-                <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
               </div>
             </div>
           
