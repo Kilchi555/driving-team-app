@@ -674,59 +674,27 @@ export class AvailabilityCalculator {
     }
 
     try {
-      // Delete existing slots: both old ones (before startDate) and ones in the calculated range
-      let deleteQuery = this.supabase.from('availability_slots').delete()
+      // CLEAN SLATE: Delete ALL availability slots for this tenant/staff and recalculate from scratch
+      // This is much simpler and more reliable than trying to delete specific ranges
+      logger.debug('🗑️ Deleting ALL existing slots for recalculation (clean slate approach)...')
+      
+      let deleteAllQuery = this.supabase.from('availability_slots').delete()
 
       if (tenantId) {
-        deleteQuery = deleteQuery.eq('tenant_id', tenantId)
+        deleteAllQuery = deleteAllQuery.eq('tenant_id', tenantId)
       }
       if (staffId) {
-        deleteQuery = deleteQuery.eq('staff_id', staffId)
+        deleteAllQuery = deleteAllQuery.eq('staff_id', staffId)
+      }
+
+      const { error: deleteAllError, count: deletedCount } = await deleteAllQuery
+
+      if (deleteAllError) {
+        logger.error('❌ Error deleting all slots:', deleteAllError)
+        throw deleteAllError
       }
       
-      // IMPORTANT: Delete both old slots (end_time < startDate) AND slots in the range
-      if (startDate) {
-        // Delete old slots that have already ended
-        deleteQuery = deleteQuery.lt('end_time', startDate.toISOString())
-      }
-
-      const { error: deleteOldError } = await deleteQuery
-
-      if (deleteOldError) {
-        logger.warn('⚠️ Could not delete old slots:', deleteOldError)
-      }
-
-      // Now delete slots in the calculated range (will be replaced with new ones)
-      let deleteRangeQuery = this.supabase.from('availability_slots').delete()
-
-      if (tenantId) {
-        deleteRangeQuery = deleteRangeQuery.eq('tenant_id', tenantId)
-      }
-      if (staffId) {
-        deleteRangeQuery = deleteRangeQuery.eq('staff_id', staffId)
-      }
-      
-      // Delete slots that START within the calculated range
-      // This ensures we replace all slots being recalculated
-      if (startDate) {
-        deleteRangeQuery = deleteRangeQuery.gte('start_time', startDate.toISOString())
-      }
-      if (endDate) {
-        // Delete slots that start ON or BEFORE endDate (inclusive)
-        const endOfRangeInclusive = new Date(endDate)
-        endOfRangeInclusive.setDate(endOfRangeInclusive.getDate() + 1)
-        deleteRangeQuery = deleteRangeQuery.lt('start_time', endOfRangeInclusive.toISOString())
-      }
-
-      logger.debug('🗑️ Deleting existing slots in range for recalculation...')
-      const { error: deleteRangeError, count: deletedCount } = await deleteRangeQuery
-
-      if (deleteRangeError) {
-        logger.error('❌ Error deleting slots in range:', deleteRangeError)
-        throw deleteRangeError
-      }
-      
-      logger.debug(`✅ Deleted ${deletedCount || 0} existing slots in range for recalculation`)
+      logger.debug(`✅ Deleted ${deletedCount || 0} existing slots - recalculating from scratch`)
 
       // Insert new slots in batches (Supabase limit: 1000 rows per insert)
       const batchSize = 1000
