@@ -1641,11 +1641,59 @@ const getDurationButtonStyle = (isSelected: boolean, isHover = false) =>
 const getDurationBadgeStyle = (isSelected: boolean) => getInteractiveBadgeStyle(isSelected)
 
 // NEW: Select main category and move to step 2
-const selectMainCategory = (category: any) => {
+const selectMainCategory = async (category: any) => {
   logger.debug('🎯 selectMainCategory called:', category.name)
   selectedMainCategory.value = category
   selectedCategory.value = null // Reset subcategory
-  currentStep.value = 2 // Move to subcategory selection
+  
+  // Check if this category has subcategories
+  const subcategories = categories.value.filter((c: any) => c.parent_category_id === category.id)
+  
+  if (subcategories.length === 0) {
+    // No subcategories - use the parent category as the selected category and go directly to duration
+    logger.debug('📌 No subcategories found - using parent category directly and going to duration selection')
+    
+    selectedCategory.value = category
+    filters.value.category_code = category.code
+    
+    // Parse duration from category
+    durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
+    
+    logger.debug('⏱️ Duration options:', durationOptions.value)
+    selectedDuration.value = null
+    filters.value.duration_minutes = durationOptions.value[0] || 45
+    
+    // Load staff for this category
+    try {
+      logger.debug('🔄 Calling loadStaffForCategory...')
+      await loadStaffForCategory()
+      logger.debug('✅ loadStaffForCategory completed')
+    } catch (err: any) {
+      logger.error('❌ loadStaffForCategory failed:', err)
+      return
+    }
+    
+    // Reset prices map for new category
+    durationPrices.value.clear()
+    
+    // Load prices for all available durations in parallel
+    logger.debug('💰 Loading prices for all durations...')
+    try {
+      await Promise.all(
+        durationOptions.value.map(duration => loadPricingForDuration(duration))
+      )
+      logger.debug('✅ All prices loaded')
+    } catch (err: any) {
+      logger.error('⚠️ Error loading prices:', err)
+    }
+    
+    // Skip subcategory selection and go directly to duration selection
+    currentStep.value = 3
+  } else {
+    // Has subcategories - go to subcategory selection
+    logger.debug('📌 Found', subcategories.length, 'subcategories - going to subcategory selection')
+    currentStep.value = 2
+  }
 }
 
 // MODIFIED: Select subcategory (was selectCategory, now step 2)
