@@ -1646,8 +1646,8 @@ const selectMainCategory = async (category: any) => {
   selectedMainCategory.value = category
   selectedCategory.value = null // Reset subcategory
   
-  // Check if this category has subcategories
-  const subcategories = categories.value.filter((c: any) => c.parent_category_id === category.id)
+  // Check if this category has subcategories (stored in category.children)
+  const subcategories = category.children || []
   
   if (subcategories.length === 0) {
     // No subcategories - use the parent category as the selected category and go directly to duration
@@ -2424,7 +2424,7 @@ const goBackToStep = (step: number) => {
 const getPreviousStep = (fromStep: number): number => {
   if (fromStep === 3 && selectedMainCategory.value) {
     // From step 3 (duration), check if main category has subcategories
-    const hasSubcategories = categories.value.some((c: any) => c.parent_category_id === selectedMainCategory.value.id)
+    const hasSubcategories = (selectedMainCategory.value.children || []).length > 0
     if (!hasSubcategories) {
       // No subcategories - skip step 2 and go to step 1
       logger.debug('📌 No subcategories found - skipping step 2 when going back')
