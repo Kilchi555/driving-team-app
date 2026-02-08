@@ -1723,43 +1723,55 @@ const selectSubcategory = async (category: any) => {
   // Use the already-filtered available_staff from the API response
   const locationsMap = new Map<string, any>()
   
-  availableStaff.value.forEach((staff: any) => {
-    if (staff.available_locations) {
-      staff.available_locations.forEach((location: any) => {
-        // Filter: Only include locations that have the selected category
-        const supportedCategories = location.available_categories || []
-        const categoryCode = selectedCategory.value.code
-        
-        if (!supportedCategories.includes(categoryCode)) {
-          logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
-          return
-        }
-        
-        if (!locationsMap.has(location.id)) {
-          locationsMap.set(location.id, {
-            id: location.id,
-            name: location.name,
-            address: location.address,
-            category_pickup_settings: location.category_pickup_settings || {},
-            time_windows: parseTimeWindows(location.time_windows),
-            // Use the already-filtered available_staff from the API
-            available_staff: location.available_staff || []
-          })
-        } else {
-          // Merge available_staff, avoiding duplicates
-          const locationEntry = locationsMap.get(location.id)!
-          (location.available_staff || []).forEach((s: any) => {
-            if (!locationEntry.available_staff.some((existing: any) => existing.id === s.id)) {
-              locationEntry.available_staff.push(s)
+  if (!availableStaff.value || availableStaff.value.length === 0) {
+    logger.warn('⚠️ No available staff loaded - cannot build locations map')
+  } else {
+    availableStaff.value.forEach((staff: any) => {
+      if (staff.available_locations && Array.isArray(staff.available_locations)) {
+        staff.available_locations.forEach((location: any) => {
+          // Filter: Only include locations that have the selected category
+          const supportedCategories = location.available_categories || []
+          const categoryCode = selectedCategory.value?.code
+          
+          if (!categoryCode) {
+            logger.warn('⚠️ No category code selected')
+            return
+          }
+          
+          if (!supportedCategories.includes(categoryCode)) {
+            logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
+            return
+          }
+          
+          if (!locationsMap.has(location.id)) {
+            locationsMap.set(location.id, {
+              id: location.id,
+              name: location.name,
+              address: location.address,
+              category_pickup_settings: location.category_pickup_settings || {},
+              time_windows: parseTimeWindows(location.time_windows),
+              // Use the already-filtered available_staff from the API
+              available_staff: location.available_staff || []
+            })
+          } else {
+            // Merge available_staff, avoiding duplicates
+            const locationEntry = locationsMap.get(location.id)
+            if (locationEntry) {
+              (location.available_staff || []).forEach((s: any) => {
+                if (!locationEntry.available_staff.some((existing: any) => existing.id === s.id)) {
+                  locationEntry.available_staff.push(s)
+                }
+              })
             }
-          })
-        }
-      })
-    }
-  })
+          }
+        })
+      }
+    })
+  }
   
   // Convert map to array
   availableLocations.value = Array.from(locationsMap.values())
+  logger.debug(`✅ Built locations map: ${availableLocations.value.length} unique locations`)
   
   await waitForPressEffect()
   currentStep.value = 3
