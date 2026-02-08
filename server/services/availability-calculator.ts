@@ -435,6 +435,8 @@ export class AvailabilityCalculator {
       }
 
       // Get staff's categories
+      // NEW: Support both parent and child categories
+      // If staff has "B", should match any subcategory of B (B Schaltung, B Automatik)
       const staffCategories = params.categories.filter(cat => {
         // If staff has specific category, only allow those
         if (staff.category) {
@@ -447,18 +449,32 @@ export class AvailabilityCalculator {
           } else {
             staffCats = []
           }
+          
+          // Check if category code matches (for subcategories where code = parent code)
+          // We only load subcategories, so this naturally filters correctly
           return staffCats.includes(cat.code)
         }
         // Otherwise allow all categories
         return true
       })
       
+      // DEDUP: If we have multiple categories with the same code (e.g., B Schaltung and B Automatik)
+      // only use the FIRST one to avoid creating duplicate slots
+      const uniqueCategories = new Map<string, any>()
+      staffCategories.forEach((cat: any) => {
+        if (!uniqueCategories.has(cat.code)) {
+          uniqueCategories.set(cat.code, cat)
+        }
+      })
+      const deduplicatedCategories = Array.from(uniqueCategories.values())
+      
       // Debug logging
       logger.debug(`👤 Staff ${staff.first_name} ${staff.last_name} (${staff.id.substring(0, 8)}...):`)
       logger.debug(`   - Locations: ${staffLocations.map(l => l.name).join(', ')}`)
       logger.debug(`   - Staff category: ${staff.category || 'NONE (all allowed)'}`)
       logger.debug(`   - Working hours: ${staffHours.length} entries`)
-      logger.debug(`   - Matching categories: ${staffCategories.map(c => c.code).join(', ') || 'NONE!'}`)
+      logger.debug(`   - Found categories (before dedup): ${staffCategories.map(c => `${c.code} (${c.name})`).join(', ') || 'NONE!'}`)
+      logger.debug(`   - Using categories (after dedup): ${deduplicatedCategories.map(c => `${c.code} (${c.name})`).join(', ') || 'NONE!'}`)
 
       // Get staff's appointments and busy times
       const staffAppointments = params.appointments.filter(apt => apt.staff_id === staff.id)
@@ -496,8 +512,8 @@ export class AvailabilityCalculator {
 
         // For each location
         for (const location of staffLocations) {
-          // For each category the staff offers
-          for (const category of staffCategories) {
+          // For each category the staff offers (deduped to avoid duplicates)
+          for (const category of deduplicatedCategories) {
             // Check if location supports this category
             if (location.available_categories && location.available_categories.length > 0 && !location.available_categories.includes(category.code)) {
               continue // Location doesn't support this category
