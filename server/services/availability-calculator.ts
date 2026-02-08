@@ -482,43 +482,34 @@ export class AvailabilityCalculator {
 
         // For each location
         for (const location of staffLocations) {
-          // Check if location supports at least one of staff's categories
-          const supportedCategories = staffCategories.filter(cat => {
-            // If available_categories is empty, allow all categories (location supports everything)
-            if (!location.available_categories || location.available_categories.length === 0) {
-              return true
+          // For each category the staff offers
+          for (const category of staffCategories) {
+            // Check if location supports this category
+            if (location.available_categories && location.available_categories.length > 0 && !location.available_categories.includes(category.code)) {
+              continue // Location doesn't support this category
             }
-            // Otherwise check if this category is in the location's supported list
-            return location.available_categories.includes(cat.code)
-          })
-          
-          if (supportedCategories.length === 0) {
-            logger.debug(`⏭️ Skipping location "${location.name}" - no supported categories for this staff member`)
-            continue
-          }
-          
-          // Use ONLY the first supported category to avoid duplicate slots
-          const primaryCategory = supportedCategories[0]
-          
-          // For each lesson duration
-          for (const durationMinutes of primaryCategory.lesson_duration_minutes) {
-            // Generate slots for each working hour block
-            for (const hours of dayHours) {
-              const daySlots = this.generateDaySlots({
-                date: currentDate,
-                startTime: hours.start_time,
-                endTime: hours.end_time,
-                durationMinutes,
-                bufferMinutes: params.bufferMinutes,
-                minBookableTime,
-                appointments: staffAppointments,
-                busyTimes: staffBusyTimes,
-                staff,
-                location,
-                category: primaryCategory  // Use only primary category, not all categories
-              })
+            // If available_categories is empty, all categories are allowed
+            
+            // For each lesson duration
+            for (const durationMinutes of category.lesson_duration_minutes) {
+              // Generate slots for each working hour block
+              for (const hours of dayHours) {
+                const daySlots = this.generateDaySlots({
+                  date: currentDate,
+                  startTime: hours.start_time,
+                  endTime: hours.end_time,
+                  durationMinutes,
+                  bufferMinutes: params.bufferMinutes,
+                  minBookableTime,
+                  appointments: staffAppointments,
+                  busyTimes: staffBusyTimes,
+                  staff,
+                  location,
+                  category
+                })
 
-              slots.push(...daySlots)
+                slots.push(...daySlots)
+              }
             }
           }
         }
@@ -714,15 +705,17 @@ export class AvailabilityCalculator {
       if (staffId) {
         deleteRangeQuery = deleteRangeQuery.eq('staff_id', staffId)
       }
+      
+      // Delete slots that START within the calculated range
+      // This ensures we replace all slots being recalculated
       if (startDate) {
         deleteRangeQuery = deleteRangeQuery.gte('start_time', startDate.toISOString())
       }
       if (endDate) {
-        // Delete all slots that START before the end of the range
-        // Use lt('end_time', ...) to catch slots that end before endDate
-        const endOfRange = new Date(endDate)
-        endOfRange.setDate(endOfRange.getDate() + 1) // Include all of endDate
-        deleteRangeQuery = deleteRangeQuery.lt('end_time', endOfRange.toISOString())
+        // Delete slots that start ON or BEFORE endDate (inclusive)
+        const endOfRangeInclusive = new Date(endDate)
+        endOfRangeInclusive.setDate(endOfRangeInclusive.getDate() + 1)
+        deleteRangeQuery = deleteRangeQuery.lt('start_time', endOfRangeInclusive.toISOString())
       }
 
       logger.debug('🗑️ Deleting existing slots in range for recalculation...')
