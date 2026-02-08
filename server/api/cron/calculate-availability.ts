@@ -40,11 +40,25 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔄 Calculate Availability Cron Job started')
 
     // ============ SECURITY: VERIFY CRON SECRET ============
-    const authHeader = getHeader(event, 'authorization')
     const cronSecret = process.env.CRON_SECRET
+    
+    // CRITICAL: Secret must always be configured!
+    if (!cronSecret || cronSecret.trim() === '') {
+      logger.error('❌ CRON_SECRET not configured - cron job is disabled for security!')
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Cron job disabled - missing CRON_SECRET configuration'
+      })
+    }
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      logger.warn('❌ Unauthorized cron job access attempt')
+    const authHeader = getHeader(event, 'authorization')
+    
+    // Verify the secret using constant-time comparison to prevent timing attacks
+    const expectedAuth = `Bearer ${cronSecret}`
+    const isValid = authHeader === expectedAuth
+    
+    if (!isValid) {
+      logger.warn('❌ Unauthorized cron job access attempt - invalid or missing credentials')
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
