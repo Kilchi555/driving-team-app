@@ -477,7 +477,7 @@
                 <button
                   v-for="slot in day.slots"
                   :key="slot.id"
-                  @click="selectedSlot = slot; currentStep = 5"
+                  @click="selectedSlot = slot; currentStep = 7"
                   class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5"
                   :style="getInteractiveCardStyle(
                     selectedSlot?.id === slot.id || hoveredSlotId === slot.id,
