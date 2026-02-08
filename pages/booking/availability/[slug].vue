@@ -226,7 +226,9 @@
                   <div class="text-2xl font-bold text-gray-900">
                     {{ duration }} <span class="text-base font-medium">Min.</span>
                   </div>
-    
+                  <div v-if="durationPrices.get(duration)" class="mt-2 text-sm font-semibold" :style="{ color: getBrandPrimary() }">
+                    CHF {{ durationPrices.get(duration)?.price_chf }}
+                  </div>
                 </div>
 
               </div>
@@ -1065,6 +1067,7 @@ const availableInstructors = ref<any[]>([])
 const availableTimeSlots = ref<any[]>([])
 const durationOptions = ref<number[]>([])
 const selectedDuration = ref<number | null>(null)
+const durationPrices = ref<Map<number, { price_rappen: number; price_chf: string }>>(new Map()) // Price per duration
 const currentWeek = ref(1)
 const maxWeek = ref(4)
 
@@ -1617,6 +1620,39 @@ const selectDurationOption = async (duration: number) => {
   currentStep.value = 4
 }
 
+// NEW: Load pricing for a duration
+const loadPricingForDuration = async (duration: number) => {
+  try {
+    logger.debug('💰 Loading pricing for duration:', {
+      category: selectedCategory.value?.code,
+      duration
+    })
+
+    const response = await $fetch('/api/booking/get-pricing', {
+      method: 'POST',
+      body: {
+        tenant_id: currentTenant.value?.id,
+        category_code: selectedCategory.value?.code,
+        duration_minutes: duration
+      }
+    })
+
+    if (response.success && response.price_chf) {
+      durationPrices.value.set(duration, {
+        price_rappen: response.price_rappen,
+        price_chf: response.price_chf
+      })
+      logger.debug('✅ Pricing loaded:', {
+        duration,
+        price_chf: response.price_chf
+      })
+    }
+  } catch (err: any) {
+    logger.error('❌ Failed to load pricing for duration:', err)
+    // Gracefully handle - just won't show price
+  }
+}
+
 const getDurationButtonStyle = (isSelected: boolean, isHover = false) => 
   getInteractiveCardStyle(isSelected, isHover)
 
@@ -1650,6 +1686,21 @@ const selectSubcategory = async (category: any) => {
   logger.debug('⏱️ Duration options:', durationOptions.value)
   selectedDuration.value = null
   filters.value.duration_minutes = durationOptions.value[0] || 45
+  
+  // Reset prices map for new category
+  durationPrices.value.clear()
+  
+  // Load prices for all available durations in parallel
+  logger.debug('💰 Loading prices for all durations...')
+  try {
+    await Promise.all(
+      durationOptions.value.map(duration => loadPricingForDuration(duration))
+    )
+    logger.debug('✅ All prices loaded')
+  } catch (err: any) {
+    logger.error('⚠️ Error loading prices:', err)
+    // Don't return, just continue without prices
+  }
   
   // Reset pickup state
   pickupPLZ.value = ''
