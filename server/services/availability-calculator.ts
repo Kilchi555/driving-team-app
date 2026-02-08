@@ -710,7 +710,11 @@ export class AvailabilityCalculator {
         deleteRangeQuery = deleteRangeQuery.gte('start_time', startDate.toISOString())
       }
       if (endDate) {
-        deleteRangeQuery = deleteRangeQuery.lte('start_time', endDate.toISOString())
+        // Delete all slots that START before the end of the range
+        // Use lt('end_time', ...) to catch slots that end before endDate
+        const endOfRange = new Date(endDate)
+        endOfRange.setDate(endOfRange.getDate() + 1) // Include all of endDate
+        deleteRangeQuery = deleteRangeQuery.lt('end_time', endOfRange.toISOString())
       }
 
       logger.debug('🗑️ Deleting existing slots in range for recalculation...')
