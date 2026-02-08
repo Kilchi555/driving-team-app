@@ -482,35 +482,43 @@ export class AvailabilityCalculator {
 
         // For each location
         for (const location of staffLocations) {
-          // For each category
-          for (const category of staffCategories) {
-            // Check if location supports this category
+          // Check if location supports at least one of staff's categories
+          const supportedCategories = staffCategories.filter(cat => {
             // If available_categories is empty, allow all categories (location supports everything)
-            if (location.available_categories && location.available_categories.length > 0 && !location.available_categories.includes(category.code)) {
-              continue // Location has category restrictions and this category is not allowed
+            if (!location.available_categories || location.available_categories.length === 0) {
+              return true
             }
-            // If available_categories is empty or undefined, all categories are allowed
+            // Otherwise check if this category is in the location's supported list
+            return location.available_categories.includes(cat.code)
+          })
+          
+          if (supportedCategories.length === 0) {
+            logger.debug(`⏭️ Skipping location "${location.name}" - no supported categories for this staff member`)
+            continue
+          }
+          
+          // Use ONLY the first supported category to avoid duplicate slots
+          const primaryCategory = supportedCategories[0]
+          
+          // For each lesson duration
+          for (const durationMinutes of primaryCategory.lesson_duration_minutes) {
+            // Generate slots for each working hour block
+            for (const hours of dayHours) {
+              const daySlots = this.generateDaySlots({
+                date: currentDate,
+                startTime: hours.start_time,
+                endTime: hours.end_time,
+                durationMinutes,
+                bufferMinutes: params.bufferMinutes,
+                minBookableTime,
+                appointments: staffAppointments,
+                busyTimes: staffBusyTimes,
+                staff,
+                location,
+                category: primaryCategory  // Use only primary category, not all categories
+              })
 
-            // For each lesson duration
-            for (const durationMinutes of category.lesson_duration_minutes) {
-              // Generate slots for each working hour block
-              for (const hours of dayHours) {
-                const daySlots = this.generateDaySlots({
-                  date: currentDate,
-                  startTime: hours.start_time,
-                  endTime: hours.end_time,
-                  durationMinutes,
-                  bufferMinutes: params.bufferMinutes,
-                  minBookableTime,
-                  appointments: staffAppointments,
-                  busyTimes: staffBusyTimes,
-                  staff,
-                  location,
-                  category
-                })
-
-                slots.push(...daySlots)
-              }
+              slots.push(...daySlots)
             }
           }
         }
