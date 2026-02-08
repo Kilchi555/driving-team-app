@@ -389,15 +389,9 @@
               @mouseenter="hoveredInstructorId = instructor.id"
               @mouseleave="hoveredInstructorId = null"
             >
-              <div class="space-y-3">
-                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                  {{ instructor.first_name }} {{ instructor.last_name }}
-                </h3>
-
-                <div class="text-xs text-purple-600 font-medium">
-                  Termine verfügbar
-                </div>
-              </div>
+              <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                {{ instructor.first_name }} {{ instructor.last_name }}
+              </h3>
             </div>
           </div>
           </div>
