@@ -389,23 +389,13 @@
               @mouseenter="hoveredInstructorId = instructor.id"
               @mouseleave="hoveredInstructorId = null"
             >
-              <div class="flex items-start space-x-3 sm:space-x-4">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center flex-shrink-0 border"
-                     :style="getInteractiveBadgeStyle(
-                       selectedInstructor?.id === instructor.id || hoveredInstructorId === instructor.id
-                     )">
-                  <span class="text-sm sm:text-base md:text-xl font-bold" :style="{ color: getBrandPrimary() }">
-                    {{ instructor.first_name.charAt(0) }}{{ instructor.last_name.charAt(0) }}
-                  </span>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 truncate">
-                    {{ instructor.first_name }} {{ instructor.last_name }}
-                  </h3>
+              <div class="space-y-3">
+                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                  {{ instructor.first_name }} {{ instructor.last_name }}
+                </h3>
 
-                  <div class="text-xs text-purple-600 font-medium">
-                    Termine verfügbar
-                  </div>
+                <div class="text-xs text-purple-600 font-medium">
+                  Termine verfügbar
                 </div>
               </div>
             </div>
