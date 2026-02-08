@@ -193,8 +193,8 @@
           </div>
         </div>
 
-        <!-- Step 3: Lesson Duration Selection (was Step 2) -->
-        <div v-if="currentStep === 4" class="space-y-4">
+        <!-- Step 3: Lesson Duration Selection -->
+        <div v-if="currentStep === 3" class="space-y-4">
           <!-- Duration Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
@@ -1605,6 +1605,16 @@ const getStepConnectorStyle = (stepId: number) => {
 const selectDurationOption = async (duration: number) => {
   selectedDuration.value = duration
   filters.value.duration_minutes = duration
+  
+  // Reload time slots with new duration
+  try {
+    logger.debug('🔄 Reloading time slots with duration:', duration)
+    await loadTimeSlotsForAllStaff()
+    logger.debug('✅ Time slots reloaded with new duration')
+  } catch (err: any) {
+    logger.error('❌ Failed to reload time slots:', err)
+  }
+  
   await waitForPressEffect()
   currentStep.value = 4
 }
@@ -1625,13 +1635,23 @@ const selectMainCategory = (category: any) => {
 // MODIFIED: Select subcategory (was selectCategory, now step 2)
 const selectSubcategory = async (category: any) => {
   logger.debug('🎯 selectSubcategory called:', category.code)
+  logger.debug('📦 Category object:', JSON.stringify(category, null, 2))
   
   selectedCategory.value = category
   filters.value.category_code = category.code
   
+  // Parse duration from subcategory, fallback to parent category if empty
   durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
+  
+  // Fallback: use parent category durations if subcategory doesn't have them
+  if (!durationOptions.value.length && selectedMainCategory.value) {
+    logger.debug('📌 No durations in subcategory, using parent category durations')
+    durationOptions.value = parseDurationValues(selectedMainCategory.value.lesson_duration_minutes)
+  }
+  
+  logger.debug('⏱️ Duration options:', durationOptions.value)
   selectedDuration.value = null
-  filters.value.duration_minutes = 45
+  filters.value.duration_minutes = durationOptions.value[0] || 45
   
   // Reset pickup state
   pickupPLZ.value = ''
@@ -1650,11 +1670,22 @@ const selectSubcategory = async (category: any) => {
   
   // Get unique locations from staff
   // Build unique locations from all staff, avoiding duplicates
+  // ONLY include locations that support the selected category
+  // Use the already-filtered available_staff from the API response
   const locationsMap = new Map<string, any>()
   
   availableStaff.value.forEach((staff: any) => {
     if (staff.available_locations) {
       staff.available_locations.forEach((location: any) => {
+        // Filter: Only include locations that have the selected category
+        const supportedCategories = location.available_categories || []
+        const categoryCode = selectedCategory.value.code
+        
+        if (!supportedCategories.includes(categoryCode)) {
+          logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
+          return
+        }
+        
         if (!locationsMap.has(location.id)) {
           locationsMap.set(location.id, {
             id: location.id,
@@ -1662,13 +1693,17 @@ const selectSubcategory = async (category: any) => {
             address: location.address,
             category_pickup_settings: location.category_pickup_settings || {},
             time_windows: parseTimeWindows(location.time_windows),
-            available_staff: []
+            // Use the already-filtered available_staff from the API
+            available_staff: location.available_staff || []
           })
-        }
-        // Add staff to this location (avoid duplicates)
-        const locationEntry = locationsMap.get(location.id)!
-        if (!locationEntry.available_staff.some((s: any) => s.id === staff.id)) {
-          locationEntry.available_staff.push(staff)
+        } else {
+          // Merge available_staff, avoiding duplicates
+          const locationEntry = locationsMap.get(location.id)!
+          (location.available_staff || []).forEach((s: any) => {
+            if (!locationEntry.available_staff.some((existing: any) => existing.id === s.id)) {
+              locationEntry.available_staff.push(s)
+            }
+          })
         }
       })
     }
@@ -1678,7 +1713,7 @@ const selectSubcategory = async (category: any) => {
   availableLocations.value = Array.from(locationsMap.values())
   
   await waitForPressEffect()
-  currentStep.value = 2
+  currentStep.value = 3
 }
 
 // Check pickup availability for entered PLZ
