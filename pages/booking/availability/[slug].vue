@@ -1606,13 +1606,14 @@ const selectDurationOption = async (duration: number) => {
   selectedDuration.value = duration
   filters.value.duration_minutes = duration
   
-  // Reload time slots with new duration
-  try {
-    logger.debug('🔄 Reloading time slots with duration:', duration)
-    await loadTimeSlotsForAllStaff()
-    logger.debug('✅ Time slots reloaded with new duration')
-  } catch (err: any) {
-    logger.error('❌ Failed to reload time slots:', err)
+  // If instructor and location already selected, reload slots with new duration
+  if (selectedInstructor.value?.id && selectedLocation.value?.id) {
+    logger.debug('🔄 Duration changed and instructor/location selected - reloading slots...')
+    try {
+      await generateTimeSlotsForSpecificCombination()
+    } catch (err: any) {
+      logger.error('❌ Failed to reload slots with new duration:', err)
+    }
   }
   
   await waitForPressEffect()
