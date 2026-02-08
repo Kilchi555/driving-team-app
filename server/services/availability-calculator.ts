@@ -433,7 +433,7 @@ export class AvailabilityCalculator {
       }
 
       // Get staff's categories
-      const staffCategories = params.categories.filter(cat => {
+      let staffCategories = params.categories.filter(cat => {
         // If staff has specific category, only allow those
         if (staff.category) {
           // staff.category can be an array ["A", "B"] or a string "A,B"
@@ -448,6 +448,17 @@ export class AvailabilityCalculator {
           return staffCats.includes(cat.code)
         }
         // Otherwise allow all categories
+        return true
+      })
+      
+      // Deduplicate categories by code (handle multiple variants like "B Schaltung" and "B Automatik")
+      const seenCodes = new Set<string>()
+      staffCategories = staffCategories.filter(cat => {
+        if (seenCodes.has(cat.code)) {
+          logger.debug(`⚠️ Skipping duplicate category code "${cat.code}" (${cat.name})`)
+          return false
+        }
+        seenCodes.add(cat.code)
         return true
       })
       
