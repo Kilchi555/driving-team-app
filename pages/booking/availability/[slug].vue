@@ -2157,44 +2157,44 @@ const confirmBooking = async () => {
   try {
     logger.debug('🎯 Starting booking confirmation via API...')
     
-    // Call API endpoint to confirm booking
-    // API handles: auth check, user data fetch, booking creation, payment processing
-    const response = await $fetch('/api/booking/confirm-booking', {
-      method: 'POST',
-      body: {
-        slot_id: selectedSlot.value?.id,
-        staff_id: selectedInstructor.value?.id,
-        student_id: currentStep.value, // Using currentStep as placeholder - actual user data comes from auth
-        // ... other booking data
-      }
-    }) as any
-
-    if (!response?.success) {
-      if (response?.message === 'NOT_AUTHENTICATED') {
-        logger.debug('ℹ️ User not authenticated, showing registration modal')
-        loginModalTab.value = 'register'
-        showLoginModal.value = true
-        return
-      }
-      throw new Error(response?.message || 'Booking confirmation failed')
+    // Validate that all required data is selected
+    if (!selectedSlot.value?.id) {
+      throw new Error('Bitte wählen Sie einen Zeitslot aus')
     }
-
-    logger.debug('✅ Booking confirmed:', response.booking_id)
+    if (!selectedInstructor.value?.id) {
+      throw new Error('Bitte wählen Sie einen Fahrlehrer aus')
+    }
+    if (!selectedCategory.value?.code) {
+      throw new Error('Bitte wählen Sie eine Kategorie aus')
+    }
     
-    // The API handles the full booking flow, including:
-    // - User authentication check
-    // - Document validation
-    // - Appointment creation
-    // - Payment processing (if needed)
+    isCreatingBooking.value = true
+    
+    // Create the appointment using the secure API
+    const result = await createAppointmentSecure({
+      slot_id: selectedSlot.value.id,
+      session_id: sessionId.value,
+      appointment_type: 'lesson',
+      category_code: selectedCategory.value.code,
+      notes: bookingNotes.value || undefined
+    })
+
+    logger.debug('✅ Booking confirmed:', result.appointment_id)
     
     // If we get here, booking was successful!
     // Handle success UI/routing
     isCreatingBooking.value = false
     
+    // Show success message or redirect
+    alert('Buchung erfolgreich! Wir haben dir eine Bestätigung per E-Mail gesendet.')
+    
   } catch (error: any) {
     console.error('Error confirming booking:', error)
     isCreatingBooking.value = false
-    alert(`Fehler bei der Buchung: ${error?.message || error?.data?.message || 'Bitte versuchen Sie es erneut.'}`)
+    
+    // Show error message to user
+    const errorMessage = error?.message || error?.data?.message || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    alert(`Fehler bei der Buchung: ${errorMessage}`)
   }
 }
 
