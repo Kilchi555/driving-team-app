@@ -227,13 +227,14 @@ export class AvailabilityCalculator {
   }
 
   /**
-   * Load categories
+   * Load categories (only subcategories with parent_category_id)
    */
   private async loadCategories(tenantId?: string): Promise<Category[]> {
     let query = this.supabase
       .from('categories')
-      .select('id, code, name, lesson_duration_minutes, is_active, tenant_id')
+      .select('id, code, name, lesson_duration_minutes, is_active, tenant_id, parent_category_id')
       .eq('is_active', true)
+      .not('parent_category_id', 'is', null) // Only subcategories!
 
     if (tenantId) {
       query = query.eq('tenant_id', tenantId)
@@ -242,6 +243,7 @@ export class AvailabilityCalculator {
     const { data, error } = await query
     if (error) throw error
 
+    logger.debug(`📚 Loaded ${data?.length || 0} subcategories (filtered by parent_category_id)`)
     return data || []
   }
 
@@ -433,7 +435,7 @@ export class AvailabilityCalculator {
       }
 
       // Get staff's categories
-      let staffCategories = params.categories.filter(cat => {
+      const staffCategories = params.categories.filter(cat => {
         // If staff has specific category, only allow those
         if (staff.category) {
           // staff.category can be an array ["A", "B"] or a string "A,B"
@@ -448,17 +450,6 @@ export class AvailabilityCalculator {
           return staffCats.includes(cat.code)
         }
         // Otherwise allow all categories
-        return true
-      })
-      
-      // Deduplicate categories by code (handle multiple variants like "B Schaltung" and "B Automatik")
-      const seenCodes = new Set<string>()
-      staffCategories = staffCategories.filter(cat => {
-        if (seenCodes.has(cat.code)) {
-          logger.debug(`⚠️ Skipping duplicate category code "${cat.code}" (${cat.name})`)
-          return false
-        }
-        seenCodes.add(cat.code)
         return true
       })
       
