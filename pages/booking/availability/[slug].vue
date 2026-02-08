@@ -2420,6 +2420,22 @@ const goBackToStep = (step: number) => {
   }
 }
 
+// Helper function to get the previous step, considering if subcategories exist
+const getPreviousStep = (fromStep: number): number => {
+  if (fromStep === 3 && selectedMainCategory.value) {
+    // From step 3 (duration), check if main category has subcategories
+    const hasSubcategories = categories.value.some((c: any) => c.parent_category_id === selectedMainCategory.value.id)
+    if (!hasSubcategories) {
+      // No subcategories - skip step 2 and go to step 1
+      logger.debug('📌 No subcategories found - skipping step 2 when going back')
+      return 1
+    }
+  }
+  
+  // Default: go back one step
+  return fromStep - 1
+}
+
 const goBackToReferrer = () => {
   if (referrerUrl.value) {
     navigateTo(referrerUrl.value)
@@ -2581,8 +2597,9 @@ const handleBackButton = () => {
   if (currentStep.value === 1) {
     goBackToReferrer()
   } else {
-    // On other steps, go back one step
-    goBackToStep(currentStep.value - 1)
+    // On other steps, go back one step (considering subcategory skip)
+    const previousStep = getPreviousStep(currentStep.value)
+    goBackToStep(previousStep)
   }
 }
 
