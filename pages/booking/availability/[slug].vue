@@ -174,11 +174,8 @@
                 <div v-if="subCategory.icon_svg" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5">
                   <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="subCategory.icon_svg"></div>
                 </div>
-                <!-- Fallback: code letter with circle -->
-                <div v-else class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5 transition-colors border"
-                     :style="getInteractiveBadgeStyle(
-                       selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id
-                     )">
+                <!-- Fallback: code letter without circle -->
+                <div v-else class="mx-auto mb-3 sm:mb-4 md:mb-5">
                   <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ subCategory.name }}</h3>
