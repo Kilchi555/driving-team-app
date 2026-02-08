@@ -713,11 +713,15 @@ export class AvailabilityCalculator {
         deleteRangeQuery = deleteRangeQuery.lte('start_time', endDate.toISOString())
       }
 
-      const { error: deleteRangeError } = await deleteRangeQuery
+      logger.debug('🗑️ Deleting existing slots in range for recalculation...')
+      const { error: deleteRangeError, count: deletedCount } = await deleteRangeQuery
 
       if (deleteRangeError) {
-        logger.warn('⚠️ Could not delete slots in range:', deleteRangeError)
+        logger.error('❌ Error deleting slots in range:', deleteRangeError)
+        throw deleteRangeError
       }
+      
+      logger.debug(`✅ Deleted ${deletedCount || 0} existing slots in range for recalculation`)
 
       // Insert new slots in batches (Supabase limit: 1000 rows per insert)
       const batchSize = 1000
