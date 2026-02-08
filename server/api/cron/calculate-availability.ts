@@ -14,9 +14,9 @@
  * Daily at 2 AM (configured in vercel.json)
  * 
  * USAGE:
- * Vercel calls this automatically via cron schedule.
+ * Vercel calls this automatically via cron schedule (GET or POST).
  * Can also be manually triggered via:
- * POST /api/cron/calculate-availability
+ * POST/GET /api/cron/calculate-availability
  * Headers: Authorization: Bearer <CRON_SECRET>
  */
 
@@ -256,4 +256,3 @@ async function cleanupExpiredReservations(): Promise<void> {
     // Non-critical, continue
   }
 }
-
