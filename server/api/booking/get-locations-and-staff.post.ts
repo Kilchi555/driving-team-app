@@ -57,64 +57,47 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('📍 Loaded locations:', tenantLocations?.length || 0)
 
-    // 2. Build staff category map from locations
+    // 2. Load all staff for this tenant first
+    const { data: allStaff, error: staffError } = await serviceSupabase
+      .from('users')
+      .select('id, first_name, last_name, email, role, category, is_active')
+      .eq('tenant_id', tenant_id)
+      .eq('role', 'staff')
+      .eq('is_active', true)
+
+    if (staffError) {
+      logger.warn('⚠️ Error loading staff data:', staffError)
+    }
+
+    // 3. Build staff category map from users table (not from locations)
     const staffCategoryMap = new Map<string, string[]>()
     
-    if (tenantLocations) {
-      tenantLocations.forEach((location: any) => {
-        const availableCategories = location.available_categories || []
-        // Parse staff_ids if it's a string (JSON array), otherwise use as is
-        let staffIds = location.staff_ids || []
-        if (typeof staffIds === 'string') {
+    if (allStaff) {
+      allStaff.forEach((staff: any) => {
+        let categories = staff.category || []
+        // Parse category if it's a string (JSON array), otherwise use as is
+        if (typeof categories === 'string') {
           try {
-            staffIds = JSON.parse(staffIds)
+            categories = JSON.parse(categories)
           } catch (e) {
-            logger.warn('⚠️ Could not parse staff_ids:', staffIds)
-            staffIds = []
+            logger.warn('⚠️ Could not parse categories for staff:', staff.id)
+            categories = []
           }
         }
-        
-        // Add each category to each staff member at this location
-        staffIds.forEach((staffId: string) => {
-          if (!staffCategoryMap.has(staffId)) {
-            staffCategoryMap.set(staffId, [])
-          }
-          const staffCategories = staffCategoryMap.get(staffId)!
-          // Add categories that aren't already there
-          availableCategories.forEach((category: string) => {
-            if (!staffCategories.includes(category)) {
-              staffCategories.push(category)
-            }
-          })
-        })
+        staffCategoryMap.set(staff.id, Array.isArray(categories) ? categories : [])
       })
     }
 
-    // 3. Filter staff who can teach the selected category
+    // 4. Filter staff who can teach the selected category
     const capableStaffIds = Array.from(staffCategoryMap.entries())
       .filter(([_, categories]) => categories.includes(category_code))
       .map(([staffId]) => staffId)
 
     logger.debug('👥 Found capable staff:', capableStaffIds.length)
 
-    // 4. Load full staff data
-    let staffData: any[] = []
-    if (capableStaffIds.length > 0) {
-      const { data, error } = await serviceSupabase
-        .from('users')
-        .select('id, first_name, last_name, email, role, category, is_active')
-        .in('id', capableStaffIds)
-        .eq('role', 'staff')
-        .eq('is_active', true)
-
-      if (error) {
-        logger.warn('⚠️ Error loading staff data:', error)
-      } else {
-        staffData = data || []
-      }
-
-      logger.debug('👤 Loaded staff details:', staffData.length)
-    }
+    // 5. Filter the full staff data to only include capable staff
+    let staffData = allStaff?.filter((staff: any) => capableStaffIds.includes(staff.id)) || []
+    logger.debug('👤 Loaded staff details:', staffData.length)
 
     // 5. Build locations map and attach staff
     const locationsMap = new Map<string, any>()
