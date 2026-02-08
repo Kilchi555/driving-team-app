@@ -472,7 +472,19 @@ export class AvailabilityCalculator {
         const dayOfWeek = this.getDayOfWeek(currentDate) // 1=Monday, 7=Sunday
 
         // Get working hours for this day
-        const dayHours = staffHours.filter(wh => wh.day_of_week === dayOfWeek)
+        let dayHours = staffHours.filter(wh => wh.day_of_week === dayOfWeek)
+        
+        // Deduplicate working hours (remove duplicates with same start/end time)
+        const seenHours = new Set<string>()
+        dayHours = dayHours.filter(wh => {
+          const key = `${wh.start_time}:${wh.end_time}`
+          if (seenHours.has(key)) {
+            logger.debug(`⚠️ Skipping duplicate working hours: ${key}`)
+            return false
+          }
+          seenHours.add(key)
+          return true
+        })
 
         if (dayHours.length === 0) {
           // No working hours for this day
