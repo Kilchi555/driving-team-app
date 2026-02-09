@@ -67,6 +67,30 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('✅ Working hour deleted')
 
+      // ✅ NEW: Queue staff for availability recalculation
+      const { data: staffUser, error: userLookupError } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+
+      if (!userLookupError && staffUser) {
+        try {
+          await $fetch('/api/availability/queue-recalc', {
+            method: 'POST',
+            body: {
+              staff_id: staffId,
+              tenant_id: staffUser.tenant_id,
+              trigger: 'working_hours'
+            }
+          })
+          logger.debug('✅ Queued staff for recalculation after working hours deletion')
+        } catch (queueError: any) {
+          logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
+          // Non-critical: availability will be recalculated at next cron
+        }
+      }
+
       return {
         success: true,
         message: 'Working hour deleted'
@@ -108,6 +132,30 @@ export default defineEventHandler(async (event) => {
       }
 
       logger.debug('✅ Working hour toggled')
+
+      // ✅ NEW: Queue staff for availability recalculation
+      const { data: staffUser, error: userLookupError } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+
+      if (!userLookupError && staffUser) {
+        try {
+          await $fetch('/api/availability/queue-recalc', {
+            method: 'POST',
+            body: {
+              staff_id: staffId,
+              tenant_id: staffUser.tenant_id,
+              trigger: 'working_hours'
+            }
+          })
+          logger.debug('✅ Queued staff for recalculation after working hours change')
+        } catch (queueError: any) {
+          logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
+          // Non-critical: availability will be recalculated at next cron
+        }
+      }
 
       return {
         success: true,

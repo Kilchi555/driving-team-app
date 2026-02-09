@@ -72,34 +72,107 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // Calculate reservation expiry (10 minutes from now)
     const reservedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    const now = new Date().toISOString()
 
-    // ATOMIC UPDATE:
-    // - Only update if slot is available
-    // - Only update if not already reserved (or reservation expired)
-    // - Return updated row (or nothing if conditions not met)
-    const { data: reservedSlot, error: reserveError } = await supabase
+    // FIRST: Check if slot is already reserved by THIS session
+    const { data: currentReservation, error: checkError } = await supabase
       .from('availability_slots')
-      .update({
-        reserved_until: reservedUntil,
-        reserved_by_session: body.session_id,
-        updated_at: new Date().toISOString()
-      })
+      .select('id, reserved_by_session, reserved_until, is_available')
       .eq('id', body.slot_id)
-      .eq('is_available', true)
-      .or(`reserved_until.is.null,reserved_until.lt.${new Date().toISOString()}`)
-      .select('id, staff_id, location_id, start_time, end_time, duration_minutes, reserved_until')
       .single()
 
-    if (reserveError) {
-      // Check if it's a "no rows" error (slot already reserved)
-      if (reserveError.code === 'PGRST116') {
-        logger.warn('⚠️ Slot already reserved or unavailable:', body.slot_id)
+    if (checkError) {
+      logger.error('❌ Error checking slot:', checkError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to check slot status'
+      })
+    }
+
+    logger.debug('🔍 Current slot status:', {
+      slot_id: body.slot_id,
+      is_available: currentReservation?.is_available,
+      reserved_by_session: currentReservation?.reserved_by_session,
+      requested_session: body.session_id,
+      sessions_match: currentReservation?.reserved_by_session === body.session_id,
+      reserved_until: currentReservation?.reserved_until
+    })
+
+    // If already reserved by the same session, just return it with extended expiry
+    if (currentReservation?.reserved_by_session === body.session_id) {
+      logger.debug('✅ Slot already reserved by this session, extending reservation...')
+      
+      const { data: extendedSlot, error: extendError } = await supabase
+        .from('availability_slots')
+        .update({
+          reserved_until: reservedUntil,
+          updated_at: now
+        })
+        .eq('id', body.slot_id)
+        .select('id, staff_id, location_id, start_time, end_time, duration_minutes, reserved_until')
+        .single()
+
+      if (!extendError && extendedSlot) {
+        const duration = Date.now() - startTime
+        logger.debug('✅ Reservation extended:', {
+          slot_id: extendedSlot.id,
+          session_id: body.session_id,
+          reserved_until: reservedUntil,
+          duration: `${duration}ms`
+        })
+
+        return {
+          success: true,
+          message: 'Slot reservation extended',
+          slot: {
+            id: extendedSlot.id,
+            staff_id: extendedSlot.staff_id,
+            location_id: extendedSlot.location_id,
+            start_time: extendedSlot.start_time,
+            end_time: extendedSlot.end_time,
+            duration_minutes: extendedSlot.duration_minutes,
+            reserved_until: extendedSlot.reserved_until
+          }
+        }
+      }
+    }
+
+    // Check if slot is available and not reserved by another user
+    if (!currentReservation?.is_available) {
+      logger.warn('⚠️ Slot is not available (is_available=false):', body.slot_id)
+      // But allow if it's reserved by this same session - we can override
+      if (currentReservation?.reserved_by_session !== body.session_id) {
         throw createError({
           statusCode: 409,
           statusMessage: 'This slot is no longer available. Please select another slot.'
         })
       }
+    }
 
+    // Check if slot is reserved by someone else and reservation hasn't expired
+    if (currentReservation?.reserved_by_session && currentReservation.reserved_by_session !== body.session_id) {
+      if (currentReservation.reserved_until && new Date(currentReservation.reserved_until) > new Date(now)) {
+        logger.warn('⚠️ Slot is reserved by another user:', body.slot_id)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'This slot is no longer available. Please select another slot.'
+        })
+      }
+    }
+
+    // Now reserve the slot
+    const { data: reservedSlot, error: reserveError } = await supabase
+      .from('availability_slots')
+      .update({
+        reserved_until: reservedUntil,
+        reserved_by_session: body.session_id,
+        updated_at: now
+      })
+      .eq('id', body.slot_id)
+      .select('id, staff_id, location_id, start_time, end_time, duration_minutes, reserved_until')
+      .single()
+
+    if (reserveError) {
       logger.error('❌ Error reserving slot:', reserveError)
       throw createError({
         statusCode: 500,

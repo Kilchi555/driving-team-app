@@ -149,10 +149,35 @@
               v-model="registerForm.password"
               type="password"
               required
-              minlength="6"
+              minlength="12"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Mindestens 6 Zeichen"
+              placeholder="Mindestens 12 Zeichen"
             >
+            <p class="text-xs text-gray-600 mt-2">
+              ✓ Mindestens 12 Zeichen<br>
+              ✓ Großbuchstaben (A-Z)<br>
+              ✓ Kleinbuchstaben (a-z)<br>
+              ✓ Zahlen (0-9)<br>
+              ✓ Sonderzeichen (!@#$%^&* etc.)
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Passwort wiederholen <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="registerForm.password_confirm"
+              type="password"
+              required
+              minlength="12"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'border-red-500': registerForm.password_confirm && registerForm.password !== registerForm.password_confirm }"
+              placeholder="Passwort wiederholen"
+            >
+            <p v-if="registerForm.password_confirm && registerForm.password !== registerForm.password_confirm" class="text-xs text-red-600 mt-1">
+              ⚠️ Passwörter stimmen nicht überein
+            </p>
           </div>
 
           <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -161,7 +186,7 @@
 
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="isLoading || (registerForm.password && registerForm.password_confirm && registerForm.password !== registerForm.password_confirm)"
             class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? 'Wird registriert...' : 'Registrieren' }}
@@ -206,7 +231,8 @@ const registerForm = ref({
   last_name: '',
   email: '',
   phone: '',
-  password: ''
+  password: '',
+  password_confirm: ''
 })
 
 const handleLogin = async () => {
@@ -219,6 +245,10 @@ const handleLogin = async () => {
       body: {
         email: loginForm.value.email,
         password: loginForm.value.password
+      },
+      // IMPORTANT: Mark this as an auth endpoint so the interceptor doesn't redirect
+      headers: {
+        'X-Auth-Request': 'true'
       }
     }) as any
 
@@ -228,10 +258,15 @@ const handleLogin = async () => {
 
     logger.debug('✅ Login successful')
     
-    // Update auth store
-    await authStore.refreshAuth()
+    // Restore auth state from session
+    const sessionRestored = await authStore.restoreSession()
     
-    emit('success')
+    if (sessionRestored) {
+      logger.debug('✅ Session restored successfully')
+      emit('success')
+    } else {
+      throw new Error('Failed to restore session after login')
+    }
   } catch (err: any) {
     console.error('Login error:', err)
     error.value = err.message || 'Fehler beim Anmelden. Bitte überprüfen Sie Ihre Zugangsdaten.'
@@ -245,6 +280,19 @@ const handleRegister = async () => {
   error.value = ''
 
   try {
+    // Validate password confirmation
+    if (registerForm.value.password !== registerForm.value.password_confirm) {
+      error.value = 'Passwörter stimmen nicht überein'
+      isLoading.value = false
+      return
+    }
+
+    if (!registerForm.value.password) {
+      error.value = 'Passwort ist erforderlich'
+      isLoading.value = false
+      return
+    }
+
     const slug = route.params.slug as string
 
     const response = await $fetch('/api/auth/register', {
@@ -257,6 +305,10 @@ const handleRegister = async () => {
         last_name: registerForm.value.last_name,
         phone: registerForm.value.phone,
         slug
+      },
+      // IMPORTANT: Mark this as an auth endpoint so the interceptor doesn't redirect
+      headers: {
+        'X-Auth-Request': 'true'
       }
     }) as any
 
@@ -266,10 +318,15 @@ const handleRegister = async () => {
 
     logger.debug('✅ Registration successful')
     
-    // Update auth store
-    await authStore.refreshAuth()
+    // Restore auth state from session
+    const sessionRestored = await authStore.restoreSession()
     
-    emit('success')
+    if (sessionRestored) {
+      logger.debug('✅ Session restored successfully')
+      emit('success')
+    } else {
+      throw new Error('Failed to restore session after registration')
+    }
   } catch (err: any) {
     console.error('Registration error:', err)
     error.value = err.message || 'Fehler bei der Registrierung. Bitte versuchen Sie es erneut.'

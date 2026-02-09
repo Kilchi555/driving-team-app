@@ -354,6 +354,32 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // ✅ NEW: Queue staff for availability recalculation
+    // If appointment was created or staff_id changed, queue for recalc
+    if (result && result.staff_id && appointmentData.tenant_id) {
+      try {
+        logger.debug(`📋 Queueing staff ${result.staff_id} for availability recalc after appointment ${mode}`)
+        
+        await supabase
+          .from('availability_recalc_queue')
+          .upsert(
+            {
+              staff_id: result.staff_id,
+              tenant_id: appointmentData.tenant_id,
+              trigger: 'appointment',
+              queued_at: new Date().toISOString(),
+              processed: false
+            },
+            { onConflict: 'staff_id,tenant_id' }
+          )
+        
+        logger.debug(`✅ Staff queued for recalculation after appointment ${mode}`)
+      } catch (queueError: any) {
+        logger.warn(`⚠️ Failed to queue staff for recalc (non-critical):`, queueError.message)
+        // Non-critical: availability will be recalculated at next cron
+      }
+    }
+
     return {
       success: true,
       data: result

@@ -969,11 +969,29 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                     {{ appointment.duration_minutes }}min
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span
-class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                          :class="getStatusClass(appointment.status)">
-                      {{ getStatusLabel(appointment.status) }}
-                    </span>
+                    <div>
+                      <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        :class="getStatusClass(appointment.status)">
+                        {{ getStatusLabel(appointment.status) }}
+                      </span>
+                      
+                      <!-- Updated at (only if NOT deleted) -->
+                      <span 
+                        v-if="appointment.updated_at && !appointment.deleted_at" 
+                        class="text-xs text-gray-500 mt-1 block"
+                      >
+                        Aktualisiert: {{ formatPaymentDateTime(appointment.updated_at) }}
+                      </span>
+                      
+                      <!-- Deleted at (takes priority if it exists) -->
+                      <span 
+                        v-if="appointment.deleted_at" 
+                        class="text-xs text-red-600 font-medium mt-0.5 block"
+                      >
+                        Gelöscht: {{ formatPaymentDateTime(appointment.deleted_at) }}
+                      </span>
+                    </div>
                   </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <span
@@ -1607,13 +1625,14 @@ const filteredAppointments = computed(() => {
     case 'paid':
       return appointments.value.filter(apt => apt.is_paid && !apt.deleted_at)
     case 'unpaid':
-      return appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at && apt.status !== 'cancelled')
+      return appointments.value.filter(apt => !apt.is_paid && apt.payment_status !== 'failed' && !apt.deleted_at)
     case 'failed':
       return appointments.value.filter(apt => apt.payment_status === 'failed' && !apt.deleted_at)
     case 'deleted':
       return appointments.value.filter(apt => apt.deleted_at)
     default:
-      return appointments.value.filter(apt => !apt.deleted_at && apt.status !== 'cancelled')
+      // Show ALL appointments (including cancelled and deleted)
+      return appointments.value
   }
 })
 
@@ -1641,8 +1660,7 @@ const getEventTypeLabel = (code?: string): string => {
 const refreshData = async () => {
   await Promise.all([
     loadUserDetails(),
-    loadUserAppointments(),
-    loadCompanyBillingAddress()
+    loadUserAppointments()
   ])
 }
 
@@ -1659,169 +1677,50 @@ const handleModalClick = (event: Event) => {
 
 const loadUserDetails = async () => {
   try {
-    const { data, error: userError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        role,
-        preferred_payment_method,
-        default_company_billing_address_id,
-        is_active,
-        tenant_id
-      `)
-      .eq('id', userId)
-      .single()
-
-    if (userError) {
-      throw new Error(userError.message)
-    }
-
-    userDetails.value = data
-    logger.debug('✅ User details loaded:', data)
-
-    // Load student credit balance
-    if (data?.id) {
-      const { data: creditData, error: creditError } = await supabase
-        .from('student_credits')
-        .select('id, balance_rappen, updated_at')
-        .eq('user_id', data.id)
-        .single()
-      
-      if (!creditError && creditData) {
-        studentCredit.value = creditData
-        logger.debug('✅ Student credit loaded:', creditData)
-      } else if (creditError?.code !== 'PGRST116') {
-        logger.warn('⚠️ Error loading student credit:', creditError)
-      }
-    }
-
-    // Load event types for this tenant
-    if (data?.tenant_id) {
-      await loadEventTypes(data.tenant_id)
-    }
-
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    isLoading.value = true
+    error.value = null
+    
+    const response = await $fetch(`/api/admin/get-user-payment-details?id=${userId}`)
+    
+    userDetails.value = response.user
+    studentCredit.value = response.studentCredit
+    eventTypes.value = response.eventTypes || []
+    companyBillingAddress.value = response.companyBillingAddress || null
+    console.log('🔍 DEBUG loadUserDetails:', {
+      userDetails: userDetails.value,
+      companyBillingAddress: companyBillingAddress.value,
+      apiResponse: response
+    })
+    logger.debug('✅ User details loaded via API')
+    
+  } catch (err: any) {
+    const errorMessage = err?.message || 'Failed to load user details'
     console.error('❌ Error loading user details:', errorMessage)
     error.value = errorMessage
+    isLoading.value = false
   }
 }
 
 const loadUserAppointments = async () => {
   try {
-    // Lade Termine und Zahlungen separat
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        duration_minutes,
-        status,
-        type,
-        deleted_at,
-        event_type_code,
-        staff_id
-      `)
-      .eq('user_id', userId)
-      .order('start_time', { ascending: false })
-
-    if (appointmentsError) throw appointmentsError
-
-    // Lade Staff-Informationen separat
-    const staffIds = appointmentsData?.map(apt => apt.staff_id).filter(Boolean) || []
-    const staffMap = new Map<string, any>()
+    // Load all data via single API call
+    const response = await $fetch(`/api/admin/get-user-payment-details?id=${userId}`)
     
-    if (staffIds.length > 0) {
-      const { data: staffData, error: staffError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', staffIds)
-      
-      if (!staffError && staffData) {
-        staffData.forEach(staff => {
-          staffMap.set(staff.id, staff)
-        })
-      }
-    }
-
-    // Füge Staff-Infos in Appointments ein
+    const appointmentsData = response.appointments || []
+    const paymentsData = response.payments || []
+    const allProducts = response.products || []
+    const allDiscounts = response.discounts || []
+    const staffMap = new Map(Object.entries(response.staffMap || {}))
+    companyBillingAddress.value = response.companyBillingAddress || null
+    
+    logger.debug('✅ Appointments loaded via API:', appointmentsData.length)
+    
+    // Add staff info to appointments
     appointmentsData?.forEach((apt: any) => {
       if (apt.staff_id && staffMap.has(apt.staff_id)) {
         apt.staff = staffMap.get(apt.staff_id)
       }
     })
-
-    // Lade Zahlungen für diese Termine mit allen Preis-Details
-    const appointmentIds = appointmentsData?.map(apt => apt.id) || []
-    let paymentsData: Payment[] = []
-    
-    if (appointmentIds.length > 0) {
-      // Lade alle Spalten um zu sehen was verfügbar ist
-      const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select('*')
-        .in('appointment_id', appointmentIds)
-      
-      if (paymentsError) throw paymentsError
-      paymentsData = payments || []
-    }
-
-    // Load products and discounts (using existing separate tables)
-    let allProducts: any[] = []
-    let allDiscounts: any[] = []
-    
-    if (appointmentIds.length > 0) {
-      // Load all products and discounts in separate queries
-      const paymentIds = paymentsData.map(p => p.id).filter(Boolean)
-      
-      if (paymentIds.length > 0) {
-        // Load products from product_sales table
-        const { data: productsData, error: productsError } = await supabase
-          .from('product_sales')
-          .select(`
-            id,
-            appointment_id,
-            quantity,
-            unit_price_rappen,
-            total_price_rappen,
-            product_id,
-            products (
-              id,
-              name,
-              description
-            )
-          `)
-          .in('appointment_id', appointmentIds)
-        
-        if (productsData && !productsError) {
-          allProducts = productsData
-          logger.debug('✅ Loaded products from product_sales:', allProducts.length)
-        }
-        
-        // Load discounts from discount_sales table
-        const { data: discountsData, error: discountsError } = await supabase
-          .from('discount_sales')
-          .select(`
-            id,
-            appointment_id,
-            amount_rappen,
-            discount_type,
-            reason
-          `)
-          .in('appointment_id', appointmentIds)
-        
-        if (discountsData && !discountsError) {
-          allDiscounts = discountsData
-          logger.debug('✅ Loaded discounts from discount_sales:', allDiscounts.length)
-        }
-      }
-    }
 
     // Kombiniere Termine mit Zahlungsinformationen
     const processedAppointments = []
@@ -2035,46 +1934,6 @@ const getPaymentMethodClass = (method: string): string => {
     'debit_card': 'bg-green-100 text-green-800'
   }
   return classes[method] || 'bg-gray-100 text-gray-800'
-}
-
-const loadCompanyBillingAddress = async () => {
-  const billingAddressId = userDetails.value?.default_company_billing_address_id
-  
-  if (!billingAddressId) {
-    return
-  }
-
-  try {
-    const { data, error: billingError } = await supabase
-      .from('company_billing_addresses')
-      .select(`
-        id,
-        company_name,
-        contact_person,
-        email,
-        phone,
-        street,
-        street_number,
-        zip,
-        city,
-        vat_number
-      `)
-      .eq('id', billingAddressId)
-      .single()
-
-    if (billingError) {
-      console.warn('Warning loading billing address:', billingError.message)
-      return
-    }
-
-    companyBillingAddress.value = data
-    logger.debug('✅ Company billing address loaded:', data)
-
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.warn('Warning loading billing address:', errorMessage)
-    // Don't set error, billing address is optional
-  }
 }
 
 const calculateAppointmentAmount = (appointment: Appointment): number => {
@@ -3540,19 +3399,25 @@ const createInvoiceInDatabase = async () => {
     }
     
     // Rechnungspositionen vorbereiten
-    const invoiceItems = selectedAppointmentData.map((appointment, index) => ({
-      product_name: appointment.title || 'Fahrstunde',
-      product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
-      appointment_id: appointment.id,
-      appointment_title: appointment.title,
-      appointment_date: appointment.start_time,
-      appointment_duration_minutes: appointment.duration_minutes,
-      quantity: 1,
-      unit_price_rappen: appointment.amount,
-      vat_rate: 7.70,
-      sort_order: index,
-      notes: `Termin: ${appointment.title}`
-    }))
+    const invoiceItems = selectedAppointmentData.map((appointment, index) => {
+      const totalPrice = appointment.amount // quantity is 1, so total = unit_price
+      const vatAmount = Math.round(totalPrice * 7.70 / 100) // VAT calculation
+      return {
+        product_name: appointment.title || 'Fahrstunde',
+        product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
+        appointment_id: appointment.id,
+        appointment_title: appointment.title,
+        appointment_date: appointment.start_time,
+        appointment_duration_minutes: appointment.duration_minutes,
+        quantity: 1,
+        unit_price_rappen: appointment.amount,
+        total_price_rappen: totalPrice,
+        vat_rate: 7.70,
+        vat_amount_rappen: vatAmount,
+        sort_order: index,
+        notes: `Termin: ${appointment.title}`
+      }
+    })
     
     logger.debug('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
     
@@ -4113,10 +3978,7 @@ onMounted(async () => {
 
   try {
     await loadUserDetails()
-    await Promise.all([
-      loadUserAppointments(),
-      loadCompanyBillingAddress()
-    ])
+    await loadUserAppointments()
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     console.error('❌ Error during initial load:', err)

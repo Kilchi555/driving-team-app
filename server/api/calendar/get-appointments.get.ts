@@ -111,6 +111,52 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`✅ Fetched ${appointments?.length || 0} appointments`)
 
+    // ✅ NEW: Load reserved slots (in-progress bookings) for the same date range
+    let reservedSlots: any[] = []
+    if (viewStartDate && viewEndDate) {
+      const startISO = viewStartDate.toISOString()
+      const endISO = viewEndDate.toISOString()
+      
+      logger.debug(`📅 Loading reserved slots for viewport: ${startISO} to ${endISO}`)
+      
+      let reservedSlotsQuery = serviceSupabase
+        .from('availability_slots')
+        .select(`
+          id,
+          staff_id,
+          location_id,
+          start_time,
+          end_time,
+          duration_minutes,
+          reserved_by_session,
+          reserved_until,
+          category_code
+        `)
+        .eq('tenant_id', tenantId)
+        .not('reserved_by_session', 'is', null) // Only reserved slots
+        .gte('start_time', startISO)
+        .lt('start_time', endISO)
+        .order('start_time')
+      
+      // Apply staff filter for staff users
+      if (userRole !== 'admin' && userRole !== 'tenant_admin' && userRole !== 'super_admin') {
+        reservedSlotsQuery = reservedSlotsQuery.eq('staff_id', userId)
+      } else if (adminStaffFilter) {
+        // Admin with staff filter
+        reservedSlotsQuery = reservedSlotsQuery.eq('staff_id', adminStaffFilter)
+      }
+      
+      const { data: slots, error: slotsError } = await reservedSlotsQuery
+      
+      if (slotsError) {
+        logger.warn('⚠️ Error fetching reserved slots:', slotsError)
+        // Continue without reserved slots - non-critical
+      } else {
+        reservedSlots = slots || []
+        logger.debug(`✅ Fetched ${reservedSlots.length} reserved slots`)
+      }
+    }
+
     // ✅ SECURITY LAYER: Batch-load payment status for appointments
     // Only for appointments that passed all security filters above!
     let paymentsMap: Record<string, any> = {}
@@ -220,11 +266,37 @@ export default defineEventHandler(async (event) => {
       paid_at: paymentsMap[apt.id]?.paid_at || null
     }))
 
-    logger.info(`✅ Successfully fetched ${enrichedAppointments.length} enriched appointments for user ${userId}`)
+    // ✅ NEW: Transform reserved slots into calendar events
+    const enrichedReservedSlots = (reservedSlots || []).map((slot: any) => ({
+      id: `reserved-${slot.id}`, // Prefix to distinguish from appointments
+      title: `🟡 Reservierung (${slot.category_code})`,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      type: 'reserved_slot',
+      event_type_code: slot.category_code,
+      status: 'reserved',
+      duration_minutes: slot.duration_minutes,
+      location_id: slot.location_id,
+      staff_id: slot.staff_id,
+      staff: usersMap[slot.staff_id] || null,
+      location: slot.location_id ? locationsMap[slot.location_id] : null,
+      reserved_until: slot.reserved_until,
+      reserved_by_session: slot.reserved_by_session,
+      // Empty user since it's just a reservation
+      user: null,
+      created_by_user: null,
+      payment_status: null,
+      paid_at: null
+    }))
+
+    // Combine appointments and reserved slots
+    const allEvents = [...enrichedAppointments, ...enrichedReservedSlots]
+
+    logger.info(`✅ Successfully fetched ${enrichedAppointments.length} appointments + ${enrichedReservedSlots.length} reserved slots`)
 
     return {
       success: true,
-      data: enrichedAppointments
+      data: allEvents
     }
 
   } catch (error: any) {

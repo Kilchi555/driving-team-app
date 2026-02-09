@@ -22,42 +22,37 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     onResponseError: async ({ response, error, request }) => {
       const status = response?.status
-      const url = request?.url || ''
+      const url = (request?.url || '').toLowerCase()
 
-      // ✅ FIX: Don't treat login/logout endpoints 401 as session expiry
-      // Those are credential errors, not session errors
-      const isAuthEndpoint = url.includes('/api/auth/login') || 
-                             url.includes('/api/auth/logout') ||
-                             url.includes('/api/auth/register') ||
-                             url.includes('/api/auth/refresh')
-
-      // 🚨 CRITICAL: If auth endpoint returns 401, it's a credential error - NEVER redirect
-      // This prevents users from being redirected to wrong tenants
-      if (isAuthEndpoint && status === 401) {
-        console.debug('ℹ️ Login/Auth endpoint returned 401 - credential error, not session expiry')
-        // Let the error propagate to the component - it will show proper error message
+      // 🚨 CRITICAL: Don't redirect for ANY /api/auth/* endpoints - these are ALWAYS credential errors
+      // This includes: login, logout, register, refresh, current-user
+      const isAnyAuthEndpoint = url.includes('/api/auth/') || request?.headers?.['X-Auth-Request'] === 'true'
+      
+      if (status === 401 && isAnyAuthEndpoint) {
+        console.debug('ℹ️ Auth endpoint returned 401 - credential error, let component handle it')
         throw createError({
           statusCode: status,
           statusMessage: response?.statusText || 'Request failed'
         })
       }
 
-      // Handle 401 - Session expired or invalid token (for non-auth endpoints)
-      // DON'T redirect for login attempts - 401 is expected when credentials are wrong
-      const requestUrl = (error?.request?.url || error?.response?.url || error?.message || '').toString()
-      const isLoginRequest = requestUrl && requestUrl.includes('/api/auth/login')
-      
-      console.debug('🔍 401 Error detected', { 
-        requestUrl, 
-        isLoginRequest,
-        hasRequest: !!error?.request,
-        hasResponse: !!error?.response,
-        message: error?.message
-      })
-      
-      if (status === 401 && !isRedirecting && !isLoginRequest) {
+      // Check if this is a booking flow request (should show modal instead of redirecting)
+      const isBookingFlow = url.includes('/api/booking/create-appointment') || url.includes('x-booking-flow=true') || request?.headers?.['X-Booking-Flow'] === 'true'
+
+      // 🚨 If this is a booking flow request, don't redirect - let component handle it
+      if (isBookingFlow && status === 401) {
+        console.debug('ℹ️ Booking flow 401 - component will show login modal')
+        throw createError({
+          statusCode: status,
+          statusMessage: response?.statusText || 'Request failed'
+        })
+      }
+
+      // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
+      // DON'T redirect for booking flow - let component show modal
+      if (status === 401 && !isRedirecting && !isBookingFlow && !isAnyAuthEndpoint) {
         isRedirecting = true
-        console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { requestUrl, isLoginRequest })
+        console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { url, isLoginRequest })
 
         try {
           const authStore = useAuthStore()
