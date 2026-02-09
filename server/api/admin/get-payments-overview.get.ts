@@ -15,7 +15,8 @@ interface UserPaymentSummary {
   role: string
   preferred_payment_method: string | null
   has_company_billing: boolean
-  has_unpaid_appointments: boolean
+  payment_status: 'invoiced' | 'open' | 'pending' | 'completed' | null
+  pending_payment_count: number
   total_unpaid_amount: number
   total_appointments: number
   oldest_appointment_date: string | null // For sorting
@@ -96,6 +97,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
     logger.debug(`🔍 [get-payments-overview] User ${userId} requesting payments overview for tenant ${tenantId}`)
 
     // ✅ 5. TENANT ISOLATION - Only fetch data for own tenant
+    // Include ALL clients (active and inactive, with any onboarding status)
     const { data: usersData, error: usersError } = await supabaseAdmin
       .from('users')
       .select(`
@@ -107,11 +109,11 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         role,
         preferred_payment_method,
         default_company_billing_address_id,
-        is_active
+        is_active,
+        onboarding_status
       `)
       .eq('tenant_id', tenantId)
       .eq('role', 'client')
-      .eq('is_active', true)
       .order('first_name')
 
     if (usersError) {
@@ -182,7 +184,30 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         appointment.user_id === user.id
       )
       
-      // Find the oldest appointment date
+      // Find all payments for this user
+      const userPayments = (paymentsData || []).filter(payment => 
+        payment.user_id === user.id
+      )
+
+      // Find appointments with pending/failed payments (unbezahlte Termine)
+      const unpaidPaymentIds = userPayments
+        .filter(p => p.payment_status === 'pending' || p.payment_status === 'failed')
+        .map(p => p.appointment_id)
+      
+      const unpaidAppointments = userAppointments.filter(apt => 
+        unpaidPaymentIds.includes(apt.id)
+      )
+      
+      // Find the oldest UNPAID appointment date (for sorting)
+      const oldestUnpaidAppointment = unpaidAppointments.length > 0
+        ? unpaidAppointments.reduce((oldest, current) => {
+            const oldestTime = new Date(oldest.start_time).getTime()
+            const currentTime = new Date(current.start_time).getTime()
+            return currentTime < oldestTime ? current : oldest
+          })
+        : null
+      
+      // Fallback: Find the oldest appointment date (any status)
       const oldestAppointment = userAppointments.length > 0
         ? userAppointments.reduce((oldest, current) => {
             const oldestTime = new Date(oldest.start_time).getTime()
@@ -190,17 +215,64 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
             return currentTime < oldestTime ? current : oldest
           })
         : null
-      
-      // Find unpaid payments for this user
-      const userUnpaidPayments = (paymentsData || []).filter(payment => 
-        payment.user_id === user.id && 
-        (payment.payment_status === 'pending' || !payment.paid_at)
-      )
 
-      // Calculate total unpaid amount
-      const totalUnpaidAmount = userUnpaidPayments.reduce((sum, payment) => {
-        return sum + ((payment.total_amount_rappen || 0) / 100)
-      }, 0)
+      // Count different payment statuses
+      const invoicedCount = userPayments.filter(p => p.payment_status === 'invoiced').length
+      const completedCount = userPayments.filter(p => p.payment_status === 'completed').length
+      const paidCount = userPayments.filter(p => p.payment_status === 'paid').length
+      const cancelledCount = userPayments.filter(p => 
+        p.payment_status === 'canceled' || p.payment_status === 'cancelled' || p.payment_status === 'refunded'
+      ).length
+      const pendingFailedCount = userPayments.filter(p => 
+        p.payment_status === 'pending' || p.payment_status === 'failed'
+      ).length
+
+      logger.debug(`🔍 Payment status counts for user ${user.id}:`, {
+        invoiced: invoicedCount,
+        completed: completedCount,
+        paid: paidCount,
+        cancelled: cancelledCount,
+        pendingFailed: pendingFailedCount,
+        total: userPayments.length,
+        statuses: userPayments.map(p => p.payment_status)
+      })
+
+      // Calculate total unpaid amount (only pending/failed are truly unpaid)
+      const totalUnpaidAmount = userPayments
+        .filter(p => p.payment_status === 'pending' || p.payment_status === 'failed')
+        .reduce((sum, payment) => {
+          return sum + ((payment.total_amount_rappen || 0) / 100)
+        }, 0)
+
+      // Determine payment status:
+      // Priority: completed > paid > invoiced > cancelled > open > null
+      // - If ANY payment is 'pending' or 'failed' → 'open' with count
+      // - If ANY payment is 'completed' or 'paid' → 'completed'
+      // - If ALL payments are 'invoiced' → 'invoiced'
+      // - If ALL payments are 'cancelled/refunded' → 'completed' (behandle als bezahlt)
+      // - If NO payments → null
+      let paymentStatus: 'invoiced' | 'open' | 'pending' | 'completed' | null = null
+      let pendingCount = 0
+
+      if (userPayments.length === 0) {
+        paymentStatus = null
+      } else if (pendingFailedCount > 0) {
+        // There are pending or failed payments - highest priority
+        paymentStatus = 'open'
+        pendingCount = pendingFailedCount
+      } else if (completedCount > 0 || paidCount > 0) {
+        // There are completed or paid payments
+        paymentStatus = 'completed'
+        pendingCount = 0
+      } else if (invoicedCount > 0) {
+        // All are invoiced
+        paymentStatus = 'invoiced'
+        pendingCount = 0
+      } else if (cancelledCount > 0) {
+        // All are cancelled/refunded - treat as paid
+        paymentStatus = 'completed'
+        pendingCount = 0
+      }
 
       // Check company billing
       const hasCompanyBilling = (billingData || []).some(billing => billing.created_by === user.id) || 
@@ -215,10 +287,12 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         role: user.role,
         preferred_payment_method: user.preferred_payment_method,
         has_company_billing: hasCompanyBilling,
-        has_unpaid_appointments: userUnpaidPayments.length > 0,
+        payment_status: paymentStatus,
+        pending_payment_count: pendingCount,
         total_unpaid_amount: totalUnpaidAmount,
         total_appointments: userAppointments.length,
-        oldest_appointment_date: oldestAppointment?.start_time || null // ✅ For sorting
+        // ✅ Use oldest UNPAID appointment for sorting, fallback to oldest appointment
+        oldest_appointment_date: oldestUnpaidAppointment?.start_time || oldestAppointment?.start_time || null
       }
     })
 
@@ -258,7 +332,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
     // ✅ 8. RESPONSE - Return aggregated stats
     const stats = {
       total_users: sortedUsers.length,
-      users_with_unpaid: sortedUsers.filter(u => u.has_unpaid_appointments).length,
+      users_with_invoiced: sortedUsers.filter(u => u.payment_status === 'invoiced').length,
+      users_with_open_payments: sortedUsers.filter(u => u.payment_status === 'open').length,
       users_with_company_billing: sortedUsers.filter(u => u.has_company_billing).length,
       total_unpaid_amount: sortedUsers.reduce((sum, u) => sum + u.total_unpaid_amount, 0)
     }

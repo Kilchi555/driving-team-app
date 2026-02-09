@@ -147,16 +147,8 @@
               </div>
             </div>
 
-            <!-- Back button -->
-            <button 
-              @click="currentStep = 1; selectedMainCategory = null"
-              class="mb-4 inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              ← Zurück
-            </button>
-          
-          <!-- Show only subcategories for selected main category -->
-          <div :class="`grid ${getGridClasses(selectedMainCategory?.children?.length || 1)} gap-3`">
+            <!-- Show only subcategories for selected main category -->
+            <div :class="`grid ${getGridClasses(selectedMainCategory?.children?.length || 1)} gap-3`">
             <div 
               v-for="subCategory in selectedMainCategory?.children || []" 
               :key="subCategory.id"
@@ -174,9 +166,11 @@
                 <div v-if="subCategory.icon_svg" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5">
                   <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="subCategory.icon_svg"></div>
                 </div>
-                <!-- Fallback: code letter without circle -->
+                <!-- Fallback: code letter with full-width underline -->
                 <div v-else class="mx-auto mb-3 sm:mb-4 md:mb-5">
-                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ subCategory.code }}</span>
+                  <div class="flex justify-center" :style="{ borderBottomWidth: '2px', borderBottomColor: getBrandPrimary() }">
+                    <span class="text-base sm:text-lg md:text-xl font-bold px-3 sm:px-4 md:px-5 pb-2" :style="{ color: getBrandPrimary() }">{{ subCategory.code }}</span>
+                  </div>
                 </div>
                 <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ subCategory.name }}</h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ subCategory.description }}</p>
@@ -478,8 +472,10 @@
                   v-for="slot in day.slots"
                   :key="slot.id"
                   @click="selectedSlot = slot; currentStep = 7"
-                  class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5"
-                  :style="getInteractiveCardStyle(
+                  :disabled="!slot.is_available || slot.reserved_by_session"
+                  class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5 disabled:cursor-not-allowed"
+                  :style="getSlotCardStyle(
+                    slot,
                     selectedSlot?.id === slot.id || hoveredSlotId === slot.id,
                     hoveredSlotId === slot.id
                   )"
@@ -798,8 +794,8 @@ const error = ref<string | null>(null)
 const sessionId = ref(generateSessionId())
 const reservedSlotId = ref<string | null>(null)
 const reservationExpiry = ref<Date | null>(null)
-const reservationCountdown = ref(600) // 10 minutes in seconds
-let countdownInterval: any = null
+const remainingSeconds = ref(600) // 10 minutes in seconds
+const countdownInterval = ref<NodeJS.Timeout | null>(null)
 
 const { autoSyncCalendars } = useExternalCalendarSync()
 
@@ -1034,10 +1030,6 @@ const isLoadingLocations = ref(false)
 const isLoadingTimeSlots = ref(false)
 const tenantSettings = ref<any>({})
 
-// Slot reservation management
-const remainingSeconds = ref(600) // 10 minutes countdown
-const reservedUntil = ref<Date | null>(null)
-
 // New flow state
 const currentStep = ref(1)
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
@@ -1164,7 +1156,7 @@ const groupedTimeSlots = computed(() => {
       dayKey,
       dayName,
       dateFormatted,
-      slots: slots.filter(slot => slot.is_available) // Only show available slots
+      slots: slots // Show both available AND reserved slots
     }
   })
   
@@ -1486,7 +1478,7 @@ const getWeeksForLocation = (location: any) => {
       number: weekNumber,
       startDate,
       endDate,
-      slots: slots.filter(slot => slot.is_available) // Only show available slots
+      slots: slots // Show both available AND reserved slots
     }
   })
   
@@ -1551,6 +1543,28 @@ const getInteractiveCardStyle = (isSelected: boolean, isHover = false) => {
     transform: isHover || isSelected ? 'translateY(-3px)' : 'translateY(0)',
     transition: 'all 0.18s ease'
   }
+}
+
+const getSlotCardStyle = (slot: any, isSelected: boolean, isHover = false) => {
+  const primary = getBrandPrimary()
+  
+  // Reservierte Slots (in Bearbeitung) - transparenter Hintergrund
+  if (!slot.is_available && slot.reserved_by_session) {
+    const lightBase = lightenColor(primary, 0.9)
+    return {
+      borderColor: withAlpha(primary, 0.4),
+      background: `linear-gradient(145deg, ${withAlpha(primary, 0.08)}, ${withAlpha(primary, 0.04)})`,
+      opacity: 0.7,
+      cursor: 'not-allowed',
+      pointerEvents: 'none',
+      boxShadow: 'none',
+      transform: 'translateY(0)',
+      transition: 'all 0.18s ease'
+    }
+  }
+  
+  // Verfügbare Slots - normales Styling
+  return getInteractiveCardStyle(isSelected, isHover)
 }
 
 const getInteractiveBadgeStyle = (isSelected: boolean) => {
@@ -2279,7 +2293,61 @@ const confirmBooking = async () => {
     
     isCreatingBooking.value = true
     
+    // FIRST: Check if user is authenticated BEFORE making any API calls
+    logger.debug('🔐 Checking authentication status...')
+    let isAuthenticated = false
+    
+    try {
+      const currentUser = await $fetch('/api/auth/current-user')
+      logger.debug('✅ User is authenticated:', currentUser.id)
+      isAuthenticated = true
+    } catch (authError: any) {
+      // User is not authenticated - this is expected
+      logger.debug('🔑 User not authenticated, will show login modal', {
+        statusCode: authError.statusCode,
+        status: authError.status,
+        data: authError.data,
+        message: authError.message
+      })
+      isAuthenticated = false
+    }
+    
+    // If not authenticated, show login modal instead of proceeding
+    if (!isAuthenticated) {
+      logger.debug('🔑 Showing login modal for unauthenticated user', {
+        showLoginModalBefore: showLoginModal.value,
+        isCreatingBooking: isCreatingBooking.value
+      })
+      isCreatingBooking.value = false
+      showLoginModal.value = true
+      loginModalTab.value = 'register'
+      logger.debug('🔑 Login modal should now be visible', {
+        showLoginModalAfter: showLoginModal.value
+      })
+      return
+    }
+    
+    // Check for appointment conflicts (in case another booking was made in the meantime)
+    logger.debug('🔍 Checking for appointment conflicts...')
+    const conflictCheckResponse = await $fetch('/api/booking/check-conflicts', {
+      method: 'POST',
+      body: {
+        slug: route.params.slug,
+        start_time: selectedSlot.value.start_time,
+        end_time: selectedSlot.value.end_time,
+        staff_id: selectedInstructor.value.id
+      }
+    })
+    
+    if (conflictCheckResponse.has_conflict) {
+      logger.error('❌ Conflict detected')
+      throw new Error('Der gewählte Zeitslot ist leider nicht mehr verfügbar. Ein anderer Termin überlappt sich. Bitte wählen Sie einen anderen Zeitslot.')
+    }
+    
+    logger.debug('✅ No conflicts detected')
+    
     // Create the appointment using the secure API
+    // The appointment creation will handle the slot reservation internally
     const result = await createAppointmentSecure({
       slot_id: selectedSlot.value.id,
       session_id: sessionId.value,
@@ -2301,9 +2369,29 @@ const confirmBooking = async () => {
     console.error('Error confirming booking:', error)
     isCreatingBooking.value = false
     
+    // Check if it's a 401 Unauthorized error (authentication required)
+    if (error.statusCode === 401 || error.data?.statusCode === 401) {
+      logger.debug('🔑 Authentication required - showing login modal')
+      showLoginModal.value = true
+      loginModalTab.value = 'register' // Default to register for new users
+      return
+    }
+    
     // Show error message to user
-    const errorMessage = error?.message || error?.data?.message || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-    alert(`Fehler bei der Buchung: ${errorMessage}`)
+    let errorMessage = error?.message || error?.data?.message || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    
+    // If error value was set, use that
+    if (error.value) {
+      errorMessage = error.value
+    }
+    
+    // Only show alert if we're not already handling the error
+    if (error.message === 'Slot-Reservierung fehlgeschlagen') {
+      logger.warn('⚠️ Slot reservation failed - user returned to slot selection')
+      error.value = errorMessage
+    } else {
+      alert(`Fehler bei der Buchung: ${errorMessage}`)
+    }
   }
 }
 
@@ -2314,28 +2402,32 @@ const createAppointmentSecure = async (userData: any) => {
   try {
     logger.debug('📅 Creating appointment via secure API...')
     
-    if (!reservedSlotId.value) {
-      throw new Error('Slot-Reservierung abgelaufen. Bitte wählen Sie erneut einen Zeitslot.')
-    }
-    
     // Use the new composable's createAppointment method
+    // The backend API will handle slot reservation
     const response = await createAppointment(
       {
-        slot_id: reservedSlotId.value,
-        session_id: sessionId.value,
-        appointment_type: 'lesson',
-        category_code: selectedCategory.value?.code || '',
-        notes: bookingNotes.value || undefined
+        slot_id: userData.slot_id,
+        session_id: userData.session_id,
+        appointment_type: userData.appointment_type,
+        category_code: userData.category_code || '',
+        notes: userData.notes || undefined
+      },
+      {
+        // Tell interceptor this is a booking request - show modal instead of redirecting
+        headers: {
+          'X-Booking-Flow': 'true'
+        }
       }
     )
     
     logger.debug('✅ Appointment created:', response.appointment.id)
     
-    // Clear reservation
+    // Clear reservation state
     reservedSlotId.value = null
     reservationExpiry.value = null
-    if (countdownInterval) {
-      clearInterval(countdownInterval)
+    if (countdownInterval.value) {
+      clearInterval(countdownInterval.value)
+      countdownInterval.value = null
     }
     
     // Return appointment ID for further processing
@@ -2509,9 +2601,10 @@ const reserveSlotSecure = async (userId?: string) => {
     console.error('❌ Error reserving slot:', error)
     
     if (error.statusCode === 409) {
-      // Slot already taken
-      error.value = 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wählen Sie einen anderen.'
-      // Refresh slots
+      // Slot already taken - this is a race condition, offer retry with fresh slots
+      logger.debug('🔄 Slot taken by another user, refreshing available slots...')
+      error.value = 'Der gewählte Zeitslot wurde gerade von jemand anderem gebucht. Bitte wählen Sie aus den verfügbaren Slots einen anderen aus.'
+      // Refresh slots so user can pick a different one
       await generateTimeSlotsForSpecificCombination()
     } else {
       error.value = error.statusMessage || 'Reservierung fehlgeschlagen'
@@ -2592,7 +2685,24 @@ const getCountdownText = computed(() => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 })
 
-const handleBackButton = () => {
+const handleBackButton = async () => {
+  // Release slot reservation if going back
+  if (reservedSlotId.value && sessionId.value) {
+    try {
+      logger.debug('🔓 Releasing slot reservation on back button...')
+      await $fetch('/api/booking/release-reservation', {
+        method: 'POST',
+        body: {
+          slot_id: reservedSlotId.value,
+          session_id: sessionId.value
+        }
+      })
+      logger.debug('✅ Slot reservation released')
+    } catch (err: any) {
+      logger.warn('⚠️ Failed to release slot reservation:', err)
+    }
+  }
+
   // On step 1, go back to referrer
   if (currentStep.value === 1) {
     goBackToReferrer()
@@ -3220,9 +3330,30 @@ onMounted(async () => {
 })
 
 // Cleanup on unmount
-onBeforeUnmount(() => {
+onBeforeUnmount(async () => {
   window.removeEventListener('resize', () => {
     isScreenSmall.value = window.innerWidth < 1000
   })
+
+  // Release slot reservation if user leaves without completing booking
+  if (reservedSlotId.value && sessionId.value) {
+    try {
+      logger.debug('🔓 Releasing slot reservation on page unmount...', {
+        slot_id: reservedSlotId.value,
+        session_id: sessionId.value
+      })
+      await $fetch('/api/booking/release-reservation', {
+        method: 'POST',
+        body: {
+          slot_id: reservedSlotId.value,
+          session_id: sessionId.value
+        }
+      })
+      logger.debug('✅ Slot reservation released')
+    } catch (err: any) {
+      logger.warn('⚠️ Failed to release slot reservation:', err)
+      // Non-critical - cleanup will happen on expiry
+    }
+  }
 })
 </script>

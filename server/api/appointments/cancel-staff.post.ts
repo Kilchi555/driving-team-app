@@ -302,6 +302,30 @@ export default defineEventHandler(async (event) => {
       result: cancellationResult?.action
     })
 
+    // ✅ NEW: Queue staff for availability recalculation
+    if (appointment.staff_id && tenantId) {
+      try {
+        logger.debug(`📋 Queueing staff ${appointment.staff_id} for recalc after appointment cancellation`)
+        
+        await supabaseAdmin
+          .from('availability_recalc_queue')
+          .upsert(
+            {
+              staff_id: appointment.staff_id,
+              tenant_id: tenantId,
+              trigger: 'appointment',
+              queued_at: new Date().toISOString(),
+              processed: false
+            },
+            { onConflict: 'staff_id,tenant_id' }
+          )
+        
+        logger.debug(`✅ Staff queued for recalculation after appointment cancellation`)
+      } catch (queueError: any) {
+        logger.warn(`⚠️ Failed to queue staff for recalc (non-critical):`, queueError.message)
+      }
+    }
+
     return {
       success: true,
       message: 'Appointment cancelled by staff',

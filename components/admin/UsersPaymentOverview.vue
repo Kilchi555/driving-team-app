@@ -101,6 +101,7 @@
             >
               <option value="all">Alle Benutzer</option>
               <option value="unpaid">Mit unbezahlten Terminen</option>
+              <option value="overdue">Überfällig (unbezahlt & in Vergangenheit)</option>
               <option value="company">Mit Firmenrechnung</option>
               <option value="cash">Barzahler</option>
               <option value="invoice">Rechnungszahler</option>
@@ -205,19 +206,29 @@
                 <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
                   <div class="flex flex-col gap-1">
                     <span
-v-if="user.has_unpaid_appointments" 
-                          class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                      Unbezahlte Termine
+                      v-if="user.payment_status === 'open'" 
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                      {{ user.pending_payment_count }} offen
                     </span>
                     <span
-v-if="user.has_company_billing" 
-                          class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                      v-else-if="user.payment_status === 'invoiced'" 
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                      Verrechnet
+                    </span>
+                    <span
+                      v-else-if="user.payment_status === 'completed'" 
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      Bezahlt
+                    </span>
+                    <span
+                      v-else
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                      Keine Termine
+                    </span>
+                    <span
+                      v-if="user.has_company_billing" 
+                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
                       Firmenrechnung
-                    </span>
-                    <span
-v-if="!user.has_unpaid_appointments && !user.has_company_billing" 
-                          class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Alle bezahlt
                     </span>
                   </div>
                 </td>
@@ -285,19 +296,29 @@ v-if="!user.has_unpaid_appointments && !user.has_company_billing"
                   {{ getPaymentMethodLabel(user.preferred_payment_method) }}
                 </span>
                 <span
-                  v-if="user.has_unpaid_appointments" 
+                  v-if="user.payment_status === 'open'" 
                   class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                  Unbezahlte Termine
+                  {{ user.pending_payment_count }} offen
+                </span>
+                <span
+                  v-else-if="user.payment_status === 'invoiced'" 
+                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                  Verrechnet
+                </span>
+                <span
+                  v-else-if="user.payment_status === 'completed'" 
+                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                  Bezahlt
+                </span>
+                <span
+                  v-else
+                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                  Keine Termine
                 </span>
                 <span
                   v-if="user.has_company_billing" 
                   class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
                   Firmenrechnung
-                </span>
-                <span
-                  v-if="!user.has_unpaid_appointments && !user.has_company_billing" 
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                  Alle bezahlt
                 </span>
               </div>
             </div>
@@ -323,7 +344,7 @@ v-if="!user.has_unpaid_appointments && !user.has_company_billing"
 
 <script setup lang="ts">
 
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { navigateTo } from '#app'
 
 // TypeScript Interfaces
@@ -336,9 +357,11 @@ interface UserPaymentSummary {
   role: string
   preferred_payment_method: string | null
   has_company_billing: boolean
-  has_unpaid_appointments: boolean
+  payment_status: 'invoiced' | 'open' | 'pending' | 'completed' | null
+  pending_payment_count: number
   total_unpaid_amount: number
-  total_appointments: number // ✅ NEU: Gesamtanzahl Termine
+  total_appointments: number
+  oldest_appointment_date: string | null
 }
 
 // Reactive state
@@ -353,7 +376,7 @@ const sortOrder = ref<'newest' | 'oldest'>('newest') // ✅ NEU: Sortierreihenfo
 const totalUsers = computed(() => users.value.length)
 
 const usersWithUnpaidAppointments = computed(() => 
-  users.value.filter(user => user.has_unpaid_appointments).length
+  users.value.filter(user => user.payment_status === 'open').length
 )
 
 const usersWithCompanyBilling = computed(() => 
@@ -380,7 +403,18 @@ const filteredUsers = computed<UserPaymentSummary[]>(() => {
   // Status filter
   switch (selectedFilter.value) {
     case 'unpaid':
-      filtered = filtered.filter(user => user.has_unpaid_appointments)
+      // Show both 'open' (pending/failed) AND 'invoiced' (not yet paid)
+      filtered = filtered.filter(user => user.payment_status === 'open' || user.payment_status === 'invoiced')
+      break
+    case 'overdue':
+      // Unbezahlt (open oder invoiced) UND ältester Termin liegt in der Vergangenheit
+      filtered = filtered.filter(user => {
+        if (user.payment_status !== 'open' && user.payment_status !== 'invoiced') return false
+        if (!user.oldest_appointment_date) return false
+        const appointmentTime = new Date(user.oldest_appointment_date).getTime()
+        const now = new Date().getTime()
+        return appointmentTime < now
+      })
       break
     case 'company':
       filtered = filtered.filter(user => user.has_company_billing)
@@ -393,16 +427,25 @@ const filteredUsers = computed<UserPaymentSummary[]>(() => {
       break
   }
 
-  // ✅ NEU: Sortierung nach Datum (basierend auf dem letzten Termin)
+  // ✅ Sortierung nach Termin-Datum (ältester/neuester Termin)
   filtered = [...filtered].sort((a, b) => {
-    // Hier könnten wir nach dem letzten Termin sortieren, aber für jetzt sortieren wir nach Namen
-    const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase()
-    const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase()
+    // Sort by oldest_appointment_date
+    const dateA = a.oldest_appointment_date ? new Date(a.oldest_appointment_date).getTime() : 0
+    const dateB = b.oldest_appointment_date ? new Date(b.oldest_appointment_date).getTime() : 0
     
-    if (sortOrder.value === 'newest') {
+    // If both have no dates, sort by name
+    if (dateA === 0 && dateB === 0) {
+      const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase()
+      const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase()
       return nameA.localeCompare(nameB)
+    }
+    
+    // Newest first: higher dates first (descending)
+    // Oldest first: lower dates first (ascending)
+    if (sortOrder.value === 'newest') {
+      return dateB - dateA // Neueste zuerst (höhere Daten zuerst)
     } else {
-      return nameB.localeCompare(nameA)
+      return dateA - dateB // Älteste zuerst (niedrigere Daten zuerst)
     }
   })
 
@@ -494,6 +537,28 @@ const sendPaymentReminder = async (user: UserPaymentSummary) => {
 
 // Lifecycle
 onMounted(() => {
+  // ✅ Restore filter and sort from localStorage
+  const savedFilter = localStorage.getItem('paymentOverviewFilter')
+  const savedSearch = localStorage.getItem('paymentOverviewSearch')
+  const savedSort = localStorage.getItem('paymentOverviewSort')
+  
+  if (savedFilter) {
+    selectedFilter.value = savedFilter
+  }
+  if (savedSearch) {
+    searchTerm.value = savedSearch
+  }
+  if (savedSort) {
+    sortOrder.value = savedSort as 'newest' | 'oldest'
+  }
+  
   fetchUsersSummary()
+})
+
+// ✅ Watch for filter, search, and sort changes and save to localStorage
+watch([selectedFilter, searchTerm, sortOrder], ([newFilter, newSearch, newSort]) => {
+  localStorage.setItem('paymentOverviewFilter', newFilter)
+  localStorage.setItem('paymentOverviewSearch', newSearch)
+  localStorage.setItem('paymentOverviewSort', newSort)
 })
 </script>

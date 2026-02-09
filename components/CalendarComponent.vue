@@ -935,7 +935,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       // ✅ Roter Rahmen für unbezahlte Termine mit echten Kunden
       // Nur wenn user_id != staff_id (echte Kundentermine, keine internen Blöcke)
       const hasRealCustomer = apt.user_id && apt.user_id !== '' && apt.user_id !== apt.staff_id
-      const isUnpaid = !apt.payment_status || apt.payment_status !== 'completed'
+      const isUnpaid = !apt.payment_status || (apt.payment_status !== 'completed' && apt.payment_status !== 'invoiced')
       const borderColor = (hasRealCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
       const unpaidClass = (hasRealCustomer && isUnpaid) ? 'unpaid-appointment' : ''
       

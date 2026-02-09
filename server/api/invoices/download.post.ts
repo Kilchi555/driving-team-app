@@ -1,5 +1,6 @@
 // API-Endpunkt für PDF-Download von Rechnungen
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import type { InvoiceWithDetails } from '~/types/invoice'
 import { logger } from '~/utils/logger'
 
@@ -23,9 +24,15 @@ export default defineEventHandler(async (event): Promise<DownloadResponse> => {
 
     logger.debug('📄 Generating PDF for invoice:', invoiceId)
 
+    // ✅ Authenticate user
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
+      throw new Error('Unauthorized')
+    }
+
     // Rechnungsdaten aus der Datenbank abrufen
-    const supabase = getSupabase()
-    const { data: invoice, error: invoiceError } = await supabase
+    const supabaseAdmin = getSupabaseAdmin()
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices_with_details')
       .select('*')
       .eq('id', invoiceId)
@@ -36,7 +43,7 @@ export default defineEventHandler(async (event): Promise<DownloadResponse> => {
     }
 
     // Rechnungspositionen abrufen
-    const { data: invoiceItems, error: itemsError } = await supabase
+    const { data: invoiceItems, error: itemsError } = await supabaseAdmin
       .from('invoice_items')
       .select('*')
       .eq('invoice_id', invoiceId)

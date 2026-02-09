@@ -198,6 +198,29 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         statusMessage: `Failed to insert busy times: ${insertError.message}`
       })
     }
+
+    // ✅ NEW: Queue affected staff for availability recalculation
+    const affectedStaffIds = [...new Set(uniqueBusyTimes.map(bt => bt.staff_id))]
+    logger.debug(`📋 Queueing ${affectedStaffIds.length} staff for recalculation after external events sync`)
+    
+    for (const staffId of affectedStaffIds) {
+      try {
+        await supabase
+          .from('availability_recalc_queue')
+          .upsert(
+            {
+              staff_id: staffId,
+              tenant_id: calendar.tenant_id,
+              trigger: 'external_event',
+              queued_at: new Date().toISOString(),
+              processed: false
+            },
+            { onConflict: 'staff_id,tenant_id' }
+          )
+      } catch (queueError: any) {
+        logger.warn(`⚠️ Failed to queue staff ${staffId} for recalc:`, queueError.message)
+      }
+    }
     
     // Asynchronously resolve and update postal codes for events with locations
     if (uniqueBusyTimes.some(bt => bt.event_location)) {

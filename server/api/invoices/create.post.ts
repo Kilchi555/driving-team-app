@@ -1,33 +1,31 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
-
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  // ✅ Use authenticated user
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser?.id) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user: authUser } } = await supabase.auth.getUser(token)
-  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
+  const supabaseAdmin = getSupabaseAdmin()
 
-  const { data: userProfile } = await supabase
+  const { data: userProfile } = await supabaseAdmin
     .from('users')
     .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
     .single()
 
   if (!userProfile || !['admin', 'staff'].includes(userProfile.role)) {
-    throw createError({ statusCode: 403, message: 'Admin access required' })
+    throw createError({ statusCode: 403, statusMessage: 'Admin access required' })
   }
 
   const body = await readBody(event)
   const { invoiceData, items } = body
 
   if (!invoiceData || !items) {
-    throw createError({ statusCode: 400, message: 'Missing invoiceData or items' })
+    throw createError({ statusCode: 400, statusMessage: 'Missing invoiceData or items' })
   }
 
   try {
@@ -37,7 +35,7 @@ export default defineEventHandler(async (event) => {
       tenant_id: userProfile.tenant_id
     }
 
-    const { data: invoice, error: invoiceError } = await supabase
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
       .insert(invoiceInsertData)
       .select()
@@ -53,7 +51,7 @@ export default defineEventHandler(async (event) => {
         sort_order: item.sort_order || index
       }))
 
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await supabaseAdmin
         .from('invoice_items')
         .insert(invoiceItems)
 
@@ -61,7 +59,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch full invoice with details
-    const { data: fullInvoice } = await supabase
+    const { data: fullInvoice } = await supabaseAdmin
       .from('invoices_with_details')
       .select('*')
       .eq('id', invoice.id)
@@ -70,6 +68,6 @@ export default defineEventHandler(async (event) => {
     return { success: true, data: fullInvoice }
   } catch (err: any) {
     console.error('Error creating invoice:', err)
-    throw createError({ statusCode: 500, message: err.message })
+    throw createError({ statusCode: 500, statusMessage: err.message })
   }
 })

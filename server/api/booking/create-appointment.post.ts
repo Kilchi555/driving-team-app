@@ -131,135 +131,131 @@ export default defineEventHandler(async (event: H3Event) => {
     auditDetails.tenant_id = tenantId
     auditDetails.user_id = userData.id
 
-    // ============ LAYER 5: VERIFY SLOT RESERVATION ============
+    // ============ LAYER 5: RESERVE AND VERIFY SLOT ============
+    // First try to reserve the slot (if not already reserved)
+    const reservedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    const now = new Date().toISOString()
+    
+    // Try to get the slot first
     const { data: slot, error: slotError } = await supabase
       .from('availability_slots')
       .select('*')
       .eq('id', body.slot_id)
-      .eq('reserved_by_session', body.session_id)
       .single()
 
     if (slotError || !slot) {
-      logger.warn('❌ Slot not found or not reserved by this session:', body.slot_id)
-      await logAudit({
-        user_id: userData.id,
-        tenant_id: tenantId,
-        action: 'create_appointment',
-        status: 'failed',
-        error_message: 'Slot not reserved or reservation expired',
-        ip_address: ipAddress,
-        details: auditDetails
-      })
+      logger.warn('❌ Slot not found:', body.slot_id)
       throw createError({
         statusCode: 409,
-        statusMessage: 'Slot reservation expired or invalid. Please reserve the slot again.'
+        statusMessage: 'Slot not found. Please select a different slot.'
       })
     }
 
-    // Check if reservation expired
-    if (slot.reserved_until && new Date(slot.reserved_until) < new Date()) {
-      logger.warn('❌ Slot reservation expired:', body.slot_id)
-      await logAudit({
-        user_id: userData.id,
-        tenant_id: tenantId,
-        action: 'create_appointment',
-        status: 'failed',
-        error_message: 'Slot reservation expired',
-        ip_address: ipAddress,
-        details: auditDetails
-      })
+    // Check if slot is already reserved by this session - if so, extend the reservation
+    if (slot.reserved_by_session === body.session_id) {
+      logger.debug('✅ Slot already reserved by this session, proceeding with appointment creation')
+      // Just verify it hasn't expired
+      if (slot.reserved_until && new Date(slot.reserved_until) < new Date()) {
+        logger.warn('❌ Slot reservation expired:', body.slot_id)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Slot reservation expired. Please select the slot again.'
+        })
+      }
+    } else if (slot.reserved_until && new Date(slot.reserved_until) > new Date()) {
+      // Slot is reserved by another session and reservation hasn't expired
+      logger.warn('⚠️ Slot is reserved by another user:', body.slot_id)
       throw createError({
         statusCode: 409,
-        statusMessage: 'Slot reservation expired. Please reserve the slot again.'
+        statusMessage: 'This slot is no longer available. Please select another slot.'
       })
+    } else {
+      // Slot is either not reserved or reservation has expired - we can reserve it
+      logger.debug('🔒 Attempting to reserve slot for appointment creation...')
+      
+      // ============ STEP 1: Reserve the main slot ============
+      const { data: reservedSlot, error: reserveError } = await supabase
+        .from('availability_slots')
+        .update({
+          is_available: false, // Mark as unavailable for others
+          reserved_until: reservedUntil,
+          reserved_by_session: body.session_id,
+          updated_at: now
+        })
+        .eq('id', body.slot_id)
+        .eq('is_available', true)
+        .select('*')
+        .single()
+
+      if (reserveError || !reservedSlot) {
+        logger.warn('❌ Could not reserve slot - already taken or unavailable:', body.slot_id)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'This slot is no longer available. Please select another slot.'
+        })
+      }
+
+      // ============ STEP 2: Reserve ALL overlapping slots for this staff/location ============
+      // This prevents double-booking when a 90-min lesson is booked
+      const slotEnd = new Date(slot.end_time)
+      const { data: overlappingForReservation, error: overlapQueryError } = await supabase
+        .from('availability_slots')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('staff_id', slot.staff_id)
+        .eq('location_id', slot.location_id)
+        .lt('start_time', slotEnd.toISOString())
+        .gt('end_time', slot.start_time)
+        .neq('id', body.slot_id) // Don't include the main slot (already reserved)
+        .eq('is_available', true) // Only unreserved slots
+
+      if (!overlapQueryError && overlappingForReservation && overlappingForReservation.length > 0) {
+        const overlapSlotIds = overlappingForReservation.map(s => s.id)
+        logger.debug(`🔒 Reserving ${overlapSlotIds.length} overlapping slots to prevent double-booking...`)
+        
+        const { error: overlapReserveError } = await supabase
+          .from('availability_slots')
+          .update({
+            is_available: false, // Mark as unavailable for others
+            reserved_until: reservedUntil,
+            reserved_by_session: body.session_id,
+            updated_at: now
+          })
+          .in('id', overlapSlotIds)
+
+        if (overlapReserveError) {
+          logger.warn('⚠️ Warning: Could not reserve all overlapping slots:', overlapReserveError)
+          // Non-critical: main slot is already reserved, this is just for UI consistency
+        } else {
+          logger.debug(`✅ Reserved ${overlapSlotIds.length} overlapping slots`)
+        }
+      }
     }
 
     // Verify slot belongs to user's tenant
     if (slot.tenant_id !== tenantId) {
       logger.warn('❌ Slot does not belong to user tenant')
-      await logAudit({
-        user_id: userData.id,
-        tenant_id: tenantId,
-        action: 'create_appointment',
-        status: 'failed',
-        error_message: 'Tenant mismatch',
-        ip_address: ipAddress,
-        details: auditDetails
-      })
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
     // ============ LAYER 6: CREATE APPOINTMENT ============
-    const now = toLocalTimeString(new Date())
+    // NOTE: Appointment is only created AFTER successful payment via webhook
+    // For now, we return a placeholder with the reserved slot info
+    const nowLocal = toLocalTimeString(new Date())
 
-    const appointmentData = {
-      tenant_id: tenantId,
-      user_id: userData.id,
-      staff_id: slot.staff_id,
-      location_id: slot.location_id,
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      duration_minutes: slot.duration_minutes,
-      status: 'booked',
-      type: body.appointment_type,
-      category_code: body.category_code,
-      notes: sanitizedNotes,
-      created_at: now,
-      updated_at: now
-    }
+    logger.debug('✅ Slot reserved successfully', {
+      slot_id: body.slot_id,
+      reserved_until: reservedUntil,
+      session_id: body.session_id
+    })
 
-    const { data: appointment, error: appointmentError } = await supabase
-      .from('appointments')
-      .insert(appointmentData)
-      .select('*')
-      .single()
-
-    if (appointmentError) {
-      logger.error('❌ Error creating appointment:', appointmentError)
-      await logAudit({
-        user_id: userData.id,
-        tenant_id: tenantId,
-        action: 'create_appointment',
-        status: 'failed',
-        error_message: `Appointment creation failed: ${appointmentError.message}`,
-        ip_address: ipAddress,
-        details: auditDetails
-      })
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to create appointment'
-      })
-    }
-
-    logger.debug('✅ Appointment created:', appointment.id)
-    auditDetails.appointment_id = appointment.id
-
-    // ============ LAYER 7: MARK SLOT AS UNAVAILABLE ============
-    const { error: slotUpdateError } = await supabase
-      .from('availability_slots')
-      .update({
-        is_available: false,
-        appointment_id: appointment.id,
-        reserved_until: null,
-        reserved_by_session: null,
-        updated_at: now
-      })
-      .eq('id', body.slot_id)
-
-    if (slotUpdateError) {
-      logger.error('❌ Error updating slot availability:', slotUpdateError)
-      // Non-critical: appointment is created, slot update can be retried
-    } else {
-      logger.debug('✅ Slot marked as unavailable')
-    }
-
-    // ============ LAYER 8: AUDIT LOGGING ============
+    // ============ LAYER 7: AUDIT LOGGING ============
     await logAudit({
       user_id: userData.id,
       tenant_id: tenantId,
-      action: 'create_appointment',
-      resource_type: 'appointment',
-      resource_id: appointment.id,
+      action: 'reserve_slot',
+      resource_type: 'availability_slot',
+      resource_id: body.slot_id,
       status: 'success',
       ip_address: ipAddress,
       details: {
@@ -274,28 +270,28 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     })
 
-    // ============ LAYER 9: RETURN RESPONSE ============
+    // ============ LAYER 8: RETURN RESPONSE ============
     return {
       success: true,
-      appointment: {
-        id: appointment.id,
-        start_time: appointment.start_time,
-        end_time: appointment.end_time,
-        duration_minutes: appointment.duration_minutes,
-        status: appointment.status,
-        type: appointment.type,
-        category_code: appointment.category_code
+      reservation: {
+        slot_id: body.slot_id,
+        reserved_until: reservedUntil,
+        session_id: body.session_id,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        duration_minutes: slot.duration_minutes,
+        staff_id: slot.staff_id,
+        location_id: slot.location_id
       },
-      payment_required: false, // TODO: Integrate payment logic if needed
-      message: 'Appointment created successfully'
+      message: 'Slot reserved successfully. Proceed to payment.'
     }
 
   } catch (error: any) {
-    logger.error('❌ Create Appointment API error:', error)
+    logger.error('❌ Reserve Slot API error:', error)
     await logAudit({
       user_id: authenticatedUserId,
       tenant_id: tenantId,
-      action: 'create_appointment',
+      action: 'reserve_slot',
       status: 'failed',
       error_message: error.statusMessage || error.message,
       ip_address: ipAddress,
@@ -303,7 +299,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || 'Failed to create appointment'
+      statusMessage: error.statusMessage || 'Failed to reserve slot'
     })
   }
 })

@@ -30,6 +30,9 @@ interface AvailableSlot {
   end_time: string
   duration_minutes: number
   category_code: string
+  is_available: boolean
+  is_reserved: boolean
+  reserved_by_session?: string
 }
 
 interface GetAvailableSlotsQuery {
@@ -92,15 +95,17 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // ============ LAYER 3: FETCH SLOTS ============
     const supabase = getSupabaseAdmin()
+    const now = new Date().toISOString()
 
     let slotsQuery = supabase
       .from('availability_slots')
-      .select('id, staff_id, location_id, start_time, end_time, duration_minutes, category_code')
+      .select('id, staff_id, location_id, start_time, end_time, duration_minutes, category_code, is_available, reserved_by_session, reserved_until')
       .eq('tenant_id', query.tenant_id)
-      .eq('is_available', true) // CRITICAL: Only return available slots!
+      // Show both available AND validly reserved slots (not expired)
+      .or(`is_available.eq.true,and(reserved_until.gt.${now})`)
       .gte('start_time', `${query.start_date}T00:00:00Z`)
       .lte('start_time', `${query.end_date}T23:59:59Z`)
-      .gt('end_time', new Date().toISOString()) // CRITICAL: Only future slots!
+      .gt('end_time', now) // CRITICAL: Only future slots!
       .order('start_time', { ascending: true })
 
     // Optional filters
@@ -163,7 +168,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const staffMap = new Map(staffData.map(s => [s.id, `${s.first_name} ${s.last_name}`]))
     const locationMap = new Map(locationData.map(l => [l.id, l.name]))
 
-    // Enrich slots with names
+    // Enrich slots with names and reservation status
     const enrichedSlots = slots?.map(slot => ({
       id: slot.id,
       staff_id: slot.staff_id,
@@ -173,7 +178,12 @@ export default defineEventHandler(async (event: H3Event) => {
       start_time: slot.start_time,
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
-      category_code: slot.category_code
+      category_code: slot.category_code,
+      is_available: slot.is_available,
+      reserved_by_session: slot.reserved_by_session,
+      reserved_until: slot.reserved_until,
+      is_reserved: !slot.is_available || (slot.reserved_by_session !== null && slot.reserved_until && new Date(slot.reserved_until) > new Date()),
+      status: slot.is_available ? 'available' : 'reserved'
     }))
 
     const duration = Date.now() - startTime
