@@ -701,6 +701,7 @@ export class AvailabilityCalculator {
       }
 
       // ✅ NEW: Check travel time between appointment location and new slot location
+      // IMPORTANT: Only check if appointment location is a standard location with postal_code
       if (params.newLocationPostalCode && apt.location?.postal_code && 
           params.newLocationPostalCode !== apt.location.postal_code) {
         try {
@@ -710,7 +711,7 @@ export class AvailabilityCalculator {
             params.slotStart
           )
 
-          if (travelTime !== null) {
+          if (travelTime !== null && travelTime > 0) {
             const travelBufferMs = travelTime * 60 * 1000
             const requiredFreeTimeStart = aptEnd + travelBufferMs
 
@@ -725,6 +726,7 @@ export class AvailabilityCalculator {
           // Non-critical: continue without travel time check if error occurs
         }
       }
+      // Note: Appointments with custom locations (no postal_code) don't trigger travel time checks
     }
 
     // Check busy times
