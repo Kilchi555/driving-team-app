@@ -138,12 +138,31 @@ export class AvailabilityCalculator {
       const staff = await this.loadStaff(options.tenantId, options.staffId)
       const categories = await this.loadCategories(options.tenantId)
       const locations = await this.loadLocations(options.tenantId, staff.map(s => s.id))
-      const workingHours = await this.loadWorkingHours(staff.map(s => s.id))
-      const appointments = await this.loadAppointments(staff.map(s => s.id), options.startDate, options.endDate)
-      const busyTimes = await this.loadExternalBusyTimes(staff.map(s => s.id), options.startDate, options.endDate, options.tenantId)
+      
+      // NEW: Get staff IDs that have bookable locations
+      let staffWithBookableLocations = staff.map(s => s.id)
+      if (locations.length > 0) {
+        // Get all staff that have at least one bookable location
+        const { data: staffLocations, error: staffLocError } = await this.supabase
+          .from('staff_locations')
+          .select('staff_id')
+          .eq('is_online_bookable', true)
+          .eq('is_active', true)
+          .in('staff_id', staff.map(s => s.id))
+        
+        if (!staffLocError && staffLocations && staffLocations.length > 0) {
+          staffWithBookableLocations = [...new Set(staffLocations.map(sl => sl.staff_id))]
+          logger.debug(`✅ Staff with bookable locations: ${staffWithBookableLocations.length}`)
+        }
+      }
+      
+      const workingHours = await this.loadWorkingHours(staffWithBookableLocations)
+      const appointments = await this.loadAppointments(staffWithBookableLocations, options.startDate, options.endDate)
+      const busyTimes = await this.loadExternalBusyTimes(staffWithBookableLocations, options.startDate, options.endDate, options.tenantId)
 
       logger.debug('✅ Data loaded:', {
         staff: staff.length,
+        staffWithBookableLocations: staffWithBookableLocations.length,
         categories: categories.length,
         locations: locations.length,
         workingHours: workingHours.length,
@@ -153,7 +172,7 @@ export class AvailabilityCalculator {
 
       // 2. Generate all possible slots
       const slots = await this.generateSlots({
-        staff,
+        staff: staff.filter(s => staffWithBookableLocations.includes(s.id)),
         categories,
         locations,
         workingHours,
