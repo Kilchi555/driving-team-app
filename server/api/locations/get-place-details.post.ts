@@ -1,0 +1,105 @@
+/**
+ * API Endpoint: Get Google Place Details
+ * Holt die vollständigen Details einer Google Places Location (inkl. PLZ)
+ */
+
+import { logger } from '~/utils/logger'
+
+interface AddressComponent {
+  long_name: string
+  short_name: string
+  types: string[]
+}
+
+interface PlaceDetailsResponse {
+  result?: {
+    address_components?: AddressComponent[]
+    formatted_address?: string
+    geometry?: {
+      location: {
+        lat: number
+        lng: number
+      }
+    }
+  }
+  status: string
+}
+
+export default defineEventHandler(async (event) => {
+  try {
+    const { place_id } = await readBody(event)
+
+    if (!place_id) {
+      throw new Error('place_id is required')
+    }
+
+    const googleApiKey = process.env.GOOGLE_DISTANCE_MATRIX_API_KEY
+    if (!googleApiKey) {
+      logger.warn('⚠️ Google API key not configured')
+      return {
+        success: false,
+        error: 'Google API key not configured'
+      }
+    }
+
+    logger.debug(`🔍 Fetching Google Place Details for place_id: ${place_id}`)
+
+    // Call Google Places Details API
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&key=${googleApiKey}&fields=address_components,formatted_address,geometry`
+
+    const response = await $fetch<PlaceDetailsResponse>(url)
+
+    if (response.status !== 'OK') {
+      logger.warn(`⚠️ Google Places API error: ${response.status}`)
+      return {
+        success: false,
+        error: `Google API error: ${response.status}`
+      }
+    }
+
+    const result = response.result
+    if (!result) {
+      logger.warn('⚠️ No result in Google Places response')
+      return {
+        success: false,
+        error: 'No result from Google Places API'
+      }
+    }
+
+    // Extract postal code from address_components
+    let postal_code: string | null = null
+    if (result.address_components) {
+      const postalCodeComponent = result.address_components.find(component =>
+        component.types.includes('postal_code')
+      )
+      postal_code = postalCodeComponent?.short_name || null
+    }
+
+    // Extract coordinates
+    const latitude = result.geometry?.location.lat || null
+    const longitude = result.geometry?.location.lng || null
+    const formatted_address = result.formatted_address || null
+
+    logger.debug(`✅ Extracted place details:`, {
+      postal_code,
+      latitude,
+      longitude,
+      formatted_address
+    })
+
+    return {
+      success: true,
+      postal_code,
+      latitude,
+      longitude,
+      formatted_address,
+      address_components: result.address_components
+    }
+  } catch (error: any) {
+    logger.error('❌ Error fetching place details:', error)
+    return {
+      success: false,
+      error: error.message || 'Unknown error'
+    }
+  }
+})

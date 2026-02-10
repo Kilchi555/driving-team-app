@@ -511,6 +511,7 @@ const savePickupLocation = async (locationData: any, userId: string) => {
         address: locationData.address,
         latitude: locationData.latitude || null,
         longitude: locationData.longitude || null,
+        postal_code: locationData.postal_code || null,
         place_id: locationData.place_id || null,
         userId: userId // Works for both students and staff
       }
@@ -684,12 +685,47 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
     // 🔥 FIX: Input-Feld sofort mit der vollständigen Adresse füllen
     manualLocationInput.value = suggestion.description
     
+    // ✅ NEW: Fetch full place details including postal code
+    isLoadingGooglePlaces.value = true
+    
+    let placeDetails: any = {
+      latitude: null,
+      longitude: null,
+      postal_code: null,
+      formatted_address: suggestion.description
+    }
+    
+    try {
+      const response = await $fetch('/api/locations/get-place-details', {
+        method: 'POST',
+        body: {
+          place_id: suggestion.place_id
+        }
+      })
+      
+      if (response.success) {
+        placeDetails = {
+          latitude: response.latitude,
+          longitude: response.longitude,
+          postal_code: response.postal_code,
+          formatted_address: response.formatted_address || suggestion.description
+        }
+        logger.debug('✅ Fetched place details:', placeDetails)
+      } else {
+        logger.warn('⚠️ Could not fetch place details:', response.error)
+      }
+    } catch (err: any) {
+      logger.warn('⚠️ Error fetching place details:', err.message)
+      // Continue with partial data
+    }
+    
     const locationData = {
       name: suggestion.structured_formatting?.main_text || suggestion.description,
       address: suggestion.description,
       place_id: suggestion.place_id,
-      latitude: null,
-      longitude: null
+      latitude: placeDetails.latitude,
+      longitude: placeDetails.longitude,
+      postal_code: placeDetails.postal_code
     }
     
     // Check if this location already exists for this student
@@ -708,10 +744,8 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       emit('locationSelected', existingLocation)
       
       logger.debug('🔄 Using existing pickup location:', existingLocation.name)
+      isLoadingGooglePlaces.value = false
     } else if (props.selectedStudentId) {
-      // ✅ LOADING STATE WÄHREND SPEICHERN:
-      isLoadingGooglePlaces.value = true
-      
       // Save as new pickup location - ABER BEI ADRESSEINGABE BLEIBEN
       const savedLocation = await savePickupLocation(locationData, props.selectedStudentId)
       
