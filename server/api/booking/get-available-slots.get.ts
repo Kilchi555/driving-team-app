@@ -168,11 +168,56 @@ export default defineEventHandler(async (event: H3Event) => {
     const staffMap = new Map(staffData.map(s => [s.id, `${s.first_name} ${s.last_name}`]))
     const locationMap = new Map(locationData.map(l => [l.id, l.name]))
 
+    // ✅ NEW: Load staff_locations to check is_online_bookable status
+    let staffLocationsMap = new Map<string, Map<string, boolean>>()
+    if (staffIds.length > 0 && locationIds.length > 0) {
+      try {
+        const { data: staffLocations, error: slError } = await supabase
+          .from('staff_locations')
+          .select('staff_id, location_id, is_online_bookable')
+          .in('staff_id', staffIds)
+          .in('location_id', locationIds)
+          .eq('is_active', true)
+
+        if (!slError && staffLocations) {
+          // Create a nested map for quick lookup: staff_id -> location_id -> is_online_bookable
+          for (const sl of staffLocations) {
+            if (!staffLocationsMap.has(sl.staff_id)) {
+              staffLocationsMap.set(sl.staff_id, new Map())
+            }
+            staffLocationsMap.get(sl.staff_id)!.set(sl.location_id, sl.is_online_bookable)
+          }
+          logger.debug('✅ Loaded staff_locations online bookable settings', {
+            staff_count: staffIds.length,
+            location_count: locationIds.length
+          })
+        }
+      } catch (slError: any) {
+        logger.warn('⚠️ Failed to load staff_locations online bookable settings:', slError.message)
+        // Non-critical: we'll assume true as default (backward compatible)
+      }
+    }
+
     // Enrich slots with names and reservation status
-    const enrichedSlots = slots?.map(slot => ({
-      id: slot.id,
-      staff_id: slot.staff_id,
-      staff_name: staffMap.get(slot.staff_id) || 'Unknown',
+    // Filter out slots where is_online_bookable = false
+    const enrichedSlots = (slots || [])
+      .filter(slot => {
+        // Check if this staff/location combination is online bookable
+        const locationBookableMap = staffLocationsMap.get(slot.staff_id)
+        if (locationBookableMap) {
+          const isOnlineBookable = locationBookableMap.get(slot.location_id)
+          // If explicitly set to false, filter out
+          if (isOnlineBookable === false) {
+            logger.debug(`🔍 Filtering out slot: staff ${slot.staff_id} has location ${slot.location_id} marked as not online bookable`)
+            return false
+          }
+        }
+        return true
+      })
+      .map(slot => ({
+        id: slot.id,
+        staff_id: slot.staff_id,
+        staff_name: staffMap.get(slot.staff_id) || 'Unknown',
       location_id: slot.location_id,
       location_name: locationMap.get(slot.location_id) || 'Unknown',
       start_time: slot.start_time,
