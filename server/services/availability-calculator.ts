@@ -779,7 +779,8 @@ export class AvailabilityCalculator {
             })
 
             // If slot starts before staff can travel there from appointment, it's a conflict
-            if (slotStartTime < requiredFreeTimeStart) {
+            // BUT: Only if appointment ends BEFORE slot starts (apt→slot progression)
+            if (aptEnd <= slotStartTime && slotStartTime < requiredFreeTimeStart) {
               logger.warn(`⚠️ TRAVEL TIME CONFLICT (Apt→Slot): slot ${params.slotStart.toISOString()} needs ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
               return true
             }
@@ -797,7 +798,8 @@ export class AvailabilityCalculator {
             })
 
             // If appointment starts before staff can travel there from slot, it's a conflict
-            if (aptStart < requiredFreeTimeForApt) {
+            // BUT: Only if slot ends BEFORE appointment starts (slot→apt progression)
+            if (slotEndTime <= aptStart && aptStart < requiredFreeTimeForApt) {
               logger.warn(`⚠️ TRAVEL TIME CONFLICT (Slot→Apt): appointment ${new Date(aptStart).toISOString()} needs ${travelTime}min travel from ${params.newLocationPostalCode} to ${apt.location.postal_code}`)
               return true
             }
