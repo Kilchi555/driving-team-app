@@ -101,8 +101,8 @@ export default defineEventHandler(async (event: H3Event) => {
       .from('availability_slots')
       .select('id, staff_id, location_id, start_time, end_time, duration_minutes, category_code, is_available, reserved_by_session, reserved_until')
       .eq('tenant_id', query.tenant_id)
-      // Show both available AND validly reserved slots (not expired)
-      .or(`is_available.eq.true,and(reserved_until.gt.${now})`)
+      // CRITICAL: Only show slots that are actually available (not reserved)
+      .eq('is_available', true)
       .gte('start_time', `${query.start_date}T00:00:00Z`)
       .lte('start_time', `${query.end_date}T23:59:59Z`)
       .gt('end_time', now) // CRITICAL: Only future slots!
@@ -209,7 +209,7 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
-    // Enrich slots with names and reservation status
+    // Enrich slots with names
     // Filter out slots where is_online_bookable = false
     const enrichedSlots = (slots || [])
       .filter(slot => {
@@ -232,18 +232,17 @@ export default defineEventHandler(async (event: H3Event) => {
         id: slot.id,
         staff_id: slot.staff_id,
         staff_name: staffMap.get(slot.staff_id) || 'Unknown',
-      location_id: slot.location_id,
-      location_name: locationMap.get(slot.location_id) || 'Unknown',
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      duration_minutes: slot.duration_minutes,
-      category_code: slot.category_code,
-      is_available: slot.is_available,
-      reserved_by_session: slot.reserved_by_session,
-      reserved_until: slot.reserved_until,
-      is_reserved: !slot.is_available || (slot.reserved_by_session !== null && slot.reserved_until && new Date(slot.reserved_until) > new Date()),
-      status: slot.is_available ? 'available' : 'reserved'
-    }))
+        location_id: slot.location_id,
+        location_name: locationMap.get(slot.location_id) || 'Unknown',
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        duration_minutes: slot.duration_minutes,
+        category_code: slot.category_code,
+        is_available: slot.is_available,
+        reserved_by_session: slot.reserved_by_session,
+        reserved_until: slot.reserved_until,
+        status: 'available'
+      }))
 
     const duration = Date.now() - startTime
     logger.debug('✅ Available slots fetched:', {

@@ -471,7 +471,7 @@
                 <button
                   v-for="slot in day.slots"
                   :key="slot.id"
-                  @click="selectedSlot = slot; currentStep = 7"
+                  @click="selectTimeSlot(slot)"
                   :disabled="!slot.is_available || slot.reserved_by_session"
                   class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5 disabled:cursor-not-allowed"
                   :style="getSlotCardStyle(
@@ -760,6 +760,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
+import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
 import { useRoute, useRuntimeConfig } from '#app'
@@ -2227,6 +2228,11 @@ const generateTimeSlotsForSpecificCombination = async () => {
       ? filters.value.duration_minutes[0] || 45 
       : filters.value.duration_minutes || 45
     
+    // ✅ NEW: Pre-load customer's existing appointments for conflict checking
+    const { checkConflicts: checkCustomerConflicts } = useCustomerConflictCheck()
+    await checkCustomerConflicts(startDate, endDate)
+    logger.debug('✅ Customer appointment conflict check initialized')
+    
     // Fetch slots from secure API
     const slots = await fetchAvailableSlots({
       tenant_id: currentTenant.value?.id || '',
@@ -2276,6 +2282,50 @@ const generateTimeSlotsForSpecificCombination = async () => {
     error.value = err.message || 'Fehler beim Laden der Verfügbarkeit'
   } finally {
     isLoadingTimeSlots.value = false
+  }
+}
+
+// ✅ NEW: Check for customer appointment conflicts and travel time
+const selectTimeSlot = async (slot: any) => {
+  try {
+    logger.debug('📋 Checking for appointment conflicts...', {
+      slotStart: slot.start_time,
+      location: selectedLocation.value?.name
+    })
+
+    const { hasConflict, getConflictingAppointment } = useCustomerConflictCheck()
+    
+    // Check for direct time or travel time conflicts
+    const conflictInfo = await hasConflict({
+      startTime: new Date(slot.start_time),
+      endTime: new Date(slot.end_time),
+      fromLocationPostalCode: selectedLocation.value?.postal_code,
+      toLocationPostalCode: selectedLocation.value?.postal_code,
+      bufferMinutes: 0
+    })
+
+    if (conflictInfo.hasConflict) {
+      logger.warn('⚠️ CONFLICT DETECTED', conflictInfo)
+      error.value = conflictInfo.reason || 'Zeitkonflikt mit einem bestehenden Termin!'
+      
+      // Show error for a few seconds then clear it
+      setTimeout(() => {
+        error.value = null
+      }, 5000)
+      return
+    }
+
+    // No conflict - proceed with slot selection
+    logger.debug('✅ No conflicts detected - slot available')
+    selectedSlot.value = slot
+    currentStep.value = 7
+    error.value = null
+    
+  } catch (err: any) {
+    logger.error('❌ Error checking conflicts:', err)
+    // Non-critical: if check fails, allow booking anyway (graceful degradation)
+    selectedSlot.value = slot
+    currentStep.value = 7
   }
 }
 
