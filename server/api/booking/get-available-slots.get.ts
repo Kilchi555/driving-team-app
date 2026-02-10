@@ -172,12 +172,22 @@ export default defineEventHandler(async (event: H3Event) => {
     let staffLocationsMap = new Map<string, Map<string, boolean>>()
     if (staffIds.length > 0 && locationIds.length > 0) {
       try {
+        logger.debug('🔍 Querying staff_locations for filtering', {
+          staffIds,
+          locationIds
+        })
+        
         const { data: staffLocations, error: slError } = await supabase
           .from('staff_locations')
           .select('staff_id, location_id, is_online_bookable')
           .in('staff_id', staffIds)
           .in('location_id', locationIds)
-          .eq('is_active', true)
+
+        logger.debug('📋 staff_locations query result:', {
+          error: slError?.message || null,
+          count: staffLocations?.length || 0,
+          data: staffLocations || []
+        })
 
         if (!slError && staffLocations) {
           // Create a nested map for quick lookup: staff_id -> location_id -> is_online_bookable
@@ -189,7 +199,8 @@ export default defineEventHandler(async (event: H3Event) => {
           }
           logger.debug('✅ Loaded staff_locations online bookable settings', {
             staff_count: staffIds.length,
-            location_count: locationIds.length
+            location_count: locationIds.length,
+            entries: staffLocations.length
           })
         }
       } catch (slError: any) {
@@ -208,9 +219,12 @@ export default defineEventHandler(async (event: H3Event) => {
           const isOnlineBookable = locationBookableMap.get(slot.location_id)
           // If explicitly set to false, filter out
           if (isOnlineBookable === false) {
-            logger.debug(`🔍 Filtering out slot: staff ${slot.staff_id} has location ${slot.location_id} marked as not online bookable`)
+            logger.debug(`🔍 FILTERED OUT slot: staff=${slot.staff_id}, location=${slot.location_id}, is_online_bookable=false`)
             return false
           }
+          logger.debug(`✅ KEEPING slot: staff=${slot.staff_id}, location=${slot.location_id}, is_online_bookable=${isOnlineBookable}`)
+        } else {
+          logger.debug(`✅ KEEPING slot (no staff_locations entry): staff=${slot.staff_id}, location=${slot.location_id}`)
         }
         return true
       })

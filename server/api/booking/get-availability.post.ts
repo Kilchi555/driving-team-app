@@ -197,7 +197,7 @@ export default defineEventHandler(async (event) => {
       if (staff_id && staff_id !== 'placeholder') {
         const { data: sl, error: slError } = await supabase
           .from('staff_locations')
-          .select('id, location_id')
+          .select('id, location_id, is_online_bookable')
           .eq('staff_id', staff_id)
 
         if (slError) throw slError

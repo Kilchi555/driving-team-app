@@ -2,6 +2,8 @@
 // Secure endpoint to fetch locations and staff for a category
 // Public endpoint - used by unauthenticated booking page
 // All data is validated server-side to ensure tenant isolation
+//
+// STRICT MODE: Only returns locations/staff combinations that are explicitly marked as online bookable in staff_locations table
 
 import { logger } from '~/utils/logger'
 
@@ -38,14 +40,52 @@ export default defineEventHandler(async (event) => {
       category_code
     })
 
-    // 1. Load all active STANDARD locations for this tenant that are publicly bookable
-    const { data: tenantLocations, error: locationsError } = await serviceSupabase
-      .from('locations')
-      .select('id, name, address, available_categories, staff_ids, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type, public_bookable')
+    // 🔒 STRICT MODE: Load ONLY staff_locations with is_online_bookable: true
+    // This is the single source of truth for online bookable staff/location combinations
+    const { data: staffLocations, error: staffLocError } = await serviceSupabase
+      .from('staff_locations')
+      .select('staff_id, location_id, is_online_bookable')
       .eq('tenant_id', tenant_id)
       .eq('is_active', true)
-      .eq('location_type', 'standard') // Only standard locations
-      .eq('public_bookable', true) // Only locations available for public booking
+      .eq('is_online_bookable', true) // Only online bookable
+
+    if (staffLocError) {
+      logger.error('❌ Error loading staff_locations:', staffLocError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to load staff locations'
+      })
+    }
+
+    logger.debug('📍 Loaded staff_locations:', staffLocations?.length || 0)
+
+    if (!staffLocations || staffLocations.length === 0) {
+      // No online bookable staff/location combinations
+      return {
+        success: true,
+        locations: [],
+        staff_count: 0,
+        location_count: 0
+      }
+    }
+
+    // Get unique location and staff IDs
+    const locationIds = [...new Set(staffLocations.map(sl => sl.location_id))]
+    const staffIds = [...new Set(staffLocations.map(sl => sl.staff_id))]
+
+    logger.debug('📊 Unique locations and staff from staff_locations', {
+      locationCount: locationIds.length,
+      staffCount: staffIds.length
+    })
+
+    // 2. Load location details
+    const { data: locations, error: locationsError } = await serviceSupabase
+      .from('locations')
+      .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type')
+      .eq('tenant_id', tenant_id)
+      .eq('is_active', true)
+      .eq('location_type', 'standard')
+      .in('id', locationIds)
 
     if (locationsError) {
       logger.error('❌ Error loading locations:', locationsError)
@@ -55,27 +95,29 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('📍 Loaded locations:', tenantLocations?.length || 0)
+    logger.debug('📍 Loaded locations:', locations?.length || 0)
 
-    // 2. Load all staff for this tenant first
+    // 3. Load staff details and filter by category
     const { data: allStaff, error: staffError } = await serviceSupabase
       .from('users')
       .select('id, first_name, last_name, email, role, category, is_active')
       .eq('tenant_id', tenant_id)
       .eq('role', 'staff')
       .eq('is_active', true)
+      .in('id', staffIds)
 
     if (staffError) {
       logger.warn('⚠️ Error loading staff data:', staffError)
     }
 
-    // 3. Build staff category map from users table (not from locations)
+    logger.debug('👤 Loaded staff details:', allStaff?.length || 0)
+
+    // 4. Build staff category map
     const staffCategoryMap = new Map<string, string[]>()
     
     if (allStaff) {
       allStaff.forEach((staff: any) => {
         let categories = staff.category || []
-        // Parse category if it's a string (JSON array), otherwise use as is
         if (typeof categories === 'string') {
           try {
             categories = JSON.parse(categories)
@@ -88,21 +130,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. Filter staff who can teach the selected category
-    const capableStaffIds = Array.from(staffCategoryMap.entries())
-      .filter(([_, categories]) => categories.includes(category_code))
-      .map(([staffId]) => staffId)
-
-    logger.debug('👥 Found capable staff:', capableStaffIds.length)
-
-    // 5. Filter the full staff data to only include capable staff
-    let staffData = allStaff?.filter((staff: any) => capableStaffIds.includes(staff.id)) || []
-    logger.debug('👤 Loaded staff details:', staffData.length)
-
-    // 5. Build locations map and attach staff
+    // 5. Build locations map with staff
     const locationsMap = new Map<string, any>()
     
-    tenantLocations?.forEach((location: any) => {
+    locations?.forEach((location: any) => {
       if (!locationsMap.has(location.id)) {
         // Parse time_windows if it's a string
         let timeWindows = location.time_windows || []
@@ -140,43 +171,33 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // 6. Attach staff to their locations
-    tenantLocations?.forEach((location: any) => {
-      let staffIds = location.staff_ids || []
-      if (typeof staffIds === 'string') {
-        try {
-          staffIds = JSON.parse(staffIds)
-        } catch (e) {
-          staffIds = []
-        }
-      }
-
-      const locationEntry = locationsMap.get(location.id)
+    // 6. Attach staff to locations using staff_locations as source of truth
+    staffLocations?.forEach((staffLoc: any) => {
+      const locationEntry = locationsMap.get(staffLoc.location_id)
       if (locationEntry) {
-        staffIds.forEach((staffId: string) => {
-          const staff = staffData.find(s => s.id === staffId)
-          if (staff && staffCategoryMap.get(staffId)?.includes(category_code)) {
-            locationEntry.available_staff.push({
-              id: staff.id,
-              first_name: staff.first_name || 'Unknown',
-              last_name: staff.last_name || 'Staff',
-              email: staff.email,
-              category: staff.category
-            })
-          }
-        })
+        const staff = allStaff?.find(s => s.id === staffLoc.staff_id)
+        // Only include if staff exists, has the required category, and is marked online bookable
+        if (staff && staffCategoryMap.get(staffLoc.staff_id)?.includes(category_code) && staffLoc.is_online_bookable === true) {
+          locationEntry.available_staff.push({
+            id: staff.id,
+            first_name: staff.first_name || 'Unknown',
+            last_name: staff.last_name || 'Staff',
+            email: staff.email,
+            category: staff.category
+          })
+        }
       }
     })
 
     const availableLocations = Array.from(locationsMap.values())
       .filter(loc => loc.available_staff.length > 0) // Only return locations with staff
 
-    logger.debug('✅ Locations with staff for category:', availableLocations.length)
+    logger.debug('✅ Final locations with staff for category:', availableLocations.length)
 
     return {
       success: true,
       locations: availableLocations,
-      staff_count: staffData.length,
+      staff_count: availableLocations.reduce((sum, loc) => sum + loc.available_staff.length, 0),
       location_count: availableLocations.length
     }
 
@@ -188,4 +209,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
