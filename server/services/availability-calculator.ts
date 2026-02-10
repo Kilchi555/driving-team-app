@@ -142,18 +142,12 @@ export class AvailabilityCalculator {
       const appointments = await this.loadAppointments(staff.map(s => s.id), options.startDate, options.endDate)
       const busyTimes = await this.loadExternalBusyTimes(staff.map(s => s.id), options.startDate, options.endDate, options.tenantId)
 
-      // NEW: Filter appointments to only include those at online-bookable locations
-      const bookableLocationIds = new Set(locations.map(l => l.id))
-      const filteredAppointments = appointments.filter(apt => bookableLocationIds.has(apt.location_id))
-      
-      logger.debug(`ℹ️ Filtered appointments: ${appointments.length} total → ${filteredAppointments.length} at bookable locations`)
-
       logger.debug('✅ Data loaded:', {
         staff: staff.length,
         categories: categories.length,
         locations: locations.length,
         workingHours: workingHours.length,
-        appointments: filteredAppointments.length,
+        appointments: appointments.length,
         busyTimes: busyTimes.length
       })
 
@@ -163,7 +157,7 @@ export class AvailabilityCalculator {
         categories,
         locations,
         workingHours,
-        appointments: filteredAppointments,
+        appointments,
         busyTimes,
         startDate: options.startDate,
         endDate: options.endDate,
@@ -771,9 +765,12 @@ export class AvailabilityCalculator {
 
           if (travelTime !== null && travelTime > 0) {
             const travelBufferMs = travelTime * 60 * 1000
+            
+            // CASE 1: Appointment ends, then staff needs to travel to new location
+            // Slot cannot start until: appointmentEnd + travelTime
             const requiredFreeTimeStart = aptEnd + travelBufferMs
 
-            logger.debug(`⏱️ Travel time analysis:`, {
+            logger.debug(`⏱️ Travel time analysis (Apt→Slot):`, {
               travelTimeMinutes: travelTime,
               aptEnd: new Date(aptEnd).toISOString(),
               requiredStart: new Date(requiredFreeTimeStart).toISOString(),
@@ -781,9 +778,27 @@ export class AvailabilityCalculator {
               conflict: slotStartTime < requiredFreeTimeStart
             })
 
-            // If slot starts before staff can travel there, it's a conflict
+            // If slot starts before staff can travel there from appointment, it's a conflict
             if (slotStartTime < requiredFreeTimeStart) {
-              logger.warn(`⚠️ TRAVEL TIME CONFLICT: slot ${params.slotStart.toISOString()} needs ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
+              logger.warn(`⚠️ TRAVEL TIME CONFLICT (Apt→Slot): slot ${params.slotStart.toISOString()} needs ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
+              return true
+            }
+
+            // CASE 2: Slot ends, then staff needs to travel to appointment location
+            // Appointment cannot start until: slotEnd + travelTime
+            const requiredFreeTimeForApt = slotEndTime + travelBufferMs
+
+            logger.debug(`⏱️ Travel time analysis (Slot→Apt):`, {
+              travelTimeMinutes: travelTime,
+              slotEnd: new Date(slotEndTime).toISOString(),
+              requiredStart: new Date(requiredFreeTimeForApt).toISOString(),
+              aptStart: new Date(aptStart).toISOString(),
+              conflict: aptStart < requiredFreeTimeForApt
+            })
+
+            // If appointment starts before staff can travel there from slot, it's a conflict
+            if (aptStart < requiredFreeTimeForApt) {
+              logger.warn(`⚠️ TRAVEL TIME CONFLICT (Slot→Apt): appointment ${new Date(aptStart).toISOString()} needs ${travelTime}min travel from ${params.newLocationPostalCode} to ${apt.location.postal_code}`)
               return true
             }
           }
