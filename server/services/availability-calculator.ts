@@ -335,8 +335,10 @@ export class AvailabilityCalculator {
       
       // Debug: Log loaded locations with their staff
       parsed.forEach(loc => {
-        logger.debug(`📍 Location: ${loc.name} (from staff_locations) | Categories: ${(loc.available_categories || []).join(', ') || 'ALL'}`)
+        logger.debug(`📍 Location: ${loc.name} (${loc.id}) | postal_code: ${loc.postal_code}`)
       })
+      
+      logger.debug(`✅ Loaded ${parsed.length} bookable locations from staff_locations`)
       
       return parsed
     }
@@ -743,6 +745,7 @@ export class AvailabilityCalculator {
 
       // ✅ NEW: Check travel time between appointment location and new slot location
       // IMPORTANT: Only check if appointment location is a standard location with postal_code
+      // AND: Only check if the appointment is at one of the online-bookable locations
       logger.debug(`📍 Appointment location check:`, {
         aptPostalCode: apt.location?.postal_code,
         newPostalCode: params.newLocationPostalCode,
