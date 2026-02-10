@@ -70,6 +70,9 @@ interface Appointment {
   duration_minutes: number
   status: string
   type: string
+  location?: {
+    postal_code?: string
+  }
 }
 
 interface ExternalBusyTime {
@@ -361,7 +364,7 @@ export class AvailabilityCalculator {
   private async loadAppointments(staffIds: string[], startDate: Date, endDate: Date): Promise<Appointment[]> {
     if (staffIds.length === 0) return []
 
-    const { data, error } = await this.supabase
+    const { data: appointments, error: appointmentsError } = await this.supabase
       .from('appointments')
       .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type')
       .in('staff_id', staffIds)
@@ -370,9 +373,29 @@ export class AvailabilityCalculator {
       .gte('start_time', startDate.toISOString())
       .lte('start_time', endDate.toISOString())
 
-    if (error) throw error
+    if (appointmentsError) throw appointmentsError
 
-    return data || []
+    // ✅ NEW: Load location details (postal_code) for travel time calculation
+    if (appointments && appointments.length > 0) {
+      const locationIds = [...new Set(appointments.map(a => a.location_id))]
+      
+      const { data: locations, error: locError } = await this.supabase
+        .from('locations')
+        .select('id, postal_code')
+        .in('id', locationIds)
+      
+      if (!locError && locations) {
+        const locMap = new Map(locations.map(l => [l.id, l]))
+        
+        // Enrich appointments with location data
+        return appointments.map(apt => ({
+          ...apt,
+          location: locMap.get(apt.location_id)
+        }))
+      }
+    }
+
+    return appointments || []
   }
 
   /**
@@ -404,6 +427,7 @@ export class AvailabilityCalculator {
 
   /**
    * Generate all possible availability slots
+   * ✅ NEW: Now async to support travel time checking
    */
   private async generateSlots(params: {
     staff: Staff[]
@@ -524,7 +548,8 @@ export class AvailabilityCalculator {
             for (const durationMinutes of category.lesson_duration_minutes) {
               // Generate slots for each working hour block
               for (const hours of dayHours) {
-                const daySlots = this.generateDaySlots({
+                // ✅ NEW: Now async/await for travel time checking
+                const daySlots = await this.generateDaySlots({
                   date: currentDate,
                   startTime: hours.start_time,
                   endTime: hours.end_time,
@@ -566,8 +591,9 @@ export class AvailabilityCalculator {
 
   /**
    * Generate slots for a specific day
+   * ✅ NEW: Include travel time checking between appointments
    */
-  private generateDaySlots(params: {
+  private async generateDaySlots(params: {
     date: Date
     startTime: string // HH:MM
     endTime: string // HH:MM
@@ -579,7 +605,7 @@ export class AvailabilityCalculator {
     staff: Staff
     location: Location
     category: Category
-  }): AvailabilitySlot[] {
+  }): Promise<AvailabilitySlot[]> {
     const slots: AvailabilitySlot[] = []
 
     // Parse start and end time
@@ -587,8 +613,6 @@ export class AvailabilityCalculator {
     const [endHour, endMinute] = params.endTime.split(':').map(Number)
 
     // Create start datetime (use UTC to avoid timezone issues)
-    // Working hours are stored as local time (e.g., 07:00 = 07:00 Swiss time)
-    // We use UTC methods so the stored time matches the working hours
     const slotStart = new Date(params.date)
     slotStart.setUTCHours(startHour, startMinute, 0, 0)
 
@@ -609,12 +633,14 @@ export class AvailabilityCalculator {
       }
 
       // Check if slot conflicts with appointments or busy times
-      const hasConflict = this.hasConflict({
+      const hasConflict = await this.hasConflict({
         slotStart: currentSlot,
         slotEnd,
         appointments: params.appointments,
         busyTimes: params.busyTimes,
-        bufferMinutes: params.bufferMinutes
+        bufferMinutes: params.bufferMinutes,
+        newLocationPostalCode: params.location.postal_code,
+        staff: params.staff
       })
 
       // Skip slots that conflict with appointments or busy times
@@ -643,14 +669,17 @@ export class AvailabilityCalculator {
 
   /**
    * Check if a time slot conflicts with appointments or busy times
+   * ✅ NEW: Include travel time checking
    */
-  private hasConflict(params: {
+  private async hasConflict(params: {
     slotStart: Date
     slotEnd: Date
     appointments: Appointment[]
     busyTimes: ExternalBusyTime[]
     bufferMinutes: number
-  }): boolean {
+    newLocationPostalCode?: string
+    staff?: Staff
+  }): Promise<boolean> {
     const slotStartTime = params.slotStart.getTime()
     const slotEndTime = params.slotEnd.getTime()
     const bufferMs = params.bufferMinutes * 60 * 1000
@@ -661,12 +690,40 @@ export class AvailabilityCalculator {
       const aptEnd = new Date(apt.end_time).getTime()
 
       // Check for overlap (including buffer)
-      if (
+      const directOverlap = (
         (slotStartTime >= aptStart - bufferMs && slotStartTime < aptEnd + bufferMs) ||
         (slotEndTime > aptStart - bufferMs && slotEndTime <= aptEnd + bufferMs) ||
         (slotStartTime <= aptStart - bufferMs && slotEndTime >= aptEnd + bufferMs)
-      ) {
+      )
+
+      if (directOverlap) {
         return true
+      }
+
+      // ✅ NEW: Check travel time between appointment location and new slot location
+      if (params.newLocationPostalCode && apt.location?.postal_code && 
+          params.newLocationPostalCode !== apt.location.postal_code) {
+        try {
+          const travelTime = await this.getTravelTimeForSlot(
+            apt.location.postal_code,
+            params.newLocationPostalCode,
+            params.slotStart
+          )
+
+          if (travelTime !== null) {
+            const travelBufferMs = travelTime * 60 * 1000
+            const requiredFreeTimeStart = aptEnd + travelBufferMs
+
+            // If slot starts before staff can travel there, it's a conflict
+            if (slotStartTime < requiredFreeTimeStart) {
+              logger.debug(`⚠️ Travel time conflict: slot ${params.slotStart.toISOString()} requires ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
+              return true
+            }
+          }
+        } catch (err: any) {
+          logger.warn('⚠️ Error checking travel time:', err.message)
+          // Non-critical: continue without travel time check if error occurs
+        }
       }
     }
 
@@ -686,6 +743,39 @@ export class AvailabilityCalculator {
     }
 
     return false
+  }
+
+  /**
+   * Get travel time between two postal codes using cache or Google API
+   */
+  private async getTravelTimeForSlot(fromPostalCode: string, toPostalCode: string, slotTime: Date): Promise<number | null> {
+    try {
+      // Check cache first
+      const { data: cached, error } = await this.supabase
+        .from('plz_distance_cache')
+        .select('driving_time_minutes_peak, driving_time_minutes_offpeak')
+        .or(`and(from_plz.eq.${fromPostalCode},to_plz.eq.${toPostalCode}),and(from_plz.eq.${toPostalCode},to_plz.eq.${fromPostalCode})`)
+        .maybeSingle()
+
+      if (!error && cached) {
+        logger.debug(`✅ Travel time from cache: ${fromPostalCode} -> ${toPostalCode}`)
+        
+        // Determine if peak or offpeak
+        const hour = slotTime.getHours()
+        const day = slotTime.getDay()
+        const isWeekday = day !== 0 && day !== 6
+        const isPeakTime = isWeekday && ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 19))
+        
+        return isPeakTime ? cached.driving_time_minutes_peak : cached.driving_time_minutes_offpeak
+      }
+
+      logger.debug(`⚠️ No travel time cache for ${fromPostalCode} -> ${toPostalCode}`)
+      // If no cache, we can't reliably calculate, so be conservative and allow the slot
+      return null
+    } catch (err: any) {
+      logger.warn('⚠️ Error getting travel time:', err.message)
+      return null
+    }
   }
 
   /**
