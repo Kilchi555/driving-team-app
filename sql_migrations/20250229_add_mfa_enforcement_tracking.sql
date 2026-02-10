@@ -227,6 +227,24 @@ BEGIN
     RETURN QUERY SELECT false, false, false;
     RETURN;
   END IF;
+
+  -- ✅ NEW: Check if account lock has expired, and reset attempts if so
+  UPDATE public.users
+  SET 
+    failed_login_attempts = 0,
+    last_failed_login_at = NULL,
+    account_locked_until = NULL,
+    account_locked_reason = NULL,
+    mfa_required_until = NULL
+  WHERE id = v_user_id 
+    AND account_locked_until IS NOT NULL 
+    AND account_locked_until < NOW();
+  
+  -- Reload failed attempts after potential reset
+  SELECT failed_login_attempts 
+  INTO v_failed_attempts
+  FROM public.users
+  WHERE id = v_user_id;
   
   -- Increment failed attempts
   v_failed_attempts := COALESCE(v_failed_attempts, 0) + 1;
