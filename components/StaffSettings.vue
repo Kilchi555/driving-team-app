@@ -234,12 +234,28 @@
                         <div class="font-medium text-gray-900">{{ location.name }}</div>
                         <div class="text-gray-600 text-xs">{{ location.address }}</div>
                       </div>
-                      <button
-                        @click="toggleLocationAssignment(location.id)"
-                        class="ml-2 px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-xs font-medium"
-                      >
-                        Entfernen
-                      </button>
+                      <div class="flex items-center space-x-2 ml-2">
+                        <!-- ✨ Online Bookable Toggle -->
+                        <label class="flex items-center space-x-1 cursor-pointer px-2 py-1 rounded hover:bg-gray-100 transition">
+                          <input
+                            type="checkbox"
+                            :checked="location.is_online_bookable !== false"
+                            @change="() => toggleLocationBookable(location.id, location.is_online_bookable === false ? true : false)"
+                            class="w-4 h-4 rounded border-gray-300"
+                          >
+                          <span class="text-xs text-gray-700 font-medium whitespace-nowrap">
+                            {{ location.is_online_bookable !== false ? '✅ Online' : '❌ Offline' }}
+                          </span>
+                        </label>
+                        
+                        <!-- Delete Button -->
+                        <button
+                          @click="toggleLocationAssignment(location.id)"
+                          class="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-xs font-medium"
+                        >
+                          Entfernen
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1388,9 +1404,58 @@ const toggleLocationAssignment = async (locationId: string) => {
 
     // Update via secure API
     await query({
-     action: 'select',
       action: 'update',
       table: 'locations',
+      filters: [{ column: 'id', operator: 'eq', value: locationId }],
+      values: { staff_ids: currentStaffIds }
+    })
+
+    const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
+    if (locationIndex >= 0) {
+      allTenantLocations.value[locationIndex].staff_ids = currentStaffIds
+    }
+
+    logger.debug('✅ Location assignment updated successfully')
+  } catch (err: any) {
+    console.error('❌ Error in toggleLocationAssignment:', err)
+  }
+}
+
+// ✨ NEW: Toggle Location Online Bookable Status
+const toggleLocationBookable = async (locationId: string, isOnlineBookable: boolean) => {
+  try {
+    logger.debug(`📍 Toggling online bookable for location ${locationId} to ${isOnlineBookable}`)
+    
+    const staffId = props.currentUser?.id
+    if (!staffId) {
+      throw new Error('Staff ID nicht gefunden')
+    }
+
+    // Call the API to update staff_locations.is_online_bookable
+    const response = await $fetch('/api/staff/update-location-booking', {
+      method: 'POST',
+      body: {
+        location_id: locationId,
+        is_online_bookable: isOnlineBookable
+      }
+    })
+
+    if (response.success) {
+      // Update local state
+      const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
+      if (locationIndex >= 0) {
+        allTenantLocations.value[locationIndex].is_online_bookable = isOnlineBookable
+      }
+      
+      logger.debug(`✅ Location booking status updated: ${isOnlineBookable ? 'online' : 'offline'}`)
+      saveSuccess.value = true
+      setTimeout(() => { saveSuccess.value = false }, 3000)
+    }
+  } catch (err: any) {
+    console.error('❌ Error toggling location bookable status:', err)
+    error.value = `Fehler beim Aktualisieren: ${err.message}`
+  }
+}
       filters: [{ column: 'id', operator: 'eq', value: locationId }],
       data: { staff_ids: currentStaffIds }
     })
