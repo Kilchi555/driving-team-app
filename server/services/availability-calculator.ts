@@ -799,6 +799,8 @@ export class AvailabilityCalculator {
 
             // If appointment starts before staff can travel there from slot, it's a conflict
             // BUT: Only if slot ends BEFORE appointment starts (slot→apt progression)
+            logger.debug(`⏱️ Slot→Apt adjacency check: slotEnd (${new Date(slotEndTime).toISOString()}) <= aptStart (${new Date(aptStart).toISOString()})? ${slotEndTime <= aptStart}`)
+            
             if (slotEndTime <= aptStart && aptStart < requiredFreeTimeForApt) {
               logger.warn(`⚠️ TRAVEL TIME CONFLICT (Slot→Apt): appointment ${new Date(aptStart).toISOString()} needs ${travelTime}min travel from ${params.newLocationPostalCode} to ${apt.location.postal_code}`)
               return true
