@@ -473,13 +473,13 @@
                   :key="slot.id"
                   @click="selectTimeSlot(slot)"
                   :disabled="!slot.is_available || slot.reserved_by_session || slot.has_conflict"
-                  class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5 disabled:cursor-not-allowed"
+                  class="px-2 sm:px-3 md:px-4 py-2 sm:py:3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5 disabled:cursor-not-allowed"
                   :style="getSlotCardStyle(
                     slot,
                     selectedSlot?.id === slot.id || hoveredSlotId === slot.id,
                     hoveredSlotId === slot.id
                   )"
-                  :title="slot.has_conflict ? 'Zeitkonflikt mit bestehendem Termin (Fahrtzeit berücksichtigt)' : ''"
+                  :title="slot.conflict_reason || (slot.has_conflict ? 'Nicht verfügbar' : '')"
                   @mouseenter="hoveredSlotId = slot.id"
                   @mouseleave="hoveredSlotId = null"
                 >
@@ -763,7 +763,6 @@ import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
-import { getTravelTime } from '~/utils/plzDistanceCache'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
 import { useRoute, useRuntimeConfig } from '#app'
@@ -2285,83 +2284,45 @@ const generateTimeSlotsForSpecificCombination = async () => {
         existingAppointments: customerAppointments.value.length
       })
 
-      // Pre-fetch all travel times to avoid blocking UI
-      const travelTimeCache = new Map<string, number>()
-      const locationPostalCode = selectedLocation.value?.postal_code
-      
-      if (locationPostalCode) {
-        for (const apt of customerAppointments.value) {
-          if (apt.postal_code && apt.postal_code !== locationPostalCode) {
-            const cacheKey = `${apt.postal_code}-${locationPostalCode}`
-            if (!travelTimeCache.has(cacheKey)) {
-              try {
-                const travelTime = await getTravelTime(
-                  apt.postal_code,
-                  locationPostalCode,
-                  new Date(),
-                  process.env.GOOGLE_MAPS_API_KEY || '',
-                  {
-                    morning_start: '07:00',
-                    morning_end: '09:00',
-                    evening_start: '17:00',
-                    evening_end: '19:00'
-                  }
-                )
-                if (travelTime !== null) {
-                  travelTimeCache.set(cacheKey, travelTime)
-                }
-              } catch (err: any) {
-                logger.warn('⚠️ Error fetching travel time:', err.message)
-              }
-            }
+      try {
+        // Call backend API to check conflicts (includes travel time)
+        const conflictCheckResponse = await $fetch('/api/booking/check-slot-conflicts', {
+          method: 'POST',
+          body: {
+            existingAppointments: customerAppointments.value,
+            proposedSlots: timeSlots.map(s => ({
+              id: s.id,
+              start_time: s.start_time,
+              end_time: s.end_time
+            })),
+            proposedLocationPostalCode: selectedLocation.value?.postal_code
           }
-        }
-        logger.debug(`✅ Pre-fetched ${travelTimeCache.size} travel times`)
-      }
+        })
 
-      // Now check slots synchronously using cached data
-      for (const slot of timeSlots) {
-        const slotStart = new Date(slot.start_time).getTime()
-        const slotEnd = new Date(slot.end_time).getTime()
-
-        for (const apt of customerAppointments.value) {
-          const aptStart = new Date(apt.start_time).getTime()
-          const aptEnd = new Date(apt.end_time).getTime()
-
-          // Direct time overlap check
-          const directOverlap = (
-            (slotStart >= aptStart && slotStart < aptEnd) ||
-            (slotEnd > aptStart && slotEnd <= aptEnd) ||
-            (slotStart <= aptStart && slotEnd >= aptEnd)
+        if (conflictCheckResponse.success && conflictCheckResponse.conflicts) {
+          // Map conflicts back to slots
+          const conflictMap = new Map(
+            conflictCheckResponse.conflicts.map((c: any) => [c.slot_id, c])
           )
 
-          if (directOverlap) {
-            slot.has_conflict = true
-            logger.debug(`⚠️ Direct conflict: ${slot.time_formatted}`)
-            break
-          }
-
-          // Travel time check
-          if (locationPostalCode && apt.postal_code && apt.postal_code !== locationPostalCode) {
-            const cacheKey = `${apt.postal_code}-${locationPostalCode}`
-            const travelTimeMinutes = travelTimeCache.get(cacheKey)
-
-            if (travelTimeMinutes !== undefined) {
-              const travelBufferMs = travelTimeMinutes * 60 * 1000
-              const requiredFreeTimeStart = aptEnd + travelBufferMs
-
-              if (slotStart < requiredFreeTimeStart) {
-                slot.has_conflict = true
-                logger.debug(`⚠️ Travel time conflict: ${slot.time_formatted} (need ${travelTimeMinutes}min travel from ${apt.location_name})`)
-                break
-              }
+          for (const slot of timeSlots) {
+            const conflict = conflictMap.get(slot.id)
+            if (conflict?.has_conflict) {
+              slot.has_conflict = true
+              slot.conflict_reason = conflict.conflict_reason
+              logger.debug(`⚠️ Slot has conflict: ${slot.time_formatted}`, {
+                reason: conflict.conflict_reason
+              })
             }
           }
-        }
-      }
 
-      const conflictCount = timeSlots.filter(s => s.has_conflict).length
-      logger.debug(`✅ Pre-filtering complete: ${conflictCount}/${timeSlots.length} slots have conflicts`)
+          const conflictCount = timeSlots.filter(s => s.has_conflict).length
+          logger.debug(`✅ Pre-filtering complete: ${conflictCount}/${timeSlots.length} slots have conflicts`)
+        }
+      } catch (err: any) {
+        logger.warn('⚠️ Error checking slot conflicts via API:', err.message)
+        // Non-critical: if API fails, show all slots as available (graceful degradation)
+      }
     }
     
     logger.debug(`✅ Converted ${timeSlots.length} slots for UI display`)
