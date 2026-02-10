@@ -142,12 +142,18 @@ export class AvailabilityCalculator {
       const appointments = await this.loadAppointments(staff.map(s => s.id), options.startDate, options.endDate)
       const busyTimes = await this.loadExternalBusyTimes(staff.map(s => s.id), options.startDate, options.endDate, options.tenantId)
 
+      // NEW: Filter appointments to only include those at online-bookable locations
+      const bookableLocationIds = new Set(locations.map(l => l.id))
+      const filteredAppointments = appointments.filter(apt => bookableLocationIds.has(apt.location_id))
+      
+      logger.debug(`ℹ️ Filtered appointments: ${appointments.length} total → ${filteredAppointments.length} at bookable locations`)
+
       logger.debug('✅ Data loaded:', {
         staff: staff.length,
         categories: categories.length,
         locations: locations.length,
         workingHours: workingHours.length,
-        appointments: appointments.length,
+        appointments: filteredAppointments.length,
         busyTimes: busyTimes.length
       })
 
@@ -157,7 +163,7 @@ export class AvailabilityCalculator {
         categories,
         locations,
         workingHours,
-        appointments,
+        appointments: filteredAppointments,
         busyTimes,
         startDate: options.startDate,
         endDate: options.endDate,
