@@ -832,8 +832,93 @@ export class AvailabilityCalculator {
       }
 
       logger.debug(`⚠️ No travel time cache for ${fromPostalCode} -> ${toPostalCode}`)
-      // If no cache, we can't reliably calculate, so be conservative and allow the slot
-      return null
+      
+      // NEW: Try to fetch from Google Distance API and cache it
+      const googleApiKey = process.env.GOOGLE_DISTANCE_MATRIX_API_KEY
+      if (!googleApiKey) {
+        logger.warn('⚠️ Google Distance API key not configured, cannot fetch travel time')
+        return null
+      }
+
+      logger.debug(`🔄 Fetching travel time from Google Distance API: ${fromPostalCode} -> ${toPostalCode}`)
+      
+      try {
+        // Fetch from Google Distance Matrix API
+        const origin = `${fromPostalCode}, Switzerland`
+        const destination = `${toPostalCode}, Switzerland`
+        
+        // Call for offpeak time
+        const offpeakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&language=de&key=${googleApiKey}`
+        
+        const offpeakResponse = await $fetch<any>(offpeakUrl)
+        
+        if (offpeakResponse.status !== 'OK' || !offpeakResponse.rows?.[0]?.elements?.[0]) {
+          logger.warn('⚠️ Google API error (offpeak):', offpeakResponse.status)
+          return null
+        }
+        
+        const offpeakElement = offpeakResponse.rows[0].elements[0]
+        if (offpeakElement.status !== 'OK') {
+          logger.warn('⚠️ No route found (offpeak):', offpeakElement.status)
+          return null
+        }
+        
+        const offpeakMinutes = Math.ceil(offpeakElement.duration.value / 60)
+        
+        // Call for peak time
+        const peakTime = new Date(slotTime)
+        peakTime.setHours(8, 0, 0, 0)
+        if (peakTime <= new Date()) {
+          peakTime.setDate(peakTime.getDate() + 1)
+        }
+        
+        const peakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&departure_time=${Math.floor(peakTime.getTime() / 1000)}&traffic_model=pessimistic&language=de&key=${googleApiKey}`
+        
+        const peakResponse = await $fetch<any>(peakUrl)
+        
+        let peakMinutes = offpeakMinutes
+        if (peakResponse.status === 'OK' && peakResponse.rows?.[0]?.elements?.[0]?.status === 'OK') {
+          const peakElement = peakResponse.rows[0].elements[0]
+          if (peakElement.duration_in_traffic) {
+            peakMinutes = Math.ceil(peakElement.duration_in_traffic.value / 60)
+          }
+        }
+        
+        logger.debug(`✅ Google Distance API results: offpeak=${offpeakMinutes} min, peak=${peakMinutes} min`)
+        
+        // NEW: Save to database cache so we don't need to call Google API again
+        logger.debug(`💾 Saving travel time to database cache: ${fromPostalCode} -> ${toPostalCode}`)
+        const { error: cacheError } = await this.supabase
+          .from('plz_distance_cache')
+          .upsert({
+            from_plz: fromPostalCode,
+            to_plz: toPostalCode,
+            driving_time_minutes: offpeakMinutes,
+            driving_time_minutes_offpeak: offpeakMinutes,
+            driving_time_minutes_peak: peakMinutes,
+            distance_km: Math.round(offpeakElement.distance.value / 1000),
+            last_updated: new Date().toISOString()
+          }, {
+            onConflict: 'from_plz,to_plz'
+          })
+        
+        if (cacheError) {
+          logger.warn('⚠️ Error saving to cache:', cacheError)
+        } else {
+          logger.debug(`✅ Saved to cache: ${fromPostalCode} -> ${toPostalCode}`)
+        }
+        
+        // Return the appropriate time (peak or offpeak)
+        const hour = slotTime.getHours()
+        const day = slotTime.getDay()
+        const isWeekday = day !== 0 && day !== 6
+        const isPeakTime = isWeekday && ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 19))
+        
+        return isPeakTime ? peakMinutes : offpeakMinutes
+      } catch (apiErr: any) {
+        logger.warn(`⚠️ Error calling Google Distance API: ${apiErr.message || apiErr}`)
+        return null
+      }
     } catch (err: any) {
       logger.warn('⚠️ Error getting travel time:', err.message)
       return null
