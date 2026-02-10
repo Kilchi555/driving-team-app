@@ -50,6 +50,7 @@ interface Location {
   available_categories?: string[] // Categories this location supports
   category?: string[] // Deprecated, use available_categories
   tenant_id: string
+  postal_code?: string // For travel time calculations
 }
 
 interface StaffWorkingHours {
@@ -256,7 +257,7 @@ export class AvailabilityCalculator {
   private async loadLocations(tenantId?: string): Promise<Location[]> {
     let query = this.supabase
       .from('locations')
-      .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id')
+      .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id, postal_code')
       .eq('is_active', true)
       .eq('location_type', 'standard')
 
@@ -684,6 +685,8 @@ export class AvailabilityCalculator {
     const slotEndTime = params.slotEnd.getTime()
     const bufferMs = params.bufferMinutes * 60 * 1000
 
+    logger.debug(`🔍 hasConflict check for slot ${params.slotStart.toISOString()}, appointments: ${params.appointments.length}`)
+
     // Check appointments
     for (const apt of params.appointments) {
       const aptStart = new Date(apt.start_time).getTime()
@@ -697,27 +700,47 @@ export class AvailabilityCalculator {
       )
 
       if (directOverlap) {
+        logger.debug(`⚠️ Direct overlap detected for appointment ${apt.id}`)
         return true
       }
 
       // ✅ NEW: Check travel time between appointment location and new slot location
       // IMPORTANT: Only check if appointment location is a standard location with postal_code
+      logger.debug(`📍 Appointment location check:`, {
+        aptPostalCode: apt.location?.postal_code,
+        newPostalCode: params.newLocationPostalCode,
+        hasPostal: !!apt.location?.postal_code,
+        sameLocation: params.newLocationPostalCode === apt.location?.postal_code
+      })
+
       if (params.newLocationPostalCode && apt.location?.postal_code && 
           params.newLocationPostalCode !== apt.location.postal_code) {
         try {
+          logger.debug(`🚗 Checking travel time from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
+          
           const travelTime = await this.getTravelTimeForSlot(
             apt.location.postal_code,
             params.newLocationPostalCode,
             params.slotStart
           )
 
+          logger.debug(`⏱️ Travel time result:`, { travelTime, slotStart: params.slotStart.toISOString() })
+
           if (travelTime !== null && travelTime > 0) {
             const travelBufferMs = travelTime * 60 * 1000
             const requiredFreeTimeStart = aptEnd + travelBufferMs
 
+            logger.debug(`⏱️ Travel time analysis:`, {
+              travelTimeMinutes: travelTime,
+              aptEnd: new Date(aptEnd).toISOString(),
+              requiredStart: new Date(requiredFreeTimeStart).toISOString(),
+              slotStart: params.slotStart.toISOString(),
+              conflict: slotStartTime < requiredFreeTimeStart
+            })
+
             // If slot starts before staff can travel there, it's a conflict
             if (slotStartTime < requiredFreeTimeStart) {
-              logger.debug(`⚠️ Travel time conflict: slot ${params.slotStart.toISOString()} requires ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
+              logger.warn(`⚠️ TRAVEL TIME CONFLICT: slot ${params.slotStart.toISOString()} needs ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
               return true
             }
           }
