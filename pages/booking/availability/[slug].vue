@@ -472,18 +472,20 @@
                   v-for="slot in day.slots"
                   :key="slot.id"
                   @click="selectTimeSlot(slot)"
-                  :disabled="!slot.is_available || slot.reserved_by_session"
+                  :disabled="!slot.is_available || slot.reserved_by_session || slot.has_conflict"
                   class="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-all duration-200 transform active:translate-y-0.5 disabled:cursor-not-allowed"
                   :style="getSlotCardStyle(
                     slot,
                     selectedSlot?.id === slot.id || hoveredSlotId === slot.id,
                     hoveredSlotId === slot.id
                   )"
+                  :title="slot.has_conflict ? 'Zeitkonflikt mit bestehendem Termin (Fahrtzeit berücksichtigt)' : ''"
                   @mouseenter="hoveredSlotId = slot.id"
                   @mouseleave="hoveredSlotId = null"
                 >
                   <div class="font-medium text-xs sm:text-sm text-gray-900">{{ slot.time_formatted }}</div>
                   <div class="text-xs text-gray-600">{{ slot.duration_minutes }} Min.</div>
+                  <div v-if="slot.has_conflict" class="text-xs text-red-600 mt-1">⚠️ Nicht verfügbar</div>
                 </button>
               </div>
             </div>
@@ -761,6 +763,7 @@ import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
+import { getTravelTime } from '~/utils/plzDistanceCache'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
 import { useRoute, useRuntimeConfig } from '#app'
@@ -2229,9 +2232,11 @@ const generateTimeSlotsForSpecificCombination = async () => {
       : filters.value.duration_minutes || 45
     
     // ✅ NEW: Pre-load customer's existing appointments for conflict checking
-    const { checkConflicts: checkCustomerConflicts } = useCustomerConflictCheck()
+    const { checkConflicts: checkCustomerConflicts, customerAppointments } = useCustomerConflictCheck()
     await checkCustomerConflicts(startDate, endDate)
-    logger.debug('✅ Customer appointment conflict check initialized')
+    logger.debug('✅ Customer appointment conflict check initialized', {
+      existingAppointments: customerAppointments.value.length
+    })
     
     // Fetch slots from secure API
     const slots = await fetchAvailableSlots({
@@ -2247,7 +2252,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
     logger.debug('✅ Fetched', slots.length, 'pre-computed slots from API')
     
     // Convert to format expected by UI
-    const timeSlots = slots.map(slot => {
+    let timeSlots = slots.map(slot => {
       const slotStartDate = new Date(slot.start_time)
       const slotEndDate = new Date(slot.end_time)
       
@@ -2268,9 +2273,96 @@ const generateTimeSlotsForSpecificCombination = async () => {
         day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long' }),
         date_formatted: slotStartDate.toLocaleDateString('de-DE'),
         time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-        category_code: slot.category_code
+        category_code: slot.category_code,
+        has_conflict: false // Will be set below
       }
     })
+    
+    // ✅ NEW: Pre-filter slots that have conflicts (show them grayed out or disabled)
+    if (customerAppointments.value.length > 0) {
+      logger.debug('🔍 Pre-filtering slots for customer conflicts...', {
+        slotsCount: timeSlots.length,
+        existingAppointments: customerAppointments.value.length
+      })
+
+      // Pre-fetch all travel times to avoid blocking UI
+      const travelTimeCache = new Map<string, number>()
+      const locationPostalCode = selectedLocation.value?.postal_code
+      
+      if (locationPostalCode) {
+        for (const apt of customerAppointments.value) {
+          if (apt.postal_code && apt.postal_code !== locationPostalCode) {
+            const cacheKey = `${apt.postal_code}-${locationPostalCode}`
+            if (!travelTimeCache.has(cacheKey)) {
+              try {
+                const travelTime = await getTravelTime(
+                  apt.postal_code,
+                  locationPostalCode,
+                  new Date(),
+                  process.env.GOOGLE_MAPS_API_KEY || '',
+                  {
+                    morning_start: '07:00',
+                    morning_end: '09:00',
+                    evening_start: '17:00',
+                    evening_end: '19:00'
+                  }
+                )
+                if (travelTime !== null) {
+                  travelTimeCache.set(cacheKey, travelTime)
+                }
+              } catch (err: any) {
+                logger.warn('⚠️ Error fetching travel time:', err.message)
+              }
+            }
+          }
+        }
+        logger.debug(`✅ Pre-fetched ${travelTimeCache.size} travel times`)
+      }
+
+      // Now check slots synchronously using cached data
+      for (const slot of timeSlots) {
+        const slotStart = new Date(slot.start_time).getTime()
+        const slotEnd = new Date(slot.end_time).getTime()
+
+        for (const apt of customerAppointments.value) {
+          const aptStart = new Date(apt.start_time).getTime()
+          const aptEnd = new Date(apt.end_time).getTime()
+
+          // Direct time overlap check
+          const directOverlap = (
+            (slotStart >= aptStart && slotStart < aptEnd) ||
+            (slotEnd > aptStart && slotEnd <= aptEnd) ||
+            (slotStart <= aptStart && slotEnd >= aptEnd)
+          )
+
+          if (directOverlap) {
+            slot.has_conflict = true
+            logger.debug(`⚠️ Direct conflict: ${slot.time_formatted}`)
+            break
+          }
+
+          // Travel time check
+          if (locationPostalCode && apt.postal_code && apt.postal_code !== locationPostalCode) {
+            const cacheKey = `${apt.postal_code}-${locationPostalCode}`
+            const travelTimeMinutes = travelTimeCache.get(cacheKey)
+
+            if (travelTimeMinutes !== undefined) {
+              const travelBufferMs = travelTimeMinutes * 60 * 1000
+              const requiredFreeTimeStart = aptEnd + travelBufferMs
+
+              if (slotStart < requiredFreeTimeStart) {
+                slot.has_conflict = true
+                logger.debug(`⚠️ Travel time conflict: ${slot.time_formatted} (need ${travelTimeMinutes}min travel from ${apt.location_name})`)
+                break
+              }
+            }
+          }
+        }
+      }
+
+      const conflictCount = timeSlots.filter(s => s.has_conflict).length
+      logger.debug(`✅ Pre-filtering complete: ${conflictCount}/${timeSlots.length} slots have conflicts`)
+    }
     
     logger.debug(`✅ Converted ${timeSlots.length} slots for UI display`)
     
@@ -2288,44 +2380,27 @@ const generateTimeSlotsForSpecificCombination = async () => {
 // ✅ NEW: Check for customer appointment conflicts and travel time
 const selectTimeSlot = async (slot: any) => {
   try {
-    logger.debug('📋 Checking for appointment conflicts...', {
+    // Slot is already pre-filtered, so this is just a safety check
+    if (slot.has_conflict) {
+      logger.warn('⚠️ Attempting to select slot with conflict (should be disabled)')
+      error.value = 'Dieser Termin hat einen Zeitkonflikt. Bitte wählen Sie einen anderen Termin.'
+      setTimeout(() => { error.value = null }, 5000)
+      return
+    }
+
+    logger.debug('✅ Slot selected (pre-filtered)', {
       slotStart: slot.start_time,
       location: selectedLocation.value?.name
     })
 
-    const { hasConflict, getConflictingAppointment } = useCustomerConflictCheck()
-    
-    // Check for direct time or travel time conflicts
-    const conflictInfo = await hasConflict({
-      startTime: new Date(slot.start_time),
-      endTime: new Date(slot.end_time),
-      fromLocationPostalCode: selectedLocation.value?.postal_code,
-      toLocationPostalCode: selectedLocation.value?.postal_code,
-      bufferMinutes: 0
-    })
-
-    if (conflictInfo.hasConflict) {
-      logger.warn('⚠️ CONFLICT DETECTED', conflictInfo)
-      error.value = conflictInfo.reason || 'Zeitkonflikt mit einem bestehenden Termin!'
-      
-      // Show error for a few seconds then clear it
-      setTimeout(() => {
-        error.value = null
-      }, 5000)
-      return
-    }
-
     // No conflict - proceed with slot selection
-    logger.debug('✅ No conflicts detected - slot available')
     selectedSlot.value = slot
     currentStep.value = 7
     error.value = null
     
   } catch (err: any) {
-    logger.error('❌ Error checking conflicts:', err)
-    // Non-critical: if check fails, allow booking anyway (graceful degradation)
-    selectedSlot.value = slot
-    currentStep.value = 7
+    logger.error('❌ Error selecting slot:', err)
+    error.value = 'Fehler beim Auswählen des Termins'
   }
 }
 
