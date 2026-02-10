@@ -40,12 +40,13 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Failed to read body:', bodyError.message)
       throw createError({ statusCode: 400, message: `Failed to parse request body: ${bodyError.message}`, data: { error: bodyError.message } })
     }
-    const { address, latitude, longitude, place_id, studentId, userId, name: locationName } = body
+    const { address, latitude, longitude, postal_code, place_id, studentId, userId, name: locationName } = body
 
     console.log('📥 Received request body:', JSON.stringify({
       address: address ? `${address.substring(0, 50)}...` : undefined,
       latitude,
       longitude,
+      postal_code,
       place_id: place_id ? `${String(place_id).substring(0, 30)}...` : undefined,
       studentId,
       userId,
@@ -131,6 +132,7 @@ export default defineEventHandler(async (event) => {
       address: sanitizedAddress,
       latitude: latitude || null,
       longitude: longitude || null,
+      postal_code: postal_code || null,
       google_place_id: sanitizedPlaceId,
       is_active: true,
       created_at: new Date().toISOString(),
@@ -168,6 +170,7 @@ export default defineEventHandler(async (event) => {
       address: data.address,
       latitude: data.latitude,
       longitude: data.longitude,
+      postal_code: data.postal_code,
       location_type: 'pickup',
       source: 'pickup'
     }
