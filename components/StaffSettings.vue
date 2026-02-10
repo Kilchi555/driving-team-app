@@ -228,25 +228,28 @@
                     <div 
                       v-for="location in registeredLocations" 
                       :key="location.id"
-                      class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition"
+                      class="flex gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition"
                     >
+                      <!-- Left Column: Location Info -->
                       <div class="flex-1">
                         <div class="font-medium text-gray-900">{{ location.name }}</div>
                         <div class="text-gray-600 text-xs">{{ location.address }}</div>
                       </div>
-                      <div class="flex items-center space-x-2 ml-2">
-                        <!-- ✨ Online Bookable Toggle -->
-                        <label class="flex items-center space-x-1 cursor-pointer px-2 py-1 rounded hover:bg-gray-100 transition">
-                          <input
-                            type="checkbox"
-                            :checked="location.is_online_bookable !== false"
-                            @change="() => toggleLocationBookable(location.id, location.is_online_bookable === false ? true : false)"
-                            class="w-4 h-4 rounded border-gray-300"
-                          >
-                          <span class="text-xs text-gray-700 font-medium whitespace-nowrap">
-                            {{ location.is_online_bookable !== false ? '✅ Online' : '❌ Offline' }}
-                          </span>
-                        </label>
+                      
+                      <!-- Right Column: Toggle and Delete Button (stacked) -->
+                      <div class="flex flex-col items-end gap-2">
+                        <!-- ✨ Online Bookable Button -->
+                        <button
+                          @click="() => toggleLocationBookable(location.id, location.is_online_bookable === false ? true : false)"
+                          :class="[
+                            'px-3 py-1 rounded text-xs font-medium transition',
+                            location.is_online_bookable !== false
+                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                              : 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                          ]"
+                        >
+                          {{ location.is_online_bookable !== false ? 'Buchbar' : 'Nicht buchbar' }}
+                        </button>
                         
                         <!-- Delete Button -->
                         <button
@@ -526,7 +529,7 @@
                     :value="registrationLink"
                     readonly
                     class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
+                  />
                   <button
                     @click="copyToClipboard(registrationLink, 'Registrierungs-Link')"
                     class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
@@ -1407,8 +1410,8 @@ const toggleLocationAssignment = async (locationId: string) => {
       action: 'update',
       table: 'locations',
       filters: [{ column: 'id', operator: 'eq', value: locationId }],
-      values: { staff_ids: currentStaffIds }
-    })
+      data: { staff_ids: currentStaffIds }
+    });
 
     const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
     if (locationIndex >= 0) {
@@ -1456,23 +1459,6 @@ const toggleLocationBookable = async (locationId: string, isOnlineBookable: bool
     error.value = `Fehler beim Aktualisieren: ${err.message}`
   }
 }
-      filters: [{ column: 'id', operator: 'eq', value: locationId }],
-      data: { staff_ids: currentStaffIds }
-    })
-
-    // Optimistic Update in UI
-    const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
-    if (locationIndex >= 0) {
-      allTenantLocations.value[locationIndex].staff_ids = currentStaffIds
-    }
-
-    logger.debug('✅ Location assignment updated successfully')
-
-  } catch (err: any) {
-    console.error('❌ Error in toggleLocationAssignment:', err)
-    error.value = `Fehler: ${err.message}`
-  }
-}
 
 // Toggle Exam Location Assignment - für Prüfungsstandorte
 // Automatisches Erstellen wenn nicht vorhanden, oder Update von staff_ids
@@ -1490,7 +1476,6 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
 
     // Step 1: Prüfe ob diese Location bereits im Tenant existiert via secure API
     const existingLocations = await query({
-     action: 'select',
       action: 'select',
       table: 'locations',
       select: '*',
@@ -1520,7 +1505,6 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
       }
 
       await query({
-       action: 'select',
         action: 'update',
         table: 'locations',
         filters: [{ column: 'id', operator: 'eq', value: existingLocation.id }],
@@ -1639,7 +1623,35 @@ const loadData = async () => {
         { column: 'location_type', operator: 'eq', value: 'standard' }
       ]
     })
-    allTenantLocations.value = allLocations || []
+    
+    // Parse staff_ids from JSON strings to arrays
+    allTenantLocations.value = (allLocations || []).map((loc: any) => ({
+      ...loc,
+      staff_ids: typeof loc.staff_ids === 'string' ? JSON.parse(loc.staff_ids) : loc.staff_ids
+    }))
+
+    // Load all staff_locations for this staff to get is_online_bookable status
+    const staffLocationRecords = await query({
+      action: 'select',
+      table: 'staff_locations',
+      select: 'location_id, is_online_bookable',
+      filters: [
+        { column: 'staff_id', operator: 'eq', value: props.currentUser.id }
+      ]
+    })
+
+    if (staffLocationRecords && staffLocationRecords.length > 0) {
+      // Create a map for quick lookup
+      const staffLocMap = new Map(staffLocationRecords.map((sl: any) => [sl.location_id, sl.is_online_bookable]))
+      
+      // Enrich allTenantLocations with is_online_bookable status
+      allTenantLocations.value = allTenantLocations.value.map((loc: any) => ({
+        ...loc,
+        is_online_bookable: staffLocMap.has(loc.id) ? staffLocMap.get(loc.id) : true // Default to true if no entry
+      }))
+      
+      logger.debug('✅ Loaded staff_locations online bookable settings')
+    }
 
     // myLocations für Backward-Compatibility (wird nicht mehr verwendet)
     myLocations.value = registeredLocations.value

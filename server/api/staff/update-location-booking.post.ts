@@ -74,36 +74,78 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Verify staff owns this location
-    const { data: staffLocation, error: staffLocError } = await supabase
+    // Verify staff owns this location or create entry if it doesn't exist
+    let { data: staffLocation, error: staffLocError } = await supabase
       .from('staff_locations')
       .select('id')
       .eq('staff_id', userProfile.id)
       .eq('location_id', location_id)
       .single()
 
+    // If staff_locations entry doesn't exist, verify location is assigned to staff in locations table
     if (staffLocError || !staffLocation) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'You do not have this location assigned'
-      })
-    }
+      const { data: locationData, error: locationError } = await supabase
+        .from('locations')
+        .select('staff_ids')
+        .eq('id', location_id)
+        .eq('tenant_id', userProfile.tenant_id)
+        .single()
 
-    // Update the booking status
-    const { error: updateError } = await supabase
-      .from('staff_locations')
-      .update({
-        is_online_bookable,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', staffLocation.id)
+      if (locationError || !locationData) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Location not found or you do not have access'
+        })
+      }
 
-    if (updateError) {
-      logger.error('❌ Error updating location booking status:', updateError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to update location booking status'
-      })
+      // Check if staff_id is in the location's staff_ids array
+      const staffIds = Array.isArray(locationData.staff_ids) ? locationData.staff_ids : []
+      if (!staffIds.includes(userProfile.id)) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'You do not have this location assigned'
+        })
+      }
+
+      // Create staff_locations entry
+      const { data: newEntry, error: createErr } = await supabase
+        .from('staff_locations')
+        .insert({
+          staff_id: userProfile.id,
+          location_id,
+          tenant_id: userProfile.tenant_id,
+          is_online_bookable,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single()
+
+      if (createErr || !newEntry) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to create location assignment'
+        })
+      }
+
+      staffLocation = newEntry
+    } else {
+      // Update the booking status for existing entry
+      const { error: updateError } = await supabase
+        .from('staff_locations')
+        .update({
+          is_online_bookable,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', staffLocation.id)
+
+      if (updateError) {
+        logger.error('❌ Error updating location booking status:', updateError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to update location booking status'
+        })
+      }
     }
 
     logger.debug(`✅ Location booking status updated`, {

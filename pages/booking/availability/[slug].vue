@@ -255,7 +255,7 @@
           <div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div 
-                v-for="location in availableLocations" 
+                v-for="location in displayableLocations" 
                 :key="location.id"
                 @click="selectLocation(location)"
                 class="group cursor-pointer rounded-2xl p-4 sm:p-5 md:p-6 transition-all duration-200 transform active:translate-y-0.5 border-2"
@@ -1088,6 +1088,57 @@ const today = computed(() => {
   return new Date().toISOString().split('T')[0]
 })
 
+// Display locations - filtered based on whether ANY AVAILABLE staff member can book this location online
+const displayableLocations = computed(() => {
+  if (!availableLocations.value) return []
+  
+  logger.debug('🔍 displayableLocations computed called', {
+    availableLocationsCount: availableLocations.value?.length || 0
+  })
+
+  // Filter locations: only show if at least ONE available staff member has is_online_bookable: true
+  const filtered = availableLocations.value.filter((loc: any) => {
+    logger.debug(`  📍 Checking location: ${loc.name}`, {
+      availableStaffCount: loc.available_staff?.length || 0,
+      hasStaffOnlineBookable: !!loc.staffOnlineBookable,
+      staffOnlineBookableLength: loc.staffOnlineBookable?.length || 0
+    })
+
+    if (!loc.staffOnlineBookable || loc.staffOnlineBookable.length === 0) {
+      // No staff_locations data - location not bookable (strict mode, no backward compat)
+      logger.debug(`    ❌ FILTERED OUT: No staff_locations entries`)
+      return false
+    }
+
+    if (!loc.available_staff || loc.available_staff.length === 0) {
+      // No available staff for this location
+      logger.debug(`    ❌ FILTERED OUT: No available staff for this location`)
+      return false
+    }
+
+    // Check if ANY available staff member has this location as online_bookable: true
+    const hasOnlineBookableStaff = loc.available_staff.some((staff: any) => {
+      const entry = loc.staffOnlineBookable.find((e: any) => e.staffId === staff.id)
+      // Strict mode: only show if entry exists AND is_online_bookable === true
+      // If no entry exists, staff cannot book this location online
+      const isOnlineBookable = entry?.isOnlineBookable === true
+      logger.debug(`      Staff ${staff.first_name}: entry=${entry ? 'exists' : 'none'}, isOnlineBookable=${isOnlineBookable}`)
+      return isOnlineBookable
+    })
+
+    if (!hasOnlineBookableStaff) {
+      logger.debug(`    ❌ FILTERED OUT: No available staff has is_online_bookable: true`)
+      return false
+    }
+
+    logger.debug(`    ✅ KEEPING: At least one available staff has is_online_bookable: true`)
+    return true
+  })
+
+  logger.debug(`📊 displayableLocations result: ${filtered.length}/${availableLocations.value.length}`)
+  return filtered
+})
+
 // Check if pickup is available for the selected category
 const isPickupAvailableForCategory = computed(() => {
   if (!selectedCategory.value) return false
@@ -1748,6 +1799,54 @@ const selectMainCategory = async (category: any) => {
     availableLocations.value = Array.from(locationsMap.values())
     logger.debug(`✅ Built locations map: ${availableLocations.value.length} unique locations`)
     
+    // 🔒 FILTER: Only show locations that are online_bookable for the selected staff
+    // Load staff_locations to check is_online_bookable status
+    if (selectedInstructor.value?.id && availableLocations.value.length > 0) {
+      try {
+        const locationIds = availableLocations.value.map((loc: any) => loc.id)
+        logger.debug('🔒 Filtering locations by is_online_bookable status', {
+          staffId: selectedInstructor.value.id,
+          locationCount: locationIds.length
+        })
+
+        const response = await $fetch<{
+          success: boolean
+          data: Array<{
+            staff_id: string
+            location_id: string
+            is_online_bookable: boolean
+          }>
+        }>('/api/staff/get-staff-locations', {
+          method: 'POST',
+          body: { staff_ids: [selectedInstructor.value.id] }
+        })
+
+        if (response?.success && response.data) {
+          // Create a map of which locations are online_bookable
+          const staffLocMap = new Map(
+            response.data.map(sl => [sl.location_id, sl.is_online_bookable])
+          )
+
+          // Filter locations to only show those that are online_bookable
+          availableLocations.value = availableLocations.value.filter((loc: any) => {
+            const isOnlineBookable = staffLocMap.get(loc.id)
+            // If no entry exists, default to true (backward compatible)
+            // If entry exists, use that value
+            const shouldShow = isOnlineBookable !== false
+            if (!shouldShow) {
+              logger.debug(`  🔍 Filtering out location: ${loc.name} (is_online_bookable=false)`)
+            }
+            return shouldShow
+          })
+
+          logger.debug(`✅ After filtering: ${availableLocations.value.length} locations available for online booking`)
+        }
+      } catch (err: any) {
+        logger.warn('⚠️ Could not filter locations by online_bookable status:', err.message)
+        // Continue with unfiltered locations if filtering fails
+      }
+    }
+    
     // Reset prices map for new category
     durationPrices.value.clear()
     
@@ -1877,6 +1976,67 @@ const selectSubcategory = async (category: any) => {
   // Convert map to array
   availableLocations.value = Array.from(locationsMap.values())
   logger.debug(`✅ Built locations map: ${availableLocations.value.length} unique locations`)
+  
+  // 🔒 LOAD ALL STAFF LOCATIONS for online_bookable filtering
+  // We need this for all staff, not just selectedInstructor, because user hasn't selected one yet
+  try {
+    const staffIds = Array.from(new Set(
+      availableStaff.value
+        ?.filter((s: any) => s.id)
+        .map((s: any) => s.id) || []
+    ))
+
+    if (staffIds.length > 0) {
+      logger.debug('🔒 Pre-loading staff_locations for online_bookable filtering', {
+        staffCount: staffIds.length,
+        locationCount: availableLocations.value.length
+      })
+
+      const response = await $fetch<{
+        success: boolean
+        data: Array<{
+          staff_id: string
+          location_id: string
+          is_online_bookable: boolean
+        }>
+      }>('/api/staff/get-staff-locations', {
+        method: 'POST',
+        body: { staff_ids: staffIds }
+      })
+
+      if (response?.success && response.data) {
+        // Store in a map for filtering per staff/location
+        const staffLocMap = new Map<string, Map<string, boolean>>()
+        for (const sl of response.data) {
+          if (!staffLocMap.has(sl.staff_id)) {
+            staffLocMap.set(sl.staff_id, new Map())
+          }
+          staffLocMap.get(sl.staff_id)!.set(sl.location_id, sl.is_online_bookable)
+        }
+
+        // Add is_online_bookable info - ONLY for staff that are available for this location
+        availableLocations.value = availableLocations.value.map((loc: any) => ({
+          ...loc,
+          // Only include staff_online_bookable for staff that are available for this location
+          staffOnlineBookable: (loc.available_staff || []).map((staff: any) => ({
+            staffId: staff.id,
+            // Look up is_online_bookable from the staff_locations data
+            isOnlineBookable: staffLocMap.get(staff.id)?.get(loc.id) === true // Only true, not default
+          }))
+        }))
+
+        logger.debug(`✅ Enriched locations with staff_locations data`, {
+          locationsCount: availableLocations.value.length,
+          exampleLocation: availableLocations.value[0]?.name,
+          exampleStaffOnlineBookableCount: availableLocations.value[0]?.staffOnlineBookable?.length || 0,
+          exampleStaffOnlineBookable: availableLocations.value[0]?.staffOnlineBookable
+        })
+      }
+    }
+  } catch (err: any) {
+    logger.warn('⚠️ Could not pre-load staff_locations:', err.message)
+    // Continue without pre-loaded data - filtering will happen at display time
+  }
   
   await waitForPressEffect()
   currentStep.value = 3
