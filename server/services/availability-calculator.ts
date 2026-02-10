@@ -137,7 +137,7 @@ export class AvailabilityCalculator {
       // 1. Load all required data
       const staff = await this.loadStaff(options.tenantId, options.staffId)
       const categories = await this.loadCategories(options.tenantId)
-      const locations = await this.loadLocations(options.tenantId)
+      const locations = await this.loadLocations(options.tenantId, staff.map(s => s.id))
       const workingHours = await this.loadWorkingHours(staff.map(s => s.id))
       const appointments = await this.loadAppointments(staff.map(s => s.id), options.startDate, options.endDate)
       const busyTimes = await this.loadExternalBusyTimes(staff.map(s => s.id), options.startDate, options.endDate, options.tenantId)
@@ -254,58 +254,95 @@ export class AvailabilityCalculator {
   /**
    * Load locations
    */
-  private async loadLocations(tenantId?: string): Promise<Location[]> {
-    let query = this.supabase
-      .from('locations')
-      .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id, postal_code')
-      .eq('is_active', true)
-      .eq('location_type', 'standard')
+  private async loadLocations(tenantId?: string, staffIds: string[] = []): Promise<Location[]> {
+    // If staff_ids are provided, query staff_locations table to get only bookable locations
+    if (staffIds.length > 0) {
+      // Query staff_locations to get only is_online_bookable = true locations
+      let staffLocQuery = this.supabase
+        .from('staff_locations')
+        .select('location_id, is_active, is_online_bookable')
+        .in('staff_id', staffIds)
+        .eq('is_active', true)
+        .eq('is_online_bookable', true)
 
-    if (tenantId) {
-      query = query.eq('tenant_id', tenantId)
+      if (tenantId) {
+        staffLocQuery = staffLocQuery.eq('tenant_id', tenantId)
+      }
+
+      const { data: staffLocs, error: staffLocError } = await staffLocQuery
+
+      if (staffLocError) {
+        logger.warn('⚠️ Could not load staff_locations:', staffLocError)
+        // Fallback to empty array if staff_locations query fails
+        return []
+      }
+
+      if (!staffLocs || staffLocs.length === 0) {
+        logger.debug('ℹ️ No bookable locations found in staff_locations table')
+        return []
+      }
+
+      // Get unique location IDs from staff_locations
+      const locationIds = [...new Set(staffLocs.map(sl => sl.location_id))]
+
+      // Now load the location details from locations table
+      let locQuery = this.supabase
+        .from('locations')
+        .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id, postal_code')
+        .in('id', locationIds)
+        .eq('is_active', true)
+        .eq('location_type', 'standard')
+
+      if (tenantId) {
+        locQuery = locQuery.eq('tenant_id', tenantId)
+      }
+
+      const { data: locations, error: locError } = await locQuery
+
+      if (locError) throw locError
+
+      // Parse staff_ids and available_categories if stored as JSON string
+      const parsed = (locations || []).map(loc => {
+        let parsedStaffIds = loc.staff_ids || []
+        let availableCategories = loc.available_categories || []
+        
+        // Parse staff_ids if it's a string
+        if (typeof parsedStaffIds === 'string') {
+          try {
+            parsedStaffIds = JSON.parse(parsedStaffIds)
+          } catch (e) {
+            logger.warn(`⚠️ Could not parse staff_ids for location ${loc.name}:`, parsedStaffIds)
+            parsedStaffIds = []
+          }
+        }
+        
+        // Parse available_categories if it's a string
+        if (typeof availableCategories === 'string') {
+          try {
+            availableCategories = JSON.parse(availableCategories)
+          } catch (e) {
+            logger.warn(`⚠️ Could not parse available_categories for location ${loc.name}:`, availableCategories)
+            availableCategories = []
+          }
+        }
+        
+        return {
+          ...loc,
+          staff_ids: parsedStaffIds,
+          available_categories: availableCategories
+        }
+      })
+      
+      // Debug: Log loaded locations with their staff
+      parsed.forEach(loc => {
+        logger.debug(`📍 Location: ${loc.name} (from staff_locations) | Categories: ${(loc.available_categories || []).join(', ') || 'ALL'}`)
+      })
+      
+      return parsed
     }
 
-    const { data, error } = await query
-    if (error) throw error
-
-    // Parse staff_ids and available_categories if stored as JSON string
-    const parsed = (data || []).map(loc => {
-      let staffIds = loc.staff_ids || []
-      let availableCategories = loc.available_categories || []
-      
-      // Parse staff_ids if it's a string
-      if (typeof staffIds === 'string') {
-        try {
-          staffIds = JSON.parse(staffIds)
-        } catch (e) {
-          logger.warn(`⚠️ Could not parse staff_ids for location ${loc.name}:`, staffIds)
-          staffIds = []
-        }
-      }
-      
-      // Parse available_categories if it's a string
-      if (typeof availableCategories === 'string') {
-        try {
-          availableCategories = JSON.parse(availableCategories)
-        } catch (e) {
-          logger.warn(`⚠️ Could not parse available_categories for location ${loc.name}:`, availableCategories)
-          availableCategories = []
-        }
-      }
-      
-      return {
-        ...loc,
-        staff_ids: staffIds,
-        available_categories: availableCategories
-      }
-    })
-    
-    // Debug: Log loaded locations with their staff
-    parsed.forEach(loc => {
-      logger.debug(`📍 Location: ${loc.name} | Staff: ${(loc.staff_ids || []).length} | Categories: ${(loc.available_categories || []).join(', ') || 'ALL'}`)
-    })
-    
-    return parsed
+    // Fallback: If no staff_ids provided, return empty array
+    return []
   }
 
   /**
