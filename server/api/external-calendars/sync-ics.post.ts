@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { resolvePLZForExternalBusyTime } from '~/utils/postalCodeUtils'
 import { logger } from '~/utils/logger'
 
@@ -17,6 +18,15 @@ interface ICSImportResponse {
 
 export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
   try {
+    // ============ LAYER 1: AUTHENTICATION ============
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
+      })
+    }
+
     const body = await readBody(event) as ICSImportRequest
     const { calendar_id, ics_url, ics_content } = body
 
@@ -29,7 +39,21 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
 
     const supabase = getSupabaseAdmin()
 
-    // Get calendar info
+    // ============ LAYER 2: GET USER PROFILE ============
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (userError || !userProfile) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'User profile not found'
+      })
+    }
+
+    // ============ LAYER 3: GET CALENDAR & VERIFY OWNERSHIP ============
     const { data: calendar, error: calendarError } = await supabase
       .from('external_calendars')
       .select('*')
@@ -40,6 +64,19 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       throw createError({
         statusCode: 404,
         statusMessage: 'Calendar not found'
+      })
+    }
+
+    // ✅ CRITICAL: Verify user owns this calendar
+    if (calendar.staff_id !== userProfile.id || calendar.tenant_id !== userProfile.tenant_id) {
+      logger.warn('⚠️ Unauthorized calendar sync attempt', {
+        calendarId: calendar_id,
+        userId: userProfile.id,
+        calendarStaffId: calendar.staff_id
+      })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'You do not have permission to sync this calendar'
       })
     }
 
