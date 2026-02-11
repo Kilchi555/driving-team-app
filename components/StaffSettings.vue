@@ -601,7 +601,7 @@
             <input
               v-model="newLocationForm.name"
               type="text"
-              placeholder="z.B. Baslerstrasse 145"
+              placeholder="z.B. Treffpunkt A"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -617,7 +617,7 @@
                 @focus="showAddressSuggestions = true"
                 @keyup.enter="selectFirstAddressSuggestion"
                 type="text"
-                placeholder="z.B. 8048 Zürich"
+                placeholder="z.B. Bahnhofstrasse 1, 8048 Zürich"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               
