@@ -609,12 +609,35 @@
           <!-- Address -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
-            <input
-              v-model="newLocationForm.address"
-              type="text"
-              placeholder="z.B. 8048 Zürich"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div class="relative">
+              <input
+                v-model="newLocationForm.address"
+                @input="onAddressSearch"
+                @blur="hideAddressSuggestionsDelayed"
+                @focus="showAddressSuggestions = true"
+                @keyup.enter="selectFirstAddressSuggestion"
+                type="text"
+                placeholder="z.B. 8048 Zürich"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              
+              <!-- Google Places Suggestions -->
+              <div v-if="showAddressSuggestions && addressSuggestions.length > 0" class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto mt-1">
+                <div
+                  v-for="suggestion in addressSuggestions"
+                  :key="suggestion.place_id"
+                  @mousedown.prevent="selectAddressSuggestion(suggestion)"
+                  class="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                >
+                  <div class="font-medium text-gray-900 text-sm">
+                    {{ suggestion.structured_formatting?.main_text || suggestion.description }}
+                  </div>
+                  <div class="text-xs text-gray-600">
+                    {{ suggestion.structured_formatting?.secondary_text || '' }}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Available Categories -->
@@ -656,7 +679,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 // ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
@@ -801,6 +824,123 @@ const newLocationForm = ref({
   address: '',
   available_categories: [] as string[]
 })
+
+// Address autocomplete
+const addressSuggestions = ref<any[]>([])
+const showAddressSuggestions = ref(false)
+let addressSuggestionsTimeout: any = null
+
+// Google Places Library
+let placesLibrary: any = null
+let newApiBlocked = false
+
+// Initialize Google Places
+const initGooglePlaces = async () => {
+  if (placesLibrary) return
+  
+  try {
+    const { Place, AutocompleteSuggestion } = await window.google.maps.importLibrary('places')
+    placesLibrary = { Place, AutocompleteSuggestion }
+    logger.debug('✅ Google Places (New API) initialized')
+  } catch (error) {
+    console.warn('⚠️ New Places API failed, using legacy API:', error)
+    placesLibrary = null
+    if (window.google?.maps?.places) {
+      logger.debug('✅ Google Places (Legacy) initialized')
+    }
+  }
+}
+
+// Address search with Google Places
+const onAddressSearch = async () => {
+  const query = newLocationForm.value.address.trim()
+  
+  if (query.length < 3) {
+    addressSuggestions.value = []
+    showAddressSuggestions.value = false
+    return
+  }
+
+  try {
+    // Try new API first
+    if (placesLibrary?.AutocompleteSuggestion && !newApiBlocked) {
+      try {
+        const request = {
+          input: query,
+          includedRegionCodes: ['CH'],
+          language: 'de'
+        }
+
+        const { suggestions } = await placesLibrary.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
+        
+        if (suggestions && suggestions.length > 0) {
+          addressSuggestions.value = suggestions.map((suggestion: any) => ({
+            place_id: suggestion.placePrediction?.placeId || `new_${Date.now()}_${Math.random()}`,
+            description: suggestion.placePrediction?.text?.text || 'Unbekannter Ort',
+            structured_formatting: {
+              main_text: suggestion.placePrediction?.mainText?.text || '',
+              secondary_text: suggestion.placePrediction?.secondaryText?.text || ''
+            }
+          }))
+          showAddressSuggestions.value = true
+          return
+        }
+      } catch (newApiError) {
+        console.warn('New Places API failed:', newApiError)
+        newApiBlocked = true
+      }
+    }
+
+    // Fall back to legacy API
+    if (window.google?.maps?.places?.AutocompleteService) {
+      const autocompleteService = new window.google.maps.places.AutocompleteService()
+      
+      const request = {
+        input: query,
+        types: ['establishment', 'geocode'],
+        componentRestrictions: { country: 'ch' },
+        language: 'de'
+      }
+
+      autocompleteService.getPlacePredictions(request, (predictions: any, status: any) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          addressSuggestions.value = predictions.map((prediction: any) => ({
+            place_id: prediction.place_id,
+            description: prediction.description,
+            structured_formatting: prediction.structured_formatting
+          }))
+          showAddressSuggestions.value = true
+        } else {
+          addressSuggestions.value = []
+        }
+      })
+    }
+  } catch (err: any) {
+    console.error('Error searching places:', err)
+    addressSuggestions.value = []
+  }
+}
+
+// Select address suggestion
+const selectAddressSuggestion = (suggestion: any) => {
+  newLocationForm.value.address = suggestion.description
+  addressSuggestions.value = []
+  showAddressSuggestions.value = false
+}
+
+// Select first suggestion on enter
+const selectFirstAddressSuggestion = () => {
+  if (addressSuggestions.value.length > 0) {
+    selectAddressSuggestion(addressSuggestions.value[0])
+  }
+}
+
+// Hide address suggestions after delay
+const hideAddressSuggestionsDelayed = () => {
+  addressSuggestionsTimeout = setTimeout(() => {
+    showAddressSuggestions.value = false
+  }, 200)
+}
 
 // Constants
 const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -2269,6 +2409,20 @@ onMounted(async () => {
   
   // Load calendar token for calendar integration
   await loadCalendarToken()
+  
+  // Initialize Google Places for address autocomplete
+  await initGooglePlaces()
+})
+
+// Watch for modal open to clear suggestions when closing
+watch(() => showNewLocationModal.value, (isOpen) => {
+  if (!isOpen) {
+    addressSuggestions.value = []
+    showAddressSuggestions.value = false
+    if (addressSuggestionsTimeout) {
+      clearTimeout(addressSuggestionsTimeout)
+    }
+  }
 })
 
 // Cleanup - Auto-Save Timeouts löschen
