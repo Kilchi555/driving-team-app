@@ -1611,7 +1611,25 @@ const loadData = async () => {
       ],
       order: { column: 'name', ascending: true }
     })
-    availableCategories.value = categories || []
+    
+    // Filter categories: if there are subcategories (parent_category_id != null), show only subcategories
+    // Otherwise show only main categories (parent_category_id = null)
+    const allCategories = categories || []
+    const hasSubcategories = allCategories.some((cat: any) => cat.parent_category_id)
+    
+    if (hasSubcategories) {
+      // Show only subcategories (those with parent_category_id)
+      availableCategories.value = allCategories.filter((cat: any) => cat.parent_category_id)
+    } else {
+      // Show only main categories (those without parent_category_id)
+      availableCategories.value = allCategories.filter((cat: any) => !cat.parent_category_id)
+    }
+    
+    logger.debug('📋 Available categories for location creation:', {
+      total: allCategories.length,
+      hasSubcategories,
+      displayCount: availableCategories.value.length
+    })
 
     // Alle Standard-Standorte des Tenants laden (mit allen staff_ids)
     const allLocations = await query({
