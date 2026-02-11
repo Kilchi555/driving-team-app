@@ -517,13 +517,13 @@
             @click="handleNoPolicyChoice(0)"
             class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
           >
-            ✅ Kostenlos absagen (Credits zurück)
+            Kostenlos absagen
           </button>
           <button
             @click="handleNoPolicyChoice(100)"
             class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
           >
-            💳 Vollständig verrechnen (100%)
+            Vollständig verrechnen
           </button>
           <button
             @click="showNoPolicyModal = false"
@@ -3710,6 +3710,24 @@ const handleNoPolicyChoice = async (chargePercent: number) => {
   // Store the manual choice
   manualChargePercentage.value = chargePercent
   
+  // If choosing free cancellation (0%), check if appointment was already paid
+  let paymentStatus = null
+  if (chargePercent === 0 && props.eventData?.id) {
+    try {
+      const payment = await eventModalApi.getPaymentByAppointment(props.eventData.id)
+      if (payment) {
+        paymentStatus = payment.payment_status
+        logger.debug('💳 Payment status for free cancellation:', {
+          payment_status: payment.payment_status,
+          paid_at: payment.paid_at,
+          appointmentId: props.eventData.id
+        })
+      }
+    } catch (err) {
+      logger.warn('⚠️ Could not fetch payment status:', err)
+    }
+  }
+  
   // Create a policy result manually
   const price = appointmentPrice.value || 0
   cancellationPolicyResult.value = {
@@ -3720,8 +3738,11 @@ const handleNoPolicyChoice = async (chargePercent: number) => {
     shouldCreateInvoice: chargePercent > 0,
     shouldCreditHours: chargePercent === 0,
     invoiceDescription: chargePercent === 0 
-      ? 'Kostenlose Stornierung (manuell festgelegt)'
-      : `Stornogebühr ${chargePercent}% (manuell festgelegt)`
+      ? (paymentStatus === 'completed' || paymentStatus === 'authorized'
+          ? 'Kostenlose Stornierung - Credits rückvergütet'
+          : 'Kostenlose Stornierung (manuell festgelegt)')
+      : `Stornogebühr ${chargePercent}% (manuell festgelegt)`,
+    paymentStatus: paymentStatus // Store payment status for later use
   }
   
   // Close modal
@@ -3804,6 +3825,10 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
       if (isStaffUser) {
         logger.debug('🔑 Staff/Admin cancellation - using secure cancel-staff API')
         
+        // Check if this was a free cancellation of a paid appointment
+        const wasFreeCancellationOfPaid = chargePercentage === 0 && 
+          cancellationPolicyResult.value?.paymentStatus === 'completed'
+        
         const staffCancellationResult = await $fetch('/api/appointments/cancel-staff', {
           method: 'POST',
           body: {
@@ -3811,17 +3836,23 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             cancellationReasonId: cancellationReasonId,
             deletionReason,
             chargePercentage,
-            shouldCreditHours: true
+            shouldCreditHours: chargePercentage === 0 || wasFreeCancellationOfPaid
           }
         }) as any
         
         logger.debug('✅ Staff cancellation via secure API completed:', staffCancellationResult)
         
+        // Build notification message
+        let notificationMessage = staffCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
+        if (wasFreeCancellationOfPaid) {
+          notificationMessage += ' Credits wurden rückvergütet.'
+        }
+        
         // Show success notification
         uiStore.addNotification({
           type: 'success',
           title: 'Termin storniert',
-          message: staffCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
+          message: notificationMessage
         })
         
         emit('appointment-deleted', props.eventData.id)
