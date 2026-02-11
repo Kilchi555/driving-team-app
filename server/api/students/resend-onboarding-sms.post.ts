@@ -166,7 +166,7 @@ export default defineEventHandler(async (event: H3Event) => {
     if (studentError || !student) {
       logger.warn('Student not found or not in tenant:', studentError)
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Student not found or not in tenant',
@@ -300,7 +300,7 @@ ${tenantName}`
     if (!smsResult.success) {
       logger.error('❌ Failed to send SMS:', smsResult.error)
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: `SMS sending failed: ${smsResult.error}`,
@@ -312,7 +312,7 @@ ${tenantName}`
 
     // ============ LAYER 5: AUDIT SUCCESS ============
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: requestingUserId,
       action: 'resend_onboarding_sms',
       resource_type: 'user',
       resource_id: studentId,
