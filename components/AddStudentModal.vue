@@ -177,8 +177,8 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
-import { useStudents } from '~/composables/useStudents'
 import { useUIStore } from '~/stores/ui'
+import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
 
@@ -221,9 +221,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-// Composables
-const { addStudent } = useStudents()
 
 // State
 const isSubmitting = ref(false)
@@ -414,8 +411,18 @@ const submitForm = async () => {
       studentData.assigned_staff_id = props.currentUser.id
     }
 
-    logger.debug('📝 Calling addStudent with:', studentData)
-    const newStudent = await addStudent(studentData) as any
+    logger.debug('📝 Calling new /api/staff/add-student API with:', studentData)
+    
+    // Call the new secure API endpoint
+    const response = await $fetch('/api/staff/add-student', {
+      method: 'POST',
+      body: studentData
+    }).catch((err: any) => {
+      // Re-throw with proper error structure
+      throw err
+    })
+
+    const newStudent = response as any
     
     logger.debug('✅✅✅ Schüler erfolgreich hinzugefügt:', newStudent)
     logger.debug('📱 SMS Success:', newStudent?.smsSuccess)

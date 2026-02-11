@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // @ts-ignore - logger.debug/info/warn accept flexible parameters from old console.log calls
-import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured, computed } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -372,6 +372,17 @@ const getCurrentUserId = () => {
 const getCurrentUserData = () => {
   return props.currentUser || composableCurrentUser.value
 }
+
+// ✅ Current tenant - derived from currentUser
+const currentUser = computed(() => {
+  return props.currentUser || composableCurrentUser.value
+})
+
+const currentTenant = computed(() => {
+  return {
+    id: currentUser.value?.tenant_id
+  }
+})
 
 const emit = defineEmits(['view-updated', 'appointment-changed'])
 
@@ -1464,7 +1475,8 @@ const handleEventDrop = async (dropInfo: any) => {
             method: 'POST',
             body: {
               phone: phoneNumber,
-              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n${tenantName.value}`
+              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n${tenantName.value}`,
+              tenantId: currentTenant.value?.id
             }
           })
           logger.debug('✅ SMS sent successfully:', result)

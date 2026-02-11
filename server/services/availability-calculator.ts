@@ -170,6 +170,11 @@ export class AvailabilityCalculator {
         busyTimes: busyTimes.length
       })
 
+      // ✅ NEW: Preload all travel times in batch before generating slots
+      logger.debug('🚗 Preloading travel times...')
+      await this.preloadTravelTimes(appointments, locations)
+      logger.debug('✅ Travel times preloaded')
+
       // 2. Generate all possible slots
       const slots = await this.generateSlots({
         staff: staff.filter(s => staffWithBookableLocations.includes(s.id)),
@@ -855,6 +860,102 @@ export class AvailabilityCalculator {
   }
 
   /**
+   * Preload travel times in batch for all postal code combinations
+   * This runs BEFORE slot generation to cache all needed travel times at once
+   */
+  private async preloadTravelTimes(appointments: Appointment[], locations: Location[]): Promise<void> {
+    try {
+      // Collect all unique postal code pairs that need travel time data
+      const travelTimePairs = new Set<string>()
+      
+      for (const apt of appointments) {
+        if (!apt.location?.postal_code) continue
+        
+        for (const loc of locations) {
+          if (!loc.postal_code) continue
+          if (apt.location.postal_code === loc.postal_code) continue
+          
+          // Add both directions to check
+          const pairForward = `${apt.location.postal_code}→${loc.postal_code}`
+          const pairReverse = `${loc.postal_code}→${apt.location.postal_code}`
+          
+          travelTimePairs.add(pairForward)
+          travelTimePairs.add(pairReverse)
+        }
+      }
+      
+      if (travelTimePairs.size === 0) {
+        logger.debug('ℹ️ No travel time pairs to preload')
+        return
+      }
+      
+      logger.debug(`🔄 Preloading ${travelTimePairs.size} travel time pairs`)
+      
+      const pairs = Array.from(travelTimePairs)
+      
+      // Check which ones are already cached
+      const { data: cached, error: cacheError } = await this.supabase
+        .from('plz_distance_cache')
+        .select('from_plz, to_plz')
+      
+      if (cacheError) {
+        logger.warn('⚠️ Error loading cache:', cacheError)
+      }
+      
+      const cachedSet = new Set(
+        cached?.map(c => `${c.from_plz}→${c.to_plz}`) || []
+      )
+      
+      const toFetch = pairs.filter(p => !cachedSet.has(p))
+      
+      if (toFetch.length === 0) {
+        logger.debug('✅ All travel times already cached')
+        return
+      }
+      
+      logger.debug(`📡 Fetching ${toFetch.length} uncached travel times from Google API`)
+      
+      // Fetch from Google in batches to avoid rate limiting
+      const config = useRuntimeConfig()
+      const googleApiKey = config.googleMapsApiKey
+      
+      if (!googleApiKey) {
+        logger.warn('⚠️ Google API key not configured, skipping travel time preload')
+        return
+      }
+      
+      // Process in smaller batches (e.g., 5 at a time) to avoid overwhelming the API
+      const batchSize = 5
+      for (let i = 0; i < toFetch.length; i += batchSize) {
+        const batch = toFetch.slice(i, i + batchSize)
+        
+        // Fetch all in this batch in parallel
+        await Promise.all(
+          batch.map(async (pairStr) => {
+            const [fromPlz, toPlz] = pairStr.split('→')
+            try {
+              await this.getTravelTimeForSlot(fromPlz, toPlz, new Date())
+            } catch (err: any) {
+              logger.warn(`⚠️ Error fetching travel time ${fromPlz}→${toPlz}:`, err.message)
+            }
+          })
+        )
+        
+        // Small delay between batches
+        if (i + batchSize < toFetch.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      }
+      
+      logger.debug(`✅ Travel time preload complete`)
+      
+    } catch (err: any) {
+      logger.warn('⚠️ Travel time preload failed:', err.message)
+      // Non-critical: continue without preload
+    }
+  }
+
+  /**
    * Get travel time between two postal codes using cache or Google API
    */
   private async getTravelTimeForSlot(fromPostalCode: string, toPostalCode: string, slotTime: Date): Promise<number | null> {
@@ -881,7 +982,8 @@ export class AvailabilityCalculator {
       logger.debug(`⚠️ No travel time cache for ${fromPostalCode} -> ${toPostalCode}`)
       
       // NEW: Try to fetch from Google Distance API and cache it
-      const googleApiKey = process.env.GOOGLE_DISTANCE_MATRIX_API_KEY
+      const config = useRuntimeConfig()
+      const googleApiKey = config.googleMapsApiKey
       if (!googleApiKey) {
         logger.warn('⚠️ Google Distance API key not configured, cannot fetch travel time')
         return null

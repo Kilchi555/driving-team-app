@@ -512,6 +512,7 @@ const savePickupLocation = async (locationData: any, userId: string) => {
         latitude: locationData.latitude || null,
         longitude: locationData.longitude || null,
         postal_code: locationData.postal_code || null,
+        city: locationData.city || null,
         place_id: locationData.place_id || null,
         userId: userId // Works for both students and staff
       }
@@ -692,6 +693,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       latitude: null,
       longitude: null,
       postal_code: null,
+      city: null,
       formatted_address: suggestion.description
     }
     
@@ -708,6 +710,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
           latitude: response.latitude,
           longitude: response.longitude,
           postal_code: response.postal_code,
+          city: response.city,
           formatted_address: response.formatted_address || suggestion.description
         }
         logger.debug('✅ Fetched place details:', placeDetails)
@@ -721,11 +724,12 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
     
     const locationData = {
       name: suggestion.structured_formatting?.main_text || suggestion.description,
-      address: suggestion.description,
+      address: placeDetails.formatted_address?.replace(', Switzerland', '') || suggestion.description,
       place_id: suggestion.place_id,
       latitude: placeDetails.latitude,
       longitude: placeDetails.longitude,
-      postal_code: placeDetails.postal_code
+      postal_code: placeDetails.postal_code,
+      city: placeDetails.city
     }
     
     // Check if this location already exists for this student
