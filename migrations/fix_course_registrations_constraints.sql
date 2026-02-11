@@ -33,16 +33,19 @@ DROP CONSTRAINT IF EXISTS course_registrations_course_id_sari_faberid_key;
 
 -- Step 4: Add improved unique constraints
 -- Only active/confirmed registrations can be unique per email
+-- Note: 'pending' removed since we no longer create pending registrations before payment
+-- Registrations are now created ONLY when payment is confirmed
 ALTER TABLE course_registrations
 ADD CONSTRAINT course_registrations_unique_email 
 UNIQUE (course_id, email) 
-WHERE status IN ('confirmed', 'pending', 'enrolled');
+WHERE status IN ('confirmed', 'enrolled');
 
 -- Only active/confirmed registrations can be unique per faberid
+-- Note: 'pending' removed since we no longer create pending registrations before payment
 ALTER TABLE course_registrations
 ADD CONSTRAINT course_registrations_unique_faberid 
 UNIQUE (course_id, sari_faberid) 
-WHERE status IN ('confirmed', 'pending', 'enrolled');
+WHERE status IN ('confirmed', 'enrolled');
 
 -- Make payment_id unique when it exists (prevents duplicate webhook processing)
 ALTER TABLE course_registrations

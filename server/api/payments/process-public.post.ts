@@ -55,10 +55,12 @@ export default defineEventHandler(async (event) => {
     let tenantSlug = 'driving-team' // Default
 
     // 1. Validate inputs
-    if (!enrollmentId || !amount || !currency || !customerEmail || !customerName || !tenantId) {
+    // ✅ CHANGED: enrollmentId is now optional (will be created in webhook)
+    // For backward compatibility, we still accept enrollmentId
+    if (!amount || !currency || !customerEmail || !customerName || !tenantId || !courseId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: enrollmentId, amount, currency, customerEmail, customerName, tenantId'
+        statusMessage: 'Missing required fields: amount, currency, customerEmail, customerName, tenantId, courseId'
       })
     }
 
@@ -71,21 +73,54 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 2. Verify enrollment exists and is pending
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from('course_registrations')
-      .select('id, course_id, tenant_id, status, payment_status, first_name, last_name, email, phone, courses!inner(*), tenants(slug)')
-      .eq('id', enrollmentId)
-      .eq('tenant_id', tenantId)
-      .eq('status', 'pending')
-      .single()
+    // 2. Verify enrollment exists and is pending (if enrollmentId provided for backward compat)
+    let enrollment: any = null
+    if (enrollmentId) {
+      const { data: existingEnrollment, error: enrollmentError } = await supabase
+        .from('course_registrations')
+        .select('id, course_id, tenant_id, status, payment_status, first_name, last_name, email, phone, courses!inner(*), tenants(slug)')
+        .eq('id', enrollmentId)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+        .single()
 
-    if (enrollmentError || !enrollment) {
-      logger.warn('❌ Enrollment not found or not pending:', { enrollmentId, tenantId })
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Enrollment not found or not in pending status'
-      })
+      if (enrollmentError || !existingEnrollment) {
+        logger.warn('❌ Enrollment not found or not pending:', { enrollmentId, tenantId })
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Enrollment not found or not in pending status'
+        })
+      }
+      
+      enrollment = existingEnrollment
+    } else {
+      // ✅ NEW: For new flow, just get course + tenant info
+      const { data: course, error: courseError } = await supabase
+        .from('courses')
+        .select('id, name, tenant_id, tenants(slug)')
+        .eq('id', courseId)
+        .eq('tenant_id', tenantId)
+        .single()
+      
+      if (courseError || !course) {
+        logger.warn('❌ Course not found:', { courseId, tenantId })
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Course not found'
+        })
+      }
+      
+      enrollment = {
+        id: undefined, // Will be created in webhook
+        course_id: courseId,
+        tenant_id: tenantId,
+        courses: { ...course, id: courseId },
+        tenants: { slug: course.tenants?.slug },
+        first_name: customerName.split(' ')[0],
+        last_name: customerName.split(' ').slice(1).join(' ') || '',
+        email: customerEmail,
+        phone: metadata?.phone
+      }
     }
 
     // Now that enrollment is loaded, set tenantSlug
@@ -225,9 +260,11 @@ export default defineEventHandler(async (event) => {
     ]
     transactionCreate.autoConfirmEnabled = true
     transactionCreate.deviceSessionIdentifier = metadata.device_fingerprint || null
-    transactionCreate.successUrl = `${baseUrl}/customer/courses/${tenantSlug}?success=true&enrollmentId=${enrollmentId}`
-    transactionCreate.failedUrl = `${baseUrl}/customer/courses/${tenantSlug}?failed=true&enrollmentId=${enrollmentId}`
-    transactionCreate.cancelledUrl = `${baseUrl}/customer/courses/${tenantSlug}?cancelled=true&enrollmentId=${enrollmentId}`
+    // ✅ CHANGED: Don't use enrollmentId in URLs (may not exist)
+    const successParam = enrollmentId ? `&enrollmentId=${enrollmentId}` : ''
+    transactionCreate.successUrl = `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`
+    transactionCreate.failedUrl = `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
+    transactionCreate.cancelledUrl = `${baseUrl}/customer/courses/${tenantSlug}?cancelled=true${successParam}`
     transactionCreate.invoiceMerchantReference = merchantRef
     transactionCreate.shippingAddress = null
     transactionCreate.billingAddress = null
