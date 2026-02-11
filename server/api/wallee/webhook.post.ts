@@ -329,32 +329,144 @@ export default defineEventHandler(async (event) => {
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
     
-    // ============ LAYER 9: UPDATE COURSE REGISTRATIONS (NEW!) ============
+    // ============ LAYER 9: HANDLE COURSE REGISTRATIONS (CREATE or UPDATE) ============
+    // ✅ NEW LOGIC: Since we no longer create pending registrations in enroll-wallee,
+    // we need to CREATE them here when payment is confirmed
     if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
       const registrationStatus = paymentStatus === 'completed' ? 'confirmed' : 'pending'
       const paymentStatusUpdate = paymentStatus === 'completed' ? 'paid' : 'pending'
       
-      // Get payment IDs to find linked course registrations
+      // Get payment IDs to find/create linked course registrations
       const paymentIds = paymentsToUpdate.map(p => p.id)
       
       if (paymentIds.length > 0) {
-        // Update course_registrations that have these payment_ids
-        const { data: updatedRegistrations, error: registrationError } = await supabase
+        // Step 1: Try to UPDATE existing registrations (idempotency for webhook retries)
+        const { data: existingRegistrations, error: queryError } = await supabase
           .from('course_registrations')
-          .update({
-            status: registrationStatus,
-            payment_status: paymentStatusUpdate,
-            sari_synced: paymentStatus === 'completed', // Mark as synced (SARI enrollment happened during validation)
-            sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
-            updated_at: new Date().toISOString()
-          })
-          .in('payment_id', paymentIds)
           .select('id, course_id')
+          .in('payment_id', paymentIds)
         
-        if (registrationError) {
-          logger.warn('⚠️ Error updating course registrations:', registrationError)
-        } else if (updatedRegistrations && updatedRegistrations.length > 0) {
-          logger.info(`✅ Updated ${updatedRegistrations.length} course registration(s) to: ${registrationStatus}`)
+        let updatedRegistrations = existingRegistrations || []
+        
+        // Step 2: For payments without registrations, CREATE them now
+        if (!queryError && paymentIds.length > 0) {
+          const registrationsToCreate = []
+          
+          for (const payment of paymentsToUpdate) {
+            // Check if this payment already has a registration
+            const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
+            
+            if (!hasRegistration && payment.metadata?.courseId) {
+              // ✅ NEW: Create registration from payment metadata
+              logger.info(`📝 Creating course registration for payment: ${payment.id}`)
+              
+              // Get course details
+              const { data: course } = await supabase
+                .from('courses')
+                .select('id, name, tenant_id')
+                .eq('id', payment.metadata.courseId)
+                .single()
+              
+              if (course) {
+                // Create or find guest user
+                let userId: string | undefined
+                if (payment.user_id) {
+                  userId = payment.user_id
+                } else if (payment.metadata?.email) {
+                  // Look for existing user
+                  const { data: existingUser } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', payment.metadata.email)
+                    .eq('tenant_id', course.tenant_id)
+                    .maybeSingle()
+                  
+                  if (existingUser) {
+                    userId = existingUser.id
+                  } else {
+                    // Create guest user
+                    const { data: newUser } = await supabase
+                      .from('users')
+                      .insert({
+                        first_name: payment.metadata?.firstname || 'Guest',
+                        last_name: payment.metadata?.lastname || 'User',
+                        email: payment.metadata?.email,
+                        phone: payment.metadata?.phone,
+                        tenant_id: course.tenant_id,
+                        role: 'student',
+                        is_active: true,
+                        is_guest: true,
+                        auth_user_id: null
+                      })
+                      .select('id')
+                      .single()
+                    
+                    if (newUser) {
+                      userId = newUser.id
+                      logger.debug('✅ Created guest user:', userId)
+                    }
+                  }
+                }
+                
+                // Create registration
+                if (userId) {
+                  registrationsToCreate.push({
+                    course_id: course.id,
+                    tenant_id: course.tenant_id,
+                    user_id: userId,
+                    payment_id: payment.id,
+                    first_name: payment.metadata?.firstname || '',
+                    last_name: payment.metadata?.lastname || '',
+                    email: payment.metadata?.email,
+                    phone: payment.metadata?.phone,
+                    sari_faberid: payment.metadata?.sari_faberid,
+                    status: registrationStatus,
+                    payment_status: paymentStatusUpdate,
+                    custom_sessions: payment.metadata?.custom_sessions || null,
+                    sari_synced: paymentStatus === 'completed',
+                    sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  })
+                }
+              }
+            }
+          }
+          
+          // Batch insert new registrations
+          if (registrationsToCreate.length > 0) {
+            const { data: newRegs, error: insertError } = await supabase
+              .from('course_registrations')
+              .insert(registrationsToCreate)
+              .select('id, course_id')
+            
+            if (!insertError && newRegs) {
+              logger.info(`✅ Created ${newRegs.length} new course registration(s)`)
+              updatedRegistrations = [...updatedRegistrations, ...newRegs]
+            } else {
+              logger.warn('⚠️ Error creating course registrations:', insertError)
+            }
+          }
+        }
+        
+        // Step 3: Update all registrations (existing + newly created)
+        if (updatedRegistrations.length > 0) {
+          const registrationIds = updatedRegistrations.map(r => r.id)
+          const { error: updateError } = await supabase
+            .from('course_registrations')
+            .update({
+              status: registrationStatus,
+              payment_status: paymentStatusUpdate,
+              webhook_processed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .in('id', registrationIds)
+          
+          if (updateError) {
+            logger.warn('⚠️ Error updating course registrations:', updateError)
+          } else {
+            logger.info(`✅ Updated ${registrationIds.length} course registration(s) to: ${registrationStatus}`)
+          }
           
           // ============ ENROLL IN SARI AFTER PAYMENT ============
           if (paymentStatus === 'completed') {
