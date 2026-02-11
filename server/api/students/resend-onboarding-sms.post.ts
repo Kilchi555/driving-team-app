@@ -11,6 +11,7 @@ export default defineEventHandler(async (event: H3Event) => {
   const startTime = Date.now()
   const ipAddress = getClientIP(event)
   let authenticatedUserId: string | undefined
+  let requestingUserId: string | undefined
   let tenantId: string | undefined
   let auditDetails: any = {}
 
@@ -341,7 +342,7 @@ ${tenantName}`
     const statusCode = error.statusCode || 500
 
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: requestingUserId || undefined,
       action: 'resend_onboarding_sms',
       status: 'error',
       error_message: errorMessage,
