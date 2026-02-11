@@ -39,8 +39,9 @@ export function setAuthCookies(
   })
   
   // Set Refresh Token cookie (longer lived)
-  // FIX: Refresh token should live 1 day longer than access token
-  const refreshMaxAge = maxAge ? (maxAge * 2) : (rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60)
+  // FIX: Refresh token should live MUCH longer than access token
+  // Access token: 24h, Refresh token: 30 days minimum
+  const refreshMaxAge = maxAge ? (maxAge * 7) : (rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60)
   
   logger.debug('🍪 Setting refresh token with maxAge:', refreshMaxAge, 'seconds (', Math.round(refreshMaxAge / 3600), 'hours )')
   
