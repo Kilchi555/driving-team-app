@@ -270,12 +270,13 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 7. Check for duplicate enrollment by FABERID
+    // ✅ UPDATED: Only check confirmed/enrolled, not pending (pending is being removed)
     const { data: existingEnrollment } = await supabase
       .from('course_registrations')
       .select('id')
       .eq('course_id', courseId)
       .eq('sari_faberid', faberidClean)
-      .in('status', ['confirmed', 'pending'])
+      .in('status', ['confirmed', 'enrolled'])
       .maybeSingle()
 
     if (existingEnrollment) {
@@ -286,6 +287,7 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 7b. Also check by email to give clear feedback
+    // ✅ UPDATED: Only check confirmed/enrolled
     const finalEmail = email || customerData.email
     const finalPhone = phone || customerData.phone || ''
 
@@ -294,7 +296,7 @@ const handler = defineEventHandler(async (event) => {
       .select('id')
       .eq('course_id', courseId)
       .eq('email', finalEmail)
-      .in('status', ['confirmed', 'pending'])
+      .in('status', ['confirmed', 'enrolled'])
       .maybeSingle()
 
     if (existingByEmail) {
@@ -319,112 +321,63 @@ const handler = defineEventHandler(async (event) => {
       guestUserId = existingUser.id
       logger.debug('✅ Found existing user:', guestUserId)
     } else {
-      // Create new guest user (no auth_user_id)
-      logger.debug('👤 Creating guest user...')
-      
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .insert({
-          first_name: customerData.firstname,
-          last_name: customerData.lastname,
-          email: finalEmail,
-          phone: finalPhone,
-          tenant_id: tenantId,
-          role: 'student',
-          is_active: true,
-          is_guest: true, // Mark as guest
-          auth_user_id: null // No auth account
-        })
-        .select('id')
-        .single()
-
-      if (userError || !newUser) {
-        logger.error('❌ Failed to create guest user:', userError)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Guest user could not be created'
-        })
-      }
-
-      guestUserId = newUser.id
-      logger.info('✅ Guest user created:', guestUserId)
+      // ⚠️ DON'T CREATE USER HERE ANYMORE!
+      // User will be created by webhook after payment confirmation
+      logger.debug('👤 No existing user, will be created after payment confirmation')
+      guestUserId = null as any // Placeholder
     }
 
-    // 9. Create pending enrollment
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from('course_registrations')
-      .insert({
-        course_id: courseId,
-        tenant_id: tenantId,
-        user_id: guestUserId, // ✅ NOW HAS USER_ID!
-        first_name: customerData.firstname,
-        last_name: customerData.lastname,
-        email: finalEmail,
-        phone: finalPhone,
-        sari_faberid: faberidClean, // Store for deduplication
-        status: 'pending',
-        payment_status: 'pending',
-        custom_sessions: customSessions || null // Store custom session selections
-      })
-      .select('id')
-      .single()
+    // ⚠️ REMOVED: Create pending enrollment
+    // This was the source of race conditions and orphaned records!
+    // Enrollment will ONLY be created when payment is confirmed in webhook
+    
+    logger.info('ℹ️ Skipping enrollment creation - will be done by webhook after payment')
 
-    if (enrollmentError || !enrollment) {
-      logger.error('❌ Failed to create enrollment:', enrollmentError)
-      
-      // Provide clearer error messages
-      if (enrollmentError?.message?.includes('duplicate key')) {
-        if (enrollmentError.message.includes('course_id_email_key')) {
-          throw createError({
-            statusCode: 409,
-            statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
-          })
-        }
-        if (enrollmentError.message.includes('course_id_sari_faberid')) {
-          throw createError({
-            statusCode: 409,
-            statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
-          })
-        }
-      }
-      
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Anmeldung konnte nicht erstellt werden. Bitte versuchen Sie es später erneut.'
-      })
-    }
-
-    logger.info('✅ Pending enrollment created:', enrollment.id)
-
-    // 9. Call payment processor
+    // 9. Call payment processor (WITH VALIDATION DATA, NOT ENROLLMENT ID)
     const priceChf = course.price_per_participant_rappen / 100
     
     try {
       const paymentResponse = await $fetch('/api/payments/process-public', {
         method: 'POST',
         body: {
-          enrollmentId: enrollment.id,
+          // ✅ CHANGED: Don't reference enrollmentId (doesn't exist yet)
+          // Instead, pass validation data for webhook
+          courseId: courseId,
           amount: course.price_per_participant_rappen,
           currency: 'CHF',
           customerEmail: finalEmail,
           customerName: `${customerData.firstname} ${customerData.lastname}`,
-          courseId: courseId,
           tenantId: tenantId,
           metadata: {
             sari_faberid: faberidClean,
-            sari_birthdate: birthdate, // Store for SARI enrollment after payment
+            sari_birthdate: birthdate,
             course_name: course.name,
-            course_location: course.description
+            course_location: course.description,
+            // ✅ NEW: Store customer data for webhook
+            firstname: customerData.firstname,
+            lastname: customerData.lastname,
+            email: finalEmail,
+            phone: finalPhone,
+            // ✅ NEW: Store custom sessions for webhook
+            custom_sessions: customSessions || null,
+            // ✅ NEW: Validation metadata for SARI
+            sari_validation_data: {
+              license: customerData.license,
+              birthdate: customerData.birthdate,
+              faberid: faberidClean
+            }
           }
         }
       }) as any
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
-        logger.info('✅ Payment URL generated, redirecting...')
+        logger.info('✅ Payment URL generated (registration will be created after payment)')
         return {
           success: true,
-          enrollmentId: enrollment.id,
-          paymentUrl: paymentResponse.paymentUrl
+          // ⚠️ REMOVED: enrollmentId (doesn't exist until payment confirmed)
+          paymentUrl: paymentResponse.paymentUrl,
+          // ✅ NEW: Let frontend know to expect creation after payment
+          message: 'Please complete payment to finalize your enrollment'
         }
       } else {
         throw new Error('No payment URL received')
@@ -432,11 +385,8 @@ const handler = defineEventHandler(async (event) => {
     } catch (error: any) {
       logger.error('❌ Payment processing failed:', error.message)
       
-      // Cancel the enrollment if payment setup fails
-      await supabase
-        .from('course_registrations')
-        .update({ status: 'cancelled' })
-        .eq('id', enrollment.id)
+      // ⚠️ REMOVED: Cancel enrollment (doesn't exist anymore!)
+      // No cleanup needed since we didn't create anything in DB
       
       throw createError({
         statusCode: 500,
