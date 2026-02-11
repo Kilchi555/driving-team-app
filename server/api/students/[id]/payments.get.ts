@@ -201,30 +201,10 @@ export default defineEventHandler(async (event) => {
               total_price_rappen,
               products(id, name, price_rappen)
             `)
-            // Try filtering by discount_sale_id if that column exists, otherwise by appointment_id
-            .eq('discount_sale_id', ds.id)
+            .eq('appointment_id', ds.appointment_id)
 
           if (productsError) {
-            logger.warn('⚠️ Error loading product sales by discount_sale_id:', productsError)
-            // Fallback: try loading by appointment_id if discount_sale_id doesn't exist
-            const { data: productsDataFallback, error: productsErrorFallback } = await supabaseAdmin
-              .from('product_sales')
-              .select(`
-                id,
-                appointment_id,
-                product_id,
-                quantity,
-                unit_price_rappen,
-                total_price_rappen,
-                products(id, name, price_rappen)
-              `)
-              .eq('appointment_id', ds.appointment_id)
-            
-            if (productsErrorFallback) {
-              logger.warn('⚠️ Error loading product sales by appointment_id:', productsErrorFallback)
-            } else if (productsDataFallback) {
-              productSalesMap[ds.appointment_id] = productsDataFallback
-            }
+            logger.warn('⚠️ Error loading product sales by appointment_id:', productsError)
           } else if (productsData) {
             productSalesMap[ds.appointment_id] = productsData
           }
