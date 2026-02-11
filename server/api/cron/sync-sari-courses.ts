@@ -33,6 +33,39 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
   const startTime = new Date()
 
   try {
+    // ⚠️ DISABLED: SARI Cron sync disabled
+    // All SARI course syncs must now be triggered manually by tenant admins
+    // This prevents unwanted duplicates and data conflicts
+    logger.warn('⚠️ SARI Cron Job disabled - manual sync only')
+    
+    await logCronExecution(getSupabaseAdmin(), 'sync-sari-courses', 'success', {
+      startedAt: startTime,
+      completedAt: new Date(),
+      errorMessage: 'Disabled - manual sync only'
+    }).catch(() => {}) // Ignore logging errors during early return
+    
+    return {
+      success: true,
+      tenants_processed: 0,
+      total_syncs: 0,
+      failed_tenants: []
+    }
+  } catch (error: any) {
+    logger.error('❌ Error in SARI Cron Job (disabled):', error.message)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'SARI Cron Job is disabled'
+    })
+  }
+})
+
+/*
+ORIGINAL CODE - KEPT FOR REFERENCE (disabled)
+
+export default defineEventHandler(async (event): Promise<CronResult> => {
+  const startTime = new Date()
+
+  try {
     // Layer 1: Authentication - Verify Vercel Cron token
     if (!verifyCronToken(event)) {
       logger.error('🚨 Unauthorized cron request to sync-sari-courses')
@@ -232,4 +265,5 @@ export default defineEventHandler(async (event): Promise<CronResult> => {
     })
   }
 })
+*/
 
