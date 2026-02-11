@@ -1,53 +1,60 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { action, data } = body
-
-  if (!action) {
-    throw createError({
-      statusCode: 400,
-      message: 'action is required (load, connect, disconnect)'
-    })
-  }
-
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  )
-
   try {
+    // ============ LAYER 1: AUTHENTICATION (Server-side) ============
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
+      })
+    }
+
+    const body = await readBody(event)
+    const { action, data } = body
+
+    if (!action) {
+      throw createError({
+        statusCode: 400,
+        message: 'action is required (load, connect, disconnect)'
+      })
+    }
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    )
+
+    // ============ Get authenticated user's profile (NOT from client) ============
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (userError || !userData?.id) {
+      logger.error('❌ External calendars: User profile not found', {
+        authUserId: authUser.id,
+        error: userError
+      })
+      throw createError({
+        statusCode: 404,
+        message: 'User profile not found'
+      })
+    }
+
     if (action === 'load') {
-      // Get internal user ID from auth_user_id
-      const { authUserId } = data
 
-      if (!authUserId) {
-        throw createError({
-          statusCode: 400,
-          message: 'authUserId is required'
-        })
-      }
-
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single()
-
-      if (userError || !userData?.id) {
-        console.error('Error loading user data:', userError)
-        throw createError({
-          statusCode: 404,
-          message: 'User not found'
-        })
-      }
-
-      // Load external calendars
+      // Load external calendars for authenticated user
       const { data: calendars, error } = await supabase
         .from('external_calendars')
         .select('*')
         .eq('staff_id', userData.id)
+        .eq('tenant_id', userData.tenant_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -57,26 +64,13 @@ export default defineEventHandler(async (event) => {
         data: calendars || []
       }
     } else if (action === 'connect') {
-      // Get user's tenant_id and internal users.id (staff id)
-      const { authUserId, provider, account_identifier, calendar_name, ics_url } = data
+      // ============ LAYER 2: AUTHORIZATION FOR CONNECT ============
+      const { provider, account_identifier, calendar_name, ics_url } = data
 
-      if (!authUserId || !provider) {
+      if (!provider) {
         throw createError({
           statusCode: 400,
-          message: 'authUserId and provider are required'
-        })
-      }
-
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, tenant_id')
-        .eq('auth_user_id', authUserId)
-        .single()
-
-      if (userError || !userData?.tenant_id || !userData?.id) {
-        throw createError({
-          statusCode: 404,
-          message: 'User or tenant not found'
+          message: 'provider is required'
         })
       }
 
@@ -100,11 +94,18 @@ export default defineEventHandler(async (event) => {
 
       if (upsertError) throw upsertError
 
+      logger.info('📅 External calendar connected', {
+        provider,
+        staffId: userData.id,
+        tenantId: userData.tenant_id
+      })
+
       return {
         success: true,
         message: 'Kalender erfolgreich verbunden!'
       }
     } else if (action === 'disconnect') {
+      // ============ LAYER 2: AUTHORIZATION FOR DISCONNECT ============
       const { calendarId } = data
 
       if (!calendarId) {
@@ -114,12 +115,44 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      // ✅ CRITICAL: Verify ownership before deletion
+      const { data: calendar, error: calendarCheckError } = await supabase
+        .from('external_calendars')
+        .select('staff_id, tenant_id')
+        .eq('id', calendarId)
+        .single()
+
+      if (calendarCheckError || !calendar) {
+        throw createError({
+          statusCode: 404,
+          message: 'Calendar not found'
+        })
+      }
+
+      // Verify user owns this calendar
+      if (calendar.staff_id !== userData.id || calendar.tenant_id !== userData.tenant_id) {
+        logger.warn('⚠️ Unauthorized calendar disconnect attempt', {
+          calendarId,
+          userId: userData.id,
+          calendarStaffId: calendar.staff_id
+        })
+        throw createError({
+          statusCode: 403,
+          message: 'You do not have permission to disconnect this calendar'
+        })
+      }
+
       const { error } = await supabase
         .from('external_calendars')
         .delete()
         .eq('id', calendarId)
 
       if (error) throw error
+
+      logger.info('📅 External calendar disconnected', {
+        calendarId,
+        staffId: userData.id
+      })
 
       return {
         success: true,
@@ -132,7 +165,11 @@ export default defineEventHandler(async (event) => {
       })
     }
   } catch (err: any) {
-    console.error('❌ External calendars API error:', err)
+    logger.error('❌ External calendars API error:', {
+      action,
+      error: err.message,
+      statusCode: err.statusCode
+    })
     throw createError({
       statusCode: err.statusCode || 500,
       message: err.message || 'Failed to manage external calendars'

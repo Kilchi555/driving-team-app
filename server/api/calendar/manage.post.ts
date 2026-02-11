@@ -7,28 +7,64 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { 
-    action,
-    tenant_id,
-    staff_id,
-    user_id,
-    appointment_data,
-    payment_data,
-    start_date,
-    end_date,
-    category
-  } = body
-
-  const supabase = getSupabaseAdmin()
-
   try {
-    logger.debug('📋 Calendar API action:', action)
+    // ============ LAYER 1: AUTHENTICATION (Server-side) ============
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
+      })
+    }
+
+    const body = await readBody(event)
+    const { 
+      action,
+      tenant_id,
+      staff_id,
+      user_id,
+      appointment_data,
+      payment_data,
+      start_date,
+      end_date,
+      category
+    } = body
+
+    const supabase = getSupabaseAdmin()
+
+    // ============ Get user profile (from authenticated user) ============
+    const { data: userProfile, error: userError } = await supabase
+      .from('users')
+      .select('id, role, tenant_id')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (userError || !userProfile) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User profile not found'
+      })
+    }
+
+    logger.debug('📋 Calendar API action:', action, 'by user:', userProfile.id)
     
     if (action === 'get-staff-meetings') {
+      // ✅ Verify tenant access
+      if (tenant_id !== userProfile.tenant_id) {
+        logger.warn('⚠️ Unauthorized tenant access attempt', {
+          requestedTenant: tenant_id,
+          userTenant: userProfile.tenant_id
+        })
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this tenant'
+        })
+      }
+
       // Get all staff meetings for a tenant/staff
       const { data: meetings, error } = await supabase
         .from('staff_meetings')
@@ -45,6 +81,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-appointment') {
+      // ✅ Verify tenant access
+      if (appointment_data?.tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this tenant'
+        })
+      }
+
       // Create a new appointment
       const { data: appointment, error } = await supabase
         .from('appointments')
@@ -54,6 +98,8 @@ export default defineEventHandler(async (event) => {
 
       if (error) throw error
 
+      logger.info('📅 Appointment created', { appointmentId: appointment.id })
+
       return {
         success: true,
         data: appointment
@@ -61,6 +107,27 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-appointment-status') {
+      // ✅ Verify user owns appointment
+      const { data: apt, error: aptError } = await supabase
+        .from('appointments')
+        .select('tenant_id')
+        .eq('id', appointment_data.id)
+        .single()
+
+      if (aptError || !apt) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Appointment not found'
+        })
+      }
+
+      if (apt.tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this appointment'
+        })
+      }
+
       // Update appointment status
       const { data: updated, error } = await supabase
         .from('appointments')
@@ -71,6 +138,8 @@ export default defineEventHandler(async (event) => {
 
       if (error) throw error
 
+      logger.info('📅 Appointment updated', { appointmentId: appointment_data.id })
+
       return {
         success: true,
         data: updated
@@ -78,6 +147,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-existing-appointments') {
+      // ✅ Verify tenant access
+      if (tenant_id && tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this tenant'
+        })
+      }
+
       // Get existing appointments for conflict checking
       logger.debug('🔍 Getting existing appointments:', { staff_id, start_date, end_date })
       
@@ -85,6 +162,7 @@ export default defineEventHandler(async (event) => {
         .from('appointments')
         .select('*')
         .eq('staff_id', staff_id)
+        .eq('tenant_id', userProfile.tenant_id)
         .neq('status', 'cancelled')
       
       // ✅ Only add date filters if they're provided
@@ -110,6 +188,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-pricing-rules') {
+      // ✅ Verify tenant access
+      if (tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this tenant'
+        })
+      }
+
       // Get pricing rules for appointment
       logger.debug('📊 Getting pricing rules for category:', category)
       
@@ -138,6 +224,27 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-user-data') {
+      // ✅ Verify user owns the requested user data or is admin
+      const { data: requestedUser, error: userDataError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user_id)
+        .single()
+
+      if (userDataError || !requestedUser) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'User not found'
+        })
+      }
+
+      if (requestedUser.tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this user'
+        })
+      }
+
       // Get user data
       const { data: user, error } = await supabase
         .from('users')
@@ -154,6 +261,27 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-staff-data') {
+      // ✅ Verify tenant access
+      const { data: staffData, error: staffDataError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staff_id)
+        .single()
+
+      if (staffDataError || !staffData) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Staff not found'
+        })
+      }
+
+      if (staffData.tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this staff'
+        })
+      }
+
       // Get staff data
       const { data: staff, error } = await supabase
         .from('users')
@@ -171,6 +299,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-payment') {
+      // ✅ Verify tenant access
+      if (payment_data?.tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this tenant'
+        })
+      }
+
       // Create payment record
       const { data: payment, error } = await supabase
         .from('payments')
@@ -180,6 +316,8 @@ export default defineEventHandler(async (event) => {
 
       if (error) throw error
 
+      logger.info('💳 Payment created', { paymentId: payment.id })
+
       return {
         success: true,
         data: payment
@@ -187,6 +325,27 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-payment') {
+      // ✅ Verify appointment ownership before fetching payment
+      const { data: apt, error: aptError } = await supabase
+        .from('appointments')
+        .select('tenant_id')
+        .eq('id', payment_data?.appointment_id)
+        .single()
+
+      if (aptError || !apt) {
+        return {
+          success: true,
+          data: null
+        }
+      }
+
+      if (apt.tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this payment'
+        })
+      }
+
       // Get payment record by appointment_id
       logger.debug('💳 Getting payment for appointment:', payment_data?.appointment_id)
       
@@ -213,6 +372,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-tenant-data') {
+      // ✅ Verify tenant access
+      if (tenant_id !== userProfile.tenant_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied to this tenant'
+        })
+      }
+
       // Get tenant data
       const { data: tenant, error } = await supabase
         .from('tenants')
@@ -234,7 +401,11 @@ export default defineEventHandler(async (event) => {
     })
 
   } catch (err: any) {
-    logger.error('❌ Calendar API error:', err.message || err)
+    logger.error('❌ Calendar API error:', {
+      action,
+      error: err.message,
+      statusCode: err.statusCode
+    })
     throw createError({
       statusCode: err.statusCode || 500,
       statusMessage: err.message || 'Calendar operation failed'
