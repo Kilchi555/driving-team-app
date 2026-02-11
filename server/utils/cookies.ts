@@ -23,9 +23,9 @@ export function setAuthCookies(
   const { rememberMe = false, maxAge } = options
   
   // Calculate maxAge (ALWAYS use provided maxAge if given, otherwise calculate default)
-  // Remember Me: 7 days, Otherwise: 1 hour
+  // Remember Me: 7 days, Otherwise: 24 hours
   // FIX: Use maxAge directly if provided, else calculate from rememberMe
-  const cookieMaxAge = maxAge !== undefined ? maxAge : (rememberMe ? 7 * 24 * 60 * 60 : 60 * 60)
+  const cookieMaxAge = maxAge !== undefined ? maxAge : (rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60)
   
   logger.debug('🍪 Setting auth cookies with maxAge:', cookieMaxAge, 'seconds (', Math.round(cookieMaxAge / 3600), 'hours )')
   
