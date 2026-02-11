@@ -1631,26 +1631,25 @@ const loadData = async () => {
     }))
 
     // Load all staff_locations for this staff to get is_online_bookable status
-    const staffLocationRecords = await query({
-      action: 'select',
-      table: 'staff_locations',
-      select: 'location_id, is_online_bookable',
-      filters: [
-        { column: 'staff_id', operator: 'eq', value: props.currentUser.id }
-      ]
-    })
+    try {
+      const staffLocResponse = await $fetch('/api/staff/get-location-bookable-status')
+      const staffLocationRecords = staffLocResponse?.staff_locations || []
 
-    if (staffLocationRecords && staffLocationRecords.length > 0) {
-      // Create a map for quick lookup
-      const staffLocMap = new Map(staffLocationRecords.map((sl: any) => [sl.location_id, sl.is_online_bookable]))
-      
-      // Enrich allTenantLocations with is_online_bookable status
-      allTenantLocations.value = allTenantLocations.value.map((loc: any) => ({
-        ...loc,
-        is_online_bookable: staffLocMap.has(loc.id) ? staffLocMap.get(loc.id) : true // Default to true if no entry
-      }))
-      
-      logger.debug('✅ Loaded staff_locations online bookable settings')
+      if (staffLocationRecords && staffLocationRecords.length > 0) {
+        // Create a map for quick lookup
+        const staffLocMap = new Map(staffLocationRecords.map((sl: any) => [sl.location_id, sl.is_online_bookable]))
+        
+        // Enrich allTenantLocations with is_online_bookable status
+        allTenantLocations.value = allTenantLocations.value.map((loc: any) => ({
+          ...loc,
+          is_online_bookable: staffLocMap.has(loc.id) ? staffLocMap.get(loc.id) : true // Default to true if no entry
+        }))
+        
+        logger.debug('✅ Loaded staff_locations online bookable settings')
+      }
+    } catch (err: any) {
+      logger.warn('⚠️ Could not load staff_locations online bookable status:', err.message)
+      // Continue without the online bookable status - it will default to true
     }
 
     // myLocations für Backward-Compatibility (wird nicht mehr verwendet)
