@@ -151,10 +151,10 @@ export default defineEventHandler(async (event) => {
     }
     
     // Remember Me: Adjust session duration
-    // Default: 1 hour (3600 seconds)
+    // Default: 24 hours (86400 seconds)
     // Remember Me: 7 days (604800 seconds)
-    const sessionDuration = rememberMe ? 604800 : 3600
-    logger.debug('🔐 [LOGIN] Session duration:', rememberMe ? '7 days' : '1 hour')
+    const sessionDuration = rememberMe ? 604800 : 86400
+    logger.debug('🔐 [LOGIN] Session duration:', rememberMe ? '7 days' : '24 hours')
     
     // Apply rate limiting (max 10 attempts per minute) - AFTER parsing email
     const rateLimit = await checkRateLimit(ipAddress, 'login', undefined, undefined, email.toLowerCase().trim(), tenantId)
