@@ -540,22 +540,25 @@ const handleStudentAdded = async (newStudent: any) => {
   logger.debug('✅ New student added:', newStudent)
   showAddStudentModal.value = false
   
+  // ✅ FIXED: Extract from newStudent.student (API returns { success, student: {...}, ... })
+  const studentData = newStudent.student || newStudent
+  
   const typedStudent: Student = {
-    id: newStudent.id,
-    first_name: newStudent.first_name || '',
-    last_name: newStudent.last_name || '',
-    email: newStudent.email || '',
-    phone: newStudent.phone || '',
-    category: newStudent.category || '',
-    assigned_staff_id: newStudent.assigned_staff_id || '',
-    preferred_location_id: newStudent.preferred_location_id || undefined
+    id: studentData.id,
+    first_name: studentData.first_name || '',
+    last_name: studentData.last_name || '',
+    email: studentData.email || '',
+    phone: studentData.phone || '',
+    category: studentData.category || '',
+    assigned_staff_id: studentData.assigned_staff_id || '',
+    preferred_location_id: studentData.preferred_location_id || undefined
   }
   
   availableStudents.value.unshift(typedStudent)
-  logger.debug('✅ Added new student to list:', typedStudent.first_name, typedStudent.last_name)
+  logger.debug('✅ Added new student to list:', typedStudent.first_name, typedStudent.last_name, typedStudent.id)
   
   selectStudent(typedStudent, true)
-  logger.debug('✅ Auto-selected new student')
+  logger.debug('✅ Auto-selected new student with ID:', typedStudent.id)
 }
 
 const selectStudentById = async (userId: string, retryCount = 0) => {
