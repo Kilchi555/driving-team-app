@@ -31,26 +31,26 @@ DROP CONSTRAINT IF EXISTS course_registrations_course_id_email_key;
 ALTER TABLE course_registrations 
 DROP CONSTRAINT IF EXISTS course_registrations_course_id_sari_faberid_key;
 
--- Step 4: Add improved unique constraints
--- Only active/confirmed registrations can be unique per email
--- Note: 'pending' removed since we no longer create pending registrations before payment
--- Registrations are now created ONLY when payment is confirmed
-ALTER TABLE course_registrations
-ADD CONSTRAINT course_registrations_unique_email 
-UNIQUE (course_id, email) 
+-- Step 4: Add improved unique constraints as UNIQUE INDEXES (not ALTER TABLE constraints)
+-- Partial unique indexes allow NULL values and conditional uniqueness per status
+-- This is better than constraints because:
+-- 1. Allows NULL values (payment_id can be NULL for old records)
+-- 2. Only enforces uniqueness for active statuses (allows re-enrollment after cancel)
+-- 3. Better performance for queries with WHERE clauses
+
+-- Only confirmed/enrolled registrations unique per email
+CREATE UNIQUE INDEX IF NOT EXISTS idx_course_registrations_unique_email 
+ON course_registrations(course_id, email) 
 WHERE status IN ('confirmed', 'enrolled');
 
--- Only active/confirmed registrations can be unique per faberid
--- Note: 'pending' removed since we no longer create pending registrations before payment
-ALTER TABLE course_registrations
-ADD CONSTRAINT course_registrations_unique_faberid 
-UNIQUE (course_id, sari_faberid) 
+-- Only confirmed/enrolled registrations unique per faberid
+CREATE UNIQUE INDEX IF NOT EXISTS idx_course_registrations_unique_faberid 
+ON course_registrations(course_id, sari_faberid) 
 WHERE status IN ('confirmed', 'enrolled');
 
 -- Make payment_id unique when it exists (prevents duplicate webhook processing)
-ALTER TABLE course_registrations
-ADD CONSTRAINT course_registrations_unique_payment_id 
-UNIQUE (payment_id) 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_course_registrations_unique_payment_id 
+ON course_registrations(payment_id) 
 WHERE payment_id IS NOT NULL;
 
 -- Step 5: Create index on (course_id, status) for common queries
