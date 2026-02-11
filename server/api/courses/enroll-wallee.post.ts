@@ -349,6 +349,8 @@ const handler = defineEventHandler(async (event) => {
           customerName: `${customerData.firstname} ${customerData.lastname}`,
           tenantId: tenantId,
           metadata: {
+            // ✅ CRITICAL: courseId needed by webhook to create registration
+            courseId: courseId,
             sari_faberid: faberidClean,
             sari_birthdate: birthdate,
             course_name: course.name,

@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
     const newStudentId = uuidv4()
     const onboardingToken = uuidv4()
 
-    const { error: createError } = await supabase
+    const { error: insertError } = await supabase
       .from('users')
       .insert({
         id: newStudentId,
@@ -118,22 +118,21 @@ export default defineEventHandler(async (event) => {
         tenant_id: userProfile.tenant_id,
         is_active: true,
         onboarding_status: 'pending',
-        onboarding_token: onboardingToken,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        onboarding_token: onboardingToken
+        // ✅ REMOVED: created_at and updated_at - let DB handle these with defaults
       })
 
-    if (createError) {
-      logger.error('❌ Error creating student:', createError)
+    if (insertError) {
+      logger.error('❌ Error creating student:', insertError)
       
       // Check for duplicate constraint
-      if (createError.code === '23505') {
-        if (createError.message?.includes('phone')) {
+      if (insertError.code === '23505') {
+        if (insertError.message?.includes('phone')) {
           const error: any = new Error('DUPLICATE_PHONE')
           error.code = '23505'
           throw error
         }
-        if (createError.message?.includes('email')) {
+        if (insertError.message?.includes('email')) {
           const error: any = new Error('DUPLICATE_EMAIL')
           error.code = '23505'
           throw error
