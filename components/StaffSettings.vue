@@ -1612,22 +1612,28 @@ const loadData = async () => {
       order: { column: 'name', ascending: true }
     })
     
-    // Filter categories: if there are subcategories (parent_category_id != null), show only subcategories
-    // Otherwise show only main categories (parent_category_id = null)
+    // Filter categories: 
+    // - Show all subcategories (parent_category_id != null)
+    // - Show only main categories that DON'T have subcategories
     const allCategories = categories || []
-    const hasSubcategories = allCategories.some((cat: any) => cat.parent_category_id)
     
-    if (hasSubcategories) {
-      // Show only subcategories (those with parent_category_id)
-      availableCategories.value = allCategories.filter((cat: any) => cat.parent_category_id)
-    } else {
-      // Show only main categories (those without parent_category_id)
-      availableCategories.value = allCategories.filter((cat: any) => !cat.parent_category_id)
-    }
+    // Get IDs of all main categories that have subcategories
+    const mainCatsWithSubs = new Set(
+      allCategories
+        .filter((cat: any) => cat.parent_category_id)
+        .map((cat: any) => cat.parent_category_id)
+    )
+    
+    // Show subcategories + main categories without subcategories
+    availableCategories.value = allCategories.filter((cat: any) => 
+      cat.parent_category_id || // All subcategories
+      !mainCatsWithSubs.has(cat.id) // Main categories without subcategories
+    )
     
     logger.debug('📋 Available categories for location creation:', {
       total: allCategories.length,
-      hasSubcategories,
+      subcategoriesCount: allCategories.filter((c: any) => c.parent_category_id).length,
+      mainWithoutSubCount: allCategories.filter((c: any) => !c.parent_category_id && !mainCatsWithSubs.has(c.id)).length,
       displayCount: availableCategories.value.length
     })
 
