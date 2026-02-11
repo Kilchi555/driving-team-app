@@ -104,16 +104,26 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           return
         }
 
-        // Check if token is expiring soon (< 5 minutes)
+        // Check if token is expiring soon (< 5 minutes) OR if we haven't refreshed in a while
+        // We refresh proactively every 20 minutes to ensure refresh token stays valid
         const expiresAt = session.expires_at * 1000 // Convert to ms
         const now = Date.now()
         const timeUntilExpiry = expiresAt - now
         const REFRESH_THRESHOLD = 5 * 60 * 1000 // 5 minutes
-        const REFRESH_INTERVAL = 30 * 1000 // Check every 30 seconds
+        const PROACTIVE_REFRESH_INTERVAL = 20 * 60 * 1000 // 20 minutes - proactively refresh before Supabase refresh token expires
+        const CHECK_INTERVAL = 30 * 1000 // Check every 30 seconds
+        
+        // Get last refresh time from session storage
+        const lastRefreshTime = parseInt(localStorage.getItem('last_token_refresh_time') || '0', 10)
+        const timeSinceLastRefresh = now - lastRefreshTime
 
-        logger.debug('🔍 Token expiry check - expires in:', Math.floor(timeUntilExpiry / 1000) + 's')
+        logger.debug('🔍 Token expiry check:', {
+          expiresIn: Math.floor(timeUntilExpiry / 1000) + 's',
+          timeSinceLastRefresh: Math.floor(timeSinceLastRefresh / 1000) + 's',
+          shouldRefresh: timeUntilExpiry < REFRESH_THRESHOLD || timeSinceLastRefresh > PROACTIVE_REFRESH_INTERVAL
+        })
 
-        if (timeUntilExpiry < REFRESH_THRESHOLD && !isRefreshing) {
+        if ((timeUntilExpiry < REFRESH_THRESHOLD || timeSinceLastRefresh > PROACTIVE_REFRESH_INTERVAL) && !isRefreshing) {
           logger.debug('🔄 Token expiring soon, attempting refresh...', {
             expiresIn: Math.floor(timeUntilExpiry / 1000) + 's'
           })
@@ -128,8 +138,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             if (response?.session?.access_token && response?.session?.refresh_token) {
               logger.debug('✅ Token refreshed successfully')
               
-              // Save to localStorage
+              // Save to localStorage and record refresh time
               await saveSessionToStorage(response.session.access_token, response.session.refresh_token)
+              localStorage.setItem('last_token_refresh_time', Date.now().toString())
               
               // Update Supabase session with new tokens
               const { error } = await supabase.auth.setSession({
