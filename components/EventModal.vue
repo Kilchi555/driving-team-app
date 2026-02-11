@@ -4113,12 +4113,14 @@ const goToPolicySelection = async () => {
   logger.debug('📋 Policy selection check:', {
     isCancelledByStudent,
     isWithin24h,
-    shouldShowChargeModal: isCancelledByStudent && isWithin24h
+    hoursUntilAppointment,
+    shouldShowChargeModal: isCancelledByStudent
   })
   
-  // ✅ If student cancellation within 24h, show charge decision modal instead
-  if (isCancelledByStudent && isWithin24h) {
-    logger.debug('❓ Student cancellation within 24h - showing charge decision modal instead of policy')
+  // ✅ If student cancellation, show charge decision modal
+  // (regardless of whether appointment is in past or future)
+  if (isCancelledByStudent) {
+    logger.debug('❓ Student cancellation - showing charge decision modal instead of policy')
     
     // ✅ CRITICAL: Save the selected reason so handleNoPolicyChoice can use it!
     pendingCancellationReason.value = selectedReason
