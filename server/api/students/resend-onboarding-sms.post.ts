@@ -194,11 +194,10 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // Check if onboarding is still pending
-    if (!student.onboarding_token || !student.onboarding_token_expires) {
-      logger.error('❌ NO TOKEN/EXPIRES:', { 
+    if (!student.onboarding_token) {
+      logger.error('❌ NO TOKEN:', { 
         studentId, 
-        hasToken: !!student.onboarding_token,
-        hasExpires: !!student.onboarding_token_expires
+        hasToken: !!student.onboarding_token
       })
       await logAudit({
         user_id: requestingUserId,
@@ -211,8 +210,27 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 400, statusMessage: 'Student onboarding already completed' })
     }
 
+    // If token has no expiry, set one now (30 days from now)
+    let tokenExpires = student.onboarding_token_expires
+    if (!tokenExpires) {
+      logger.warn('⚠️ TOKEN HAS NO EXPIRY - Setting 30 day expiry:', { studentId })
+      const newExpires = new Date()
+      newExpires.setDate(newExpires.getDate() + 30)
+      tokenExpires = newExpires.toISOString()
+      
+      // Update student with expiry
+      const { error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({ onboarding_token_expires: tokenExpires })
+        .eq('id', studentId)
+      
+      if (updateError) {
+        logger.warn('⚠️ Failed to set token expiry:', updateError)
+      }
+    }
+
     // Check if token has expired
-    const expiresAt = new Date(student.onboarding_token_expires)
+    const expiresAt = new Date(tokenExpires)
     const now = new Date()
     if (expiresAt < now) {
       logger.warn('⚠️ TOKEN EXPIRED - Generating new one:', { 
