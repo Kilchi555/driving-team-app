@@ -63,7 +63,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     if (reqUserError || !requestingUser) {
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: undefined,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'User profile not found',
@@ -74,11 +74,12 @@ export default defineEventHandler(async (event: H3Event) => {
 
     tenantId = requestingUser.tenant_id
     auditDetails.tenant_id = tenantId
+    const requestingUserId = requestingUser.id
 
     // Only admin/staff/tenant_admin can resend
     if (!['admin', 'staff', 'tenant_admin', 'superadmin'].includes(requestingUser.role)) {
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Insufficient permissions',
@@ -97,7 +98,7 @@ export default defineEventHandler(async (event: H3Event) => {
     )
     if (!canProceed) {
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Rate limit exceeded',
@@ -125,7 +126,7 @@ export default defineEventHandler(async (event: H3Event) => {
         rawBody: JSON.stringify(body)
       })
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Missing or invalid studentId',
@@ -138,7 +139,7 @@ export default defineEventHandler(async (event: H3Event) => {
     // Validate UUID format
     if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(studentId)) {
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Invalid UUID format for studentId',
@@ -181,7 +182,7 @@ export default defineEventHandler(async (event: H3Event) => {
     if (!student.phone) {
       logger.error('❌ NO PHONE:', { studentId, phone: student.phone })
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Student has no phone number',
@@ -199,7 +200,7 @@ export default defineEventHandler(async (event: H3Event) => {
         hasExpires: !!student.onboarding_token_expires
       })
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
         error_message: 'Student onboarding already completed',
@@ -247,7 +248,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // ============ LAYER 5: AUDIT LOGGING ============
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: requestingUserId,
       action: 'resend_onboarding_sms_initiated',
       resource_type: 'user',
       resource_id: studentId,
