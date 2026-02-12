@@ -2323,9 +2323,9 @@ const handleLogout = async () => {
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
     
-    // ✅ Redirect to tenant booking page (/booking/slug) or fallback to /login
+    // ✅ Redirect to tenant login page (/slug) or fallback to /login
     // NEVER redirect to / or tenant homepage!
-    const redirectPath = slug ? `/booking/${slug}` : '/login'
+    const redirectPath = slug ? `/${slug}` : '/login'
     logger.debug('🔄 Logout redirect:', redirectPath)
     await navigateTo(redirectPath)
     
@@ -2334,8 +2334,8 @@ const handleLogout = async () => {
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
     
-    // ✅ On error, also redirect to /booking/slug or /login, never to /
-    const redirectPath = slug ? `/booking/${slug}` : '/login'
+    // ✅ On error, also redirect to /slug or /login, never to /
+    const redirectPath = slug ? `/${slug}` : '/login'
     logger.error('🔄 Logout redirect on error:', redirectPath)
     await navigateTo(redirectPath)
   } finally {
