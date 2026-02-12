@@ -221,13 +221,27 @@
                   type="email"
                   autocomplete="username email"
                   required
+                  @input="validateEmailRealtime"
                   @blur="validateEmail"
                   :class="[
                     'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                    emailStatus === 'available' ? 'border-green-500 bg-green-50 focus:ring-green-500' :
+                    emailStatus === 'taken' ? 'border-red-500 bg-red-50 focus:ring-red-500' :
+                    emailStatus === 'checking' ? 'border-gray-400 bg-gray-50 focus:ring-gray-500' :
+                    emailStatus === 'error' ? 'border-red-500 focus:ring-red-500' :
                     fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
                   ]"
                   placeholder="max.mustermann@example.com"
                 >
+                <p v-if="emailCheckMessage" :class="[
+                  'mt-1 text-sm',
+                  emailStatus === 'available' ? 'text-green-600' :
+                  emailStatus === 'taken' ? 'text-red-600' :
+                  emailStatus === 'checking' ? 'text-gray-500' :
+                  'text-red-600'
+                ]">
+                  {{ emailCheckMessage }}
+                </p>
                 <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
               </div>
 
@@ -353,7 +367,7 @@
 
                 <div class="space-y-3">
                   <div 
-                    v-for="cat in categories" 
+                    v-for="cat in filteredCategories" 
                     :key="cat.code || cat.id" 
                     class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-colors cursor-pointer"
                     @click="toggleCategory(cat.code || cat.id)"
@@ -709,6 +723,9 @@ const currentRegulation = ref<any>(null)
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
 const categoryError = ref('')
+const emailStatus = ref('')  // ← NEW: 'available', 'taken', 'checking', 'error', or empty
+const emailCheckMessage = ref('')  // ← NEW: Visual feedback message
+let emailCheckTimeout: NodeJS.Timeout | null = null  // ← NEW: Debounce timer
 
 // Field-specific errors
 const fieldErrors = ref<Record<string, string>>({
@@ -778,6 +795,57 @@ function validateEmail() {
   } else {
     fieldErrors.value.email = ''
   }
+}
+
+// ✅ NEW: Real-time email validation with debounce
+async function validateEmailRealtime() {
+  if (!form.email) {
+    emailStatus.value = ''
+    emailCheckMessage.value = ''
+    fieldErrors.value.email = ''
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.email)) {
+    emailStatus.value = 'error'
+    emailCheckMessage.value = 'Ungültige E-Mail-Adresse'
+    fieldErrors.value.email = 'Ungültige E-Mail-Adresse'
+    return
+  }
+  
+  // Format is valid - show checking state
+  emailStatus.value = 'checking'
+  emailCheckMessage.value = '⏳ Wird überprüft...'
+  fieldErrors.value.email = ''
+  
+  // Debounce: Check availability after 500ms
+  clearTimeout(emailCheckTimeout!)
+  emailCheckTimeout = setTimeout(async () => {
+    try {
+      const { available, message } = await $fetch('/api/students/check-email', {
+        method: 'POST',
+        body: {
+          email: form.email.trim().toLowerCase(),
+          tenantId: userData.value?.tenant_id
+        }
+      }) as any
+      
+      if (available) {
+        emailStatus.value = 'available'
+        emailCheckMessage.value = '✓ E-Mail verfügbar'
+        fieldErrors.value.email = ''
+      } else {
+        emailStatus.value = 'taken'
+        emailCheckMessage.value = '✗ ' + message
+        fieldErrors.value.email = message
+      }
+    } catch (err) {
+      emailStatus.value = 'error'
+      emailCheckMessage.value = 'Konnte E-Mail nicht überprüfen'
+      fieldErrors.value.email = 'Konnte E-Mail nicht überprüfen'
+    }
+  }, 500)
 }
 
 // Validate phone format
@@ -1114,6 +1182,41 @@ const openRegulationModal = async (type: string) => {
     }
   }
 }
+
+// ✅ NEW: Filter categories - show only Main if no Subs, else only Subs
+const filteredCategories = computed(() => {
+  if (!categories.value) return []
+  
+  const hasSubcategories = (mainCategoryId: string) => {
+    return categories.value.some(cat => cat.parent_category_id === mainCategoryId)
+  }
+  
+  return categories.value.filter(cat => {
+    // If it's a Main category (parent_category_id is null/undefined)
+    if (!cat.parent_category_id) {
+      // Only show if NO subcategories exist for this main
+      return !hasSubcategories(cat.id)
+    }
+    // Always show subcategories
+    return true
+  })
+})
+
+// ✅ NEW: Check if form is valid for submission
+const isFormValid = computed(() => {
+  return (
+    form.password &&
+    form.confirmPassword &&
+    form.firstName &&
+    form.lastName &&
+    form.email &&
+    emailStatus.value === 'available' && // ← Email MUST be available
+    form.phone &&
+    form.acceptedTerms &&
+    form.categories.length > 0 &&
+    !isSubmitting.value
+  )
+})
 
 // Handle next step
 const handleNextStep = async () => {
