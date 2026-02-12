@@ -156,7 +156,7 @@ export default defineEventHandler(async (event) => {
     // 7. SEND ONBOARDING INVITATION
     let smsSuccess = false
     let emailSuccess = false
-    let onboardingLink = `${process.env.PUBLIC_URL}/onboarding/${onboardingToken}`
+    let onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
 
     // Send SMS if phone exists
     if (body.phone) {
