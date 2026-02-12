@@ -123,7 +123,8 @@ export default defineEventHandler(async (event) => {
         is_active: true,
         onboarding_status: 'pending',
         onboarding_token: onboardingToken,
-        onboarding_token_expires: expiresAt.toISOString()
+        onboarding_token_expires: expiresAt.toISOString(),
+        assigned_staff_id: userProfile.id  // ✅ NEW: Assign to staff who created the student
         // ✅ REMOVED: created_at and updated_at - let DB handle these with defaults
       })
 
