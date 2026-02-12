@@ -1173,8 +1173,8 @@ const getAppointmentDateTime = (payment: any): string => {
 // Watch for user role changes
 watch([currentUser], ([newUser]) => {
   if (newUser && !isClient.value) {
-    logger.debug('🔄 User is not a client, redirecting to main dashboard')
-    navigateTo('/')
+    logger.debug('🔄 User is not a client, redirecting to login')
+    navigateTo('/login')
   }
 }, { immediate: true })
 
@@ -1191,8 +1191,8 @@ onMounted(async () => {
   logger.debug('🔥 Customer Payments mounted')
   
   if (!isClient.value) {
-    console.warn('⚠️ User is not a client, redirecting...')
-    await navigateTo('/')
+    console.warn('⚠️ User is not a client, redirecting to login...')
+    await navigateTo('/login')
     return
   }
 

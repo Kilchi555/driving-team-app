@@ -1567,8 +1567,8 @@ const retryLoad = async () => {
 const loadAllData = async () => {
   try {
     if (!isClient.value) {
-      console.warn('⚠️ User is not a client, redirecting...')
-      await navigateTo('/')
+      console.warn('⚠️ User is not a client, redirecting to login...')
+      await navigateTo('/login')
       return
     }
 
@@ -2319,16 +2319,25 @@ const handleLogout = async () => {
     
     await authStore.logout()
     
-    logger.debug('✅ Logout successful, redirecting to tenant login...')
+    logger.debug('✅ Logout successful, redirecting to tenant booking...')
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
-    await navigateTo(slug ? `/${slug}` : '/login')
+    
+    // ✅ Redirect to tenant booking page (/booking/slug) or fallback to /login
+    // NEVER redirect to / or tenant homepage!
+    const redirectPath = slug ? `/booking/${slug}` : '/login'
+    logger.debug('🔄 Logout redirect:', redirectPath)
+    await navigateTo(redirectPath)
     
   } catch (err: any) {
     console.error('❌ Fehler beim Abmelden:', err)
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
-    await navigateTo(slug ? `/${slug}` : '/login')
+    
+    // ✅ On error, also redirect to /booking/slug or /login, never to /
+    const redirectPath = slug ? `/booking/${slug}` : '/login'
+    logger.error('🔄 Logout redirect on error:', redirectPath)
+    await navigateTo(redirectPath)
   } finally {
     isLoggingOut.value = false
   }
@@ -2337,8 +2346,8 @@ const handleLogout = async () => {
 // Watch for user role changes and redirect if needed
 watch([currentUser, userRole], ([newUser, newRole]) => {
   if (newUser && !isClient.value) {
-    logger.debug('🔄 User is not a client, redirecting to main dashboard')
-    navigateTo('/')
+    logger.debug('🔄 User is not a client, redirecting to login')
+    navigateTo('/login')
   }
 }, { immediate: true })
 
@@ -2436,8 +2445,8 @@ onMounted(async () => {
     }
     
     if (!authStore.isLoggedIn || !authStore.isClient) {
-      logger.debug('❌ Not logged in or not a client, redirecting...')
-      await navigateTo('/')
+      logger.debug('❌ Not logged in or not a client, redirecting to login...')
+      await navigateTo('/login')
       return
     }
     
@@ -2487,7 +2496,7 @@ onMounted(async () => {
     
   } catch (err: any) {
     console.error('❌ Error during mount:', err)
-    await navigateTo('/')
+    await navigateTo('/login')
   }
 })
 
