@@ -147,16 +147,18 @@ export default defineEventHandler(async (event) => {
     // 6. LOAD TENANT DATA FOR SMS SENDER NAME
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, twilio_from_sender')
+      .select('name, slug, twilio_from_sender')
       .eq('id', userProfile.tenant_id)
       .single()
 
     let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+    let tenantSlug = tenant?.slug || 'driving-team'
 
     // 7. SEND ONBOARDING INVITATION
     let smsSuccess = false
     let emailSuccess = false
     let onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
+    let loginLink = `https://simy.ch/${tenantSlug}`
 
     // Send SMS if phone exists
     if (body.phone) {
@@ -166,7 +168,7 @@ export default defineEventHandler(async (event) => {
         // Format phone number (ensure +41 format)
         const formattedPhone = formatSwissPhoneNumber(body.phone)
         
-        const message = `Hallo ${body.first_name}! Willkommen bei ${tenantName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 30 Tage gültig).`
+        const message = `Hallo ${body.first_name}!\n\nWillkommen bei ${tenantName}. Vervollständige deine Registrierung unter:\n${onboardingLink}\n\nNach der Registrierung kannst du dich hier anmelden:\n${loginLink}\n\n(Link 30 Tage gültig)\n\nFreundliche Grüße\n${tenantName}`
         
         await sendSMS({
           to: formattedPhone,
