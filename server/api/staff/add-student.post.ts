@@ -99,6 +99,10 @@ export default defineEventHandler(async (event) => {
     // 5. CREATE NEW STUDENT
     const newStudentId = uuidv4()
     const onboardingToken = uuidv4()
+    
+    // Calculate expiry: 30 days from now
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30)
 
     const { error: insertError } = await supabase
       .from('users')
@@ -118,7 +122,8 @@ export default defineEventHandler(async (event) => {
         tenant_id: userProfile.tenant_id,
         is_active: true,
         onboarding_status: 'pending',
-        onboarding_token: onboardingToken
+        onboarding_token: onboardingToken,
+        onboarding_token_expires: expiresAt.toISOString()
         // ✅ REMOVED: created_at and updated_at - let DB handle these with defaults
       })
 
