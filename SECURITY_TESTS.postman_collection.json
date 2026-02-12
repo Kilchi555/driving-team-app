@@ -1,0 +1,319 @@
+{
+  "info": {
+    "name": "Security Tests - External Calendar APIs",
+    "description": "API tests for authentication and authorization fixes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth Setup",
+      "item": [
+        {
+          "name": "Get Current User (verify token)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/current-user",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "current-user"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. sync-ics.post.ts Tests",
+      "item": [
+        {
+          "name": "❌ Without Auth Token (should be 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calendar_id\": \"test-id\",\n  \"ics_content\": \"BEGIN:VCALENDAR\\nEND:VCALENDAR\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/external-calendars/sync-ics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "external-calendars", "sync-ics"]
+            }
+          }
+        },
+        {
+          "name": "✅ With Auth Token, Invalid Calendar (should be 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calendar_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"ics_content\": \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//Test//Test//EN\\nEND:VCALENDAR\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/external-calendars/sync-ics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "external-calendars", "sync-ics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. external-calendars.post.ts Tests",
+      "item": [
+        {
+          "name": "❌ Load without Auth (should be 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\": \"load\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/staff/external-calendars",
+              "host": ["{{base_url}}"],
+              "path": ["api", "staff", "external-calendars"]
+            }
+          }
+        },
+        {
+          "name": "✅ Load with Auth (should be 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\": \"load\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/staff/external-calendars",
+              "host": ["{{base_url}}"],
+              "path": ["api", "staff", "external-calendars"]
+            }
+          }
+        },
+        {
+          "name": "✅ Connect ICS Calendar (should be 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"connect\",\n  \"data\": {\n    \"provider\": \"ics\",\n    \"calendar_name\": \"Test Calendar\",\n    \"account_identifier\": \"test@example.com\",\n    \"ics_url\": \"https://example.com/calendar.ics\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/staff/external-calendars",
+              "host": ["{{base_url}}"],
+              "path": ["api", "staff", "external-calendars"]
+            }
+          }
+        },
+        {
+          "name": "❌ Disconnect Other User's Calendar (should be 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"disconnect\",\n  \"data\": {\n    \"calendarId\": \"OTHER_STAFF_CALENDAR_ID_HERE\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/staff/external-calendars",
+              "host": ["{{base_url}}"],
+              "path": ["api", "staff", "external-calendars"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. calendar/manage.post.ts Tests",
+      "item": [
+        {
+          "name": "❌ Without Auth (should be 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\": \"get-staff-meetings\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calendar/manage",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calendar", "manage"]
+            }
+          }
+        },
+        {
+          "name": "✅ Get Tenant Data (should be 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"get-tenant-data\",\n  \"tenant_id\": \"{{tenant_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calendar/manage",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calendar", "manage"]
+            }
+          }
+        },
+        {
+          "name": "❌ Access Other Tenant (should be 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"get-tenant-data\",\n  \"tenant_id\": \"OTHER_TENANT_ID_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calendar/manage",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calendar", "manage"]
+            }
+          }
+        },
+        {
+          "name": "✅ Get Pricing Rules (should be 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"get-pricing-rules\",\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"category\": \"B\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/calendar/manage",
+              "host": ["{{base_url}}"],
+              "path": ["api", "calendar", "manage"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenant_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

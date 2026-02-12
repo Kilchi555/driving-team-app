@@ -71,9 +71,18 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event) as WalleeWebhookPayload
     const signature = event.headers['x-wallee-signature'] as string
     
+    // 🔍 DEBUG: Log the entire payload to understand structure
+    logger.info('🔔 WEBHOOK PAYLOAD RECEIVED:', JSON.stringify(body, null, 2))
+    logger.info('🔔 WEBHOOK BODY KEYS:', Object.keys(body))
+    logger.info('🔔 WEBHOOK BODY entityId:', body.entityId, 'type:', typeof body.entityId)
+    logger.info('🔔 WEBHOOK BODY state:', body.state, 'type:', typeof body.state)
+    
     // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
     if (!body.entityId || !body.state) {
       logger.warn('❌ Invalid webhook payload - missing entityId or state')
+      logger.warn('❌ body.entityId:', body.entityId)
+      logger.warn('❌ body.state:', body.state)
+      logger.warn('❌ Full body:', JSON.stringify(body))
       return { success: false, error: 'Invalid webhook payload' }
     }
     
