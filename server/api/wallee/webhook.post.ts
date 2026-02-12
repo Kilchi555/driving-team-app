@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // ============ LAYER 3: FIND PAYMENT BY TRANSACTION ID ============
-    const supabase = getSupabaseAdmin()
+    // Note: supabase is already initialized at the top of the handler
     
     logger.debug('🔍 Searching for payment with wallee_transaction_id:', transactionId)
     
