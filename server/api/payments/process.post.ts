@@ -446,6 +446,13 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const transaction = createdTransaction?.body || createdTransaction
     const transactionId = transaction?.id
 
+    logger.info('✅ WALLEE TRANSACTION CREATED:', {
+      paymentId: payment.id,
+      transactionId: transactionId,
+      state: transaction?.state,
+      merchantReference: transaction?.merchantReference
+    })
+
     logger.debug('🔍 Wallee response - extracted transaction:', {
       transactionId: transactionId,
       state: transaction?.state,
