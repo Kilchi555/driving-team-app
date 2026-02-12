@@ -404,12 +404,8 @@ const submitForm = async () => {
     if (form.value.zip) studentData.zip = form.value.zip.trim()
     if (form.value.city) studentData.city = form.value.city.trim()
     if (form.value.category) studentData.category = form.value.category
-    if (form.value.assigned_staff_id) studentData.assigned_staff_id = form.value.assigned_staff_id
-
-    // Auto-assign to current user if staff
-    if (props.currentUser?.role === 'staff') {
-      studentData.assigned_staff_id = props.currentUser.id
-    }
+    // ✅ NOTE: assigned_staff_id is now automatically set by the API based on authenticated user
+    // No need to pass it from frontend anymore
 
     logger.debug('📝 Calling new /api/staff/add-student API with:', studentData)
     
