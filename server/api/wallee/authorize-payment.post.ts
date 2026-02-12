@@ -339,7 +339,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // ✅ Update Payment in DB
-    await supabase
+    const { error: updateError } = await supabase
       .from('payments')
       .update({
         wallee_transaction_id: String(updatedTransaction.id),
@@ -349,7 +349,17 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', paymentId)
 
+    if (updateError) {
+      logger.error('❌ CRITICAL: Failed to save wallee_transaction_id:', updateError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to save transaction ID to payment record',
+        data: { error: updateError.message }
+      })
+    }
+
     logger.debug('✅ Payment updated with authorization')
+    logger.info(`✅ Payment ${paymentId} linked to Wallee Transaction ${updatedTransaction.id}`)
 
     return {
       success: true,
