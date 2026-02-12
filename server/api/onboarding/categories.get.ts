@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
     if (tenantId) {
       const { data } = await supabase
         .from('categories')
-        .select('id, code, name')
+        .select('id, code, name, parent_category_id')
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('name')
@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
     if (!categories || categories.length === 0) {
       const { data } = await supabase
         .from('categories')
-        .select('id, code, name')
+        .select('id, code, name, parent_category_id')
         .is('tenant_id', null)
         .eq('is_active', true)
         .order('name')
