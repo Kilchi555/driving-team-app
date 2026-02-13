@@ -364,6 +364,8 @@ export default defineEventHandler(async (event) => {
           for (const payment of paymentsToUpdate) {
             // Check if this payment already has a registration
             const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
+
+            logger.debug(`🔍 Webhook debug: Checking payment ${payment.id} for registration creation. hasRegistration: ${hasRegistration}, payment.metadata?.course_id: ${payment.metadata?.course_id}`)
             
             if (!hasRegistration && payment.metadata?.course_id) {
               // ✅ NEW: Create registration from payment metadata
