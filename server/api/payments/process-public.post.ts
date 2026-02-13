@@ -217,19 +217,20 @@ export default defineEventHandler(async (event) => {
     
     // Build clean merchant reference: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
     // ✅ CRITICAL: Include payment ID as fallback for webhook search!
+    // ✅ CRITICAL: Remove all non-printable ASCII characters for Wallee compatibility
+    // Wallee accepts: 0x20-0x7E (printable ASCII) + TAB (0x09)
+    const sanitizeWallee = (str: string) => str.replace(/[^\x09\x20-\x7E]/g, '')
+    
     let merchantRef = `payment-${paymentRecord.id}`
-    // ✅ CLEANED: Remove non-ASCII characters from names (e.g., umlauts: Cäcilia → Cacilia)
-    const cleanFirstName = firstName.replace(/[^\x20-\x7E]/g, '')
-    const cleanLastName = lastName.replace(/[^\x20-\x7E]/g, '')
-    merchantRef += ` | ${cleanFirstName} ${cleanLastName}`
+    merchantRef += ` | ${sanitizeWallee(firstName)} ${sanitizeWallee(lastName)}`
     if (course?.name) {
-      merchantRef += ` | ${course.name.replace(/[^\x20-\x7E]/g, '')}`  // Remove non-ASCII (Umlaute, etc)
+      merchantRef += ` | ${sanitizeWallee(course.name)}`
     }
     if (course?.description) {
       // Extract location from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
       const locationMatch = course.description.match(/(\b[A-Z][a-z]+\b)(?:\s|,|$)/)
       if (locationMatch) {
-        merchantRef += ` | ${locationMatch[1]}`
+        merchantRef += ` | ${sanitizeWallee(locationMatch[1])}`
       }
     }
     
