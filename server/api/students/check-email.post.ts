@@ -27,26 +27,50 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Check if email already exists in this tenant
-    const { data: existingUser, error } = await supabase
+    // 1. Check if email already exists globally in auth.users (Supabase's internal auth table)
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers({
+      search: email.trim().toLowerCase()
+    })
+
+    if (authError) {
+      logger.error('❌ Global auth.users email check error:', authError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Could not check global email availability'
+      })
+    }
+
+    const authUserExists = authUsers?.users.some(u => 
+      u.email?.toLowerCase() === email.trim().toLowerCase()
+    )
+
+    if (authUserExists) {
+      return {
+        available: false,
+        message: 'Diese E-Mail-Adresse ist bereits im System registriert (global)'
+      }
+    }
+
+    // 2. Check if email already exists in the local 'users' profile table for this specific tenant
+    const { data: existingUserInTenant, error: dbError } = await supabase
       .from('users')
       .select('id')
       .eq('email', email.trim().toLowerCase())
       .eq('tenant_id', tenantId)
       .maybeSingle()
 
-    if (error) {
-      logger.error('❌ Email check error:', error)
+    if (dbError) {
+      logger.error('❌ Local users table email check error:', dbError)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Could not check email availability'
+        statusMessage: 'Could not check local email availability'
       })
     }
 
     return {
-      available: !existingUser,
-      message: existingUser 
-        ? 'Diese E-Mail-Adresse ist bereits registriert'
+      available: !existingUserInTenant,
+      message: existingUserInTenant 
+        ? 'Diese E-Mail wird bereits in diesem Tenant verwendet'
         : '✓ E-Mail verfügbar'
     }
 
