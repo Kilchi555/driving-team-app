@@ -429,7 +429,11 @@ export default defineEventHandler(async (event) => {
                         tenant_id: course.tenant_id,
                         role: 'student',
                         is_active: true,
-                        auth_user_id: null
+                        auth_user_id: null,
+                        // ✅ NEW: Generate onboarding token for guest user to complete profile later
+                        onboarding_token: crypto.randomUUID ? crypto.randomUUID() : 'token-' + Date.now(),
+                        onboarding_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+                        onboarding_status: 'pending'
                       })
                       .select('id')
                       .single()
