@@ -16,7 +16,7 @@
             :type="showPassword ? 'text' : 'password'"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Mindestens 8 Zeichen"
+            placeholder="Mindestens 12 Zeichen"
           />
           <button
             type="button"
@@ -27,7 +27,7 @@
           </button>
         </div>
         <p class="text-xs text-gray-500 mt-1">
-          Mindestens 8 Zeichen, ein Großbuchstabe und eine Zahl
+          Mindestens 12 Zeichen, ein Großbuchstabe und eine Zahl
         </p>
       </div>
 

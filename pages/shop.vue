@@ -128,7 +128,7 @@
                       <input
                         v-model="registerForm.password"
                         type="password"
-                        placeholder="Mindestens 8 Zeichen"
+                        placeholder="Mindestens 12 Zeichen"
                         class="w-full px-3 py-2 border border-green-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         required
                         minlength="8"
@@ -1180,7 +1180,7 @@ const handleRegister = async () => {
   }
   
   if (registerForm.value.password.length < 8) {
-    showToastMessage('Passwort muss mindestens 8 Zeichen lang sein')
+    showToastMessage('Passwort muss mindestens 12 Zeichen lang sein')
     return
   }
   

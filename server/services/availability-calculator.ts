@@ -170,12 +170,11 @@ export class AvailabilityCalculator {
         busyTimes: busyTimes.length
       })
 
-      // ✅ NEW: Preload all travel times in batch before generating slots
-      logger.debug('🚗 Preloading travel times...')
-      await this.preloadTravelTimes(appointments, locations)
-      logger.debug('✅ Travel times preloaded')
-
       // 2. Generate all possible slots
+      // DEACTIVATED: Preload all travel times in batch before generating slots
+      // logger.debug(`🚗 Preloading travel times... (DEACTIVATED)`)
+      // await this.preloadTravelTimes(appointments, locations)
+      // logger.debug(`✅ Travel times preloaded (DEACTIVATED)`)
       const slots = await this.generateSlots({
         staff: staff.filter(s => staffWithBookableLocations.includes(s.id)),
         categories,
@@ -770,6 +769,8 @@ export class AvailabilityCalculator {
       // ✅ NEW: Check travel time between appointment location and new slot location
       // IMPORTANT: Only check if appointment location is a standard location with postal_code
       // AND: Only check if the appointment is at one of the online-bookable locations
+      // DEACTIVATED: Travel time checking disabled
+      /*
       logger.debug(`📍 Appointment location check:`, {
         aptPostalCode: apt.location?.postal_code,
         newPostalCode: params.newLocationPostalCode,
@@ -838,6 +839,7 @@ export class AvailabilityCalculator {
           // Non-critical: continue without travel time check if error occurs
         }
       }
+      */
       // Note: Appointments with custom locations (no postal_code) don't trigger travel time checks
     }
 
@@ -859,247 +861,108 @@ export class AvailabilityCalculator {
     return false
   }
 
-  /**
+  /*
    * Preload travel times in batch for all postal code combinations
    * This runs BEFORE slot generation to cache all needed travel times at once
    */
-  private async preloadTravelTimes(appointments: Appointment[], locations: Location[]): Promise<void> {
-    try {
-      // Collect all unique postal code pairs that need travel time data
-      const travelTimePairs = new Set<string>()
+  // private async preloadTravelTimes(appointments: Appointment[], locations: Location[]): Promise<void> {
+  //   try {
+  //     // Collect all unique postal code pairs that need travel time data
+  //     const travelTimePairs = new Set<string>()
       
-      for (const apt of appointments) {
-        if (!apt.location?.postal_code) continue
+  //     for (const apt of appointments) {
+  //       if (!apt.location?.postal_code) continue
         
-        for (const loc of locations) {
-          if (!loc.postal_code) continue
-          if (apt.location.postal_code === loc.postal_code) continue
+  //       for (const loc of locations) {
+  //         if (!loc.postal_code) continue
+  //         if (apt.location.postal_code === loc.postal_code) continue
           
-          // Add both directions to check
-          const pairForward = `${apt.location.postal_code}→${loc.postal_code}`
-          const pairReverse = `${loc.postal_code}→${apt.location.postal_code}`
+  //         // Add both directions to check
+  //         const pairForward = `${apt.location.postal_code}→${loc.postal_code}`
+  //         const pairReverse = `${loc.postal_code}→${apt.location.postal_code}`
           
-          travelTimePairs.add(pairForward)
-          travelTimePairs.add(pairReverse)
-        }
-      }
+  //         travelTimePairs.add(pairForward)
+  //         travelTimePairs.add(pairReverse)
+  //       }
+  //     }
       
-      if (travelTimePairs.size === 0) {
-        logger.debug('ℹ️ No travel time pairs to preload')
-        return
-      }
+  //     if (travelTimePairs.size === 0) {
+  //       logger.debug('ℹ️ No travel time pairs to preload')
+  //       return
+  //     }
       
-      logger.debug(`🔄 Preloading ${travelTimePairs.size} travel time pairs`)
+  //     logger.debug(`🔄 Preloading ${travelTimePairs.size} travel time pairs`)
       
-      const pairs = Array.from(travelTimePairs)
+  //     const pairs = Array.from(travelTimePairs)
       
-      // Check which ones are already cached
-      const { data: cached, error: cacheError } = await this.supabase
-        .from('plz_distance_cache')
-        .select('from_plz, to_plz')
+  //     // Check which ones are already cached
+  //     const { data: cached, error: cacheError } = await this.supabase
+  //       .from('plz_distance_cache')
+  //       .select('from_plz, to_plz')
       
-      if (cacheError) {
-        logger.warn('⚠️ Error loading cache:', cacheError)
-      }
+  //     if (cacheError) {
+  //       logger.warn('⚠️ Error loading cache:', cacheError)
+  //     }
       
-      const cachedSet = new Set(
-        cached?.map(c => `${c.from_plz}→${c.to_plz}`) || []
-      )
+  //     const cachedSet = new Set(
+  //       cached?.map(c => `${c.from_plz}→${c.to_plz}`) || []
+  //     )
       
-      const toFetch = pairs.filter(p => !cachedSet.has(p))
+  //     const toFetch = pairs.filter(p => !cachedSet.has(p))
       
-      if (toFetch.length === 0) {
-        logger.debug('✅ All travel times already cached')
-        return
-      }
+  //     if (toFetch.length === 0) {
+  //       logger.debug('✅ All travel times already cached')
+  //       return
+  //     }
       
-      logger.debug(`📡 Fetching ${toFetch.length} uncached travel times from Google API`)
+  //     logger.debug(`📡 Fetching ${toFetch.length} uncached travel times from Google API`)
       
-      // Fetch from Google in batches to avoid rate limiting
-      const config = useRuntimeConfig()
-      const googleApiKey = config.googleMapsApiKey
+  //     // Fetch from Google in batches to avoid rate limiting
+  //     const config = useRuntimeConfig()
+  //     const googleApiKey = config.googleMapsApiKey
       
-      if (!googleApiKey) {
-        logger.warn('⚠️ Google API key not configured, skipping travel time preload')
-        return
-      }
+  //     if (!googleApiKey) {
+  //       logger.warn('⚠️ Google API key not configured, skipping travel time preload')
+  //       return
+  //     }
       
-      // Process in smaller batches (e.g., 5 at a time) to avoid overwhelming the API
-      const batchSize = 5
-      for (let i = 0; i < toFetch.length; i += batchSize) {
-        const batch = toFetch.slice(i, i + batchSize)
+  //     // Process in smaller batches (e.g., 5 at a time) to avoid overwhelming the API
+  //     const batchSize = 5
+  //     for (let i = 0; i < toFetch.length; i += batchSize) {
+  //       const batch = toFetch.slice(i, i + batchSize)
         
-        // Fetch all in this batch in parallel
-        await Promise.all(
-          batch.map(async (pairStr) => {
-            const [fromPlz, toPlz] = pairStr.split('→')
-            try {
-              await this.getTravelTimeForSlot(fromPlz, toPlz, new Date())
-            } catch (err: any) {
-              logger.warn(`⚠️ Error fetching travel time ${fromPlz}→${toPlz}:`, err.message)
-            }
-          })
-        )
+  //       // Fetch all in this batch in parallel
+  //       await Promise.all(
+  //         batch.map(async (pairStr) => {
+  //           const [fromPlz, toPlz] = pairStr.split('→')
+  //           try {
+  //             await this.getTravelTimeForSlot(fromPlz, toPlz, new Date())
+  //           } catch (err: any) {
+  //             logger.warn(`⚠️ Error fetching travel time ${fromPlz}→${toPlz}:`, err.message)
+  //           }
+  //         })
+  //       )
         
-        // Small delay between batches
-        if (i + batchSize < toFetch.length) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
+  //       // Small delay between batches
+  //       if (i + batchSize < toFetch.length) {
+  //         await new Promise(resolve => setTimeout(resolve, 100))
+  //       }
+  //     }
       
-      logger.debug(`✅ Travel time preload complete`)
+  //     logger.debug(`✅ Travel time preload complete`)
       
-    } catch (err: any) {
-      logger.warn('⚠️ Travel time preload failed:', err.message)
-      // Non-critical: continue without preload
-    }
-  }
+  //   } catch (err: any) {
+  //     logger.warn('⚠️ Travel time preload failed:', err.message)
+  //     // Non-critical: continue without preload
+  //   }
+  // }
 
-  /**
-   * Get travel time between two postal codes using cache or Google API
-   */
-  private async getTravelTimeForSlot(fromPostalCode: string, toPostalCode: string, slotTime: Date): Promise<number | null> {
-    // Helper to construct a more precise address for Google API
-    const getFullAddress = (plz: string) => {
-      // This is a simplified mapping. A real-world scenario might need a full PLZ-to-city/canton database.
-      // For now, we'll use common cities within the preloaded cantons as examples.
-      const cityMap: Record<string, string> = {
-        // Zürich
-        '8000': 'Zürich', '8001': 'Zürich', '8002': 'Zürich', '8003': 'Zürich', '8004': 'Zürich', '8005': 'Zürich', '8006': 'Zürich', '8008': 'Zürich', '8032': 'Zürich', '8037': 'Zürich', '8038': 'Zürich', '8041': 'Zürich', '8044': 'Zürich', '8045': 'Zürich', '8046': 'Zürich', '8048': 'Zürich', '8049': 'Zürich', '8050': 'Zürich', '8051': 'Zürich', '8052': 'Zürich', '8053': 'Zürich', '8055': 'Zürich', '8057': 'Zürich', '8064': 'Zürich', '8092': 'Zürich', '8093': 'Zürich',
-        // Aargau
-        '5000': 'Aarau', '5001': 'Aarau', '5002': 'Aarau', '5003': 'Aarau', '5004': 'Aarau', '5012': 'Schönenwerd', '5013': 'Schönenwerd', '5014': 'Schönenwerd', '5015': 'Schönenwerd',
-        // St.Gallen
-        '9000': 'St.Gallen', '9001': 'St.Gallen', '9002': 'St.Gallen', '9003': 'St.Gallen', '9004': 'St.Gallen', '9006': 'St.Gallen', '9007': 'St.Gallen', '9008': 'St.Gallen',
-        // Schwyz
-        '6430': 'Schwyz', '6431': 'Schwyz', '6432': 'Schwyz', '6433': 'Schwyz', '6434': 'Schwyz', '6436': 'Schwyz', '6438': 'Schwyz', '6440': 'Schwyz', '6442': 'Schwyz',
-        // Add more mappings as needed for full coverage
-      }
-      const cantonMap: Record<string, string> = {
-        '8': 'Zürich', '5': 'Aargau', '9': 'St.Gallen', '6': 'Schwyz' // Based on first digit of PLZ (simplistic)
-      }
-      
-      const city = cityMap[plz] || ''
-      const canton = cantonMap[plz.substring(0, 1)] || ''
-      
-      if (city && canton) return `${plz} ${city}, ${canton}, Switzerland`
-      if (city) return `${plz} ${city}, Switzerland`
-      return `${plz}, Switzerland`
-    }
-
-    try {
-      // Check cache first
-      const { data: cached, error } = await this.supabase
-        .from('plz_distance_cache')
-        .select('driving_time_minutes_peak, driving_time_minutes_offpeak')
-        .or(`and(from_plz.eq.${fromPostalCode},to_plz.eq.${toPostalCode}),and(from_plz.eq.${toPostalCode},to_plz.eq.${fromPostalCode})`)
-        .maybeSingle()
-
-      if (!error && cached) {
-        logger.debug(`✅ Travel time from cache: ${fromPostalCode} -> ${toPostalCode}`)
-        
-        // Determine if peak or offpeak
-        const hour = slotTime.getHours()
-        const day = slotTime.getDay()
-        const isWeekday = day !== 0 && day !== 6
-        const isPeakTime = isWeekday && ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 19))
-        
-        return isPeakTime ? cached.driving_time_minutes_peak : cached.driving_time_minutes_offpeak
-      }
-
-      logger.debug(`⚠️ No travel time cache for ${fromPostalCode} -> ${toPostalCode}`)
-      
-      // NEW: Try to fetch from Google Distance API and cache it
-      const config = useRuntimeConfig()
-      const googleApiKey = config.googleMapsApiKey
-      if (!googleApiKey) {
-        logger.warn('⚠️ Google Distance API key not configured, cannot fetch travel time')
-        return null
-      }
-
-      logger.debug(`🔄 Fetching travel time from Google Distance API: ${fromPostalCode} -> ${toPostalCode}`)
-      
-      try {
-        // Fetch from Google Distance Matrix API
-        const origin = getFullAddress(fromPostalCode)
-        const destination = getFullAddress(toPostalCode)
-        
-        // Call for offpeak time
-        const offpeakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&language=de&key=${googleApiKey}`
-        
-        const offpeakResponse = await $fetch<any>(offpeakUrl)
-        
-        if (offpeakResponse.status !== 'OK' || !offpeakResponse.rows?.[0]?.elements?.[0]) {
-          logger.warn('⚠️ Google API error (offpeak):', offpeakResponse.status)
-          return null
-        }
-        
-        const offpeakElement = offpeakResponse.rows[0].elements[0]
-        if (offpeakElement.status !== 'OK') {
-          logger.warn('⚠️ No route found (offpeak):', offpeakElement.status)
-          return null
-        }
-        
-        const offpeakMinutes = Math.ceil(offpeakElement.duration.value / 60)
-        
-        // Call for peak time
-        const peakTime = new Date(slotTime)
-        peakTime.setHours(8, 0, 0, 0)
-        if (peakTime <= new Date()) {
-          peakTime.setDate(peakTime.getDate() + 1)
-        }
-        
-        const peakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&departure_time=${Math.floor(peakTime.getTime() / 1000)}&traffic_model=pessimistic&language=de&key=${googleApiKey}`
-        
-        const peakResponse = await $fetch<any>(peakUrl)
-        
-        let peakMinutes = offpeakMinutes
-        if (peakResponse.status === 'OK' && peakResponse.rows?.[0]?.elements?.[0]?.status === 'OK') {
-          const peakElement = peakResponse.rows[0].elements[0]
-          if (peakElement.duration_in_traffic) {
-            peakMinutes = Math.ceil(peakElement.duration_in_traffic.value / 60)
-          }
-        }
-        
-        logger.debug(`✅ Google Distance API results: offpeak=${offpeakMinutes} min, peak=${peakMinutes} min`)
-        
-        // NEW: Save to database cache so we don't need to call Google API again
-        logger.debug(`💾 Saving travel time to database cache: ${fromPostalCode} -> ${toPostalCode}`)
-        const { error: cacheError } = await this.supabase
-          .from('plz_distance_cache')
-          .upsert({
-            from_plz: fromPostalCode,
-            to_plz: toPostalCode,
-            driving_time_minutes: offpeakMinutes,
-            driving_time_minutes_offpeak: offpeakMinutes,
-            driving_time_minutes_peak: peakMinutes,
-            distance_km: Math.round(offpeakElement.distance.value / 1000),
-            last_updated: new Date().toISOString()
-          }, {
-            onConflict: 'from_plz,to_plz'
-          })
-        
-        if (cacheError) {
-          logger.warn('⚠️ Error saving to cache:', cacheError)
-        } else {
-          logger.debug(`✅ Saved to cache: ${fromPostalCode} -> ${toPostalCode}`)
-        }
-        
-        // Return the appropriate time (peak or offpeak)
-        const hour = slotTime.getHours()
-        const day = slotTime.getDay()
-        const isWeekday = day !== 0 && day !== 6
-        const isPeakTime = isWeekday && ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 19))
-        
-        return isPeakTime ? peakMinutes : offpeakMinutes
-      } catch (apiErr: any) {
-        logger.warn(`⚠️ Error calling Google Distance API: ${apiErr.message || apiErr}`)
-        return null
-      }
-    } catch (err: any) {
-      logger.warn('⚠️ Error getting travel time:', err.message)
-      return null
-    }
-  }
+  /*
+  // DEACTIVATED: Get travel time between two postal codes using cache or Google API
+  // private async getTravelTimeForSlot(fromPostalCode: string, toPostalCode: string, slotTime: Date): Promise<number | null> {
+  //   // ... entire method disabled ...
+  // }
+  */
 
   /**
    * Write slots to availability_slots table
