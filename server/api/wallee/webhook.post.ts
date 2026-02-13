@@ -414,6 +414,8 @@ export default defineEventHandler(async (event) => {
                 .eq('id', payment.metadata.course_id)
                 .single()
               
+              logger.debug(`🔍 Course lookup result: course=${course?.id}, name=${course?.name}`)
+              
               if (course) {
                 // Create or find guest user
                 let userId: string | undefined
@@ -482,6 +484,9 @@ export default defineEventHandler(async (event) => {
           
           // Batch insert new registrations
           if (registrationsToCreate.length > 0) {
+            logger.info(`📊 About to insert ${registrationsToCreate.length} course registrations`)
+            logger.debug('📋 Registration data to insert:', JSON.stringify(registrationsToCreate, null, 2).substring(0, 500))
+            
             const { data: newRegs, error: insertError } = await supabase
               .from('course_registrations')
               .insert(registrationsToCreate)
@@ -491,7 +496,12 @@ export default defineEventHandler(async (event) => {
               logger.info(`✅ Created ${newRegs.length} new course registration(s)`)
               updatedRegistrations = [...updatedRegistrations, ...newRegs]
             } else {
-              logger.warn('⚠️ Error creating course registrations:', insertError)
+              logger.error('❌ Error creating course registrations:', {
+                error_code: insertError?.code,
+                error_message: insertError?.message,
+                error_details: insertError?.details,
+                registrations_to_create_count: registrationsToCreate.length
+              })
               
               // ⚠️ DEBUG: Update payment metadata with error info
               for (const payment of paymentsToUpdate) {
@@ -503,13 +513,16 @@ export default defineEventHandler(async (event) => {
                     metadata: {
                       ...payment.metadata,
                       webhook_registration_error: insertError?.message || 'Unknown error creating registration',
-                      webhook_error_timestamp: new Date().toISOString()
+                      webhook_error_timestamp: new Date().toISOString(),
+                      webhook_error_code: insertError?.code
                     }
                   })
                   .eq('id', payment.id)
                   .catch(e => logger.warn('Could not update payment metadata with error:', e.message))
               }
             }
+          } else {
+            logger.warn('⚠️ No registrations to create. registrationsToCreate.length:', registrationsToCreate.length)
           }
         }
         
