@@ -491,11 +491,36 @@ export default defineEventHandler(async (event) => {
             const { data: newRegs, error: insertError } = await supabase
               .from('course_registrations')
               .insert(registrationsToCreate)
-              .select('id, course_id')
+              .select('id, course_id, user_id')
             
             if (!insertError && newRegs) {
               logger.info(`✅ Created ${newRegs.length} new course registration(s)`)
               updatedRegistrations = [...updatedRegistrations, ...newRegs]
+              
+              // ✅ NEW: Update payments with user_id and course_registration_id
+              for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
+                const registration = newRegs[i]
+                const originalPayment = registrationsToCreate[i]
+                
+                // Find the payment that corresponds to this registration
+                const payment = paymentsToUpdate.find(p => p.id === originalPayment.payment_id)
+                if (payment) {
+                  const { error: updatePaymentError } = await supabase
+                    .from('payments')
+                    .update({
+                      user_id: registration.user_id,
+                      course_registration_id: registration.id,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', payment.id)
+                  
+                  if (updatePaymentError) {
+                    logger.warn(`⚠️ Failed to update payment ${payment.id} with user_id and course_registration_id:`, updatePaymentError.message)
+                  } else {
+                    logger.debug(`✅ Updated payment ${payment.id} with user_id=${registration.user_id} and course_registration_id=${registration.id}`)
+                  }
+                }
+              }
             } else {
               logger.error('❌ Error creating course registrations:', {
                 error_code: insertError?.code,
