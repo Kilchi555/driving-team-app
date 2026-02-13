@@ -959,6 +959,33 @@ export class AvailabilityCalculator {
    * Get travel time between two postal codes using cache or Google API
    */
   private async getTravelTimeForSlot(fromPostalCode: string, toPostalCode: string, slotTime: Date): Promise<number | null> {
+    // Helper to construct a more precise address for Google API
+    const getFullAddress = (plz: string) => {
+      // This is a simplified mapping. A real-world scenario might need a full PLZ-to-city/canton database.
+      // For now, we'll use common cities within the preloaded cantons as examples.
+      const cityMap: Record<string, string> = {
+        // Zürich
+        '8000': 'Zürich', '8001': 'Zürich', '8002': 'Zürich', '8003': 'Zürich', '8004': 'Zürich', '8005': 'Zürich', '8006': 'Zürich', '8008': 'Zürich', '8032': 'Zürich', '8037': 'Zürich', '8038': 'Zürich', '8041': 'Zürich', '8044': 'Zürich', '8045': 'Zürich', '8046': 'Zürich', '8048': 'Zürich', '8049': 'Zürich', '8050': 'Zürich', '8051': 'Zürich', '8052': 'Zürich', '8053': 'Zürich', '8055': 'Zürich', '8057': 'Zürich', '8064': 'Zürich', '8092': 'Zürich', '8093': 'Zürich',
+        // Aargau
+        '5000': 'Aarau', '5001': 'Aarau', '5002': 'Aarau', '5003': 'Aarau', '5004': 'Aarau', '5012': 'Schönenwerd', '5013': 'Schönenwerd', '5014': 'Schönenwerd', '5015': 'Schönenwerd',
+        // St.Gallen
+        '9000': 'St.Gallen', '9001': 'St.Gallen', '9002': 'St.Gallen', '9003': 'St.Gallen', '9004': 'St.Gallen', '9006': 'St.Gallen', '9007': 'St.Gallen', '9008': 'St.Gallen',
+        // Schwyz
+        '6430': 'Schwyz', '6431': 'Schwyz', '6432': 'Schwyz', '6433': 'Schwyz', '6434': 'Schwyz', '6436': 'Schwyz', '6438': 'Schwyz', '6440': 'Schwyz', '6442': 'Schwyz',
+        // Add more mappings as needed for full coverage
+      }
+      const cantonMap: Record<string, string> = {
+        '8': 'Zürich', '5': 'Aargau', '9': 'St.Gallen', '6': 'Schwyz' // Based on first digit of PLZ (simplistic)
+      }
+      
+      const city = cityMap[plz] || ''
+      const canton = cantonMap[plz.substring(0, 1)] || ''
+      
+      if (city && canton) return `${plz} ${city}, ${canton}, Switzerland`
+      if (city) return `${plz} ${city}, Switzerland`
+      return `${plz}, Switzerland`
+    }
+
     try {
       // Check cache first
       const { data: cached, error } = await this.supabase
@@ -993,8 +1020,8 @@ export class AvailabilityCalculator {
       
       try {
         // Fetch from Google Distance Matrix API
-        const origin = `${fromPostalCode}, Switzerland`
-        const destination = `${toPostalCode}, Switzerland`
+        const origin = getFullAddress(fromPostalCode)
+        const destination = getFullAddress(toPostalCode)
         
         // Call for offpeak time
         const offpeakUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&mode=driving&language=de&key=${googleApiKey}`
