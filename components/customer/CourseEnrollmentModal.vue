@@ -1037,6 +1037,12 @@ const getGermanErrorMessage = (error: any): string => {
     messageLength: message?.length || 0
   })
   
+  // ⚠️ IMPORTANT: Log the exact message for debugging
+  logger.warn('⚠️ EXACT ERROR MESSAGE FOR MATCHING:', { 
+    message, 
+    statusCode 
+  })
+  
   // License errors from SARI - return the exact message if it contains license info
   if (message && (message.includes('Lizenz') || message.includes('Fahrerlaubnis') || message.includes('Category'))) {
     logger.debug('✅ License error detected, returning exact message')
