@@ -191,7 +191,9 @@ export default defineEventHandler(async (event) => {
         firstname: metadata?.firstname || firstName || '',
         lastname: metadata?.lastname || lastName || '',
         email: customerEmail,
-        phone: metadata?.phone || ''
+        phone: metadata?.phone || '',
+        // ✅ ADDED: Custom sessions for flexible session selection
+        custom_sessions: metadata?.custom_sessions || null
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
