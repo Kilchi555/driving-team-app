@@ -390,19 +390,6 @@ export default defineEventHandler(async (event) => {
             // Check if this payment already has a registration
             const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
             
-            // ⚠️ CRITICAL DEBUG: Log this to payments table metadata so we can see it in the DB
-            const debugInfo = {
-              webhook_debug: true,
-              timestamp: new Date().toISOString(),
-              hasRegistration,
-              course_id_in_metadata: payment.metadata?.course_id,
-              should_create: !hasRegistration && !!payment.metadata?.course_id,
-              payment_status: paymentStatus,
-              existingRegistrations_count: updatedRegistrations.length
-            }
-
-            logger.debug(`🔍 Webhook debug: Checking payment ${payment.id} for registration creation. hasRegistration: ${hasRegistration}, payment.metadata?.course_id: ${payment.metadata?.course_id}`)
-            
             if (!hasRegistration && payment.metadata?.course_id) {
               // ✅ NEW: Create registration from payment metadata
               logger.info(`📝 Creating course registration for payment: ${payment.id}`)
@@ -414,16 +401,12 @@ export default defineEventHandler(async (event) => {
                 .eq('id', payment.metadata.course_id)
                 .single()
               
-              logger.debug(`🔍 Course lookup result: course=${course?.id}, name=${course?.name}`)
-              
               if (course) {
                 // Create or find guest user
                 let userId: string | undefined
                 if (payment.user_id) {
                   userId = payment.user_id
-                  logger.debug(`✅ Using existing user_id from payment: ${userId}`)
                 } else if (payment.metadata?.email) {
-                  logger.debug(`🔍 Looking for guest user by email: ${payment.metadata.email}`)
                   // Look for existing user
                   const { data: existingUser } = await supabase
                     .from('users')
@@ -434,9 +417,7 @@ export default defineEventHandler(async (event) => {
                   
                   if (existingUser) {
                     userId = existingUser.id
-                    logger.debug(`✅ Found existing guest user: ${userId}`)
                   } else {
-                    logger.debug(`👤 No existing user found, creating new guest user`)
                     // Create guest user
                     const { data: newUser, error: createUserError } = await supabase
                       .from('users')
@@ -470,8 +451,6 @@ export default defineEventHandler(async (event) => {
                       })
                     }
                   }
-                } else {
-                  logger.warn('⚠️ No user_id and no email in payment metadata')
                 }
                 
                 // Create registration
@@ -508,7 +487,6 @@ export default defineEventHandler(async (event) => {
           // Batch insert new registrations
           if (registrationsToCreate.length > 0) {
             logger.info(`📊 About to insert ${registrationsToCreate.length} course registrations`)
-            logger.debug('📋 Registration data to insert:', JSON.stringify(registrationsToCreate, null, 2).substring(0, 500))
             
             const { data: newRegs, error: insertError } = await supabase
               .from('course_registrations')
@@ -544,8 +522,6 @@ export default defineEventHandler(async (event) => {
                   .catch(e => logger.warn('Could not update payment metadata with error:', e.message))
               }
             }
-          } else {
-            logger.warn('⚠️ No registrations to create. registrationsToCreate.length:', registrationsToCreate.length)
           }
         }
         
