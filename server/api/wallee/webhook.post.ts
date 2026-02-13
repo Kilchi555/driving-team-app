@@ -448,7 +448,6 @@ export default defineEventHandler(async (event) => {
                         tenant_id: course.tenant_id,
                         role: 'student',
                         is_active: true,
-                        is_anonymous: true,
                         auth_user_id: null
                       })
                       .select('id')
