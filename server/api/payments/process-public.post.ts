@@ -243,48 +243,32 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('📝 Merchant reference:', merchantRef)
 
-    // 8. Create Wallee transaction
-    const transactionCreate = new Wallee.model.TransactionCreate()
-    transactionCreate.spaceViewId = null
-    transactionCreate.currency = currency
-    transactionCreate.lineItems = [
-      {
-        name: course?.name || 'Course Enrollment',
-        sku: courseId,
-        quantity: 1,
-        amountIncludingTax: amount / 100, // Convert from rappen to CHF
-        type: Wallee.model.LineItemType.PRODUCT,
-        uniqueId: 'item-1',
-        taxRate: 0
-      }
-    ]
-    transactionCreate.autoConfirmEnabled = true
-    transactionCreate.deviceSessionIdentifier = metadata.device_fingerprint || null
-    // ✅ CHANGED: Don't use enrollmentId in URLs (may not exist)
+    // 8. Create Wallee transaction - use object literal like process.post.ts (proven to work)
     const successParam = enrollmentId ? `&enrollmentId=${enrollmentId}` : ''
-    transactionCreate.successUrl = `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`
-    transactionCreate.failedUrl = `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
-    transactionCreate.cancelledUrl = `${baseUrl}/customer/courses/${tenantSlug}?cancelled=true${successParam}`
-    transactionCreate.invoiceMerchantReference = merchantRef
-    transactionCreate.shippingAddress = null
-    transactionCreate.billingAddress = null
-    transactionCreate.customerEmailAddress = customerEmail
-    transactionCreate.customersPresence = Wallee.model.CustomersPresence.PRESENT
-    transactionCreate.chargeRetryEnabled = true
-    transactionCreate.language = 'de_CH'
-    transactionCreate.merchantReference = merchantRef
-    transactionCreate.metaData = {
-      enrollmentId: enrollmentId,
-      courseId: courseId,
-      tenantId: tenantId,
-      ...metadata
+    const transactionCreate: Wallee.model.TransactionCreate = {
+      lineItems: [
+        {
+          name: course?.name || 'Course Enrollment',
+          sku: courseId,
+          quantity: 1,
+          amountIncludingTax: amount / 100, // Convert from rappen to CHF
+          type: Wallee.model.LineItemType.PRODUCT,
+          uniqueId: 'item-1',
+          taxRate: 0
+        }
+      ],
+      spaceViewId: null,
+      currency: currency,
+      autoConfirmationEnabled: true,
+      chargeRetryEnabled: false,
+      customersEmailAddress: customerEmail,
+      shippingAddress: null,
+      billingAddress: null,
+      deviceSessionIdentifier: null,
+      merchantReference: merchantRef,
+      successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
+      failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
     }
-
-
-    // ✅ STEP 2: Use clean merchant reference directly (no payment UUID prefix)
-    // The payment record is already linked via course_registration_id in the database
-    transactionCreate.merchantReference = merchantRef
-    transactionCreate.invoiceMerchantReference = merchantRef
 
     logger.debug('📝 Final merchant reference for Wallee:', transactionCreate.merchantReference)
 
