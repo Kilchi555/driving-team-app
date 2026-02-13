@@ -421,7 +421,9 @@ export default defineEventHandler(async (event) => {
                 let userId: string | undefined
                 if (payment.user_id) {
                   userId = payment.user_id
+                  logger.debug(`✅ Using existing user_id from payment: ${userId}`)
                 } else if (payment.metadata?.email) {
+                  logger.debug(`🔍 Looking for guest user by email: ${payment.metadata.email}`)
                   // Look for existing user
                   const { data: existingUser } = await supabase
                     .from('users')
@@ -432,7 +434,9 @@ export default defineEventHandler(async (event) => {
                   
                   if (existingUser) {
                     userId = existingUser.id
+                    logger.debug(`✅ Found existing guest user: ${userId}`)
                   } else {
+                    logger.debug(`👤 No existing user found, creating new guest user`)
                     // Create guest user
                     const { data: newUser } = await supabase
                       .from('users')
@@ -453,12 +457,17 @@ export default defineEventHandler(async (event) => {
                     if (newUser) {
                       userId = newUser.id
                       logger.debug('✅ Created guest user:', userId)
+                    } else {
+                      logger.warn('⚠️ Failed to create guest user')
                     }
                   }
+                } else {
+                  logger.warn('⚠️ No user_id and no email in payment metadata')
                 }
                 
                 // Create registration
                 if (userId) {
+                  logger.debug(`📋 Building registration object with userId: ${userId}`)
                   registrationsToCreate.push({
                     course_id: course.id,
                     tenant_id: course.tenant_id,
@@ -477,7 +486,12 @@ export default defineEventHandler(async (event) => {
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   })
+                  logger.debug(`✅ Registration object added to array. Total registrations to create: ${registrationsToCreate.length}`)
+                } else {
+                  logger.error('❌ No userId available, skipping registration creation')
                 }
+              } else {
+                logger.error(`❌ Course not found for course_id: ${payment.metadata.course_id}`)
               }
             }
           }
