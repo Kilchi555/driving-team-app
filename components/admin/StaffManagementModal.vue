@@ -115,7 +115,7 @@
                   v-model="form.temp_password"
                   type="password"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Mindestens 8 Zeichen"
+                  placeholder="Mindestens 12 Zeichen"
                 />
                 <p class="text-xs text-gray-500 mt-1">
                   Der Fahrlehrer kann das Passwort nach dem ersten Login ändern

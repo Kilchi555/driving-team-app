@@ -1575,7 +1575,7 @@ const createUser = async () => {
 
     // 1. Validate password
     if (newUser.value.password.length < 8) {
-      throw new Error('Passwort muss mindestens 8 Zeichen lang sein')
+      throw new Error('Passwort muss mindestens 12 Zeichen lang sein')
     }
     
     const hasUppercase = /[A-Z]/.test(newUser.value.password)

@@ -339,7 +339,7 @@ if (!token || !newPassword) {
 if (newPassword.length < 8) {
   throw createError({
     statusCode: 400,
-    statusMessage: 'Passwort muss mindestens 8 Zeichen lang sein'
+    statusMessage: 'Passwort muss mindestens 12 Zeichen lang sein'
   })
 }
 ```
