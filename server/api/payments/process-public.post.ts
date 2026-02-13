@@ -218,7 +218,10 @@ export default defineEventHandler(async (event) => {
     // Build clean merchant reference: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
     // ✅ CRITICAL: Include payment ID as fallback for webhook search!
     let merchantRef = `payment-${paymentRecord.id}`
-    merchantRef += ` | ${firstName} ${lastName}`
+    // ✅ CLEANED: Remove non-ASCII characters from names (e.g., umlauts: Cäcilia → Cacilia)
+    const cleanFirstName = firstName.replace(/[^\x20-\x7E]/g, '')
+    const cleanLastName = lastName.replace(/[^\x20-\x7E]/g, '')
+    merchantRef += ` | ${cleanFirstName} ${cleanLastName}`
     if (course?.name) {
       merchantRef += ` | ${course.name.replace(/[^\x20-\x7E]/g, '')}`  // Remove non-ASCII (Umlaute, etc)
     }
