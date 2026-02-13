@@ -77,6 +77,31 @@ export default defineEventHandler(async (event) => {
     logger.info('🔔 WEBHOOK BODY entityId:', body.entityId, 'type:', typeof body.entityId)
     logger.info('🔔 WEBHOOK BODY state:', body.state, 'type:', typeof body.state)
     
+    // ⚠️ IMMEDIATE LOG: Try to create webhook log entry RIGHT NOW
+    // This will help us debug if the webhook is even being called
+    try {
+      const { data: immediateLog } = await supabase
+        .from('webhook_logs')
+        .insert({
+          transaction_id: body.entityId?.toString() || 'unknown',
+          entity_id: body.entityId,
+          space_id: body.spaceId,
+          wallee_state: body.state,
+          listener_entity_id: body.listenerEntityId,
+          listener_entity_technical_name: body.listenerEntityTechnicalName,
+          timestamp: body.timestamp,
+          raw_payload: body
+        })
+        .select('id')
+        .single()
+      
+      webhookLogId = immediateLog?.id
+      logger.debug('✅ IMMEDIATE webhook log entry created:', webhookLogId)
+    } catch (immediateLogErr: any) {
+      logger.error('❌ FAILED to create immediate webhook log:', immediateLogErr.message)
+      // Continue anyway - this is just for debugging
+    }
+    
     // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
     if (!body.entityId || !body.state) {
       logger.warn('❌ Invalid webhook payload - missing entityId or state')
