@@ -6,6 +6,7 @@
  */
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { decryptSecret } from '~/server/utils/encryption'
 import { logger } from '~/utils/logger'
 
 interface SARICredentials {
@@ -44,21 +45,24 @@ export async function getSARICredentialsSecure(
 
     if (!secretsError && secrets && secrets.length > 0) {
       for (const secret of secrets) {
+        // Decrypt the secret value
+        const decryptedValue = decryptSecret(secret.secret_value)
+        
         switch (secret.secret_name) {
           case 'sari_client_id':
-            clientId = secret.secret_value
+            clientId = decryptedValue
             break
           case 'sari_client_secret':
-            clientSecret = secret.secret_value
+            clientSecret = decryptedValue
             break
           case 'sari_username':
-            username = secret.secret_value
+            username = decryptedValue
             break
           case 'sari_password':
-            password = secret.secret_value
+            password = decryptedValue
             break
           case 'sari_environment':
-            environment = secret.secret_value as 'test' | 'production'
+            environment = decryptedValue as 'test' | 'production'
             break
         }
       }
