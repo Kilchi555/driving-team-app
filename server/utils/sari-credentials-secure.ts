@@ -32,9 +32,9 @@ export async function getSARICredentialsSecure(
     // 1. Try to load from tenant_secrets (secure storage)
     const { data: secrets, error: secretsError } = await supabaseAdmin
       .from('tenant_secrets')
-      .select('secret_type, secret_value')
+      .select('secret_name, secret_value')
       .eq('tenant_id', tenantId)
-      .in('secret_type', ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD', 'SARI_ENVIRONMENT'])
+      .eq('secret_type', 'sari_credentials')
 
     let clientId = ''
     let clientSecret = ''
@@ -44,20 +44,20 @@ export async function getSARICredentialsSecure(
 
     if (!secretsError && secrets && secrets.length > 0) {
       for (const secret of secrets) {
-        switch (secret.secret_type) {
-          case 'SARI_CLIENT_ID':
+        switch (secret.secret_name) {
+          case 'sari_client_id':
             clientId = secret.secret_value
             break
-          case 'SARI_CLIENT_SECRET':
+          case 'sari_client_secret':
             clientSecret = secret.secret_value
             break
-          case 'SARI_USERNAME':
+          case 'sari_username':
             username = secret.secret_value
             break
-          case 'SARI_PASSWORD':
+          case 'sari_password':
             password = secret.secret_value
             break
-          case 'SARI_ENVIRONMENT':
+          case 'sari_environment':
             environment = secret.secret_value as 'test' | 'production'
             break
         }
