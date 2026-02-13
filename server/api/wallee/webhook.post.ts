@@ -389,6 +389,17 @@ export default defineEventHandler(async (event) => {
           for (const payment of paymentsToUpdate) {
             // Check if this payment already has a registration
             const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
+            
+            // ⚠️ CRITICAL DEBUG: Log this to payments table metadata so we can see it in the DB
+            const debugInfo = {
+              webhook_debug: true,
+              timestamp: new Date().toISOString(),
+              hasRegistration,
+              course_id_in_metadata: payment.metadata?.course_id,
+              should_create: !hasRegistration && !!payment.metadata?.course_id,
+              payment_status: paymentStatus,
+              existingRegistrations_count: updatedRegistrations.length
+            }
 
             logger.debug(`🔍 Webhook debug: Checking payment ${payment.id} for registration creation. hasRegistration: ${hasRegistration}, payment.metadata?.course_id: ${payment.metadata?.course_id}`)
             
@@ -481,6 +492,23 @@ export default defineEventHandler(async (event) => {
               updatedRegistrations = [...updatedRegistrations, ...newRegs]
             } else {
               logger.warn('⚠️ Error creating course registrations:', insertError)
+              
+              // ⚠️ DEBUG: Update payment metadata with error info
+              for (const payment of paymentsToUpdate) {
+                if (!payment.metadata?.course_id) continue
+                
+                await supabase
+                  .from('payments')
+                  .update({
+                    metadata: {
+                      ...payment.metadata,
+                      webhook_registration_error: insertError?.message || 'Unknown error creating registration',
+                      webhook_error_timestamp: new Date().toISOString()
+                    }
+                  })
+                  .eq('id', payment.id)
+                  .catch(e => logger.warn('Could not update payment metadata with error:', e.message))
+              }
             }
           }
         }
