@@ -15,11 +15,7 @@
  * 5. Webhook updates status to 'confirmed' after payment
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { logger } from '~/utils/logger'
-import { Wallee } from 'wallee'
-import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { buildMerchantReference } from '~/utils/merchantReference'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -217,20 +213,21 @@ export default defineEventHandler(async (event) => {
     
     // Build clean merchant reference: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
     // ✅ CRITICAL: Include payment ID as fallback for webhook search!
-    // ✅ CRITICAL: Remove all non-printable ASCII characters for Wallee compatibility
-    // Wallee accepts: 0x20-0x7E (printable ASCII) + TAB (0x09)
-    const sanitizeWallee = (str: string) => str.replace(/[^\x09\x20-\x7E]/g, '')
+    // ✅ USE STANDARDIZED FUNCTION: Use the same sanitization as process.post.ts
+    let merchantRef = `payment-${paymentRecord.id} | ${buildMerchantReference({
+      customerName: `${firstName} ${lastName}`,
+      staffName: undefined // Not used for courses
+    })}`
     
-    let merchantRef = `payment-${paymentRecord.id}`
-    merchantRef += ` | ${sanitizeWallee(firstName)} ${sanitizeWallee(lastName)}`
     if (course?.name) {
-      merchantRef += ` | ${sanitizeWallee(course.name)}`
+      merchantRef += ` | ${course.name.substring(0, 50)}`
     }
+    
     if (course?.description) {
       // Extract location from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
       const locationMatch = course.description.match(/(\b[A-Z][a-z]+\b)(?:\s|,|$)/)
       if (locationMatch) {
-        merchantRef += ` | ${sanitizeWallee(locationMatch[1])}`
+        merchantRef += ` | ${locationMatch[1]}`
       }
     }
     
