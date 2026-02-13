@@ -438,7 +438,7 @@ export default defineEventHandler(async (event) => {
                   } else {
                     logger.debug(`👤 No existing user found, creating new guest user`)
                     // Create guest user
-                    const { data: newUser } = await supabase
+                    const { data: newUser, error: createUserError } = await supabase
                       .from('users')
                       .insert({
                         first_name: payment.metadata?.firstname || 'Guest',
@@ -458,7 +458,17 @@ export default defineEventHandler(async (event) => {
                       userId = newUser.id
                       logger.debug('✅ Created guest user:', userId)
                     } else {
-                      logger.warn('⚠️ Failed to create guest user')
+                      logger.error('❌ Failed to create guest user:', {
+                        error_code: createUserError?.code,
+                        error_message: createUserError?.message,
+                        error_details: createUserError?.details,
+                        user_data: {
+                          first_name: payment.metadata?.firstname || 'Guest',
+                          last_name: payment.metadata?.lastname || 'User',
+                          email: payment.metadata?.email,
+                          tenant_id: course.tenant_id
+                        }
+                      })
                     }
                   }
                 } else {
