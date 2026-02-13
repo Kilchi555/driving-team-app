@@ -455,8 +455,8 @@ const openSessionCustomizer = (course: any) => {
 
 // Check for success params on mount (after Wallee payment redirect)
 const checkSuccessParams = () => {
-  if (route.query.success === 'true' && route.query.enrollmentId) {
-    logger.debug('✅ Success params found:', route.query.enrollmentId)
+  if (route.query.success === 'true') {
+    logger.debug('✅ Success params found - payment completed')
     // Show success via global UI store
     const uiStore = useUIStore()
     uiStore.showSuccess('Anmeldung erfolgreich!', 'Die Bestätigungsmail wurde versendet.')
