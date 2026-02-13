@@ -1049,7 +1049,7 @@ const getGermanErrorMessage = (error: any): string => {
     return 'Sie sind bereits für diesen Kurs angemeldet.'
   }
   // SARI deadline/capacity errors (most specific first)
-  if (message.includes('Anmeldungsfrist abgelaufen') || message.includes('DEADLINE_VIOLATED')) {
+  if (message.includes('Anmeldungsfrist abgelaufen') || message.includes('Anmeldefrist') || message.includes('Deadline violated') || message.includes('DEADLINE_VIOLATED')) {
     return 'Anmeldungsfrist abgelaufen. Der Kurs nimmt keine neuen Anmeldungen mehr an.'
   }
   if (message.includes('Der Kurs ist leider voll besetzt') || message.includes('CAPACITY')) {
