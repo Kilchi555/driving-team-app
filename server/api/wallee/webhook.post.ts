@@ -365,7 +365,7 @@ export default defineEventHandler(async (event) => {
             // Check if this payment already has a registration
             const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
             
-            if (!hasRegistration && payment.metadata?.courseId) {
+            if (!hasRegistration && payment.metadata?.course_id) {
               // ✅ NEW: Create registration from payment metadata
               logger.info(`📝 Creating course registration for payment: ${payment.id}`)
               
@@ -373,7 +373,7 @@ export default defineEventHandler(async (event) => {
               const { data: course } = await supabase
                 .from('courses')
                 .select('id, name, tenant_id')
-                .eq('id', payment.metadata.courseId)
+                .eq('id', payment.metadata.course_id)
                 .single()
               
               if (course) {
