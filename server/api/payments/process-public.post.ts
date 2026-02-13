@@ -186,8 +186,12 @@ export default defineEventHandler(async (event) => {
           ? enrollment.courses.course_start_date 
           : null, // Only store string date, not complex object
         sari_faberid: metadata?.sari_faberid || null,
-        sari_birthdate: metadata?.sari_birthdate || null
-        // ❌ REMOVED: ...metadata (could contain complex objects)
+        sari_birthdate: metadata?.sari_birthdate || null,
+        // ✅ ADDED: Customer data needed by webhook to create registration and guest user
+        firstname: metadata?.firstname || firstName || '',
+        lastname: metadata?.lastname || lastName || '',
+        email: customerEmail,
+        phone: metadata?.phone || ''
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -384,20 +388,24 @@ export default defineEventHandler(async (event) => {
 
     logger.info('✅ Payment page URL generated')
 
-    // ✅ STEP 6: Update enrollment with payment info
-    const { error: enrollmentUpdateError } = await supabase
-      .from('course_registrations')
-      .update({
-        payment_status: 'pending',
-        payment_id: paymentRecord.id // Use the UUID of the created payment record
-      })
-      .eq('id', enrollmentId)
+    // ✅ STEP 6: Update enrollment with payment info (only if enrollmentId was provided)
+    if (enrollmentId) {
+      const { error: enrollmentUpdateError } = await supabase
+        .from('course_registrations')
+        .update({
+          payment_status: 'pending',
+          payment_id: paymentRecord.id // Use the UUID of the created payment record
+        })
+        .eq('id', enrollmentId)
 
-    if (enrollmentUpdateError) {
-      logger.warn('⚠️ Could not update enrollment with payment ID:', enrollmentUpdateError)
-      // Non-critical - continue anyway
+      if (enrollmentUpdateError) {
+        logger.warn('⚠️ Could not update enrollment with payment ID:', enrollmentUpdateError)
+        // Non-critical - continue anyway
+      } else {
+        logger.debug('✅ Enrollment updated with payment_id')
+      }
     } else {
-      logger.debug('✅ Enrollment updated with payment_id')
+      logger.debug('ℹ️ Skipping enrollment update as no enrollmentId was provided (new flow)')
     }
 
     return {
