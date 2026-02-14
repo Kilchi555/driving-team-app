@@ -17,7 +17,7 @@
  */
 
 import { defineEventHandler, getQuery, createError, H3Event } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getSupabase } from '~/server/utils/supabase'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
@@ -94,7 +94,8 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 3: FETCH SLOTS ============
-    const supabase = getSupabaseAdmin()
+    // Use anon key so RLS policies are enforced
+    const supabase = getSupabase()
     const now = new Date().toISOString()
 
     let slotsQuery = supabase
