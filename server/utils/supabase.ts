@@ -6,7 +6,7 @@ import type { H3Event } from 'h3'
  * This allows RLS policies to be enforced
  * Unauthenticated requests use the 'anon' role
  */
-export function getSupabase(event?: H3Event) {
+export function getSupabase(event?: H3Event, sessionJwt?: string) {
   const supabaseUrl = process.env.SUPABASE_URL
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
 
@@ -14,21 +14,23 @@ export function getSupabase(event?: H3Event) {
     throw new Error('Missing Supabase environment variables (SUPABASE_URL or SUPABASE_ANON_KEY)')
   }
 
-  // Log which key we're using (for debugging)
-  console.log('🔐 getSupabase() - Using ANON key, first 20 chars:', supabaseAnonKey.substring(0, 20))
+  const headers: Record<string, string> = {}
+  if (sessionJwt) {
+    headers['Authorization'] = `Bearer ${sessionJwt}`
+    logger.debug('🔐 getSupabase() - Using JWT for Authorization')
+  }
 
-  // Create client with anon key - minimal configuration
-  // Do NOT use signOut() as it can cause issues
   const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
       detectSessionInUrl: false,
       storage: undefined
+    },
+    global: {
+      headers: headers,
     }
   })
-  
-  console.log('🔐 getSupabase() - Client created (no signOut)')
   
   return client
 }
