@@ -1064,6 +1064,7 @@ const stepsContainerRef = ref<HTMLDivElement | null>(null)
 
 // Reservation state
 const currentReservationId = ref<string | null>(null)
+const reservedUntil = ref<Date | null>(null)
 
 // Pickup state
 const pickupPLZ = ref('')
@@ -2341,7 +2342,6 @@ const generateTimeSlotsForSpecificCombination = async () => {
 // ✅ NEW: Check for customer appointment conflicts and travel time
 const selectTimeSlot = async (slot: any) => {
   try {
-    // Slot is already pre-filtered, so this is just a safety check
     if (slot.has_conflict) {
       logger.warn('⚠️ Attempting to select slot with conflict (should be disabled)')
       error.value = 'Dieser Termin hat einen Zeitkonflikt. Bitte wählen Sie einen anderen Termin.'
@@ -2354,10 +2354,18 @@ const selectTimeSlot = async (slot: any) => {
       location: selectedLocation.value?.name
     })
 
-    // No conflict - proceed with slot selection
     selectedSlot.value = slot
-    currentStep.value = 7
-    error.value = null
+
+    // CRITICAL: Reserve the slot in the database FIRST
+    const isReserved = await reserveSlotSecure()
+
+    if (isReserved) {
+      currentStep.value = 7
+      error.value = null
+    } else {
+      // Error message is already set by reserveSlotSecure if it fails
+      logger.warn('❌ Failed to reserve slot, not proceeding to next step.')
+    }
     
   } catch (err: any) {
     logger.error('❌ Error selecting slot:', err)
@@ -2837,6 +2845,7 @@ const reserveSlotSecure = async (userId?: string) => {
       logger.debug('✅ Slot reserved:', reservation.slot.reserved_until)
       reservedSlotId.value = selectedSlot.value.id
       reservationExpiry.value = new Date(reservation.slot.reserved_until)
+      reservedUntil.value = reservationExpiry.value // Set reservedUntil here
       startCountdown()
       return true
     } else {
