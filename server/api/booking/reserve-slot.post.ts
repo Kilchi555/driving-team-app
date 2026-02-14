@@ -76,8 +76,8 @@ export default defineEventHandler(async (event: H3Event) => {
       session_id: body.session_id
     })
 
-    // Calculate reservation expiry (10 minutes from now)
-    const reservedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    // Calculate reservation expiry (5 minutes from now)
+    const reservedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
     // First, READ the current slot to verify it exists
     const { data: currentSlot, error: readError } = await supabase

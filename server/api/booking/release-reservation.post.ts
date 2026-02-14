@@ -12,16 +12,12 @@
  * Body: { slot_id, session_id }
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { defineEventHandler, readBody, createError, H3Event } from 'h3'
+import { getSupabase } from '~/server/utils/supabase'
+import { createSignedSessionJwt } from '~/server/utils/jwt'
 import { logger } from '~/utils/logger'
 
-interface ReleaseReservationRequest {
-  slot_id: string
-  session_id: string
-}
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
   try {
     const body = await readBody(event) as ReleaseReservationRequest
     const { slot_id, session_id } = body
@@ -33,7 +29,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabaseAdmin()
+    const sessionJwt = createSignedSessionJwt(session_id)
+    const supabase = getSupabase(event, sessionJwt)
     const now = new Date().toISOString()
 
     // ============ STEP 1: Get the slot details ============
@@ -41,7 +38,6 @@ export default defineEventHandler(async (event) => {
       .from('availability_slots')
       .select('*')
       .eq('id', slot_id)
-      .eq('reserved_by_session', session_id)
       .single()
 
     if (slotError || !slot) {
@@ -87,7 +83,6 @@ export default defineEventHandler(async (event) => {
         updated_at: now
       })
       .in('id', slotIdsToRelease)
-      .eq('reserved_by_session', session_id)
 
     if (releaseError) {
       logger.error('❌ Error releasing slots:', releaseError)

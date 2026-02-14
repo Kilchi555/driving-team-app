@@ -414,7 +414,7 @@
                   {{ getCountdownText }}
                 </div>
               </div>
-              <p class="text-xs text-blue-700 mt-2">Der Termin ist für {{ remainingSeconds < 60 ? 'noch' : '' }} {{ getCountdownText }} Minuten reserviert.</p>
+              <p class="text-xs text-blue-700 mt-2">Ihre Reservation läuft in {{ getCountdownText }} ab.</p>
             </div>
           
           <!-- Loading Time Slots -->
@@ -797,7 +797,7 @@ const error = ref<string | null>(null)
 const sessionId = ref(generateSessionId())
 const reservedSlotId = ref<string | null>(null)
 const reservationExpiry = ref<Date | null>(null)
-const remainingSeconds = ref(600) // 10 minutes in seconds
+const remainingSeconds = ref(300) // 5 minutes in seconds
 const countdownInterval = ref<NodeJS.Timeout | null>(null)
 
 const { autoSyncCalendars } = useExternalCalendarSync()
@@ -2843,7 +2843,7 @@ const reserveSlotSecure = async (userId?: string) => {
     
     if (reservation.success) {
       logger.debug('✅ Slot reserved:', reservation.slot.reserved_until)
-      reservedSlotId.value = selectedSlot.value.id
+      currentReservationId.value = selectedSlot.value.id
       reservationExpiry.value = new Date(reservation.slot.reserved_until)
       reservedUntil.value = reservationExpiry.value // Set reservedUntil here
       startCountdown()
