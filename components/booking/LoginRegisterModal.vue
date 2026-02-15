@@ -154,11 +154,11 @@
               placeholder="Mindestens 12 Zeichen"
             >
             <p class="text-xs text-gray-600 mt-2">
-              ✓ Mindestens 12 Zeichen<br>
-              ✓ Großbuchstaben (A-Z)<br>
-              ✓ Kleinbuchstaben (a-z)<br>
-              ✓ Zahlen (0-9)<br>
-              ✓ Sonderzeichen (!@#$%^&* etc.)
+              <span :class="{ 'text-green-600': passwordRequirements.minLength }">✓ Mindestens 12 Zeichen</span><br>
+              <span :class="{ 'text-green-600': passwordRequirements.hasUpperCase }">✓ Großbuchstaben (A-Z)</span><br>
+              <span :class="{ 'text-green-600': passwordRequirements.hasLowerCase }">✓ Kleinbuchstaben (a-z)</span><br>
+              <span :class="{ 'text-green-600': passwordRequirements.hasNumber }">✓ Zahlen (0-9)</span><br>
+              <span :class="{ 'text-green-600': passwordRequirements.hasSpecialChar }">✓ Sonderzeichen (!@#$%^&* etc.)</span>
             </p>
           </div>
 
@@ -233,6 +233,23 @@ const registerForm = ref({
   phone: '',
   password: '',
   password_confirm: ''
+})
+
+// Password strength validation
+const passwordRequirements = computed(() => {
+  const password = registerForm.value.password
+  return {
+    minLength: password.length >= 12,
+    hasUpperCase: /[A-Z]/.test(password),
+    hasLowerCase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+        hasSpecialChar: /[!@#$%^&*()_\-]/.test(password)
+  }
+})
+
+const isPasswordValid = computed(() => {
+  const req = passwordRequirements.value
+  return req.minLength && req.hasUpperCase && req.hasLowerCase && req.hasNumber && req.hasSpecialChar
 })
 
 const handleLogin = async () => {

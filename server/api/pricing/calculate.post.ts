@@ -89,25 +89,42 @@ export default defineEventHandler(async (event) => {
     // ========== GET PRICING RULES ==========
     if (action === 'get-pricing-rules') {
       // Can be called with tenantId (get all) or categoryCode (get specific)
-      logger.debug('💰 Getting pricing rules', { tenantId })
+      const requestTenantId = body.tenantId
+      logger.debug('💰 Getting pricing rules', { 
+        requestTenantId,
+        bodyTenantId: body.tenantId,
+        userTenantId: tenantId,
+        hasUserTenantId: !!tenantId
+      })
 
       // If no tenant_id, return empty and let client use fallback
-      if (!tenantId) {
-        logger.debug('ℹ️ No tenant_id available, returning empty pricing rules')
+      if (!requestTenantId && !tenantId) {
+        logger.debug('ℹ️ No tenant_id available (neither in body nor from user), returning empty pricing rules')
         return {
           success: true,
           data: []
         }
       }
 
+      // Use tenantId from body OR from user (body takes precedence)
+      const finalTenantId = requestTenantId || tenantId
+      logger.debug('🔍 Using finalTenantId for query:', finalTenantId)
+
       let query = supabaseAdmin
         .from('pricing_rules')
         .select('*')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', finalTenantId)
         .eq('is_active', true)
-        .order('category_code')
+
+      logger.debug('🔍 Query after building:', {
+        table: 'pricing_rules',
+        tenant_id: finalTenantId,
+        is_active: true,
+        categoryCode: body.categoryCode
+      })
 
       if (body.categoryCode) {
+        logger.debug('🔍 Adding categoryCode filter:', body.categoryCode)
         query = query.eq('category_code', body.categoryCode)
       }
 

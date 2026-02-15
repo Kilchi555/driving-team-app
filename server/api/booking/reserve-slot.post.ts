@@ -79,8 +79,8 @@ export default defineEventHandler(async (event: H3Event) => {
     // Calculate reservation expiry (5 minutes from now)
     const reservedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString()
     
-    // Overlapping slots get 15 minutes extra (total 20 minutes)
-    const overlappingReservedUntil = new Date(Date.now() + 20 * 60 * 1000).toISOString()
+    // Overlapping slots get the same 5 minutes expiry
+    const overlappingReservedUntil = reservedUntil
 
     // First, READ the current slot to verify it exists
     const { data: currentSlot, error: readError } = await supabase
@@ -118,12 +118,14 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ STEP 2: Find and reserve all overlapping slots ============
     // Find slots that overlap with this one and belong to the same staff
     // Location doesn't matter - if staff is busy, they're busy everywhere
+    // IMPORTANT: Include already-reserved slots too (even if from old sessions)
+    // We want to update ALL overlapping slots for this staff member
     const { data: overlappingSlots, error: findOverlapError } = await supabase
       .from('availability_slots')
       .select('id')
       .eq('staff_id', currentSlot.staff_id)
       .eq('tenant_id', currentSlot.tenant_id)
-      .is('reserved_by_session', null) // Only unreserved slots (must use .is() for NULL)
+      // Removed: .is('reserved_by_session', null) - we WANT to include already-reserved slots
       .lte('start_time', currentSlot.end_time) // Starts before or at this slot ends (also include adjacent)
       .gte('end_time', currentSlot.start_time) // Ends after or at this slot starts (also include adjacent)
       .neq('id', body.slot_id) // Exclude the primary slot (already reserved)

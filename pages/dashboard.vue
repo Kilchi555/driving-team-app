@@ -30,9 +30,12 @@ interface CalendarApi {
   view: { currentStart: Date }
 }
 
-// Composables
-const { currentUser, fetchCurrentUser, isLoading, userError, profileExists } = useCurrentUser()
-const { isEnabled } = useFeatureFlags()
+const goToTenantLogin = () => {
+  if (process.client) {
+    const tenantSlug = localStorage.getItem('last_tenant_slug') || 'driving-team'
+    navigateTo(`/${tenantSlug}`)
+  }
+}
 
 
 // WICHTIG: Hole das ganze Composable-Objekt für volle Reaktivität
@@ -54,6 +57,19 @@ const {
   isUpdating: isUpdatingStatus,
   updateError: statusUpdateError 
 } = useAppointmentStatus()
+
+// WICHTIG: Hole das ganze Composable-Objekt für volle Reaktivität
+const currentUserComposable = useCurrentUser()
+const {
+  currentUser,
+  isLoading,
+  userError,
+  profileExists,
+  fetchCurrentUser
+} = currentUserComposable
+
+// Feature Flags
+const { isEnabled } = useFeatureFlags()
 
 // Refs
 const calendarRef = ref<{ getApi(): CalendarApi } | null>(null)
@@ -295,6 +311,13 @@ watch(userError, async (error) => {
 onMounted(async () => {
   logger.debug('🚀 Dashboard mounting...')
 
+  // Check for booking success message
+  const route = useRoute()
+  if (route.query.booking_success === 'true') {
+    logger.debug('✅ Booking successful!')
+    alert('✅ Buchung erfolgreich! Dein Termin wurde bestätigt.')
+  }
+
     logger.debug('🔥 Feature Flags Debug:', isEnabled('AUTO_REFRESH_PENDING'))
 
   
@@ -496,7 +519,7 @@ onUnmounted(() => {
         Erneut versuchen
       </button>
       <button 
-        @click="navigateTo('/')" 
+        @click="goToTenantLogin()" 
         class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
       >
         Zum Login

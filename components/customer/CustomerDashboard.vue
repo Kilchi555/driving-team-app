@@ -2421,6 +2421,14 @@ onMounted(async () => {
     const route = useRoute()
     const paymentSuccess = route.query.payment_success === 'true'
     const paymentFailed = route.query.payment_failed === 'true'
+    const bookingSuccess = route.query.booking_success === 'true'
+    
+    if (bookingSuccess) {
+      logger.debug('✅ Booking success detected!')
+      alert('✅ Buchung erfolgreich! Dein Termin wurde bestätigt.')
+      // Small delay to ensure data is loaded before showing success
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
     
     if (paymentSuccess) {
       logger.debug('💳 Payment success detected, refreshing data...')

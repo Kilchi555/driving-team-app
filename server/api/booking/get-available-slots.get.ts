@@ -102,8 +102,11 @@ export default defineEventHandler(async (event: H3Event) => {
       .from('availability_slots')
       .select('id, staff_id, location_id, start_time, end_time, duration_minutes, category_code, is_available, reserved_by_session, reserved_until')
       .eq('tenant_id', query.tenant_id)
-      // CRITICAL: Only show slots that are actually available (not reserved)
+      // CRITICAL: Only show slots that are actually available
+      // - is_available = true (not part of definitive booking)
+      // - AND (no temporary reservation OR reservation has expired)
       .eq('is_available', true)
+      .or(`reserved_until.is.null,reserved_until.lt.${now}`)
       .gte('start_time', `${query.start_date}T00:00:00Z`)
       .lte('start_time', `${query.end_date}T23:59:59Z`)
       .gt('end_time', now) // CRITICAL: Only future slots!

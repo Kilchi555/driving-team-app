@@ -1504,13 +1504,63 @@ const loadTimeSlotsForStaffLocation = async (staff: any, location: any) => {
   }
 }
 
+// ============================================================
+// HELPER: Filter slots based on 15-minute gap and reservations
+// ============================================================
+// Rule: A slot can only be shown if:
+// 1. It's not reserved (reserved_until is null or expired)
+// 2. There's a 15-minute gap between this slot's start and any other reserved/booked slot's end
+const filterSlotsWithGapAndReservations = (allSlots: any[]) => {
+  if (!allSlots || allSlots.length === 0) return []
+  
+  const GAP_MINUTES = 15
+  const now = new Date()
+  
+  return allSlots.filter(slot => {
+    // Rule 1: Check if slot itself is reserved
+    if (slot.reserved_until) {
+      const reservedUntilDate = new Date(slot.reserved_until)
+      // If reservation is still valid and not by our session, hide the slot
+      if (reservedUntilDate > now && slot.reserved_by_session !== sessionId.value) {
+        return false
+      }
+    }
+    
+    // Rule 2: Check 15-minute gap from other reserved/booked slots
+    // A slot can be shown if no other reserved slot ends within GAP_MINUTES before this slot starts
+    const slotStartTime = new Date(slot.start_time)
+    const minAllowedEndTime = new Date(slotStartTime.getTime() - GAP_MINUTES * 60 * 1000)
+    
+    // Check if any other slot would conflict with this gap
+    const hasConflictingSlot = allSlots.some(otherSlot => {
+      if (otherSlot.id === slot.id) return false // Don't check against itself
+      
+      const otherEndTime = new Date(otherSlot.end_time)
+      
+      // Check if other slot is reserved/booked
+      const isOtherReserved = otherSlot.reserved_until && new Date(otherSlot.reserved_until) > now && otherSlot.reserved_by_session !== sessionId.value
+      const isOtherBooked = otherSlot.is_available === false
+      
+      if (!isOtherReserved && !isOtherBooked) return false // Other slot is not reserved/booked
+      
+      // Check if other slot's end time violates the gap
+      return otherEndTime > minAllowedEndTime && otherEndTime <= slotStartTime
+    })
+    
+    return !hasConflictingSlot
+  })
+}
+
 const getWeeksForLocation = (location: any) => {
   if (!location.time_slots || location.time_slots.length === 0) return []
+  
+  // Apply 15-minute gap filtering before grouping slots
+  const filteredSlots = filterSlotsWithGapAndReservations(location.time_slots)
   
   // Group slots by week
   const weeksMap = new Map<number, any[]>()
   
-  location.time_slots.forEach((slot: any) => {
+  filteredSlots.forEach((slot: any) => {
     const weekNumber = slot.week_number
     if (!weeksMap.has(weekNumber)) {
       weeksMap.set(weekNumber, [])
@@ -1600,7 +1650,7 @@ const getInteractiveCardStyle = (isSelected: boolean, isHover = false) => {
   }
 }
 
-const getSlotCardStyle = (slot: any, isSelected: boolean, isHover = false) => {
+const getSlotCardStyle = (slot: any, isSelected: boolean, isHover = false): any => {
   const primary = getBrandPrimary()
   
   // Reservierte Slots (in Bearbeitung) - transparenter Hintergrund
@@ -1611,11 +1661,10 @@ const getSlotCardStyle = (slot: any, isSelected: boolean, isHover = false) => {
       background: `linear-gradient(145deg, ${withAlpha(primary, 0.08)}, ${withAlpha(primary, 0.04)})`,
       opacity: 0.7,
       cursor: 'not-allowed',
-      pointerEvents: 'none',
       boxShadow: 'none',
       transform: 'translateY(0)',
       transition: 'all 0.18s ease'
-    }
+    } as any
   }
   
   // Verfügbare Slots - normales Styling
@@ -1688,14 +1737,14 @@ const loadPricingForDuration = async (duration: number) => {
       }
     })
 
-    if (response.success && response.price_chf) {
+    if ((response as any)?.success && (response as any)?.price_chf) {
       durationPrices.value.set(duration, {
-        price_rappen: response.price_rappen,
-        price_chf: response.price_chf
+        price_rappen: (response as any).price_rappen,
+        price_chf: (response as any).price_chf
       })
       logger.debug('✅ Pricing loaded:', {
         duration,
-        price_chf: response.price_chf
+        price_chf: (response as any).price_chf
       })
     }
   } catch (err: any) {
@@ -2300,24 +2349,25 @@ const generateTimeSlotsForSpecificCombination = async () => {
           }
         })
 
-        if (conflictCheckResponse.success && conflictCheckResponse.conflicts) {
+        if ((conflictCheckResponse as any)?.success && (conflictCheckResponse as any)?.conflicts) {
           // Map conflicts back to slots
           const conflictMap = new Map(
-            conflictCheckResponse.conflicts.map((c: any) => [c.slot_id, c])
+            (conflictCheckResponse as any).conflicts.map((c: any) => [c.slot_id, c])
           )
 
           for (const slot of timeSlots) {
-            const conflict = conflictMap.get(slot.id)
+            const conflict = conflictMap.get((slot as any).id) as any
             if (conflict?.has_conflict) {
-              slot.has_conflict = true
-              slot.conflict_reason = conflict.conflict_reason
-              logger.debug(`⚠️ Slot has conflict: ${slot.time_formatted}`, {
+              const slotAny = slot as any
+              slotAny.has_conflict = true
+              slotAny.conflict_reason = conflict.conflict_reason
+              logger.debug(`⚠️ Slot has conflict: ${slotAny.time_formatted}`, {
                 reason: conflict.conflict_reason
               })
             }
           }
 
-          const conflictCount = timeSlots.filter(s => s.has_conflict).length
+          const conflictCount = timeSlots.filter((s: any) => s.has_conflict).length
           logger.debug(`✅ Pre-filtering complete: ${conflictCount}/${timeSlots.length} slots have conflicts`)
         }
       } catch (err: any) {
@@ -2553,7 +2603,7 @@ const confirmBooking = async () => {
     
     try {
       const currentUser = await $fetch('/api/auth/current-user')
-      logger.debug('✅ User is authenticated:', currentUser.id)
+      logger.debug('✅ User is authenticated:', (currentUser as any)?.id)
       isAuthenticated = true
     } catch (authError: any) {
       // User is not authenticated - this is expected
@@ -2593,7 +2643,7 @@ const confirmBooking = async () => {
       }
     })
     
-    if (conflictCheckResponse.has_conflict) {
+    if ((conflictCheckResponse as any)?.has_conflict) {
       logger.error('❌ Conflict detected')
       throw new Error('Der gewählte Zeitslot ist leider nicht mehr verfügbar. Ein anderer Termin überlappt sich. Bitte wählen Sie einen anderen Zeitslot.')
     }
@@ -2610,14 +2660,18 @@ const confirmBooking = async () => {
       notes: bookingNotes.value || undefined
     })
 
-    logger.debug('✅ Booking confirmed:', result.appointment_id)
+    logger.debug('✅ Appointment created:', result.appointment_id)
     
-    // If we get here, booking was successful!
-    // Handle success UI/routing
     isCreatingBooking.value = false
     
-    // Show success message or redirect
-    alert('Buchung erfolgreich! Wir haben dir eine Bestätigung per E-Mail gesendet.')
+    // Redirect to customer dashboard with success message
+    await navigateTo({
+      path: '/customer-dashboard',
+      query: {
+        appointment_id: result.appointment_id,
+        booking_success: 'true'
+      }
+    })
     
   } catch (error: any) {
     console.error('Error confirming booking:', error)
@@ -2665,30 +2719,25 @@ const createAppointmentSecure = async (userData: any) => {
         appointment_type: userData.appointment_type,
         category_code: userData.category_code || '',
         notes: userData.notes || undefined
-      },
-      {
-        // Tell interceptor this is a booking request - show modal instead of redirecting
-        headers: {
-          'X-Booking-Flow': 'true'
-        }
       }
     )
     
-    logger.debug('✅ Appointment created:', response.appointment.id)
-    
-    // Clear reservation state
-    reservedSlotId.value = null
-    reservationExpiry.value = null
-    if (countdownInterval.value) {
-      clearInterval(countdownInterval.value)
-      countdownInterval.value = null
+    // ✅ Safety check: Ensure reservation data is returned
+    if (!response?.reservation?.slot_id) {
+      logger.error('❌ Reservation data missing from API response:', response)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Slot reservation failed - no reservation data returned'
+      })
     }
     
-    // Return appointment ID for further processing
+    logger.debug('✅ Slot reserved successfully:', response.reservation.slot_id)
+    
+    // Return the appointment ID (use slot_id as identifier for this step)
     return {
       success: true,
-      appointment_id: response.appointment.id,
-      payment_required: response.payment_required
+      appointment_id: response.reservation.slot_id,
+      reservation: response.reservation
     }
     
   } catch (err: any) {
@@ -3521,7 +3570,7 @@ onMounted(async () => {
           
           if (categoryToSelect) {
             // Pre-select category (this loads staff and locations)
-            await selectCategory(categoryToSelect)
+            await selectSubcategory(categoryToSelect)
             
             // Wait a bit for data to load
             await new Promise(resolve => setTimeout(resolve, 500))
@@ -3565,7 +3614,7 @@ onMounted(async () => {
           
           if (categoryToSelect) {
             // Pre-select category
-            await selectCategory(categoryToSelect)
+            await selectSubcategory(categoryToSelect)
             currentStep.value = 2
             logger.debug('✅ Pre-selected category, user can continue from step 2')
           }
