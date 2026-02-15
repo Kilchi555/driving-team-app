@@ -2,6 +2,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getServerSession } from '#auth'
 import { createClient } from '@supabase/supabase-js'
+import { setAuthCookies } from '~/server/utils/cookies'
 import { validatePassword, logPasswordValidationAttempt } from '~/server/utils/password-validator'
 import { logger } from '~/utils/logger'
 
@@ -36,9 +37,9 @@ export default defineEventHandler(async (event) => {
     const { action } = body
 
     if (action === 'register-customer') {
-      return await registerCustomer(body)
+      return await registerCustomer(event, body)
     } else if (action === 'register-staff') {
-      return await registerStaff(body)
+      return await registerStaff(event, body)
     } else if (action === 'get-tenant-from-slug') {
       return await getTenantFromSlug(body)
     }
@@ -59,7 +60,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-async function registerCustomer(body: RegisterRequest) {
+async function registerCustomer(event: any, body: RegisterRequest) {
   const { email, password, first_name, last_name, phone, slug, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
@@ -185,8 +186,57 @@ async function registerCustomer(body: RegisterRequest) {
     })
   }
 
-  // ===== LAYER 6: AUDIT LOGGING =====
-  logger.info('✅ [REGISTER-CUSTOMER] Customer registered successfully', {
+  // ===== LAYER 6: CONFIRM EMAIL (for newly registered user) =====
+  // Mark email as confirmed so user can log in immediately
+  const { error: confirmError } = await supabase.auth.admin.updateUserById(authData.user.id, {
+    email_confirm: true
+  })
+
+  if (confirmError) {
+    logger.warn('⚠️ [REGISTER-CUSTOMER] Failed to confirm email', {
+      email: email.substring(0, 3) + '***',
+      error: confirmError.message
+    })
+    // Don't fail registration for this - user can still log in manually
+    // This is just a convenience to auto-confirm during registration
+  } else {
+    logger.debug('✅ [REGISTER-CUSTOMER] Email confirmed for newly registered user')
+  }
+
+  // ===== LAYER 7: AUTHENTICATE NEWLY REGISTERED USER AND SET COOKIES =====
+  // Use anon client for login (as frontend would)
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+  const anonSupabase = createClient(supabaseUrl!, supabaseAnonKey!)
+
+  logger.debug('🔑 Attempting to sign in newly registered user:', email.substring(0, 3) + '***')
+
+  const { data: signInData, error: signInError } = await anonSupabase.auth.signInWithPassword({
+    email: email.toLowerCase().trim(),
+    password: password! // Password is guaranteed to exist by Layer 1
+  })
+
+  if (signInError || !signInData.user || !signInData.session) {
+    logger.error('❌ [REGISTER-CUSTOMER] Failed to sign in newly registered user', {
+      email: email.substring(0, 3) + '***',
+      error: signInError?.message
+    })
+    // Note: We don't delete the user here, as the registration was successful
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Registration successful, but failed to log in automatically. Please try logging in manually.'
+    })
+  }
+
+  // Set httpOnly cookies for session
+  setAuthCookies(event, signInData.session.access_token, signInData.session.refresh_token, {
+    rememberMe: true, // Assuming new registrations should be remembered
+    maxAge: 604800 // 7 days
+  })
+  logger.debug('🍪 [REGISTER-CUSTOMER] Session cookies set for newly registered user')
+
+  // ===== LAYER 7: AUDIT LOGGING (now after session is set) =====
+  logger.info('✅ [REGISTER-CUSTOMER] Customer registered and logged in successfully', {
     userId: userData.id,
     email: userData.email.substring(0, 3) + '***',
     tenantId: finalTenantId
@@ -194,18 +244,27 @@ async function registerCustomer(body: RegisterRequest) {
 
   return {
     success: true,
-    data: {
-      user: {
-        id: userData.id,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name
-      }
-    }
+    user: {
+      id: userData.id,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      // Add auth_user_id for consistency if needed by frontend
+      auth_user_id: authData.user.id
+    },
+    // Return session info for client-side Supabase session
+    session: {
+      access_token: signInData.session.access_token,
+      refresh_token: signInData.session.refresh_token,
+      expires_in: 604800, // 7 days
+      expires_at: Math.floor(Date.now() / 1000) + 604800
+    },
+    // We can assume rememberMe for new registrations, or make it configurable
+    rememberMe: true
   }
 }
 
-async function registerStaff(body: RegisterRequest) {
+async function registerStaff(event: any, body: RegisterRequest) {
   const { email, password, first_name, last_name, phone, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
