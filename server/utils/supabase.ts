@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
+import { logger } from '~/utils/logger'
 
 /**
  * Get Supabase client with anon key
