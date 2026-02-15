@@ -17,6 +17,11 @@ import { getSupabase } from '~/server/utils/supabase'
 import { createSignedSessionJwt } from '~/server/utils/jwt'
 import { logger } from '~/utils/logger'
 
+interface ReleaseReservationRequest {
+  slot_id: string
+  session_id: string
+}
+
 export default defineEventHandler(async (event: H3Event) => {
   try {
     const body = await readBody(event) as ReleaseReservationRequest
@@ -33,23 +38,50 @@ export default defineEventHandler(async (event: H3Event) => {
     const supabase = getSupabase(event, sessionJwt)
     const now = new Date().toISOString()
 
-    // ============ STEP 1: Get the slot details ============
-    const { data: slot, error: slotError } = await supabase
+    logger.debug('🔓 Release reservation request:', { slot_id, session_id })
+
+    // ============ STEP 1: Try to release the primary slot directly ============
+    // We don't SELECT first because the slot is reserved and may not pass the SELECT RLS policy
+    const { error: releaseError } = await supabase
       .from('availability_slots')
-      .select('*')
+      .update({
+        is_available: true,
+        reserved_until: null,
+        reserved_by_session: null,
+        updated_at: now
+      })
+      .eq('id', slot_id)
+
+    if (releaseError) {
+      logger.error('❌ Error releasing slot:', releaseError)
+      throw createError({
+        statusCode: releaseError.code === '42501' ? 403 : 500,
+        statusMessage: releaseError.code === '42501' ? 'Unauthorized to release this reservation' : 'Failed to release reservation'
+      })
+    }
+
+    logger.debug('✅ Primary slot released')
+
+    // ============ STEP 2: Get the slot details to find overlapping slots ============
+    // Use the internal SELECT policy which allows reading all slots
+    const supabaseInternal = getSupabase(event)
+    const { data: slot, error: slotError } = await supabaseInternal
+      .from('availability_slots')
+      .select('tenant_id, staff_id, location_id, start_time, end_time')
       .eq('id', slot_id)
       .single()
 
     if (slotError || !slot) {
-      logger.warn('⚠️ Slot not found or not reserved by this session:', { slot_id, session_id })
-      // Not an error - maybe already released
+      logger.warn('⚠️ Could not fetch slot details:', slotError)
+      // Return success anyway - the primary slot was already released
       return {
         success: true,
-        message: 'Slot already released or not found'
+        released_count: 1,
+        message: 'Primary slot released successfully'
       }
     }
 
-    // ============ STEP 2: Find all overlapping slots with same session ============
+    // ============ STEP 3: Find and release all overlapping slots with same session ============
     const { data: overlappingSlots, error: overlapError } = await supabase
       .from('availability_slots')
       .select('id')
@@ -62,41 +94,53 @@ export default defineEventHandler(async (event: H3Event) => {
 
     if (overlapError) {
       logger.error('❌ Error querying overlapping slots:', overlapError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to release reservation'
-      })
+      // Return success anyway - the primary slot was released
+      return {
+        success: true,
+        released_count: 1,
+        message: 'Primary slot released (overlapping slots could not be queried)'
+      }
     }
 
-    const slotIdsToRelease = overlappingSlots ? overlappingSlots.map(s => s.id) : [slot_id]
+    const slotIdsToRelease = overlappingSlots ? overlappingSlots.map(s => s.id).filter(id => id !== slot_id) : []
 
-    logger.debug(`🔓 Releasing ${slotIdsToRelease.length} reserved slots for session ${session_id}`)
+    if (slotIdsToRelease.length === 0) {
+      logger.debug('✅ No overlapping slots to release')
+      return {
+        success: true,
+        released_count: 1,
+        message: 'Reservation released successfully'
+      }
+    }
 
-    // ============ STEP 3: Clear reservation from all overlapping slots ============
-    // Set is_available back to true + clear reservation fields
-    const { error: releaseError } = await supabase
+    logger.debug(`🔓 Releasing ${slotIdsToRelease.length} overlapping slots`)
+
+    // ============ STEP 4: Release overlapping slots ============
+    const { error: overlapReleaseError } = await supabase
       .from('availability_slots')
       .update({
-        is_available: true, // Make available again
+        is_available: true,
         reserved_until: null,
         reserved_by_session: null,
         updated_at: now
       })
       .in('id', slotIdsToRelease)
 
-    if (releaseError) {
-      logger.error('❌ Error releasing slots:', releaseError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to release reservation'
-      })
+    if (overlapReleaseError) {
+      logger.error('❌ Error releasing overlapping slots:', overlapReleaseError)
+      // Return success anyway - the primary slot was released
+      return {
+        success: true,
+        released_count: 1 + (overlappingSlots?.length || 0),
+        message: 'Primary slot released (some overlapping slots could not be released)'
+      }
     }
 
-    logger.debug(`✅ Released ${slotIdsToRelease.length} slots`)
+    logger.debug(`✅ Released ${slotIdsToRelease.length} overlapping slots`)
 
     return {
       success: true,
-      released_count: slotIdsToRelease.length,
+      released_count: 1 + slotIdsToRelease.length,
       message: 'Reservation released successfully'
     }
 

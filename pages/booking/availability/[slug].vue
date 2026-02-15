@@ -2725,22 +2725,18 @@ const handleDocumentUploadSuccess = () => {
 }
 
 const goBackToStep = (step: number) => {
-  // Cancel reservation when going back to step 5 or earlier from step 6
-  if (currentStep.value === 6 && step <= 5) {
+  // Cancel reservation when going to any step that's not the reservation confirmation (step 7)
+  if (currentReservationId.value && step < 7) {
     cancelReservation()
   }
   
   currentStep.value = step
   
   // Reset subsequent selections
-  if (step < 6) {
+  if (step < 7) {
     selectedSlot.value = null
     pickupAddress.value = ''
     pickupAddressDetails.value = null
-    // Also cancel reservation if going back from 6
-    if (currentReservationId.value) {
-      cancelReservation()
-    }
   }
   if (step < 5) {
     selectedSlot.value = null
@@ -2874,24 +2870,31 @@ const reserveSlotSecure = async (userId?: string) => {
 const reserveSlot_OLD = reserveSlotSecure
 
 const cancelReservation = async (silent: boolean = false) => {
-  if (!currentReservationId.value) return
+  if (!currentReservationId.value) {
+    logger.debug('⚠️ No reservation to cancel (currentReservationId is empty)')
+    return
+  }
 
   try {
-    logger.debug('🗑️ Cancelling reservation...')
+    logger.debug('🗑️ Cancelling reservation...', { 
+      slot_id: currentReservationId.value, 
+      session_id: sessionId.value 
+    })
     
-    await $fetch('/api/booking/cancel-reservation', {
+    const response = await $fetch('/api/booking/release-reservation', {
       method: 'POST',
       body: {
-        reservation_id: currentReservationId.value
+        slot_id: currentReservationId.value,
+        session_id: sessionId.value
       }
     })
 
-    logger.debug('✅ Reservation cancelled')
+    logger.debug('✅ Reservation cancelled:', response)
   } catch (error: any) {
-    console.error('❌ Error cancelling reservation:', error)
+    logger.error('❌ Error cancelling reservation:', error)
     // Silently ignore cancellation errors - the reservation might already be gone
     if (!silent) {
-      console.warn('⚠️ Could not cancel reservation, but continuing...')
+      console.warn('⚠️ Could not cancel reservation, but continuing...', error)
     }
   } finally {
     // Always reset state regardless of cancellation success
@@ -2942,16 +2945,10 @@ const getCountdownText = computed(() => {
 
 const handleBackButton = async () => {
   // Release slot reservation if going back
-  if (reservedSlotId.value && sessionId.value) {
+  if (currentReservationId.value && sessionId.value) {
     try {
       logger.debug('🔓 Releasing slot reservation on back button...')
-      await $fetch('/api/booking/release-reservation', {
-        method: 'POST',
-        body: {
-          slot_id: reservedSlotId.value,
-          session_id: sessionId.value
-        }
-      })
+      await cancelReservation()
       logger.debug('✅ Slot reservation released')
     } catch (err: any) {
       logger.warn('⚠️ Failed to release slot reservation:', err)
