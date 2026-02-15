@@ -78,11 +78,14 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // Calculate reservation expiry (5 minutes from now)
     const reservedUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    
+    // Overlapping slots get 15 minutes extra (total 20 minutes)
+    const overlappingReservedUntil = new Date(Date.now() + 20 * 60 * 1000).toISOString()
 
     // First, READ the current slot to verify it exists
     const { data: currentSlot, error: readError } = await supabase
       .from('availability_slots')
-      .select('id, reserved_by_session, reserved_until, staff_id, location_id, start_time, end_time, duration_minutes')
+      .select('id, tenant_id, reserved_by_session, reserved_until, staff_id, location_id, start_time, end_time, duration_minutes')
       .eq('id', body.slot_id)
       .maybeSingle()
 
@@ -93,8 +96,7 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
-    // Attempt to reserve the slot
-    // RLS policy enforces: can only update if slot is free (reserved_by_session IS NULL) OR reservation expired
+    // ============ STEP 1: Reserve the primary slot ============
     const { error: reserveError } = await supabase
       .from('availability_slots')
       .update({
@@ -109,6 +111,48 @@ export default defineEventHandler(async (event: H3Event) => {
         statusCode: reserveError.code === '42501' ? 409 : 500,
         statusMessage: reserveError.code === '42501' ? 'Slot is no longer available' : 'Failed to reserve slot'
       })
+    }
+
+    logger.debug('✅ Primary slot reserved')
+
+    // ============ STEP 2: Find and reserve all overlapping slots ============
+    // Find slots that overlap with this one and belong to the same staff
+    // Location doesn't matter - if staff is busy, they're busy everywhere
+    const { data: overlappingSlots, error: findOverlapError } = await supabase
+      .from('availability_slots')
+      .select('id')
+      .eq('staff_id', currentSlot.staff_id)
+      .eq('tenant_id', currentSlot.tenant_id)
+      .is('reserved_by_session', null) // Only unreserved slots (must use .is() for NULL)
+      .lte('start_time', currentSlot.end_time) // Starts before or at this slot ends (also include adjacent)
+      .gte('end_time', currentSlot.start_time) // Ends after or at this slot starts (also include adjacent)
+      .neq('id', body.slot_id) // Exclude the primary slot (already reserved)
+
+    if (findOverlapError) {
+      logger.warn('⚠️ Could not find overlapping slots:', findOverlapError)
+      // Continue anyway - the primary slot is already reserved
+    }
+
+    const overlappingSlotIds = overlappingSlots ? overlappingSlots.map(s => s.id) : []
+    
+    if (overlappingSlotIds.length > 0) {
+      logger.debug(`🔗 Found ${overlappingSlotIds.length} overlapping slots, reserving them...`)
+      
+      // ============ STEP 3: Reserve all overlapping slots ============
+      const { error: overlapReserveError } = await supabase
+        .from('availability_slots')
+        .update({
+          reserved_until: overlappingReservedUntil,
+          reserved_by_session: body.session_id
+        })
+        .in('id', overlappingSlotIds)
+
+      if (overlapReserveError) {
+        logger.warn('⚠️ Could not reserve all overlapping slots:', overlapReserveError)
+        // Continue anyway - the primary slot is reserved
+      } else {
+        logger.debug(`✅ Reserved ${overlappingSlotIds.length} overlapping slots`)
+      }
     }
 
     // Construct response from current slot data (don't SELECT after UPDATE, as reserved slots won't be visible via SELECT policy)
@@ -147,7 +191,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     return {
       success: true,
-      message: 'Slot reserved for 10 minutes',
+      message: 'Slot reserved for 5 minutes',
       slot: {
         id: reservedSlot.id,
         staff_id: reservedSlot.staff_id,
@@ -155,7 +199,8 @@ export default defineEventHandler(async (event: H3Event) => {
         start_time: reservedSlot.start_time,
         end_time: reservedSlot.end_time,
         duration_minutes: reservedSlot.duration_minutes,
-        reserved_until: reservedSlot.reserved_until
+        reserved_until: reservedSlot.reserved_until,
+        overlappingSlotsReserved: overlappingSlotIds.length
       }
     }
 
