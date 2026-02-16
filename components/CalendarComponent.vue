@@ -990,8 +990,8 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
         location_id: apt.location_id,
         duration_minutes: apt.duration_minutes,
         status: apt.status,
-        // ✅ Debug: Event-Farben direkt setzen
-        classNames: [`category-${category}`, unpaidClass].filter(Boolean),
+        // ✅ Merge classNames from API (e.g., reserved-slot-event) with local ones
+        classNames: [...(apt.classNames || []), `category-${category}`, unpaidClass].filter(Boolean),
         extendedProps: {
           // ✅ Location für 'other' Events - use location data from backend
           location: ((apt as any).location?.address || (apt as any).location?.name) || '',
@@ -3430,6 +3430,53 @@ defineExpose({
 .fc-event.unpaid-appointment {
   border: 1px solid #ef4444 !important;
   border-left: 2px solid #ef4444 !important;
+}
+
+/* ✅ CSS für reservierte Slots (Booking-Reservierungen in Echtzeit) */
+.fc .fc-event.reserved-slot-event {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-event.reserved-slot-event .fc-bg {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-event.reserved-slot-event .fc-event-main {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-event.reserved-slot-event .fc-event-main-frame {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-daygrid-event.reserved-slot-event {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-daygrid-event.reserved-slot-event .fc-event-main {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-timegrid-event.reserved-slot-event {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-timegrid-event.reserved-slot-event .fc-event-bg {
+  background-color: #9ca3af !important;
+}
+
+.fc .fc-event.reserved-slot-event,
+.fc .fc-daygrid-event.reserved-slot-event,
+.fc .fc-timegrid-event.reserved-slot-event {
+  border: 2px solid #6b7280 !important;
+  color: #374151 !important;
+}
+
+.fc .fc-event.reserved-slot-event .fc-event-title {
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  color: #374151 !important;
+  font-size: 0.85rem !important;
 }
 
 /* Tailwind CSS ::selection Duplikate bereinigen */

@@ -130,10 +130,13 @@ export default defineEventHandler(async (event) => {
           duration_minutes,
           reserved_by_session,
           reserved_until,
-          category_code
+          category_code,
+          is_primary_reservation
         `)
         .eq('tenant_id', tenantId)
         .not('reserved_by_session', 'is', null) // Only reserved slots
+        .eq('is_primary_reservation', true) // Only load primary reservations
+        .gte('reserved_until', new Date().toISOString()) // NEW: Filter out expired reservations
         .gte('start_time', startISO)
         .lt('start_time', endISO)
         .order('start_time')
@@ -269,7 +272,7 @@ export default defineEventHandler(async (event) => {
     // ✅ NEW: Transform reserved slots into calendar events
     const enrichedReservedSlots = (reservedSlots || []).map((slot: any) => ({
       id: `reserved-${slot.id}`, // Prefix to distinguish from appointments
-      title: `🟡 Reservierung (${slot.category_code})`,
+      title: `Reserviert`,
       start_time: slot.start_time,
       end_time: slot.end_time,
       type: 'reserved_slot',
@@ -282,11 +285,11 @@ export default defineEventHandler(async (event) => {
       location: slot.location_id ? locationsMap[slot.location_id] : null,
       reserved_until: slot.reserved_until,
       reserved_by_session: slot.reserved_by_session,
-      // Empty user since it's just a reservation
       user: null,
       created_by_user: null,
       payment_status: null,
-      paid_at: null
+      paid_at: null,
+      classNames: ['reserved-slot-event'] // NEW: Add custom CSS class
     }))
 
     // Combine appointments and reserved slots
