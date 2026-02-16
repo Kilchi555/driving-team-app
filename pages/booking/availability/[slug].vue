@@ -491,14 +491,16 @@
             </div>
           </div>
           
-          <div v-else class="text-center py-12">
-            <div class="text-gray-500 mb-4">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Keine verfügbaren Termine</h3>
-            <p class="text-gray-600">Für diese Kombination sind momentan keine Termine verfügbar.</p>
+          <!-- No Available Slots - Show Proposal Form -->
+          <div v-else>
+            <BookingProposalForm
+              :tenant_id="currentTenant?.id"
+              :category="selectedCategory"
+              :duration_minutes="selectedDuration"
+              :location="selectedLocation"
+              :staff="selectedInstructor"
+              @submitted="handleProposalSubmitted"
+            />
           </div>
           
           <div class="mt-6 text-center">
@@ -765,6 +767,7 @@ import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
+import BookingProposalForm from '~/components/BookingProposalForm.vue'
 import { useRoute, useRuntimeConfig } from '#app'
 import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
@@ -1324,16 +1327,15 @@ const loadStaffForCategory = async () => {
 const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
   try {
     isLoadingLocations.value = true
-    logger.debug('🔄 Loading locations for all staff via API...')
+    logger.debug('🔄 Loading ALL standard locations for category via API...')
     
-    // Replaces direct Supabase query at line 1239
-    
+    // ✅ Use get-staff-for-category action which returns ALL locations with staff_ids
     const response = await $fetch('/api/booking/get-availability', {
       method: 'POST',
       body: {
         tenant_id: currentTenant.value?.id,
-        staff_id: availableStaff.value[0]?.id || 'placeholder',
-        action: 'get-locations-for-staff',
+        staff_id: 'placeholder', // Not used for this action
+        action: 'get-staff-for-category',
         category_code: filters.value.category_code
       }
     }) as any
@@ -1343,63 +1345,102 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
     }
 
     const allLocations = response.locations || []
+    logger.debug(`📍 API returned ${allLocations.length} total locations`)
     
-    // Load locations for all available staff in parallel (client-side filtering)
-    const locationPromises = availableStaff.value.map(async (staff) => {
+    // ✅ Filter ALL locations for the category
+    const categoryLocations = (allLocations || []).filter((location: any) => {
+      // Check if category is available
+      const availableCategories = location.available_categories || []
+      const hasCategory = availableCategories.includes(filters.value.category_code)
+      
+      if (!hasCategory) {
+        logger.debug(`⏭️ Skipping location "${location.name}" - category ${filters.value.category_code} not available`)
+        return false
+      }
+      
+      logger.debug(`✅ Including location "${location.name}" for category ${filters.value.category_code}`)
+      return true
+    })
+    
+    logger.debug(`📍 Found ${categoryLocations.length} standard locations for category ${filters.value.category_code}`)
+    
+    // ✅ Map locations with their available staff
+    const locationsWithStaff = categoryLocations.map((location: any) => {
+      // Get staff IDs from location
+      const staffIds = location.staff_ids || []
+      
+      // Find matching staff from availableStaff
+      const staffAtLocation = availableStaff.value.filter((staff: any) =>
+        staffIds.includes(staff.id)
+      )
+      
+      logger.debug(`  📍 ${location.name}: ${staffAtLocation.length} staff`, {
+        staffIds: staffIds,
+        foundStaff: staffAtLocation.map((s: any) => s.first_name)
+      })
+      
+      return {
+        ...location,
+        available_staff: staffAtLocation,
+        time_slots: []
+      }
+    })
+    
+    availableLocations.value = locationsWithStaff
+    logger.debug(`✅ Prepared ${availableLocations.value.length} locations with ${availableStaff.value.length} available staff`)
+    
+    // ✅ Load staffOnlineBookable info for displaying which staff can book which location online
+    if (availableLocations.value.length > 0 && availableStaff.value.length > 0) {
       try {
-        // Client-side filtering of locations already fetched from API
-        const filteredLocations = (allLocations || []).filter((location: any) => {
-          // Check if staff is registered at this location
-          const staffIds = location.staff_ids || []
-          const isStaffRegistered = Array.isArray(staffIds) && staffIds.includes(staff.id)
-          
-          // Check if category is available
-          const availableCategories = location.available_categories || []
-          const hasCategory = availableCategories.includes(filters.value.category_code)
-          
-          if (!isStaffRegistered) {
-            logger.debug(`⏭️ Skipping location ${location.name} for ${staff.first_name} - staff not registered`)
-            return false
-          }
-          
-          if (!hasCategory) {
-            logger.debug(`⏭️ Skipping location ${location.name} for ${staff.first_name} - category ${filters.value.category_code} not available`)
-          }
-          
-          return hasCategory && isStaffRegistered
-        })
+        const staffIds = availableStaff.value.map((s: any) => s.id)
         
-        logger.debug(`✅ Loaded ${filteredLocations.length}/${allLocations?.length || 0} locations for ${staff.first_name} ${staff.last_name} (category: ${filters.value.category_code})`)
-        return { staffId: staff.id, locations: filteredLocations }
-      } catch (err) {
-        console.error(`❌ Error filtering locations for ${staff.first_name}:`, err)
-        return { staffId: staff.id, locations: [] }
+        logger.debug('🔒 Loading staff_locations for online booking status', {
+          staffCount: staffIds.length,
+          locationCount: availableLocations.value.length
+        })
+
+        const response = await $fetch<{
+          success: boolean
+          data: Array<{
+            staff_id: string
+            location_id: string
+            is_online_bookable: boolean
+          }>
+        }>('/api/staff/get-staff-locations', {
+          method: 'POST',
+          body: { staff_ids: staffIds }
+        })
+
+        if (response?.success && response.data) {
+          // Build staffOnlineBookable array for each location
+          availableLocations.value = availableLocations.value.map((loc: any) => ({
+            ...loc,
+            staffOnlineBookable: response.data.filter((sl: any) => sl.location_id === loc.id)
+          }))
+          
+          logger.debug(`✅ Loaded online booking status for all staff-location combinations`)
+        }
+      } catch (err: any) {
+        logger.warn('⚠️ Could not load staff_locations info:', err.message)
       }
-    })
-    
-    // Wait for all location filtering to complete
-    const results = await Promise.all(locationPromises)
-    
-    // Update staff with their locations
-    results.forEach(({ staffId, locations }) => {
-      const index = availableStaff.value.findIndex(s => s.id === staffId)
-      if (index !== -1) {
-        availableStaff.value[index].available_locations = locations.map((location: any) => ({
-          ...location,
-          time_slots: []
-        }))
-      }
-    })
-    
-    logger.debug('✅ All standard locations loaded for staff')
-    
-    // Only generate time slots if explicitly requested
-    if (generateTimeSlots) {
-      logger.debug('🕒 Generating time slots for all staff-location combinations (explicit)')
-      await loadTimeSlotsForAllStaff()
-    } else {
-      logger.debug('⏭️ Skipping time slot generation at category step')
     }
+    
+    // Reset prices map for new category
+    durationPrices.value.clear()
+    
+    // Load prices for all available durations in parallel
+    logger.debug('💰 Loading prices for all durations...')
+    try {
+      await Promise.all(
+        durationOptions.value.map(duration => loadPricingForDuration(duration))
+      )
+      logger.debug('✅ All prices loaded')
+    } catch (err: any) {
+      logger.error('⚠️ Error loading prices:', err)
+    }
+    
+    // Skip subcategory selection and go directly to duration selection
+    currentStep.value = 3
   } catch (err) {
     console.error('❌ Error loading locations for all staff:', err)
   } finally {
@@ -1983,6 +2024,7 @@ const selectSubcategory = async (category: any) => {
   if (!availableStaff.value || availableStaff.value.length === 0) {
     logger.warn('⚠️ No available staff loaded - cannot build locations map')
   } else {
+    // ✅ NEW: Get ALL standard locations for the category (from first staff member's locations)
     availableStaff.value.forEach((staff: any) => {
       if (staff.available_locations && Array.isArray(staff.available_locations)) {
         staff.available_locations.forEach((location: any) => {
@@ -2001,22 +2043,32 @@ const selectSubcategory = async (category: any) => {
           }
           
           if (!locationsMap.has(location.id)) {
+            // Get all staff from availableStaff that work at this location
+            const staffAtLocation = availableStaff.value.filter((s: any) => {
+              const locIds = (s.available_locations || []).map((l: any) => l.id)
+              return locIds.includes(location.id)
+            })
+            
             locationsMap.set(location.id, {
               id: location.id,
               name: location.name,
               address: location.address,
               category_pickup_settings: location.category_pickup_settings || {},
               time_windows: parseTimeWindows(location.time_windows),
-              // Use the already-filtered available_staff from the API
-              available_staff: location.available_staff || []
+              available_staff: staffAtLocation,
+              staff_ids: location.staff_ids || []
             })
+            logger.debug(`✅ Added location "${location.name}" with ${staffAtLocation.length} staff`)
           } else {
             // Merge available_staff, avoiding duplicates
             const locationEntry = locationsMap.get(location.id)
             if (locationEntry) {
-              (location.available_staff || []).forEach((s: any) => {
+              (availableStaff.value || []).forEach((s: any) => {
                 if (!locationEntry.available_staff.some((existing: any) => existing.id === s.id)) {
-                  locationEntry.available_staff.push(s)
+                  const locIds = (s.available_locations || []).map((l: any) => l.id)
+                  if (locIds.includes(location.id)) {
+                    locationEntry.available_staff.push(s)
+                  }
                 }
               })
             }
@@ -2423,6 +2475,18 @@ const selectTimeSlot = async (slot: any) => {
   }
 }
 
+// ✅ NEW: Handle proposal submission
+const handleProposalSubmitted = async (proposalId: string) => {
+  logger.debug('✅ Booking proposal submitted:', proposalId)
+  
+  // Show success message
+  alert('✅ Deine Anfrage wurde erfolgreich eingereicht! Wir kontaktieren dich in Kürze.')
+  
+  // Redirect to login/register
+  await nextTick()
+  currentStep.value = 8 // Next step is login/register
+}
+
 // Initialize Google Places Autocomplete
 const initializeAddressAutocomplete = () => {
   if (!pickupAddressInput.value) {
@@ -2569,6 +2633,7 @@ const validatePickupAddress = () => {
 
 // State for modals
 const showLoginModal = ref(false)
+const showProposalForm = ref(false) // Show proposal form when no slots available
 const loginModalTab = ref<'login' | 'register'>('register') // Default to register for booking flow
 const showDocumentUploadModal = ref(false)
 const requiredDocuments = ref<any[]>([])
