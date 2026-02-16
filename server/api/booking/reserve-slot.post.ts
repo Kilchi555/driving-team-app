@@ -101,7 +101,8 @@ export default defineEventHandler(async (event: H3Event) => {
       .from('availability_slots')
       .update({
         reserved_until: reservedUntil,
-        reserved_by_session: body.session_id
+        reserved_by_session: body.session_id,
+        is_primary_reservation: true // Mark as primary reservation
       })
       .eq('id', body.slot_id)
 
@@ -145,7 +146,8 @@ export default defineEventHandler(async (event: H3Event) => {
         .from('availability_slots')
         .update({
           reserved_until: overlappingReservedUntil,
-          reserved_by_session: body.session_id
+          reserved_by_session: body.session_id,
+          is_primary_reservation: false // Mark as secondary reservation
         })
         .in('id', overlappingSlotIds)
 
