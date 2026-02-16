@@ -91,8 +91,21 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Booking proposal created:', proposal.id)
 
-    // TODO: Send email to tenant + staff notifying them of the new proposal
-    // TODO: Send confirmation email to customer
+    // Send emails to customer and staff
+    try {
+      await fetch(`${process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/emails/send-booking-proposal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proposalId: proposal.id,
+          tenant_id: tenant_id
+        })
+      })
+      console.log('✅ Booking proposal emails sent')
+    } catch (emailErr: any) {
+      console.warn('⚠️ Failed to send booking proposal emails:', emailErr.message)
+      // Don't fail the proposal creation if email fails
+    }
 
     return {
       success: true,

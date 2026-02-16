@@ -271,11 +271,12 @@ const submitProposal = async () => {
 
     if (response?.success) {
       logger.debug('✅ Booking proposal submitted:', response.proposal_id)
+      error.value = '' // Clear any previous errors
       emit('submitted', response.proposal_id)
     }
   } catch (err: any) {
     logger.error('❌ Error submitting proposal:', err)
-    error.value = err.message || 'Fehler beim Absenden der Anfrage'
+    error.value = err.data?.message || err.message || 'Fehler beim Absenden der Anfrage'
   } finally {
     isSubmitting.value = false
   }
