@@ -56,6 +56,32 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Validate customer contact information (required for communication)
+    if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
+      })
+    }
+
+    // Validate email format
+    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
+    if (!emailRegex.test(email)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid email address format'
+      })
+    }
+
+    // Validate phone format (Swiss format: +41 XX XXX XX XX or 0XX XXX XX XX)
+    const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
+    if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid phone number format (e.g. +41 79 123 45 67 or 079 123 45 67)'
+      })
+    }
+
     const supabase = createClient(
       process.env.SUPABASE_URL || '',
       process.env.SUPABASE_ANON_KEY || '' // Use ANON key for public endpoint only!
