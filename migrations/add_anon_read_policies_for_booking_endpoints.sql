@@ -44,9 +44,9 @@ ON public.external_busy_times
 FOR SELECT
 USING (true); -- Anon users can read, but must filter by tenant_id in query
 
--- 8. Allow anon to read working_hours (filtered by tenant_id in query)
-CREATE POLICY "anon_read_working_hours"
-ON public.working_hours
+-- 8. Allow anon to read staff_working_hours (filtered by tenant_id in query)
+CREATE POLICY "anon_read_staff_working_hours"
+ON public.staff_working_hours
 FOR SELECT
 USING (true); -- Anon users can read, but must filter by tenant_id in query
 
