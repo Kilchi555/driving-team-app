@@ -1095,7 +1095,7 @@ const today = computed(() => {
   return new Date().toISOString().split('T')[0]
 })
 
-// Display locations - filtered based on whether ANY AVAILABLE staff member can book this location online
+// Display locations - show ALL available locations with their staff
 const displayableLocations = computed(() => {
   if (!availableLocations.value) return []
   
@@ -1103,7 +1103,7 @@ const displayableLocations = computed(() => {
     availableLocationsCount: availableLocations.value?.length || 0
   })
 
-  // Filter locations: only show if at least ONE available staff member has is_online_bookable: true
+  // Filter locations: show if has available staff
   const filtered = availableLocations.value.filter((loc: any) => {
     logger.debug(`  📍 Checking location: ${loc.name}`, {
       availableStaffCount: loc.available_staff?.length || 0,
@@ -1111,34 +1111,13 @@ const displayableLocations = computed(() => {
       staffOnlineBookableLength: loc.staffOnlineBookable?.length || 0
     })
 
-    if (!loc.staffOnlineBookable || loc.staffOnlineBookable.length === 0) {
-      // No staff_locations data - location not bookable (strict mode, no backward compat)
-      logger.debug(`    ❌ FILTERED OUT: No staff_locations entries`)
-      return false
-    }
-
+    // Show location if it has available staff
     if (!loc.available_staff || loc.available_staff.length === 0) {
-      // No available staff for this location
       logger.debug(`    ❌ FILTERED OUT: No available staff for this location`)
       return false
     }
 
-    // Check if ANY available staff member has this location as online_bookable: true
-    const hasOnlineBookableStaff = loc.available_staff.some((staff: any) => {
-      const entry = loc.staffOnlineBookable.find((e: any) => e.staffId === staff.id)
-      // Strict mode: only show if entry exists AND is_online_bookable === true
-      // If no entry exists, staff cannot book this location online
-      const isOnlineBookable = entry?.isOnlineBookable === true
-      logger.debug(`      Staff ${staff.first_name}: entry=${entry ? 'exists' : 'none'}, isOnlineBookable=${isOnlineBookable}`)
-      return isOnlineBookable
-    })
-
-    if (!hasOnlineBookableStaff) {
-      logger.debug(`    ❌ FILTERED OUT: No available staff has is_online_bookable: true`)
-      return false
-    }
-
-    logger.debug(`    ✅ KEEPING: At least one available staff has is_online_bookable: true`)
+    logger.debug(`    ✅ KEEPING: Location has ${loc.available_staff.length} available staff`)
     return true
   })
 
