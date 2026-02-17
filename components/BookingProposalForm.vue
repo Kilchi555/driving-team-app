@@ -109,6 +109,61 @@
         </div>
       </div>
 
+      <!-- Customer Contact Information -->
+      <div class="space-y-4">
+        <label class="block text-sm font-semibold text-gray-900">
+          Deine Kontaktdaten <span class="text-red-500">*</span>
+        </label>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- First Name -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Vorname</label>
+            <input
+              v-model="firstName"
+              type="text"
+              placeholder="z.B. Max"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+          
+          <!-- Last Name -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Nachname</label>
+            <input
+              v-model="lastName"
+              type="text"
+              placeholder="z.B. Müller"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Email -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Email</label>
+            <input
+              v-model="email"
+              type="email"
+              placeholder="z.B. max@example.com"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+          
+          <!-- Phone -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Telefon</label>
+            <input
+              v-model="phone"
+              type="tel"
+              placeholder="z.B. +41 79 123 45 67"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- Notes -->
       <div class="space-y-2">
         <label class="block text-sm font-semibold text-gray-900">
@@ -177,6 +232,10 @@ const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samsta
 const selectedDays = ref<number[]>([])
 const timeSlots = ref<Map<number, Array<{ start_time: string; end_time: string }>>>(new Map())
 const notes = ref('')
+const firstName = ref('')
+const lastName = ref('')
+const email = ref('')
+const phone = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
 
@@ -266,6 +325,10 @@ const submitProposal = async () => {
         location_id: props.location.id,
         staff_id: props.staff.id,
         preferred_time_slots,
+        first_name: firstName.value || null,
+        last_name: lastName.value || null,
+        email: email.value || null,
+        phone: phone.value || null,
         notes: notes.value || null
       }
     })
