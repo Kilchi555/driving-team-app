@@ -745,6 +745,71 @@
     </div>
   </div>
 
+  <!-- Step 9: Proposal Confirmation -->
+  <div v-if="currentStep === 9" class="max-w-3xl mx-auto px-4 py-8">
+    <div class="space-y-4">
+      <!-- Confirmation Card -->
+      <div class="bg-white shadow rounded-lg p-6 sm:p-8">
+        <div class="text-center mb-8">
+          <!-- Success Icon -->
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Anfrage erfolgreich eingereicht!</h2>
+          <p class="text-gray-600 mb-2">Vielen Dank für deine Anfrage</p>
+          <p class="text-sm text-gray-500">Proposal-ID: {{ currentReservationId }}</p>
+        </div>
+
+        <!-- Message -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p class="text-blue-900 text-center">
+            ✅ Wir haben deine bevorzugten Zeitfenster erhalten. Unser Team wird dich in Kürze kontaktieren, um einen passenden Termin zu vereinbaren.
+          </p>
+        </div>
+
+        <!-- Booking Summary -->
+        <div class="space-y-4 bg-gray-50 rounded-lg p-6 mb-6">
+          <div class="border-b border-gray-200 pb-4">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Kategorie</p>
+            <p class="text-lg font-medium text-gray-900">{{ selectedCategory?.name }}</p>
+          </div>
+          <div class="border-b border-gray-200 pb-4">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Standort</p>
+            <p class="text-lg font-medium text-gray-900">{{ selectedLocation?.name }}</p>
+            <p v-if="selectedLocation?.address" class="text-sm text-gray-600 mt-1">{{ selectedLocation?.address }}</p>
+          </div>
+          <div class="border-b border-gray-200 pb-4">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Fahrlehrer</p>
+            <p class="text-lg font-medium text-gray-900">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Dauer</p>
+            <p class="text-lg font-medium text-gray-900">{{ selectedDuration }} Minuten</p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-3 sm:flex sm:gap-3 sm:space-y-0">
+          <button
+            @click="currentStep = 0"
+            class="flex-1 px-4 py-3 bg-gray-100 text-gray-900 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            ← Neue Anfrage
+          </button>
+          <button
+            @click="showLoginModal = true"
+            :style="{ backgroundColor: getBrandPrimary() }"
+            class="flex-1 px-4 py-3 text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Anmelden / Registrieren →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Success Modal -->
   <div v-if="showSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg p-8 max-w-md mx-4 shadow-lg">
@@ -2467,12 +2532,12 @@ const selectTimeSlot = async (slot: any) => {
 const handleProposalSubmitted = async (proposalId: string) => {
   logger.debug('✅ Booking proposal submitted:', proposalId)
   
-  // Show success message
-  alert('✅ Deine Anfrage wurde erfolgreich eingereicht! Wir kontaktieren dich in Kürze.')
+  // Store proposal ID for potential later use
+  currentReservationId.value = proposalId
   
-  // Redirect to login/register
+  // Redirect to proposal confirmation page (new step)
   await nextTick()
-  currentStep.value = 8 // Next step is login/register
+  currentStep.value = 9 // New step for proposal confirmation
 }
 
 // Initialize Google Places Autocomplete
