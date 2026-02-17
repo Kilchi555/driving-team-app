@@ -51,9 +51,13 @@ CREATE INDEX idx_booking_proposals_created_at ON booking_proposals(created_at);
 ALTER TABLE booking_proposals ENABLE ROW LEVEL SECURITY;
 
 -- Anon users can INSERT their own proposals (during booking flow)
+-- This policy allows anyone (authenticated or not) to create a proposal
 CREATE POLICY anon_insert_proposals ON booking_proposals
   FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (
+    -- Allow insert for anyone
+    true
+  );
 
 -- Staff can view proposals for their locations
 CREATE POLICY staff_view_proposals ON booking_proposals
