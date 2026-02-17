@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(
       process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_ANON_KEY || '' // Use ANON key for public endpoint
+      process.env.SUPABASE_ANON_KEY || '' // Use ANON key for public endpoint only!
     )
 
     // ⚠️ TODO: Implement robust rate limiting here to prevent spamming
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
     // 2. Validate location_id (exists and belongs to tenant)
     const { data: location, error: locationError } = await supabase
       .from('locations')
-      .select('id, available_categories, staff_ids') // Also fetch staff_ids for validation
+      .select('id, name, available_categories, staff_ids') // Also fetch staff_ids for validation
       .eq('id', location_id)
       .eq('tenant_id', tenant_id)
       .eq('is_active', true)
@@ -155,7 +155,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create the proposal
+    // Create the proposal using Anon Key (respects RLS policies for the booking_proposals table)
     const { data: proposal, error: proposalError } = await supabase
       .from('booking_proposals')
       .insert({
