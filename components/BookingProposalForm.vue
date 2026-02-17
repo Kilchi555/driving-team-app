@@ -207,7 +207,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
-import { useSupabaseUser, useSupabaseClient } from '#supabase/composables'
+import { useAuthStore } from '~/stores/auth'
 
 const props = defineProps({
   tenant_id: {
@@ -246,17 +246,19 @@ const email = ref('')
 const phone = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
-const user = useSupabaseUser()
-const isUserLoggedIn = computed(() => !!user.value)
+
+// Use Auth Store to check if user is logged in
+const authStore = useAuthStore()
+const isUserLoggedIn = computed(() => authStore.isLoggedIn)
 
 // Pre-fill customer data if user is logged in
 onMounted(() => {
-  if (user.value) {
-    // Pre-fill customer data from user metadata
-    const metadata = user.value.user_metadata || {}
-    firstName.value = metadata.first_name || ''
-    lastName.value = metadata.last_name || ''
-    email.value = user.value.email || ''
+  if (authStore.isLoggedIn && authStore.userProfile) {
+    // Pre-fill customer data from user profile
+    firstName.value = authStore.userProfile.first_name || ''
+    lastName.value = authStore.userProfile.last_name || ''
+    email.value = authStore.userProfile.email || ''
+    phone.value = authStore.userProfile.phone || ''
     
     logger.debug('✅ User logged in, pre-filling customer data', {
       email: email.value,
@@ -394,7 +396,7 @@ const submitProposal = async () => {
         email: email.value?.trim() || null,
         phone: phone.value?.trim() || null,
         notes: notes.value.trim() || null,
-        created_by_user_id: user.value?.id || null
+        created_by_user_id: authStore.userProfile?.id || null
       }
     })
 
