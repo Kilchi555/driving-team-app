@@ -207,7 +207,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
-import { useAuth } from '#auth'
+import { useSupabaseUser, useSupabaseClient } from '#supabase/composables'
 
 const props = defineProps({
   tenant_id: {
@@ -246,30 +246,23 @@ const email = ref('')
 const phone = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
-const currentUser = ref<any>(null)
-const isUserLoggedIn = computed(() => !!currentUser.value)
+const user = useSupabaseUser()
+const isUserLoggedIn = computed(() => !!user.value)
 
-// Load current user on mount
-onMounted(async () => {
-  try {
-    const { data: { session } } = await useAuth().getCurrentSession?.() || { data: {} }
-    if (session?.user) {
-      currentUser.value = session.user
-      // Pre-fill customer data if user is logged in
-      if (session.user.user_metadata) {
-        firstName.value = session.user.user_metadata.first_name || ''
-        lastName.value = session.user.user_metadata.last_name || ''
-      }
-      email.value = session.user.email || ''
-      
-      logger.debug('✅ User logged in, pre-filling customer data', {
-        email: email.value,
-        firstName: firstName.value,
-        lastName: lastName.value
-      })
-    }
-  } catch (err) {
-    logger.warn('⚠️ Could not load user session:', err)
+// Pre-fill customer data if user is logged in
+onMounted(() => {
+  if (user.value) {
+    // Pre-fill customer data from user metadata
+    const metadata = user.value.user_metadata || {}
+    firstName.value = metadata.first_name || ''
+    lastName.value = metadata.last_name || ''
+    email.value = user.value.email || ''
+    
+    logger.debug('✅ User logged in, pre-filling customer data', {
+      email: email.value,
+      firstName: firstName.value,
+      lastName: lastName.value
+    })
   }
 })
 
@@ -401,7 +394,7 @@ const submitProposal = async () => {
         email: email.value?.trim() || null,
         phone: phone.value?.trim() || null,
         notes: notes.value.trim() || null,
-        created_by_user_id: currentUser.value?.id || null
+        created_by_user_id: user.value?.id || null
       }
     })
 
