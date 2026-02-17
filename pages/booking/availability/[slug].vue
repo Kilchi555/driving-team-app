@@ -427,7 +427,7 @@
           </div>
           
           <!-- Week Navigation Controls -->
-          <div v-else-if="availableTimeSlots.length > 0" class="space-y-6">
+          <div v-else-if="availableTimeSlots.length > 0 && !showProposalFormManually" class="space-y-6">
             <div class="flex items-center justify-center mb-4">
               <div class="inline-flex items-stretch divide-x divide-gray-200 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <button
@@ -487,6 +487,17 @@
                 </button>
               </div>
             </div>
+            
+            <!-- NEW: Button to show proposal form if no suitable slots -->
+            <div class="mt-6 text-center">
+              <button
+                @click="showProposalFormManually = true"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg shadow hover:bg-blue-100 transition-colors"
+              >
+                Keinen passenden Termin gefunden? Vorschlag machen!
+              </button>
+            </div>
+
           </div>
           
           <!-- No Available Slots - Show Proposal Form -->
@@ -494,7 +505,7 @@
             <BookingProposalForm
               :tenant_id="currentTenant?.id"
               :category="selectedCategory"
-              :duration_minutes="selectedDuration"
+              :duration_minutes="selectedDuration || 45"
               :location="selectedLocation"
               :staff="selectedInstructor"
               @submitted="handleProposalSubmitted"
@@ -1035,6 +1046,7 @@ const tenantSettings = ref<any>({})
 
 // New flow state
 const currentStep = ref(1)
+const showProposalFormManually = ref(false) // Manually trigger proposal form even if slots exist
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
@@ -3670,6 +3682,14 @@ onMounted(async () => {
     console.error('❌ Error initializing availability page:', err)
   }
 })
+
+watch(
+  [selectedCategory, selectedDuration, selectedLocation, selectedInstructor],
+  () => {
+    showProposalFormManually.value = false
+  },
+  { deep: true }
+)
 
 // Cleanup on unmount
 onBeforeUnmount(async () => {

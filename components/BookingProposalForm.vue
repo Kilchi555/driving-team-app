@@ -157,7 +157,8 @@ const props = defineProps({
   },
   duration_minutes: {
     type: Number,
-    required: true
+    required: false, // Not always required if proposal form is shown early
+    default: 45 // Default to 45 minutes for proposals
   },
   location: {
     type: Object,
