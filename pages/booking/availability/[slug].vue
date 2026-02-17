@@ -2351,6 +2351,7 @@ const selectLocation = async (location: any) => {
 
 const selectInstructor = async (instructor: any) => {
   selectedInstructor.value = instructor
+  showProposalFormManually.value = false // Reset proposal form flag
   await waitForPressEffect()
   currentStep.value = 6 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
   
