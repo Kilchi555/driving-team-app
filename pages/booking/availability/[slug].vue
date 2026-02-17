@@ -390,8 +390,8 @@
 
         <!-- Step 5: Time Slot Selection -->
         <div v-if="currentStep === 6" class="space-y-4">
-          <!-- Time Slot Selection Card - only show header if slots are available -->
-          <div v-if="isLoadingTimeSlots || availableTimeSlots.length > 0" class="bg-white shadow rounded-lg p-4">
+          <!-- Time Slot Selection Card - only show header if slots are available AND not showing proposal form -->
+          <div v-if="(isLoadingTimeSlots || availableTimeSlots.length > 0) && !showProposalFormManually" class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 5</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Termin</h2>
