@@ -90,7 +90,6 @@
           <!-- Main Category Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 1</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Hauptkategorie</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedMainCategory?.name }}</span>
@@ -136,7 +135,6 @@
           <!-- Subcategory Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 2</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Unterkategorie</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedMainCategory?.name }}</span>
@@ -186,7 +184,6 @@
           <!-- Duration Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 3</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
                 Wähle deine Dauer
               </h2>
@@ -239,7 +236,6 @@
           <!-- Location Selection Card -->
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 3</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle einen Standort</h2>
               <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
@@ -358,7 +354,6 @@
           <!-- Instructor Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 4</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Fahrlehrer</h2>
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.name }}</span>
@@ -393,14 +388,7 @@
           <!-- Time Slot Selection Card - only show header if slots are available AND not showing proposal form -->
           <div v-if="(isLoadingTimeSlots || availableTimeSlots.length > 0) && !showProposalFormManually" class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 5</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Termin</h2>
-              <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.name }}</span>
-                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
-                <span v-if="selectedSlot" class="font-semibold"> • {{ formatDate(selectedSlot?.start_time) }} {{ formatTime(selectedSlot?.start_time) }}</span>
-              </div>
               
               <!-- Countdown Timer (wenn Termin reserviert) -->
             </div>
@@ -412,6 +400,15 @@
                 </div>
               </div>
               <p class="text-xs text-blue-700 mt-2">Ihre Reservation läuft in {{ getCountdownText }} ab.</p>
+            </div>
+          </div>
+          
+          <!-- Summary Info - Show between steps and content -->
+          <div v-if="currentStep === 6" class="mt-4 mb-6 text-center">
+            <div class="text-sm" :style="{ color: getBrandPrimary() }">
+              <span class="font-semibold">{{ selectedCategory?.name }}</span>
+              <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
+              <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
             </div>
           </div>
           
