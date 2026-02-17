@@ -286,6 +286,13 @@ import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
 import { getBrandPrimary, lightenColor, withAlpha } from '~/utils/colors'
 
+// Type for API response
+interface ProposalResponse {
+  success: boolean
+  proposal_id: string
+  message: string
+}
+
 const props = defineProps({
   tenant_id: {
     type: String,
@@ -531,7 +538,7 @@ const submitProposal = async () => {
     isSubmitting.value = true
 
     // Submit proposal
-    const response = await $fetch('/api/booking/submit-proposal', {
+    const response = await $fetch<ProposalResponse>('/api/booking/submit-proposal', {
       method: 'POST',
       body: {
         tenant_id: props.tenant_id,
@@ -554,9 +561,9 @@ const submitProposal = async () => {
     })
 
     if (response?.success) {
-      logger.debug('✅ Booking proposal submitted:', (response as any).proposal_id)
+      logger.debug('✅ Booking proposal submitted:', response.proposal_id)
       error.value = '' // Clear any previous errors
-      emit('submitted', (response as any).proposal_id)
+      emit('submitted', response.proposal_id)
     }
   } catch (err: any) {
     logger.error('❌ Error submitting proposal:', err)
