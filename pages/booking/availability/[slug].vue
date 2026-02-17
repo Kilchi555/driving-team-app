@@ -2,19 +2,16 @@
   <div class="min-h-screen bg-gray-50 py-4">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Back Button -->
-      <div v-if="currentStep > 0" class="mb-4">
+      <!-- Back Button & Header -->
+      <div class="mb-4 flex items-center justify-between gap-4">
         <button 
+          v-if="currentStep > 0"
           @click="handleBackButton"
-          class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors"
+          class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors flex-shrink-0"
         >
           ← Zurück
         </button>
-      </div>
-      
-      <!-- Header -->
-      <div class="mb-4">
-        <h1 class="text-3xl font-bold text-gray-900">Fahrstunde buchen</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 truncate">Fahrstunde buchen</h1>
       </div>
 
       <!-- Loading State -->
@@ -505,7 +502,6 @@
           </div>
           
           <div class="mt-6 text-center">
-          </div>
           </div>
         </div>
 

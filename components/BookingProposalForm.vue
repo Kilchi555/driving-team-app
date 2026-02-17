@@ -171,7 +171,7 @@ const props = defineProps({
 
 const emit = defineEmits(['submitted'])
 
-const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
+const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
 
 const selectedDays = ref<number[]>([])
 const timeSlots = ref<Map<number, Array<{ start_time: string; end_time: string }>>>(new Map())
