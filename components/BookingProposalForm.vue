@@ -5,10 +5,7 @@
       <div class="text-center mb-4">
         <p class="text-xs uppercase tracking-wide text-gray-400">Alternative Anfrage</p>
         <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Deine bevorzugten Zeitfenster</h2>
-        <div class="mt-2 text-sm text-gray-600">
-          <p class="font-semibold">{{ staff?.first_name }} {{ staff?.last_name }} • {{ location?.name }}</p>
-          <p class="text-xs">{{ category?.name }} • {{ duration_minutes }} Min.</p>
-        </div>
+      
       </div>
       <p class="text-center text-sm text-gray-600 mb-0">
         Leider haben wir für diese Kombination keine freien Termine im System. 
