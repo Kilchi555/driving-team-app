@@ -20,20 +20,20 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create service role client to bypass RLS
+    // Create anon client to respect RLS policies
     const { createClient } = await import('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const anonKey = process.env.SUPABASE_ANON_KEY
 
-    if (!serviceRoleKey) {
-      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured')
+    if (!anonKey) {
+      console.error('❌ SUPABASE_ANON_KEY not configured')
       throw createError({
         statusCode: 500,
         statusMessage: 'Server configuration error'
       })
     }
 
-    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+    const supabase = createClient(supabaseUrl, anonKey)
 
     logger.debug('📍 Fetching locations and staff:', {
       tenant_id,
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
 
     // 🔒 STRICT MODE: Load ONLY staff_locations with is_online_bookable: true
     // This is the single source of truth for online bookable staff/location combinations
-    const { data: staffLocations, error: staffLocError } = await serviceSupabase
+    const { data: staffLocations, error: staffLocError } = await supabase
       .from('staff_locations')
       .select('staff_id, location_id, is_online_bookable')
       .eq('tenant_id', tenant_id)
@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('📍 Loaded staff_locations:', staffLocations?.length || 0)
 
     // ✅ NEW: Also load ALL standard locations for the category (not just those with staff_locations entries)
-    const { data: allStandardLocations, error: allLocError } = await serviceSupabase
+    const { data: allStandardLocations, error: allLocError } = await supabase
       .from('locations')
       .select('id, name, staff_ids, available_categories')
       .eq('tenant_id', tenant_id)
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // 2. Load location details
-    const { data: locations, error: locationsError } = await serviceSupabase
+    const { data: locations, error: locationsError } = await supabase
       .from('locations')
       .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type, staff_ids')
       .eq('tenant_id', tenant_id)
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('📍 Loaded locations:', locations?.length || 0)
 
     // 3. Load ALL staff for the tenant
-    const { data: allStaff, error: staffError } = await serviceSupabase
+    const { data: allStaff, error: staffError } = await supabase
       .from('users')
       .select('id, first_name, last_name, email, role, category, is_active')
       .eq('tenant_id', tenant_id)
