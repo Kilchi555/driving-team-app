@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
       last_name,
       email,
       phone,
-      notes
+      notes,
+      created_by_user_id
     } = body
 
     // Validate required fields
@@ -56,30 +57,36 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate customer contact information (required for communication)
-    if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
-      })
-    }
+    // Validate customer contact information (required only if NOT created by a logged-in user)
+    // If user is logged in, these fields are optional
+    const isLoggedInUser = !!created_by_user_id
+    
+    if (!isLoggedInUser) {
+      // For anonymous users, all contact fields are required
+      if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
+        })
+      }
 
-    // Validate email format
-    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
-    if (!emailRegex.test(email)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid email address format'
-      })
-    }
+      // Validate email format
+      const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
+      if (!emailRegex.test(email)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid email address format'
+        })
+      }
 
-    // Validate phone format (Swiss format: +41 XX XXX XX XX or 0XX XXX XX XX)
-    const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
-    if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid phone number format (e.g. +41 79 123 45 67 or 079 123 45 67)'
-      })
+      // Validate phone format (Swiss format: +41 XX XXX XX XX or 0XX XXX XX XX)
+      const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
+      if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid phone number format (e.g. +41 79 123 45 67 or 079 123 45 67)'
+        })
+      }
     }
 
     const supabase = createClient(
@@ -166,11 +173,12 @@ export default defineEventHandler(async (event) => {
         location_id,
         staff_id,
         preferred_time_slots,
-        first_name,
-        last_name,
-        email,
-        phone,
-        notes,
+        first_name: first_name?.trim() || null,
+        last_name: last_name?.trim() || null,
+        email: email?.trim() || null,
+        phone: phone?.trim() || null,
+        notes: notes?.trim() || null,
+        created_by_user_id: created_by_user_id || null,
         status: 'pending'
       })
       .select()

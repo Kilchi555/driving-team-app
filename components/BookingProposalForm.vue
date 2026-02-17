@@ -109,8 +109,8 @@
         </div>
       </div>
 
-      <!-- Customer Contact Information -->
-      <div class="space-y-4">
+      <!-- Customer Contact Information - Only show if user is NOT logged in -->
+      <div v-if="!isUserLoggedIn" class="space-y-4">
         <label class="block text-sm font-semibold text-gray-900">
           Deine Kontaktdaten <span class="text-red-500">*</span>
         </label>
@@ -164,6 +164,13 @@
         </div>
       </div>
 
+      <!-- User Info Card - Only show if user IS logged in -->
+      <div v-else class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p class="text-sm text-blue-900">
+          ✅ Anfrage wird erstellt mit deinen Kontaktdaten: <strong>{{ firstName }} {{ lastName }} ({{ email }})</strong>
+        </p>
+      </div>
+
       <!-- Notes -->
       <div class="space-y-2">
         <label class="block text-sm font-semibold text-gray-900">
@@ -198,8 +205,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
+import { useAuth } from '#auth'
 
 const props = defineProps({
   tenant_id: {
@@ -238,6 +246,32 @@ const email = ref('')
 const phone = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
+const currentUser = ref<any>(null)
+const isUserLoggedIn = computed(() => !!currentUser.value)
+
+// Load current user on mount
+onMounted(async () => {
+  try {
+    const { data: { session } } = await useAuth().getCurrentSession?.() || { data: {} }
+    if (session?.user) {
+      currentUser.value = session.user
+      // Pre-fill customer data if user is logged in
+      if (session.user.user_metadata) {
+        firstName.value = session.user.user_metadata.first_name || ''
+        lastName.value = session.user.user_metadata.last_name || ''
+      }
+      email.value = session.user.email || ''
+      
+      logger.debug('✅ User logged in, pre-filling customer data', {
+        email: email.value,
+        firstName: firstName.value,
+        lastName: lastName.value
+      })
+    }
+  } catch (err) {
+    logger.warn('⚠️ Could not load user session:', err)
+  }
+})
 
 const toggleDay = (dayIndex: number) => {
   if (selectedDays.value.includes(dayIndex)) {
@@ -300,39 +334,41 @@ const submitProposal = async () => {
       return
     }
 
-    // Validate customer contact information
-    if (!firstName.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihren Vornamen an'
-      return
-    }
+    // Validate customer contact information (only required if NOT logged in)
+    if (!isUserLoggedIn.value) {
+      if (!firstName.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihren Vornamen an'
+        return
+      }
 
-    if (!lastName.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihren Nachnamen an'
-      return
-    }
+      if (!lastName.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihren Nachnamen an'
+        return
+      }
 
-    if (!email.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihre Email-Adresse an'
-      return
-    }
+      if (!email.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihre Email-Adresse an'
+        return
+      }
 
-    // Validate email format
-    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
-    if (!emailRegex.test(email.value)) {
-      error.value = 'Bitte geben Sie eine gültige Email-Adresse ein'
-      return
-    }
+      // Validate email format
+      const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
+      if (!emailRegex.test(email.value)) {
+        error.value = 'Bitte geben Sie eine gültige Email-Adresse ein'
+        return
+      }
 
-    if (!phone.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihre Telefonnummer an'
-      return
-    }
+      if (!phone.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihre Telefonnummer an'
+        return
+      }
 
-    // Validate phone format (basic Swiss format check)
-    const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
-    if (!phoneRegex.test(phone.value.replace(/\s/g, ''))) {
-      error.value = 'Bitte geben Sie eine gültige Schweizer Telefonnummer ein (z.B. +41 79 123 45 67)'
-      return
+      // Validate phone format (basic Swiss format check)
+      const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
+      if (!phoneRegex.test(phone.value.replace(/\s/g, ''))) {
+        error.value = 'Bitte geben Sie eine gültige Schweizer Telefonnummer ein (z.B. +41 79 123 45 67)'
+        return
+      }
     }
 
     // Build preferred_time_slots array
@@ -360,11 +396,12 @@ const submitProposal = async () => {
         location_id: props.location.id,
         staff_id: props.staff.id,
         preferred_time_slots,
-        first_name: firstName.value.trim(),
-        last_name: lastName.value.trim(),
-        email: email.value.trim(),
-        phone: phone.value.trim(),
-        notes: notes.value.trim() || null
+        first_name: firstName.value?.trim() || null,
+        last_name: lastName.value?.trim() || null,
+        email: email.value?.trim() || null,
+        phone: phone.value?.trim() || null,
+        notes: notes.value.trim() || null,
+        created_by_user_id: currentUser.value?.id || null
       }
     })
 
