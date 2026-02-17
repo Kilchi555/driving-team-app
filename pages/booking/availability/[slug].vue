@@ -85,6 +85,18 @@
           </div>
         </div>
 
+        <!-- Summary Info - Show at every step for context -->
+        <div v-if="currentStep > 0" class="mt-4 mb-6 text-center">
+          <div class="text-sm" :style="{ color: getBrandPrimary() }">
+            <span v-if="selectedCategory" class="font-semibold">{{ selectedCategory?.name }}</span>
+            <span v-else-if="selectedMainCategory" class="font-semibold">{{ selectedMainCategory?.name }}</span>
+            <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
+            <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
+            <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
+            <span v-if="selectedSlot" class="font-semibold"> • {{ formatDate(selectedSlot?.start_time) }} {{ formatTime(selectedSlot?.start_time) }}</span>
+          </div>
+        </div>
+
         <!-- Step 1: Main Category Selection -->
         <div v-if="currentStep === 1" class="space-y-4">
           <!-- Main Category Selection Card -->
@@ -400,15 +412,6 @@
                 </div>
               </div>
               <p class="text-xs text-blue-700 mt-2">Ihre Reservation läuft in {{ getCountdownText }} ab.</p>
-            </div>
-          </div>
-          
-          <!-- Summary Info - Show between steps and content -->
-          <div v-if="currentStep === 6" class="mt-4 mb-6 text-center">
-            <div class="text-sm" :style="{ color: getBrandPrimary() }">
-              <span class="font-semibold">{{ selectedCategory?.name }}</span>
-              <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-              <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
             </div>
           </div>
           
