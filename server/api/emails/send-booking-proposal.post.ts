@@ -1,7 +1,7 @@
 // server/api/emails/send-booking-proposal.post.ts
 // Send booking proposal confirmation email to customer and staff
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getRequestHeaders } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
@@ -96,7 +96,17 @@ export default defineEventHandler(async (event) => {
       dayNames
     )
 
-    // Send both emails
+    // 3. Send notification email to TENANT
+    const tenantEmail = buildTenantEmail(
+      proposal,
+      location,
+      staff,
+      tenant,
+      formattedTimeSlots,
+      dayNames
+    )
+
+    // Send all three emails
     try {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
@@ -115,6 +125,13 @@ export default defineEventHandler(async (event) => {
         ...staffEmail
       })
       logger.info('✅ Booking proposal notification email sent to staff:', staff.email)
+
+      // Send to tenant
+      await resend.emails.send({
+        from: fromEmail,
+        ...tenantEmail
+      })
+      logger.info('✅ Booking proposal notification email sent to tenant:', tenant.contact_email)
 
       return {
         success: true,
@@ -260,8 +277,6 @@ function buildCustomerEmail(proposal: any, location: any, staff: any, tenant: an
 }
 
 function buildStaffEmail(proposal: any, location: any, staff: any, tenant: any, formattedTimeSlots: string, dayNames: string[]) {
-  const proposalLink = `https://${tenant?.slug || 'app'}.drivingteam.ch/admin/booking-proposals/${proposal.id}`
-
   return {
     to: staff?.email,
     subject: `🎯 Neue Buchungsanfrage: ${proposal.category_code} - ${proposal.first_name} ${proposal.last_name}`,
@@ -320,13 +335,86 @@ function buildStaffEmail(proposal: any, location: any, staff: any, tenant: any, 
                       </tr>
                     </table>
                     
-                    <!-- Action Button -->
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                    <p style="margin: 15px 0 0 0; font-size: 12px; color: #6b7280;">
+                      ${tenant?.name}<br>
+                      ${tenant?.contact_email}
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #f3f4f6; padding: 15px 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 11px; color: #9ca3af;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `
+  }
+}
+
+function buildTenantEmail(proposal: any, location: any, staff: any, tenant: any, formattedTimeSlots: string, dayNames: string[]) {
+  return {
+    to: tenant?.contact_email,
+    subject: `📋 Neue Buchungsanfrage eingegangen: ${proposal.category_code} - ${proposal.first_name} ${proposal.last_name}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="de">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Neue Buchungsanfrage</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6;">
+          <tr>
+            <td align="center" style="padding: 20px 10px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, rgba(16, 185, 129, 0.8) 100%); color: white; padding: 25px 20px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 600;">📋 Neue Buchungsanfrage</h1>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Geschäftsmitteilung</p>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 25px 20px;">
+                    <p style="margin: 0 0 15px 0; font-size: 16px;">Hallo,</p>
+                    <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">es ist eine neue Buchungsanfrage eingegangen. Hier ist eine Zusammenfassung:</p>
+                    
+                    <!-- Proposal Summary -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
                       <tr>
-                        <td align="center">
-                          <a href="${proposalLink}" style="display: inline-block; background: #3b82f6; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 14px;">
-                            Anfrage in Dashboard öffnen →
-                          </a>
+                        <td style="padding: 20px;">
+                          <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 15px; font-weight: 600;">Kundenangaben</h3>
+                          <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Name:</strong> ${proposal.first_name} ${proposal.last_name}</p>
+                          <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>E-Mail:</strong> <a href="mailto:${proposal.email}" style="color: ${tenant?.primary_color || '#10B981'};">${proposal.email}</a></p>
+                          <p style="margin: 0 0 12px 0; font-size: 13px;"><strong>Telefon:</strong> <a href="tel:${proposal.phone}" style="color: ${tenant?.primary_color || '#10B981'};">${proposal.phone}</a></p>
+                          
+                          <h3 style="margin: 15px 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 15px; font-weight: 600;">Anfrageinformationen</h3>
+                          <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kategorie:</strong> ${proposal.category_code}</p>
+                          <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Dauer:</strong> ${proposal.duration_minutes} Minuten</p>
+                          <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Standort:</strong> ${location?.name}</p>
+                          <p style="margin: 0 0 12px 0; font-size: 13px;"><strong>Fahrlehrer:</strong> ${staff?.first_name} ${staff?.last_name}</p>
+                          
+                          <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>Bevorzugte Zeitfenster:</strong></p>
+                          <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #374151;">
+                            ${formattedTimeSlots}
+                          </ul>
+                          
+                          ${proposal.notes ? `
+                          <p style="margin: 12px 0 0 0; font-size: 13px;"><strong>Kundennotizen:</strong></p>
+                          <p style="margin: 0; padding: 10px; background: #fff; border-radius: 4px; font-size: 13px; color: #374151;">${proposal.notes}</p>
+                          ` : ''}
                         </td>
                       </tr>
                     </table>
