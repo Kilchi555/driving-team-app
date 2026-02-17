@@ -58,8 +58,102 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(
       process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+      process.env.SUPABASE_ANON_KEY || '' // Use ANON key for public endpoint
     )
+
+    // ⚠️ TODO: Implement robust rate limiting here to prevent spamming
+    // (e.g., based on IP address, email, or a captcha)
+
+    // 1. Validate tenant_id
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('id', tenant_id)
+      .single()
+
+    if (tenantError || !tenant) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Tenant not found or invalid tenant_id'
+      })
+    }
+
+    // 2. Validate location_id (exists and belongs to tenant)
+    const { data: location, error: locationError } = await supabase
+      .from('locations')
+      .select('id, available_categories, staff_ids') // Also fetch staff_ids for validation
+      .eq('id', location_id)
+      .eq('tenant_id', tenant_id)
+      .eq('is_active', true)
+      .single()
+
+    if (locationError || !location) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Location not found or invalid for this tenant'
+      })
+    }
+
+    // Check if location supports the category
+    if (!location.available_categories.includes(category_code)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Location does not support category: ${category_code}`
+      })
+    }
+
+    // 3. Validate staff_id (exists, belongs to tenant, and works at this location + supports category)
+    const { data: staff, error: staffError } = await supabase
+      .from('users')
+      .select('id, role, category') // Fetch category to validate
+      .eq('id', staff_id)
+      .eq('tenant_id', tenant_id)
+      .eq('is_active', true)
+      .eq('role', 'staff')
+      .single()
+
+    if (staffError || !staff) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Staff not found or invalid for this tenant'
+      })
+    }
+
+    // Check if staff is assigned to this location (via location.staff_ids)
+    if (!location.staff_ids.includes(staff_id)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Selected staff is not assigned to location: ${location.name}`
+      })
+    }
+
+    // Check if staff supports the category (via staff.category array)
+    const staffCategories = Array.isArray(staff.category) ? staff.category : (typeof staff.category === 'string' ? JSON.parse(staff.category || '[]') : [])
+    if (!staffCategories.includes(category_code)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Selected staff does not support category: ${category_code}`
+      })
+    }
+
+    // 4. Validate email and phone formats
+    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    if (email && !emailRegex.test(email)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid email address format'
+      })
+    }
+
+    // Basic phone number validation (e.g., Swiss format +41 XX XXX XX XX or 0XX XXX XX XX)
+    // This regex is simplified, consider a more robust library if needed
+    const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/;
+    if (phone && !phoneRegex.test(phone.replace(/\s/g, ''))) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid phone number format (e.g. +41 79 123 45 67 or 079 123 45 67)'
+      })
+    }
 
     // Create the proposal
     const { data: proposal, error: proposalError } = await supabase
@@ -93,15 +187,23 @@ export default defineEventHandler(async (event) => {
 
     // Send emails to customer and staff
     try {
-      await fetch(`${process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/emails/send-booking-proposal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proposalId: proposal.id,
-          tenant_id: tenant_id
+      const internalApiSecret = process.env.NUXT_INTERNAL_API_SECRET
+      if (!internalApiSecret) {
+        console.error('❌ NUXT_INTERNAL_API_SECRET is not configured. Skipping email sending.')
+      } else {
+        await fetch(`${process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/emails/send-booking-proposal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Api-Secret': internalApiSecret // Send internal secret header
+          },
+          body: JSON.stringify({
+            proposalId: proposal.id,
+            tenant_id: tenant_id
+          })
         })
-      })
-      console.log('✅ Booking proposal emails sent')
+        console.log('✅ Booking proposal emails sent')
+      }
     } catch (emailErr: any) {
       console.warn('⚠️ Failed to send booking proposal emails:', emailErr.message)
       // Don't fail the proposal creation if email fails

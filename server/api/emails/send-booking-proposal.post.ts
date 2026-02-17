@@ -12,6 +12,18 @@ interface BookingProposalEmailRequest {
 
 export default defineEventHandler(async (event) => {
   try {
+    // 🔒 Security: Only allow internal calls with a shared secret
+    const internalApiSecret = process.env.NUXT_INTERNAL_API_SECRET
+    const providedSecret = getRequestHeaders(event)['x-internal-api-secret']
+
+    if (!internalApiSecret || providedSecret !== internalApiSecret) {
+      console.warn('❌ Unauthorized access to send-booking-proposal endpoint')
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized internal API access'
+      })
+    }
+
     const body = await readBody(event) as BookingProposalEmailRequest
     const { proposalId, tenant_id } = body
 
@@ -45,13 +57,14 @@ export default defineEventHandler(async (event) => {
         tenant:tenants(id, name, slug, primary_color, contact_email)
       `)
       .eq('id', proposalId)
+      .eq('tenant_id', tenant_id) // 🔒 Security: Ensure proposal belongs to the tenant
       .single()
 
     if (proposalError || !proposal) {
-      logger.warn('❌ Booking proposal not found:', proposalId)
+      logger.warn('❌ Booking proposal not found or does not belong to tenant:', proposalId, tenant_id)
       throw createError({
         statusCode: 404,
-        statusMessage: 'Booking proposal not found'
+        statusMessage: 'Booking proposal not found or unauthorized'
       })
     }
 
