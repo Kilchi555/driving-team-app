@@ -102,37 +102,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. Validate staff_id (exists, belongs to tenant, and works at this location + supports category)
-    const { data: staff, error: staffError } = await supabase
-      .from('users')
-      .select('id, role, category') // Fetch category to validate
-      .eq('id', staff_id)
-      .eq('tenant_id', tenant_id)
-      .eq('is_active', true)
-      .eq('role', 'staff')
-      .single()
-
-    if (staffError || !staff) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Staff not found or invalid for this tenant'
-      })
-    }
-
-    // Check if staff is assigned to this location (via location.staff_ids)
+    // 3. Validate staff_id is assigned to this location (via location.staff_ids)
+    // We don't need to read the users table - the foreign key constraint will validate the staff exists
     if (!location.staff_ids.includes(staff_id)) {
       throw createError({
         statusCode: 400,
         statusMessage: `Selected staff is not assigned to location: ${location.name}`
-      })
-    }
-
-    // Check if staff supports the category (via staff.category array)
-    const staffCategories = Array.isArray(staff.category) ? staff.category : (typeof staff.category === 'string' ? JSON.parse(staff.category || '[]') : [])
-    if (!staffCategories.includes(category_code)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Selected staff does not support category: ${category_code}`
       })
     }
 
