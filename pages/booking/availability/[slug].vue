@@ -806,7 +806,7 @@
         <!-- Action Buttons -->
         <div class="space-y-3 sm:flex sm:gap-3 sm:space-y-0">
           <button
-            @click="currentStep = 0"
+            @click="currentStep = 1"
             class="flex-1 px-4 py-3 bg-gray-100 text-gray-900 font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             ← Neue Anfrage
@@ -2553,6 +2553,9 @@ const handleProposalSubmitted = async (proposalId: string) => {
   // Redirect to proposal confirmation page (new step)
   await nextTick()
   currentStep.value = 9 // New step for proposal confirmation
+  
+  // Scroll to top of page
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // Initialize Google Places Autocomplete
