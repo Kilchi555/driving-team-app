@@ -33,6 +33,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
                        to.path.includes('/register') ||
                        to.path.match(/^\/[^\/]+\/(services|register)/) ||
                        to.path.startsWith('/customer/courses') ||
+                       to.path.match(/^\/[^\/]+\/booking\/availability\/.+$/) ||
                        isSlugRoute
   
   logger.debug('🔐 Auth middleware:', { isPublicRoute, isSlugRoute, path: to.path })

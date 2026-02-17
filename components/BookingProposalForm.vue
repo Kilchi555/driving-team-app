@@ -2,15 +2,12 @@
   <div class="space-y-6">
     <!-- Header -->
     <div class="bg-white shadow rounded-lg p-4 sm:p-6">
-      <div class="text-center mb-4">
+      <div class="text-center">
         <p class="text-xs uppercase tracking-wide text-gray-400">Alternative Anfrage</p>
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Deine bevorzugten Zeitfenster</h2>
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Deine bevorzugten Zeitfenster</h2>
       
       </div>
-      <p class="text-center text-sm text-gray-600 mb-0">
-        Leider haben wir für diese Kombination keine freien Termine im System. 
-        Bitte teile uns deine bevorzugten Zeitfenster mit und wir kontaktieren dich schnellstmöglich!
-      </p>
+     
     </div>
 
     <!-- Time Slots Form -->
@@ -26,9 +23,10 @@
             :key="dayIndex"
             @click="toggleDay(dayIndex)"
             :class="{
-              'bg-blue-500 text-white border-blue-600': selectedDays.includes(dayIndex),
+              'text-white border-transparent': selectedDays.includes(dayIndex),
               'bg-gray-100 text-gray-700 border-gray-200 hover:border-gray-300': !selectedDays.includes(dayIndex)
             }"
+            :style="selectedDays.includes(dayIndex) ? { backgroundColor: getBrandPrimary() } : {}"
             class="py-2 px-3 text-sm font-medium border rounded-lg transition-colors"
           >
             {{ dayName }}
@@ -42,8 +40,13 @@
           Zeitfenster pro Tag
         </label>
 
-        <div v-if="selectedDays.length === 0" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p class="text-sm text-blue-700">👆 Wähle zunächst mindestens einen Tag aus</p>
+        <div v-if="selectedDays.length === 0" class="p-4 rounded-lg"
+          :style="{
+            backgroundColor: lightenColor(getBrandPrimary(), 0.95),
+            borderColor: withAlpha(getBrandPrimary(), 0.2)
+          }"
+        >
+          <p class="text-sm" :style="{ color: getBrandPrimary() }">👆 Wähle zunächst mindestens einen Tag aus</p>
         </div>
 
         <div v-else class="space-y-6">
@@ -73,14 +76,16 @@
                 <input
                   v-model="slot.start_time"
                   type="time"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
                   @change="validateTimeSlot(dayIndex, slotIndex)"
                 />
                 <span class="text-gray-500">–</span>
                 <input
                   v-model="slot.end_time"
                   type="time"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
                   @change="validateTimeSlot(dayIndex, slotIndex)"
                 />
                 <button
@@ -97,7 +102,15 @@
               <!-- Add Time Slot Button -->
               <button
                 @click="addTimeSlot(dayIndex)"
-                class="w-full mt-3 py-2 px-3 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                class="w-full mt-3 py-2 px-3 text-sm font-medium rounded-lg border transition-colors"
+                :style="{
+                  backgroundColor: lightenColor(getBrandPrimary(), 0.95),
+                  borderColor: withAlpha(getBrandPrimary(), 0.2),
+                  color: getBrandPrimary()
+                }"
+                :class="{
+                  'hover:brightness-95': true
+                }"
               >
                 + Weiteres Zeitfenster hinzufügen
               </button>
@@ -119,8 +132,9 @@
             <input
               v-model="firstName"
               type="text"
-              placeholder="z.B. Max"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="Max"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
             />
           </div>
           
@@ -130,8 +144,61 @@
             <input
               v-model="lastName"
               type="text"
-              placeholder="z.B. Müller"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="Müller"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Street -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Strasse</label>
+            <input
+              v-model="street"
+              type="text"
+              placeholder="Musterstrasse"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+          
+          <!-- House Number -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Nr.</label>
+            <input
+              v-model="houseNumber"
+              type="text"
+              placeholder="123"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Postal Code -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">PLZ</label>
+            <input
+              v-model="postalCode"
+              type="text"
+              placeholder="8000"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+          
+          <!-- City -->
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Ort</label>
+            <input
+              v-model="city"
+              type="text"
+              placeholder="Zürich"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
             />
           </div>
         </div>
@@ -143,8 +210,9 @@
             <input
               v-model="email"
               type="email"
-              placeholder="z.B. max@example.com"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="max@example.com"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
             />
           </div>
           
@@ -154,18 +222,23 @@
             <input
               v-model="phone"
               type="tel"
-              placeholder="z.B. 079 123 45 67 oder +41 79 123 45 67"
+              placeholder="+41791234567"
               @input="onPhoneInput"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm font-mono"
+                  :style="{ '--tw-ring-color': getBrandPrimary() }"
             />
-            <p class="text-xs text-gray-500 mt-1">Format wird automatisch angepasst</p>
           </div>
         </div>
       </div>
 
       <!-- User Info Card - Only show if user IS logged in -->
-      <div v-else class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p class="text-sm text-blue-900">
+      <div v-else class="p-4 rounded-lg"
+        :style="{
+          backgroundColor: lightenColor(getBrandPrimary(), 0.95),
+          borderColor: withAlpha(getBrandPrimary(), 0.2)
+        }"
+      >
+        <p class="text-sm" :style="{ color: getBrandPrimary() }">
           ✅ Anfrage wird erstellt mit deinen Kontaktdaten: <strong>{{ firstName }} {{ lastName }} ({{ email }})</strong>
         </p>
       </div>
@@ -177,8 +250,9 @@
         </label>
         <textarea
           v-model="notes"
-          placeholder="z.B. Flexible Zeiten, Fahrzeug-Vorlieben, etc."
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+          placeholder="z.B. Flexible Zeiten, etc."
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm resize-none"
+          :style="{ '--tw-ring-color': getBrandPrimary() }"
           rows="3"
         />
       </div>
@@ -195,7 +269,10 @@
         :class="{
           'opacity-50 cursor-not-allowed': selectedDays.length === 0 || isSubmitting
         }"
-        class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full py-3 px-4 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110"
+        :style="{
+          backgroundColor: getBrandPrimary()
+        }"
       >
         {{ isSubmitting ? 'Wird gespeichert...' : 'Anfrage absenden' }}
       </button>
@@ -207,6 +284,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
+import { getBrandPrimary, lightenColor, withAlpha } from '~/utils/colors'
 
 const props = defineProps({
   tenant_id: {
@@ -243,6 +321,10 @@ const firstName = ref('')
 const lastName = ref('')
 const email = ref('')
 const phone = ref('')
+const street = ref('')
+const houseNumber = ref('')
+const postalCode = ref('')
+const city = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
 
@@ -258,11 +340,20 @@ onMounted(() => {
     lastName.value = authStore.userProfile.last_name || ''
     email.value = authStore.userProfile.email || ''
     phone.value = authStore.userProfile.phone || ''
+    // Address fields are optional and may not be in userProfile
+    street.value = (authStore.userProfile as any).street || ''
+    houseNumber.value = (authStore.userProfile as any).house_number || ''
+    postalCode.value = (authStore.userProfile as any).postal_code || ''
+    city.value = (authStore.userProfile as any).city || ''
     
     logger.debug('✅ User logged in, pre-filling customer data', {
       email: email.value,
       firstName: firstName.value,
-      lastName: lastName.value
+      lastName: lastName.value,
+      street: street.value,
+      houseNumber: houseNumber.value,
+      postalCode: postalCode.value,
+      city: city.value
     })
   }
 })
@@ -396,8 +487,28 @@ const submitProposal = async () => {
         return
       }
 
+      if (!street.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihre Strasse an'
+        return
+      }
+
+      if (!houseNumber.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihre Hausnummer an'
+        return
+      }
+
+      if (!postalCode.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihre PLZ an'
+        return
+      }
+
+      if (!city.value?.trim()) {
+        error.value = 'Bitte geben Sie Ihren Ort an'
+        return
+      }
+
       // Validate phone format (basic Swiss format check)
-      const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
+      const phoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/
       if (!phoneRegex.test(phone.value.replace(/\s/g, ''))) {
         error.value = 'Bitte geben Sie eine gültige Schweizer Telefonnummer ein (z.B. +41 79 123 45 67)'
         return
@@ -433,15 +544,19 @@ const submitProposal = async () => {
         last_name: lastName.value?.trim() || null,
         email: email.value?.trim() || null,
         phone: phone.value?.trim() || null,
+        street: street.value?.trim() || null,
+        house_number: houseNumber.value?.trim() || null,
+        postal_code: postalCode.value?.trim() || null,
+        city: city.value?.trim() || null,
         notes: notes.value.trim() || null,
         created_by_user_id: authStore.userProfile?.id || null
       }
     })
 
     if (response?.success) {
-      logger.debug('✅ Booking proposal submitted:', response.proposal_id)
+      logger.debug('✅ Booking proposal submitted:', (response as any).proposal_id)
       error.value = '' // Clear any previous errors
-      emit('submitted', response.proposal_id)
+      emit('submitted', (response as any).proposal_id)
     }
   } catch (err: any) {
     logger.error('❌ Error submitting proposal:', err)

@@ -413,7 +413,7 @@
           <!-- Week Navigation Controls -->
           <div v-else-if="availableTimeSlots.length > 0 && !showProposalFormManually" class="space-y-6">
             <div class="flex items-center justify-center mb-4">
-              <div class="inline-flex items-stretch divide-x divide-gray-200 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div class="inline-flex items-stretch rounded-xl bg-white shadow-sm overflow-hidden">
                 <button
                   @click="prevWeek"
                   :disabled="currentWeek <= 1"
@@ -496,9 +496,19 @@
             <div class="mt-6 text-center">
               <button
                 @click="showProposalFormManually = true"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg shadow hover:bg-blue-100 transition-colors"
+                class="w-full px-4 py-3 text-sm font-semibold rounded-xl border transition-all duration-200 transform active:translate-y-0.5"
+                :style="{
+                  borderColor: withAlpha(getBrandPrimary(), 0.25),
+                  background: `linear-gradient(145deg, ${lightenColor(getBrandPrimary(), 0.9)}, ${lightenColor(getBrandPrimary(), 0.95)})`,
+                  color: getBrandPrimary(),
+                  boxShadow: 'none',
+                }"
+                :class="{
+                  'hover:brightness-95': true // Always allow hover for this button
+                }"
               >
-                Keinen passenden Termin gefunden? Vorschlag machen!
+                <p class="text-gray-700">Keinen passenden Termin gefunden?</p>
+                <p class="font-bold flex items-center justify-center gap-2" :style="{ color: getBrandPrimary() }">Vorschlag machen! <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></p>
               </button>
             </div>
 
@@ -646,8 +656,8 @@
               <span v-else>Buchung bestätigen →</span>
             </button>
           </div>
-          </div>
         </div>
+      </div>
 
         <!-- Step 6: Direct Confirmation (wenn kein Pickup) -->
         <div v-if="currentStep === 7 && !selectedLocation?.isPickup" class="space-y-4">
@@ -713,7 +723,6 @@
               <span v-else>Buchung bestätigen →</span>
             </button>
           </div>
-          </div>
         </div>
       </div>
     </div>
@@ -750,7 +759,7 @@
   </div>
 
   <!-- Step 9: Proposal Confirmation -->
-  <div v-if="currentStep === 9" class="max-w-3xl mx-auto px-4 py-8">
+  <div v-if="currentStep === 9" class="max-w-3xl mx-auto px-4 py-4">
     <div class="space-y-4">
       <!-- Confirmation Card -->
       <div class="bg-white shadow rounded-lg p-6 sm:p-8">
@@ -833,6 +842,7 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -850,7 +860,6 @@ import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
-import { getBrandPrimary, lightenColor, withAlpha } from '~/utils/colors'
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
