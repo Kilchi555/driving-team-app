@@ -417,19 +417,20 @@
                 <button
                   @click="prevWeek"
                   :disabled="currentWeek <= 1"
-                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-gray-900 flex items-center gap-2 rounded-xl transition-all duration-200 transform active:translate-y-0.5"
                   :style="{
-                    backgroundColor: getBrandPrimary(),
-                    borderColor: getBrandPrimary(),
-                    '--tw-ring-color': getBrandPrimary(),
-                    opacity: currentWeek <= 1 ? 0.4 : 1 // Use opacity for disabled state
+                    borderColor: currentWeek <= 1 ? '#e5e7eb' : withAlpha(getBrandPrimary(), 0.25),
+                    background: `linear-gradient(145deg, ${lightenColor(getBrandPrimary(), 0.9)}, ${lightenColor(getBrandPrimary(), 0.95)})`,
+                    opacity: currentWeek <= 1 ? 0.6 : 1,
+                    cursor: currentWeek <= 1 ? 'not-allowed' : 'pointer',
+                    boxShadow: 'none',
                   }"
                   :class="{
-                    'hover:brightness-110': currentWeek > 1
+                    'hover:brightness-95': currentWeek > 1
                   }"
                   aria-label="Vorherige Woche"
                 >
-                  <span class="hidden sm:inline">Vorher</span>
+                  <span class="hidden sm:inline">← Vorher</span>
                   <span class="sm:hidden">←</span>
                 </button>
                 <div class="px-3 sm:px-5 py-2 text-center">
@@ -439,20 +440,21 @@
                 <button
                   @click="nextWeek"
                   :disabled="currentWeek >= maxWeek"
-                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-gray-900 flex items-center gap-2 rounded-xl transition-all duration-200 transform active:translate-y-0.5"
                   :style="{
-                    backgroundColor: getBrandPrimary(),
-                    borderColor: getBrandPrimary(),
-                    '--tw-ring-color': getBrandPrimary(),
-                    opacity: currentWeek >= maxWeek ? 0.4 : 1 // Use opacity for disabled state
+                    borderColor: currentWeek >= maxWeek ? '#e5e7eb' : withAlpha(getBrandPrimary(), 0.25),
+                    background: `linear-gradient(145deg, ${lightenColor(getBrandPrimary(), 0.9)}, ${lightenColor(getBrandPrimary(), 0.95)})`,
+                    opacity: currentWeek >= maxWeek ? 0.6 : 1,
+                    cursor: currentWeek >= maxWeek ? 'not-allowed' : 'pointer',
+                    boxShadow: 'none',
                   }"
                   :class="{
-                    'hover:brightness-110': currentWeek < maxWeek
+                    'hover:brightness-95': currentWeek < maxWeek
                   }"
                   aria-label="Nächste Woche"
                 >
                   <span class="sm:hidden">→</span>
-                  <span class="hidden sm:inline">Nächste</span>
+                  <span class="hidden sm:inline">Nächste →</span>
                 </button>
               </div>
             </div>
@@ -848,6 +850,7 @@ import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
+import { getBrandPrimary, lightenColor, withAlpha } from '~/utils/colors'
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
