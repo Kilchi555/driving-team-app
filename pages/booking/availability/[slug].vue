@@ -812,7 +812,7 @@
             ← Neue Anfrage
           </button>
           <button
-            @click="showLoginModal = true"
+            @click="navigateTo('/' + route.params.slug)"
             :style="{ backgroundColor: getBrandPrimary() }"
             class="flex-1 px-4 py-3 text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
           >
