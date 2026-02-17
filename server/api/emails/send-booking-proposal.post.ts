@@ -106,11 +106,14 @@ export default defineEventHandler(async (event) => {
       dayNames
     )
 
-    // Send both emails
+    // Send emails with delays to respect Resend's rate limit (2 requests/second)
     try {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+
+      // Helper function to delay execution
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
       // Send to customer
       try {
@@ -123,6 +126,9 @@ export default defineEventHandler(async (event) => {
         logger.error('❌ Failed to send customer email:', err.message)
       }
 
+      // Wait 600ms to respect rate limit (2 requests/second = 1 request every 500ms)
+      await delay(600)
+
       // Send to staff
       try {
         await resend.emails.send({
@@ -133,6 +139,9 @@ export default defineEventHandler(async (event) => {
       } catch (err: any) {
         logger.error('❌ Failed to send staff email:', err.message)
       }
+
+      // Wait 600ms before next request
+      await delay(600)
 
       // Send to tenant (only if contact_email exists)
       if (tenant?.contact_email) {
