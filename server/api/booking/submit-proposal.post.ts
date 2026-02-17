@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Validate phone format (Swiss format: +41 XX XXX XX XX or 0XX XXX XX XX)
-      const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
+      const phoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/
       if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
         throw createError({
           statusCode: 400,
@@ -155,7 +155,7 @@ export default defineEventHandler(async (event) => {
 
     // Basic phone number validation (e.g., Swiss format +41 XX XXX XX XX or 0XX XXX XX XX)
     // This regex is simplified, consider a more robust library if needed
-    const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/;
+    const phoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/;
     if (phone && !phoneRegex.test(phone.replace(/\s/g, ''))) {
       throw createError({
         statusCode: 400,
