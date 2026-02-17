@@ -2554,8 +2554,12 @@ const handleProposalSubmitted = async (proposalId: string) => {
   await nextTick()
   currentStep.value = 9 // New step for proposal confirmation
   
-  // Scroll to top of page
+  // Scroll to top of page - works on iOS and all browsers
+  await nextTick()
+  // Try multiple scroll methods to ensure it works on all devices
   window.scrollTo({ top: 0, behavior: 'smooth' })
+  document.documentElement.scrollTop = 0
+  document.body.scrollTop = 0
 }
 
 // Initialize Google Places Autocomplete
