@@ -20,11 +20,11 @@ ON public.staff_locations
 FOR SELECT
 USING (true); -- Anon users can read, but must filter by tenant_id in query
 
--- 4. Allow anon to read users (staff members, filtered by tenant_id and role in query)
+-- 4. Allow anon to read users (ONLY staff members, filtered by role and tenant_id in query)
 CREATE POLICY "anon_read_staff_users"
 ON public.users
 FOR SELECT
-USING (true); -- Anon users can read staff, but must filter by tenant_id and role=staff in query
+USING (role = 'staff'); -- Only allow reading staff members, not other user types
 
 -- 5. Allow anon to read availability_slots (filtered by tenant_id in query)
 CREATE POLICY "anon_read_availability_slots"
