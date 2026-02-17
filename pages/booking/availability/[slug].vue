@@ -45,12 +45,12 @@
       />
 
       <!-- Verfügbarkeitstool (wenn Online-Buchung aktiviert) -->
-      <div v-else class="space-y-8">
+      <div v-else class="space-y-4">
         
         <!-- Progress Steps -->
         <div 
           ref="stepsContainerRef"
-          class="bg-white shadow rounded-lg p-4 mb-6 max-w-full" 
+          class="bg-white shadow rounded-lg p-4 max-w-full" 
           :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }"
         >
           <div class="flex items-center justify-start">
@@ -86,7 +86,7 @@
         </div>
 
         <!-- Summary Info - Show at every step for context -->
-        <div v-if="currentStep > 0" class="mt-4 mb-6 text-center">
+        <div v-if="currentStep > 0" class="text-center">
           <div class="text-sm" :style="{ color: getBrandPrimary() }">
             <span v-if="selectedCategory" class="font-semibold">{{ selectedCategory?.name }}</span>
             <span v-else-if="selectedMainCategory" class="font-semibold">{{ selectedMainCategory?.name }}</span>
@@ -103,9 +103,7 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Hauptkategorie</h2>
-              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedMainCategory?.name }}</span>
-              </div>
+              
             </div>
           
           <!-- Show only main categories (where parent_category_id is null) -->
@@ -148,10 +146,7 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Unterkategorie</h2>
-              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedMainCategory?.name }}</span>
-                <span v-if="selectedCategory" class="font-semibold"> • {{ selectedCategory?.name }}</span>
-              </div>
+             
             </div>
 
             <!-- Show only subcategories for selected main category -->
@@ -199,10 +194,7 @@
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
                 Wähle deine Dauer
               </h2>
-              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.name }}</span>
-                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-              </div>
+             
             </div>
           
           <div
@@ -249,11 +241,7 @@
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle einen Standort</h2>
-              <div class="mt-2 text-xs sm:text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.name }}</span>
-                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
-              </div>
+             
             </div>
           
           <!-- Standard Locations -->
@@ -367,11 +355,7 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Fahrlehrer</h2>
-              <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
-                <span class="font-semibold">{{ selectedCategory?.name }}</span>
-                <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
-              </div>
+            
             </div>
           
           <div :class="`grid ${getGridClasses(availableInstructors.length)} gap-4`">
@@ -399,8 +383,8 @@
         <div v-if="currentStep === 6" class="space-y-4">
           <!-- Time Slot Selection Card - only show header if slots are available AND not showing proposal form -->
           <div v-if="(isLoadingTimeSlots || availableTimeSlots.length > 0) && !showProposalFormManually" class="bg-white shadow rounded-lg p-4">
-            <div class="text-center mb-6">
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Termin</h2>
+            <div class="text-center">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deinen Termin</h2>
               
               <!-- Countdown Timer (wenn Termin reserviert) -->
             </div>
@@ -433,7 +417,19 @@
                 <button
                   @click="prevWeek"
                   :disabled="currentWeek <= 1"
-                  class="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  :style="{
+                    backgroundColor: getBrandPrimary(),
+                    borderColor: getBrandPrimary(),
+                    '--tw-ring-color': getBrandPrimary(),
+                    opacity: currentWeek <= 1 ? 0.4 : 1
+                  }"
+                  @mouseover="prevWeekHover = true"
+                  @mouseleave="prevWeekHover = false"
+                  :class="{
+                    'hover:brightness-110': !prevWeekHover && !isPreviousDisabledComputed,
+                    '!bg-gray-300 !border-gray-300': isPreviousDisabledComputed
+                  }"
                   aria-label="Vorherige Woche"
                 >
                   <span class="hidden sm:inline">Vorher</span>
@@ -446,7 +442,19 @@
                 <button
                   @click="nextWeek"
                   :disabled="currentWeek >= maxWeek"
-                  class="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  :style="{
+                    backgroundColor: getBrandPrimary(),
+                    borderColor: getBrandPrimary(),
+                    '--tw-ring-color': getBrandPrimary(),
+                    opacity: currentWeek >= maxWeek ? 0.4 : 1
+                  }"
+                  @mouseover="nextWeekHover = true"
+                  @mouseleave="nextWeekHover = false"
+                  :class="{
+                    'hover:brightness-110': !nextWeekHover && !isNextDisabledComputed,
+                    '!bg-gray-300 !border-gray-300': isNextDisabledComputed
+                  }"
                   aria-label="Nächste Woche"
                 >
                   <span class="sm:hidden">→</span>
@@ -1131,6 +1139,13 @@ const hoveredDuration = ref<number | null>(null)
 const hoveredLocationId = ref<string | null>(null)
 const hoveredInstructorId = ref<string | null>(null)
 const hoveredSlotId = ref<string | null>(null)
+
+// New hover states for week navigation buttons
+const prevWeekHover = ref(false)
+const nextWeekHover = ref(false)
+
+const isPreviousDisabledComputed = computed(() => currentWeek.value <= 1)
+const isNextDisabledComputed = computed(() => currentWeek.value >= maxWeek.value)
 
 // Referrer state
 const referrerUrl = ref<string | null>(null)
