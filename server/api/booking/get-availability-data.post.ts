@@ -18,20 +18,20 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create service role client to bypass RLS
+    // Create anon client to respect RLS policies
     const { createClient } = await import('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const anonKey = process.env.SUPABASE_ANON_KEY
 
-    if (!serviceRoleKey) {
-      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured')
+    if (!anonKey) {
+      console.error('❌ SUPABASE_ANON_KEY not configured')
       throw createError({
         statusCode: 500,
         statusMessage: 'Server configuration error'
       })
     }
 
-    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+    const supabase = createClient(supabaseUrl, anonKey)
 
     logger.debug('📅 Fetching availability data:', {
       tenant_id,
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
     // Fetch working hours
     if (include_working_hours) {
-      const { data: workingHours, error: whError } = await serviceSupabase
+      const { data: workingHours, error: whError } = await supabase
         .from('staff_working_hours')
         .select('day_of_week, start_time, end_time, is_active')
         .eq('staff_id', staff_id)
@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
 
     // Fetch external busy times
     if (include_busy_times && start_date && end_date) {
-      const { data: busyTimes, error: busyError } = await serviceSupabase
+      const { data: busyTimes, error: busyError } = await supabase
         .from('external_busy_times')
         .select('id, staff_id, start_time, end_time, event_title, sync_source')
         .eq('tenant_id', tenant_id)
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
 
     // Fetch appointments
     if (include_appointments && start_date && end_date) {
-      const { data: appointments, error: aptError } = await serviceSupabase
+      const { data: appointments, error: aptError } = await supabase
         .from('appointments')
         .select('id, start_time, end_time, status')
         .eq('staff_id', staff_id)
