@@ -2421,7 +2421,10 @@ const generateTimeSlotsForSpecificCombination = async () => {
     logger.debug('✅ Fetched', slots.length, 'pre-computed slots from API')
     
     // Convert to format expected by UI
-    let timeSlots = slots.map(slot => {
+    let timeSlots = slots
+      // Filter: Only show primary reservations (avoid duplicates from other categories)
+      .filter((slot: any) => slot.is_primary_reservation !== false)
+      .map((slot: any) => {
       const slotStartDate = new Date(slot.start_time)
       const slotEndDate = new Date(slot.end_time)
       
@@ -2443,7 +2446,8 @@ const generateTimeSlotsForSpecificCombination = async () => {
         date_formatted: slotStartDate.toLocaleDateString('de-DE'),
         time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
         category_code: slot.category_code,
-        has_conflict: false // Will be set below
+        has_conflict: false, // Will be set below
+        is_primary_reservation: slot.is_primary_reservation // Preserve for debugging
       }
     })
     
