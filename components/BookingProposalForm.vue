@@ -157,9 +157,11 @@
             <input
               v-model="phone"
               type="tel"
-              placeholder="z.B. +41 79 123 45 67"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="z.B. 079 123 45 67 oder +41 79 123 45 67"
+              @input="onPhoneInput"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
             />
+            <p class="text-xs text-gray-500 mt-1">Format wird automatisch angepasst</p>
           </div>
         </div>
       </div>
@@ -284,6 +286,45 @@ const toggleDay = (dayIndex: number) => {
 const removeDay = (dayIndex: number) => {
   selectedDays.value = selectedDays.value.filter(d => d !== dayIndex)
   timeSlots.value.delete(dayIndex)
+}
+
+// Format Swiss phone number automatically
+const formatSwissPhoneNumber = (value: string): string => {
+  // Remove all non-digit characters except + at the start
+  let cleaned = value.replace(/[^\d+]/g, '')
+  
+  // If it starts with 00, replace with +
+  if (cleaned.startsWith('00')) {
+    cleaned = '+' + cleaned.substring(2)
+  }
+  
+  // If it starts with 0 (but not 00), replace with +41
+  if (cleaned.startsWith('0') && !cleaned.startsWith('00')) {
+    cleaned = '+41' + cleaned.substring(1)
+  }
+  
+  // Format: +41 79 123 45 67
+  if (cleaned.startsWith('+41')) {
+    const digits = cleaned.substring(3) // Remove +41
+    if (digits.length <= 2) {
+      return '+41 ' + digits
+    } else if (digits.length <= 5) {
+      return '+41 ' + digits.substring(0, 2) + ' ' + digits.substring(2)
+    } else if (digits.length <= 8) {
+      return '+41 ' + digits.substring(0, 2) + ' ' + digits.substring(2, 5) + ' ' + digits.substring(5)
+    } else {
+      return '+41 ' + digits.substring(0, 2) + ' ' + digits.substring(2, 5) + ' ' + digits.substring(5, 7) + ' ' + digits.substring(7, 9)
+    }
+  }
+  
+  return cleaned
+}
+
+const onPhoneInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const formatted = formatSwissPhoneNumber(input.value)
+  phone.value = formatted
+  input.value = formatted
 }
 
 const getTimeSlotsForDay = (dayIndex: number) => {
