@@ -417,18 +417,15 @@
                 <button
                   @click="prevWeek"
                   :disabled="currentWeek <= 1"
-                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors"
                   :style="{
                     backgroundColor: getBrandPrimary(),
                     borderColor: getBrandPrimary(),
                     '--tw-ring-color': getBrandPrimary(),
-                    opacity: currentWeek <= 1 ? 0.4 : 1
+                    opacity: currentWeek <= 1 ? 0.4 : 1 // Use opacity for disabled state
                   }"
-                  @mouseover="prevWeekHover = true"
-                  @mouseleave="prevWeekHover = false"
                   :class="{
-                    'hover:brightness-110': !prevWeekHover && !isPreviousDisabledComputed,
-                    '!bg-gray-300 !border-gray-300': isPreviousDisabledComputed
+                    'hover:brightness-110': currentWeek > 1
                   }"
                   aria-label="Vorherige Woche"
                 >
@@ -442,18 +439,15 @@
                 <button
                   @click="nextWeek"
                   :disabled="currentWeek >= maxWeek"
-                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-white flex items-center gap-2 transition-colors"
                   :style="{
                     backgroundColor: getBrandPrimary(),
                     borderColor: getBrandPrimary(),
                     '--tw-ring-color': getBrandPrimary(),
-                    opacity: currentWeek >= maxWeek ? 0.4 : 1
+                    opacity: currentWeek >= maxWeek ? 0.4 : 1 // Use opacity for disabled state
                   }"
-                  @mouseover="nextWeekHover = true"
-                  @mouseleave="nextWeekHover = false"
                   :class="{
-                    'hover:brightness-110': !nextWeekHover && !isNextDisabledComputed,
-                    '!bg-gray-300 !border-gray-300': isNextDisabledComputed
+                    'hover:brightness-110': currentWeek < maxWeek
                   }"
                   aria-label="Nächste Woche"
                 >
@@ -1139,13 +1133,6 @@ const hoveredDuration = ref<number | null>(null)
 const hoveredLocationId = ref<string | null>(null)
 const hoveredInstructorId = ref<string | null>(null)
 const hoveredSlotId = ref<string | null>(null)
-
-// New hover states for week navigation buttons
-const prevWeekHover = ref(false)
-const nextWeekHover = ref(false)
-
-const isPreviousDisabledComputed = computed(() => currentWeek.value <= 1)
-const isNextDisabledComputed = computed(() => currentWeek.value >= maxWeek.value)
 
 // Referrer state
 const referrerUrl = ref<string | null>(null)
