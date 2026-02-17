@@ -3756,6 +3756,15 @@ watch(
   { deep: true }
 )
 
+// Reset proposal form flag when selection changes
+watch(
+  [selectedCategory, selectedDuration, selectedLocation, selectedInstructor],
+  () => {
+    showProposalFormManually.value = false
+  },
+  { deep: true }
+)
+
 // Cleanup on unmount
 onBeforeUnmount(async () => {
   window.removeEventListener('resize', () => {
