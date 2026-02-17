@@ -106,32 +106,48 @@ export default defineEventHandler(async (event) => {
       dayNames
     )
 
-    // Send all three emails
+    // Send both emails
     try {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
 
       // Send to customer
-      await resend.emails.send({
-        from: fromEmail,
-        ...customerEmail
-      })
-      logger.info('✅ Booking proposal confirmation email sent to customer:', proposal.email)
+      try {
+        await resend.emails.send({
+          from: fromEmail,
+          ...customerEmail
+        })
+        logger.info('✅ Booking proposal confirmation email sent to customer:', proposal.email)
+      } catch (err: any) {
+        logger.error('❌ Failed to send customer email:', err.message)
+      }
 
       // Send to staff
-      await resend.emails.send({
-        from: fromEmail,
-        ...staffEmail
-      })
-      logger.info('✅ Booking proposal notification email sent to staff:', staff.email)
+      try {
+        await resend.emails.send({
+          from: fromEmail,
+          ...staffEmail
+        })
+        logger.info('✅ Booking proposal notification email sent to staff:', staff.email)
+      } catch (err: any) {
+        logger.error('❌ Failed to send staff email:', err.message)
+      }
 
-      // Send to tenant
-      await resend.emails.send({
-        from: fromEmail,
-        ...tenantEmail
-      })
-      logger.info('✅ Booking proposal notification email sent to tenant:', tenant.contact_email)
+      // Send to tenant (only if contact_email exists)
+      if (tenant?.contact_email) {
+        try {
+          await resend.emails.send({
+            from: fromEmail,
+            ...tenantEmail
+          })
+          logger.info('✅ Booking proposal notification email sent to tenant:', tenant.contact_email)
+        } catch (err: any) {
+          logger.error('❌ Failed to send tenant email:', err.message, 'Tenant email:', tenant.contact_email)
+        }
+      } else {
+        logger.warn('⚠️ Tenant contact_email is missing, skipping tenant email')
+      }
 
       return {
         success: true,
