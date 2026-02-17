@@ -393,8 +393,8 @@
 
         <!-- Step 5: Time Slot Selection -->
         <div v-if="currentStep === 6" class="space-y-4">
-          <!-- Time Slot Selection Card -->
-          <div class="bg-white shadow rounded-lg p-4">
+          <!-- Time Slot Selection Card - only show header if slots are available -->
+          <div v-if="isLoadingTimeSlots || availableTimeSlots.length > 0" class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <p class="text-xs uppercase tracking-wide text-gray-400">Schritt 5</p>
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Termin</h2>
@@ -416,6 +416,7 @@
               </div>
               <p class="text-xs text-blue-700 mt-2">Ihre Reservation läuft in {{ getCountdownText }} ab.</p>
             </div>
+          </div>
           
           <!-- Loading Time Slots -->
           <div v-if="isLoadingTimeSlots" class="text-center py-12">
