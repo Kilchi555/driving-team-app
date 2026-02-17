@@ -294,9 +294,44 @@ const submitProposal = async () => {
   try {
     error.value = ''
 
-    // Validate
+    // Validate time slots
     if (selectedDays.value.length === 0) {
       error.value = 'Bitte wähle mindestens einen Tag'
+      return
+    }
+
+    // Validate customer contact information
+    if (!firstName.value?.trim()) {
+      error.value = 'Bitte geben Sie Ihren Vornamen an'
+      return
+    }
+
+    if (!lastName.value?.trim()) {
+      error.value = 'Bitte geben Sie Ihren Nachnamen an'
+      return
+    }
+
+    if (!email.value?.trim()) {
+      error.value = 'Bitte geben Sie Ihre Email-Adresse an'
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
+    if (!emailRegex.test(email.value)) {
+      error.value = 'Bitte geben Sie eine gültige Email-Adresse ein'
+      return
+    }
+
+    if (!phone.value?.trim()) {
+      error.value = 'Bitte geben Sie Ihre Telefonnummer an'
+      return
+    }
+
+    // Validate phone format (basic Swiss format check)
+    const phoneRegex = /^(?:\+41|0)\d{2}(?:\s?\d{3}){2}(?:\s?\d{2})$/
+    if (!phoneRegex.test(phone.value.replace(/\s/g, ''))) {
+      error.value = 'Bitte geben Sie eine gültige Schweizer Telefonnummer ein (z.B. +41 79 123 45 67)'
       return
     }
 
@@ -325,11 +360,11 @@ const submitProposal = async () => {
         location_id: props.location.id,
         staff_id: props.staff.id,
         preferred_time_slots,
-        first_name: firstName.value || null,
-        last_name: lastName.value || null,
-        email: email.value || null,
-        phone: phone.value || null,
-        notes: notes.value || null
+        first_name: firstName.value.trim(),
+        last_name: lastName.value.trim(),
+        email: email.value.trim(),
+        phone: phone.value.trim(),
+        notes: notes.value.trim() || null
       }
     })
 
