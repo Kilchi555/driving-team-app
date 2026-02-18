@@ -41,6 +41,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { useCategoryWithFallback } from '~/composables/useCategoryWithFallback'
 
 interface Category {
   id: number
@@ -53,6 +54,7 @@ interface Category {
   exam_duration_minutes?: number  
   color?: string
   is_active: boolean
+  parent_category_id?: string | null
 }
 
 interface CategoryWithDurations extends Category {
