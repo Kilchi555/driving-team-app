@@ -152,6 +152,16 @@
               @durations-changed="handleDurationsChanged"
             />
 
+            <!-- Debug: Evaluation Criteria -->
+            <div v-if="showDebugInfo && evaluationCriteria.length > 0" class="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+              <p class="font-semibold mb-2">Evaluation Criteria (Debug):</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li v-for="criteria in evaluationCriteria" :key="criteria.id">
+                  {{ criteria.name }} (Category: {{ criteria.category_id }})
+                </li>
+              </ul>
+            </div>
+
 
 
             <DurationSelector
@@ -602,6 +612,10 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
+import { useCategoryWithFallback, type CategoryWithParent, type EvaluationCriteria } from '~/composables/useCategoryWithFallback'
+
+// Composables
+const { getEvaluationCriteriaForCategory, getCategoryWithParent } = useCategoryWithFallback()
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -665,6 +679,7 @@ interface Props {
   mode: 'view' | 'edit' | 'create'
   currentUser?: any
   eventType?: 'lesson' | 'staff_meeting'
+  showDebugInfo?: boolean // ✅ NEU: Für Debugging
 }
 
 interface SmsPayload {
@@ -764,12 +779,24 @@ const invitedCustomers = ref([] as any[])
 const priceDisplayRef = ref()
 const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
 const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
+const evaluationCriteria = ref<EvaluationCriteria[]>([]) // ✅ NEU: Evaluationskriterien
 
 // Student Credit Management
 const { getStudentCredit, useCreditForAppointment } = useStudentCredits()
 const studentCredit = ref<any>(null)
 const isLoadingStudentCredit = ref(false)
 const isUsingCredit = ref(false)
+
+const loadEvaluationCriteria = async (category: CategoryWithParent | null) => {
+  if (!category) {
+    evaluationCriteria.value = []
+    return
+  }
+  logger.debug('🔄 Loading evaluation criteria for category:', { categoryCode: category.code, categoryId: category.id, parentId: category.parent_category_id })
+  evaluationCriteria.value = await getEvaluationCriteriaForCategory(category.id, category.parent_category_id)
+  logger.debug('✅ Loaded evaluation criteria:', evaluationCriteria.value.length)
+}
+
 
 // ✅ NEU: Stelle productSale für useEventModalForm zur Verfügung
 const productSale = {
@@ -787,6 +814,18 @@ const productSale = {
 watch(priceDisplayRef, (newRef) => {
   if (newRef) {
     newRef.productSale = productSale
+  }
+}, { immediate: true })
+
+watch(() => formData.value.type, async (newType) => {
+  if (newType) {
+    logger.debug('🔄 Category type changed, loading evaluation criteria:', newType)
+    // Find the full category object (with parent_category_id)
+    const fullCategory = await getCategoryWithParent(newType)
+    await loadEvaluationCriteria(fullCategory)
+  } else {
+    logger.debug('⚠️ Category type cleared, clearing evaluation criteria')
+    evaluationCriteria.value = []
   }
 }, { immediate: true })
 
