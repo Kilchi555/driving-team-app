@@ -17,6 +17,7 @@ interface Category {
   exam_duration_minutes?: number
   lesson_duration_minutes?: number[]
   theory_durations?: number[]
+  parent_category_id?: string | null // <<< NEU
 }
 
 // Global shared state
@@ -76,9 +77,9 @@ export const useCategoryData = () => {
       }
       
       const { data, error } = await supabase
-        .from('categories')
-        .select('id, created_at, name, description, code, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations')
-        .eq('is_active', true)
+      .from('categories')
+      .select('id, created_at, name, description, code, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations, parent_category_id') // <<< parent_category_id hinzugefügt
+      .eq('is_active', true)
         .eq('tenant_id', tenantId)
         .order('code', { ascending: true })
 
