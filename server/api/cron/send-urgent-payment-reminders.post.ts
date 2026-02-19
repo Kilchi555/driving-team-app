@@ -50,40 +50,46 @@ export default defineEventHandler(async (event) => {
 
     console.log('[UrgentPaymentReminder] ✅ Test user found:', testUser.id)
 
-    // Fetch pending wallee payments for this user where appointment is now or in the past or within 24h
-    const { data: payments, error: paymentsError } = await supabase
-      .from('payments')
+    // Fetch pending wallee payments for this user where appointment exists
+    // Use a different approach - query appointments with payments
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
       .select(`
         id,
-        user_id,
-        appointment_id,
-        payment_method,
-        payment_status,
-        total_amount_rappen,
-        appointments:appointment_id (
+        start_time,
+        end_time,
+        duration_minutes,
+        payments (
           id,
-          start_time,
-          end_time,
-          duration_minutes
-        ),
-        users:user_id (
-          id,
-          email,
-          first_name,
-          last_name
+          user_id,
+          payment_method,
+          payment_status,
+          total_amount_rappen
         )
       `)
-      .eq('user_id', testUser.id)
-      .eq('payment_status', 'pending')
-      .eq('payment_method', 'wallee')
-      .not('appointments', 'is', null)
+      .eq('payments.user_id', testUser.id)
+      .eq('payments.payment_status', 'pending')
+      .eq('payments.payment_method', 'wallee')
 
-    if (paymentsError) {
-      console.error('[UrgentPaymentReminder] ❌ Error fetching payments:', paymentsError)
-      throw paymentsError
+    if (appointmentsError) {
+      console.error('[UrgentPaymentReminder] ❌ Error fetching appointments:', appointmentsError)
+      throw appointmentsError
     }
 
-    console.log('[UrgentPaymentReminder] 📋 Found', payments?.length || 0, 'pending wallee payments')
+    console.log('[UrgentPaymentReminder] 📋 Found', appointments?.length || 0, 'appointments with pending wallee payments')
+
+    // Flatten appointments and payments
+    const payments = (appointments || []).flatMap((apt: any) => 
+      (apt.payments || []).map((p: any) => ({
+        ...p,
+        appointments: [{ 
+          id: apt.id,
+          start_time: apt.start_time,
+          end_time: apt.end_time,
+          duration_minutes: apt.duration_minutes
+        }]
+      }))
+    )
 
     // Filter payments: appointment is in the past or within 24 hours
     const now = new Date()
