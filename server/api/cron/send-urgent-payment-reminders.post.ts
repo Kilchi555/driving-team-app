@@ -96,11 +96,15 @@ export default defineEventHandler(async (event) => {
       }
 
       const appointmentTime = new Date(payment.appointments[0].start_time)
-      const isPastOrWithin24h = appointmentTime <= in24Hours
+      
+      // Include: past appointments OR appointments within 24 hours
+      const isPast = appointmentTime < now
+      const isWithin24h = appointmentTime <= in24Hours && appointmentTime >= now
+      const shouldRemind = isPast || isWithin24h
 
-      console.log('[UrgentPaymentReminder] 🕐 Payment', payment.id, '- Appointment:', appointmentTime.toISOString(), '- Within 24h or past:', isPastOrWithin24h)
+      console.log('[UrgentPaymentReminder] 🕐 Payment', payment.id, '- Appointment:', appointmentTime.toISOString(), '- Past:', isPast, 'Within24h:', isWithin24h, 'Include:', shouldRemind)
 
-      return isPastOrWithin24h
+      return shouldRemind
     })
 
     console.log('[UrgentPaymentReminder] 📌 Filtered to', paymentsToRemind.length, 'payments due for reminder')
