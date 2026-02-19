@@ -89,13 +89,15 @@ export default defineEventHandler(async (event) => {
           duration_minutes: apt.duration_minutes
         }],
         users: [{ // Add user data from the appointment
-          id: apt.user_id,
-          email: apt.email,
-          first_name: apt.first_name,
-          last_name: apt.last_name
+          id: apt.user_id || apt.users?.[0]?.id,
+          email: apt.email || apt.users?.[0]?.email,
+          first_name: apt.first_name || apt.users?.[0]?.first_name,
+          last_name: apt.last_name || apt.users?.[0]?.last_name
         }]
       }))
     )
+    
+    console.log('[UrgentPaymentReminder] 🔍 Debug - First payment users:', payments[0]?.users)
 
     // Filter payments: appointment is in the past or within 24 hours
     const now = new Date()
