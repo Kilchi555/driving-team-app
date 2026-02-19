@@ -131,8 +131,9 @@ export default defineEventHandler(async (event) => {
 
     for (const payment of paymentsToRemind) {
       try {
-        const user = payment.users?.[0]
-        const appointment = payment.appointments?.[0]
+        // Handle array responses from Supabase relations
+        const user = Array.isArray(payment.users) ? payment.users[0] : payment.users
+        const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
 
         if (!user || !appointment) {
           console.warn('[UrgentPaymentReminder] ⚠️ Missing user or appointment data for payment:', payment.id)
