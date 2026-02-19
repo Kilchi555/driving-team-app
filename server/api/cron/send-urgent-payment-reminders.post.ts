@@ -28,50 +28,8 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // TEST MODE: Only fetch payments for this specific test user
-    const TEST_EMAIL = 'pascal_kilchenmann@icloud.com'
-    console.log('[UrgentPaymentReminder] 📧 TEST MODE: Fetching pending payments only for:', TEST_EMAIL)
-
-    // Get user ID for test email
-    const { data: testUser, error: userError } = await supabase
-      .from('users')
-      .select('id, email')
-      .eq('email', TEST_EMAIL)
-      .single()
-
-    if (userError || !testUser) {
-      console.error('[UrgentPaymentReminder] ❌ Test user not found:', TEST_EMAIL)
-      return {
-        success: false,
-        message: 'Test user not found',
-        testedEmail: TEST_EMAIL
-      }
-    }
-
-    console.log('[UrgentPaymentReminder] ✅ Test user found:', testUser.id)
-
-    // Fetch pending wallee payments for this user where appointment exists
-    // Use a different approach - query appointments with payments
+    // Fetch pending wallee payments for all users where appointment exists
     const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        start_time,
-        end_time,
-        duration_minutes,
-        user_id,
-        payments (
-          id,
-          user_id,
-          payment_method,
-          payment_status,
-          total_amount_rappen,
-          tenant_id
-        )
-      `)
-      .eq('user_id', testUser.id)
-      .eq('payments.payment_status', 'pending')
-      .eq('payments.payment_method', 'wallee')
 
     if (appointmentsError) {
       console.error('[UrgentPaymentReminder] ❌ Error fetching appointments:', appointmentsError)
@@ -101,7 +59,7 @@ export default defineEventHandler(async (event) => {
     const userMap = new Map(users?.map((u: any) => [u.id, u]))
 
     // Flatten appointments and payments
-    let payments = (appointments || []).flatMap((apt: any) => 
+    const payments = (appointments || []).flatMap((apt: any) => 
       (apt.payments || []).map((p: any) => {
         const appointmentUser = userMap.get(apt.user_id)
         return {
@@ -122,11 +80,7 @@ export default defineEventHandler(async (event) => {
       })
     )
     
-    // TEST MODE: Filter to only test email
-    payments = payments.filter((p: any) => p.users?.[0]?.email === TEST_EMAIL)
-    console.log('[UrgentPaymentReminder] 📧 After TEST MODE filter:', payments.length, 'payments remaining')
-    
-    console.log('[UrgentPaymentReminder] 🔍 Debug - First payment users:', payments[0]?.users)
+    console.log('[UrgentPaymentReminder] 🔍 Processing', payments.length, 'payments')
 
     // Filter payments: appointment is in the past or within 24 hours
     const now = new Date()
