@@ -248,14 +248,13 @@ export default defineEventHandler(async (event) => {
             .from('payment_reminders')
             .insert({
               payment_id: payment.id,
-              user_id: payment.user_id || user.id, // Fallback to user from appointments if payment.user_id is null
+              user_id: payment.user_id || user.id,
               appointment_id: appointment.id,
               tenant_id: payment.tenant_id,
               reminder_type: 'urgent',
               channel: 'email',
               status: 'failed',
               recipient_email: userEmail,
-              appointment_start_time: appointment.start_time,
               payment_amount_rappen: payment.total_amount_rappen,
               failed_at: new Date().toISOString(),
               error_message: emailError.message,
@@ -263,7 +262,8 @@ export default defineEventHandler(async (event) => {
               attempt_number: 1,
               metadata: {
                 isPast: isPast,
-                hoursUntilAppointment: hoursUntilAppointment
+                hoursUntilAppointment: hoursUntilAppointment,
+                appointmentTime: appointment.start_time
               }
             })
           
