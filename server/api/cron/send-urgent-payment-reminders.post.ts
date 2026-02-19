@@ -87,6 +87,12 @@ export default defineEventHandler(async (event) => {
           start_time: apt.start_time,
           end_time: apt.end_time,
           duration_minutes: apt.duration_minutes
+        }],
+        users: [{ // Add user data from the appointment
+          id: apt.user_id,
+          email: apt.email,
+          first_name: apt.first_name,
+          last_name: apt.last_name
         }]
       }))
     )
