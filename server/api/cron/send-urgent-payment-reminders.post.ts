@@ -205,6 +205,8 @@ export default defineEventHandler(async (event) => {
         const { Resend } = await import('resend')
         const resend = new Resend(resendApiKey)
 
+        const displayName = payment.tenant_id ? 'Driving Team' : 'Driving Team'
+
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1f2937;">⚠️ Zahlungserinnerung erforderlich</h2>
@@ -234,7 +236,7 @@ export default defineEventHandler(async (event) => {
         `
 
         const { data: emailResult, error: emailError } = await resend.emails.send({
-          from: `Driving Team <${fromEmail}>`,
+          from: `${displayName} <${fromEmail}>`,
           to: userEmail,
           subject: '⚠️ Zahlungserinnerung - Ausstehende Rechnung',
           html: emailHtml
@@ -243,27 +245,21 @@ export default defineEventHandler(async (event) => {
         if (emailError) {
           console.error('[UrgentPaymentReminder] ❌ Failed to send email:', emailError)
           
-          // Log failed reminder attempt
+          // Log failed reminder to payment_reminders table
           const { error: failLogError } = await supabase
             .from('payment_reminders')
             .insert({
               payment_id: payment.id,
-              user_id: payment.user_id || user.id,
-              appointment_id: appointment.id,
-              tenant_id: payment.tenant_id,
-              reminder_type: 'urgent',
-              channel: 'email',
+              reminder_type: 'email',
+              reminder_number: 1,
               status: 'failed',
-              recipient_email: userEmail,
-              payment_amount_rappen: payment.total_amount_rappen,
-              failed_at: new Date().toISOString(),
               error_message: emailError.message,
-              error_code: emailError.name,
-              attempt_number: 1,
               metadata: {
+                userEmail: userEmail,
+                appointmentTime: appointment.start_time,
                 isPast: isPast,
                 hoursUntilAppointment: hoursUntilAppointment,
-                appointmentTime: appointment.start_time
+                amountCHF: amountCHF
               }
             })
           
@@ -277,32 +273,26 @@ export default defineEventHandler(async (event) => {
 
         console.log('[UrgentPaymentReminder] ✅ Email sent successfully. Resend ID:', emailResult?.id)
 
-        // Log reminder in payment_reminders table
+        // Log successful reminder to payment_reminders table
         const { error: logError } = await supabase
           .from('payment_reminders')
           .insert({
             payment_id: payment.id,
-            user_id: payment.user_id || user.id,
-            appointment_id: appointment.id,
-            tenant_id: payment.tenant_id,
-            reminder_type: 'urgent',
-            channel: 'email',
+            reminder_type: 'email',
+            reminder_number: 1,
             status: 'sent',
-            recipient_email: userEmail,
-            resend_email_id: emailResult?.id,
-            payment_amount_rappen: payment.total_amount_rappen,
-            sent_at: new Date().toISOString(),
-            attempt_number: 1,
             metadata: {
+              userEmail: userEmail,
+              appointmentTime: appointment.start_time,
               isPast: isPast,
               hoursUntilAppointment: hoursUntilAppointment,
-              appointmentTime: appointment.start_time
+              amountCHF: amountCHF,
+              resendEmailId: emailResult?.id
             }
           })
 
         if (logError) {
           console.error('[UrgentPaymentReminder] ⚠️ Failed to log reminder:', logError)
-          // Continue anyway - email was sent
         } else {
           console.log('[UrgentPaymentReminder] 💾 Logged reminder in payment_reminders table')
         }
