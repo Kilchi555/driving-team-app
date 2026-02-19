@@ -80,6 +80,10 @@ export default defineEventHandler(async (event) => {
 
     console.log('[UrgentPaymentReminder] 📋 Found', appointments?.length || 0, 'appointments with pending wallee payments')
 
+    // TEST MODE: Only process payments for pascal_kilchenmann@icloud.com
+    const TEST_EMAIL = 'pascal_kilchenmann@icloud.com'
+    console.log('[UrgentPaymentReminder] 📧 TEST MODE: Only sending to:', TEST_EMAIL)
+
     // Collect unique user IDs from appointments
     const userIds = new Set<string>()
     appointments?.forEach((apt: any) => {
@@ -101,7 +105,7 @@ export default defineEventHandler(async (event) => {
     const userMap = new Map(users?.map((u: any) => [u.id, u]))
 
     // Flatten appointments and payments
-    const payments = (appointments || []).flatMap((apt: any) => 
+    let payments = (appointments || []).flatMap((apt: any) => 
       (apt.payments || []).map((p: any) => {
         const appointmentUser = userMap.get(apt.user_id)
         return {
@@ -121,6 +125,10 @@ export default defineEventHandler(async (event) => {
         }
       })
     )
+    
+    // TEST MODE: Filter to only test email
+    payments = payments.filter((p: any) => p.users?.[0]?.email === TEST_EMAIL)
+    console.log('[UrgentPaymentReminder] 📧 After TEST MODE filter:', payments.length, 'payments remaining')
     
     console.log('[UrgentPaymentReminder] 🔍 Debug - First payment users:', payments[0]?.users)
 
