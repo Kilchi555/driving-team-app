@@ -201,7 +201,7 @@ export default defineEventHandler(async (event) => {
             .from('payment_reminders')
             .insert({
               payment_id: payment.id,
-              user_id: payment.user_id,
+              user_id: payment.user_id || user.id, // Fallback to user from appointments if payment.user_id is null
               appointment_id: appointment.id,
               tenant_id: payment.tenant_id,
               reminder_type: 'urgent',
@@ -235,7 +235,7 @@ export default defineEventHandler(async (event) => {
           .from('payment_reminders')
           .insert({
             payment_id: payment.id,
-            user_id: payment.user_id,
+            user_id: payment.user_id || user.id, // Fallback to user from appointments if payment.user_id is null
             appointment_id: appointment.id,
             tenant_id: payment.tenant_id,
             reminder_type: 'urgent',
