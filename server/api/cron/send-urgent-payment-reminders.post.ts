@@ -60,7 +60,6 @@ export default defineEventHandler(async (event) => {
         payment_method,
         payment_status,
         total_amount_rappen,
-        reminder_sent_at,
         appointments:appointment_id (
           id,
           start_time,
