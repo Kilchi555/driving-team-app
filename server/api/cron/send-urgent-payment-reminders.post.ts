@@ -59,15 +59,17 @@ export default defineEventHandler(async (event) => {
         start_time,
         end_time,
         duration_minutes,
+        user_id,
         payments (
           id,
           user_id,
           payment_method,
           payment_status,
-          total_amount_rappen
+          total_amount_rappen,
+          tenant_id
         )
       `)
-      .eq('payments.user_id', testUser.id)
+      .eq('user_id', testUser.id)
       .eq('payments.payment_status', 'pending')
       .eq('payments.payment_method', 'wallee')
 
@@ -78,23 +80,46 @@ export default defineEventHandler(async (event) => {
 
     console.log('[UrgentPaymentReminder] 📋 Found', appointments?.length || 0, 'appointments with pending wallee payments')
 
+    // Collect unique user IDs from appointments
+    const userIds = new Set<string>()
+    appointments?.forEach((apt: any) => {
+      if (apt.user_id) userIds.add(apt.user_id)
+    })
+
+    // Fetch all user data for these users
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name, tenant_id')
+      .in('id', Array.from(userIds))
+
+    if (usersError) {
+      console.error('[UrgentPaymentReminder] ❌ Error fetching users:', usersError)
+      throw usersError
+    }
+
+    // Create a map for quick user lookup
+    const userMap = new Map(users?.map((u: any) => [u.id, u]))
+
     // Flatten appointments and payments
     const payments = (appointments || []).flatMap((apt: any) => 
-      (apt.payments || []).map((p: any) => ({
-        ...p,
-        appointments: [{ 
-          id: apt.id,
-          start_time: apt.start_time,
-          end_time: apt.end_time,
-          duration_minutes: apt.duration_minutes
-        }],
-        users: [{ // Add user data from the appointment
-          id: apt.user_id || apt.users?.[0]?.id,
-          email: apt.email || apt.users?.[0]?.email,
-          first_name: apt.first_name || apt.users?.[0]?.first_name,
-          last_name: apt.last_name || apt.users?.[0]?.last_name
-        }]
-      }))
+      (apt.payments || []).map((p: any) => {
+        const appointmentUser = userMap.get(apt.user_id)
+        return {
+          ...p,
+          appointments: [{ 
+            id: apt.id,
+            start_time: apt.start_time,
+            end_time: apt.end_time,
+            duration_minutes: apt.duration_minutes
+          }],
+          users: [{
+            id: appointmentUser?.id,
+            email: appointmentUser?.email,
+            first_name: appointmentUser?.first_name,
+            last_name: appointmentUser?.last_name
+          }]
+        }
+      })
     )
     
     console.log('[UrgentPaymentReminder] 🔍 Debug - First payment users:', payments[0]?.users)
@@ -253,7 +278,7 @@ export default defineEventHandler(async (event) => {
           .from('payment_reminders')
           .insert({
             payment_id: payment.id,
-            user_id: payment.user_id || user.id, // Fallback to user from appointments if payment.user_id is null
+            user_id: payment.user_id || user.id,
             appointment_id: appointment.id,
             tenant_id: payment.tenant_id,
             reminder_type: 'urgent',
@@ -261,13 +286,13 @@ export default defineEventHandler(async (event) => {
             status: 'sent',
             recipient_email: userEmail,
             resend_email_id: emailResult?.id,
-            appointment_start_time: appointment.start_time,
             payment_amount_rappen: payment.total_amount_rappen,
             sent_at: new Date().toISOString(),
             attempt_number: 1,
             metadata: {
               isPast: isPast,
-              hoursUntilAppointment: hoursUntilAppointment
+              hoursUntilAppointment: hoursUntilAppointment,
+              appointmentTime: appointment.start_time
             }
           })
 
