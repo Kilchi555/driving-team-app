@@ -2,7 +2,6 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
-import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
 import { validateRequiredString, throwValidationError } from '~/server/utils/validators'
 
@@ -14,11 +13,13 @@ export default defineEventHandler(async (event) => {
                       event.node.req.socket.remoteAddress || 
                       'unknown'
     
-    logger.debug('🔐 Password reset request from IP:', ipAddress)
+    console.log('[PasswordReset] Request received from IP:', ipAddress)
     
     // Parse body first for validation and rate limiting
     const body = await readBody(event)
     const { contact, method, tenantId } = body
+
+    console.log('[PasswordReset] Request params:', { method, tenantId, contactProvided: !!contact })
 
     // Validate input
     const errors: Record<string, string> = {}
@@ -39,13 +40,13 @@ export default defineEventHandler(async (event) => {
     // Apply rate limiting (max 5 attempts per 15 minutes)
     const rateLimit = await checkRateLimit(ipAddress, 'password_reset', 5, 15 * 60 * 1000, contact, tenantId)
     if (!rateLimit.allowed) {
-      console.warn('⚠️ Password reset rate limit exceeded for IP:', ipAddress)
+      console.warn('[PasswordReset] ⚠️ Rate limit exceeded for IP:', ipAddress)
       throw createError({
         statusCode: 429,
         statusMessage: 'Zu viele Versuche. Bitte versuchen Sie es später erneut.'
       })
     }
-    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
+    console.log('[PasswordReset] Rate limit check passed. Remaining:', rateLimit.remaining)
 
     // Normalize method: 'phone' -> 'sms'
     const normalizedMethod = method === 'phone' ? 'sms' : method
@@ -54,7 +55,7 @@ export default defineEventHandler(async (event) => {
     if (method === 'email') {
       const emailValidation = validateRegistrationEmail(contact)
       if (!emailValidation.valid) {
-        console.warn('⚠️ Email validation failed:', emailValidation.reason)
+        console.warn('[PasswordReset] ⚠️ Email validation failed:', emailValidation.reason)
         throw createError({
           statusCode: 400,
           statusMessage: 'Ungültige E-Mail-Adresse'
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!serviceRoleKey) {
-      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured')
+      console.error('[PasswordReset] ❌ SUPABASE_SERVICE_ROLE_KEY not configured')
       throw createError({
         statusCode: 500,
         statusMessage: 'Server configuration error'
@@ -77,13 +78,12 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Find user by email or phone
-    logger.debug(`🔍 Looking up user by ${method}:`, contact)
+    console.log(`[PasswordReset] Looking up user by ${method}:`, method === 'email' ? contact : '[phone redacted]')
     
     let user = null
     let userError = null
     
     if (method === 'email') {
-      // Email should be unique - use .single()
       const { data, error } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
@@ -93,33 +93,33 @@ export default defineEventHandler(async (event) => {
       
       user = data
       userError = error
+      console.log('[PasswordReset] Email lookup result:', { found: !!data, error: error?.code || error?.message || null })
     } else {
-      // ✅ FIX: Phone might not be unique! Use .limit(1) to get first match
       const { data, error } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
         .eq('phone', contact)
         .eq('is_active', true)
-        .order('created_at', { ascending: false })  // Get most recent user
+        .order('created_at', { ascending: false })
         .limit(1)
       
       if (!error && data && data.length > 0) {
         user = data[0]
         userError = null
+        console.log('[PasswordReset] Phone lookup result: found', data.length, 'user(s)')
       } else {
         userError = error
+        console.log('[PasswordReset] Phone lookup result:', { found: false, error: error?.code || error?.message || null })
       }
     }
 
     // If phone number not found, try with different formatting
     if ((userError || !user) && method === 'sms') {
-      logger.debug(`⚠️ Phone not found with exact format, trying normalized format...`)
+      console.log('[PasswordReset] Phone not found with exact format, trying normalized format...')
       
-      // Remove all non-digit characters except leading +
       const normalizedPhone = contact.replace(/[^\d+]/g, '')
-      logger.debug(`🔍 Trying normalized phone:`, normalizedPhone)
+      console.log('[PasswordReset] Trying normalized phone format (digits only, +41 preserved)')
       
-      // ✅ FIX: Use .limit(1) instead of .single() to handle multiple matches gracefully
       const { data: phoneUsers, error: phoneError } = await serviceSupabase
         .from('users')
         .select('id, auth_user_id, email, phone, tenant_id')
@@ -130,35 +130,47 @@ export default defineEventHandler(async (event) => {
       if (!phoneError && phoneUsers && phoneUsers.length > 0) {
         user = phoneUsers[0]
         userError = null
-        logger.debug(`✅ Found user with normalized phone format`)
+        console.log('[PasswordReset] Found user with normalized phone format')
       } else {
-        logger.debug(`ℹ️ No active user found with phone: ${normalizedPhone}`)
+        console.log('[PasswordReset] No user found with normalized phone format either')
       }
     }
 
     if (userError || !user) {
-      // Don't reveal if user exists (security)
-      logger.debug(`ℹ️ No user found for ${method}: ${contact}`)
-      logger.debug(`User lookup error:`, userError?.message)
+      // Don't reveal if user exists (security) - but log it server-side
+      console.log(`[PasswordReset] No active user found for ${method} — returning generic success (security)`)
+      console.log('[PasswordReset] DB error if any:', userError?.code || userError?.message || 'none')
       // Still return success to prevent user enumeration
       return { success: true, message: 'Falls ein Account mit diesen Angaben existiert, erhalten Sie einen Magic Link.' }
     }
 
-    logger.debug('✅ User found:', user.id)
+    console.log('[PasswordReset] ✅ User found:', { userId: user.id, hasTenantId: !!user.tenant_id })
     
-    // Load tenant slug if user has tenant_id
+    // Load tenant info
     let tenantSlug: string | null = null
-    if (user.tenant_id) {
+    let tenantName: string | null = null
+    let tenantFromSender: string | null = null
+
+    // Use tenantId from request if provided, otherwise fall back to user's tenant_id
+    const resolvedTenantId = tenantId || user.tenant_id
+
+    if (resolvedTenantId) {
       const { data: tenant, error: tenantError } = await serviceSupabase
         .from('tenants')
-        .select('slug')
-        .eq('id', user.tenant_id)
+        .select('slug, name, twilio_from_sender, contact_email')
+        .eq('id', resolvedTenantId)
         .single()
       
-      if (!tenantError && tenant?.slug) {
+      if (!tenantError && tenant) {
         tenantSlug = tenant.slug
-        logger.debug('🏢 Found tenant slug:', tenantSlug)
+        tenantName = tenant.name
+        tenantFromSender = tenant.twilio_from_sender || tenant.name
+        console.log('[PasswordReset] Tenant resolved:', { slug: tenantSlug, name: tenantName })
+      } else {
+        console.warn('[PasswordReset] ⚠️ Could not load tenant:', tenantError?.message || 'Not found', 'tenantId:', resolvedTenantId)
       }
+    } else {
+      console.warn('[PasswordReset] ⚠️ No tenantId provided and user has no tenant_id')
     }
 
     // Generate secure random token
@@ -169,7 +181,7 @@ export default defineEventHandler(async (event) => {
     // Token expires in 1 hour
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000)
 
-    logger.debug('🔐 Creating password reset token...')
+    console.log('[PasswordReset] Creating password reset token in DB...')
     
     const { error: insertError } = await serviceSupabase
       .from('password_reset_tokens')
@@ -185,8 +197,7 @@ export default defineEventHandler(async (event) => {
       })
 
     if (insertError) {
-      console.error('❌ Failed to create reset token:', insertError)
-      console.error('❌ Insert error details:', {
+      console.error('[PasswordReset] ❌ Failed to create reset token:', {
         message: insertError?.message,
         details: insertError?.details,
         hint: insertError?.hint,
@@ -198,13 +209,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('✅ Reset token created')
+    console.log('[PasswordReset] ✅ Reset token created in DB, expires:', expiresAt.toISOString())
 
-    // Build reset link with tenant slug if available
+    // Build reset link
     const protocol = getHeader(event, 'x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
     const host = getHeader(event, 'host') || 'localhost:3000'
     const tenantParam = tenantSlug ? `&tenant=${tenantSlug}` : ''
     const resetLink = `${protocol}://${host}/password-reset?token=${token}${tenantParam}`
+
+    console.log('[PasswordReset] Reset link built:', { protocol, host, hasTenantParam: !!tenantSlug })
 
     // Track if sending failed
     let sendingFailed = false
@@ -212,104 +225,103 @@ export default defineEventHandler(async (event) => {
 
     // Send magic link via email or SMS
     if (normalizedMethod === 'email') {
-      logger.debug('📧 Sending password reset email to:', user.email)
+      console.log('[PasswordReset] Sending password reset email via Resend to:', user.email)
       
       try {
+        const resendApiKey = process.env.RESEND_API_KEY
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+
+        if (!resendApiKey) {
+          console.error('[PasswordReset] ❌ RESEND_API_KEY not configured!')
+          throw new Error('RESEND_API_KEY not configured')
+        }
+
+        console.log('[PasswordReset] Resend API key configured:', resendApiKey.substring(0, 8) + '...')
+
+        const { Resend } = await import('resend')
+        const resend = new Resend(resendApiKey)
+
+        const displayName = tenantName || 'Driving Team'
+
         const emailHtml = `
-          <h2>Passwort zurücksetzen</h2>
-          <p>Hallo ${user.email?.split('@')[0]},</p>
-          <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt. Klicken Sie auf den Link unten, um Ihr Passwort zu ändern:</p>
-          <p>
-            <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
-              Passwort zurücksetzen
-            </a>
-          </p>
-          <p>Dieser Link ist 1 Stunde lang gültig.</p>
-          <p>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail.</p>
-          <p>Beste Grüße<br>Ihr Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1f2937;">Passwort zurücksetzen</h2>
+            <p>Hallo ${user.email?.split('@')[0]},</p>
+            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts bei <strong>${displayName}</strong> gestellt.</p>
+            <p>Klicken Sie auf den Button unten, um Ihr Passwort zu ändern:</p>
+            <p style="margin: 24px 0;">
+              <a href="${resetLink}" 
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+                Passwort zurücksetzen
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 14px;">Dieser Link ist 1 Stunde lang gültig.</p>
+            <p style="color: #6b7280; font-size: 14px;">Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+            <p style="color: #9ca3af; font-size: 12px;">
+              Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br>
+              <a href="${resetLink}" style="color: #2563eb; word-break: break-all;">${resetLink}</a>
+            </p>
+          </div>
         `
         
-        const emailText = `Passwort zurücksetzen\n\nHallo,\n\nSie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt. Öffnen Sie bitte diesen Link:\n\n${resetLink}\n\nDieser Link ist 1 Stunde lang gültig.\n\nFalls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail.`
-        
-        // Use service role for edge function invocation
-        const { data: emailResult, error: emailError } = await serviceSupabase.functions.invoke('send-email', {
-          body: {
-            to: user.email,
-            subject: 'Passwort zurücksetzen',
-            html: emailHtml,
-            body: emailText
-          },
-          method: 'POST'
+        const { data: emailResult, error: emailError } = await resend.emails.send({
+          from: `${displayName} <${fromEmail}>`,
+          to: user.email!,
+          subject: 'Passwort zurücksetzen',
+          html: emailHtml
         })
         
         if (emailError) {
-          console.error('❌ Email sending via send-email failed:', emailError)
+          console.error('[PasswordReset] ❌ Resend API returned error:', {
+            name: emailError.name,
+            message: emailError.message
+          })
           throw emailError
         }
         
-        logger.debug('✅ Password reset email sent successfully')
+        console.log('[PasswordReset] ✅ Password reset email sent successfully via Resend. Email ID:', emailResult?.id)
       } catch (emailError: any) {
-        console.error('❌ Email sending failed:', emailError)
-        console.error('❌ Email error details:', {
+        console.error('[PasswordReset] ❌ Email sending failed:', {
           message: emailError?.message,
           cause: emailError?.cause,
           status: emailError?.status,
-          data: emailError?.data
+          statusCode: emailError?.statusCode,
+          data: emailError?.data,
+          name: emailError?.name
         })
-        // Don't fail the whole process - token is created, email just failed
-        logger.debug('⚠️ Continuing despite email error - token still valid')
         sendingFailed = true
         failureReason = 'email_send_failed'
       }
     } else if (normalizedMethod === 'sms') {
-      logger.debug('📱 Sending password reset SMS to:', user.phone)
+      console.log('[PasswordReset] Sending password reset SMS to phone (redacted)')
       
       try {
         const smsMessage = `Ihr Passwort-Reset-Link: ${resetLink}. Dieser Link ist 1 Stunde gültig.`
         
-        // Load tenant SMS sender name
-        let tenantName = ''
-        try {
-          const { data: tenantData } = await serviceSupabase
-            .from('tenants')
-            .select('name, twilio_from_sender')
-            .eq('id', user.tenant_id)
-            .single()
-          
-          if (tenantData?.twilio_from_sender) {
-            tenantName = tenantData.twilio_from_sender
-            logger.debug('📱 Using twilio_from_sender:', tenantName)
-          } else if (tenantData?.name) {
-            tenantName = tenantData.name
-            logger.debug('📱 Fallback to tenant name:', tenantName)
-          }
-        } catch (tenantError) {
-          logger.warn('⚠️ Could not load tenant name:', tenantError)
-        }
-        
-        // Use local sendSMS function with Alphanumeric Sender ID support
         const smsResult = await sendSMS({
           to: user.phone!,
           message: smsMessage,
-          senderName: tenantName
+          senderName: tenantFromSender || undefined
         })
         
-        logger.debug('✅ Password reset SMS sent successfully:', smsResult)
+        console.log('[PasswordReset] ✅ Password reset SMS sent successfully:', smsResult)
       } catch (smsError: any) {
-        console.error('❌ SMS sending failed:', smsError)
-        console.error('❌ SMS error details:', {
+        console.error('[PasswordReset] ❌ SMS sending failed:', {
           message: smsError?.message,
           cause: smsError?.cause,
           status: smsError?.status
         })
-        // Don't fail the whole process - token is created, SMS just failed
-        logger.debug('⚠️ Continuing despite SMS error - token still valid')
         sendingFailed = true
         failureReason = 'sms_send_failed'
       }
     }
 
-    logger.debug('✅ Password reset link sent successfully')
+    if (sendingFailed) {
+      console.warn('[PasswordReset] ⚠️ Sending failed. Reason:', failureReason, '— Token was created but message not delivered.')
+    } else {
+      console.log('[PasswordReset] ✅ Password reset flow completed successfully for method:', normalizedMethod)
+    }
 
     // Return success but include warning if sending failed
     const response: any = {
@@ -324,21 +336,18 @@ export default defineEventHandler(async (event) => {
       response.message = method === 'email'
         ? 'Der Reset-Link wurde erstellt, aber die E-Mail konnte nicht gesendet werden. Bitte kontaktieren Sie den Support oder versuchen Sie es mit einer anderen Methode.'
         : 'Der Reset-Link wurde erstellt, aber die SMS konnte nicht gesendet werden. Bitte versuchen Sie es mit E-Mail oder kontaktieren Sie den Support.'
-      logger.debug('⚠️ Returning success with warning due to:', failureReason)
     }
 
     return response
 
   } catch (error: any) {
-    console.error('❌ Password reset request error:', error)
-    console.error('❌ Error details:', {
+    console.error('[PasswordReset] ❌ Unhandled error in password reset request:', {
       message: error?.message,
       status: error?.status,
       statusCode: error?.statusCode,
       statusMessage: error?.statusMessage,
-      stack: error?.stack
+      stack: error?.stack?.split('\n').slice(0, 5).join('\n')
     })
     throw error
   }
 })
-

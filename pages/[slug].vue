@@ -867,7 +867,7 @@ const handlePasswordReset = async () => {
       body: {
         contact,
         method: resetContactMethod.value,
-        tenantId: null
+        tenantId: currentTenant.value?.id || null
       }
     }) as any
 
