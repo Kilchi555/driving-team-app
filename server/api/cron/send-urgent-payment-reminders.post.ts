@@ -195,23 +195,69 @@ export default defineEventHandler(async (event) => {
 
         if (emailError) {
           console.error('[UrgentPaymentReminder] ❌ Failed to send email:', emailError)
+          
+          // Log failed reminder attempt
+          const { error: failLogError } = await supabase
+            .from('payment_reminders')
+            .insert({
+              payment_id: payment.id,
+              user_id: payment.user_id,
+              appointment_id: appointment.id,
+              tenant_id: payment.tenant_id,
+              reminder_type: 'urgent',
+              channel: 'email',
+              status: 'failed',
+              recipient_email: userEmail,
+              appointment_start_time: appointment.start_time,
+              payment_amount_rappen: payment.total_amount_rappen,
+              failed_at: new Date().toISOString(),
+              error_message: emailError.message,
+              error_code: emailError.name,
+              attempt_number: 1,
+              metadata: {
+                isPast: isPast,
+                hoursUntilAppointment: hoursUntilAppointment
+              }
+            })
+          
+          if (failLogError) {
+            console.error('[UrgentPaymentReminder] ⚠️ Failed to log failed reminder:', failLogError)
+          }
+          
           failedCount++
           continue
         }
 
         console.log('[UrgentPaymentReminder] ✅ Email sent successfully. Resend ID:', emailResult?.id)
 
-        // Update reminder_sent_at timestamp
-        const { error: updateError } = await supabase
-          .from('payments')
-          .update({ reminder_sent_at: new Date().toISOString() })
-          .eq('id', payment.id)
+        // Log reminder in payment_reminders table
+        const { error: logError } = await supabase
+          .from('payment_reminders')
+          .insert({
+            payment_id: payment.id,
+            user_id: payment.user_id,
+            appointment_id: appointment.id,
+            tenant_id: payment.tenant_id,
+            reminder_type: 'urgent',
+            channel: 'email',
+            status: 'sent',
+            recipient_email: userEmail,
+            resend_email_id: emailResult?.id,
+            appointment_start_time: appointment.start_time,
+            payment_amount_rappen: payment.total_amount_rappen,
+            sent_at: new Date().toISOString(),
+            attempt_number: 1,
+            metadata: {
+              isPast: isPast,
+              hoursUntilAppointment: hoursUntilAppointment
+            }
+          })
 
-        if (updateError) {
-          console.error('[UrgentPaymentReminder] ⚠️ Failed to update reminder_sent_at:', updateError)
+        if (logError) {
+          console.error('[UrgentPaymentReminder] ⚠️ Failed to log reminder:', logError)
           // Continue anyway - email was sent
         } else {
-          console.log('[UrgentPaymentReminder] 💾 Updated reminder_sent_at for payment:', payment.id)
+          console.log('[UrgentPaymentReminder] 💾 Logged reminder in payment_reminders table')
         }
 
         sentCount++
