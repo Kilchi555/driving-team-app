@@ -80,10 +80,6 @@ export default defineEventHandler(async (event) => {
 
     console.log('[UrgentPaymentReminder] 📋 Found', appointments?.length || 0, 'appointments with pending wallee payments')
 
-    // TEST MODE: Only process payments for pascal_kilchenmann@icloud.com
-    const TEST_EMAIL = 'pascal_kilchenmann@icloud.com'
-    console.log('[UrgentPaymentReminder] 📧 TEST MODE: Only sending to:', TEST_EMAIL)
-
     // Collect unique user IDs from appointments
     const userIds = new Set<string>()
     appointments?.forEach((apt: any) => {
