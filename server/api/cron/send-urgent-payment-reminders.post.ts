@@ -163,7 +163,6 @@ export default defineEventHandler(async (event) => {
 
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1f2937;">⚠️ Zahlungserinnerung erforderlich</h2>
             <p>Hallo ${userName},</p>
             <p>Ihr Fahrtermin <strong>${timeDescription}</strong> hat eine ausstehende Zahlung von <strong>CHF ${amountCHF}</strong>.</p>
             
