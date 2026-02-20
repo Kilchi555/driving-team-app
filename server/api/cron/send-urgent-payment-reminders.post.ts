@@ -30,6 +30,26 @@ export default defineEventHandler(async (event) => {
 
     // Fetch pending wallee payments for all users where appointment exists
     const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        start_time,
+        end_time,
+        duration_minutes,
+        user_id,
+        status, -- Include appointment status
+        cancellation_charge_percentage, -- Include cancellation charge percentage
+        payments (
+          id,
+          user_id,
+          payment_method,
+          payment_status,
+          total_amount_rappen,
+          tenant_id
+        )
+      `)
+      .eq('payments.payment_status', 'pending')
+      .eq('payments.payment_method', 'wallee')
 
     if (appointmentsError) {
       console.error('[UrgentPaymentReminder] ❌ Error fetching appointments:', appointmentsError)
@@ -97,9 +117,11 @@ export default defineEventHandler(async (event) => {
       // Include: past appointments OR appointments within 24 hours
       const isPast = appointmentTime < now
       const isWithin24h = appointmentTime <= in24Hours && appointmentTime >= now
-      const shouldRemind = isPast || isWithin24h
+      const hasNoCancellationCharge = appointment.cancellation_charge_percentage === 0 || appointment.cancellation_charge_percentage === null
+      
+      const shouldRemind = (isPast || isWithin24h) && hasNoCancellationCharge
 
-      console.log('[UrgentPaymentReminder] 🕐 Payment', payment.id, '- Appointment:', appointmentTime.toISOString(), '- Past:', isPast, 'Within24h:', isWithin24h, 'Include:', shouldRemind)
+      console.log('[UrgentPaymentReminder] 🕐 Payment', payment.id, '- Appointment:', appointmentTime.toISOString(), '- Past:', isPast, 'Within24h:', isWithin24h, 'NoCharge:', hasNoCancellationCharge, 'Include:', shouldRemind)
 
       return shouldRemind
     })
