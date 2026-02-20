@@ -118,10 +118,11 @@ export default defineEventHandler(async (event) => {
       const isPast = appointmentTime < now
       const isWithin24h = appointmentTime <= in24Hours && appointmentTime >= now
       const hasNoCancellationCharge = appointment.cancellation_charge_percentage === 0 || appointment.cancellation_charge_percentage === null
+      const isNotCancelled = appointment.status !== 'cancelled' // Add this filter
       
-      const shouldRemind = (isPast || isWithin24h) && hasNoCancellationCharge
+      const shouldRemind = (isPast || isWithin24h) && hasNoCancellationCharge && isNotCancelled
 
-      console.log('[UrgentPaymentReminder] 🕐 Payment', payment.id, '- Appointment:', appointmentTime.toISOString(), '- Past:', isPast, 'Within24h:', isWithin24h, 'NoCharge:', hasNoCancellationCharge, 'Include:', shouldRemind)
+      console.log('[UrgentPaymentReminder] 🕐 Payment', payment.id, '- Appointment:', appointmentTime.toISOString(), '- Past:', isPast, 'Within24h:', isWithin24h, 'NoCharge:', hasNoCancellationCharge, 'NotCancelled:', isNotCancelled, 'Include:', shouldRemind)
 
       return shouldRemind
     })
