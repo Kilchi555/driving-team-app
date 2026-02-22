@@ -280,7 +280,7 @@ export default defineEventHandler(async (event) => {
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantRef,
-      tokenizationMode: Wallee.model.TokenizationMode.AllowOneClickPayment,
+      tokenizationMode: Wallee.model.TokenizationMode.ALLOW_ONE_CLICK_PAYMENT,
       successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
       failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
     }

@@ -501,7 +501,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantReference,
-      tokenizationMode: Wallee.model.TokenizationMode.AllowOneClickPayment,
+      tokenizationMode: Wallee.model.TokenizationMode.ALLOW_ONE_CLICK_PAYMENT,
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
     }
