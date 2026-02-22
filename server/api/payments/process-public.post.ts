@@ -274,6 +274,8 @@ export default defineEventHandler(async (event) => {
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: customerEmail,
+      // ✅ customerId: For public enrollments, use email-based ID so Wallee can track returning customers
+      customerId: `dt-${tenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
