@@ -376,6 +376,21 @@ export default defineEventHandler(async (event) => {
       logger.info('✅ Fallback: Webhook will use merchantReference pattern to find this payment')
     }
 
+    // Save transaction ID to history table for webhook reliability
+    try {
+      const { error: historyError } = await supabase.from('payment_wallee_transactions').insert({
+        payment_id: paymentRecord.id,
+        wallee_transaction_id: transactionId.toString(),
+        wallee_space_id: walleeConfig.spaceId,
+        merchant_reference: merchantRef
+      })
+      if (historyError) {
+        logger.warn('⚠️ Could not save transaction to history:', historyError.message)
+      }
+    } catch (historyErr: any) {
+      logger.warn('⚠️ Transaction history save failed:', historyErr.message)
+    }
+
     // ✅ STEP 5: Get payment page URL
     const paymentPageService = new Wallee.api.TransactionPaymentPageService(config)
     const pageUrlResponse = await paymentPageService.paymentPageUrl(

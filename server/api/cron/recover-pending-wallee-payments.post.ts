@@ -90,20 +90,60 @@ export default defineEventHandler(async (event) => {
         const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
         const transactionService = new Wallee.api.TransactionService(config)
 
-        // Fetch from Wallee
+        // Fetch current transaction from Wallee
         const response = await transactionService.read(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
         const transaction = response?.body || response
 
+        let walleeState = transaction?.state || null
+        let mappedStatus = walleeState ? (STATUS_MAPPING[walleeState] || 'pending') : 'pending'
+
         if (!transaction) {
           logger.warn(`⚠️ No transaction found for ID ${payment.wallee_transaction_id}`)
+        }
+
+        logger.debug(`📊 Wallee state: ${walleeState} → ${mappedStatus}`)
+
+        // If primary transaction is still pending, check historical transaction IDs
+        if (mappedStatus === 'pending') {
+          try {
+            const { data: historyRecords } = await supabase
+              .from('payment_wallee_transactions')
+              .select('wallee_transaction_id')
+              .eq('payment_id', payment.id)
+
+            if (historyRecords && historyRecords.length > 0) {
+              for (const record of historyRecords) {
+                if (record.wallee_transaction_id === payment.wallee_transaction_id) continue
+
+                try {
+                  const histResponse = await transactionService.read(walleeConfig.spaceId, parseInt(record.wallee_transaction_id))
+                  const histTx = histResponse?.body || histResponse
+
+                  if (histTx?.state) {
+                    const histStatus = STATUS_MAPPING[histTx.state] || 'pending'
+
+                    if (histStatus === 'completed' || histStatus === 'authorized') {
+                      logger.info(`✅ Found completed historical transaction ${record.wallee_transaction_id} (${histTx.state}) for payment ${payment.id}`)
+                      walleeState = histTx.state
+                      mappedStatus = histStatus
+                      break
+                    }
+                  }
+                } catch (histErr: any) {
+                  logger.debug(`⚠️ Could not check historical transaction ${record.wallee_transaction_id}:`, histErr.message)
+                }
+              }
+            }
+          } catch (historyErr: any) {
+            logger.debug('⚠️ Could not query transaction history:', historyErr.message)
+          }
+        }
+
+        // If no valid state found from any transaction, skip
+        if (!walleeState) {
           failed++
           continue
         }
-
-        const walleeState = transaction.state
-        const mappedStatus = STATUS_MAPPING[walleeState] || 'pending'
-
-        logger.debug(`📊 Wallee state: ${walleeState} → ${mappedStatus}`)
 
         // If status changed, update payment
         if (mappedStatus !== payment.payment_status) {

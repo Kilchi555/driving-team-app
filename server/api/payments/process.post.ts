@@ -132,7 +132,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     // Load the existing payment that customer wants to pay for
     const { data: payment, error: paymentError } = await supabaseAdmin
       .from('payments')
-      .select('id, user_id, tenant_id, total_amount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
+      .select('id, user_id, tenant_id, total_amount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
       .eq('id', body.paymentId)
       .eq('tenant_id', tenantId)
       .single()
@@ -374,6 +374,65 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
+    // ✅ CHECK: If payment already has a Wallee transaction, check if it's already completed
+    if (payment.wallee_transaction_id) {
+      logger.info('🔍 Payment already has wallee_transaction_id:', payment.wallee_transaction_id, '- checking status at Wallee...')
+      
+      try {
+        const existingTxResponse = await transactionService.read(spaceId, parseInt(payment.wallee_transaction_id))
+        const existingTx = existingTxResponse?.body || existingTxResponse
+        
+        if (existingTx?.state) {
+          const COMPLETED_STATES = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
+          
+          if (COMPLETED_STATES.includes(existingTx.state)) {
+            logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- marking payment as completed')
+            
+            const now = new Date().toISOString()
+            await supabaseAdmin.from('payments').update({
+              payment_status: 'completed',
+              paid_at: now,
+              updated_at: now
+            }).eq('id', payment.id)
+            
+            if (payment.appointments?.id) {
+              await supabaseAdmin.from('appointments').update({
+                payment_status: 'paid',
+                updated_at: now
+              }).eq('id', payment.appointments.id)
+            }
+            
+            return {
+              success: true,
+              paymentId: payment.id,
+              paymentStatus: 'completed',
+              message: 'Payment was already completed via existing Wallee transaction'
+            }
+          }
+          
+          logger.info(`📋 Existing transaction state: ${existingTx.state} - will create new transaction`)
+        }
+      } catch (checkErr: any) {
+        logger.warn('⚠️ Could not check existing Wallee transaction:', checkErr.message)
+      }
+      
+      // Save old transaction ID to history before overwriting
+      try {
+        const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
+          payment_id: payment.id,
+          wallee_transaction_id: payment.wallee_transaction_id,
+          wallee_space_id: spaceId
+        })
+        if (historyError) {
+          logger.warn('⚠️ Could not save transaction history:', historyError.message)
+        } else {
+          logger.debug('📋 Saved old transaction ID to history:', payment.wallee_transaction_id)
+        }
+      } catch (historyErr: any) {
+        logger.warn('⚠️ Transaction history save failed:', historyErr.message)
+      }
+    }
+
     // ✅ SWISS ROUNDING: Round to nearest Franken (50 Rappen boundary) before sending to Wallee
     const roundToNearestFranken = (rappen: number): number => {
       const remainder = rappen % 100
@@ -411,13 +470,22 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     ]
 
-    // Build merchant reference with payment ID (CRITICAL for webhook fallback!), customer name, date, time, duration
-    const merchantReference = body.orderId || buildMerchantReference({
-      staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
-      startTime: payment.appointments?.start_time,
-      durationMinutes: payment.appointments?.duration_minutes,
-      appointmentId: payment.appointments?.id
-    })
+    // Build merchant reference with payment ID prefix (CRITICAL for webhook fallback!)
+    let merchantReference: string
+    if (body.orderId) {
+      merchantReference = body.orderId
+    } else {
+      const baseMerchantRef = buildMerchantReference({
+        staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
+        startTime: payment.appointments?.start_time,
+        durationMinutes: payment.appointments?.duration_minutes,
+        appointmentId: payment.appointments?.id
+      })
+      merchantReference = `payment-${payment.id} | ${baseMerchantRef}`
+      if (merchantReference.length > 100) {
+        merchantReference = merchantReference.substring(0, 97) + '...'
+      }
+    }
 
     logger.debug('📋 Generated merchant reference:', merchantReference)
 
@@ -536,6 +604,21 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         error: lastUpdateError?.message
       })
       // Continue anyway - customer should be able to pay, webhook will use fallback
+    }
+
+    // Save new transaction ID to history table for webhook reliability
+    try {
+      const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
+        payment_id: payment.id,
+        wallee_transaction_id: transactionId.toString(),
+        wallee_space_id: spaceId,
+        merchant_reference: merchantReference
+      })
+      if (historyError) {
+        logger.warn('⚠️ Could not save transaction to history:', historyError.message)
+      }
+    } catch (historyErr: any) {
+      logger.warn('⚠️ Transaction history save failed:', historyErr.message)
     }
 
     // ============ AUDIT LOGGING & RESPONSE ============
