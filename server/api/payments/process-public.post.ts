@@ -278,6 +278,12 @@ export default defineEventHandler(async (event) => {
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantRef,
+      // ✅ TokenizationMode.AUTOMATIC: Wallee intelligently decides per payment method
+      // - VISA/Mastercard: save token ✅
+      // - iDEAL: save token ✅
+      // - TWINT: NOT saved ✅ (Wallee respects TWINT data protection rules)
+      // - SEPA: save token ✅
+      tokenizationMode: Wallee.model.TokenizationMode.AUTOMATIC,
       successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
       failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
     }
