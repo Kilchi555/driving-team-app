@@ -77,10 +77,9 @@ export default defineEventHandler(async (event) => {
     logger.info('🔔 WEBHOOK BODY entityId:', body.entityId, 'type:', typeof body.entityId)
     logger.info('🔔 WEBHOOK BODY state:', body.state, 'type:', typeof body.state)
     
-    // ⚠️ IMMEDIATE LOG: Try to create webhook log entry RIGHT NOW
-    // This will help us debug if the webhook is even being called
+    // ⚠️ IMMEDIATE LOG: Create webhook log entry for debugging
     try {
-      const { data: immediateLog } = await supabase
+      const { data: immediateLog, error: immediateLogError } = await supabase
         .from('webhook_logs')
         .insert({
           transaction_id: body.entityId?.toString() || 'unknown',
@@ -95,11 +94,14 @@ export default defineEventHandler(async (event) => {
         .select('id')
         .single()
       
-      webhookLogId = immediateLog?.id
-      logger.debug('✅ IMMEDIATE webhook log entry created:', webhookLogId)
+      if (immediateLogError) {
+        logger.error('❌ webhook_logs INSERT failed:', immediateLogError.message, immediateLogError.code, immediateLogError.details)
+      } else {
+        webhookLogId = immediateLog?.id
+        logger.debug('✅ IMMEDIATE webhook log entry created:', webhookLogId)
+      }
     } catch (immediateLogErr: any) {
-      logger.error('❌ FAILED to create immediate webhook log:', immediateLogErr.message)
-      // Continue anyway - this is just for debugging
+      logger.error('❌ FAILED to create immediate webhook log (exception):', immediateLogErr.message)
     }
     
     // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
@@ -122,27 +124,33 @@ export default defineEventHandler(async (event) => {
       timestamp: body.timestamp
     })
     
-    // 🔍 Log webhook receipt
-    try {
-      const { data: logRecord } = await supabase
-        .from('webhook_logs')
-        .insert({
-          transaction_id: transactionId,
-          entity_id: body.entityId,
-          space_id: body.spaceId,
-          wallee_state: walleeState,
-          listener_entity_id: body.listenerEntityId,
-          listener_entity_technical_name: body.listenerEntityTechnicalName,
-          timestamp: body.timestamp,
-          raw_payload: body
-        })
-        .select('id')
-        .single()
-      
-      webhookLogId = logRecord?.id
-      logger.debug('✅ Webhook logged with ID:', webhookLogId)
-    } catch (logErr: any) {
-      logger.warn('⚠️ Could not log webhook:', logErr.message)
+    // 🔍 Log webhook receipt (skip if immediate log already succeeded)
+    if (!webhookLogId) {
+      try {
+        const { data: logRecord, error: logInsertError } = await supabase
+          .from('webhook_logs')
+          .insert({
+            transaction_id: transactionId,
+            entity_id: body.entityId,
+            space_id: body.spaceId,
+            wallee_state: walleeState,
+            listener_entity_id: body.listenerEntityId,
+            listener_entity_technical_name: body.listenerEntityTechnicalName,
+            timestamp: body.timestamp,
+            raw_payload: body
+          })
+          .select('id')
+          .single()
+        
+        if (logInsertError) {
+          logger.error('❌ webhook_logs INSERT failed:', logInsertError.message, logInsertError.code, logInsertError.details)
+        } else {
+          webhookLogId = logRecord?.id
+          logger.debug('✅ Webhook logged with ID:', webhookLogId)
+        }
+      } catch (logErr: any) {
+        logger.warn('⚠️ Could not log webhook (exception):', logErr.message)
+      }
     }
     
     // ============ LAYER 2: MAP STATUS ============
@@ -174,9 +182,49 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('wallee_transaction_id', transactionId)
     
+    // ============ LAYER 3.5: FALLBACK - Search in transaction history table ============
+    if (findError || !payments || payments.length === 0) {
+      logger.debug('⚠️ Payment not found by current transaction ID, checking history table...')
+      
+      try {
+        const { data: historyRecord } = await supabase
+          .from('payment_wallee_transactions')
+          .select('payment_id')
+          .eq('wallee_transaction_id', transactionId)
+          .maybeSingle()
+        
+        if (historyRecord?.payment_id) {
+          logger.info('✅ Found payment via transaction history:', historyRecord.payment_id)
+          
+          const { data: historyPayment, error: historyPaymentError } = await supabase
+            .from('payments')
+            .select(`
+              id,
+              payment_status,
+              appointment_id,
+              user_id,
+              tenant_id,
+              total_amount_rappen,
+              metadata,
+              wallee_transaction_id,
+              credit_used_rappen
+            `)
+            .eq('id', historyRecord.payment_id)
+            .single()
+          
+          if (!historyPaymentError && historyPayment) {
+            payments = [historyPayment]
+            findError = null
+          }
+        }
+      } catch (historyErr: any) {
+        logger.warn('⚠️ History table lookup failed (table may not exist yet):', historyErr.message)
+      }
+    }
+    
     // ============ LAYER 4: FALLBACK - Search by merchantReference ============
     if (findError || !payments || payments.length === 0) {
-      logger.debug('⚠️ Payment not found by transaction ID, trying merchantReference fallback...')
+      logger.debug('⚠️ Payment not found by transaction ID or history, trying merchantReference fallback...')
       
       try {
         // Fetch transaction from Wallee to get merchantReference
@@ -783,11 +831,34 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     
     // Try to get tenant-specific config first
     const supabase = getSupabaseAdmin()
-    const { data: paymentForConfig } = await supabase
+    let { data: paymentForConfig } = await supabase
       .from('payments')
       .select('tenant_id')
       .eq('wallee_transaction_id', transactionId)
       .maybeSingle()
+    
+    // Also check history table if payment not found by current transaction ID
+    if (!paymentForConfig) {
+      try {
+        const { data: historyRecord } = await supabase
+          .from('payment_wallee_transactions')
+          .select('payment_id')
+          .eq('wallee_transaction_id', transactionId)
+          .maybeSingle()
+        
+        if (historyRecord?.payment_id) {
+          const { data: histPayment } = await supabase
+            .from('payments')
+            .select('tenant_id')
+            .eq('id', historyRecord.payment_id)
+            .maybeSingle()
+          
+          paymentForConfig = histPayment
+        }
+      } catch {
+        // History table may not exist yet
+      }
+    }
     
     let spaceId = webhookSpaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
     let userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
