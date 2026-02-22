@@ -1,7 +1,6 @@
 // composables/useCategoryWithFallback.ts
 // Handles loading categories and evaluation criteria with fallback to parent category
 
-import { useSupabase } from '~/composables/useSupabase'
 import { logger } from '~/utils/logger'
 
 export interface CategoryWithParent {
@@ -31,7 +30,7 @@ export interface EvaluationCriteria {
 }
 
 export const useCategoryWithFallback = () => {
-  const supabase = useSupabase()
+  const supabase = useSupabaseClient()
 
   /**
    * Load evaluation criteria for a category

@@ -989,7 +989,6 @@ const loadCalendarToken = async () => {
     const { query } = useDatabaseQuery()
     
     const tokenData = await query({
-     action: 'select',
       action: 'select',
       table: 'calendar_tokens',
       select: 'token',
