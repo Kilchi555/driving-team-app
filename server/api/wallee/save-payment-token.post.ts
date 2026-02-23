@@ -8,7 +8,7 @@ import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    logger.info('💳 Wallee: Saving payment method token...')
+    logger.info('💳 Wallee: Saving payment method token... [v2.2-token-fix]')
     
     const body = await readBody(event)
     const { transactionId, userId, tenantId } = body
@@ -88,42 +88,54 @@ export default defineEventHandler(async (event) => {
       
       try {
         const tokenService: Wallee.api.TokenService = new Wallee.api.TokenService(config)
+        logger.debug('🔧 TokenService created successfully')
         
         // Search for tokens linked to this customer
-        const tokenSearchResult = await tokenService.search(spaceId, {
-          filter: {
-            fieldName: 'customerId',
-            value: transaction.customerId.toString(),
-            operator: Wallee.model.CriteriaOperator.EQUALS,
-            type: Wallee.model.EntityQueryFilterType.LEAF
-          }
-        })
+        let tokenSearchResult: any = null
+        try {
+          tokenSearchResult = await tokenService.search(spaceId, {
+            filter: {
+              fieldName: 'customerId',
+              value: transaction.customerId.toString(),
+              operator: Wallee.model.CriteriaOperator.EQUALS,
+              type: Wallee.model.EntityQueryFilterType.LEAF
+            }
+          })
+          logger.debug('🔧 TokenService search completed, result type:', typeof tokenSearchResult)
+        } catch (innerError: any) {
+          logger.warn('⚠️ TokenService.search() threw error:', innerError.message)
+          throw innerError
+        }
         
         // Extract tokens array - handle both wrapped and unwrapped responses
         let allTokens: any[] = []
-        if (tokenSearchResult?.body && Array.isArray(tokenSearchResult.body)) {
-          allTokens = tokenSearchResult.body
-        } else if (Array.isArray(tokenSearchResult)) {
-          allTokens = tokenSearchResult
+        if (tokenSearchResult !== null && tokenSearchResult !== undefined) {
+          if (tokenSearchResult?.body && Array.isArray(tokenSearchResult.body)) {
+            allTokens = tokenSearchResult.body
+          } else if (Array.isArray(tokenSearchResult)) {
+            allTokens = tokenSearchResult
+          } else {
+            logger.warn('⚠️ TokenService result is neither wrapped nor array, type:', typeof tokenSearchResult)
+          }
         }
         
         logger.info('💳 TokenService search result:', {
           count: allTokens.length,
           tokens: allTokens.map((t: any) => ({
-            id: t.id,
-            state: t.state,
-            customerId: t.customerId,
-            enabledForOneClick: t.enabledForOneClickPayment,
-            paymentMethodBrand: t.paymentConnectorConfiguration?.paymentMethodConfiguration?.name
+            id: t?.id,
+            state: t?.state,
+            customerId: t?.customerId,
+            enabledForOneClick: t?.enabledForOneClickPayment,
+            paymentMethodBrand: t?.paymentConnectorConfiguration?.paymentMethodConfiguration?.name
           }))
         })
         
         // Find the most recent active token
         if (allTokens && allTokens.length > 0) {
-          const activeToken = allTokens.find((t: any) => t.state === 'ACTIVE') || allTokens[0]
+          const activeToken = allTokens.find((t: any) => t?.state === 'ACTIVE') || allTokens[0]
           
-          if (activeToken) {
-            paymentMethodToken = activeToken.id?.toString() || null
+          if (activeToken && activeToken.id) {
+            paymentMethodToken = activeToken.id.toString()
             displayName = activeToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 'Gespeicherte Zahlungsmethode'
             paymentMethodType = activeToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 'card'
             logger.info('✅ Found token via TokenService:', {
@@ -134,7 +146,7 @@ export default defineEventHandler(async (event) => {
           }
         }
       } catch (searchError: any) {
-        logger.warn('⚠️ TokenService search failed:', searchError.message)
+        logger.warn('⚠️ TokenService search failed:', searchError.message, searchError.stack)
       }
     }
 
