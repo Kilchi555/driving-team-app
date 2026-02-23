@@ -280,7 +280,7 @@ export default defineEventHandler(async (event) => {
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantRef,
-      tokenizationMode: 'ALLOW_ONE_CLICK_PAYMENT' as any,
+      tokenizationMode: 'FORCE_CREATION' as any,
       successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
       failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
     }
