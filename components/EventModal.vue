@@ -1105,30 +1105,36 @@ const handleSaveAppointment = async () => {
         )
       }
       
-      // Check for auto-assignment (non-critical, only create mode)
-      if (props.mode === 'create' && savedAppointment?.id && selectedStudent.value?.id && currentUser.value?.id) {
-        parallelOperations.push(
-          checkFirstAppointmentAssignment({
-            user_id: selectedStudent.value.id,
-            staff_id: currentUser.value.id
-          })
-            .then((assignmentResult: any) => {
-              if (assignmentResult.assigned) {
-                logger.debug('✅ Auto-assignment completed:', assignmentResult)
-                showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem Fahrlehrer zugeordnet.`)
-              } else {
-                logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
-              }
-            })
-            .catch((error: any) => logger.warn('⚠️ Auto-assignment check failed:', error))
-        )
-      }
-      
       // Wait for all parallel operations to complete
       if (parallelOperations.length > 0) {
         logger.debug(`⏳ Running ${parallelOperations.length} parallel operations...`)
         await Promise.all(parallelOperations)
         logger.debug('✅ All parallel operations completed')
+      }
+      
+      // ✅ OPTIMIZATION: Auto-assignment is non-critical - run in background (fire-and-forget)
+      // Don't wait for it, just trigger and let it run async
+      if (props.mode === 'create' && savedAppointment?.id && selectedStudent.value?.id && currentUser.value?.id) {
+        logger.debug('🔄 Triggering auto-assignment check (async)...')
+        Promise.resolve().then(async () => {
+          try {
+            const assignmentResult: any = await checkFirstAppointmentAssignment({
+              user_id: selectedStudent.value.id,
+              staff_id: currentUser.value.id
+            })
+            
+            if (assignmentResult.assigned) {
+              logger.debug('✅ Auto-assignment completed:', assignmentResult)
+              showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem Fahrlehrer zugeordnet.`)
+            } else {
+              logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
+            }
+          } catch (error: any) {
+            logger.warn('⚠️ Auto-assignment check failed (async, non-critical):', error.message)
+          }
+        }).catch((err: any) => {
+          logger.warn('⚠️ Error in async auto-assignment:', err.message)
+        })
       }
     } catch (saveError: any) {
       isLoading.value = false  // ✅ Re-enable watchers on error
