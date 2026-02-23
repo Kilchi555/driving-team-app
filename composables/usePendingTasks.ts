@@ -213,10 +213,13 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
     // Use the backend API endpoint that bypasses RLS
     // Authentication is handled via HTTP-Only cookies (sent automatically)
     logger.debug('🚀 Fetching pending appointments via backend API...')
-    const response = await $fetch('/api/admin/get-pending-appointments', {
-      method: 'GET'
-      // No Authorization header needed - cookies are sent automatically
-    }) as any
+    const { getOrFetch } = useCalendarCache()
+    const response = await getOrFetch(
+      '/api/admin/get-pending-appointments',
+      () => $fetch('/api/admin/get-pending-appointments', { method: 'GET' }),
+      undefined,
+      30 * 1000 // 30s TTL – matches server-side Cache-Control
+    ) as any
 
     if (!response?.success || !response?.data) {
       throw new Error('Failed to load pending appointments from API')
