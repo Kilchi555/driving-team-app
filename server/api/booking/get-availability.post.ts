@@ -88,13 +88,12 @@ export default defineEventHandler(async (event) => {
       }
 
       // 1. Load appointments for staff in date range
-      // ⚠️ IMPORTANT: Only load CONFIRMED and COMPLETED appointments
-      // Pending confirmations should not block availability slots
+      // Include ALL appointments except deleted ones (includes pending_confirmation, confirmed, completed)
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select('id, start_time, end_time, title, status')
         .eq('staff_id', staff_id)
-        .in('status', ['confirmed', 'completed'])
+        .not('status', 'eq', 'deleted')
         .is('deleted_at', null)
         .lte('start_time', end_date)
         .gte('end_time', start_date)
