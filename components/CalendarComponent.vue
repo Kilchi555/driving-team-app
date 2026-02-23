@@ -58,7 +58,7 @@ if (typeof window !== 'undefined') {
 
 
 // ✅ Calendar cache for working hours and external busy times (rarely change)
-const { getOrFetch: getCachedOrFetch, invalidate: invalidateCache } = useCalendarCache()
+const { getOrFetch: getCachedOrFetch, invalidate: invalidateCacheEntry } = useCalendarCache()
 
 // Neue refs für Confirmation Dialog
 const showConfirmation = ref(false)
@@ -1314,7 +1314,7 @@ const handleSaveEvent = async (eventData: CalendarEvent) => {
   logger.debug('💾 Event saved, refreshing calendar...', eventData)
   
   // Appointments-Cache nach dem Speichern invalidieren, damit frische Daten geladen werden
-  invalidateCache('/api/calendar/get-appointments')
+  invalidateCacheEntry('/api/calendar/get-appointments')
   
   // ✅ EINFACH: Kompletter Reload der Calendar-Daten aus DB
   await loadAppointments(true)
