@@ -5,6 +5,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
+    // ✅ Set cache headers: Cache for 30 seconds
+    // EventModal может открываться несколько раз, но данные не меняются часто
+    setHeader(event, 'Cache-Control', 'private, max-age=30')
+    
     // Get authenticated user with database ID
     const user = await getAuthenticatedUserWithDbId(event)
     
