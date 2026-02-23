@@ -1079,7 +1079,9 @@ const handleSaveAppointment = async () => {
     }
     
     try {
-      // ✅ WICHTIG: Stelle sicher, dass die Preisberechnung vor dem Speichern abgeschlossen ist
+      // ✅ OPTIMIZATION: Set isLoading to prevent watcher from triggering during save
+      isLoading.value = true
+      
       // Calculate price before saving if needed
       if (formData.value.eventType === 'lesson' && formData.value.type) {
         logger.debug('⏳ Calculating price before saving...')
@@ -1129,6 +1131,7 @@ const handleSaveAppointment = async () => {
         logger.debug('✅ All parallel operations completed')
       }
     } catch (saveError: any) {
+      isLoading.value = false  // ✅ Re-enable watchers on error
       logger.error('EventModal', 'Error saving appointment:', saveError)
       
       // Check if it's the duration increase error
@@ -1316,6 +1319,9 @@ const handleSaveAppointment = async () => {
       emit('appointment-updated', savedAppointment)
       emit('save-event', { type: 'updated', data: savedAppointment })
     }
+    
+    // ✅ Re-enable watchers after successful save
+    isLoading.value = false
     
     // Emit refresh calendar event
     emit('refresh-calendar')

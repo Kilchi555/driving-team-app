@@ -49,10 +49,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Layer 4: Authorization - Get requesting user's tenant
+    // Layer 4: Authorization - Get requesting user's tenant AND get the actual user ID
     const { data: requestingUser, error: userError } = await supabaseAdmin
       .from('users')
-      .select('tenant_id, role')
+      .select('id, tenant_id, role')
       .eq('auth_user_id', authenticatedUserId)
       .single()
 
@@ -63,6 +63,8 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User profile not found'
       })
     }
+
+    const actualUserId = requestingUser.id // ✅ Use the actual users.id for audit logs
 
     // Verify user belongs to the tenant they're validating for
     if (requestingUser.tenant_id !== tenantId && requestingUser.role !== 'superadmin') {
@@ -76,14 +78,16 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔍 Validating category:', { categoryCode, tenantId })
 
     // Fetch category from database
-    const { data: category, error: categoryError } = await supabaseAdmin
+    // Note: Categories can have parent_category_id for subcategories
+    // We search for either direct categories OR parent categories
+    const { data: categories, error: categoryError } = await supabaseAdmin
       .from('categories')
-      .select('id, code, name, is_active, tenant_id')
+      .select('id, code, name, is_active, tenant_id, parent_category_id')
       .eq('code', categoryCode.trim())
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
-      .maybeSingle()
-
+      .order('parent_category_id', { ascending: true }) // Parent categories (null) first
+    
     if (categoryError) {
       logger.error('Error fetching category:', categoryError)
       throw createError({
@@ -91,12 +95,15 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Error validating category'
       })
     }
+    
+    // Get first match (prefer parent category if both exist with same code)
+    const category = categories?.[0]
 
     // Category found and active
     if (category) {
       logger.debug('✅ Category valid:', category.code)
       await logAudit({
-        user_id: authenticatedUserId,
+        user_id: actualUserId,
         action: 'validate_category',
         resource_type: 'category',
         resource_id: category.id,
@@ -116,7 +123,7 @@ export default defineEventHandler(async (event) => {
     // Category not found
     logger.warn('❌ Category not valid:', categoryCode)
     await logAudit({
-      user_id: authenticatedUserId,
+      user_id: actualUserId,
       action: 'validate_category',
       status: 'failed',
       error_message: `Category "${categoryCode}" not found or inactive`,
@@ -137,13 +144,25 @@ export default defineEventHandler(async (event) => {
     const statusCode = error.statusCode || 500
 
     if (authenticatedUserId) {
-      await logAudit({
-        user_id: authenticatedUserId,
-        action: 'validate_category',
-        status: 'error',
-        error_message: errorMessage,
-        ip_address: ipAddress
-      })
+      // Try to get actual user ID for audit log, but don't fail if it's not available
+      try {
+        const { data: user } = await getSupabaseAdmin()
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', authenticatedUserId)
+          .single()
+        
+        await logAudit({
+          user_id: user?.id || authenticatedUserId,
+          action: 'validate_category',
+          status: 'error',
+          error_message: errorMessage,
+          ip_address: ipAddress
+        })
+      } catch (auditError: any) {
+        logger.warn('⚠️ Could not log audit entry:', auditError.message)
+        // Don't throw - just continue with the error response
+      }
     }
 
     throw createError({ statusCode, statusMessage: errorMessage })
