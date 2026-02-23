@@ -15,6 +15,7 @@ import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
+import { useCalendarCache } from '~/composables/useCalendarCache'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -55,6 +56,9 @@ if (typeof window !== 'undefined') {
   })
 }
 
+
+// ✅ Calendar cache for working hours and external busy times (rarely change)
+const { getOrFetch: getCachedOrFetch, invalidate: invalidateCache } = useCalendarCache()
 
 // Neue refs für Confirmation Dialog
 const showConfirmation = ref(false)
@@ -412,8 +416,13 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
   try {
     logger.debug('🔒 Loading non-working hours blocks via Backend API...')
     
-    // Working hours via Backend API laden (Auth wird via HTTP-Only Cookies automatisch gehandhabt)
-    const response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+    // Working hours via Backend API laden – mit Client-Cache (2 min TTL)
+    const response = await getCachedOrFetch(
+      '/api/staff/get-working-hours',
+      () => $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours'),
+      undefined,
+      2 * 60 * 1000
+    )
     
     if (!response.success) {
       logger.debug('⚠️ No working hours found')
@@ -735,8 +744,13 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   try {
     logger.debug('📅 Loading external busy times via Backend API...')
     
-    // External busy times via Backend API laden (Auth wird via HTTP-Only Cookies automatisch gehandhabt)
-    const response = await $fetch<{ success: boolean, busyTimes: any[], staffId: string }>('/api/staff/get-external-busy-times')
+    // External busy times via Backend API laden – mit Client-Cache (5 min TTL)
+    const response = await getCachedOrFetch(
+      '/api/staff/get-external-busy-times',
+      () => $fetch<{ success: boolean, busyTimes: any[], staffId: string }>('/api/staff/get-external-busy-times'),
+      undefined,
+      5 * 60 * 1000
+    )
     
     if (!response.success || !response.busyTimes || response.busyTimes.length === 0) {
       logger.debug('📅 No external busy times found via API')
@@ -821,11 +835,18 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       adminStaffFilter: props.adminStaffFilter
     })
 
-    // Call backend API (cookies sent automatically)
-    const response = await $fetch(`/api/calendar/get-appointments?${params.toString()}`, {
-      method: 'GET'
-      // No Authorization header needed - cookies are sent automatically
-    }) as any
+    // Call backend API – mit Client-Cache (30s TTL, gleich wie server-seitiger Cache)
+    const cacheParams = {
+      viewStart: viewStartDate?.toISOString(),
+      viewEnd: viewEndDate?.toISOString(),
+      adminStaffFilter: props.adminStaffFilter || null
+    }
+    const response = await getCachedOrFetch(
+      '/api/calendar/get-appointments',
+      () => $fetch(`/api/calendar/get-appointments?${params.toString()}`, { method: 'GET' }),
+      cacheParams,
+      30 * 1000
+    ) as any
 
     if (!response?.success || !response?.data) {
       throw new Error('Failed to load appointments from API')
@@ -1292,8 +1313,10 @@ const editAppointment = (appointment: CalendarAppointment) => {
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   logger.debug('💾 Event saved, refreshing calendar...', eventData)
   
+  // Appointments-Cache nach dem Speichern invalidieren, damit frische Daten geladen werden
+  invalidateCache('/api/calendar/get-appointments')
+  
   // ✅ EINFACH: Kompletter Reload der Calendar-Daten aus DB
-  // Dies stellt sicher, dass alle Änderungen (inkl. manuell editierter Titel) korrekt angezeigt werden
   await loadAppointments(true)
   
   emit('appointment-changed', { type: 'saved', data: eventData })

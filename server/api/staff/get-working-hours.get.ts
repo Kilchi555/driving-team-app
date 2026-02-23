@@ -4,6 +4,9 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
+  // Working hours change rarely → cache for 2 minutes
+  setHeader(event, 'Cache-Control', 'private, max-age=120')
+
   try {
     // Get authenticated user with database ID
     const user = await getAuthenticatedUserWithDbId(event)
