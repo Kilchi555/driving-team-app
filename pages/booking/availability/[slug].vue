@@ -912,9 +912,21 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
   try {
     if (timeSlots.length === 0) return []
     
-    // Get date range for all slots (extend range to catch timezone differences)
-    const minDate = new Date(Math.min(...timeSlots.map(slot => slot.startTime.getTime())))
-    const maxDate = new Date(Math.max(...timeSlots.map(slot => slot.endTime.getTime())))
+    // Get date range for all slots
+    // Handle both formats: Date objects (startTime/endTime) and ISO strings (start_time/end_time)
+    const getSlotStart = (slot: any) => {
+      if (slot.startTime instanceof Date) return slot.startTime.getTime()
+      if (slot.start_time) return new Date(slot.start_time).getTime()
+      return 0
+    }
+    const getSlotEnd = (slot: any) => {
+      if (slot.endTime instanceof Date) return slot.endTime.getTime()
+      if (slot.end_time) return new Date(slot.end_time).getTime()
+      return 0
+    }
+    
+    const minDate = new Date(Math.min(...timeSlots.map(slot => getSlotStart(slot))))
+    const maxDate = new Date(Math.max(...timeSlots.map(slot => getSlotEnd(slot))))
     
     // Extend range by 24 hours to catch timezone differences
     minDate.setDate(minDate.getDate() - 1)
@@ -964,17 +976,31 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
     
     // Check each slot against appointments and working hours
     const availabilityResults = timeSlots.map(slot => {
+      // Normalize slot times - handle both Date objects and ISO strings
+      let slotStartDate: Date
+      let slotEndDate: Date
+      
+      if (slot.startTime instanceof Date) {
+        slotStartDate = slot.startTime
+        slotEndDate = slot.endTime
+      } else if (slot.start_time) {
+        slotStartDate = new Date(slot.start_time)
+        slotEndDate = new Date(slot.end_time)
+      } else {
+        return false // Invalid slot
+      }
+      
       // Check if slot is within working hours
-      const dayOfWeek = slot.startTime.getDay() // 0=Sunday, 1=Monday, etc.
-      const slotHour = slot.startTime.getHours()
-      const slotMinute = slot.startTime.getMinutes()
+      const dayOfWeek = slotStartDate.getDay() // 0=Sunday, 1=Monday, etc.
+      const slotHour = slotStartDate.getHours()
+      const slotMinute = slotStartDate.getMinutes()
       const slotTimeMinutes = slotHour * 60 + slotMinute
       
       // Find working hours for this day
       const dayWorkingHours = finalWorkingHours.find((wh: any) => wh.day_of_week === dayOfWeek)
       
       if (!dayWorkingHours) {
-        logger.debug('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slot.startTime.toLocaleDateString('de-DE'))
+        logger.debug('🚫 No working hours for day', dayOfWeek, '(Sunday=0)', slotStartDate.toLocaleDateString('de-DE'))
         return false // Not available if no working hours defined
       }
       
@@ -989,9 +1015,9 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
       const withinWorkingHours = slotTimeMinutes >= startTimeMinutes && slotTimeMinutes <= endTimeMinutes
       
       // Debug 18:00 slot
-      if (slot.startTime.getHours() === 17 && slot.startTime.getMinutes() === 0) {
+      if (slotStartDate.getHours() === 17 && slotStartDate.getMinutes() === 0) {
         logger.debug('🔍 DEBUG 17:00 UTC (18:00 CET) working hours check:', {
-          slotHour: slot.startTime.getHours(),
+          slotHour: slotStartDate.getHours(),
           slotTimeMinutes,
           startTimeMinutes,
           endTimeMinutes,
@@ -1002,7 +1028,7 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
       
       if (!withinWorkingHours) {
         logger.debug('🚫 Slot outside working hours:', {
-          slot: slot.startTime.toLocaleString('de-DE'),
+          slot: slotStartDate.toLocaleString('de-DE'),
           workingHours: `${dayWorkingHours.start_time} - ${dayWorkingHours.end_time}`,
           dayOfWeek: dayOfWeek,
           slotTimeMinutes,
@@ -1014,7 +1040,7 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
       
       // Check for conflicts with any appointment OR external busy time
       const hasConflict = (finalAppointments.some(apt => {
-        // Parse appointment times - DB may return in ISO format (2025-11-20T08:00:00+00:00) or space format (2025-11-20 08:00:00+00)
+        // Parse appointment times - DB returns in format: "2026-02-24 13:00:00+00"
         let aptStartISO = apt.start_time
         let aptEndISO = apt.end_time
         
@@ -1037,14 +1063,16 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
         const aptEndDate = new Date(aptEndISO)
         
         // Check for time overlap: slot starts before appointment ends AND slot ends after appointment starts
-        const overlaps = slot.startTime < aptEndDate && slot.endTime > aptStartDate
+        // Both slots and appointments are now in UTC
+        const overlaps = slotStartDate < aptEndDate && slotEndDate > aptStartDate
         
         if (overlaps) {
           logger.debug('⚠️ Time conflict detected (appointment):', {
-            slot: `${slot.startTime.toLocaleString('de-DE')} - ${slot.endTime.toLocaleString('de-DE')}`,
+            slot: `${slotStartDate.toLocaleString('de-DE')} - ${slotEndDate.toLocaleString('de-DE')}`,
             appointment: `${aptStartDate.toLocaleString('de-DE')} - ${aptEndDate.toLocaleString('de-DE')}`,
             appointmentTitle: apt.title,
-            slotISO: `${slot.startTime.toISOString()} - ${slot.endTime.toISOString()}`,
+            appointmentStatus: apt.status,
+            slotISO: `${slotStartDate.toISOString()} - ${slotEndDate.toISOString()}`,
             appointmentISO: `${apt.start_time} - ${apt.end_time}`
           })
         }
@@ -1081,15 +1109,15 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
         const ebtEndDate = new Date(ebtEndStr)
         
         // Check for time overlap: slot starts before external busy time ends AND slot ends after external busy time starts
-        const overlaps = slot.startTime < ebtEndDate && slot.endTime > ebtStartDate
+        const overlaps = slotStartDate < ebtEndDate && slotEndDate > ebtStartDate
         
         if (overlaps) {
           logger.debug('⚠️ Time conflict detected (external busy time):', {
-            slot: `${slot.startTime.toLocaleString('de-DE')} - ${slot.endTime.toLocaleString('de-DE')}`,
+            slot: `${slotStartDate.toLocaleString('de-DE')} - ${slotEndDate.toLocaleString('de-DE')}`,
             externalBusyTime: `${ebtStartDate.toLocaleString('de-DE')} - ${ebtEndDate.toLocaleString('de-DE')}`,
             eventTitle: ebt.event_title,
             syncSource: ebt.sync_source,
-            slotISO: `${slot.startTime.toISOString()} - ${slot.endTime.toISOString()}`,
+            slotISO: `${slotStartDate.toISOString()} - ${slotEndDate.toISOString()}`,
             externalBusyTimeISO: `${ebtStartStr} - ${ebtEndStr}`
           })
         }
