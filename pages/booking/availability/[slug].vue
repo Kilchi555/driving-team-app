@@ -3671,6 +3671,15 @@ onMounted(async () => {
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
     
+    // ✅ Reload time slots when returning to this page (e.g., from EventModal after booking)
+    watch(() => route.path, async () => {
+      if (route.path.includes('/booking/availability/') && selectedInstructor.value) {
+        logger.debug('🔄 Route changed - reloading time slots for instructor:', selectedInstructor.value.first_name)
+        // Reload time slots for the currently selected instructor
+        await selectInstructor(selectedInstructor.value)
+      }
+    })
+    
     // Load referrer URL from query parameter
     logger.debug('🔍 Route query params:', route.query)
     logger.debug('🔍 Route full URL:', window.location.href)
