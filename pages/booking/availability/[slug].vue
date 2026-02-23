@@ -1066,6 +1066,25 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
         // Both slots and appointments are now in UTC
         const overlaps = slotStartDate < aptEndDate && slotEndDate > aptStartDate
         
+        // DEBUG: Log ALL appointment checks to find the bug
+        if (apt.title && apt.title.includes('Salad')) {
+          logger.warn('🔍 DEBUG: Checking Salad appointment:', {
+            aptStart: aptStartISO,
+            aptEnd: aptEndISO,
+            aptStartUTC: aptStartDate.toISOString(),
+            aptEndUTC: aptEndDate.toISOString(),
+            slotStartUTC: slotStartDate.toISOString(),
+            slotEndUTC: slotEndDate.toISOString(),
+            slotStartTime: slotStartDate.getTime(),
+            aptEndTime: aptEndDate.getTime(),
+            slotEndTime: slotEndDate.getTime(),
+            aptStartTime: aptStartDate.getTime(),
+            overlaps,
+            compareStart: `${slotStartDate.toISOString()} < ${aptEndDate.toISOString()} = ${slotStartDate < aptEndDate}`,
+            compareEnd: `${slotEndDate.toISOString()} > ${aptStartDate.toISOString()} = ${slotEndDate > aptStartDate}`
+          })
+        }
+        
         if (overlaps) {
           logger.debug('⚠️ Time conflict detected (appointment):', {
             slot: `${slotStartDate.toLocaleString('de-DE')} - ${slotEndDate.toLocaleString('de-DE')}`,
