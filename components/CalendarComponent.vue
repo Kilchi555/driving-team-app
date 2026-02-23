@@ -1313,8 +1313,9 @@ const editAppointment = (appointment: CalendarAppointment) => {
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   logger.debug('💾 Event saved, refreshing calendar...', eventData)
   
-  // Appointments-Cache nach dem Speichern invalidieren, damit frische Daten geladen werden
+  // Caches nach dem Speichern invalidieren, damit frische Daten geladen werden
   invalidateCacheEntry('/api/calendar/get-appointments')
+  invalidateCacheEntry('/api/admin/get-pending-appointments')
   
   // ✅ EINFACH: Kompletter Reload der Calendar-Daten aus DB
   await loadAppointments(true)
