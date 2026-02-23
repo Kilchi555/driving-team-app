@@ -502,10 +502,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantReference,
-      // ✅ FORCE_CREATION: Wallee automatically creates token for all compatible payment methods
-      // TWINT: Token creation silently fails (not critical, TWINT payments still work)
-      // Cards/iDEAL/SEPA: Token is automatically created for future one-click payments
-      tokenizationMode: 'FORCE_CREATION' as any,
+      // ✅ Don't set tokenizationMode - let Wallee decide per payment method
+      // Wallee honors payment method configuration (TWINT: no token, Cards: auto token)
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
     }
