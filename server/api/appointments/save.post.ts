@@ -251,6 +251,49 @@ export default defineEventHandler(async (event) => {
       result = data
       logger.debug('✅ Appointment created:', result.id)
       
+      // ============ BLOCK OVERLAPPING AVAILABILITY SLOTS ============
+      // Mark all overlapping slots as unavailable (is_available = false) when appointment is created
+      // This ensures the public booking page doesn't show conflicting slots
+      try {
+        logger.debug('🔒 Marking overlapping availability slots as unavailable...')
+        
+        const appointmentEnd = new Date(result.end_time)
+        
+        // Find all overlapping slots for this staff member
+        const { data: overlappingSlots, error: overlapError } = await supabase
+          .from('availability_slots')
+          .select('id')
+          .eq('tenant_id', result.tenant_id)
+          .eq('staff_id', result.staff_id)
+          .lt('start_time', appointmentEnd.toISOString())
+          .gt('end_time', result.start_time)
+        
+        if (!overlapError && overlappingSlots && overlappingSlots.length > 0) {
+          const slotIds = overlappingSlots.map(s => s.id)
+          logger.debug(`📌 Found ${slotIds.length} overlapping slots to mark as unavailable`)
+          
+          const { error: updateError } = await supabase
+            .from('availability_slots')
+            .update({
+              is_available: false,
+              updated_at: new Date().toISOString()
+            })
+            .in('id', slotIds)
+          
+          if (updateError) {
+            logger.warn('⚠️ Failed to mark overlapping slots as unavailable:', updateError.message)
+            // Non-critical: appointment is already created
+          } else {
+            logger.debug(`✅ Marked ${slotIds.length} slots as unavailable for this appointment`)
+          }
+        } else {
+          logger.debug('ℹ️ No overlapping slots found to update')
+        }
+      } catch (slotError: any) {
+        logger.warn('⚠️ Error updating availability slots (non-critical):', slotError.message)
+        // Non-critical: appointment is already created successfully
+      }
+      
       // ============ CREATE PAYMENT FOR NEW APPOINTMENT ============
       // ✅ FIX: ALWAYS create payment for lesson/exam/theory appointments (even if amount is 0!)
       const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
