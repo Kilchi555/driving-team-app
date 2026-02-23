@@ -962,6 +962,19 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
           working_hours: workingHoursFromAPI.length,
           appointments: appointmentsFromAPI.length
         })
+        
+        // DEBUG: Log actual appointments
+        if (appointmentsFromAPI.length > 0) {
+          logger.warn('🔍 DEBUG: Appointments loaded from API:', appointmentsFromAPI.map((apt: any) => ({
+            title: apt.title,
+            status: apt.status,
+            start: apt.start_time,
+            end: apt.end_time,
+            staff_id: apt.staff_id
+          })))
+        } else {
+          logger.warn('🔍 DEBUG: NO appointments loaded from API!')
+        }
       } else {
         console.warn('⚠️ Error fetching availability data:', response?.message)
       }
@@ -972,6 +985,7 @@ const fetchAvailableSlotsForCombination = async (timeSlots: any[] = [], staffId:
     const finalWorkingHours = workingHoursFromAPI || []
     const finalAppointments = appointmentsFromAPI || []
     
+    logger.warn('🔍 DEBUG: finalAppointments count:', finalAppointments.length, 'appointments from API')
     logger.debug('📅 Found', finalAppointments.length, 'appointments,', externalBusyTimes?.length || 0, 'external busy times, and', finalWorkingHours.length, 'working hours')
     
     // Check each slot against appointments and working hours
