@@ -1080,49 +1080,53 @@ const handleSaveAppointment = async () => {
     
     try {
       // ✅ WICHTIG: Stelle sicher, dass die Preisberechnung vor dem Speichern abgeschlossen ist
-      // Dies verhindert Race Conditions, wo der Fallback-Preis verwendet wird
+      // Calculate price before saving if needed
       if (formData.value.eventType === 'lesson' && formData.value.type) {
-        logger.debug('⏳ Waiting for price calculation before saving...')
+        logger.debug('⏳ Calculating price before saving...')
         await calculatePriceForCurrentData()
-        // Gebe der Preisberechnung ein paar Millisekunden Zeit zum Aktualisieren
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // Price is now in formData.value.price
       }
       
       savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)
       
-      // ✅ NEW: Save appointment products (if any were selected)
+      // ✅ OPTIMIZATION: Run independent operations in parallel (no dependencies on each other)
+      const parallelOperations: Promise<any>[] = []
+      
+      // Save selected products (non-critical)
       if (savedAppointment?.id && selectedProducts.value && selectedProducts.value.length > 0) {
-        try {
-          logger.debug('📦 Saving selected products for appointment:', savedAppointment.id)
-          await saveToProductSales(savedAppointment.id)
-          logger.debug('✅ Products saved successfully')
-        } catch (productError: any) {
-          logger.warn('⚠️ Failed to save products (non-critical):', productError.message)
-          // Don't fail the appointment save due to product error
-        }
+        parallelOperations.push(
+          saveToProductSales(savedAppointment.id)
+            .then(() => logger.debug('✅ Products saved successfully'))
+            .catch((error: any) => logger.warn('⚠️ Failed to save products (non-critical):', error.message))
+        )
       }
       
-      // ✅ NEW: Check for auto-assignment (only on create mode for new appointments)
+      // Check for auto-assignment (non-critical, only create mode)
       if (props.mode === 'create' && savedAppointment?.id && selectedStudent.value?.id && currentUser.value?.id) {
-        try {
-          logger.debug('🔍 Checking auto-assignment for student:', selectedStudent.value.id)
-          const assignmentResult: any = await checkFirstAppointmentAssignment({
+        parallelOperations.push(
+          checkFirstAppointmentAssignment({
             user_id: selectedStudent.value.id,
             staff_id: currentUser.value.id
           })
-          
-          if (assignmentResult.assigned) {
-            logger.debug('✅ Auto-assignment completed:', assignmentResult)
-            showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem Fahrlehrer zugeordnet.`)
-          } else {
-            logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
-          }
-        } catch (assignmentError: any) {
-          logger.warn('⚠️ Auto-assignment check failed:', assignmentError)
-          // Don't fail the appointment save due to assignment error
-        }
+            .then((assignmentResult: any) => {
+              if (assignmentResult.assigned) {
+                logger.debug('✅ Auto-assignment completed:', assignmentResult)
+                showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem Fahrlehrer zugeordnet.`)
+              } else {
+                logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
+              }
+            })
+            .catch((error: any) => logger.warn('⚠️ Auto-assignment check failed:', error))
+        )
+      }
+      
+      // Wait for all parallel operations to complete
+      if (parallelOperations.length > 0) {
+        logger.debug(`⏳ Running ${parallelOperations.length} parallel operations...`)
+        await Promise.all(parallelOperations)
+        logger.debug('✅ All parallel operations completed')
       }
     } catch (saveError: any) {
       logger.error('EventModal', 'Error saving appointment:', saveError)
