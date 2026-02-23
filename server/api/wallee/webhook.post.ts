@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
   const isProduction = host.includes('www.simy.ch') && !host.includes('preview')
   const isPreview = host.includes('preview.simy.ch')
   
-  logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview})`)
+  logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview}) [v2.1-token-fix]`)
   
   let webhookLogId: string | undefined
   let transactionId: string | undefined

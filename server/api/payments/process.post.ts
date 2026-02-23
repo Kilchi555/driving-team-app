@@ -501,11 +501,12 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantReference,
-      tokenizationMode: Wallee.model.TokenizationMode.ALLOW_ONE_CLICK_PAYMENT,
+      tokenizationMode: 'ALLOW_ONE_CLICK_PAYMENT' as any,
       successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
       failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
     }
 
+    logger.info('🔧 TokenizationMode value:', transactionCreate.tokenizationMode)
     const createdTransaction = await transactionService.create(spaceId, transactionCreate)
 
     // Extract the actual transaction from the SDK response wrapper
