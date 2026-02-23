@@ -497,6 +497,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: userData.email,
+      customerId: `dt-${tenantId}-${userData.id}`,
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
