@@ -99,7 +99,14 @@ export default defineEventHandler(async (event) => {
           }
         })
         
-        const allTokens = tokenSearchResult?.body || []
+        // Extract tokens array - handle both wrapped and unwrapped responses
+        let allTokens: any[] = []
+        if (tokenSearchResult?.body && Array.isArray(tokenSearchResult.body)) {
+          allTokens = tokenSearchResult.body
+        } else if (Array.isArray(tokenSearchResult)) {
+          allTokens = tokenSearchResult
+        }
+        
         logger.info('💳 TokenService search result:', {
           count: allTokens.length,
           tokens: allTokens.map((t: any) => ({
@@ -112,17 +119,19 @@ export default defineEventHandler(async (event) => {
         })
         
         // Find the most recent active token
-        const activeToken = allTokens.find((t: any) => t.state === 'ACTIVE') || allTokens[0]
-        
-        if (activeToken) {
-          paymentMethodToken = activeToken.id?.toString() || null
-          displayName = activeToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 'Gespeicherte Zahlungsmethode'
-          paymentMethodType = activeToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 'card'
-          logger.info('✅ Found token via TokenService:', {
-            tokenId: paymentMethodToken,
-            displayName,
-            type: paymentMethodType
-          })
+        if (allTokens && allTokens.length > 0) {
+          const activeToken = allTokens.find((t: any) => t.state === 'ACTIVE') || allTokens[0]
+          
+          if (activeToken) {
+            paymentMethodToken = activeToken.id?.toString() || null
+            displayName = activeToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.name || 'Gespeicherte Zahlungsmethode'
+            paymentMethodType = activeToken.paymentConnectorConfiguration?.paymentMethodConfiguration?.description || 'card'
+            logger.info('✅ Found token via TokenService:', {
+              tokenId: paymentMethodToken,
+              displayName,
+              type: paymentMethodType
+            })
+          }
         }
       } catch (searchError: any) {
         logger.warn('⚠️ TokenService search failed:', searchError.message)
