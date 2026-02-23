@@ -335,23 +335,27 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ NEW: Send appointment confirmation email (immediately after creation)
+    // ✅ OPTIMIZATION: Send appointment confirmation email asynchronously (non-blocking)
     if (mode === 'create') {
-      try {
-        logger.debug('📧 Sending appointment confirmation email...')
-        const confirmationResponse = await $fetch('/api/reminders/send-appointment-confirmation', {
-          method: 'POST',
-          body: {
-            appointmentId: result.id,
-            userId: appointmentData.user_id,
-            tenantId: appointmentData.tenant_id
-          }
-        })
-        logger.debug('✅ Appointment confirmation email sent:', confirmationResponse)
-      } catch (confirmationErr: any) {
-        logger.warn('⚠️ Failed to send appointment confirmation email (non-critical):', confirmationErr.message)
-        // Don't throw - appointment was created successfully
-      }
+      // Fire and forget - don't await, don't block the response
+      Promise.resolve().then(async () => {
+        try {
+          logger.debug('📧 Sending appointment confirmation email (async)...')
+          const confirmationResponse = await $fetch('/api/reminders/send-appointment-confirmation', {
+            method: 'POST',
+            body: {
+              appointmentId: result.id,
+              userId: appointmentData.user_id,
+              tenantId: appointmentData.tenant_id
+            }
+          })
+          logger.debug('✅ Appointment confirmation email sent:', confirmationResponse)
+        } catch (confirmationErr: any) {
+          logger.warn('⚠️ Failed to send appointment confirmation email (non-critical, async):', confirmationErr.message)
+        }
+      }).catch((err: any) => {
+        logger.warn('⚠️ Error in async email sending:', err.message)
+      })
     }
 
     // ✅ NEW: Queue staff for availability recalculation
