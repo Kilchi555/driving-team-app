@@ -6,6 +6,8 @@ import { logger } from '~/utils/logger'
 import { useCategoryData } from '~/composables/useCategoryData'
 import { toLocalTimeString, localTimeToUTC } from '~/utils/dateUtils'
 import { useEventTypes } from '~/composables/useEventTypes'
+import { useCategoryWithFallback } from '~/composables/useCategoryWithFallback'
+import type { CategoryWithParent, EvaluationCriteria } from '~/composables/useCategoryWithFallback'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -91,7 +93,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   })
 
   const selectedStudent = ref<Student | null>(null)
-  const selectedCategory = ref<any>(null)
+  const selectedCategory = ref<CategoryWithParent | null>(null)
   const selectedLocation = ref<any>(null)
   const availableDurations = ref<number[]>([45])
   const appointmentNumber = ref<number>(1)
@@ -102,6 +104,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // ✅ NEUE COMPOSABLES
   const categoryData = useCategoryData()
   const eventTypes = useEventTypes()
+  const { getCategoryWithParent } = useCategoryWithFallback()
 
   // ============ COMPUTED ============
   const isFormValid = computed(() => {
@@ -226,6 +229,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
     logger.debug('🎯 Final appointmentType:', appointmentType)
     logger.debug('🎯 Final vehicleCategory:', vehicleCategory)
     
+    // ✅ NEU: Lade die komplette Kategorie mit Parent-Info
+    if (vehicleCategory) {
+      const fullCategory = await getCategoryWithParent(vehicleCategory)
+      if (fullCategory) {
+        selectedCategory.value = fullCategory
+        logger.debug('✅ Full category loaded for form:', fullCategory)
+      } else {
+        logger.warn('⚠️ Could not load full category for code:', vehicleCategory)
+      }
+    }
+
     const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
     
     // Zeit-Verarbeitung: Convert UTC from DB to Zurich local time for display
