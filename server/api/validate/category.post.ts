@@ -106,10 +106,9 @@ export default defineEventHandler(async (event) => {
         user_id: actualUserId,
         action: 'validate_category',
         resource_type: 'category',
-        resource_id: category.id,
         status: 'success',
         ip_address: ipAddress,
-        details: { categoryCode, result: 'found' }
+        details: { categoryCode, categoryId: category.id, result: 'found' }
       })
 
       return {

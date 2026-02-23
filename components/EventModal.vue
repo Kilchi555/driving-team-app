@@ -993,6 +993,7 @@ const handleCustomerInvites = async (appointmentData: any) => {
 
 // ✅ NEUE FUNKTION: Handle appointment save
 const handleSaveAppointment = async () => {
+  const saveStartTime = performance.now()
   try {
     logger.debug('💾 Starting appointment save...')
     isLoading.value = true
@@ -1082,6 +1083,9 @@ const handleSaveAppointment = async () => {
       // ✅ OPTIMIZATION: Set isLoading to prevent watcher from triggering during save
       isLoading.value = true
       
+      const saveStartTime = performance.now()
+      logger.info('🕐 Starting appointment save...')
+      
       // Calculate price before saving if needed
       if (formData.value.eventType === 'lesson' && formData.value.type) {
         logger.debug('⏳ Calculating price before saving...')
@@ -1089,7 +1093,13 @@ const handleSaveAppointment = async () => {
         // Price is now in formData.value.price
       }
       
+      const priceTime = performance.now()
+      logger.info(`⏱️ Price calc took ${(priceTime - saveStartTime).toFixed(0)}ms`)
+      
       savedAppointment = await saveAppointment(props.mode as 'create' | 'edit', props.eventData?.id)
+      
+      const mainSaveTime = performance.now()
+      logger.info(`⏱️ Main save took ${(mainSaveTime - priceTime).toFixed(0)}ms`)
       
       logger.debug('✅ Appointment saved successfully:', savedAppointment)
       
@@ -1118,9 +1128,10 @@ const handleSaveAppointment = async () => {
         logger.debug('🔄 Triggering auto-assignment check (async)...')
         Promise.resolve().then(async () => {
           try {
+          if (selectedStudent.value?.id && currentUser.value?.id) {
             const assignmentResult: any = await checkFirstAppointmentAssignment({
-              user_id: selectedStudent.value.id,
-              staff_id: currentUser.value.id
+              user_id: selectedStudent.value!.id,
+              staff_id: currentUser.value!.id
             })
             
             if (assignmentResult.assigned) {
@@ -1129,6 +1140,7 @@ const handleSaveAppointment = async () => {
             } else {
               logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
             }
+          }
           } catch (error: any) {
             logger.warn('⚠️ Auto-assignment check failed (async, non-critical):', error.message)
           }
@@ -1326,11 +1338,14 @@ const handleSaveAppointment = async () => {
       emit('save-event', { type: 'updated', data: savedAppointment })
     }
     
-    // ✅ Re-enable watchers after successful save
-    isLoading.value = false
-    
-    // Emit refresh calendar event
-    emit('refresh-calendar')
+      // ✅ Re-enable watchers after successful save
+      isLoading.value = false
+      
+      const totalTime = performance.now() - saveStartTime
+      logger.info(`⏱️ TOTAL SAVE TIME: ${totalTime.toFixed(0)}ms (${(totalTime/1000).toFixed(1)}s)`)
+      
+      // Emit refresh calendar event
+      emit('refresh-calendar')
     
     // Close the modal
     emit('close')

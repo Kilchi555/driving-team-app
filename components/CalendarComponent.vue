@@ -1970,7 +1970,12 @@ const isCalendarReady = ref(false)
 
 const handleDeleteEvent = async (eventData: CalendarEvent) => {
   logger.debug('🗑 Event deleted, refreshing calendar...')
-  await loadAppointments()
+  
+  // Caches invalidieren damit gelöschter Termin nicht mehr angezeigt wird
+  invalidateCacheEntry('/api/calendar/get-appointments')
+  invalidateCacheEntry('/api/admin/get-pending-appointments')
+  
+  await loadAppointments(true)
 
   refreshCalendar()
 
