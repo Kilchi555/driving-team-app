@@ -280,7 +280,7 @@ export default defineEventHandler(async (event) => {
       billingAddress: null,
       deviceSessionIdentifier: null,
       merchantReference: merchantRef,
-      tokenizationMode: 'FORCE_CREATION' as any,
+      // ✅ Don't set tokenizationMode - let Wallee decide per payment method
       successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
       failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
     }
