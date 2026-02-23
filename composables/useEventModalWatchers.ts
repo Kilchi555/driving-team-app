@@ -48,10 +48,6 @@ export const useEventModalWatchers = ({
       return 1
     }
   }
-      console.error('❌ Error in getAppointmentCount:', error)
-      return 1
-    }
-  }
 
   // ✅ REACTIVE PRICE CALCULATION WATCHER
   const setupPriceWatcher = () => {
