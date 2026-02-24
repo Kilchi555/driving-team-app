@@ -107,6 +107,8 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-appointment-status') {
+      logger.debug('🟠 START: update-appointment-status action triggered')
+      
       // ✅ Verify user owns appointment
       const { data: apt, error: aptError } = await supabase
         .from('appointments')
