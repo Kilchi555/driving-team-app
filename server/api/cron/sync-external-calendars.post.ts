@@ -116,11 +116,16 @@ export default defineEventHandler(async (event) => {
         }
 
         // Clear existing busy times for this calendar within window
+        // IMPORTANT: Use a buffer to catch deletions that happened today/yesterday
+        // so we don't miss events that were deleted recently
+        const clearStart = new Date()
+        clearStart.setDate(clearStart.getDate() - 1) // Include yesterday
+        
         const { error: clearError } = await supabase
           .from('external_busy_times')
           .delete()
           .eq('external_calendar_id', calendar.id)
-          .gte('start_time', now.toISOString())
+          .gte('start_time', clearStart.toISOString())
           .lte('start_time', horizon.toISOString())
 
         if (clearError) {
