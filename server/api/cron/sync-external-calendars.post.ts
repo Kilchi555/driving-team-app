@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
 
         // Clear existing busy times for this calendar within window
         // IMPORTANT: Use a buffer to catch deletions that happened today/yesterday
-        // so we don't miss events that were deleted recently
+        // and check BOTH start_time and end_time to catch events that span boundaries
         const clearStart = new Date()
         clearStart.setDate(clearStart.getDate() - 1) // Include yesterday
         
@@ -125,8 +125,10 @@ export default defineEventHandler(async (event) => {
           .from('external_busy_times')
           .delete()
           .eq('external_calendar_id', calendar.id)
-          .gte('start_time', clearStart.toISOString())
-          .lte('start_time', horizon.toISOString())
+          // Delete if event ends after clearStart AND starts before horizon
+          // This catches all overlapping events including ones that span boundaries
+          .lt('end_time', horizon.toISOString())
+          .gt('start_time', clearStart.toISOString())
 
         if (clearError) {
           logger.warn(`⚠️ Failed to clear busy times for ${calendar.calendar_name}:`, clearError.message)
