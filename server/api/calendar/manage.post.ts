@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
       // ✅ Verify user owns appointment
       const { data: apt, error: aptError } = await supabase
         .from('appointments')
-        .select('tenant_id')
+        .select('id, staff_id, tenant_id, start_time, end_time')
         .eq('id', appointment_data.id)
         .single()
 
@@ -128,6 +128,10 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      // Check if time changed
+      const timeChanged = apt.start_time !== appointment_data.start_time ||
+                         apt.end_time !== appointment_data.end_time
+
       // Update appointment status
       const { data: updated, error } = await supabase
         .from('appointments')
@@ -139,6 +143,24 @@ export default defineEventHandler(async (event) => {
       if (error) throw error
 
       logger.info('📅 Appointment updated', { appointmentId: appointment_data.id })
+
+      // ✅ NEW: Queue availability recalculation if time changed
+      if (timeChanged) {
+        try {
+          logger.debug('📋 Queuing availability recalculation after appointment update...')
+          await $fetch('/api/availability/queue-recalc', {
+            method: 'POST',
+            body: {
+              staff_id: apt.staff_id,
+              tenant_id: apt.tenant_id,
+              trigger: 'appointment_edit'
+            }
+          })
+          logger.debug('✅ Queued recalculation after appointment update')
+        } catch (queueError: any) {
+          logger.warn('⚠️ Failed to queue recalculation (non-critical):', queueError.message)
+        }
+      }
 
       return {
         success: true,
