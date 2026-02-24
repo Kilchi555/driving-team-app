@@ -770,36 +770,28 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Anfrage erfolgreich eingereicht!</h2>
-          <p class="text-gray-600 mb-2">Vielen Dank für deine Anfrage</p>
-          <p class="text-sm text-gray-500">Proposal-ID: {{ currentReservationId }}</p>
-        </div>
-
-        <!-- Message -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p class="text-blue-900 text-center">
-            ✅ Wir haben deine bevorzugten Zeitfenster erhalten. Unser Team wird dich in Kürze kontaktieren, um einen passenden Termin zu vereinbaren.
-          </p>
+          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Anfrage eingereicht!</h2>
+          <p class="text-gray-600 mb-2">Vielen Dank für deine Nachricht. Wir werden uns schnellstmöglich bei dir melden.</p>
         </div>
 
         <!-- Booking Summary -->
         <div class="space-y-4 bg-gray-50 rounded-lg p-6 mb-6">
           <div class="border-b border-gray-200 pb-4">
-            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Kategorie</p>
-            <p class="text-lg font-medium text-gray-900">{{ selectedCategory?.name }}</p>
+            <p class="text-xs   text-gray-500 mb-1">Kategorie</p>
+            <p class="text-md font-medium text-gray-900">{{ selectedCategory?.name }}</p>
           </div>
           <div class="border-b border-gray-200 pb-4">
-            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Standort</p>
-            <p class="text-lg font-medium text-gray-900">{{ selectedLocation?.name }}</p>
+            <p class="text-xs  text-gray-500 mb-1">Standort</p>
+            <p class="text-md font-medium text-gray-900">{{ selectedLocation?.name }}</p>
             <p v-if="selectedLocation?.address" class="text-sm text-gray-600 mt-1">{{ selectedLocation?.address }}</p>
           </div>
           <div class="border-b border-gray-200 pb-4">
-            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Fahrlehrer</p>
-            <p class="text-lg font-medium text-gray-900">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</p>
+            <p class="text-xs  text-gray-500 mb-1">Fahrlehrer</p>
+            <p class="text-md font-medium text-gray-900">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</p>
           </div>
           <div>
-            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Dauer</p>
-            <p class="text-lg font-medium text-gray-900">{{ selectedDuration }} Minuten</p>
+            <p class="text-xs text-gray-500 mb-1">Dauer</p>
+            <p class="text-md font-medium text-gray-900">{{ selectedDuration }} Minuten</p>
           </div>
         </div>
 
