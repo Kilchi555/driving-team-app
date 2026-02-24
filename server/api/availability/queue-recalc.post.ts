@@ -63,6 +63,38 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`✅ Staff queued for recalculation: ${staff_id}`)
 
+    // ============ STEP 2: Immediately trigger cron to process queue ============
+    // Don't wait for next scheduled run - process immediately for instant updates
+    try {
+      logger.debug(`⚡ Immediately triggering cron to process queue...`)
+      
+      // Get CRON_SECRET for authentication
+      const cronSecret = process.env.CRON_SECRET
+      const headers: any = {
+        'Content-Type': 'application/json'
+      }
+      
+      // Only add auth header if CRON_SECRET is configured
+      if (cronSecret && cronSecret.trim() !== '') {
+        headers['Authorization'] = `Bearer ${cronSecret}`
+      }
+      
+      const cronResponse = await $fetch('/api/cron/process-recalc-queue', {
+        method: 'GET',
+        headers
+      })
+      
+      logger.debug(`✅ Cron executed immediately:`, {
+        processed: cronResponse.processed,
+        failed: cronResponse.failed,
+        duration_ms: cronResponse.duration_ms
+      })
+      
+    } catch (cronError: any) {
+      // Non-critical: cron will run on next scheduled interval anyway
+      logger.warn(`⚠️ Failed to trigger immediate cron (non-critical):`, cronError.message)
+    }
+
     return {
       success: true,
       message: 'Staff queued for availability recalculation',
