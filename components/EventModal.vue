@@ -655,6 +655,7 @@ import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
+import { useCalendarCache } from '~/composables/useCalendarCache'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -1343,6 +1344,12 @@ const handleSaveAppointment = async () => {
       
       const totalTime = performance.now() - saveStartTime
       logger.info(`⏱️ TOTAL SAVE TIME: ${totalTime.toFixed(0)}ms (${(totalTime/1000).toFixed(1)}s)`)
+      
+      // ✅ NEW: Invalidate calendar cache to force refresh
+      const { invalidate } = useCalendarCache()
+      invalidate('/api/staff/get-working-hours')
+      invalidate('/api/booking/get-available-slots')
+      logger.debug('✅ Cache invalidated for working hours and available slots')
       
       // Emit refresh calendar event
       emit('refresh-calendar')
@@ -3439,6 +3446,13 @@ const loadCategoryData = async (categoryCode: string) => {
 
 const handleClose = () => {
   logger.debug('🚪 Closing modal')
+  
+  // ✅ NEW: Invalidate calendar cache on close to ensure fresh data
+  const { invalidate } = useCalendarCache()
+  invalidate('/api/staff/get-working-hours')
+  invalidate('/api/booking/get-available-slots')
+  logger.debug('✅ Cache invalidated on modal close')
+  
   resetForm()
   emit('close')
 }

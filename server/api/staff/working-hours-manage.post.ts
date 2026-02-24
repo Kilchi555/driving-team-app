@@ -2,6 +2,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
+import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 
 interface ManageWorkingHoursBody {
   action: 'delete' | 'toggle'
@@ -55,6 +56,15 @@ export default defineEventHandler(async (event) => {
         throw new Error('Unauthorized to manage this staff')
       }
 
+      // Get tenant_id for slot manager
+      const { data: staffUser, error: userLookupError } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+
+      const tenantId = staffUser?.tenant_id
+
       const { error: deleteError } = await supabaseAdmin
         .from('staff_working_hours')
         .delete()
@@ -67,13 +77,41 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('✅ Working hour deleted')
 
-      // ✅ NEW: Queue staff for availability recalculation
-      const { data: staffUser, error: userLookupError } = await supabaseAdmin
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
+      // ✅ NEW: Release all availability slots for this day
+      // Get today's date and set to the specified day of week
+      try {
+        const slotManager = createAvailabilitySlotManager(supabaseAdmin)
+        
+        const today = new Date()
+        const currentDay = today.getUTCDay()
+        const daysUntilTarget = (dayOfWeek === 0 ? 7 : dayOfWeek) - (currentDay === 0 ? 7 : currentDay)
+        const targetDate = new Date(today)
+        targetDate.setUTCDate(targetDate.getUTCDate() + daysUntilTarget)
+        targetDate.setUTCHours(0, 0, 0, 0)
 
+        const dayEnd = new Date(targetDate)
+        dayEnd.setUTCHours(23, 59, 59, 999)
+
+        logger.debug('🔓 Releasing slots for deleted working hours:', {
+          staffId: staffId.substring(0, 8),
+          dayOfWeek,
+          date: targetDate.toISOString()
+        })
+
+        const releaseResult = await slotManager.releaseSlots(
+          staffId,
+          targetDate.toISOString(),
+          dayEnd.toISOString(),
+          tenantId
+        )
+
+        logger.debug(`✅ Released ${releaseResult.releasedCount} slots for deleted working hours`)
+      } catch (slotError: any) {
+        logger.warn('⚠️ Failed to release slots (non-critical):', slotError.message)
+        // Non-critical: slots will be regenerated at next cron
+      }
+
+      // ✅ NEW: Queue staff for availability recalculation
       if (!userLookupError && staffUser) {
         try {
           await $fetch('/api/availability/queue-recalc', {
@@ -121,6 +159,15 @@ export default defineEventHandler(async (event) => {
         throw new Error('Unauthorized to manage this staff')
       }
 
+      // Get tenant_id for slot manager
+      const { data: staffUser, error: userLookupError } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id')
+        .eq('id', staffId)
+        .single()
+
+      const tenantId = staffUser?.tenant_id
+
       const { error: updateError } = await supabaseAdmin
         .from('staff_working_hours')
         .update({ is_active: isActive })
@@ -133,13 +180,41 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('✅ Working hour toggled')
 
-      // ✅ NEW: Queue staff for availability recalculation
-      const { data: staffUser, error: userLookupError } = await supabaseAdmin
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
+      // ✅ NEW: If toggling to false (deactivating), release all slots for this day
+      if (!isActive) {
+        try {
+          const slotManager = createAvailabilitySlotManager(supabaseAdmin)
+          
+          const today = new Date()
+          const currentDay = today.getUTCDay()
+          const daysUntilTarget = (dayOfWeek === 0 ? 7 : dayOfWeek) - (currentDay === 0 ? 7 : currentDay)
+          const targetDate = new Date(today)
+          targetDate.setUTCDate(targetDate.getUTCDate() + daysUntilTarget)
+          targetDate.setUTCHours(0, 0, 0, 0)
 
+          const dayEnd = new Date(targetDate)
+          dayEnd.setUTCHours(23, 59, 59, 999)
+
+          logger.debug('🔓 Releasing slots for deactivated working hours:', {
+            staffId: staffId.substring(0, 8),
+            dayOfWeek,
+            date: targetDate.toISOString()
+          })
+
+          const releaseResult = await slotManager.releaseSlots(
+            staffId,
+            targetDate.toISOString(),
+            dayEnd.toISOString(),
+            tenantId
+          )
+
+          logger.debug(`✅ Released ${releaseResult.releasedCount} slots for deactivated day`)
+        } catch (slotError: any) {
+          logger.warn('⚠️ Failed to release slots (non-critical):', slotError.message)
+        }
+      }
+
+      // ✅ NEW: Queue staff for availability recalculation
       if (!userLookupError && staffUser) {
         try {
           await $fetch('/api/availability/queue-recalc', {
