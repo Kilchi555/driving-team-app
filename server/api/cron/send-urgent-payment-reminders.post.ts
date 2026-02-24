@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { renderTemplate, renderSubject } from '~/server/utils/templateRenderer'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -37,8 +38,8 @@ export default defineEventHandler(async (event) => {
         end_time,
         duration_minutes,
         user_id,
-        status, -- Include appointment status
-        cancellation_charge_percentage, -- Include cancellation charge percentage
+        status,
+        cancellation_charge_percentage,
         payments (
           id,
           user_id,
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
     // Fetch all user data for these users
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, email, first_name, last_name, tenant_id')
+      .select('id, email, phone, first_name, last_name, tenant_id')
       .in('id', Array.from(userIds))
 
     if (usersError) {
@@ -77,6 +78,44 @@ export default defineEventHandler(async (event) => {
 
     // Create a map for quick user lookup
     const userMap = new Map(users?.map((u: any) => [u.id, u]))
+
+    // Fetch tenant data
+    const tenantIds = new Set<string>();
+    users?.forEach((user: any) => {
+      if (user.tenant_id) tenantIds.add(user.tenant_id);
+    });
+    const { data: tenants, error: tenantsError } = await supabase
+      .from('tenants')
+      .select('id, name')
+      .in('id', Array.from(tenantIds));
+
+    if (tenantsError) {
+      console.error('[UrgentPaymentReminder] ❌ Error fetching tenants:', tenantsError);
+      throw tenantsError;
+    }
+
+    const tenantMap = new Map(tenants?.map((t: any) => [t.id, t]));
+
+    // Fetch email templates
+    const { data: reminderTemplates, error: templatesError } = await supabase
+      .from('reminder_templates')
+      .select('id, tenant_id, channel, stage, language, subject, body');
+
+    if (templatesError) {
+      console.error('[UrgentPaymentReminder] ❌ Error fetching reminder templates:', templatesError);
+      throw templatesError;
+    }
+
+    const getTemplate = (tenantId: string | null, channel: string, stage: string, language: string) => {
+      return reminderTemplates?.find(
+        (template: any) =>
+          (template.tenant_id === tenantId || template.tenant_id === null) && // Match specific tenant or global
+          template.channel === channel &&
+          template.stage === stage &&
+          template.language === language
+      );
+    };
+
 
     // Flatten appointments and payments
     const payments = (appointments || []).flatMap((apt: any) => 
@@ -88,13 +127,17 @@ export default defineEventHandler(async (event) => {
             id: apt.id,
             start_time: apt.start_time,
             end_time: apt.end_time,
-            duration_minutes: apt.duration_minutes
+            duration_minutes: apt.duration_minutes,
+            status: apt.status, // Include appointment status
+            cancellation_charge_percentage: apt.cancellation_charge_percentage // Include cancellation charge
           }],
           users: [{
             id: appointmentUser?.id,
             email: appointmentUser?.email,
+            phone: appointmentUser?.phone, // Hinzufügen des phone-Feldes
             first_name: appointmentUser?.first_name,
-            last_name: appointmentUser?.last_name
+            last_name: appointmentUser?.last_name,
+            tenant_id: appointmentUser?.tenant_id
           }]
         }
       })
@@ -112,7 +155,8 @@ export default defineEventHandler(async (event) => {
         return false
       }
 
-      const appointmentTime = new Date(payment.appointments[0].start_time)
+      const appointment = payment.appointments[0];
+      const appointmentTime = new Date(appointment.start_time)
       
       // Include: past appointments OR appointments within 24 hours
       const isPast = appointmentTime < now
@@ -135,159 +179,146 @@ export default defineEventHandler(async (event) => {
         success: true,
         message: 'No urgent payments found',
         remindersCount: 0,
-        testedEmail: TEST_EMAIL
+        isManualTrigger
       }
     }
 
-    // Send reminders
-    let sentCount = 0
-    let failedCount = 0
+    // Enqueue reminders
+    let enqueuedCount = 0
+    let skippedCount = 0
 
     for (const payment of paymentsToRemind) {
       try {
-        // Handle array responses from Supabase relations
-        const user = Array.isArray(payment.users) ? payment.users[0] : payment.users
-        const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
+        const user = Array.isArray(payment.users) ? payment.users[0] : payment.users;
+        const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments;
 
         if (!user || !appointment) {
-          console.warn('[UrgentPaymentReminder] ⚠️ Missing user or appointment data for payment:', payment.id)
-          failedCount++
-          continue
+          console.warn('[UrgentPaymentReminder] ⚠️ Missing user or appointment data for payment:', payment.id);
+          skippedCount++;
+          continue;
         }
 
-        const userEmail = user.email
-        const userName = user.first_name ? `${user.first_name}` : 'Kunde'
-        const appointmentTime = new Date(appointment.start_time)
-        const appointmentDate = appointmentTime.toLocaleDateString('de-CH')
-        const appointmentTimeStr = appointmentTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-        const amountCHF = (payment.total_amount_rappen / 100).toFixed(2)
+        const userEmail = user.email;
+        const userPhone = user.phone || ''; // Get phone number, default to empty string
+        const userName = user.first_name ? `${user.first_name}` : 'Kunde';
+        const tenantName = tenantMap.get(payment.tenant_id)?.name || 'Driving Team';
 
-        // Determine if appointment is past or upcoming
-        const isPast = appointmentTime < now
-        const hoursUntilAppointment = Math.round((appointmentTime.getTime() - now.getTime()) / (60 * 60 * 1000))
-        const timeDescription = isPast ? `war am ${appointmentDate} um ${appointmentTimeStr}` : `ist am ${appointmentDate} um ${appointmentTimeStr}`
+        const appointmentTime = new Date(appointment.start_time);
+        const appointmentDate = appointmentTime.toLocaleDateString('de-CH');
+        const appointmentTimeStr = appointmentTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+        const amountCHF = (payment.total_amount_rappen / 100).toFixed(2);
 
-        console.log(`[UrgentPaymentReminder] 📧 Sending reminder to ${userEmail} for payment CHF ${amountCHF}`)
+        const templateData = {
+          student_name: userName,
+          student_first_name: user.first_name,
+          appointment_date: appointmentDate,
+          appointment_time: appointmentTimeStr,
+          tenant_name: tenantName,
+          amountCHF: amountCHF, // Add amountCHF to template data
+          // confirmation_link: 'TODO: Add confirmation link if applicable'
+          // location: 'TODO: Add location'
+        };
 
-        // Send email via Resend
-        const resendApiKey = process.env.RESEND_API_KEY
-        const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+        let messageChannel = '';
+        let recipient = '';
+        let messageSubject = '';
+        let messageBody = '';
+        let enqueueError = null;
 
-        if (!resendApiKey) {
-          console.error('[UrgentPaymentReminder] ❌ RESEND_API_KEY not configured')
-          failedCount++
-          continue
-        }
-
-        const { Resend } = await import('resend')
-        const resend = new Resend(resendApiKey)
-
-        const displayName = payment.tenant_id ? 'Driving Team' : 'Driving Team'
-
-        const emailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <p>Hallo ${userName},</p>
-            <p>Ihr Fahrtermin <strong>${timeDescription}</strong> hat eine ausstehende Zahlung von <strong>CHF ${amountCHF}</strong>.</p>
-            
-            ${isPast ? `
-              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 16px 0;">
-                <p style="margin: 0; color: #92400e;"><strong>Termin bereits vorbei:</strong> Bitte begleichen Sie diese Zahlung schnellstmöglich.</p>
-              </div>
-            ` : `
-              <div style="background-color: #dbeafe; border-left: 4px solid #0284c7; padding: 12px; margin: 16px 0;">
-                <p style="margin: 0; color: #0c2d6b;"><strong>Termin in ${hoursUntilAppointment} Stunden:</strong> Bitte begleichen Sie die Zahlung vor dem Termin.</p>
-              </div>
-            `}
-            
-            <p style="margin-top: 20px;">
-              <a href="https://www.simy.ch/customer-dashboard" 
-                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-                Zur Zahlung
-              </a>
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-            <p style="color: #6b7280; font-size: 12px;">Falls Sie diese Zahlung bereits begleitet haben, können Sie diese E-Mail ignorieren.</p>
-          </div>
-        `
-
-        const { data: emailResult, error: emailError } = await resend.emails.send({
-          from: `${displayName} <${fromEmail}>`,
-          to: userEmail,
-          subject: '⚠️ Zahlungserinnerung - Ausstehende Rechnung',
-          html: emailHtml
-        })
-
-        if (emailError) {
-          console.error('[UrgentPaymentReminder] ❌ Failed to send email:', emailError)
-          
-          // Log failed reminder to payment_reminders table
-          const { error: failLogError } = await supabase
-            .from('payment_reminders')
-            .insert({
-              payment_id: payment.id,
-              reminder_type: 'email',
-              reminder_number: 1,
-              status: 'failed',
-              error_message: emailError.message,
-              metadata: {
-                userEmail: userEmail,
-                appointmentTime: appointment.start_time,
-                isPast: isPast,
-                hoursUntilAppointment: hoursUntilAppointment,
-                amountCHF: amountCHF
-              }
-            })
-          
-          if (failLogError) {
-            console.error('[UrgentPaymentReminder] ⚠️ Failed to log failed reminder:', failLogError)
+        // --- Prioritize email, fallback to SMS ---
+        if (userEmail && userEmail.trim() !== '') {
+          const emailTemplate = getTemplate(payment.tenant_id, 'email', 'payment_reminder', 'de');
+          if (emailTemplate) {
+            messageChannel = 'email';
+            recipient = userEmail;
+            messageSubject = renderSubject(emailTemplate.subject || 'Wichtige Zahlungserinnerung', templateData);
+            messageBody = renderTemplate(emailTemplate.body, templateData);
+          } else {
+            console.warn('[UrgentPaymentReminder] ⚠️ No email template found for tenant', payment.tenant_id, 'stage payment_reminder, language de. Trying SMS...');
           }
-          
-          failedCount++
-          continue
         }
 
-        console.log('[UrgentPaymentReminder] ✅ Email sent successfully. Resend ID:', emailResult?.id)
+        if (!recipient && userPhone.trim() !== '') { // If no email template or no email address, try SMS
+          const smsTemplate = getTemplate(payment.tenant_id, 'sms', 'payment_reminder', 'de');
+          if (smsTemplate) {
+            messageChannel = 'sms';
+            recipient = userPhone;
+            messageBody = renderTemplate(smsTemplate.body, templateData); // SMS typically has no subject
+          } else {
+            console.warn('[UrgentPaymentReminder] ⚠️ No SMS template found for tenant', payment.tenant_id, 'stage payment_reminder, language de. Skipping payment:', payment.id);
+          }
+        }
 
-        // Log successful reminder to payment_reminders table
-        const { error: logError } = await supabase
-          .from('payment_reminders')
+        if (!recipient) {
+          console.warn('[UrgentPaymentReminder] ⚠️ No valid recipient (email or phone) or template found for payment:', payment.id);
+          skippedCount++;
+          continue;
+        }
+        
+        // Insert into outbound_messages_queue
+        // Insert into outbound_messages_queue
+        // --- Deduplication Check ---
+        const { count: existingMessageCount, error: existingMessageError } = await supabase
+          .from('outbound_messages_queue')
+          .select('id', { count: 'exact' })
+          .eq('context_data->>payment_id', payment.id)
+          .eq('context_data->>stage', 'payment_reminder') // Füge Stage zur Deduplizierungsprüfung hinzu
+          .eq('channel', messageChannel)
+          .in('status', ['pending', 'sending']);
+
+        if (existingMessageError) {
+          console.error('[UrgentPaymentReminder] ❌ Error checking for existing messages:', existingMessageError);
+          // Continue to enqueue, better to have duplicates than miss a reminder
+        } else if (existingMessageCount && existingMessageCount > 0) {
+          console.warn(`[UrgentPaymentReminder] ⚠️ Message for payment ${payment.id} (channel: ${messageChannel}) already in queue. Skipping.`);
+          skippedCount++;
+          continue;
+        }
+        const { error: currentEnqueueError } = await supabase
+          .from('outbound_messages_queue')
           .insert({
-            payment_id: payment.id,
-            reminder_type: 'email',
-            reminder_number: 1,
-            status: 'sent',
-            metadata: {
-              userEmail: userEmail,
-              appointmentTime: appointment.start_time,
-              isPast: isPast,
-              hoursUntilAppointment: hoursUntilAppointment,
+            tenant_id: payment.tenant_id,
+            channel: messageChannel,
+            recipient_email: messageChannel === 'email' ? recipient : null,
+            recipient_phone: messageChannel === 'sms' ? recipient : null,
+            subject: messageSubject || null, // SMS might not have a subject
+            body: messageBody,
+            status: 'pending',
+            send_at: now, // Immediately ready for processing
+            context_data: {
+              payment_id: payment.id,
+              stage: 'payment_reminder',
+              appointment_id: appointment.id,
+              user_id: user.id,
               amountCHF: amountCHF,
-              resendEmailId: emailResult?.id
+              tenant_name: tenantName,
+              isManualTrigger: isManualTrigger,
+              // originalEmailHtml: emailBody, // Only for email, store if needed for debugging specific channels
             }
-          })
+          });
 
-        if (logError) {
-          console.error('[UrgentPaymentReminder] ⚠️ Failed to log reminder:', logError)
-        } else {
-          console.log('[UrgentPaymentReminder] 💾 Logged reminder in payment_reminders table')
+        if (currentEnqueueError) {
+          console.error('[UrgentPaymentReminder] ❌ Failed to enqueue message for payment', payment.id, ':', currentEnqueueError);
+          skippedCount++;
+          continue;
         }
 
-        sentCount++
+        console.log(`[UrgentPaymentReminder] ✅ Enqueued ${messageChannel} for payment`, payment.id, 'to', recipient);
+        enqueuedCount++;
+
       } catch (error: any) {
-        console.error('[UrgentPaymentReminder] ❌ Error processing payment reminder:', error)
-        failedCount++
+        console.error('[UrgentPaymentReminder] ❌ Error processing payment reminder for payment', payment.id, ':', error);
+        skippedCount++;
       }
     }
 
-    console.log('[UrgentPaymentReminder] ✅ Cron job completed. Sent:', sentCount, 'Failed:', failedCount)
+    console.log('[UrgentPaymentReminder] ✅ Cron job completed. Enqueued:', enqueuedCount, 'Skipped:', skippedCount);
 
     return {
       success: true,
-      message: `Payment reminders processed: ${sentCount} sent, ${failedCount} failed`,
-      remindersCount: sentCount,
-      failedCount: failedCount,
-      testedEmail: TEST_EMAIL,
+      message: `Payment reminders processed: ${enqueuedCount} enqueued, ${skippedCount} skipped`,
+      enqueuedCount: enqueuedCount,
+      skippedCount: skippedCount,
       isManualTrigger
     }
 
