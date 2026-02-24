@@ -131,6 +131,15 @@ export default defineEventHandler(async (event) => {
       // Check if time changed
       const timeChanged = apt.start_time !== appointment_data.start_time ||
                          apt.end_time !== appointment_data.end_time
+      
+      logger.debug('🔍 DEBUG update-appointment-status:', {
+        appointmentId: appointment_data.id,
+        oldStart: apt.start_time,
+        newStart: appointment_data.start_time,
+        oldEnd: apt.end_time,
+        newEnd: appointment_data.end_time,
+        timeChanged
+      })
 
       // Update appointment status
       const { data: updated, error } = await supabase
@@ -147,7 +156,10 @@ export default defineEventHandler(async (event) => {
       // ✅ NEW: Queue availability recalculation if time changed
       if (timeChanged) {
         try {
-          logger.debug('📋 Queuing availability recalculation after appointment update...')
+          logger.debug('📋 Queuing availability recalculation after appointment update...', {
+            staffId: apt.staff_id,
+            tenantId: apt.tenant_id
+          })
           await $fetch('/api/availability/queue-recalc', {
             method: 'POST',
             body: {
@@ -160,6 +172,8 @@ export default defineEventHandler(async (event) => {
         } catch (queueError: any) {
           logger.warn('⚠️ Failed to queue recalculation (non-critical):', queueError.message)
         }
+      } else {
+        logger.debug('ℹ️ Time unchanged - no queue needed')
       }
 
       return {
