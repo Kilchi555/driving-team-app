@@ -1,0 +1,3 @@
+INSERT INTO reminder_templates (id, tenant_id, channel, stage, language, subject, body)
+VALUES
+    (gen_random_uuid(), '64259d68-195a-4c68-8875-f1b44d962830', 'sms', 'payment_reminder', 'de', NULL, 'Hallo {{student_first_name}}, Ihr Termin {{appointment_date}} {{appointment_time}} hat eine ausstehende Zahlung von CHF {{amountCHF}}. Bitte begleichen Sie diese schnellstmöglich. Zur Zahlung: https://www.simy.ch/customer-dashboard');

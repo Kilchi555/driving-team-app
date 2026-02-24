@@ -407,16 +407,16 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 8: CREATE PAYMENT ============ 
     logger.debug('💳 Creating payment record for appointment...', {
       appointment_id: newAppointment.id,
-      user_id: userData.id,
+      user_id: newAppointment.user_id, // ✅ FIX: Use user_id from the newAppointment (the client)!
       tenant_id: tenantId,
       total_amount_rappen: totalAmountRappen
     })
 
     const paymentToInsert = {
       appointment_id: newAppointment.id,
-      user_id: userData.id,
+      user_id: newAppointment.user_id, // ✅ FIX: Use user_id from the newAppointment (the client)!
       tenant_id: tenantId,
-      staff_id: slot.staff_id, // Add staff_id
+      staff_id: slot.staff_id, // Add staff_id (this is correct, staff_id is for the staff who performs the appointment)
       lesson_price_rappen: totalAmountRappen, // Use totalAmountRappen for lesson price
       admin_fee_rappen: 0, // Default to 0 for now
       products_price_rappen: 0, // Default to 0 as no products are booked via this flow
@@ -428,7 +428,7 @@ export default defineEventHandler(async (event: H3Event) => {
       payment_method_id: null, // No payment method yet
       description: appointmentTitle,
       currency: 'CHF',
-      created_by: userData.id // The user who booked (from public.users table)
+      created_by: authenticatedUserId // ✅ IMPORTANT: The user who *created* the payment (Staff or Customer)
     }
 
     const { data: newPayment, error: paymentError } = await supabase

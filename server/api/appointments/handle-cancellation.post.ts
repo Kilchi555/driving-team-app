@@ -362,18 +362,23 @@ export default defineEventHandler(async (event) => {
           chargeAmount: (chargeAmountRappen / 100).toFixed(2)
         })
         
-        // Update payment: keep status as 'pending', but update total_amount_rappen to the charge
+        // Update payment: set status to 'cancelled', update total_amount_rappen to the charge, and store charge info in metadata
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
-            // ✅ KEY FIX: Keep payment_status as 'pending' (NOT cancelled!)
-            // and update total_amount_rappen to the charge amount
+            payment_status: 'cancelled', // ✅ KEY FIX: Set payment_status to 'cancelled'
             total_amount_rappen: chargeAmountRappen,
             lesson_price_rappen: Math.round(lessonPriceRappen * chargePercentage / 100),
             admin_fee_rappen: Math.round(adminFeeRappen * chargePercentage / 100),
             products_price_rappen: 0, // Products are cancelled
             discount_amount_rappen: 0, // Discounts are not applied to charges
-            notes: `${payment.notes ? payment.notes + ' | ' : ''}Paid cancellation (${chargePercentage}% charge): ${deletionReason}`
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Cancellation with ${chargePercentage}% charge: ${deletionReason}`,
+            metadata: { // ✅ NEW: Store charge details in metadata
+              ...payment.metadata, // Preserve existing metadata
+              cancellation_charge_percentage: chargePercentage,
+              cancellation_charge_amount_rappen: chargeAmountRappen,
+              cancellation_reason: deletionReason
+            }
           })
           .eq('id', payment.id)
         

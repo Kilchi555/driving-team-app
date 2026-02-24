@@ -119,8 +119,6 @@ const getCorrectDuration = (category: Category): number => {
 }
 
 const availableCategoriesForUser = computed(() => {
-  let result: CategoryWithDurations[] = []
-  
   logger.debug('🔍 Computing availableCategoriesForUser:', {
     role: props.currentUserRole,
     allCategoriesCount: allCategories.value.length,
@@ -133,38 +131,15 @@ const availableCategoriesForUser = computed(() => {
     return []
   }
   
-  // Admin kann alle Kategorien sehen
-  if (props.currentUserRole === 'admin') {
-    result = allCategories.value
-      .filter(cat => cat.is_active)
-      .map(cat => ({
-        ...cat,
+  // Alle Benutzer (Admin, Staff, Client) sollen nur Subkategorien sehen können (mit Parent-Fallback Logik)
+  let result: CategoryWithDurations[] = allCategories.value
+    .filter(cat => cat.is_active && cat.parent_category_id !== null) // ✅ NEU: Nur Subkategorien anzeigen
+    .map(cat => ({
+      ...cat,
       availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-      }))
-    logger.debug('👨‍💼 Admin: Showing all categories:', result.length)
-  }
-  // ✅ Staff sieht alle Kategorien aus der zentralen categories Tabelle
-  else if (props.currentUserRole === 'staff') {
-    logger.debug('👨‍🏫 Staff: Using all categories from central table')
-    result = allCategories.value
-      .filter(cat => cat.is_active)
-      .map(cat => ({
-        ...cat,
-        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-      }))
-    logger.debug('👨‍🏫 Staff: Final categories:', result.length, result.map(r => r.code))
-  }
-  // Client sieht alle aktiven Kategorien (für Terminbuchung)
-  else {
-    result = allCategories.value
-      .filter(cat => cat.is_active)
-      .map(cat => ({
-        ...cat,
-        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-      }))
-    logger.debug('👤 Client: Showing all categories:', result.length)
-  }
-  
+    }))
+  logger.debug('👨‍🏫 All Users: Showing only subcategories:', result.length, result.map(r => r.code))
+
   // ✅ Sortieren nach Code und dann nach Name (display_order existiert nicht mehr)
   const sortedResult = result.sort((a, b) => {
     if (a.code !== b.code) {
@@ -176,6 +151,7 @@ const availableCategoriesForUser = computed(() => {
   logger.debug('📋 Final sorted categories:', sortedResult.map(cat => ({
     code: cat.code,
     name: cat.name,
+    parent_category_id: cat.parent_category_id,
     durations: cat.availableDurations
   })))
   
@@ -224,6 +200,7 @@ const loadCategories = async () => {
     }
     
     // ✅ KORREKTE REIHENFOLGE: Query zuerst definieren (with tenant filter)
+    // ✅ UPDATED: Now loads parent_category_id for fallback to parent evaluation criteria
     const queryPromise = supabase
       .from('categories')
       .select(`
@@ -236,6 +213,7 @@ const loadCategories = async () => {
         color, 
         is_active, 
         exam_duration_minutes,
+        parent_category_id,
         created_at
       `)
       .eq('is_active', true)
@@ -306,7 +284,8 @@ const loadCategories = async () => {
         lesson_duration_minutes: lessonDurations,
         theory_durations: theoryDurations,
         exam_duration_minutes: examDuration,  // ✅ CONVERTED TO NUMBER
-        availableDurations: lessonDurations // Use converted lesson durations
+        availableDurations: lessonDurations, // Use converted lesson durations
+        parent_category_id: cat.parent_category_id // ✅ PRESERVE PARENT INFO
       }
     })
     
