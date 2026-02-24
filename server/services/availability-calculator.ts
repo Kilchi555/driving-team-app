@@ -675,13 +675,13 @@ export class AvailabilityCalculator {
     const [startHour, startMinute] = params.startTime.split(':').map(Number)
     const [endHour, endMinute] = params.endTime.split(':').map(Number)
 
-    // Create start datetime (use UTC to avoid timezone issues)
+    // Create start datetime (staff_working_hours are stored as local time, not UTC)
     const slotStart = new Date(params.date)
-    slotStart.setUTCHours(startHour, startMinute, 0, 0)
+    slotStart.setHours(startHour, startMinute, 0, 0)
 
     // Create end datetime
     const workingEnd = new Date(params.date)
-    workingEnd.setUTCHours(endHour, endMinute, 0, 0)
+    workingEnd.setHours(endHour, endMinute, 0, 0)
 
     // Generate slots in 15-minute increments
     const currentSlot = new Date(slotStart)
@@ -1032,9 +1032,10 @@ export class AvailabilityCalculator {
 
   /**
    * Get day of week (1=Monday, 7=Sunday)
+   * IMPORTANT: Use getUTCDay() since all working_hours are stored in UTC
    */
   private getDayOfWeek(date: Date): number {
-    const day = date.getDay()
+    const day = date.getUTCDay()
     // Convert JS day (0=Sunday) to our format (1=Monday, 7=Sunday)
     return day === 0 ? 7 : day
   }
