@@ -1459,6 +1459,12 @@ const handleEventDrop = async (dropInfo: any) => {
 
       logger.debug('✅ Appointment moved via API:', dropInfo.event.title)
       
+      // ✅ NEW: Invalidate calendar cache to force refresh
+      const { invalidate } = useCalendarCache()
+      invalidate('/api/staff/get-working-hours')
+      invalidate('/api/booking/get-available-slots')
+      logger.debug('✅ Cache invalidated for working hours and available slots')
+      
       // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
       // Stattdessen: Kalender neu laden um frische Daten zu bekommen
       logger.debug('🔄 Invalidating cache and reloading appointments...')
@@ -1478,25 +1484,26 @@ const handleEventDrop = async (dropInfo: any) => {
       
       logger.debug('📅 Time details:', { oldStartTime, newTime })
       
-      // SMS versenden
-      if (phoneNumber) {
-        logger.debug('📱 Sending SMS notification for rescheduled appointment...')
-        try {
-          const result = await $fetch('/api/sms/send', {
-            method: 'POST',
-            body: {
-              phone: phoneNumber,
-              message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n${tenantName.value}`,
-              tenantId: currentTenant.value?.id
-            }
-          })
-          logger.debug('✅ SMS sent successfully:', result)
-        } catch (smsError: any) {
-          console.error('❌ Failed to send SMS:', smsError)
-        }
-      } else {
-        logger.debug('⚠️ No phone number available for SMS')
-      }
+      // ✅ SMS DISABLED: Nur Email beim Verschieben
+      // SMS versenden (REMOVED)
+      // if (phoneNumber) {
+      //   logger.debug('📱 Sending SMS notification for rescheduled appointment...')
+      //   try {
+      //     const result = await $fetch('/api/sms/send', {
+      //       method: 'POST',
+      //       body: {
+      //         phone: phoneNumber,
+      //         message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} wurde verschoben:\n\n📅 ALT:\n${oldStartTime}\n\n📌 NEU:\n${newTime}\n\nBeste Grüsse\n${tenantName.value}`,
+      //         tenantId: currentTenant.value?.id
+      //       }
+      //     })
+      //     logger.debug('✅ SMS sent successfully:', result)
+      //   } catch (smsError: any) {
+      //     console.error('❌ Failed to send SMS:', smsError)
+      //   }
+      // } else {
+      //   logger.debug('⚠️ No phone number available for SMS')
+      // }
       
       // Email versenden
       if (studentEmail) {

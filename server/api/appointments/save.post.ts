@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
+import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import {
   validateAppointmentData,
   validateUUID,
@@ -131,6 +132,20 @@ export default defineEventHandler(async (event) => {
     let result
     if (mode === 'edit' && eventId) {
       // Update existing appointment
+      const { data: oldAppointment, error: fetchError } = await supabase
+        .from('appointments')
+        .select('start_time, end_time, staff_id, tenant_id')
+        .eq('id', eventId)
+        .single()
+
+      if (fetchError || !oldAppointment) {
+        logger.error('❌ Error fetching old appointment for edit:', fetchError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Could not fetch appointment for editing'
+        })
+      }
+
       const { data, error: updateError } = await supabase
         .from('appointments')
         .update(appointmentData)
@@ -147,6 +162,82 @@ export default defineEventHandler(async (event) => {
       }
       result = data
       logger.debug('✅ Appointment updated:', result.id)
+
+      // ✅ NEW: Manage availability slots for edited appointment
+      try {
+        const slotManager = createAvailabilitySlotManager(supabase)
+        
+        // Check if time changed (use oldAppointment for comparison since result might not have all fields)
+        const timeChanged = oldAppointment.start_time !== appointmentData.start_time || 
+                           oldAppointment.end_time !== appointmentData.end_time
+        
+        if (timeChanged) {
+          logger.debug('⏰ Appointment time changed - updating slots:', {
+            oldTime: `${oldAppointment.start_time} - ${oldAppointment.end_time}`,
+            newTime: `${appointmentData.start_time} - ${appointmentData.end_time}`
+          })
+          
+          // Release slots from OLD time
+          const releaseResult = await slotManager.releaseSlots(
+            oldAppointment.staff_id,
+            oldAppointment.start_time,
+            oldAppointment.end_time,
+            oldAppointment.tenant_id
+          )
+          if (releaseResult.success) {
+            logger.debug(`✅ Released ${releaseResult.releasedCount} slots from old time`)
+          }
+          
+          // Invalidate slots for NEW time
+          const invalidateResult = await slotManager.invalidateSlots(
+            oldAppointment.staff_id,
+            appointmentData.start_time,
+            appointmentData.end_time,
+            oldAppointment.tenant_id
+          )
+          if (invalidateResult.success) {
+            logger.debug(`✅ Invalidated ${invalidateResult.invalidatedCount} slots for new time`)
+          }
+        } else {
+          logger.debug('ℹ️ Appointment time unchanged - no slot updates needed')
+        }
+      } catch (slotError: any) {
+        logger.warn('⚠️ Failed to update slots during edit (non-critical):', slotError.message)
+        // Non-critical: will be recalculated at next cron
+      }
+
+      // ✅ NEW: DELETE all availability slots for this staff to force regeneration
+      // This ensures new slots are generated at correct times immediately
+      try {
+        logger.debug('🗑️ Deleting all availability slots for staff to force regeneration...')
+        const { error: deleteError } = await supabase
+          .from('availability_slots')
+          .delete()
+          .eq('staff_id', oldAppointment.staff_id)
+          .eq('tenant_id', oldAppointment.tenant_id)
+        
+        if (!deleteError) {
+          logger.debug('✅ Deleted all availability slots - will be regenerated on next calendar view')
+        }
+      } catch (deleteError: any) {
+        logger.warn('⚠️ Failed to delete slots (non-critical):', deleteError.message)
+      }
+
+      // ✅ NEW: Queue availability recalculation to generate new slots
+      try {
+        logger.debug('📋 Queuing availability recalculation after appointment edit...')
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: {
+            staff_id: oldAppointment.staff_id,
+            tenant_id: oldAppointment.tenant_id,
+            trigger: 'appointment_edit'
+          }
+        })
+        logger.debug('✅ Queued recalculation after appointment edit')
+      } catch (queueError: any) {
+        logger.warn('⚠️ Failed to queue recalculation (non-critical):', queueError.message)
+      }
       
       // ============ UPDATE PAYMENT FOR EDITED APPOINTMENT ============
       // ✅ If this is a lesson/exam/theory appointment, update the existing payment

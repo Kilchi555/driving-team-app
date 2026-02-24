@@ -6,10 +6,13 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
+import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
+    const slotManager = createAvailabilitySlotManager(supabase)
+    
     const { 
       appointmentId, 
       cancellationReasonId,
@@ -46,7 +49,7 @@ export default defineEventHandler(async (event) => {
     // 1. Fetch the appointment and its payment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select('user_id, duration_minutes, type, tenant_id, status')
+      .select('user_id, duration_minutes, type, tenant_id, status, staff_id, start_time, end_time')
       .eq('id', appointmentId)
       .single()
 
@@ -55,6 +58,57 @@ export default defineEventHandler(async (event) => {
     // ✅ CRITICAL: Mark appointment as cancelled immediately
     // This must happen before any refund logic, so status is set correctly
     await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
+
+    // ✅ NEW: Release all overlapping availability slots immediately
+    // This makes slots available again for other bookings
+    try {
+      logger.debug('🔓 Releasing availability slots for cancelled appointment...')
+      const releaseResult = await slotManager.releaseSlots(
+        appointment.staff_id,
+        appointment.start_time,
+        appointment.end_time,
+        appointment.tenant_id
+      )
+      if (releaseResult.success) {
+        logger.debug(`✅ Released ${releaseResult.releasedCount} availability slots`)
+      }
+    } catch (slotError: any) {
+      logger.warn('⚠️ Failed to release slots (non-critical):', slotError.message)
+      // Non-critical: appointment is already cancelled, slots will be regenerated at next cron
+    }
+
+    // ✅ NEW: DELETE all availability slots for this staff to force regeneration
+    // This ensures new slots are generated at correct times immediately
+    try {
+      logger.debug('🗑️ Deleting all availability slots for staff to force regeneration...')
+      const { error: deleteError } = await supabase
+        .from('availability_slots')
+        .delete()
+        .eq('staff_id', appointment.staff_id)
+        .eq('tenant_id', appointment.tenant_id)
+      
+      if (!deleteError) {
+        logger.debug('✅ Deleted all availability slots - will be regenerated on next calendar view')
+      }
+    } catch (deleteError: any) {
+      logger.warn('⚠️ Failed to delete slots (non-critical):', deleteError.message)
+    }
+
+    // ✅ NEW: Queue availability recalculation to regenerate slots
+    try {
+      logger.debug('📋 Queuing availability recalculation after appointment cancellation...')
+      await $fetch('/api/availability/queue-recalc', {
+        method: 'POST',
+        body: {
+          staff_id: appointment.staff_id,
+          tenant_id: appointment.tenant_id,
+          trigger: 'appointment_cancelled'
+        }
+      })
+      logger.debug('✅ Queued recalculation after appointment cancellation')
+    } catch (queueError: any) {
+      logger.warn('⚠️ Failed to queue recalculation (non-critical):', queueError.message)
+    }
 
     // Get payment with tenant_id filter to bypass RLS issues
     const { data: payment, error: paymentError } = await supabase
