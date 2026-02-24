@@ -53,7 +53,9 @@ export default defineEventHandler(async (event) => {
 
       const convertTime = (utcTime: string): string => {
         if (!utcTime) return utcTime
-        const [hours, minutes] = utcTime.split(':').map(Number)
+        // TIMETZ format: "06:00:00+00" → remove timezone offset
+        const timeWithoutTz = utcTime.split('+')[0].split('-')[0]
+        const [hours, minutes] = timeWithoutTz.split(':').map(Number)
         const now = new Date()
         const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0))
         // Use Intl to correctly convert UTC to the record's timezone (handles DST)
