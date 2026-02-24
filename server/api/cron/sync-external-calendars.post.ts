@@ -26,7 +26,6 @@ export default defineEventHandler(async (event) => {
     const { data: calendars, error: calendarsError } = await supabase
       .from('external_calendars')
       .select('*')
-      .eq('is_active', true)
 
     if (calendarsError) {
       throw createError({

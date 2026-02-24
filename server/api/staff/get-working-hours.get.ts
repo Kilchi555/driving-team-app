@@ -46,9 +46,32 @@ export default defineEventHandler(async (event) => {
     
     console.log(`[${new Date().toLocaleTimeString()}] ✅ Working hours loaded:`, workingHours?.length || 0)
     
+    // Convert UTC times to local time using the timezone stored per record
+    // Uses Intl.DateTimeFormat to correctly handle DST (summer/winter time)
+    const convertedHours = (workingHours || []).map((wh: any) => {
+      const tz = wh.timezone || 'Europe/Zurich'
+
+      const convertTime = (utcTime: string): string => {
+        if (!utcTime) return utcTime
+        const [hours, minutes] = utcTime.split(':').map(Number)
+        const now = new Date()
+        const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0))
+        // Use Intl to correctly convert UTC to the record's timezone (handles DST)
+        const localStr = utcDate.toLocaleString('sv-SE', { timeZone: tz })
+        const timePart = localStr.split(' ')[1] // "HH:MM:SS"
+        return timePart || utcTime
+      }
+
+      return {
+        ...wh,
+        start_time: convertTime(wh.start_time),
+        end_time: convertTime(wh.end_time)
+      }
+    })
+
     return {
       success: true,
-      workingHours: workingHours || [],
+      workingHours: convertedHours,
       staffId
     }
     

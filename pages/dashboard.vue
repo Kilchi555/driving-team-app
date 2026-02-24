@@ -321,6 +321,27 @@ onMounted(async () => {
     logger.debug('🔥 Feature Flags Debug:', isEnabled('AUTO_REFRESH_PENDING'))
 
   
+  // FIRST: Check if user is authenticated before fetching
+  const authStore = useAuthStore()
+  if (!authStore.isLoggedIn) {
+    logger.debug('🚫 Dashboard: User not logged in, redirecting to login')
+    let lastTenantSlug: string | null = null
+    try {
+      lastTenantSlug = localStorage.getItem('last_tenant_slug')
+    } catch (e) {
+      logger.warn('Could not read localStorage:', e)
+    }
+    
+    if (lastTenantSlug) {
+      logger.debug('🔄 Redirecting to last tenant:', `/${lastTenantSlug}`)
+      return await navigateTo(`/${lastTenantSlug}`)
+    }
+    
+    // Fallback to generic login
+    logger.debug('🔄 No tenant found, redirecting to generic login')
+    return await navigateTo('/login')
+  }
+
   await fetchCurrentUser()
   
   logger.debug('🔥 Current user after fetch:', currentUser.value)

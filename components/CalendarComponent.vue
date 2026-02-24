@@ -488,26 +488,13 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
         const inactiveBlocks = dayWorkingHours.filter(wh => wh.is_active === false)
         
         inactiveBlocks.forEach((block, index) => {
-          // Convert UTC time to local time for display
-          // Working hours are now stored in UTC, need to display in local time
-          const [utcHour, utcMinute, utcSecond] = block.start_time.split(':').map(Number)
-          const [utcEndHour, utcEndMinute, utcEndSecond] = block.end_time.split(':').map(Number)
-          
-          // Create UTC date and get local time equivalent
-          const utcStart = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), utcHour || 0, utcMinute || 0, utcSecond || 0))
-          const utcEnd = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), utcEndHour || 0, utcEndMinute || 0, utcEndSecond || 0))
-          
-          // Convert to local time strings for display
-          const localStartHour = String(utcStart.getHours()).padStart(2, '0')
-          const localStartMinute = String(utcStart.getMinutes()).padStart(2, '0')
-          const localStartSecond = String(utcStart.getSeconds()).padStart(2, '0')
-          
-          const localEndHour = String(utcEnd.getHours()).padStart(2, '0')
-          const localEndMinute = String(utcEnd.getMinutes()).padStart(2, '0')
-          const localEndSecond = String(utcEnd.getSeconds()).padStart(2, '0')
-          
-          const startTime = `${dateStr}T${localStartHour}:${localStartMinute}:${localStartSecond}`
-          const endTime = `${dateStr}T${localEndHour}:${localEndMinute}:${localEndSecond}`
+          // Times are already converted to local time by the API (get-working-hours)
+          // Just use them directly as local time strings for FullCalendar
+          const [startHour, startMinute, startSecond] = block.start_time.split(':').map(Number)
+          const [endHour, endMinute, endSecond] = block.end_time.split(':').map(Number)
+
+          const startTime = `${dateStr}T${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}:${String(startSecond || 0).padStart(2, '0')}`
+          const endTime = `${dateStr}T${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}:${String(endSecond || 0).padStart(2, '0')}`
           
           events.push({
             id: `non-working-${dayOfWeek}-${index}-${dateStr}`,
