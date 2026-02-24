@@ -278,7 +278,8 @@ function parseICSData(icsData: string): Array<{
       inEvent = true
       currentEvent = {}
     } else if (line === 'END:VEVENT') {
-      if (inEvent && currentEvent.start && currentEvent.end) {
+      // Only add event if it's NOT cancelled and has valid start/end
+      if (inEvent && currentEvent.start && currentEvent.end && currentEvent.status !== 'CANCELLED') {
         events.push({
           uid: currentEvent.uid,
           summary: currentEvent.summary,
@@ -307,6 +308,10 @@ function parseICSData(icsData: string): Array<{
           break
         case 'LOCATION':
           currentEvent.location = value
+          break
+        case 'STATUS':
+          // ✅ NEW: Track event status (CANCELLED events are deleted)
+          currentEvent.status = value.toUpperCase()
           break
         case 'DTSTART': {
           const tzidParam = params.find(p => p.toUpperCase().startsWith('TZID='))
