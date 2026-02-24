@@ -3596,6 +3596,12 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
     
     logger.debug('✅ Appointment soft deleted successfully via API (without payment cleanup)')
     
+    // ✅ NEW: Invalidate calendar cache on delete to ensure fresh data
+    const { invalidate } = useCalendarCache()
+    invalidate('/api/staff/get-working-hours')
+    invalidate('/api/booking/get-available-slots')
+    logger.debug('✅ Cache invalidated after soft delete')
+    
     // ✅ Schließe das Modal
     emit('close')
     

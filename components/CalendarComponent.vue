@@ -2735,7 +2735,7 @@ defineExpose({
   :mode="modalMode"
   :current-user="props.currentUser" 
   :event-type="modalEventType"
-  @close="isModalVisible = false"
+  @close="() => { isModalVisible = false; invalidateCache('modal-closed'); loadAppointments() }"
   @save-event="handleSaveEvent"       
   @delete-event="handleEventDeleted"
   @copy-appointment="handleCopyAppointment"
