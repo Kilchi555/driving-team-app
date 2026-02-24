@@ -19,13 +19,28 @@
  * - Scalable: can batch multiple staff
  */
 
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { availabilityCalculator } from '~/server/services/availability-calculator'
 
 export default defineEventHandler(async (event) => {
   try {
+    // ============ SECURITY: Verify CRON_SECRET (if configured) ============
+    const cronSecret = process.env.CRON_SECRET
+    if (cronSecret && cronSecret.trim() !== '') {
+      const authHeader = getHeader(event, 'authorization')
+      const expectedAuth = `Bearer ${cronSecret}`
+      
+      if (authHeader !== expectedAuth) {
+        logger.warn('⚠️ Unauthorized cron access attempt - missing or invalid CRON_SECRET')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Unauthorized - invalid CRON_SECRET'
+        })
+      }
+    }
+
     logger.debug('⏰ Starting availability recalculation queue processor...')
 
     const supabase = getSupabaseAdmin()
