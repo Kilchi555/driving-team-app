@@ -658,8 +658,8 @@ export class AvailabilityCalculator {
    */
   private async generateDaySlots(params: {
     date: Date
-    startTime: string // HH:MM
-    endTime: string // HH:MM
+    startTime: string // HH:MM or HH:MM:SS+tz (TIMETZ)
+    endTime: string // HH:MM or HH:MM:SS+tz (TIMETZ)
     durationMinutes: number
     bufferMinutes: number
     minBookableTime: Date
@@ -671,17 +671,27 @@ export class AvailabilityCalculator {
   }): Promise<AvailabilitySlot[]> {
     const slots: AvailabilitySlot[] = []
 
-    // Parse start and end time
-    const [startHour, startMinute] = params.startTime.split(':').map(Number)
-    const [endHour, endMinute] = params.endTime.split(':').map(Number)
+    // Parse start and end time - handle both HH:MM and HH:MM:SS+tz formats
+    const parseTimeString = (timeStr: string): { hours: number; minutes: number } => {
+      // Remove timezone info if present (e.g., "06:00:00+00" -> "06:00:00")
+      const timeWithoutTz = timeStr.split('+')[0].split('-')[0]
+      const parts = timeWithoutTz.split(':').map(Number)
+      return {
+        hours: parts[0] || 0,
+        minutes: parts[1] || 0
+      }
+    }
+
+    const startParsed = parseTimeString(params.startTime)
+    const endParsed = parseTimeString(params.endTime)
 
     // Create start datetime (staff_working_hours are stored as local time, not UTC)
     const slotStart = new Date(params.date)
-    slotStart.setHours(startHour, startMinute, 0, 0)
+    slotStart.setHours(startParsed.hours, startParsed.minutes, 0, 0)
 
     // Create end datetime
     const workingEnd = new Date(params.date)
-    workingEnd.setHours(endHour, endMinute, 0, 0)
+    workingEnd.setHours(endParsed.hours, endParsed.minutes, 0, 0)
 
     // Generate slots in 15-minute increments
     const currentSlot = new Date(slotStart)
