@@ -685,13 +685,13 @@ export class AvailabilityCalculator {
     const startParsed = parseTimeString(params.startTime)
     const endParsed = parseTimeString(params.endTime)
 
-    // Create start datetime (staff_working_hours are stored as local time, not UTC)
+    // Create start datetime using UTC (since all data is UTC-based)
     const slotStart = new Date(params.date)
-    slotStart.setHours(startParsed.hours, startParsed.minutes, 0, 0)
+    slotStart.setUTCHours(startParsed.hours, startParsed.minutes, 0, 0)
 
-    // Create end datetime
+    // Create end datetime using UTC
     const workingEnd = new Date(params.date)
-    workingEnd.setHours(endParsed.hours, endParsed.minutes, 0, 0)
+    workingEnd.setUTCHours(endParsed.hours, endParsed.minutes, 0, 0)
 
     // Generate slots in 15-minute increments
     const currentSlot = new Date(slotStart)
