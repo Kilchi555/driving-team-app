@@ -35,9 +35,6 @@ export class AvailabilitySlotManager {
         endTime
       })
 
-      const startDate = new Date(startTime)
-      const endDate = new Date(endTime)
-
       let query = this.supabase
         .from('availability_slots')
         .update({
@@ -47,8 +44,8 @@ export class AvailabilitySlotManager {
           updated_at: new Date().toISOString()
         })
         .eq('staff_id', staffId)
-        .lt('start_time', endDate.toISOString())
-        .gt('end_time', startDate.toISOString())
+        .lte('start_time', endTime)  // slot starts at or before appointment ends
+        .gte('end_time', startTime)   // slot ends at or after appointment starts
 
       if (tenantId) {
         query = query.eq('tenant_id', tenantId)
@@ -63,9 +60,16 @@ export class AvailabilitySlotManager {
 
       const releasedCount = data?.length || 0
       if (releasedCount > 0) {
-        logger.debug(`✅ Released ${releasedCount} overlapping slots`)
+        logger.debug(`✅ Released ${releasedCount} overlapping slots`, {
+          releasedCount,
+          appointmentStart: startTime,
+          appointmentEnd: endTime
+        })
       } else {
-        logger.debug('ℹ️ No overlapping slots to release')
+        logger.debug('ℹ️ No overlapping slots to release', {
+          appointmentStart: startTime,
+          appointmentEnd: endTime
+        })
       }
 
       return { success: true, releasedCount }
@@ -94,9 +98,6 @@ export class AvailabilitySlotManager {
         hasSession: !!sessionId
       })
 
-      const startDate = new Date(startTime)
-      const endDate = new Date(endTime)
-
       const updateData: any = {
         is_available: false,
         updated_at: new Date().toISOString()
@@ -110,12 +111,16 @@ export class AvailabilitySlotManager {
         updateData.reserved_until = reservedUntil.toISOString()
       }
 
+      // Find overlapping slots:
+      // Slot overlaps with appointment if:
+      // - slot.start_time < appointment.end_time AND
+      // - slot.end_time > appointment.start_time
       let query = this.supabase
         .from('availability_slots')
         .update(updateData)
         .eq('staff_id', staffId)
-        .lt('start_time', endDate.toISOString())
-        .gt('end_time', startDate.toISOString())
+        .lte('start_time', endTime)  // slot starts at or before appointment ends
+        .gte('end_time', startTime)   // slot ends at or after appointment starts
 
       if (tenantId) {
         query = query.eq('tenant_id', tenantId)
@@ -130,9 +135,16 @@ export class AvailabilitySlotManager {
 
       const invalidatedCount = data?.length || 0
       if (invalidatedCount > 0) {
-        logger.debug(`✅ Invalidated ${invalidatedCount} overlapping slots`)
+        logger.debug(`✅ Invalidated ${invalidatedCount} overlapping slots`, {
+          invalidatedCount,
+          appointmentStart: startTime,
+          appointmentEnd: endTime
+        })
       } else {
-        logger.debug('ℹ️ No overlapping slots to invalidate')
+        logger.debug('ℹ️ No overlapping slots to invalidate', {
+          appointmentStart: startTime,
+          appointmentEnd: endTime
+        })
       }
 
       return { success: true, invalidatedCount }
