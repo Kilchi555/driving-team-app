@@ -71,18 +71,14 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug(`📋 Queueing staff ${appointment.staff_id} for recalc after appointment deletion`)
         
-        await supabaseAdmin
-          .from('availability_recalc_queue')
-          .upsert(
-            {
-              staff_id: appointment.staff_id,
-              tenant_id: appointment.tenant_id,
-              trigger: 'appointment',
-              queued_at: new Date().toISOString(),
-              processed: false
-            },
-            { onConflict: 'staff_id,tenant_id' }
-          )
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: {
+            staff_id: appointment.staff_id,
+            tenant_id: appointment.tenant_id,
+            trigger: 'appointment'
+          }
+        })
         
         logger.debug(`✅ Staff queued for recalculation after appointment deletion`)
       } catch (queueError: any) {

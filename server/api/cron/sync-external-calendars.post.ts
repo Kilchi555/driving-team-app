@@ -188,18 +188,14 @@ export default defineEventHandler(async (event) => {
 
         // Queue affected staff for availability recalculation
         try {
-          await supabase
-            .from('availability_recalc_queue')
-            .upsert(
-              {
-                staff_id: calendar.staff_id,
-                tenant_id: calendar.tenant_id,
-                trigger: 'external_event',
-                queued_at: new Date().toISOString(),
-                processed: false
-              },
-              { onConflict: 'staff_id,tenant_id' }
-            )
+          await $fetch('/api/availability/queue-recalc', {
+            method: 'POST',
+            body: {
+              staff_id: calendar.staff_id,
+              tenant_id: calendar.tenant_id,
+              trigger: 'external_event'
+            }
+          })
         } catch (queueErr: any) {
           logger.warn(`⚠️ Failed to queue staff for recalc:`, queueErr.message)
         }

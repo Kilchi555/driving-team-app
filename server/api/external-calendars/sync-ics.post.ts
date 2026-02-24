@@ -242,18 +242,14 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     
     for (const staffId of affectedStaffIds) {
       try {
-        await supabase
-          .from('availability_recalc_queue')
-          .upsert(
-            {
-              staff_id: staffId,
-              tenant_id: calendar.tenant_id,
-              trigger: 'external_event',
-              queued_at: new Date().toISOString(),
-              processed: false
-            },
-            { onConflict: 'staff_id,tenant_id' }
-          )
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: {
+            staff_id: staffId,
+            tenant_id: calendar.tenant_id,
+            trigger: 'external_event'
+          }
+        })
       } catch (queueError: any) {
         logger.warn(`⚠️ Failed to queue staff ${staffId} for recalc:`, queueError.message)
       }

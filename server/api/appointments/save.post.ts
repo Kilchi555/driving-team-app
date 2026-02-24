@@ -485,18 +485,14 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug(`📋 Queueing staff ${result.staff_id} for availability recalc after appointment ${mode}`)
         
-        await supabase
-          .from('availability_recalc_queue')
-          .upsert(
-            {
-              staff_id: result.staff_id,
-              tenant_id: appointmentData.tenant_id,
-              trigger: 'appointment',
-              queued_at: new Date().toISOString(),
-              processed: false
-            },
-            { onConflict: 'staff_id,tenant_id' }
-          )
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: {
+            staff_id: result.staff_id,
+            tenant_id: appointmentData.tenant_id,
+            trigger: 'appointment'
+          }
+        })
         
         logger.debug(`✅ Staff queued for recalculation after appointment ${mode}`)
       } catch (queueError: any) {
