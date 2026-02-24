@@ -77,24 +77,7 @@ export default defineEventHandler(async (event) => {
       // Non-critical: appointment is already cancelled, slots will be regenerated at next cron
     }
 
-    // ✅ NEW: DELETE all availability slots for this staff to force regeneration
-    // This ensures new slots are generated at correct times immediately
-    try {
-      logger.debug('🗑️ Deleting all availability slots for staff to force regeneration...')
-      const { error: deleteError } = await supabase
-        .from('availability_slots')
-        .delete()
-        .eq('staff_id', appointment.staff_id)
-        .eq('tenant_id', appointment.tenant_id)
-      
-      if (!deleteError) {
-        logger.debug('✅ Deleted all availability slots - will be regenerated on next calendar view')
-      }
-    } catch (deleteError: any) {
-      logger.warn('⚠️ Failed to delete slots (non-critical):', deleteError.message)
-    }
-
-    // ✅ NEW: Queue availability recalculation to regenerate slots
+    // ✅ NEW: Queue availability recalculation to regenerate slots for freed time
     try {
       logger.debug('📋 Queuing availability recalculation after appointment cancellation...')
       await $fetch('/api/availability/queue-recalc', {

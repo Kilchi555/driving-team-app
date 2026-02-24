@@ -5,15 +5,15 @@ CREATE TABLE IF NOT EXISTS availability_recalc_queue (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   staff_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  trigger TEXT NOT NULL CHECK (trigger IN ('working_hours', 'external_event', 'appointment')),
+  trigger TEXT NOT NULL CHECK (trigger IN ('working_hours', 'external_event', 'appointment', 'appointment_edit', 'appointment_cancelled')),
   queued_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   processed BOOLEAN NOT NULL DEFAULT FALSE,
   processed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   
-  -- Unique constraint: only one pending recalc per staff
-  UNIQUE(staff_id, tenant_id, processed)
+  -- Unique constraint: only one pending recalc per staff (staff_id + tenant_id only, ignoring processed status)
+  UNIQUE(staff_id, tenant_id)
 );
 
 -- Create indexes for fast lookups
