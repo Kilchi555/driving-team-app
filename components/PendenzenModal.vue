@@ -490,9 +490,9 @@ watch(pendenciesCount, (newCount) => {
   console.log('🔧 pendenciesCount changed:', newCount)
 }, { immediate: true })
 
-// Computed: Nur Bewertungen (ohne pending_confirmation)
+// Computed: Alle Bewertungen (inkl. pending_confirmation)
 const evaluationAppointments = computed(() => {
-  return (formattedAppointments.value || []).filter((apt: any) => apt.status !== 'pending_confirmation')
+  return formattedAppointments.value || []
 })
 
 // ✅ NEU: Gefilterte unbestätigte Termine - zeige ALLE unbestätigten Termine (Vergangenheit und Zukunft)
