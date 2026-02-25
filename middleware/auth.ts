@@ -27,7 +27,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   
   // Skip for dynamic routes that are public (like /[slug]/services, /[slug]/register)
   // Also skip the [slug] route itself for public tenant pages
-  const isSlugRoute = to.path.match(/^\/[^\/]+$/) && !to.path.startsWith('/admin') && !to.path.startsWith('/staff') && !to.path.startsWith('/customer')
+  const isSlugRoute = to.path.match(/^\/[^\/]+$/) && !to.path.startsWith('/admin') && !to.path.startsWith('/staff') && !to.path.startsWith('/customer') && !to.path.startsWith('/dashboard') && !to.path.startsWith('/customers')
   const isPublicRoute = publicRoutes.includes(to.path) || 
                        to.path.includes('/services') || 
                        to.path.includes('/register') ||

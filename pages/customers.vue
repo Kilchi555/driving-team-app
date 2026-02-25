@@ -382,6 +382,10 @@
 
 <script setup lang="ts">
 
+definePageMeta({
+  middleware: 'auth'
+})
+
 import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
