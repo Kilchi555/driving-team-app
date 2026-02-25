@@ -616,14 +616,6 @@ const getStudentCategory = (appointment: any) => {
 const openEvaluation = (appointment: any) => {
   logger.debug('🔥 PendenzenModal - opening evaluation for:', appointment.id)
   
-  // ✅ PRÜFE OB TERMIN NICHT BESTÄTIGT IST
-  if (appointment.status === 'pending_confirmation') {
-    logger.debug('⚠️ Appointment not confirmed yet - cannot evaluate')
-    // Zeige Info-Meldung oder öffne Termin-Details
-    alert(`Dieser Termin wurde noch nicht vom Schüler bestätigt.\n\nSchüler: ${appointment.studentName}\nDatum: ${appointment.formattedDate} ${appointment.formattedStartTime}\n\nBitte warten Sie auf die Bestätigung des Schülers.`)
-    return
-  }
-  
   logger.debug('🔥 Student category debug:', {
     userCategory: appointment.users?.category,
     appointmentType: appointment.type,
