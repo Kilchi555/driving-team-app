@@ -333,6 +333,7 @@ export default defineEventHandler(async (event: H3Event) => {
       // Apply duration multiplier
       if (pricingRule.duration_multiplier && pricingRule.duration_multiplier !== '1.00') {
         price *= parseFloat(pricingRule.duration_multiplier)
+        price = Math.round(price) // Round after each calculation
       }
 
       // Apply weekend multiplier (if start_time is Saturday or Sunday)
@@ -340,12 +341,14 @@ export default defineEventHandler(async (event: H3Event) => {
       const dayOfWeek = appointmentStartTime.getDay() // 0 = Sunday, 6 = Saturday
       if ((dayOfWeek === 0 || dayOfWeek === 6) && pricingRule.weekend_multiplier && pricingRule.weekend_multiplier !== '1.00') {
         price *= parseFloat(pricingRule.weekend_multiplier)
+        price = Math.round(price) // Round after each calculation
       }
 
       // Apply evening multiplier (if start_time is after 18:00)
       const hour = appointmentStartTime.getHours()
       if (hour >= 18 && pricingRule.evening_multiplier && pricingRule.evening_multiplier !== '1.00') {
         price *= parseFloat(pricingRule.evening_multiplier)
+        price = Math.round(price) // Round after each calculation
       }
 
       totalAmountRappen = Math.round(price)
