@@ -595,6 +595,12 @@ const selectCriteria = (criteria: any) => {
     criteriaNotes.value[criteria.id] = ''
   }
   
+  // ✅ NEU: Wenn dieses Kriterium bereits historische Bewertungen hat, 
+  // aber noch nicht in allCriteriaRatings, kopiere die aktuelle Bewertung hin
+  if (criteriaRatings.value[criteria.id] && !allCriteriaRatings.value[criteria.id]) {
+    allCriteriaRatings.value[criteria.id] = [criteriaRatings.value[criteria.id]]
+  }
+  
   searchQuery.value = ''
   showDropdown.value = false
 }
@@ -1011,6 +1017,7 @@ watch(() => props.isOpen, (isOpen) => {
     error.value = null
     criteriaTimestamps.value = {}
     newlyRatedCriteria.value = [] // Clear tracking
+    allCriteriaRatings.value = {} // ✅ NEU: Reset rating history
     
 
     
