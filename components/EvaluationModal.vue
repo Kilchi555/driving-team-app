@@ -990,6 +990,7 @@ watch(() => props.studentCategory, (newCategory) => {
 
 // ✅ NEU: Helper Funktionen für Rating-Farben
 const allRatings = ref<any[]>([])
+const { currentTenant } = useTenant()
 
 const getRatingColor = (ratingValue: number): string => {
   const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
@@ -1003,9 +1004,23 @@ const getRatingLabel = (ratingValue: number): string => {
 
 onMounted(async () => {
   try {
-    const response = await $fetch('/api/staff/get-evaluation-ratings')
-    allRatings.value = response?.data || []
-    logger.debug('✅ Ratings loaded:', allRatings.value.length)
+    const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
+    if (!tenantId) {
+      logger.warn('⚠️ No tenant ID available for loading ratings')
+      return
+    }
+    
+    const response = await $fetch('/api/staff/get-rating-points', {
+      method: 'POST',
+      body: { tenantId }
+    }) as any
+    
+    if (response?.success) {
+      allRatings.value = response.data || []
+      logger.debug('✅ Ratings loaded:', allRatings.value.length)
+    } else {
+      logger.warn('⚠️ Failed to load ratings:', response?.error)
+    }
   } catch (err) {
     logger.warn('⚠️ Failed to load ratings:', err)
   }
