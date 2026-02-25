@@ -847,9 +847,11 @@ const loadCurrentAppointmentEvaluations = async () => {
           start_time: props.appointment?.start_time
         }
         
-        if (!selectedCriteriaOrder.value.includes(criteriaId)) {
-          selectedCriteriaOrder.value.push(criteriaId)
-        }
+        // ✅ WICHTIG: Nicht automatisch zu selectedCriteriaOrder hinzufügen!
+        // Der User muss das Kriterium explizit im Dropdown anklicken
+        // if (!selectedCriteriaOrder.value.includes(criteriaId)) {
+        //   selectedCriteriaOrder.value.push(criteriaId)
+        // }
       })
       return true
     }
