@@ -564,24 +564,8 @@ const loadAllCriteria = async () => {
 
 // Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
-  // ✅ DEBUG: Log was wir wissen
-  logger.debug('🔍 selectCriteria called for:', criteria.id)
-  logger.debug('🔍 selectedCriteriaOrder:', selectedCriteriaOrder.value)
-  logger.debug('🔍 criteriaAppointments[criteria.id]:', criteriaAppointments.value[criteria.id])
-  logger.debug('🔍 props.appointment?.id:', props.appointment?.id)
-  
-  // ✅ SMART: Prüfe ob das Kriterium bereits mit DIESEM TERMIN verknüpft ist
-  const alreadyForThisAppointment = selectedCriteriaOrder.value.some(id => {
-    const isMatch = id === criteria.id && criteriaAppointments.value[id]?.appointment_id === props.appointment?.id
-    logger.debug('🔍 Checking id:', id, 'isMatch:', isMatch, 'appointmentId:', criteriaAppointments.value[id]?.appointment_id)
-    return isMatch
-  })
-  
-  logger.debug('🔍 alreadyForThisAppointment:', alreadyForThisAppointment)
-  
-  // Wenn bereits mit DIESEM Termin verknüpft, nicht hinzufügen
-  if (alreadyForThisAppointment) {
-    logger.debug('⚠️ Criteria', criteria.id, 'already selected for this appointment, ignoring click')
+  // Prüfe ob das Kriterium bereits in selectedCriteriaOrder ist
+  if (selectedCriteriaOrder.value.includes(criteria.id)) {
     searchQuery.value = ''
     showDropdown.value = false
     return
@@ -904,20 +888,18 @@ const loadStudentEvaluationHistory = async () => {
       })
       .map((e: any) => e.evaluation_criteria_id)
 
-    selectedCriteriaOrder.value = sortedByLessonDate
+    // ✅ NICHT zu selectedCriteriaOrder hinzufügen! Historische Daten nur für Dropdown-Farben
+    // selectedCriteriaOrder.value = sortedByLessonDate
 
-    // Setup appointment data for sorting
-    criteriaAppointments.value = {}
-    originalNotes.value = {}
-    allCriteriaRatings.value = {} // ✅ Reset für neue Daten
+    // Setup data for dropdown display only
+    allCriteriaRatings.value = {}
     
     evaluations.forEach((note: any) => {
       const criteriaId = note.evaluation_criteria_id
       criteriaRatings.value[criteriaId] = note.criteria_rating || 0
       criteriaNotes.value[criteriaId] = note.criteria_note || ''
-      originalNotes.value[criteriaId] = note.criteria_note || ''
       
-      // ✅ NEU: Sammle ALLE Bewertungen für dieses Kriterium
+      // Sammle ALLE Bewertungen für dieses Kriterium (für Dropdown-Anzeige)
       if (!allCriteriaRatings.value[criteriaId]) {
         allCriteriaRatings.value[criteriaId] = []
       }
