@@ -37,7 +37,10 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
 
       // Check if this is a booking flow request (should show modal instead of redirecting)
-      const isBookingFlow = url.includes('/api/booking/create-appointment') || url.includes('x-booking-flow=true') || request?.headers?.['X-Booking-Flow'] === 'true'
+      const route = useRoute()
+      const currentPath = route.path
+      const isBookingAvailabilityPage = currentPath.includes('/booking/availability/')
+      const isBookingFlow = isBookingAvailabilityPage || url.includes('/api/booking/create-appointment') || url.includes('x-booking-flow=true') || request?.headers?.['X-Booking-Flow'] === 'true'
 
       // 🚨 If this is a booking flow request, don't redirect - let component handle it
       if (isBookingFlow && status === 401) {
@@ -56,11 +59,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
         try {
           const authStore = useAuthStore()
-          const route = useRoute()
           
           // ✅ CHECK: Sind wir bereits auf einer /{slug} Login-Seite? Dann NICHT redirect!
           // Das verhindert Redirect-Schleifen
-          const currentPath = route.path
           const currentSlug = route.params.slug as string
           if (currentSlug && (currentPath === `/${currentSlug}` || currentPath.startsWith(`/${currentSlug}/`))) {
             console.log('ℹ️ Already on tenant login page - no redirect needed')
