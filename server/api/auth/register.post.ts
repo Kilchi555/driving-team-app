@@ -155,7 +155,9 @@ async function registerCustomer(event: any, body: RegisterRequest) {
   if (authError || !authData.user) {
     logger.error('❌ [REGISTER-CUSTOMER] Auth creation failed', { 
       email: email.substring(0, 3) + '***',
-      error: authError?.message 
+      error: authError?.message,
+      errorCode: authError?.code,
+      errorDetails: authError?.status
     })
     throw createError({
       statusCode: 400,
