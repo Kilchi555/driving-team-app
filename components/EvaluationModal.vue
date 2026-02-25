@@ -6,6 +6,19 @@
           <div>
             <h2 class="text-lg font-bold">Lektion bewerten</h2>
           </div>
+          
+          <!-- ✅ NEU: Cancel Button für Termin-Absage -->
+          <button 
+            @click="openCancelModal"
+            class="mr-3 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+            title="Termin absagen"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Absagen
+          </button>
+          
           <button @click="closeModal" class="text-white hover:text-green-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -223,7 +236,7 @@ interface Props {
 const props = defineProps<Props>()
 
 // Emits
-const emit = defineEmits(['close', 'saved'])
+const emit = defineEmits(['close', 'saved', 'cancel'])
 
 // WICHTIG: Verwende das zentrale usePendingTasks Composable
 // Jetzt importieren wir saveCriteriaEvaluations
@@ -420,6 +433,12 @@ const currentTermCriteria = computed(() => {
 const closeModal = () => {
   logger.debug('🔥 EvaluationModal - closing modal')
   emit('close')
+}
+
+// ✅ NEU: Funktion um Cancel-Modal zu öffnen
+const openCancelModal = () => {
+  logger.debug('🔥 EvaluationModal - opening cancel modal for appointment:', props.appointment?.id)
+  emit('cancel', props.appointment)
 }
 
 // KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
