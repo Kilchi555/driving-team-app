@@ -2560,8 +2560,15 @@ const generateTimeSlotsForSpecificCombination = async () => {
     
     // ✅ Auto-skip to next week if current week has no available slots
     if (timeSlots.length > 0) {
+      logger.debug(`📊 Auto-skip logic: Total slots: ${timeSlots.length}`)
+      logger.debug(`📊 currentWeek.value: ${currentWeek.value}`)
+      logger.debug(`📊 Unique weeks in slots: ${[...new Set(timeSlots.map((s: any) => s.week_number))]}`)
+      
       // Check if current week (week 1) has any available slots
       const currentWeekSlots = timeSlots.filter((s: any) => s.week_number === currentWeek.value)
+      logger.debug(`📊 Slots in current week (${currentWeek.value}): ${currentWeekSlots.length}`)
+      logger.debug(`📊 Available in current week: ${currentWeekSlots.filter((s: any) => s.is_available === true).length}`)
+      
       const hasAvailableInCurrentWeek = currentWeekSlots.some((s: any) => s.is_available === true)
       
       if (!hasAvailableInCurrentWeek && currentWeekSlots.length > 0) {
@@ -2570,9 +2577,13 @@ const generateTimeSlotsForSpecificCombination = async () => {
         // Find first week with available slots
         let nextWeekWithAvailability = currentWeek.value + 1
         const maxWeekValue = Math.max(...timeSlots.map((s: any) => s.week_number))
+        logger.debug(`📊 Max week: ${maxWeekValue}`)
         
         while (nextWeekWithAvailability <= maxWeekValue) {
           const weekSlots = timeSlots.filter((s: any) => s.week_number === nextWeekWithAvailability)
+          const availableCount = weekSlots.filter((s: any) => s.is_available === true).length
+          logger.debug(`📊 Week ${nextWeekWithAvailability}: ${weekSlots.length} slots total, ${availableCount} available`)
+          
           const hasAvailable = weekSlots.some((s: any) => s.is_available === true)
           
           if (hasAvailable) {
@@ -2581,6 +2592,10 @@ const generateTimeSlotsForSpecificCombination = async () => {
             break
           }
           nextWeekWithAvailability++
+        }
+        
+        if (nextWeekWithAvailability > maxWeekValue) {
+          logger.warn('⚠️ No weeks with available slots found! Keeping current week.')
         }
       }
     }
