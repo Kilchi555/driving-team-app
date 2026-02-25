@@ -164,26 +164,30 @@ async function registerCustomer(event: any, body: RegisterRequest) {
   }
 
   // ===== LAYER 5: PROFILE CREATION =====
+  const userInsertData: any = {
+    auth_user_id: authData.user.id,
+    email,
+    first_name,
+    last_name,
+    phone,
+    role: 'client',
+    tenant_id: finalTenantId,
+    is_active: true,
+    password_strength_version: 2 // Mark as using new password requirements
+  }
+
+  // Only add optional fields if they were provided
+  if (birthdate) userInsertData.birthdate = birthdate
+  if (street) userInsertData.street = street
+  if (street_nr) userInsertData.street_nr = street_nr
+  if (zip) userInsertData.zip = zip
+  if (city) userInsertData.city = city
+  if (assigned_staff_id) userInsertData.assigned_staff_id = assigned_staff_id
+  if (category) userInsertData.category = category
+
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .insert({
-      auth_user_id: authData.user.id,
-      email,
-      first_name,
-      last_name,
-      phone,
-      birthdate: birthdate || null,
-      street: street || null,
-      street_nr: street_nr || null,
-      zip: zip || null,
-      city: city || null,
-      assigned_staff_id: assigned_staff_id || null,
-      category: category || null,
-      role: 'client',
-      tenant_id: finalTenantId,
-      is_active: true,
-      password_strength_version: 2 // Mark as using new password requirements
-    })
+    .insert(userInsertData)
     .select()
     .single()
 
