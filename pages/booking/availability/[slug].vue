@@ -2562,9 +2562,20 @@ const generateTimeSlotsForSpecificCombination = async () => {
     if (timeSlots.length > 0) {
       logger.debug(`📊 Auto-skip logic: Total slots: ${timeSlots.length}`)
       logger.debug(`📊 currentWeek.value: ${currentWeek.value}`)
-      logger.debug(`📊 Unique weeks in slots: ${[...new Set(timeSlots.map((s: any) => s.week_number))]}`)
+      const allWeeks = [...new Set(timeSlots.map((s: any) => s.week_number))].sort((a, b) => a - b)
+      logger.debug(`📊 Unique weeks in slots: ${allWeeks}`)
       
-      // Check if current week (week 1) has any available slots
+      // Get the first week that actually has slots (not necessarily week 1)
+      const firstWeekWithSlots = allWeeks[0]
+      logger.debug(`📊 First week with slots: ${firstWeekWithSlots}`)
+      
+      // Set currentWeek to first week with slots
+      if (firstWeekWithSlots && currentWeek.value !== firstWeekWithSlots) {
+        logger.debug(`🔄 Setting currentWeek to ${firstWeekWithSlots} (first week with data)`)
+        currentWeek.value = firstWeekWithSlots
+      }
+      
+      // Check if this first week has any available slots
       const currentWeekSlots = timeSlots.filter((s: any) => s.week_number === currentWeek.value)
       logger.debug(`📊 Slots in current week (${currentWeek.value}): ${currentWeekSlots.length}`)
       logger.debug(`📊 Available in current week: ${currentWeekSlots.filter((s: any) => s.is_available === true).length}`)
