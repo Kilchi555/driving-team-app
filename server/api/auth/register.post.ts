@@ -183,7 +183,7 @@ async function registerCustomer(event: any, body: RegisterRequest) {
   if (zip) userInsertData.zip = zip
   if (city) userInsertData.city = city
   if (assigned_staff_id) userInsertData.assigned_staff_id = assigned_staff_id
-  if (category) userInsertData.category = category
+  if (category) userInsertData.category = [category] // Convert to array for PostgreSQL
 
   const { data: userData, error: userError } = await supabase
     .from('users')
