@@ -143,6 +143,70 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
+              Geburtsdatum <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="registerForm.birthdate"
+              type="date"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+          </div>
+
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Straße <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="registerForm.street"
+                type="text"
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Hauptstraße"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Nr. <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="registerForm.street_nr"
+                type="text"
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="42"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                PLZ <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="registerForm.zip"
+                type="text"
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="8000"
+              >
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Stadt <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="registerForm.city"
+              type="text"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Zürich"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
               Passwort <span class="text-red-500">*</span>
             </label>
             <input
@@ -207,10 +271,14 @@ const emit = defineEmits(['close', 'success'])
 
 interface Props {
   initialTab?: 'login' | 'register'
+  selectedStaffId?: string
+  selectedCategory?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialTab: 'login'
+  initialTab: 'login',
+  selectedStaffId: undefined,
+  selectedCategory: undefined
 })
 
 const route = useRoute()
@@ -232,7 +300,14 @@ const registerForm = ref({
   email: '',
   phone: '',
   password: '',
-  password_confirm: ''
+  password_confirm: '',
+  street: '',
+  street_nr: '',
+  zip: '',
+  city: '',
+  birthdate: '',
+  assigned_staff_id: props.selectedStaffId || '',
+  category: props.selectedCategory || ''
 })
 
 // Password strength validation
@@ -321,6 +396,13 @@ const handleRegister = async () => {
         first_name: registerForm.value.first_name,
         last_name: registerForm.value.last_name,
         phone: registerForm.value.phone,
+        birthdate: registerForm.value.birthdate || null,
+        street: registerForm.value.street || null,
+        street_nr: registerForm.value.street_nr || null,
+        zip: registerForm.value.zip || null,
+        city: registerForm.value.city || null,
+        assigned_staff_id: registerForm.value.assigned_staff_id || null,
+        category: registerForm.value.category || null,
         slug
       },
       // IMPORTANT: Mark this as an auth endpoint so the interceptor doesn't redirect

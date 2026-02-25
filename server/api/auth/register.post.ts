@@ -18,6 +18,13 @@ interface RegisterRequest {
   first_name?: string
   last_name?: string
   phone?: string
+  birthdate?: string | null
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
+  assigned_staff_id?: string | null
+  category?: string | null
   slug?: string
   tenant_id?: string
 }
@@ -61,7 +68,7 @@ export default defineEventHandler(async (event) => {
 })
 
 async function registerCustomer(event: any, body: RegisterRequest) {
-  const { email, password, first_name, last_name, phone, slug, tenant_id } = body
+  const { email, password, first_name, last_name, phone, birthdate, street, street_nr, zip, city, assigned_staff_id, category, slug, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
   if (!email || !password || !first_name || !last_name || !phone) {
@@ -165,6 +172,13 @@ async function registerCustomer(event: any, body: RegisterRequest) {
       first_name,
       last_name,
       phone,
+      birthdate: birthdate || null,
+      street: street || null,
+      street_nr: street_nr || null,
+      zip: zip || null,
+      city: city || null,
+      assigned_staff_id: assigned_staff_id || null,
+      category: category || null,
       role: 'client',
       tenant_id: finalTenantId,
       is_active: true,

@@ -732,6 +732,8 @@
   <LoginRegisterModal 
     v-if="showLoginModal"
     :initial-tab="loginModalTab"
+    :selected-staff-id="selectedInstructor?.id"
+    :selected-category="selectedCategory?.code"
     @close="showLoginModal = false"
     @success="handleAuthSuccess"
   />
