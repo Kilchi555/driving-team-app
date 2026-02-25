@@ -356,6 +356,15 @@
     @close="showCashPaymentModal = false"
     @payment-confirmed="onCashPaymentConfirmed"
   />
+
+  <!-- ✅ NEU: Appointment Cancellation Modal -->
+  <AppointmentCancellationDetailsModal
+    v-if="showCancellationModal"
+    :is-open="showCancellationModal"
+    :appointment="cancellationAppointment"
+    @close="closeCancellationModal"
+    @cancellation-completed="onCancellationCompleted"
+  />
 </template>
 
 <script setup lang="ts">
@@ -370,6 +379,7 @@ import { useCurrentUser } from '~/composables/useCurrentUser'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
+import AppointmentCancellationDetailsModal from '~/components/AppointmentCancellationDetailsModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 // Props
@@ -835,44 +845,27 @@ const refreshData = async () => {
 }
 
 // ✅ NEU: Handler für Cancel-Event vom EvaluationModal
+const showCancellationModal = ref(false)
+const cancellationAppointment = ref<any>(null)
+
 const onCancelAppointment = async (appointment: any) => {
   logger.debug('🚫 PendenzenModal - cancel requested for appointment:', appointment?.id)
   closeEvaluationModal()
   
-  // ✅ Hier könnten Sie jetzt:
-  // 1. Ein Cancel-Modal öffnen
-  // 2. Den Benutzter fragen ob er das Termin absagen will
-  // 3. Den cancel_by_staff Prozess starten
-  
-  // Für jetzt: Öffne ein Confirm-Dialog
-  const confirmed = confirm(`Möchten Sie den Termin wirklich absagen?\n\nSchüler: ${appointment.studentName}\nDatum: ${appointment.formattedDate} ${appointment.formattedStartTime}`)
-  
-  if (confirmed) {
-    try {
-      logger.debug('🚫 Starting cancel_by_staff process for appointment:', appointment.id)
-      
-      // Rufe das Cancel-Endpoint auf
-      const response = await $fetch('/api/staff/delete-appointment', {
-        method: 'POST',
-        body: {
-          appointment_id: appointment.id,
-          reason: 'Nicht stattgefunden / von Instruktor abgesagt'
-        }
-      }) as any
-      
-      if (response?.success) {
-        logger.debug('✅ Appointment cancelled successfully')
-        alert('Termin wurde erfolgreich abgesagt')
-        await refreshData()
-      } else {
-        logger.warn('⚠️ Failed to cancel appointment:', response?.error)
-        alert('Fehler beim Absagen des Termins: ' + response?.error)
-      }
-    } catch (err) {
-      logger.warn('⚠️ Error cancelling appointment:', err)
-      alert('Fehler beim Absagen des Termins')
-    }
-  }
+  // Öffne das Cancellation-Modal
+  cancellationAppointment.value = appointment
+  showCancellationModal.value = true
+}
+
+const closeCancellationModal = () => {
+  showCancellationModal.value = false
+  cancellationAppointment.value = null
+}
+
+const onCancellationCompleted = async () => {
+  logger.debug('✅ Appointment cancellation completed')
+  closeCancellationModal()
+  await refreshData()
 }
 
 // ✅ NEU: Funktion um Termin-Status zu aktualisieren
