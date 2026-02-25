@@ -565,6 +565,23 @@ export default defineEventHandler(async (event) => {
     //   data: { appointment, reason }
     // })
 
+    // ============ LAYER 9: QUEUE AVAILABILITY RECALCULATION ============
+    // Release the appointment slots and regenerate availability for the freed time
+    try {
+      logger.debug('📋 Queueing availability recalculation after customer cancellation...')
+      await $fetch('/api/availability/queue-recalc', {
+        method: 'POST',
+        body: {
+          staff_id: appointment.staff_id,
+          tenant_id: tenantId,
+          trigger: 'appointment_cancelled'
+        }
+      })
+      logger.debug('✅ Queued recalculation after customer cancellation')
+    } catch (queueError: any) {
+      logger.warn('⚠️ Failed to queue recalculation (non-critical):', queueError.message)
+    }
+
     return {
       success: true,
       message: 'Termin erfolgreich abgesagt',
