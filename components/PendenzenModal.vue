@@ -357,14 +357,75 @@
     @payment-confirmed="onCashPaymentConfirmed"
   />
 
-  <!-- ✅ NEU: Appointment Cancellation Modal -->
-  <AppointmentCancellationDetailsModal
-    v-if="showCancellationModal"
-    :is-open="showCancellationModal"
-    :appointment="cancellationAppointment"
-    @close="closeCancellationModal"
-    @confirm="onCancellationCompleted"
-  />
+  <!-- ✅ NEU: Appointment Cancellation Reason Modal (wie im EventModal) -->
+  <div v-if="showCancellationReasonModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <!-- Header with Progress -->
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+          <div class="text-2xl mr-3">❌</div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            {{ cancellationStep === 0 ? 'Wer hat abgesagt?' : cancellationStep === 1 ? 'Absage-Grund auswählen' : 'Bestätigung' }}
+          </h3>
+        </div>
+        <button
+          @click="closeCancellationReasonModal"
+          class="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Wer hat abgesagt? -->
+      <div v-if="cancellationStep === 0" class="mb-6">
+        <div class="grid grid-cols-2 gap-4">
+          <button
+            @click="cancellationType = 'student'; cancellationStep = 1"
+            :class="[
+              'p-6 rounded-lg border-2 transition-all duration-200 text-center',
+              cancellationType === 'student'
+                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+            ]"
+          >
+            <div class="text-3xl mb-2">👨‍🎓</div>
+            <div class="font-medium">Schüler</div>
+          </button>
+          <button
+            @click="cancellationType = 'staff'; cancellationStep = 1"
+            :class="[
+              'p-6 rounded-lg border-2 transition-all duration-200 text-center',
+              cancellationType === 'staff'
+                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+            ]"
+          >
+            <div class="text-3xl mb-2">👨‍🏫</div>
+            <div class="font-medium">Fahrlehrer</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 justify-end">
+        <button
+          @click="closeCancellationReasonModal"
+          class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+        >
+          Abbrechen
+        </button>
+        <button
+          v-if="cancellationType"
+          @click="await performCancellation(cancellationType)"
+          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Absagen
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -379,7 +440,6 @@ import { useCurrentUser } from '~/composables/useCurrentUser'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
-import AppointmentCancellationDetailsModal from '~/components/AppointmentCancellationDetailsModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 // Props
@@ -845,8 +905,11 @@ const refreshData = async () => {
 }
 
 // ✅ NEU: Handler für Cancel-Event vom EvaluationModal
-const showCancellationModal = ref(false)
+const showCancellationReasonModal = ref(false)
 const cancellationAppointment = ref<any>(null)
+const cancellationStep = ref(0)
+const cancellationType = ref<'student' | 'staff' | undefined>()
+const selectedCancellationReasonId = ref<string | undefined>()
 
 const onCancelAppointment = async (appointment: any) => {
   logger.debug('🚫 PendenzenModal - cancel requested for appointment:', appointment?.id)
@@ -863,9 +926,12 @@ const onCancelAppointment = async (appointment: any) => {
   logger.debug('🗑️ Appointment type:', appointmentType, 'isPayable:', isPayableAppointment)
   
   if (isPayableAppointment) {
-    // Für Lektionen: Öffne das Cancellation-Modal (mit Zahlungs-Details)
+    // Für Lektionen: Öffne das Cancellation-Reason-Modal (mit Schritten)
     cancellationAppointment.value = appointment
-    showCancellationModal.value = true
+    cancellationStep.value = 0 // Starte mit Schritt 0 (Wer hat abgesagt?)
+    cancellationType.value = undefined
+    selectedCancellationReasonId.value = undefined
+    showCancellationReasonModal.value = true
   } else {
     // Für andere Events: Direkt löschen
     logger.debug('🗑️ Other event type - direct delete')
@@ -873,15 +939,12 @@ const onCancelAppointment = async (appointment: any) => {
   }
 }
 
-const closeCancellationModal = () => {
-  showCancellationModal.value = false
+const closeCancellationReasonModal = () => {
+  showCancellationReasonModal.value = false
   cancellationAppointment.value = null
-}
-
-const onCancellationCompleted = async () => {
-  logger.debug('✅ Appointment cancellation completed')
-  closeCancellationModal()
-  await refreshData()
+  cancellationStep.value = 0
+  cancellationType.value = undefined
+  selectedCancellationReasonId.value = undefined
 }
 
 // ✅ NEU: Direktes Löschen für nicht-zahlbare Events
@@ -905,6 +968,32 @@ const deleteAppointmentDirectly = async (appointmentId: string) => {
     }
   } catch (err) {
     logger.warn('⚠️ Error deleting appointment:', err)
+  }
+}
+
+// ✅ NEU: Termin absagen mit Grund
+const performCancellation = async (type: 'student' | 'staff') => {
+  try {
+    logger.debug('🚫 Cancelling appointment:', cancellationAppointment.value?.id, 'by:', type)
+    
+    const response = await $fetch('/api/staff/delete-appointment', {
+      method: 'POST',
+      body: {
+        appointment_id: cancellationAppointment.value?.id,
+        reason: type === 'student' ? 'Schüler hat abgesagt' : 'Fahrlehrer hat abgesagt',
+        cancelled_by: type
+      }
+    }) as any
+    
+    if (response?.success) {
+      logger.debug('✅ Appointment cancelled successfully')
+      closeCancellationReasonModal()
+      await refreshData()
+    } else {
+      logger.warn('⚠️ Failed to cancel appointment:', response?.error)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Error cancelling appointment:', err)
   }
 }
 
