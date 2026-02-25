@@ -1053,6 +1053,21 @@ watch(() => props.studentCategory, (newCategory) => {
   }
 }, { immediate: true })
 
+// ✅ NEU: Watch für Appointment-Wechsel um State zu clearen
+watch(() => props.appointment?.id, (newAppointmentId) => {
+  if (newAppointmentId && props.isOpen) {
+    logger.debug('🔄 Appointment changed to:', newAppointmentId)
+    logger.debug('🔄 Clearing selectedCriteriaOrder and criteriaAppointments')
+    selectedCriteriaOrder.value = []
+    criteriaRatings.value = {}
+    criteriaNotes.value = {}
+    criteriaAppointments.value = {}
+    allCriteriaRatings.value = {}
+    originalNotes.value = {}
+    newlyRatedCriteria.value = []
+  }
+}, { immediate: true })
+
 // ✅ NEU: Helper Funktionen für Rating-Farben
 const allRatings = ref<any[]>([])
 
