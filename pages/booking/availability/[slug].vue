@@ -2558,6 +2558,33 @@ const generateTimeSlotsForSpecificCombination = async () => {
     // Store globally for UI
     availableTimeSlots.value = timeSlots
     
+    // ✅ Auto-skip to next week if current week has no available slots
+    if (timeSlots.length > 0) {
+      // Check if current week (week 1) has any available slots
+      const currentWeekSlots = timeSlots.filter((s: any) => s.week_number === currentWeek.value)
+      const hasAvailableInCurrentWeek = currentWeekSlots.some((s: any) => s.is_available === true)
+      
+      if (!hasAvailableInCurrentWeek && currentWeekSlots.length > 0) {
+        logger.debug('⚠️ Current week has no available slots, finding first week with availability...')
+        
+        // Find first week with available slots
+        let nextWeekWithAvailability = currentWeek.value + 1
+        const maxWeekValue = Math.max(...timeSlots.map((s: any) => s.week_number))
+        
+        while (nextWeekWithAvailability <= maxWeekValue) {
+          const weekSlots = timeSlots.filter((s: any) => s.week_number === nextWeekWithAvailability)
+          const hasAvailable = weekSlots.some((s: any) => s.is_available === true)
+          
+          if (hasAvailable) {
+            logger.debug(`✅ Found available slots in week ${nextWeekWithAvailability}, jumping to it`)
+            currentWeek.value = nextWeekWithAvailability
+            break
+          }
+          nextWeekWithAvailability++
+        }
+      }
+    }
+    
   } catch (err: any) {
     logger.error('❌ Error fetching slots:', err)
     error.value = err.message || 'Fehler beim Laden der Verfügbarkeit'
