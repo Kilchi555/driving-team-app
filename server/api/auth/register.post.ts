@@ -196,7 +196,10 @@ async function registerCustomer(event: any, body: RegisterRequest) {
     await supabase.auth.admin.deleteUser(authData.user.id)
     logger.error('❌ [REGISTER-CUSTOMER] Profile creation failed', { 
       email: email.substring(0, 3) + '***',
-      error: userError.message 
+      error: userError.message,
+      errorCode: userError.code,
+      errorDetails: userError.details,
+      insertData: userInsertData
     })
     throw createError({
       statusCode: 400,
