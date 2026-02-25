@@ -327,6 +327,27 @@ const isPasswordValid = computed(() => {
   return req.minLength && req.hasUpperCase && req.hasLowerCase && req.hasNumber && req.hasSpecialChar
 })
 
+// Format phone number to +41 format
+const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return phone
+  
+  // Remove all non-digits
+  const digits = phone.replace(/\D/g, '')
+  
+  // If already starts with 41, just add +
+  if (digits.startsWith('41')) {
+    return '+' + digits
+  }
+  
+  // If starts with 0, replace with 41
+  if (digits.startsWith('0')) {
+    return '+41' + digits.substring(1)
+  }
+  
+  // Otherwise, assume Switzerland and add +41
+  return '+41' + digits
+}
+
 const handleLogin = async () => {
   isLoading.value = true
   error.value = ''
@@ -395,13 +416,14 @@ const handleRegister = async () => {
         password: registerForm.value.password,
         first_name: registerForm.value.first_name,
         last_name: registerForm.value.last_name,
-        phone: registerForm.value.phone,
+        phone: formatPhoneNumber(registerForm.value.phone),
         ...(registerForm.value.birthdate && { birthdate: registerForm.value.birthdate }),
         ...(registerForm.value.street && { street: registerForm.value.street }),
         ...(registerForm.value.street_nr && { street_nr: registerForm.value.street_nr }),
         ...(registerForm.value.zip && { zip: registerForm.value.zip }),
         ...(registerForm.value.city && { city: registerForm.value.city }),
         ...(registerForm.value.assigned_staff_id && { assigned_staff_id: registerForm.value.assigned_staff_id }),
+        ...(registerForm.value.assigned_staff_id && { assigned_staff_ids: [registerForm.value.assigned_staff_id] }),
         ...(registerForm.value.category && { category: registerForm.value.category }),
         slug
       },
