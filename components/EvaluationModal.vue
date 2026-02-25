@@ -564,7 +564,10 @@ const loadAllCriteria = async () => {
 
 // Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
-  if (!selectedCriteriaOrder.value.includes(criteria.id)) {
+  // ✅ NEU: Prüfe ob bereits im aktuellen Termin, nicht in der kompletten History
+  const isAlreadyInCurrentTerm = criteriaAppointments.value[criteria.id]?.appointment_id === props.appointment?.id
+  
+  if (!isAlreadyInCurrentTerm) {
     selectedCriteriaOrder.value.unshift(criteria.id)
     if (!newlyRatedCriteria.value.includes(criteria.id)) {
       newlyRatedCriteria.value.push(criteria.id) // Mark as newly rated in this session
