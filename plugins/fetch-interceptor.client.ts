@@ -52,7 +52,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       // DON'T redirect for booking flow - let component show modal
       if (status === 401 && !isRedirecting && !isBookingFlow && !isAnyAuthEndpoint) {
         isRedirecting = true
-        console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { url, isLoginRequest })
+        console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { url })
 
         try {
           const authStore = useAuthStore()
