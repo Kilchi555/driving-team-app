@@ -564,11 +564,12 @@ const loadAllCriteria = async () => {
 
 // Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
-  // ✅ NEU: Prüfe ob bereits im aktuellen Termin
-  const isAlreadyInCurrentTerm = criteriaAppointments.value[criteria.id]?.appointment_id === props.appointment?.id
+  // ✅ NEU: Prüfe ob bereits im aktuellen Termin, indem wir schauen ob es in currentTermCriteria ist
+  const isAlreadyInCurrentTerm = currentTermCriteria.value.includes(criteria.id)
   
   // Wenn bereits im aktuellen Termin, ignoriere den Click (verhindert Duplikate)
   if (isAlreadyInCurrentTerm) {
+    logger.debug('⚠️ Criteria', criteria.id, 'already in current term, ignoring click')
     searchQuery.value = ''
     showDropdown.value = false
     return
