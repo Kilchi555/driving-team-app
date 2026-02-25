@@ -43,6 +43,18 @@ export default defineEventHandler(async (event) => {
 
     if (invoiceError) throw invoiceError
 
+    // Update user's preferred payment method to 'invoice' if user_id is provided
+    if (invoiceData.user_id) {
+      const { error: updateUserError } = await supabaseAdmin
+        .from('users')
+        .update({ preferred_payment_method: 'invoice' })
+        .eq('id', invoiceData.user_id)
+
+      if (updateUserError) {
+        console.warn('Warning: Could not update user payment method:', updateUserError)
+      }
+    }
+
     // Create invoice items
     if (items.length > 0) {
       const invoiceItems = items.map((item: any, index: number) => ({
