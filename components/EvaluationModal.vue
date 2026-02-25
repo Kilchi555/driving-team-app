@@ -83,13 +83,16 @@
                   <h4 class="font-medium text-gray-900">{{ criteria.name }}</h4>
                 </div>
                 
-                <!-- ✅ NEU: Zeige Farbe wenn bereits bewertet -->
-                <div v-if="criteriaRatings[criteria.id]" class="ml-3 flex items-center gap-2">
-                  <div 
-                    :style="{ backgroundColor: getRatingColor(criteriaRatings[criteria.id]) }"
-                    class="w-6 h-6 rounded-full"
-                  ></div>
-                  <span class="text-xs font-medium text-gray-600">{{ getRatingLabel(criteriaRatings[criteria.id]) }}</span>
+                <!-- ✅ NEU: Zeige nur Punkte in Farben wenn bereits bewertet -->
+                <div v-if="getAllRatingsForCriteria(criteria.id).length > 0" class="ml-3 flex items-center gap-1">
+                  <div
+                    v-for="rating in getAllRatingsForCriteria(criteria.id)"
+                    :key="rating"
+                    :style="{ backgroundColor: getRatingColor(rating) }"
+                    class="w-6 h-6 rounded-full flex items-center justify-center"
+                  >
+                    <span class="text-xs font-bold text-white">{{ rating }}</span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -254,6 +257,7 @@ const sortByNewest = ref(true) // true = neueste zuerst, false = schlechteste zu
 const criteriaTimestamps = ref<Record<string, string>>({}) // Neue ref für Timestamps
 const criteriaAppointments = ref<Record<string, { appointment_id: string, start_time: string }>>({})
 const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly rated in this session
+const allCriteriaRatings = ref<Record<string, number[]>>({}) // ✅ NEU: Speichert ALLE Bewertungen pro Kriterium
 
 
 // Computed
@@ -784,11 +788,21 @@ const loadCurrentAppointmentEvaluations = async () => {
 
     if (currentNotes.length > 0) {
       originalNotes.value = {}
+      allCriteriaRatings.value = {} // ✅ Reset für neue Daten
+      
       currentNotes.forEach((note: any) => {
         const criteriaId = note.evaluation_criteria_id
         criteriaRatings.value[criteriaId] = note.criteria_rating || 0
         criteriaNotes.value[criteriaId] = note.criteria_note || ''
         originalNotes.value[criteriaId] = note.criteria_note || ''
+        
+        // ✅ NEU: Speichere aktuelle Bewertung in allCriteriaRatings
+        if (!allCriteriaRatings.value[criteriaId]) {
+          allCriteriaRatings.value[criteriaId] = []
+        }
+        if (note.criteria_rating) {
+          allCriteriaRatings.value[criteriaId].push(note.criteria_rating)
+        }
         
         criteriaAppointments.value[criteriaId] = {
           appointment_id: props.appointment?.id,
@@ -855,11 +869,21 @@ const loadStudentEvaluationHistory = async () => {
     // Setup appointment data for sorting
     criteriaAppointments.value = {}
     originalNotes.value = {}
+    allCriteriaRatings.value = {} // ✅ Reset für neue Daten
+    
     evaluations.forEach((note: any) => {
       const criteriaId = note.evaluation_criteria_id
       criteriaRatings.value[criteriaId] = note.criteria_rating || 0
       criteriaNotes.value[criteriaId] = note.criteria_note || ''
       originalNotes.value[criteriaId] = note.criteria_note || ''
+      
+      // ✅ NEU: Sammle ALLE Bewertungen für dieses Kriterium
+      if (!allCriteriaRatings.value[criteriaId]) {
+        allCriteriaRatings.value[criteriaId] = []
+      }
+      if (note.criteria_rating && !allCriteriaRatings.value[criteriaId].includes(note.criteria_rating)) {
+        allCriteriaRatings.value[criteriaId].push(note.criteria_rating)
+      }
       
       criteriaAppointments.value[criteriaId] = {
         appointment_id: note.appointment_id,
@@ -999,6 +1023,11 @@ const getRatingColor = (ratingValue: number): string => {
 const getRatingLabel = (ratingValue: number): string => {
   const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
   return rating?.label || 'Unbekannt'
+}
+
+// ✅ NEU: Funktion um alle Bewertungen für ein Kriterium zu bekommen
+const getAllRatingsForCriteria = (criteriaId: string): number[] => {
+  return allCriteriaRatings.value[criteriaId] || []
 }
 
 onMounted(async () => {
