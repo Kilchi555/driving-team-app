@@ -460,7 +460,10 @@ export default defineEventHandler(async (event: H3Event) => {
     const { error: finalizeError } = await supabase
       .from('availability_slots')
       .update({
-        is_available: false, // Mark as definitively booked
+        is_available: false,
+        appointment_id: newAppointment.id,
+        reserved_by_session: null,
+        reserved_until: null,
         updated_at: now
       })
       .eq('reserved_by_session', body.session_id)
@@ -470,7 +473,7 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Warning: Could not finalize all slots:', finalizeError)
       // Non-critical: appointment is already created
     } else {
-      logger.debug('✅ All reserved slots marked as definitively booked (is_available = false)')
+      logger.debug('✅ All reserved slots finalized: appointment_id linked, reservation cleared')
     }
 
     // ============ LAYER 8: AUDIT LOGGING ============
