@@ -852,9 +852,25 @@ const onCancelAppointment = async (appointment: any) => {
   logger.debug('🚫 PendenzenModal - cancel requested for appointment:', appointment?.id)
   closeEvaluationModal()
   
-  // Öffne das Cancellation-Modal
-  cancellationAppointment.value = appointment
-  showCancellationModal.value = true
+  // ✅ Prüfe ob es eine Lektion/Exam/Theory ist (bezahlbar)
+  const isLessonType = (eventType: string) => {
+    return ['lesson', 'exam', 'theory'].includes(eventType)
+  }
+  
+  const appointmentType = appointment.event_type_code || appointment.type || 'unknown'
+  const isPayableAppointment = isLessonType(appointmentType)
+  
+  logger.debug('🗑️ Appointment type:', appointmentType, 'isPayable:', isPayableAppointment)
+  
+  if (isPayableAppointment) {
+    // Für Lektionen: Öffne das Cancellation-Modal (mit Zahlungs-Details)
+    cancellationAppointment.value = appointment
+    showCancellationModal.value = true
+  } else {
+    // Für andere Events: Direkt löschen
+    logger.debug('🗑️ Other event type - direct delete')
+    await deleteAppointmentDirectly(appointment.id)
+  }
 }
 
 const closeCancellationModal = () => {
@@ -866,6 +882,30 @@ const onCancellationCompleted = async () => {
   logger.debug('✅ Appointment cancellation completed')
   closeCancellationModal()
   await refreshData()
+}
+
+// ✅ NEU: Direktes Löschen für nicht-zahlbare Events
+const deleteAppointmentDirectly = async (appointmentId: string) => {
+  try {
+    logger.debug('🗑️ Deleting appointment directly:', appointmentId)
+    
+    const response = await $fetch('/api/staff/delete-appointment', {
+      method: 'POST',
+      body: {
+        appointment_id: appointmentId,
+        reason: 'Nicht stattgefunden / von Instruktor abgesagt'
+      }
+    }) as any
+    
+    if (response?.success) {
+      logger.debug('✅ Appointment deleted successfully')
+      await refreshData()
+    } else {
+      logger.warn('⚠️ Failed to delete appointment:', response?.error)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Error deleting appointment:', err)
+  }
 }
 
 // ✅ NEU: Funktion um Termin-Status zu aktualisieren
