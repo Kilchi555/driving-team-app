@@ -3012,8 +3012,11 @@ const createAppointmentSecure = async (userData: any) => {
 // Handle successful login/registration
 const handleAuthSuccess = () => {
   showLoginModal.value = false
-  // Retry booking
-  confirmBooking()
+  // Wait a moment for auth state to settle before retrying booking
+  setTimeout(() => {
+    logger.debug('🔄 Retrying booking after auth success...')
+    confirmBooking()
+  }, 500)
 }
 
 // Handle successful document upload
