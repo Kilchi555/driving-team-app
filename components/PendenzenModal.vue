@@ -408,6 +408,25 @@
         </div>
       </div>
 
+      <!-- Absage-Gründe auswählen -->
+      <div v-if="cancellationStep === 1" class="mb-6">
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            v-for="reason in cancellationReasons"
+            :key="reason.id"
+            @click="selectedCancellationReasonId = reason.id"
+            :class="[
+              'p-4 rounded-lg border-2 transition-all duration-200 text-center',
+              selectedCancellationReasonId === reason.id
+                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+            ]"
+          >
+            <div class="font-medium text-sm">{{ reason.name_de }}</div>
+          </button>
+        </div>
+      </div>
+
       <!-- Buttons -->
       <div class="flex gap-3 justify-end">
         <button
@@ -437,6 +456,7 @@ import { usePendingTasks } from '~/composables/usePendingTasks'
 import { usePendencies } from '~/composables/usePendencies'
 import { useCategoryData } from '~/composables/useCategoryData'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
@@ -470,6 +490,12 @@ const {
   fetchPendingTasks,
   clearError
 } = usePendingTasks()
+
+// ✅ NEU: Cancellation Reasons Composable
+const { 
+  cancellationReasons, 
+  fetchCancellationReasons 
+} = useCancellationReasons()
 
 // Category Data Composable
 const { allCategories, loadCategories } = useCategoryData()
@@ -931,6 +957,8 @@ const onCancelAppointment = async (appointment: any) => {
     cancellationStep.value = 0 // Starte mit Schritt 0 (Wer hat abgesagt?)
     cancellationType.value = undefined
     selectedCancellationReasonId.value = undefined
+    // ✅ Lade Absagegründe
+    await fetchCancellationReasons()
     showCancellationReasonModal.value = true
   } else {
     // Für andere Events: Direkt löschen
