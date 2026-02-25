@@ -418,7 +418,7 @@
         </button>
         <button
           v-if="cancellationType"
-          @click="await performCancellation(cancellationType)"
+          @click="handleCancellationConfirm"
           class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           Absagen
@@ -994,6 +994,13 @@ const performCancellation = async (type: 'student' | 'staff') => {
     }
   } catch (err) {
     logger.warn('⚠️ Error cancelling appointment:', err)
+  }
+}
+
+// ✅ NEU: Handler für Cancel-Button im Template
+const handleCancellationConfirm = async () => {
+  if (cancellationType.value) {
+    await performCancellation(cancellationType.value)
   }
 }
 
