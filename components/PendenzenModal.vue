@@ -788,6 +788,12 @@ const getEventTypeText = (eventType: string) => {
 const onEvaluationSaved = async (appointmentId: string) => {
   logger.debug('🎉 PendenzenModal - evaluation saved for:', appointmentId)
   
+  // ✅ NEU: Wenn Termin pending_confirmation ist, setze ihn auf confirmed
+  if (selectedAppointment.value?.status === 'pending_confirmation') {
+    logger.debug('🔄 Updating appointment status from pending_confirmation to confirmed')
+    await updateAppointmentStatus(appointmentId, 'confirmed')
+  }
+  
   // Lade Pendenzen neu um die aktualisierten Daten zu sehen
   await refreshData()
   logger.debug('✅ New pending count after evaluation:', pendingCount.value)
@@ -825,6 +831,29 @@ const refreshData = async () => {
   }
   
   logger.debug('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
+}
+
+// ✅ NEU: Funktion um Termin-Status zu aktualisieren
+const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
+  try {
+    logger.debug('🔄 Updating appointment', appointmentId, 'to status:', newStatus)
+    
+    const response = await $fetch('/api/staff/update-appointment', {
+      method: 'POST',
+      body: {
+        appointment_id: appointmentId,
+        status: newStatus
+      }
+    }) as any
+    
+    if (response?.success) {
+      logger.debug('✅ Appointment status updated successfully')
+    } else {
+      logger.warn('⚠️ Failed to update appointment status:', response?.error)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Error updating appointment status:', err)
+  }
 }
 
 /**
