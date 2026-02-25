@@ -2136,7 +2136,9 @@ const loadAppointments = async () => {
     logger.debug('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
 
     appointments.value = lessonsWithEvaluations
-    // Note: lessons.value is set by loadCourseRegistrations which merges appointments + course sessions
+    
+    // ✅ Initialize lessons with appointments (will be merged with course sessions later)
+    lessons.value = lessonsWithEvaluations
 
   } catch (err: any) {
     logger.error('❌ Error loading appointments:', {
