@@ -363,7 +363,7 @@
     :is-open="showCancellationModal"
     :appointment="cancellationAppointment"
     @close="closeCancellationModal"
-    @cancellation-completed="onCancellationCompleted"
+    @confirm="onCancellationCompleted"
   />
 </template>
 
