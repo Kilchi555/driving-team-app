@@ -564,10 +564,20 @@ const loadAllCriteria = async () => {
 
 // Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
+  // ✅ DEBUG: Log was wir wissen
+  logger.debug('🔍 selectCriteria called for:', criteria.id)
+  logger.debug('🔍 selectedCriteriaOrder:', selectedCriteriaOrder.value)
+  logger.debug('🔍 criteriaAppointments[criteria.id]:', criteriaAppointments.value[criteria.id])
+  logger.debug('🔍 props.appointment?.id:', props.appointment?.id)
+  
   // ✅ SMART: Prüfe ob das Kriterium bereits mit DIESEM TERMIN verknüpft ist
   const alreadyForThisAppointment = selectedCriteriaOrder.value.some(id => {
-    return id === criteria.id && criteriaAppointments.value[id]?.appointment_id === props.appointment?.id
+    const isMatch = id === criteria.id && criteriaAppointments.value[id]?.appointment_id === props.appointment?.id
+    logger.debug('🔍 Checking id:', id, 'isMatch:', isMatch, 'appointmentId:', criteriaAppointments.value[id]?.appointment_id)
+    return isMatch
   })
+  
+  logger.debug('🔍 alreadyForThisAppointment:', alreadyForThisAppointment)
   
   // Wenn bereits mit DIESEM Termin verknüpft, nicht hinzufügen
   if (alreadyForThisAppointment) {
@@ -582,7 +592,7 @@ const selectCriteria = (criteria: any) => {
     newlyRatedCriteria.value.push(criteria.id) // Mark as newly rated in this session
   }
   
-  // Setze aktuelles Appointment für neue Kriterien - WICHTIG: Setze VORHER die ID
+  // Setze aktuelles Appointment für neue Kriterien
   if (props.appointment) {
     criteriaAppointments.value[criteria.id] = {
       appointment_id: props.appointment.id,
