@@ -15,7 +15,7 @@
       </div>
 
       <!-- Sortierungs-Regler -->
-      <div v-if="selectedCriteriaOrder.length > 1" class="flex items-center justify-between p-2 bg-gray-50 border-b flex-shrink-0">
+      <div v-if="currentTermCriteria.length > 1" class="flex items-center justify-between p-2 bg-gray-50 border-b flex-shrink-0">
         <div class="flex items-center space-x-3">
           <span class="text-gray-500 text-xs font-semibold">Sortierung:</span>
           <button
@@ -101,7 +101,7 @@
 
           <div class="space-y-2">
             <div
-              v-for="(criteriaId, index) in sortedCriteriaOrder"
+              v-for="(criteriaId, index) in currentTermCriteria"
               :key="criteriaId"
               class="bg-gray-50 rounded-lg p-3 border border-gray-200"
             >
@@ -155,7 +155,7 @@
             </div>
           </div>
 
-          <div v-if="selectedCriteriaOrder.length === 0" class="text-center py-8">
+          <div v-if="currentTermCriteria.length === 0" class="text-center py-8">
             <div class="text-4xl mb-2">📝</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Bewertungspunkte hinzufügen</h3>
             <p class="text-gray-600">
@@ -403,6 +403,17 @@ const sortedCriteriaOrder = computed(() => {
     logger.debug('🔍 AFTER DATE SORT:', sorted)
     return sorted
   }
+})
+
+// ✅ NEU: Nur die Bewertungen des aktuellen Termins anzeigen
+const currentTermCriteria = computed(() => {
+  // Filtere selectedCriteriaOrder um nur die Kriterien zu zeigen,
+  // die vom aktuellen Termin stammen (nicht die historischen)
+  return sortedCriteriaOrder.value.filter(criteriaId => {
+    const appointment = criteriaAppointments.value[criteriaId]
+    // Zeige nur wenn es das aktuelle Appointment ist
+    return appointment?.appointment_id === props.appointment?.id
+  })
 })
 
 // Methods
