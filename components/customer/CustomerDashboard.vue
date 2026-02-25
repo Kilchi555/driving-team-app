@@ -1578,33 +1578,31 @@ const loadAllData = async () => {
 
     // 🔄 Load all data (appointments must load immediately for upcoming lessons count)
     logger.debug('⏳ Loading all customer data...')
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       loadAppointments(),
       loadCourseRegistrations(),
       loadLocations(),
       loadStaff(),
       loadPayments()
-    ]).then((results) => {
-      // Process results but don't block UI
-      const failed = results.filter(r => r.status === 'rejected')
-      if (failed.length > 0) {
-        logger.warn(`⚠️ ${failed.length} background task(s) failed`)
-        failed.forEach((r, idx) => {
-          if (r.status === 'rejected') {
-            console.error(`❌ Background task ${idx} failed:`, r.reason)
-          }
-        })
-      } else {
-        logger.debug('✅ All background data loaded successfully')
-      }
-      
-      // Load instructors after appointments are loaded
-      if (appointments.value.length > 0) {
-        loadInstructors()
-      }
-    }).catch(err => {
-      console.error('❌ Error in lazy loading:', err)
-    })
+    ])
+    
+    // Process results but don't block UI
+    const failed = results.filter(r => r.status === 'rejected')
+    if (failed.length > 0) {
+      logger.warn(`⚠️ ${failed.length} background task(s) failed`)
+      failed.forEach((r, idx) => {
+        if (r.status === 'rejected') {
+          console.error(`❌ Background task ${idx} failed:`, r.reason)
+        }
+      })
+    } else {
+      logger.debug('✅ All background data loaded successfully')
+    }
+    
+    // Load instructors after appointments are loaded
+    if (appointments.value.length > 0) {
+      loadInstructors()
+    }
 
     logger.debug('✅ Pending confirmations loaded, background tasks started')
   } catch (err: any) {
