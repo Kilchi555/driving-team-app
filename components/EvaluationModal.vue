@@ -10,13 +10,10 @@
           <!-- ✅ NEU: Cancel Button für Termin-Absage -->
           <button 
             @click="openCancelModal"
-            class="mr-3 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+            class="mr-3 px-4 py-2 bg-green-600 border-2 border-white text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
             title="Termin absagen"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-            Absagen
+            Abgesagt
           </button>
           
           <button @click="closeModal" class="text-white hover:text-green-200">
