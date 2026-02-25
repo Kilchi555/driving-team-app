@@ -77,12 +77,19 @@
                 v-for="criteria in categoryGroup"
                 :key="criteria.id"
                 @click="selectCriteria(criteria)"
-                class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 flex items-center justify-between"
               >
-                <div class="flex items-center justify-between">
-                  <div>
-                    <h4 class="font-medium text-gray-900">{{ criteria.name }}</h4>
-                  </div>
+                <div class="flex-1">
+                  <h4 class="font-medium text-gray-900">{{ criteria.name }}</h4>
+                </div>
+                
+                <!-- ✅ NEU: Zeige Farbe wenn bereits bewertet -->
+                <div v-if="criteriaRatings[criteria.id]" class="ml-3 flex items-center gap-2">
+                  <div 
+                    :style="{ backgroundColor: getRatingColor(criteriaRatings[criteria.id]) }"
+                    class="w-6 h-6 rounded-full"
+                  ></div>
+                  <span class="text-xs font-medium text-gray-600">{{ getRatingLabel(criteriaRatings[criteria.id]) }}</span>
                 </div>
               </div>
             </template>
@@ -121,7 +128,7 @@
                     :class="[
                       'w-10 h-10 rounded-full text-sm font-semibold transition-all',
                       getCriteriaRating(criteriaId) === rating
-                        ? getRatingColor(rating, true)
+                        ? getRatingColorClass(rating, true)
                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     ]"
                   >
@@ -193,7 +200,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
@@ -252,55 +259,35 @@ const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly 
 // Computed
 
 const filteredCriteria = computed(() => {
-  // Zeige nur Kriterien, die NICHT bereits ausgewählt/bewertet sind
-  // ODER zeige die bereits bewerteten auch wenn der Benutzer sie nochmal hinzufügen möchte
-  let unratedCriteria = allCriteria.value.filter(criteria => 
-    !selectedCriteriaOrder.value.includes(criteria.id)
-  )
+  // ✅ NEU: Zeige ALLE Kriterien (unbewertete + bereits bewertete)
+  let criteria = allCriteria.value
   
-  // ✅ NEU: Filtere nach Fahrkategorie des Schülers
+  // Filtere nach Fahrkategorie des Schülers
   if (props.studentCategory) {
     logger.debug('🎓 Filtering criteria by student category:', props.studentCategory)
-    const beforeFilter = unratedCriteria.length
+    const beforeFilter = criteria.length
     
-    unratedCriteria = unratedCriteria.filter(criteria => {
-      // Prüfe ob das Kriterium die Fahrkategorie des Schülers enthält
-      const drivingCategories = criteria.driving_categories || []
-      
-      // Include if:
-      // 1. driving_categories is empty (applies to all categories)
-      // 2. driving_categories contains the student category
+    criteria = criteria.filter(c => {
+      const drivingCategories = c.driving_categories || []
       const includesStudentCategory = 
         drivingCategories.length === 0 || 
         (Array.isArray(drivingCategories) && drivingCategories.includes(props.studentCategory))
-      
-      if (drivingCategories.length === 0) {
-        logger.debug('✅ Including criterion (NO category restriction):', criteria.name)
-      } else if (!includesStudentCategory) {
-        logger.debug('🚫 Skipping criterion (not for category', props.studentCategory + '):', criteria.name, 'categories:', drivingCategories)
-      } else {
-        logger.debug('✅ Including criterion (matching category):', criteria.name)
-      }
       return includesStudentCategory
     })
-    logger.debug('✅ After category filter: ', beforeFilter, '→', unratedCriteria.length, 'criteria remain')
+    logger.debug('✅ After category filter: ', beforeFilter, '→', criteria.length, 'criteria remain')
   }
   
-  logger.debug('📚 filteredCriteria - allCriteria.value:', allCriteria.value.length)
-  logger.debug('📚 filteredCriteria - unratedCriteria:', unratedCriteria.length)
-  logger.debug('📚 filteredCriteria - first unrated:', unratedCriteria[0])
-  
-  // Wenn kein Suchtext eingegeben, zeige alle unbewerteten
+  // Wenn kein Suchtext eingegeben, zeige alle Kriterien
   if (!searchQuery.value || searchQuery.value.trim() === '') {
-    logger.debug('📚 filteredCriteria - returning unratedCriteria (no search)')
-    return unratedCriteria
+    logger.debug('📚 filteredCriteria - returning all:', criteria.length)
+    return criteria
   }
   
-  // Filtere unbewertete Kriterien nach Suchtext
+  // Filtere nach Suchtext
   const query = searchQuery.value.toLowerCase()
-  const filtered = unratedCriteria.filter(criteria => 
-    (criteria.name?.toLowerCase().includes(query) ||
-     criteria.category_name?.toLowerCase().includes(query) ||
+  const filtered = criteria.filter(c => 
+    (c.name?.toLowerCase().includes(query) ||
+     c.category_name?.toLowerCase().includes(query) ||
      false)
   )
   
@@ -623,7 +610,7 @@ const getCriteriaRating = (criteriaId: string) => {
   return criteriaRatings.value[criteriaId] || 0 // Rückgabe 0, falls nicht gesetzt
 }
 
-const getRatingColor = (rating: number, selected = false) => {
+const getRatingColorClass = (rating: number, selected = false) => {
   const colors = {
     1: selected ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700',
     2: selected ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700',
@@ -1000,6 +987,29 @@ watch(() => props.studentCategory, (newCategory) => {
     loadAllCriteria()
   }
 }, { immediate: true })
+
+// ✅ NEU: Helper Funktionen für Rating-Farben
+const allRatings = ref<any[]>([])
+
+const getRatingColor = (ratingValue: number): string => {
+  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
+  return rating?.color || '#999999'
+}
+
+const getRatingLabel = (ratingValue: number): string => {
+  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
+  return rating?.label || 'Unbekannt'
+}
+
+onMounted(async () => {
+  try {
+    const response = await $fetch('/api/staff/get-evaluation-ratings')
+    allRatings.value = response?.data || []
+    logger.debug('✅ Ratings loaded:', allRatings.value.length)
+  } catch (err) {
+    logger.warn('⚠️ Failed to load ratings:', err)
+  }
+})
 </script>
 
 <style scoped>
