@@ -564,30 +564,35 @@ const loadAllCriteria = async () => {
 
 // Beim Hinzufügen neuer Kriterien das aktuelle Appointment setzen
 const selectCriteria = (criteria: any) => {
-  // ✅ NEU: Prüfe ob bereits im aktuellen Termin, nicht in der kompletten History
+  // ✅ NEU: Prüfe ob bereits im aktuellen Termin
   const isAlreadyInCurrentTerm = criteriaAppointments.value[criteria.id]?.appointment_id === props.appointment?.id
   
-  if (!isAlreadyInCurrentTerm) {
-    selectedCriteriaOrder.value.unshift(criteria.id)
-    if (!newlyRatedCriteria.value.includes(criteria.id)) {
-      newlyRatedCriteria.value.push(criteria.id) // Mark as newly rated in this session
+  // Wenn bereits im aktuellen Termin, ignoriere den Click (verhindert Duplikate)
+  if (isAlreadyInCurrentTerm) {
+    searchQuery.value = ''
+    showDropdown.value = false
+    return
+  }
+  
+  selectedCriteriaOrder.value.unshift(criteria.id)
+  if (!newlyRatedCriteria.value.includes(criteria.id)) {
+    newlyRatedCriteria.value.push(criteria.id) // Mark as newly rated in this session
+  }
+  
+  // Setze aktuelles Appointment für neue Kriterien
+  if (props.appointment) {
+    criteriaAppointments.value[criteria.id] = {
+      appointment_id: props.appointment.id,
+      start_time: props.appointment.start_time
     }
-    
-    // Setze aktuelles Appointment für neue Kriterien
-    if (props.appointment) {
-      criteriaAppointments.value[criteria.id] = {
-        appointment_id: props.appointment.id,
-        start_time: props.appointment.start_time
-      }
-    }
-    
-    // Initialize rating and note
-    if (!criteriaRatings.value[criteria.id]) {
-      criteriaRatings.value[criteria.id] = 0
-    }
-    if (!criteriaNotes.value[criteria.id]) {
-      criteriaNotes.value[criteria.id] = ''
-    }
+  }
+  
+  // Initialize rating and note
+  if (!criteriaRatings.value[criteria.id]) {
+    criteriaRatings.value[criteria.id] = 0
+  }
+  if (!criteriaNotes.value[criteria.id]) {
+    criteriaNotes.value[criteria.id] = ''
   }
   
   searchQuery.value = ''
