@@ -417,11 +417,14 @@ const handleRegister = async () => {
 
     logger.debug('✅ Registration successful')
     
-    // Restore auth state from session
+    // Wait for cookies to be set on server
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Restore auth state from session (cookies should now have new tokens)
     const sessionRestored = await authStore.restoreSession()
     
     if (sessionRestored) {
-      logger.debug('✅ Session restored successfully')
+      logger.debug('✅ Session restored successfully after registration')
       emit('success')
     } else {
       throw new Error('Failed to restore session after registration')
