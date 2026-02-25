@@ -990,7 +990,6 @@ watch(() => props.studentCategory, (newCategory) => {
 
 // ✅ NEU: Helper Funktionen für Rating-Farben
 const allRatings = ref<any[]>([])
-const { currentTenant } = useTenant()
 
 const getRatingColor = (ratingValue: number): string => {
   const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
