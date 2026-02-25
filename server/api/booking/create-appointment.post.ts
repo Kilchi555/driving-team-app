@@ -442,7 +442,8 @@ export default defineEventHandler(async (event: H3Event) => {
         error: paymentError,
         message: paymentError?.message,
         code: paymentError?.code,
-        details: paymentError?.details
+        details: paymentError?.details,
+        insertData: paymentToInsert
       })
       // This is critical, but we don't want to fail the appointment if payment fails
       // Instead, we log a warning and let the payment reconciliation handle it later
