@@ -254,7 +254,7 @@ export default defineEventHandler(async (event) => {
               finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
             }
             
-            finalTotalAmount = Math.max(0, finalTotalAmount)
+            finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
             const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
             
             logger.debug('💳 Updating payment for edited appointment:', {
@@ -394,8 +394,8 @@ export default defineEventHandler(async (event) => {
             finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
           }
           
-          // ✅ Ensure amount is never negative
-          finalTotalAmount = Math.max(0, finalTotalAmount)
+          // ✅ Ensure amount is never negative and always rounded
+          finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
           
           logger.debug('💳 Creating payment for new appointment:', {
             appointmentId: result.id,
