@@ -428,7 +428,7 @@ export default defineEventHandler(async (event: H3Event) => {
       payment_method_id: null, // No payment method yet
       description: appointmentTitle,
       currency: 'CHF',
-      created_by: authenticatedUserId // ✅ IMPORTANT: The user who *created* the payment (Staff or Customer)
+      created_by: newAppointment.user_id // ✅ FIXED: Use user_id (customer) not authenticatedUserId which may not exist yet
     }
 
     const { data: newPayment, error: paymentError } = await supabase
