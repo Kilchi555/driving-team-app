@@ -334,6 +334,7 @@
       :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
+      @cancel="onCancelAppointment"
   />
   
   <!-- ✅ EXAM RESULT MODAL -->
@@ -831,6 +832,47 @@ const refreshData = async () => {
   }
   
   logger.debug('✅ PendenzenModal - data refreshed, count:', pendingCount.value)
+}
+
+// ✅ NEU: Handler für Cancel-Event vom EvaluationModal
+const onCancelAppointment = async (appointment: any) => {
+  logger.debug('🚫 PendenzenModal - cancel requested for appointment:', appointment?.id)
+  closeEvaluationModal()
+  
+  // ✅ Hier könnten Sie jetzt:
+  // 1. Ein Cancel-Modal öffnen
+  // 2. Den Benutzter fragen ob er das Termin absagen will
+  // 3. Den cancel_by_staff Prozess starten
+  
+  // Für jetzt: Öffne ein Confirm-Dialog
+  const confirmed = confirm(`Möchten Sie den Termin wirklich absagen?\n\nSchüler: ${appointment.studentName}\nDatum: ${appointment.formattedDate} ${appointment.formattedStartTime}`)
+  
+  if (confirmed) {
+    try {
+      logger.debug('🚫 Starting cancel_by_staff process for appointment:', appointment.id)
+      
+      // Rufe das Cancel-Endpoint auf
+      const response = await $fetch('/api/staff/delete-appointment', {
+        method: 'POST',
+        body: {
+          appointment_id: appointment.id,
+          reason: 'Nicht stattgefunden / von Instruktor abgesagt'
+        }
+      }) as any
+      
+      if (response?.success) {
+        logger.debug('✅ Appointment cancelled successfully')
+        alert('Termin wurde erfolgreich abgesagt')
+        await refreshData()
+      } else {
+        logger.warn('⚠️ Failed to cancel appointment:', response?.error)
+        alert('Fehler beim Absagen des Termins: ' + response?.error)
+      }
+    } catch (err) {
+      logger.warn('⚠️ Error cancelling appointment:', err)
+      alert('Fehler beim Absagen des Termins')
+    }
+  }
 }
 
 // ✅ NEU: Funktion um Termin-Status zu aktualisieren
