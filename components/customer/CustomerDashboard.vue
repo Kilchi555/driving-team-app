@@ -1576,9 +1576,9 @@ const loadAllData = async () => {
     logger.debug('🎯 Loading pending confirmations first (priority)...')
     await loadPendingConfirmations()
 
-    // 🔄 LAZY LOAD: Load everything else in background without blocking
-    logger.debug('⏳ Lazy loading other data in background...')
-    Promise.allSettled([
+    // 🔄 Load all data (appointments must load immediately for upcoming lessons count)
+    logger.debug('⏳ Loading all customer data...')
+    await Promise.allSettled([
       loadAppointments(),
       loadCourseRegistrations(),
       loadLocations(),
