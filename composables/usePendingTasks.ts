@@ -326,6 +326,13 @@ const saveCriteriaEvaluations = async (
 
     logger.debug('✅ Kriterien-Bewertungen erfolgreich gespeichert:', appointmentId);
 
+    // ✅ Invalidate calendar cache after saving evaluations
+    const { invalidate } = useCalendarCache()
+    invalidate('/api/calendar/get-appointments')
+    invalidate('/api/admin/get-pending-appointments')
+    invalidate('/api/staff/get-working-hours')
+    logger.debug('✅ Calendar cache invalidated after evaluation save')
+
     // Aktualisiere die Pendenzen nach dem Speichern
     await fetchPendingTasks(currentUserId || '', 'staff')
 
