@@ -333,7 +333,17 @@
 
     <!-- Cancellation Reason Modal -->
     <div v-if="showCancellationReasonModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
+        
+        <!-- Loading Overlay -->
+        <div v-if="isLoading" class="absolute inset-0 bg-white bg-opacity-80 rounded-lg flex flex-col items-center justify-center z-10">
+          <svg class="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="text-sm font-medium text-gray-700">Termin wird abgesagt...</p>
+        </div>
+
         <!-- Header with Progress -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center">
@@ -344,7 +354,8 @@
           </div>
           <button
             @click="cancelCancellationReason"
-            class="text-gray-400 hover:text-gray-600 transition-colors"
+            :disabled="isLoading"
+            class="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -359,8 +370,9 @@
           <div class="grid grid-cols-2 gap-4">
             <button
               @click="selectCancellationType('student')"
+              :disabled="isLoading"
               :class="[
-                'p-6 rounded-lg border-2 transition-all duration-200 text-center',
+                'p-6 rounded-lg border-2 transition-all duration-200 text-center disabled:opacity-50 disabled:cursor-not-allowed',
                 cancellationType === 'student'
                   ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -371,8 +383,9 @@
             </button>
             <button
               @click="selectCancellationType('staff')"
+              :disabled="isLoading"
               :class="[
-                'p-6 rounded-lg border-2 transition-all duration-200 text-center',
+                'p-6 rounded-lg border-2 transition-all duration-200 text-center disabled:opacity-50 disabled:cursor-not-allowed',
                 cancellationType === 'staff'
                   ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -391,8 +404,9 @@
               v-for="reason in filteredCancellationReasons"
               :key="reason.id"
               @click="selectReasonAndContinue(reason.id)"
+              :disabled="isLoading"
               :class="[
-                'p-4 rounded-lg border-2 transition-all duration-200 text-center',
+                'p-4 rounded-lg border-2 transition-all duration-200 text-center disabled:opacity-50 disabled:cursor-not-allowed',
                 selectedCancellationReasonId === reason.id
                   ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -474,14 +488,16 @@
           <button
             v-if="cancellationStep === 1"
             @click="goBackInCancellationFlow"
-            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            :disabled="isLoading"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             ← Zurück
           </button>
           <button
             v-if="cancellationStep === 2"
             @click="goBackInCancellationFlow"
-            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            :disabled="isLoading"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             ← Zurück
           </button>
