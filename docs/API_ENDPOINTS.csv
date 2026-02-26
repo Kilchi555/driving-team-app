@@ -1,0 +1,126 @@
+Endpoint,Method,Purpose,Authentication,Input Parameters,Output,Related Tables,Module,Status
+/api/auth/login,POST,"Password authentication","public","email, password","JWT token, user data","users, auth.users",Auth,Active
+/api/auth/register,POST,"New user registration","public","email, password, tenant_id, name","JWT token, user data","users, auth.users",Auth,Active
+/api/auth/webauthn-register,POST,"Start WebAuthn registration","authenticated","displayName","challenge, userId","webauthn_sessions",Auth,Active
+/api/auth/webauthn-registration-options,POST,"Get WebAuthn registration options","authenticated","--","challenge, userId, timeout","webauthn_sessions",Auth,Active
+/api/auth/webauthn-credentials,GET,"List user WebAuthn credentials","authenticated","--","credential list","webauthn_credentials",Auth,Active
+/api/auth/check-webauthn,POST,"Check WebAuthn browser support","public","--","supported: boolean","--",Auth,Active
+/api/auth/webauthn-credential/_id,DELETE,"Remove WebAuthn credential","authenticated","credential_id","--","webauthn_credentials",Auth,Active
+/api/auth/password-reset-request,POST,"Request password reset","public","email","confirmation sent","password_reset_tokens",Auth,Active
+/api/auth/reset-password,POST,"Reset password","public","token, newPassword","success message","users",Auth,Active
+/api/auth/current-user,GET,"Get current user data","authenticated","--","user data, role, permissions","users",Auth,Active
+/api/appointments/save,POST,"Create or update appointment","staff, admin","appointment data","appointment_id, status","appointments, availability_slots",Appointments,Active
+/api/appointments/cancel-staff,POST,"Cancel appointment (staff)","staff, admin","appointment_id, reason, charge_amount","success message","appointments, payments",Appointments,Active
+/api/appointments/cancel-customer,POST,"Cancel appointment (customer)","customer","appointment_id, reason","success message","appointments",Appointments,Active
+/api/appointments/delete,POST,"Delete appointment","admin","appointment_id","--","appointments",Appointments,Active
+/api/appointments/handle-cancellation,POST,"Process cancellation logic","service_role","appointment_id, charge_amount","success message","appointments, payments",Appointments,Active
+/api/appointments/update-payment-status,POST,"Update appointment payment status","staff, admin","appointment_id, payment_id, status","success message","appointments, payments",Appointments,Active
+/api/payments/process,POST,"Process authenticated payment","customer","amount, method, appointment_id","payment_id, transaction_url","payments, payment_items",Payments,Active
+/api/payments/process-public,POST,"Process public/guest payment","anon","amount, method, email","payment_id, transaction_url","payments, payment_items",Payments,Active
+/api/payments/status,POST,"Get payment status","public","payment_id, reference_number","payment status","payments",Payments,Active
+/api/payments/confirm-cash,POST,"Confirm cash payment","staff, admin","payment_id, amount_received","success message","payments, cash_balances",Payments,Active
+/api/payments/receipt,POST,"Generate payment receipt PDF","customer","payment_id","PDF binary data","payments",Payments,Active
+/api/payments/settle-and-email,POST,"Settle payment and send receipt email","customer","payment_id","success message","payments, reminder_templates",Payments,Active
+/api/payments/convert-to-online,POST,"Convert cash payment to online","staff, admin","payment_id, method","payment_url","payments",Payments,Active
+/api/payments/manage,POST,"Manage payment (update/refund)","admin, staff","payment_id, action, amount","success message","payments, payment_audit_logs",Payments,Active
+/api/payments/get-details,GET,"Get payment details","customer, staff","payment_id","payment data","payments, payment_items",Payments,Active
+/api/payments/reset-failed,POST,"Reset failed payment status","staff, admin","payment_id","success message","payments",Payments,Active
+/api/payments/update-wallee-id,POST,"Update Wallee transaction ID","service_role","payment_id, wallee_id","success message","payment_wallee_transactions",Payments,Active
+/api/wallee/create-transaction,POST,"Create Wallee transaction","public, authenticated","payment data","Wallee transaction URL","payment_wallee_transactions",Payments,Active
+/api/wallee/webhook,POST,"Wallee payment webhook","public","Wallee webhook data","200 response","payment_wallee_transactions, payments",Payments,Active
+/api/wallee/save-payment-token,POST,"Save Wallee payment token","authenticated","token data","success message","users",Payments,Active
+/api/wallee/test-connection,GET,"Test Wallee API connection","admin","--","connection status","--",Payments,Active
+/api/booking/get-availability,GET,"Get available slots for booking","public","staff_id, location_id, date, duration_minutes","available slots","availability_slots, staff_working_hours",Booking,Active
+/api/booking/get-availability-data,POST,"Get detailed availability data","public","filters (staff, location, category)","availability grid","availability_slots, staff_locations, categories",Booking,Active
+/api/booking/get-locations-and-staff,POST,"Get booking options (locations and staff)","public","category_id","locations, staff list","locations, users, staff_locations",Booking,Active
+/api/booking/get-tenant-by-slug,POST,"Get tenant info by slug","public","slug","tenant data, branding","tenants, tenant_settings",Booking,Active
+/api/booking/reserve-slot,POST,"Reserve time slot (temporary)","public, authenticated","slot_id, email, duration_minutes","reservation_id, expiry_time","availability_slots, booking_reservations",Booking,Active
+/api/booking/release-reservation,POST,"Release reserved slot","public, authenticated","reservation_id","--","booking_reservations",Booking,Active
+/api/booking/create-appointment,POST,"Create appointment from booking","authenticated, public","booking data, user info","appointment_id, payment_url","appointments, payments, users",Booking,Active
+/api/booking/submit-proposal,POST,"Submit booking proposal","public","proposal data","confirmation","booking_proposals",Booking,Active
+/api/staff/get-working-hours,GET,"Get staff working hours","staff, admin","staff_id, date_from, date_to","working hours schedule","staff_working_hours",Staff,Active
+/api/staff/working-hours,POST,"Get working hours (alt endpoint)","staff, admin","staff_id, date_range","working hours schedule","staff_working_hours",Staff,Active
+/api/staff/working-hours-manage,POST,"Manage working hours","staff, admin","staff_id, hours_data","success message","staff_working_hours",Staff,Active
+/api/staff/get-appointments,GET,"Get staff appointments","staff, admin","staff_id, date_from, date_to","appointments list","appointments",Staff,Active
+/api/staff/get-appointment-count,GET,"Get appointment count","staff, admin","staff_id, status","count","appointments",Staff,Active
+/api/staff/get-appointment-statistics,GET,"Get appointment statistics","staff, admin","staff_id, period","statistics","appointments, payments",Staff,Active
+/api/staff/get-appointment-products,GET,"Get appointment product info","staff, admin","appointment_id","products data","appointments, products",Staff,Active
+/api/staff/get-appointment-payment,GET,"Get appointment payment info","staff, admin","appointment_id","payment data","payments",Staff,Active
+/api/staff/get-appointment-pricing,GET,"Get appointment pricing","staff, admin","appointment_id","pricing info","products, pricing_rules",Staff,Active
+/api/staff/create-payment,POST,"Create payment for appointment","staff, admin","appointment_id, amount, method","payment_id","payments",Staff,Active
+/api/staff/check-payment-status,GET,"Check payment status","staff, admin","payment_id","status","payments",Staff,Active
+/api/staff/check-admin-fee-paid,GET,"Check admin fee payment status","staff, admin","staff_id, period","paid: boolean","payments",Staff,Active
+/api/staff/cash-balance,POST,"Manage cash balance","staff, admin","staff_id, action, amount","new balance","cash_balances, cash_transactions",Staff,Active
+/api/staff/get-rating-points,POST,"Get evaluation rating points","staff, admin","staff_id, period","rating points","appointments, evaluation_criteria",Staff,Active
+/api/staff/exam-stats,POST,"Get exam statistics","staff, admin","staff_id, exam_type","statistics","exam_results",Staff,Active
+/api/staff/get-categories,GET,"Get lesson categories","public, staff","--","categories list","categories",Staff,Active
+/api/staff/get-locations,GET,"Get staff locations","staff, admin","staff_id","locations list","locations, staff_locations",Staff,Active
+/api/staff/get-evaluation-criteria,GET,"Get evaluation criteria","staff, admin","--","criteria list","evaluation_criteria",Staff,Active
+/api/staff/get-document-requirements,POST,"Get document requirements","staff, admin","category_id","document list","document_categories",Staff,Active
+/api/staff/get-exam-locations,GET,"Get exam locations","staff, admin","--","locations list","locations",Staff,Active
+/api/staff/exam-locations,POST,"Manage exam locations","admin","location_id, action","--","locations",Staff,Active
+/api/staff/get-external-busy-times,GET,"Get external calendar busy times","staff, admin","staff_id","busy times","external_calendars",Staff,Active
+/api/staff/manage-external-busy-times,POST,"Manage external busy times","staff, admin","staff_id, busy_times","--","external_calendars",Staff,Active
+/api/staff/get-tenant,GET,"Get tenant information","staff, admin","--","tenant data","tenants",Staff,Active
+/api/staff/batch-update-appointment-status,POST,"Batch update appointment status","admin, staff","appointment_ids, status","success count","appointments",Staff,Active
+/api/courses/enroll,POST,"Enroll student in course","customer, staff","course_id, user_id","enrollment_id, invoice_id","course_registrations, invoices",Courses,Active
+/api/courses/enroll-wallee,POST,"Enroll student with Wallee payment","public, authenticated","course_id, payment data","enrollment_id, payment_url","course_registrations, payments",Courses,Active
+/api/sari/sync-courses,POST,"Sync courses from SARI","admin","--","sync count","courses, sari_sync_logs",Integration,Active
+/api/sari/sync-participants,POST,"Sync participants from SARI","admin","--","sync count","course_registrations, sari_sync_logs",Integration,Active
+/api/sari/sync-status,GET,"Get SARI sync status","admin","--","sync status","sari_sync_logs",Integration,Active
+/api/sari/save-settings,POST,"Save SARI connection settings","tenant_admin","api_key, url, environment","success message","tenant_settings",Integration,Active
+/api/sari/enroll-student,POST,"Enroll student in SARI course","admin, staff","student_id, course_id","success message","sari_sync_logs",Integration,Active
+/api/sari/unenroll-student,POST,"Unenroll student from SARI","admin, staff","student_id, course_id","success message","sari_sync_logs",Integration,Active
+/api/sari/lookup-customer,POST,"Lookup customer in SARI","admin, staff","faberid, email","customer data","sari_customer_mapping",Integration,Active
+/api/sari/validate-student,POST,"Validate student SARI ID","admin, staff","faberid","valid: boolean","sari_customer_mapping",Integration,Active
+/api/admin/get-pending-appointments,GET,"Get pending appointments","admin","--","appointments list","appointments",Admin,Active
+/api/admin/get-user-payment-details,GET,"Get user payment details","admin","user_id","payment history","payments",Admin,Active
+/api/admin/get-student-instructors,POST,"Get student's instructors","admin, staff","student_id","instructors list","appointments, users",Admin,Active
+/api/admin/get-billing-addresses,POST,"Get company billing addresses","admin","--","addresses list","company_billing_addresses",Admin,Active
+/api/admin/rate-limit-logs,GET,"Get rate limit violation logs","super_admin","--","logs list","rate_limit_logs",Admin,Active
+/api/admin/preload-plz-distances,POST,"Preload postal code distances","admin","plz_list","success count","plz_distance_cache",Admin,Active
+/api/calendar/get-appointments,GET,"Get calendar appointments","staff, admin, customer","date_from, date_to","appointments list","appointments",Calendar,Active
+/api/calendar/manage,POST,"Manage calendar settings","staff, admin","calendar_id, settings","success message","external_calendars",Calendar,Active
+/api/calendar/generate-token,POST,"Generate calendar access token","staff, admin","--","token","--",Calendar,Active
+/api/calendar/ics,GET,"Export calendar as ICS","public, authenticated","token or staff_id","ICS file","appointments",Calendar,Active
+/api/external-calendars/sync-ics,POST,"Sync external ICS calendar","staff, admin","calendar_url","sync count","external_calendars",Calendar,Active
+/api/availability/queue-recalc,POST,"Queue availability recalculation","staff, admin, service_role","staff_id, location_id, date_range","queue_id","availability_recalc_queue",Scheduling,Active
+/api/cancellation-policies/manage,POST,"Manage cancellation policies","admin","policy_data, action","--","cancellation_policies",Appointments,Active
+/api/cancellation-reasons/list-active,GET,"List active cancellation reasons","public, staff","--","reasons list","cancellation_reasons",Appointments,Active
+/api/cancellation-reasons/list-all,GET,"List all cancellation reasons","admin, staff","--","reasons list","cancellation_reasons",Appointments,Active
+/api/cancellation-reasons/create,POST,"Create cancellation reason","admin","name, description","reason_id","cancellation_reasons",Appointments,Active
+/api/cancellation-reasons/update,POST,"Update cancellation reason","admin","reason_id, data","--","cancellation_reasons",Appointments,Active
+/api/cancellation-reasons/delete,DELETE,"Delete cancellation reason","admin","reason_id","--","cancellation_reasons",Appointments,Active
+/api/invoices/create,POST,"Create invoice","admin, staff","invoice_data","invoice_id, pdf_url","invoices, invoice_items",Invoices,Active
+/api/invoices/list,GET,"List invoices","admin, staff, customer","filters, limit, offset","invoices list","invoices",Invoices,Active
+/api/invoices/get,GET,"Get invoice details","admin, staff, customer","invoice_id","invoice data","invoices, invoice_items",Invoices,Active
+/api/invoices/get-items,GET,"Get invoice items","admin, staff, customer","invoice_id","items list","invoice_items",Invoices,Active
+/api/invoices/update,POST,"Update invoice","admin, staff","invoice_id, data","--","invoices",Invoices,Active
+/api/invoices/delete,DELETE,"Delete invoice","admin","invoice_id","--","invoices",Invoices,Active
+/api/invoices/download,POST,"Download invoice PDF","admin, staff, customer","invoice_id","PDF binary","invoices",Invoices,Active
+/api/products/list,GET,"List products","public, staff","category_id, limit","products list","products",Products,Active
+/api/products/list-all,GET,"List all products","admin, staff","--","products list","products",Products,Active
+/api/products/get-appointment-products,GET,"Get appointment products","staff, admin","appointment_id","products data","products",Products,Active
+/api/pricing/calculate,POST,"Calculate price","public, authenticated","appointment_data, category","price, breakdown","pricing_rules, products",Pricing,Active
+/api/pricing/calculate-with-discounts,POST,"Calculate with discounts","public, authenticated","pricing_data, discount_codes","price, breakdown","pricing_rules, discount_codes",Pricing,Active
+/api/students/check-email,POST,"Check email availability","public","email","available: boolean","users",Customers,Active
+/api/students/resend-onboarding-sms,POST,"Resend onboarding SMS","customer","--","success message","sms_logs",Customers,Active
+/api/students/_id/payments,GET,"Get student payments","customer, staff","student_id","payments list","payments",Customers,Active
+/api/customer/get-appointments,GET,"Get customer appointments","customer","--","appointments list","appointments",Customers,Active
+/api/credit/use-for-appointment,POST,"Use student credit for appointment","customer","appointment_id, amount","success message","student_credits, credit_transactions",Customers,Active
+/api/tenant/upload-logo,POST,"Upload tenant logo","tenant_admin","file (multipart)","logo_url","tenant_assets",Admin,Active
+/api/tenant/assets,GET,"Get tenant assets","public","--","assets list","tenant_assets",Admin,Active
+/api/tenant/delete-asset,DELETE,"Delete tenant asset","tenant_admin","asset_id","--","tenant_assets",Admin,Active
+/api/validate/category,POST,"Validate category","public","category_id","valid: boolean","categories",Validation,Active
+/api/cron/send-payment-reminders,POST,"Send payment reminders","cron, service_role","--","sent count","payments, payment_reminders, reminder_templates",Cron,Active
+/api/cron/send-urgent-payment-reminders,POST,"Send urgent reminders","cron, service_role","--","sent count","payments, payment_reminders",Cron,Active
+/api/cron/process-recalc-queue,GET,"Process availability recalculation queue","cron, service_role","--","processed count","availability_recalc_queue, availability_slots",Cron,Active
+/api/cron/sync-external-calendars,POST,"Sync external calendars","cron, service_role","--","sync count","external_calendars",Cron,Active
+/api/cron/recover-pending-wallee-payments,POST,"Recover stuck Wallee payments","cron, service_role","--","recovered count","payment_wallee_transactions, payments",Cron,Active
+/api/cron/process-outbound-messages,POST,"Process message queue","cron, service_role","--","sent count","outbound_messages_queue, sms_logs",Cron,Active
+/api/examiners/list,GET,"List examiners","staff, admin","--","examiners list","examiners",Staff,Active
+/api/exams/save-result,POST,"Save exam result","staff, admin","student_id, result_data","result_id","exam_results",Staff,Active
+/api/onboarding/categories,GET,"Get categories for onboarding","public","--","categories list","categories",Onboarding,Active
+/api/emails/send-booking-proposal,POST,"Send booking proposal email","staff, admin","proposal_id, email_data","success message","booking_proposals, reminder_templates",Messaging,Active
+/api/debug/check-wallee-payments,GET,"Debug Wallee payments (dev)","admin","--","debug info","payment_wallee_transactions",Debug,Active
+/api/debug/trigger-recalc-queue,POST,"Manually trigger recalculation (dev)","admin","staff_id, location_id, date_range","queue_id","availability_recalc_queue",Debug,Active
