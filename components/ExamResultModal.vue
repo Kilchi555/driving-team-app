@@ -1,6 +1,6 @@
 <!-- components/ExamResultModal.vue -->
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-50">
+  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-[10000]">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[95vh] overflow-hidden flex flex-col">
       
       <!-- Header -->
@@ -41,7 +41,7 @@
               >
               
               <!-- Dropdown mit gefilterten Experten -->
-              <div v-if="showExaminerDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div v-if="showExaminerDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-[10001] max-h-60 overflow-y-auto">
                 <div v-if="filteredExaminers.length > 0">
                   <div 
                     v-for="examiner in filteredExaminers" 
