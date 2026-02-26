@@ -118,7 +118,8 @@ export default defineEventHandler(async (event) => {
       lessonPriceRappen = 0,
       adminFeeRappen = 0,
       chargePercentage = 0,
-      shouldCreditHours = true
+      shouldCreditHours = true,
+      cancelledBy = 'staff'
     } = body
 
     if (!appointmentId || !validateUUID(appointmentId)) {
@@ -205,7 +206,7 @@ export default defineEventHandler(async (event) => {
         shouldCreditHours,
         chargePercentage,
         staffId: userData.id,
-        cancelledBy: 'staff' // ← Identify as staff cancellation
+        cancelledBy: cancelledBy === 'customer' ? 'customer' : 'staff'
       }
     })
 
@@ -213,7 +214,7 @@ export default defineEventHandler(async (event) => {
     await logAudit({
       user_id: userData.id,
       auth_user_id: authenticatedUserId,
-      action: 'cancel_appointment_staff',
+      action: cancelledBy === 'customer' ? 'cancel_appointment_customer' : 'cancel_appointment_staff',
       resource_type: 'appointment',
       resource_id: appointmentId,
       status: 'success',
@@ -223,6 +224,7 @@ export default defineEventHandler(async (event) => {
         studentId: appointment.user_id,
         chargePercentage,
         deletionReason,
+        cancelledBy,
         cancellationResult: cancellationResult?.action
       }
     })

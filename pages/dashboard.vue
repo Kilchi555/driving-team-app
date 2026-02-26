@@ -278,6 +278,14 @@ const onAppointmentChanged = async (event: { type: string, data: any }) => {
   await refreshPendingData()
 }
 
+const onAppointmentCancelled = async (appointmentId: string) => {
+  logger.debug('🗑️ Appointment cancelled from PendenzenModal:', appointmentId)
+  if (calendarRef.value && 'refreshCalendar' in calendarRef.value) {
+    await (calendarRef.value as any).refreshCalendar?.()
+  }
+  await refreshPendingData()
+}
+
 // Admin Staff Switcher Handler
 const onStaffChanged = (staffId: string | null) => {
   logger.debug('🔄 Admin staff filter changed:', staffId)
@@ -516,6 +524,7 @@ onUnmounted(() => {
           showPendenzen = false; 
         }"
         @evaluate-lesson="handleEvaluateLesson"
+        @appointment-cancelled="onAppointmentCancelled"
       />
       
       <!-- Staff Settings nur für Staff/Admin -->

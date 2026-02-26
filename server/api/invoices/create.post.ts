@@ -53,6 +53,26 @@ export default defineEventHandler(async (event) => {
       if (updateUserError) {
         console.warn('Warning: Could not update user payment method:', updateUserError)
       }
+
+      // Update payments for the selected appointments in the invoice items
+      if (items.length > 0) {
+        // Collect all appointment IDs from invoice items
+        const appointmentIds = items
+          .filter((item: any) => item.appointment_id)
+          .map((item: any) => item.appointment_id)
+
+        if (appointmentIds.length > 0) {
+          const { error: updatePaymentsError } = await supabaseAdmin
+            .from('payments')
+            .update({ payment_status: 'invoice', payment_method: 'invoice' })
+            .eq('user_id', invoiceData.user_id)
+            .in('appointment_id', appointmentIds)
+
+          if (updatePaymentsError) {
+            console.warn('Warning: Could not update payment statuses:', updatePaymentsError)
+          }
+        }
+      }
     }
 
     // Create invoice items
