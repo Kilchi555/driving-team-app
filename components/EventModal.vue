@@ -1277,60 +1277,17 @@ const handleSaveAppointment = async () => {
       }
     }
     
-    // ✅ NEW: Use secure backend API to apply credit to appointment
-    if (props.mode === 'create' && selectedStudent.value && studentCredit.value && studentCredit.value.balance_rappen > 0) {
-      try {
-        logger.debug('💳 Using secure API to apply credit for appointment...')
-        
-        // Calculate total price including all components
-        const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
-        let productsPrice = 0
-        if (selectedProducts.value && selectedProducts.value.length > 0) {
-          productsPrice = selectedProducts.value.reduce((sum: number, p: any) => {
-            return sum + ((p.product?.price || 0) * 100 * p.quantity)
-          }, 0)
-        }
-        const adminFee = savedAppointment?.admin_fee_rappen || 0
-        const discountTotal = (formData.value.discount || 0) * 100
-        const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee - discountTotal)
-        
-        const creditToUse = Math.min(studentCredit.value.balance_rappen, totalPrice)
-        
-        if (creditToUse > 0 && savedAppointment?.id) {
-          const response = await $fetch<{ success: boolean; creditTransactionId?: string }>('/api/credit/use-for-appointment', {
-            method: 'POST',
-            body: {
-              appointmentId: savedAppointment.id,
-              amountRappen: creditToUse,
-              notes: `Guthaben für Termin: ${formData.value.title || 'Fahrstunde'}`
-            }
-          })
-          
-          if (response?.success) {
-            logger.debug('✅ Credit applied successfully via API:', response)
-            // Reload student credit
-            if (selectedStudent.value?.id) {
-              await loadStudentCredit(selectedStudent.value.id)
-            }
-          } else {
-            logger.warn('⚠️ Failed to apply credit via API:', response)
-          }
-        }
-      } catch (creditError: any) {
-        logger.warn('⚠️ Failed to apply credit for appointment:', creditError.message)
-        // Don't fail the entire flow - appointment was saved successfully
-      }
-    }
+    // ✅ FAST PATH: Emit events, invalidate cache and close modal IMMEDIATELY
+    // All post-save operations (credit, invites) run in background
+    const totalTime = performance.now() - saveStartTime
+    logger.info(`⏱️ TOTAL SAVE TIME: ${totalTime.toFixed(0)}ms (${(totalTime/1000).toFixed(1)}s)`)
     
-    // ✅ Handle customer invites and SMS sending
-    try {
-      await handleCustomerInvites(savedAppointment)
-    } catch (inviteError) {
-      console.error('❌ Error handling customer invites:', inviteError)
-      // Don't fail the entire save process, just log the error
-    }
+    // Invalidate cache FIRST so refresh gets fresh data
+    const { clearCache } = useCalendarCache()
+    clearCache()
+    logger.debug('✅ Full calendar cache cleared')
     
-    // Emit the appropriate event based on mode
+    // Emit events to trigger calendar refresh
     if (props.mode === 'create') {
       emit('appointment-saved', savedAppointment)
       emit('save-event', { type: 'created', data: savedAppointment })
@@ -1339,25 +1296,56 @@ const handleSaveAppointment = async () => {
       emit('save-event', { type: 'updated', data: savedAppointment })
     }
     
-      // ✅ Re-enable watchers after successful save
-      isLoading.value = false
-      
-      const totalTime = performance.now() - saveStartTime
-      logger.info(`⏱️ TOTAL SAVE TIME: ${totalTime.toFixed(0)}ms (${(totalTime/1000).toFixed(1)}s)`)
-      
-      // ✅ NEW: Invalidate calendar cache to force refresh
-      const { invalidate } = useCalendarCache()
-      invalidate('/api/staff/get-working-hours')
-      invalidate('/api/booking/get-available-slots')
-      invalidate('/api/calendar/get-appointments')
-      invalidate('/api/admin/get-pending-appointments')
-      logger.debug('✅ Cache invalidated for working hours, available slots, and appointments')
-      
-      // Emit refresh calendar event
-      emit('refresh-calendar')
+    emit('refresh-calendar')
     
-    // Close the modal
+    isLoading.value = false
+    
+    // Close the modal IMMEDIATELY - don't wait for background tasks
     emit('close')
+    
+    // ✅ BACKGROUND: Run non-critical operations after modal is closed (fire-and-forget)
+    const bgSavedAppointment = savedAppointment
+    const bgSelectedStudent = selectedStudent.value
+    const bgStudentCredit = studentCredit.value
+    const bgFormData = { ...formData.value }
+    const bgSelectedProducts = selectedProducts.value
+    const bgDynamicPricing = dynamicPricing.value
+    
+    Promise.resolve().then(async () => {
+      // Apply credit
+      if (props.mode === 'create' && bgSelectedStudent && bgStudentCredit && bgStudentCredit.balance_rappen > 0) {
+        try {
+          const lessonPrice = (bgFormData.duration_minutes || 45) * (bgDynamicPricing.pricePerMinute || 2.11) * 100
+          let productsPrice = 0
+          if (bgSelectedProducts && bgSelectedProducts.length > 0) {
+            productsPrice = bgSelectedProducts.reduce((sum: number, p: any) => {
+              return sum + ((p.product?.price || 0) * 100 * p.quantity)
+            }, 0)
+          }
+          const adminFee = bgSavedAppointment?.admin_fee_rappen || 0
+          const discountTotal = (bgFormData.discount || 0) * 100
+          const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee - discountTotal)
+          const creditToUse = Math.min(bgStudentCredit.balance_rappen, totalPrice)
+          
+          if (creditToUse > 0 && bgSavedAppointment?.id) {
+            await $fetch('/api/credit/use-for-appointment', {
+              method: 'POST',
+              body: { appointmentId: bgSavedAppointment.id, amountRappen: creditToUse, notes: `Guthaben für Termin` }
+            })
+            logger.debug('✅ Credit applied in background')
+          }
+        } catch (creditError: any) {
+          logger.warn('⚠️ Background credit apply failed:', creditError.message)
+        }
+      }
+      
+      // Handle customer invites
+      try {
+        await handleCustomerInvites(bgSavedAppointment)
+      } catch (inviteError: any) {
+        logger.warn('⚠️ Background invite failed:', inviteError.message)
+      }
+    }).catch(err => logger.warn('⚠️ Background tasks error:', err))
     
   } catch (error: any) {
     console.error('❌ Error saving appointment:', error)

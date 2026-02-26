@@ -330,18 +330,77 @@ export default defineEventHandler(async (event) => {
       result = data
       logger.debug('✅ Appointment created:', result.id)
       
-      // ============ PARALLEL OPERATIONS FOR NEW APPOINTMENT ============
-      // Use Promise.all to execute non-blocking operations in parallel
-      // This improves performance by ~2-3x for new appointments
-      const parallelOperations = [
-        // 1. Mark overlapping availability slots as unavailable
+      // ============ ALL POST-CREATE OPERATIONS IN PARALLEL ============
+      // Payment + Slot blocking + Queue recalc all run at the same time
+      const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
+      
+      // Prepare payment data synchronously (no DB calls needed)
+      let paymentPromise: Promise<void> | null = null
+      if (isChargeableEventType) {
+        let finalTotalAmount = totalAmountRappenForPayment ?? 0
+        let finalBasePrice = basePriceRappen || 0
+        
+        if (!finalBasePrice || finalBasePrice <= 0) {
+          const durationMins = appointmentData.duration_minutes || 45
+          const pricePerMin = 2.11
+          finalBasePrice = Math.round(durationMins * pricePerMin * 100)
+        }
+        
+        if (finalTotalAmount === undefined || finalTotalAmount === null) {
+          finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
+        }
+        
+        finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
+        const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
+        
+        const paymentData = {
+          appointment_id: result.id,
+          user_id: result.user_id,
+          staff_id: appointmentData.staff_id,
+          tenant_id: appointmentData.tenant_id,
+          lesson_price_rappen: finalBasePrice,
+          admin_fee_rappen: adminFeeRappen || 0,
+          products_price_rappen: productsPriceRappen || 0,
+          discount_amount_rappen: discountAmountRappen || 0,
+          voucher_discount_rappen: 0,
+          total_amount_rappen: remainingAmountRappen,
+          payment_method: paymentMethodForPayment || 'wallee',
+          payment_status: remainingAmountRappen === 0 ? 'completed' : 'pending',
+          ...(remainingAmountRappen === 0 ? { paid_at: new Date().toISOString() } : {}),
+          credit_used_rappen: creditUsedRappen || 0,
+          ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
+          description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,
+          created_at: new Date().toISOString()
+        }
+        
+        paymentPromise = (async () => {
+          try {
+            const { data: paymentResult, error: paymentError } = await supabase
+              .from('payments')
+              .insert(paymentData)
+              .select()
+              .single()
+            
+            if (paymentError) {
+              logger.warn('⚠️ Failed to create payment:', paymentError)
+            } else {
+              logger.debug('✅ Payment created:', paymentResult.id)
+              result.payment_id = paymentResult.id
+            }
+          } catch (paymentErr: any) {
+            logger.warn('⚠️ Payment creation exception:', paymentErr.message)
+          }
+        })()
+      }
+      
+      // Run ALL post-create operations in parallel
+      await Promise.all([
+        // 1. Create payment (critical - but non-blocking for response)
+        paymentPromise,
+        // 2. Mark overlapping availability slots
         (async () => {
           try {
-            logger.debug('🔒 Marking overlapping availability slots as unavailable...')
-            
             const appointmentEnd = new Date(result.end_time)
-            
-            // Find all overlapping slots for this staff member
             const { data: overlappingSlots, error: overlapError } = await supabase
               .from('availability_slots')
               .select('id')
@@ -352,33 +411,19 @@ export default defineEventHandler(async (event) => {
             
             if (!overlapError && overlappingSlots && overlappingSlots.length > 0) {
               const slotIds = overlappingSlots.map(s => s.id)
-              logger.debug(`📌 Found ${slotIds.length} overlapping slots to mark as unavailable`)
-              
-              const { error: updateError } = await supabase
+              await supabase
                 .from('availability_slots')
-                .update({
-                  is_available: false,
-                  updated_at: new Date().toISOString()
-                })
+                .update({ is_available: false, updated_at: new Date().toISOString() })
                 .in('id', slotIds)
-              
-              if (updateError) {
-                logger.warn('⚠️ Failed to mark overlapping slots as unavailable:', updateError.message)
-              } else {
-                logger.debug(`✅ Marked ${slotIds.length} slots as unavailable for this appointment`)
-              }
-            } else {
-              logger.debug('ℹ️ No overlapping slots found to update')
+              logger.debug(`✅ Marked ${slotIds.length} slots as unavailable`)
             }
           } catch (slotError: any) {
-            logger.warn('⚠️ Error updating availability slots (non-critical):', slotError.message)
+            logger.warn('⚠️ Slot update error (non-critical):', slotError.message)
           }
         })(),
-        
-        // 2. Queue availability recalculation
+        // 3. Queue availability recalculation (single call, not duplicated)
         (async () => {
           try {
-            logger.debug('📋 Queuing availability recalculation after appointment creation...')
             await $fetch('/api/availability/queue-recalc', {
               method: 'POST',
               body: {
@@ -387,140 +432,26 @@ export default defineEventHandler(async (event) => {
                 trigger: 'appointment_created'
               }
             })
-            logger.debug('✅ Queued recalculation after appointment creation')
+            logger.debug('✅ Queued recalculation')
           } catch (queueError: any) {
-            logger.warn('⚠️ Failed to queue recalculation (non-critical):', queueError.message)
+            logger.warn('⚠️ Queue recalc error (non-critical):', queueError.message)
           }
         })()
-      ]
-      
-      // ============ CREATE PAYMENT FOR NEW APPOINTMENT ============
-      // ✅ FIX: ALWAYS create payment for lesson/exam/theory appointments (even if amount is 0!)
-      const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
-      
-      if (isChargeableEventType) {
-        try {
-          // ✅ Calculate amount from appointment if not provided or if it's explicitly 0 (after discounts)
-          let finalTotalAmount = totalAmountRappenForPayment ?? 0
-          let finalBasePrice = basePriceRappen || 0
-          
-          // Fallback calculation if base price not provided
-          if (!finalBasePrice || finalBasePrice <= 0) {
-            const durationMins = appointmentData.duration_minutes || 45
-            const pricePerMin = 2.11 // Default CHF 2.11/min
-            finalBasePrice = Math.round(durationMins * pricePerMin * 100)
-          }
-          
-          // Recalculate total if not explicitly provided
-          if (finalTotalAmount === undefined || finalTotalAmount === null) {
-            finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
-          }
-          
-          // ✅ Ensure amount is never negative and always rounded
-          finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
-          
-          logger.debug('💳 Creating payment for new appointment:', {
-            appointmentId: result.id,
-            userId: result.user_id,
-            basePrice: (finalBasePrice / 100).toFixed(2),
-            adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
-            products: ((productsPriceRappen || 0) / 100).toFixed(2),
-            discount: ((discountAmountRappen || 0) / 100).toFixed(2),
-            totalAmount: (finalTotalAmount / 100).toFixed(2),
-            creditUsed: ((creditUsedRappen || 0) / 100).toFixed(2)
-          })
-          
-          // ✅ Calculate the remaining amount after credit is deducted
-          const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
-          
-          const paymentData = {
-            appointment_id: result.id,
-            user_id: result.user_id,
-            staff_id: appointmentData.staff_id,  // ✅ ADD: Store staff_id for payment tracking
-            tenant_id: appointmentData.tenant_id,
-            lesson_price_rappen: finalBasePrice,
-            admin_fee_rappen: adminFeeRappen || 0,
-            products_price_rappen: productsPriceRappen || 0,
-            discount_amount_rappen: discountAmountRappen || 0,
-            voucher_discount_rappen: 0, // Will be set if discount is from voucher
-            // ✅ FIX: total_amount_rappen is the REMAINING amount after credit is deducted
-            total_amount_rappen: remainingAmountRappen,
-            payment_method: paymentMethodForPayment || 'wallee',
-            // ✅ CRITICAL FIX: Check REMAINING amount (after credit), not finalTotalAmount!
-            payment_status: remainingAmountRappen === 0 ? 'completed' : 'pending',
-            // ✅ FIX: Set paid_at ONLY if remaining amount is 0 (nothing left to pay)
-            ...(remainingAmountRappen === 0 ? { paid_at: new Date().toISOString() } : {}),
-            // ✅ NEW: Store credit used in payment record
-            credit_used_rappen: creditUsedRappen || 0,
-            // ✅ NEW: Company billing address ID for invoice payments
-            ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
-            description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,
-            created_at: new Date().toISOString()
-          }
-          
-          const { data: paymentResult, error: paymentError } = await supabase
-            .from('payments')
-            .insert(paymentData)
-            .select()
-            .single()
-          
-          if (paymentError) {
-            logger.warn('⚠️ Failed to create payment (non-critical):', paymentError)
-            // Don't throw - appointment creation succeeded, payment creation is secondary
-          } else {
-            logger.debug('✅ Payment created for appointment:', paymentResult.id)
-            result.payment_id = paymentResult.id
-          }
-        } catch (paymentErr: any) {
-          logger.warn('⚠️ Payment creation exception (non-critical):', paymentErr.message)
-          // Don't throw - appointment is already created
-        }
-      }
+      ].filter(Boolean))
     }
 
-    // ✅ OPTIMIZATION: Send appointment confirmation email asynchronously (non-blocking)
+    // Fire-and-forget: email + queue recalc for edits (non-blocking)
     if (mode === 'create') {
-      // Fire and forget - don't await, don't block the response
       Promise.resolve().then(async () => {
         try {
-          logger.debug('📧 Sending appointment confirmation email (async)...')
-          const confirmationResponse = await $fetch('/api/reminders/send-appointment-confirmation', {
+          await $fetch('/api/reminders/send-appointment-confirmation', {
             method: 'POST',
-            body: {
-              appointmentId: result.id,
-              userId: appointmentData.user_id,
-              tenantId: appointmentData.tenant_id
-            }
+            body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
           })
-          logger.debug('✅ Appointment confirmation email sent:', confirmationResponse)
-        } catch (confirmationErr: any) {
-          logger.warn('⚠️ Failed to send appointment confirmation email (non-critical, async):', confirmationErr.message)
+        } catch (err: any) {
+          logger.warn('⚠️ Confirmation email failed (async):', err.message)
         }
-      }).catch((err: any) => {
-        logger.warn('⚠️ Error in async email sending:', err.message)
       })
-    }
-
-    // ✅ NEW: Queue staff for availability recalculation
-    // If appointment was created or staff_id changed, queue for recalc
-    if (result && result.staff_id && appointmentData.tenant_id) {
-      try {
-        logger.debug(`📋 Queueing staff ${result.staff_id} for availability recalc after appointment ${mode}`)
-        
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id: result.staff_id,
-            tenant_id: appointmentData.tenant_id,
-            trigger: 'appointment'
-          }
-        })
-        
-        logger.debug(`✅ Staff queued for recalculation after appointment ${mode}`)
-      } catch (queueError: any) {
-        logger.warn(`⚠️ Failed to queue staff for recalc (non-critical):`, queueError.message)
-        // Non-critical: availability will be recalculated at next cron
-      }
     }
 
     return {
