@@ -1,0 +1,77 @@
+Type,Name,Description,Dependencies,Key Features,Module,Status
+FEATURE,Multi-Tenant System,"Allows multiple driving schools to use the same platform with complete data isolation","RLS Policies, Supabase Auth, Tenant table","Tenant registration, branding, settings, isolation via RLS",Core,Active
+FEATURE,Appointment Management,"Handles creation, editing, cancellation of driving lessons","Users table, Locations table, Payments table, Staff working hours","Create/edit/cancel, staff scheduling, working hours, location management, availability slots, external calendar sync, status tracking",Scheduling,Active
+FEATURE,Payment Processing,"Manages multiple payment methods and tracks payment status","Wallee API, Stripe API, Users table, Payments table, Invoices table","Multiple payment methods, status tracking, reminders, receipt generation, discounts, vouchers, student credits, cash balance",Payments,Active
+FEATURE,Course Management,"VKU/PGS course management with enrollment","Courses table, Course sessions table, Course registrations table, SARI API","Course creation, categories, sessions, student enrollment, waitlist, SARI integration",Courses,Active
+FEATURE,Student/Customer Management,"Manages student profiles and data","Users table, Documents table, Credits table, Payments table","Profiles, documents, credit tracking, payment history, appointment history, evaluation",Customers,Active
+FEATURE,Authentication & Security,"Secure user authentication with multiple methods","auth.users table, WebAuthn credentials, MFA methods, Login attempts table","Password auth, WebAuthn/Passkeys, Multi-Factor Authentication, login tracking, IP blocking, account lockout",Auth,Active
+FEATURE,Booking System,"Public booking platform for new customers","Availability slots, Booking proposals, Locations, Staff","Public booking pages, availability checking, slot reservation, guest bookings, proposals",Booking,Active
+FEATURE,Staff Management,"Manages staff profiles and assignments","Users table, Staff working hours, Locations table, Appointments table","Profiles, working hours, location assignments, appointment stats, cash tracking, evaluation",Staff,Active
+FEATURE,SARI Integration,"Synchronizes VKU/PGS courses and student data from SARI system","SARI API, Courses table, Course registrations, SARI mapping tables","Course sync, student enrollment sync, FABERID mapping, sync logging, test/prod environments",Integration,Active
+FEATURE,Reminder System,"Multi-stage payment and notification reminders","Payment reminders table, SMS logs, Email service, Twilio, Resend","Payment reminders, email/SMS/push, multi-stage, templates, logging",Messaging,Active
+FEATURE,Task Management,"Task and pendency tracking system","Pendencies table, Users table, Appointments table","Tasks, assignments, recurrence, priority levels",Admin,Active
+FEATURE,Analytics & Logging,"Comprehensive audit trail and system logging","Audit logs, Error logs, Webhook logs, Analytics events","Audit logs, error logs, webhook logs, analytics events, system metrics",Logging,Active
+FEATURE,Invoice System,"Invoice generation and tracking","Invoices table, Invoice items, Payments table","Generation, items, payment tracking, PDF export",Invoices,Active
+FEATURE,Cancellation Management,"Handles appointment cancellations and policies","Cancellation policies, Cancellation reasons, Appointments table","Policies, reasons, charge calculation, medical certificate tracking",Appointments,Active
+FEATURE,Evaluation System,"Staff and appointment evaluation","Evaluation categories, criteria, scales, exam results, examiners table","Categories, criteria, rating scales, exam results, examiner management",Staff,Active
+FEATURE,Calendar Integration,"External calendar synchronization","External calendars table, ICS files, FullCalendar","ICS sync, calendar export, appointment display, integration with external tools",Calendar,Active
+FEATURE,Document Management,"User document storage and tracking","User documents table, Document categories","Upload, storage, categorization, requirements tracking",Admin,Active
+FEATURE,WebAuthn/Passkey Support,"Biometric and hardware key authentication","Webauthn credentials table, Webauthn sessions table","Biometric auth, security keys, multi-device, credential management",Auth,Active
+API,/api/auth/*,"Authentication endpoints","Users, auth.users, WebAuthn, Password reset","Login, register, WebAuthn, password reset, MFA, current user",Auth,Active
+API,/api/appointments/*,"Appointment management endpoints","Appointments, Users, Locations, Payments","Create, update, cancel, status management, payment tracking",Appointments,Active
+API,/api/payments/*,"Payment processing endpoints","Payments, Payment items, Wallee, Stripe","Process payments, status check, receipts, conversions, cash handling",Payments,Active
+API,/api/wallee/*,"Wallee payment provider endpoints","Wallee API, Payments, Payment transactions","Transaction creation, webhooks, payment tokens, debugging",Payments,Active
+API,/api/booking/*,"Booking system endpoints","Availability slots, Locations, Staff, Booking proposals","Availability, slot reservation, options, tenant lookup, proposals",Booking,Active
+API,/api/staff/*,"Staff management endpoints","Users (staff), Working hours, Locations, Appointments","Working hours, appointments, statistics, products, categories, ratings",Staff,Active
+API,/api/courses/*,"Course management endpoints","Courses, Course registrations, Wallee payments","Enrollment, Wallee integration",Courses,Active
+API,/api/sari/*,"SARI integration endpoints","SARI API, Courses, Course registrations, User mappings","Course sync, participant sync, student enrollment, validation",Integration,Active
+API,/api/admin/*,"Admin management endpoints","Users, Payments, Appointments, Locations","Pending appointments, payment details, student instructors, billing",Admin,Active
+API,/api/calendar/*,"Calendar management endpoints","Appointments, ICS format, External calendars","Get appointments, manage calendar, generate tokens, export ICS",Calendar,Active
+API,/api/availability/*,"Availability calculation endpoints","Availability slots, Availability recalc queue, Working hours","Queue recalculation of availability",Scheduling,Active
+API,/api/cancellation-*/*,"Cancellation management endpoints","Cancellation policies, Cancellation reasons","Manage policies, list reasons, create/update/delete",Appointments,Active
+API,/api/invoices/*,"Invoice management endpoints","Invoices, Invoice items, Payments","Create, list, get, update, delete, download PDF",Invoices,Active
+API,/api/products/*,"Product catalog endpoints","Products, Pricing","List products, get appointment products",Products,Active
+API,/api/pricing/*,"Pricing calculation endpoints","Pricing rules, Discounts","Calculate prices with/without discounts",Pricing,Active
+API,/api/cron/*,"Scheduled background job endpoints","Various tables, Email/SMS services","Payment reminders, availability recalc, calendar sync, payment recovery, message queue",Cron,Active
+COMPONENT,Auth Components,"Authentication UI components","Auth stores, WebAuthn composables","Login, register, password reset, WebAuthn, MFA",Auth,Active
+COMPONENT,Appointment Components,"Appointment UI components","Appointment stores, Calendar, Pricing","Calendar view, appointment form, status display, payment info",Appointments,Active
+COMPONENT,Payment Components,"Payment UI components","Wallee integration, Payment stores","Payment form, payment status, receipt display, cash balance",Payments,Active
+COMPONENT,Booking Components,"Public booking UI components","Availability, Location, Booking proposals","Booking form, availability selector, confirmation",Booking,Active
+COMPONENT,Admin Components,"Admin dashboard components","Admin stores, Analytics","User management, statistics, settings, logs",Admin,Active
+COMPOSABLE,useCurrentUser,"Current user session management","Auth store, Users table","User data, role management, permissions",Auth,Active
+COMPOSABLE,useWebAuthn,"WebAuthn operations","Webauthn credentials, WebAuthn sessions","Register, authenticate, list credentials",Auth,Active
+COMPOSABLE,useCalendarCache,"Calendar data caching","Appointments, Cache management","Cache appointments, invalidate cache",Calendar,Active
+COMPOSABLE,usePricing,"Pricing calculations","Pricing rules, Products, Discounts","Calculate prices, apply discounts",Pricing,Active
+COMPOSABLE,usePendingTasks,"Task/pendency management","Pendencies table, Users","Fetch, create, update tasks",Admin,Active
+COMPOSABLE,useTenantBranding,"Tenant branding customization","Tenants table, Tenant assets","Get logo, colors, branding elements",Branding,Active
+COMPOSABLE,useCancellationReasons,"Cancellation reason management","Cancellation reasons table","Fetch active/all reasons, create, update",Appointments,Active
+UTILITY,Supabase Client,"Supabase database client","PostgreSQL, Supabase Auth","Database queries, auth integration",Core,Active
+UTILITY,JWT Utils,"JWT token handling","auth.users, Supabase Auth","Token creation, verification",Auth,Active
+UTILITY,Wallee Provider,"Wallee payment service","Wallee API","Transaction creation, webhook handling",Payments,Active
+UTILITY,Availability Calculator,"Availability slot computation","Staff working hours, Appointments, Availability slots","Calculate available slots, handle constraints",Scheduling,Active
+UTILITY,Template Renderer,"Email/SMS template rendering","Reminder templates, Reminders","Render templates with variables",Messaging,Active
+UTILITY,Session Persistence,"Session data persistence","Browser storage, Session manager","Save/restore session",Core,Active
+STORE,Auth Store,"Pinia store for authentication","Users, auth.users, WebAuthn","User data, role, permissions, login state",Auth,Active
+STORE,UI Store,"Pinia store for UI state","Notification, Loading state","Notifications, dialogs, loading indicators",UI,Active
+MIDDLEWARE,Auth Middleware,"Route protection middleware","Auth store, Users","Check authentication, role-based access",Auth,Active
+PLUGIN,Session Auto Save,"Auto-save session data","Session persistence","Save session periodically",Core,Active
+PLUGIN,Auth Restore,"Restore authentication on app load","Auth store, Session","Restore user on app load",Auth,Active
+PLUGIN,Fetch Interceptor,"Global fetch interceptor","Auth middleware","Add auth headers, error handling",Core,Active
+LAYOUT,Default Layout,"Standard layout template","Components, stores","Header, sidebar, main content, footer",UI,Active
+LAYOUT,Minimal Layout,"Minimal layout template","Components","Simple header, content area",UI,Active
+LAYOUT,Tenant Admin Layout,"Tenant admin layout template","Admin components","Admin sidebar, content area",Admin,Active
+I18N,de,German language,"Locales folder","German translations for all UI",Localization,Active
+I18N,en,English language,"Locales folder","English translations for all UI",Localization,Active
+I18N,fr,French language,"Locales folder","French translations for all UI",Localization,Active
+I18N,it,Italian language,"Locales folder","Italian translations for all UI",Localization,Active
+DATABASE,PostgreSQL,"PostgreSQL database via Supabase","Supabase","Relational database, PostGIS, RLS",Core,Active
+AUTH,Supabase Auth,"Supabase authentication service","PostgreSQL, auth.users","User authentication, session management",Core,Active
+PAYMENT,Wallee,"Swiss payment provider","Payment API, Webhooks","Online payments, TWINT, transaction tracking",Payments,Active
+PAYMENT,Stripe,"Payment provider","Stripe API","Card payments, PayPal, TWINT",Payments,Active
+EMAIL,Resend,"Email service provider","Email templates, Resend API","Send emails, templates, tracking",Messaging,Active
+SMS,Twilio,"SMS service provider","SMS templates, Twilio API","Send SMS, tracking",Messaging,Active
+EXTERNAL,SARI System,"VKU/PGS course management system","SARI API, Webhooks","Course data, student enrollment",Integration,Active
+EXTERNAL,FullCalendar,"Calendar library","Appointments, Events","Calendar display, event management",UI,Active
+EXTERNAL,jsPDF,"PDF generation library","Invoices, Receipts","Generate PDF documents",Documents,Active
+EXTERNAL,Tailwind CSS,"Utility-first CSS framework","Styles, Components","Responsive design, styling",UI,Active
+EXTERNAL,Nuxt UI,"Vue 3 UI component library","Tailwind CSS, Components","Pre-built components, styling",UI,Active
