@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
-    <div class="bg-white rounded-lg max-w-4xl w-full h-[95vh] sm:h-[90vh] flex flex-col evaluation-modal-container">
+    <div class="bg-white rounded-lg max-w-4xl w-full h-[calc(100svh-1rem)] sm:h-[90vh] flex flex-col evaluation-modal-container">
       <div class="bg-green-600 text-white p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
