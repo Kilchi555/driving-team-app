@@ -430,8 +430,9 @@ export default defineEventHandler(async (event: H3Event) => {
       payment_provider: 'wallee', // Default payment provider
       payment_method_id: null, // No payment method yet
       description: appointmentTitle,
+      metadata: { category: body.category_code || null },
       currency: 'CHF',
-      created_by: newAppointment.user_id // ✅ FIXED: Use user_id (customer) not authenticatedUserId which may not exist yet
+      created_by: newAppointment.user_id
     }
 
     const { data: newPayment, error: paymentError } = await supabase

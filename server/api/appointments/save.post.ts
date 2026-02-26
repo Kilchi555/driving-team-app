@@ -370,6 +370,7 @@ export default defineEventHandler(async (event) => {
           credit_used_rappen: creditUsedRappen || 0,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
           description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,
+          metadata: { category: appointmentData.type || null },
           created_at: new Date().toISOString()
         }
         

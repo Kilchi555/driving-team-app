@@ -373,19 +373,19 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
   }
 
-  // ✅ NEUE LOGIK: Admin-Fee nur verrechnen wenn noch nie bezahlt
+  // ✅ Admin-Fee genau 1x pro Kategorie verrechnen
   const shouldApplyAdminFee = async (userId: string, categoryCode: string): Promise<boolean> => {
-    // Admin-Fee nur beim 2. Termin UND wenn noch nie bezahlt
     const appointmentCount = await getAppointmentCount(userId, categoryCode)
     const adminFeeAlreadyPaid = await hasAdminFeeBeenPaid(userId, categoryCode)
     
-    const shouldApply = appointmentCount === 2 && !adminFeeAlreadyPaid
+    // Admin-Fee ab dem 2. Termin, aber nur wenn noch nie bezahlt für diese Kategorie
+    const shouldApply = appointmentCount >= 2 && !adminFeeAlreadyPaid
     
     logger.debug(`🎯 Admin fee decision for ${categoryCode}:`, {
       appointmentCount,
       adminFeeAlreadyPaid,
       shouldApply,
-      reason: shouldApply ? '2. Termin + noch nie bezahlt' : 'Nicht anwendbar'
+      reason: adminFeeAlreadyPaid ? 'Bereits bezahlt' : (appointmentCount < 2 ? 'Erst 1. Termin' : 'Noch nie bezahlt → verrechnen')
     })
     
     return shouldApply
