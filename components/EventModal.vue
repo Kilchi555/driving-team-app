@@ -1349,7 +1349,9 @@ const handleSaveAppointment = async () => {
       const { invalidate } = useCalendarCache()
       invalidate('/api/staff/get-working-hours')
       invalidate('/api/booking/get-available-slots')
-      logger.debug('✅ Cache invalidated for working hours and available slots')
+      invalidate('/api/calendar/get-appointments')
+      invalidate('/api/admin/get-pending-appointments')
+      logger.debug('✅ Cache invalidated for working hours, available slots, and appointments')
       
       // Emit refresh calendar event
       emit('refresh-calendar')

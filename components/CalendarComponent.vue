@@ -802,8 +802,8 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   }
 }
 
-const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date) => {
-  logger.debug('🔥 loadRegularAppointments using backend API!')
+const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date, forceReload?: boolean) => {
+  logger.debug('🔥 loadRegularAppointments using backend API!', forceReload ? '(force reload)' : '')
   isLoadingEvents.value = true
   try {
     logger.debug('🔄 Loading appointments via backend API...')
@@ -828,6 +828,14 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
       viewEnd: viewEndDate?.toISOString(),
       adminStaffFilter: props.adminStaffFilter || null
     }
+    
+    // ✅ If forceReload, invalidate the specific cache entry first
+    if (forceReload) {
+      const { invalidate: invalidateCache } = useCalendarCache()
+      invalidateCache('/api/calendar/get-appointments', cacheParams)
+      logger.debug('🗑️ Cache invalidated for appointments before reload')
+    }
+    
     const response = await getCachedOrFetch(
       '/api/calendar/get-appointments',
       () => $fetch(`/api/calendar/get-appointments?${params.toString()}`, { method: 'GET' }),
@@ -1081,7 +1089,7 @@ const loadAppointments = async (forceReload = false) => {
     const startTime = performance.now()
     
     const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
-      loadRegularAppointments(viewStart, viewEnd),
+      loadRegularAppointments(viewStart, viewEnd, forceReload),
       loadExternalBusyTimes(),
       loadNonWorkingHoursBlocks(staffId, viewStart, viewEnd),
     ])
