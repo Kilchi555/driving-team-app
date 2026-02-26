@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]">
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
       <!-- Header -->
       <h2 class="text-xl font-bold text-gray-900 mb-1">Termin-Stornierung</h2>
