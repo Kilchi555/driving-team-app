@@ -738,9 +738,18 @@ const saveEvaluation = async () => {
           }
         }
         
-        // Save if: no previous eval (new) OR rating/note changed
+        // Save if:
+        // 1. No previous eval (new evaluation)
+        // 2. Was newly rated in this session (even if same value as before)
+        // 3. Rating or note changed
         if (!existingEval) {
           logger.debug(`✨ NEW evaluation for criteria ${criteriaId}: rating=${currentRating}`)
+          return true
+        }
+        
+        // If criteria was newly added/selected in this session, always save (even if values are same)
+        if (wasNewlyRatedThisSession) {
+          logger.debug(`🆕 NEWLY RATED evaluation for criteria ${criteriaId} (even if same value): rating=${currentRating}`)
           return true
         }
         
