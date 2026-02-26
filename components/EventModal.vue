@@ -4072,8 +4072,8 @@ const confirmCancellationWithReason = async () => {
   // ✅ SCHRITT 1: Absage-Grund und Policy-Information speichern
   pendingCancellationReason.value = selectedReason
   
-  // ✅ SCHRITT 2: Absage-Grund Modal schließen
-  showCancellationReasonModal.value = false
+  // ✅ SET LOADING STATE FIRST - Modal stays open with loading overlay
+  isLoading.value = true
   
   // ✅ NEU: Prüfe ob Arztzeugnis erforderlich ist (nur logging, Kunde lädt später hoch)
   // @ts-ignore - selectedReason may have additional properties from database
@@ -4120,6 +4120,7 @@ const confirmCancellationWithReason = async () => {
     
     // Show charge decision modal and STOP here
     // Do NOT proceed with cancellation until staff decides
+    isLoading.value = false  // Reset loading since we're showing another modal
     showNoPolicyModal.value = true
     return  // ← EXIT! Don't call proceedWithCancellation yet
   }
@@ -4127,6 +4128,9 @@ const confirmCancellationWithReason = async () => {
   // ✅ SCHRITT 4: Direkt mit dem Löschen fortfahren (nur wenn kein Modal gezeigt wurde)
   logger.debug('🗑️ Proceeding with cancellation')
   await proceedWithCancellation(selectedReason)
+  
+  // ✅ SCHRITT 5: Erst NACH proceedWithCancellation das Modal schließen
+  showCancellationReasonModal.value = false
 }
 
 // ✅ Hilfsfunktion für das eigentliche Löschen nach Absage-Grund
