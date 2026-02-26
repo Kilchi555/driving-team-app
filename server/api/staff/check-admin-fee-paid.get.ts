@@ -85,13 +85,14 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 4: Check if admin fee was already paid for this category
-    // ✅ KORRIGIERT: Verwende metadata um die Kategorie zu ermitteln
+    // Strategy: JOIN payments with appointments to get category, filter by active payment status
     const { data: payments, error } = await supabaseAdmin
       .from('payments')
-      .select('id, admin_fee_rappen, metadata')
+      .select('id, admin_fee_rappen, payment_status, metadata, appointment_id, appointments!inner(type)')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
-      .gt('admin_fee_rappen', 0) // Admin-Fee wurde bereits bezahlt
+      .gt('admin_fee_rappen', 0)
+      .in('payment_status', ['pending', 'completed'])
 
     if (error) {
       logger.error('❌ Error checking admin fee payments:', error)
@@ -101,31 +102,30 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ Filtere nach Kategorie in den metadata
-    const paymentsWithAdminFee = (payments || []).filter(payment => {
+    // Filter by category: use appointment.type (reliable) OR metadata.category (fallback)
+    const paymentsWithAdminFee = (payments || []).filter((payment: any) => {
+      const appointmentCategory = payment.appointments?.type
+      if (appointmentCategory === categoryCode) return true
+
+      // Fallback: check metadata for newer payments that have it set
       let metadataObj: any = {}
       try {
-        if (payment.metadata == null) {
-          metadataObj = {}
-        } else if (typeof payment.metadata === 'string') {
+        if (typeof payment.metadata === 'string') {
           metadataObj = JSON.parse(payment.metadata)
-        } else if (typeof payment.metadata === 'object') {
+        } else if (typeof payment.metadata === 'object' && payment.metadata != null) {
           metadataObj = payment.metadata
-        } else {
-          metadataObj = {}
         }
-      } catch (_e) {
-        metadataObj = {}
-      }
+      } catch (_e) { /* ignore */ }
       return metadataObj?.category === categoryCode
     })
 
     const hasPaid = paymentsWithAdminFee.length > 0
 
-    logger.debug(`📊 Admin fee payment check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
+    logger.debug(`📊 Admin fee check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
       userId,
       categoryCode,
-      paymentsFound: paymentsWithAdminFee.length
+      totalPaymentsWithFee: (payments || []).length,
+      matchingCategory: paymentsWithAdminFee.length
     })
 
     return {
