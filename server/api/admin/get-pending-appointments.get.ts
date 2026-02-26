@@ -4,8 +4,8 @@ import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  // ✅ Set cache headers: Cache for 30 seconds
-  setHeader(event, 'Cache-Control', 'private, max-age=30')
+  // ✅ Set cache headers: No-cache to ensure fresh data
+  setHeader(event, 'Cache-Control', 'private, no-cache, max-age=0')
   
   const supabaseUrl = process.env.SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
