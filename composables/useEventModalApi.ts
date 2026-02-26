@@ -287,9 +287,26 @@ export const useEventModalApi = () => {
    * Update appointment (soft delete, status change, etc.)
    */
   const updateAppointment = async (appointmentId: string, updateData: any) => {
+    // Ensure update_data is properly structured
+    const body: any = { appointment_id: appointmentId }
+    
+    if (updateData.update_data) {
+      // If updateData already has update_data field, use it directly
+      body.update_data = updateData.update_data
+      // Preserve other fields like check_duration_reduction
+      Object.keys(updateData).forEach(key => {
+        if (key !== 'update_data') {
+          body[key] = updateData[key]
+        }
+      })
+    } else {
+      // Otherwise, treat updateData as the update_data itself
+      body.update_data = updateData
+    }
+    
     return apiCall<any>('/api/staff/update-appointment', {
       method: 'POST',
-      body: { appointment_id: appointmentId, ...updateData }
+      body
     })
   }
 
