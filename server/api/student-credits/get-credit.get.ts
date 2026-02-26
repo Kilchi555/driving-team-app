@@ -1,10 +1,10 @@
-import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get query parameters FIRST
     const query = getQuery(event)
     const { user_id } = query
 
@@ -14,44 +14,34 @@ export default defineEventHandler(async (event) => {
 
     const supabaseAdmin = getSupabaseAdmin()
 
-    // Get auth token from headers
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new Error('Missing or invalid authorization header')
+    const authUser = await getAuthUserFromRequest(event)
+    if (!authUser) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Authentication required'
+      })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-
-    // Get current user
-    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    if (authError || !authUser) {
-      throw new Error('Unauthorized')
-    }
-
-    // Get user profile
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, role')
-      .eq('id', authUser.id)
+      .eq('auth_user_id', authUser.id)
       .single()
 
     if (profileError || !userProfile) {
       logger.warn('⚠️ Current user profile not found:', { userId: authUser.id, error: profileError })
-      // If user profile doesn't exist in users table, they might be in process of being created
-      // Return empty credit for now
       return {
         success: true,
         data: null
       }
     }
     
-    // Verify access: can only access own credits or if admin
     const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
-    const isOwnCredit = authUser.id === user_id
+    const isOwnCredit = userProfile.id === user_id
     const isStaff = userProfile.role === 'staff'
     
     logger.debug('🔐 Student credit access check:', {
-      currentUserId: authUser.id,
+      currentUserId: userProfile.id,
       requestedUserId: user_id,
       userRole: userProfile.role,
       isOwnCredit,
@@ -59,15 +49,10 @@ export default defineEventHandler(async (event) => {
       isStaff
     })
     
-    // Access rules:
-    // 1. User can access their own credits
-    // 2. Admin can access any credits
-    // 3. Staff can access their students' credits (same tenant)
     if (!isOwnCredit && !isAdmin && !isStaff) {
       throw new Error('Unauthorized to access this student credit')
     }
     
-    // If staff: Verify student is in same tenant
     if (isStaff && !isOwnCredit) {
       const { data: studentProfile } = await supabaseAdmin
         .from('users')
@@ -84,7 +69,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Fetch student credit with tenant isolation
     const { data: credit, error } = await supabaseAdmin
       .from('student_credits')
       .select('*')
@@ -97,7 +81,7 @@ export default defineEventHandler(async (event) => {
       throw new Error(error.message)
     }
 
-    logger.debug('✅ Student credit loaded:', credit?.id || 'none')
+    logger.debug('✅ Student credit loaded:', credit?.id || 'none', 'balance:', credit?.balance_rappen)
 
     return {
       success: true,

@@ -55,9 +55,14 @@ export default defineEventHandler(async (event) => {
 
     if (aptError) throw new Error(`Appointment not found: ${aptError.message}`)
 
-    // ✅ CRITICAL: Mark appointment as cancelled immediately
-    // This must happen before any refund logic, so status is set correctly
-    await markAppointmentCancelled(supabase, appointmentId, deletionReason, appointment.tenant_id)
+    await markAppointmentCancelled(supabase, appointmentId, {
+      deletionReason,
+      tenantId: appointment.tenant_id,
+      cancellationReasonId,
+      cancellationType: cancelledBy === 'staff' ? 'staff' : 'student',
+      chargePercentage: chargePercentage || 0,
+      shouldCreditHours: shouldCreditHours || false
+    })
 
     // ✅ NEW: Release all overlapping availability slots immediately
     // This makes slots available again for other bookings
@@ -324,8 +329,8 @@ export default defineEventHandler(async (event) => {
     } else {
       logger.debug('ℹ️ Payment was not completed (pending/pending_approval)')
       
-      // ✅ Case 1: FREE CANCELLATION (refundableAmount === 0 AND chargePercentage === 0)
-      if (refundableAmount === 0 && chargePercentage === 0) {
+      // ✅ Case 1: FREE CANCELLATION (chargePercentage === 0)
+      if (chargePercentage === 0) {
         logger.debug('ℹ️ Free cancellation - updating payment status to cancelled')
         
         // ✅ NEW: If credit was used, refund it back to student credit
@@ -387,31 +392,21 @@ export default defineEventHandler(async (event) => {
           })
         }
       } else if (chargePercentage > 0) {
-        // ✅ Case 2: PAID CANCELLATION on UNPAID appointment (chargePercentage > 0, refundableAmount > 0)
-        logger.debug('🔴 Paid cancellation on unpaid appointment - updating total_amount_rappen with charge fee')
-        
-        // Calculate the new charge amount (what customer now owes)
+        // Case 2: PAID CANCELLATION on UNPAID appointment
+        // Payment stays pending (still needs to be collected), only add cancellation metadata
         const chargeAmountRappen = Math.round(refundableAmount * chargePercentage / 100)
         
-        logger.debug('💰 Calculating new charge amount:', {
-          originalTotal: (refundableAmount / 100).toFixed(2),
+        logger.debug('🔴 Paid cancellation on unpaid appointment - payment stays pending:', {
           chargePercentage,
           chargeAmount: (chargeAmountRappen / 100).toFixed(2)
         })
         
-        // Update payment: set status to 'cancelled', update total_amount_rappen to the charge, and store charge info in metadata
         const { error: updatePaymentError } = await supabase
           .from('payments')
           .update({
-            payment_status: 'cancelled', // ✅ KEY FIX: Set payment_status to 'cancelled'
-            total_amount_rappen: chargeAmountRappen,
-            lesson_price_rappen: Math.round(lessonPriceRappen * chargePercentage / 100),
-            admin_fee_rappen: Math.round(adminFeeRappen * chargePercentage / 100),
-            products_price_rappen: 0, // Products are cancelled
-            discount_amount_rappen: 0, // Discounts are not applied to charges
             notes: `${payment.notes ? payment.notes + ' | ' : ''}Cancellation with ${chargePercentage}% charge: ${deletionReason}`,
-            metadata: { // ✅ NEW: Store charge details in metadata
-              ...payment.metadata, // Preserve existing metadata
+            metadata: {
+              ...payment.metadata,
               cancellation_charge_percentage: chargePercentage,
               cancellation_charge_amount_rappen: chargeAmountRappen,
               cancellation_reason: deletionReason
@@ -420,13 +415,11 @@ export default defineEventHandler(async (event) => {
           .eq('id', payment.id)
         
         if (updatePaymentError) {
-          console.warn('⚠️ Could not update payment with charge:', updatePaymentError)
-          throw new Error(`Failed to update payment: ${updatePaymentError.message}`)
+          console.warn('⚠️ Could not update payment metadata:', updatePaymentError)
         } else {
-          logger.debug('✅ Payment updated with cancellation charge:', {
+          logger.debug('✅ Payment metadata updated with cancellation charge:', {
             paymentId: payment.id,
-            oldTotal: (payment.total_amount_rappen / 100).toFixed(2),
-            newTotal: (chargeAmountRappen / 100).toFixed(2),
+            paymentStatus: payment.payment_status,
             chargePercentage
           })
         }
@@ -445,12 +438,17 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-// Mark appointment as cancelled in the database
 async function markAppointmentCancelled(
   supabase: any,
   appointmentId: string,
-  deletionReason: string,
-  tenantId: string  // ✅ Add tenant_id parameter
+  opts: {
+    deletionReason: string
+    tenantId: string
+    cancellationReasonId?: string
+    cancellationType?: string
+    chargePercentage?: number
+    shouldCreditHours?: boolean
+  }
 ) {
   try {
     const { error: updateError } = await supabase
@@ -458,17 +456,22 @@ async function markAppointmentCancelled(
       .update({
         status: 'cancelled',
         deleted_at: new Date().toISOString(),
-        deletion_reason: deletionReason
+        deletion_reason: opts.deletionReason,
+        cancellation_reason_id: opts.cancellationReasonId || null,
+        cancellation_type: opts.cancellationType || null,
+        cancellation_charge_percentage: opts.chargePercentage ?? 0,
+        cancellation_credit_hours: opts.shouldCreditHours ?? false
       })
       .eq('id', appointmentId)
-      .eq('tenant_id', tenantId)  // ✅ Use the passed tenantId
+      .eq('tenant_id', opts.tenantId)
     
     if (updateError) {
       console.warn('⚠️ Could not mark appointment as cancelled:', updateError)
     } else {
       logger.debug('✅ Appointment marked as cancelled:', {
         appointmentId,
-        deletionReason
+        chargePercentage: opts.chargePercentage,
+        cancellationType: opts.cancellationType
       })
     }
   } catch (error: any) {

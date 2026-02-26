@@ -58,7 +58,7 @@ if (typeof window !== 'undefined') {
 
 
 // ✅ Calendar cache for working hours and external busy times (rarely change)
-const { getOrFetch: getCachedOrFetch, invalidate: invalidateCacheEntry } = useCalendarCache()
+const { getOrFetch: getCachedOrFetch, clearCache } = useCalendarCache()
 
 // Neue refs für Confirmation Dialog
 const showConfirmation = ref(false)
@@ -1047,130 +1047,62 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date)
 }
 
 // ✅ IMPROVED CACHING: Viewport-spezifische Caches statt globaler Cache
-const lastLoadTime = ref<number>(0)
-const CACHE_DURATION = 60000 // 60 Sekunden (erhöht von 30s, da viewport-spezifisch)
-const viewportCache = ref<Map<string, { data: any; timestamp: number }>>(new Map())
-
-// ✅ Cache Key basierend auf Viewport-Daten
-const getCacheKey = (viewStart: Date, viewEnd: Date): string => {
-  // Runde auf Tagesgenauigkeit um Cache-Hits zu maximieren
-  const startDay = new Date(viewStart).toISOString().split('T')[0]
-  const endDay = new Date(viewEnd).toISOString().split('T')[0]
-  return `${startDay}_${endDay}`
-}
-
-// ✅ Cache-Check für spezifischen Viewport
-const getCachedData = (cacheKey: string): any | null => {
-  const cached = viewportCache.value.get(cacheKey)
-  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-    logger.debug('💾 Cache HIT for viewport:', cacheKey, `(${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`)
-    return cached.data
-  }
-  logger.debug('💾 Cache MISS for viewport:', cacheKey)
-  return null
-}
-
-// ✅ Cache speichern
-const setCacheData = (cacheKey: string, data: any) => {
-  viewportCache.value.set(cacheKey, {
-    data,
-    timestamp: Date.now()
-  })
-  logger.debug('💾 Cache SET for viewport:', cacheKey)
-}
-
-// ✅ Alte globale Cache-Invalidierung (nur für kritische Änderungen)
-const invalidateCache = (reason: string = 'unknown') => {
-  lastLoadTime.value = 0
-  viewportCache.value.clear() // Clear all viewport caches
-  logger.debug('🔄 Calendar cache invalidated:', reason)
-}
 
 const loadAppointments = async (forceReload = false) => {
-  // ✅ Prüfen ob Komponente noch mounted ist
   if (!calendar.value) {
     logger.debug('⚠️ Calendar not mounted, skipping load')
     return
   }
   
-  // ✅ Zusätzliche Sicherheitsprüfung: Ist die Komponente noch aktiv?
   if (isUpdating.value) {
     logger.debug('⚠️ Calendar update already in progress, skipping load')
     return
   }
   
-  // ✅ Versuche currentUser zu bestimmen (Props oder Composable)
   const staffId = getCurrentUserId()
   logger.debug('🔍 loadAppointments staffId:', staffId)
 
-  // Get current calendar view for date range (immer aktuell bei jedem Aufruf)
   const calendarApi = calendar.value?.getApi()
   const currentView = calendarApi?.view
   const viewStart = currentView?.activeStart || new Date()
   const viewEnd = currentView?.activeEnd || new Date()
   
-  // ✅ VIEWPORT-SPEZIFISCHER CACHE CHECK
-  const cacheKey = getCacheKey(viewStart, viewEnd)
-  if (!forceReload) {
-    const cachedData = getCachedData(cacheKey)
-    if (cachedData) {
-      logger.debug('⚡ Using cached calendar data for this viewport')
-      calendarEvents.value = cachedData
-      return
-    }
+  if (forceReload) {
+    clearCache()
   }
   
   isLoadingEvents.value = true
   isUpdating.value = true
   
   try {
-    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '(cache miss)')
-    
-    // ✅ External Calendar Sync - aber NOT bei jedem Load (führe nur auf Demand auf)
-    // Removed automatic sync here to save 50-100ms per viewport load
-    
+    logger.debug('🔄 Loading all calendar events...', forceReload ? '(forced reload)' : '')
     logger.debug('📅 Loading events for view range:', viewStart, 'to', viewEnd)
     
-    // ✅ LOAD WORKING HOURS - wird jetzt via Backend API in loadNonWorkingHoursBlocks geladen
-    logger.debug('🔒 Working hours will be loaded via Backend API (auth token based)')
-    
-    // ✅ VIEWPORT-BASED: Pass date range to appointments loader
-    logger.debug('⏱️ Performance: Starting parallel loads with viewport dates')
     const startTime = performance.now()
     
-    // Parallel laden - Backend APIs werden verwendet, daher kein staffId nötig
-    logger.debug('🔄 Starting parallel loads via Backend APIs')
     const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
-      loadRegularAppointments(viewStart, viewEnd), // ← Pass viewport dates
-      loadExternalBusyTimes(), // ← Uses backend API with auth token
-      loadNonWorkingHoursBlocks(staffId, viewStart, viewEnd), // ← Uses backend API with auth token
+      loadRegularAppointments(viewStart, viewEnd),
+      loadExternalBusyTimes(),
+      loadNonWorkingHoursBlocks(staffId, viewStart, viewEnd),
     ])
     logger.debug('📊 Loaded events:', { appointments: appointments.length, nonWorkingHours: nonWorkingHoursEvents.length, externalBusy: externalBusyEvents.length })
     
     const loadDuration = (performance.now() - startTime).toFixed(0)
     logger.debug(`⏱️ Performance: All loads completed in ${loadDuration}ms`)
     
-    // ✅ Sicherheitsprüfung: Ist die Komponente noch mounted?
     if (!calendar.value) {
       logger.debug('⚠️ Calendar unmounted during load, aborting')
       return
     }
     
-    logger.debug('🕐 Non-working hours blocks loaded:', nonWorkingHoursEvents.length)
-    
-    // Kombinieren
     const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
     calendarEvents.value = allEvents
-    
-    // ✅ SAVE TO VIEWPORT CACHE
-    setCacheData(cacheKey, allEvents)
     
     logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
       nonWorkingHours: nonWorkingHoursEvents.length,
       externalBusy: externalBusyEvents.length,
-      total: allEvents.length,
-      cacheTime: new Date(lastLoadTime.value).toLocaleTimeString()
+      total: allEvents.length
     })
     
     // ✅ DEBUG: Zeige alle Events
@@ -1300,11 +1232,6 @@ const editAppointment = (appointment: CalendarAppointment) => {
 const handleSaveEvent = async (eventData: CalendarEvent) => {
   logger.debug('💾 Event saved, refreshing calendar...', eventData)
   
-  // Caches nach dem Speichern invalidieren, damit frische Daten geladen werden
-  invalidateCacheEntry('/api/calendar/get-appointments')
-  invalidateCacheEntry('/api/admin/get-pending-appointments')
-  
-  // ✅ EINFACH: Kompletter Reload der Calendar-Daten aus DB
   await loadAppointments(true)
   
   emit('appointment-changed', { type: 'saved', data: eventData })
@@ -1460,17 +1387,9 @@ const handleEventDrop = async (dropInfo: any) => {
       logger.debug('✅ Appointment moved via API:', dropInfo.event.title)
       
       // ✅ NEW: Invalidate calendar cache to force refresh
-      const { invalidate } = useCalendarCache()
-      invalidate('/api/staff/get-working-hours')
-      invalidate('/api/booking/get-available-slots')
-      logger.debug('✅ Cache invalidated for working hours and available slots')
-      
-      // ✅ WICHTIG: Nicht versuchen, extendedProps direkt zu mutieren (read-only!)
-      // Stattdessen: Kalender neu laden um frische Daten zu bekommen
-      logger.debug('🔄 Invalidating cache and reloading appointments...')
-      invalidateCache('appointment-moved')
+      logger.debug('🔄 Reloading appointments after move...')
       isUpdating.value = true
-      await loadAppointments()
+      await loadAppointments(true)
       isUpdating.value = false
       refreshCalendar()
       
@@ -1678,6 +1597,7 @@ showConfirmDialog({
     initialView: 'timeGridWeek',
     locale: 'delocale',
     timeZone: 'local',
+    height: '100%',
     allDaySlot: false,
     slotMinTime: '05:00:00',
     slotMaxTime: '23:30:00',
@@ -1896,27 +1816,10 @@ const refreshCalendar = async () => {
       return
     }
     
-    // ✅ FIX: Invalidate ONLY the current viewport cache so new appointments show up
-    // This allows cache to work for navigation, but refreshes when appointments are saved
     const currentDate = calendar.value?.getApi()?.getDate()
-    if (currentDate) {
-      const currentStart = new Date(currentDate)
-      currentStart.setDate(currentStart.getDate() - 7) // Assume week view
-      const currentEnd = new Date(currentDate)
-      currentEnd.setDate(currentEnd.getDate() + 7)
-      
-      const cacheKey = getCacheKey(currentStart, currentEnd)
-      viewportCache.value.delete(cacheKey) // ✅ Use .value!
-      logger.debug('🗑️ Invalidated current viewport cache:', cacheKey)
-    }
-    
-    // 1. Aktuelle View-Position speichern
     const refreshStart = currentDate
     
-    // 2. Daten neu laden - FORCE reload to get fresh data!
-    await Promise.all([
-      loadAppointments(true), // ← Force reload to get new appointments from DB!
-    ])
+    await loadAppointments(true)
     
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted nach dem Laden?
     if (!calendar.value) {
@@ -1964,10 +1867,6 @@ const isCalendarReady = ref(false)
 
 const handleDeleteEvent = async (eventData: CalendarEvent) => {
   logger.debug('🗑 Event deleted, refreshing calendar...')
-  
-  // Caches invalidieren damit gelöschter Termin nicht mehr angezeigt wird
-  invalidateCacheEntry('/api/calendar/get-appointments')
-  invalidateCacheEntry('/api/admin/get-pending-appointments')
   
   await loadAppointments(true)
 
@@ -2317,11 +2216,8 @@ const pasteAppointmentDirectly = async () => {
     pendingSlotClick.value = null
     
     // ✅ Cache invalidieren damit loadAppointments nicht gecacht wird
-    invalidateCache()
-    
-    // Kalender neu laden und direkt aktualisieren
     logger.debug('🔄 Reloading calendar after paste...')
-    await loadAppointments(true) // Force reload
+    await loadAppointments(true)
     
     // ✅ Erfolgs-Nachricht
     showToast('✅ Termin erfolgreich eingefügt')
@@ -2585,8 +2481,7 @@ onMounted(async () => {
         const result = await autoSyncCalendars(props.currentUser?.id)
         if (result.success && !result.skipped) {
           logger.debug('✅ Auto-sync completed, reloading events')
-          invalidateCache()
-          await loadAppointments(true) // Force reload nach Sync
+          await loadAppointments(true)
         }
       } catch (err) {
         console.warn('Auto-sync interval failed (non-fatal):', err)
@@ -2611,16 +2506,14 @@ onMounted(async () => {
 watch(() => props.adminStaffFilter, async (newFilter) => {
   logger.debug('🔄 Admin staff filter changed:', newFilter)
   if (props.currentUser?.role === 'admin') {
-    invalidateCache() // ✅ Cache invalidieren bei Filter-Änderungen
-    await loadAppointments(true) // ✅ Force reload
+    await loadAppointments(true)
   }
 }, { immediate: false })
 
 // ✅ Watch für User-Änderungen mit Cache-Invalidierung (Props)
 watch(() => props.currentUser, async (newUser, oldUser) => {
   if (newUser && newUser.id !== oldUser?.id) {
-    logger.debug('🔄 User changed via props, invalidating cache and reloading')
-    invalidateCache()
+    logger.debug('🔄 User changed via props, reloading')
     await loadAppointments(true)
   }
 }, { deep: true })
@@ -2629,7 +2522,6 @@ watch(() => props.currentUser, async (newUser, oldUser) => {
 watch(() => composableCurrentUser.value?.id, async (newId, oldId) => {
   if (newId && newId !== oldId && calendar.value) {
     logger.debug('🔄 User ID available from composable, loading appointments:', newId)
-    invalidateCache()
     await loadAppointments(true)
   }
 })
@@ -2686,7 +2578,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="relative" ref="rootEl">
+  <div class="relative calendar-root" ref="rootEl">
     <!-- Loading Overlay -->
     <div v-if="isLoadingEvents" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
       <div class="text-center">
@@ -2735,7 +2627,7 @@ defineExpose({
   :mode="modalMode"
   :current-user="props.currentUser" 
   :event-type="modalEventType"
-  @close="() => { isModalVisible = false; invalidateCache('modal-closed'); loadAppointments() }"
+  @close="() => { isModalVisible = false; loadAppointments(true) }"
   @save-event="handleSaveEvent"       
   @delete-event="handleEventDeleted"
   @copy-appointment="handleCopyAppointment"
@@ -2839,14 +2731,16 @@ defineExpose({
 </template>
 
 <style>
+/* === KALENDER CONTAINER === */
+.calendar-root {
+  height: calc(100svh - 50px - env(safe-area-inset-bottom, 0px));
+}
+
 /* === KALENDER BASIS === */
 .fc {
   background-color: white !important;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  /* Use small viewport height to avoid iOS browser chrome overlay */
-  height: calc(100svh - 50px - env(safe-area-inset-bottom, 0px));
   margin: 0 !important;
 }
 
