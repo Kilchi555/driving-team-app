@@ -1104,7 +1104,6 @@ const loadAppointments = async (forceReload = false) => {
     }
     
     const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
-    calendarEvents.value = allEvents
     
     logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
@@ -1113,33 +1112,8 @@ const loadAppointments = async (forceReload = false) => {
       total: allEvents.length
     })
     
-    // ✅ DEBUG: Zeige alle Events
-    logger.debug('🔍 ALL EVENTS:', allEvents)
-    if (appointments.length > 0) {
-      logger.debug('🔍 FIRST APPOINTMENT EVENT:', appointments[0])
-    }
-    
-    // ✅ Prüfen ob Komponente noch mounted ist bevor Calendar API aufrufen
-    if (calendar.value?.getApi) {
-      try {
-        const calendarApi = calendar.value.getApi()
-        
-        // ✅ Zusätzliche Sicherheitsprüfung: Ist der Calendar API noch gültig?
-        if (!calendarApi || typeof calendarApi.getEvents !== 'function') {
-          logger.debug('⚠️ Calendar API not ready, skipping event update')
-          return
-        }
-        
-        // ✅ Events immer neu laden (verschiedene Wochen haben gleiche Anzahl)
-        logger.debug('🔄 Updating calendar events...')
-        calendarApi.removeAllEvents()
-        calendarApi.addEventSource(calendarEvents.value)
-        logger.debug('✅ Calendar events updated successfully')
-      } catch (error) {
-        console.error('❌ Error updating calendar events:', error)
-        // ✅ Fehler nicht weiterwerfen, nur loggen
-      }
-    }
+    // Set calendarEvents - the watcher handles FullCalendar update
+    calendarEvents.value = allEvents
   } catch (error) {
     console.error('❌ Error loading calendar events:', error)
     // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -2538,7 +2512,6 @@ watch(calendarEvents, (newEvents) => {
   try {
     logger.debug('🔄 calendarEvents changed, updating FullCalendar:', newEvents.length)
     
-    // ✅ Prüfen ob Komponente noch mounted ist
     if (!calendar.value?.getApi) {
       logger.debug('⚠️ Calendar not ready, skipping event update')
       return
@@ -2547,28 +2520,22 @@ watch(calendarEvents, (newEvents) => {
     try {
       const api = calendar.value.getApi()
       
-      // ✅ Zusätzliche Sicherheitsprüfung: Ist der API noch gültig?
       if (!api || typeof api.getEvents !== 'function') {
         logger.debug('⚠️ Calendar API not ready, skipping event update')
         return
       }
       
-      // ✅ FIX: Events nur aktualisieren wenn nötig
-      const currentEvents = api.getEvents()
-      if (currentEvents.length !== newEvents.length) {
-        logger.debug('🔄 Updating calendar events...')
-        api.removeAllEvents()
-        api.removeAllEventSources()
-        newEvents.forEach(event => api.addEvent(event))
-        logger.debug('✅ Calendar events updated successfully')
-      }
+      // ALWAYS update - old length check skipped edits and caused stale display
+      logger.debug('🔄 Updating calendar events...')
+      api.removeAllEvents()
+      api.removeAllEventSources()
+      newEvents.forEach(event => api.addEvent(event))
+      logger.debug('✅ Calendar events updated:', newEvents.length)
     } catch (error) {
       console.error('❌ Error updating calendar events:', error)
-      // ✅ Fehler nicht weiterwerfen, nur loggen
     }
   } catch (error) {
     console.error('❌ Error in calendarEvents watcher:', error)
-    // ✅ Fehler nicht weiterwerfen, nur loggen
   }
 }, { deep: true, immediate: true })
 
