@@ -7,8 +7,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 const client = new Anthropic()
 
 // Use latest Claude Haiku model for cost efficiency
-// Without date suffix, SDK uses the latest available version
-const AI_MODEL = 'claude-3-5-haiku'
+const AI_MODEL = 'claude-3-5-haiku-20241022'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
