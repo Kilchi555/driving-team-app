@@ -6,8 +6,9 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const client = new Anthropic()
 
-// Use Claude 3.5 Haiku for best quality at low cost
-const AI_MODEL = 'claude-3-5-haiku-20241022'
+// Use Claude 3.5 Sonnet for website content optimization
+// Fallback to Sonnet since Haiku models are deprecated
+const AI_MODEL = 'claude-3-5-sonnet-20241022'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
