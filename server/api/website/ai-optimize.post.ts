@@ -52,14 +52,24 @@ export default defineEventHandler(async (event) => {
 
     // Log for analytics
     const supabase = getSupabaseAdmin()
-    await supabase.from('website_ai_history').insert({
-      website_id: user.website_id,
-      content_type,
-      original_content: content,
-      ai_suggestions: suggestions,
-      tokens_used: message.usage.input_tokens + message.usage.output_tokens,
-      optimization_type
-    })
+    
+    // Get user profile to get website_id
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (userProfile?.id) {
+      await supabase.from('website_ai_history').insert({
+        tenant_id: userProfile.tenant_id,
+        content_type,
+        original_content: content,
+        ai_suggestions: suggestions,
+        tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+        optimization_type
+      })
+    }
 
     return {
       success: true,
