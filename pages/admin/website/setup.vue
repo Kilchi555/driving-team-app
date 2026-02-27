@@ -33,6 +33,84 @@
 
     <!-- Step Content -->
     <div class="max-w-2xl mx-auto px-4 py-8 pb-24">
+      <!-- Tenant Info Dashboard (always visible) -->
+      <div class="bg-white rounded-lg p-6 mb-8 shadow-sm border border-gray-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Tenant Info -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">📊 Tenant Info</h3>
+            <div class="space-y-2">
+              <div>
+                <p class="text-xs text-gray-500">Name</p>
+                <p class="font-semibold">{{ tenantInfo?.name || 'Laden...' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Stadt/Region</p>
+                <p class="font-semibold">{{ tenantInfo?.city || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Email</p>
+                <p class="font-semibold text-sm">{{ tenantInfo?.email || '-' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistics -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">📈 Statistiken</h3>
+            <div class="space-y-2">
+              <div>
+                <p class="text-xs text-gray-500">Gesamte Termine</p>
+                <p class="font-semibold text-lg">{{ stats?.total_appointments || 0 }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Ø Bewertung</p>
+                <p class="font-semibold">⭐ {{ stats?.avg_rating || '-' }}/5</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Kategorien aktiv</p>
+                <p class="font-semibold">{{ categories.length }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Staff Members -->
+        <div v-if="staffList.length > 0" class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">👥 Fahrlehrer/Staff</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div v-for="staff in staffList" :key="staff.id" class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+              <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                {{ staff.name.charAt(0) }}
+              </div>
+              <div>
+                <p class="font-semibold text-sm">{{ staff.name }}</p>
+                <p class="text-xs text-gray-600">{{ staff.email }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Services Summary -->
+        <div v-if="appServices.length > 0" class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🎓 Services/Kategorien</h3>
+          <div class="flex flex-wrap gap-2">
+            <span v-for="service in appServices.slice(0, 5)" :key="service.id" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+              {{ service.category || 'Fahrstunde' }} ({{ service.duration_minutes }}min)
+            </span>
+            <span v-if="appServices.length > 5" class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+              +{{ appServices.length - 5 }} mehr
+            </span>
+          </div>
+        </div>
+
+        <!-- Testimonials Count -->
+        <div v-if="topTestimonials.length > 0" class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">⭐ Bewertungen</h3>
+          <p class="text-sm">{{ topTestimonials.length }} 5-Stern Bewertungen verfügbar für Website</p>
+        </div>
+      </div>
+
       <!-- Step 1: Who Are You? -->
       <div v-if="currentStep === 0" class="space-y-6 animate-in fade-in">
         <div>
@@ -400,6 +478,10 @@ const appServices = ref<any[]>([])
 const serviceDescriptions = ref<Record<string, string>>({})
 const topTestimonials = ref<any[]>([])
 const selectedTestimonials = ref<string[]>([])
+const tenantInfo = ref<any>(null)
+const staffList = ref<any[]>([])
+const categories = ref<any[]>([])
+const stats = ref<any>(null)
 
 const successRate = computed(() => 88) // TODO: Calculate from app data
 const totalStudents = computed(() => 245)
@@ -450,6 +532,18 @@ onMounted(async () => {
     const response = await $fetch('/api/website/init-data')
     const data = response?.data || response
 
+    // ✅ Load Tenant Info for display
+    tenantInfo.value = data.tenant
+    
+    // ✅ Load Staff Members
+    staffList.value = data.staff || []
+    
+    // ✅ Load Categories
+    categories.value = data.categories || []
+    
+    // ✅ Load Statistics
+    stats.value = data.stats
+
     // ✅ Load Services
     appServices.value = data.services || []
     
@@ -497,9 +591,12 @@ onMounted(async () => {
     }
 
     console.log('✅ Website setup data loaded successfully:', {
+      tenant: tenantInfo.value?.name,
+      staff: staffList.value.length,
       services: appServices.value.length,
       testimonials: topTestimonials.value.length,
-      categories: data.categories?.length || 0
+      categories: categories.value.length,
+      stats: stats.value
     })
   } catch (error) {
     console.error('❌ Failed to load website setup data:', error)
