@@ -107,6 +107,14 @@ function buildOptimizationPrompt(
 ): string {
   const basePrompt = `You are an expert SEO copywriter and marketing specialist for driving schools and coaching services in German-speaking countries.
 
+IMPORTANT INSTRUCTIONS:
+- Write ONLY in Swiss/German High German (Schweizer Hochdeutsch)
+- Use professional but friendly tone
+- Always use "Sie" for formal address, not "du"
+- Use Swiss terminology where appropriate (e.g., "Fahrschule" instead of "Fahrschule")
+- Keep language simple and clear, no jargon
+- Write as if you are communicating with potential driving students in Switzerland
+
 Current content to optimize:
 "${content}"
 
@@ -119,7 +127,7 @@ ${
   optimizationType === 'seo'
     ? `Include relevant keywords that potential students would search for (e.g., "Fahrschule", "Fahrausbildung", "Führerschein", etc.).
 Focus on:
-- Clear, specific language
+- Clear, specific language in Swiss German
 - Local SEO keywords if applicable
 - Proper headline structure
 - Include call-to-action
@@ -132,7 +140,7 @@ ${
     ? `Make it more persuasive and action-oriented:
 - Include unique value proposition
 - Address customer pain points
-- Strong call-to-action
+- Strong call-to-action (use Sie form)
 - Trust signals (experience, qualifications, success rate)
 - Emotional benefits, not just features`
     : ''
@@ -145,7 +153,8 @@ ${
 - Remove jargon
 - Use active voice
 - Break into logical sections
-- Use power words and action verbs`
+- Use power words and action verbs
+- Keep Swiss German terminology consistent`
     : ''
 }
 
