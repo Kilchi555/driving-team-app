@@ -806,7 +806,7 @@
             ← Neue Anfrage
           </button>
           <button
-            @click="navigateTo('/' + route.params.slug)"
+            @click="navigateTo('/register/' + route.params.slug + '?service=fahrlektion')"
             :style="{ backgroundColor: getBrandPrimary() }"
             class="flex-1 px-4 py-3 text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
           >
