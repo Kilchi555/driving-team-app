@@ -39,12 +39,10 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Company Name -->
             <div class="md:col-span-1">
-              <p class="text-xs text-gray-500 uppercase mb-2">Unternehmen</p>
               <p class="text-3xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
             </div>
             <!-- Contact Info -->
             <div class="md:col-span-2">
-              <p class="text-xs text-gray-500 uppercase mb-3">📞 Kontakt</p>
               <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p class="text-xs text-gray-500">Email</p>
