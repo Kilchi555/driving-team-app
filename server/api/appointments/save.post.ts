@@ -430,7 +430,7 @@ export default defineEventHandler(async (event) => {
               body: {
                 staff_id: result.staff_id,
                 tenant_id: result.tenant_id,
-                trigger: 'appointment_created'
+                trigger: 'appointment'
               }
             })
             logger.debug('✅ Queued recalculation')

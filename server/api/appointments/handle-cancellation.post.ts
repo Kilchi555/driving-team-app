@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
         body: {
           staff_id: appointment.staff_id,
           tenant_id: appointment.tenant_id,
-          trigger: 'appointment_cancelled'
+          trigger: 'appointment'
         }
       })
       logger.debug('✅ Queued recalculation after appointment cancellation')
