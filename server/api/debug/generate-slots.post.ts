@@ -62,10 +62,20 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Calculate date range
+    const startDate = new Date()
+    startDate.setHours(0, 0, 0, 0)
+    
+    const endDate = new Date(startDate)
+    endDate.setDate(endDate.getDate() + days)
+    endDate.setHours(23, 59, 59, 999)
+
     logger.debug('📊 Slot generation parameters:', {
       tenant_id,
       staff_id: staff_id || 'ALL',
-      days
+      days,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     })
 
     const startTime = Date.now()
@@ -74,13 +84,14 @@ export default defineEventHandler(async (event) => {
     const result = await availabilityCalculator.calculateAvailability({
       tenantId: tenant_id,
       staffId: staff_id,
-      daysAhead: days
+      startDate,
+      endDate
     })
 
     const duration = Date.now() - startTime
 
     logger.debug('✅ Slot generation completed:', {
-      total_slots_written: result.total_slots_written,
+      total_slots_written: result,
       duration_ms: duration
     })
 
@@ -88,7 +99,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       message: 'Slots generated successfully',
       stats: {
-        total_slots_written: result.total_slots_written,
+        total_slots_written: result,
         duration_ms: duration,
         parameters: {
           tenant_id,
