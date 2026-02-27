@@ -63,38 +63,6 @@
 
         <!-- Expandable Sections -->
         <div class="divide-y divide-gray-200">
-          <!-- System Settings Section -->
-          <div>
-            <button @click="expandedSections.system = !expandedSections.system" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">⚙️</span>
-                <h3 class="font-semibold text-gray-700">System</h3>
-              </div>
-              <span class="text-gray-500 transition" :class="expandedSections.system ? 'rotate-180' : ''">▼</span>
-            </button>
-            <div v-if="expandedSections.system" class="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p class="text-xs text-gray-500">Zeitzone</p>
-                <p class="font-semibold">{{ tenantInfo?.timezone || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Sprache</p>
-                <p class="font-semibold uppercase">{{ tenantInfo?.language || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Währung</p>
-                <p class="font-semibold">{{ tenantInfo?.currency || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Status</p>
-                <p class="font-semibold">
-                  <span v-if="tenantInfo?.is_active" class="text-green-600">✓ Aktiv</span>
-                  <span v-else class="text-red-600">✗ Inaktiv</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
           <!-- Branding Section -->
           <div>
             <button @click="expandedSections.branding = !expandedSections.branding" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
