@@ -325,8 +325,6 @@ import CustomerCancellationModal from '~/components/customer/CustomerCancellatio
 import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue' // ✅ NEW: Voucher Modal
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
-import { buildMerchantReference } from '~/utils/merchantReference' // ✅ NEW: Merchant Reference
-
 
 // Components (these would need to be created)
 // import PaymentDetailsModal from '~/components/customer/PaymentDetailsModal.vue'
