@@ -33,20 +33,49 @@
 
     <!-- Step Content -->
     <div class="max-w-2xl mx-auto px-4 py-8 pb-24">
-      <!-- Tenant Info Dashboard (always visible) -->
-      <div class="bg-white rounded-lg p-6 mb-8 shadow-sm border border-gray-100">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Company Info -->
-          <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🏢 Unternehmen</h3>
-            <div class="space-y-2 text-sm">
+      <!-- Tenant Info Dashboard (always visible, full width, collapsible) -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-8">
+        <!-- Summary Header (always visible) -->
+        <div class="p-6 border-b border-gray-200">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+              <p class="text-2xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
+              <p class="text-xs text-gray-600 mt-1">Unternehmen</p>
+            </div>
+            <div class="text-center">
+              <p class="text-2xl font-bold text-green-600">{{ categories.length }}</p>
+              <p class="text-xs text-gray-600 mt-1">Kategorien</p>
+            </div>
+            <div class="text-center">
+              <p class="text-2xl font-bold text-purple-600">{{ appServices.length }}</p>
+              <p class="text-xs text-gray-600 mt-1">Preise</p>
+            </div>
+            <div class="text-center">
+              <p class="text-2xl font-bold text-orange-600">⭐ {{ stats?.avg_rating || '-' }}/5</p>
+              <p class="text-xs text-gray-600 mt-1">Bewertung</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expandable Sections -->
+        <div class="divide-y divide-gray-200">
+          <!-- Company Info Section -->
+          <div class="border-b border-gray-200">
+            <button @click="expandedSections.company = !expandedSections.company" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🏢</span>
+                <h3 class="font-semibold text-gray-700">Unternehmen</h3>
+              </div>
+              <span class="text-gray-500 transition" :class="expandedSections.company ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="expandedSections.company" class="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p class="text-xs text-gray-500">Name</p>
                 <p class="font-semibold">{{ tenantInfo?.name || '-' }}</p>
               </div>
               <div>
                 <p class="text-xs text-gray-500">Rechtlicher Name</p>
-                <p class="font-semibold">{{ tenantInfo?.legal_company_name || '-' }}</p>
+                <p class="font-semibold text-sm">{{ tenantInfo?.legal_company_name || '-' }}</p>
               </div>
               <div>
                 <p class="text-xs text-gray-500">Typ</p>
@@ -59,10 +88,16 @@
             </div>
           </div>
 
-          <!-- Contact Info -->
+          <!-- Contact Info Section -->
           <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">📞 Kontakt</h3>
-            <div class="space-y-2 text-sm">
+            <button @click="expandedSections.contact = !expandedSections.contact" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📞</span>
+                <h3 class="font-semibold text-gray-700">Kontakt</h3>
+              </div>
+              <span class="text-gray-500 transition" :class="expandedSections.contact ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="expandedSections.contact" class="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p class="text-xs text-gray-500">Email</p>
                 <p class="font-semibold text-xs break-all">{{ tenantInfo?.contact_email || '-' }}</p>
@@ -76,20 +111,22 @@
                 <p class="font-semibold text-xs">{{ tenantInfo?.address || '-' }}</p>
               </div>
               <div>
-                <p class="text-xs text-gray-500">Ort</p>
-                <p class="font-semibold">{{ tenantInfo?.city || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">PLZ</p>
-                <p class="font-semibold">{{ tenantInfo?.postal_code || '-' }}</p>
+                <p class="text-xs text-gray-500">Ort / PLZ</p>
+                <p class="font-semibold">{{ tenantInfo?.city || '-' }} {{ tenantInfo?.postal_code || '' }}</p>
               </div>
             </div>
           </div>
 
-          <!-- System Info -->
+          <!-- System Settings Section -->
           <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">⚙️ System</h3>
-            <div class="space-y-2 text-sm">
+            <button @click="expandedSections.system = !expandedSections.system" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">⚙️</span>
+                <h3 class="font-semibold text-gray-700">System</h3>
+              </div>
+              <span class="text-gray-500 transition" :class="expandedSections.system ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="expandedSections.system" class="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p class="text-xs text-gray-500">Zeitzone</p>
                 <p class="font-semibold">{{ tenantInfo?.timezone || '-' }}</p>
@@ -109,89 +146,105 @@
                   <span v-else class="text-red-600">✗ Inaktiv</span>
                 </p>
               </div>
-              <div>
-                <p class="text-xs text-gray-500">Slug</p>
-                <p class="font-semibold text-xs break-all">{{ tenantInfo?.slug || '-' }}</p>
+            </div>
+          </div>
+
+          <!-- Branding Section -->
+          <div>
+            <button @click="expandedSections.branding = !expandedSections.branding" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🎨</span>
+                <h3 class="font-semibold text-gray-700">Branding</h3>
+              </div>
+              <span class="text-gray-500 transition" :class="expandedSections.branding ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="expandedSections.branding" class="p-4 bg-gray-50">
+              <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.primary_color }"></div>
+                  <p class="text-xs text-gray-600 text-center">Primary</p>
+                  <p class="text-xs font-mono">{{ tenantInfo?.primary_color }}</p>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.secondary_color }"></div>
+                  <p class="text-xs text-gray-600 text-center">Secondary</p>
+                  <p class="text-xs font-mono">{{ tenantInfo?.secondary_color }}</p>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.accent_color }"></div>
+                  <p class="text-xs text-gray-600 text-center">Accent</p>
+                  <p class="text-xs font-mono">{{ tenantInfo?.accent_color }}</p>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.success_color }"></div>
+                  <p class="text-xs text-gray-600 text-center">Success</p>
+                  <p class="text-xs font-mono">{{ tenantInfo?.success_color }}</p>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.error_color }"></div>
+                  <p class="text-xs text-gray-600 text-center">Error</p>
+                  <p class="text-xs font-mono">{{ tenantInfo?.error_color }}</p>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.info_color }"></div>
+                  <p class="text-xs text-gray-600 text-center">Info</p>
+                  <p class="text-xs font-mono">{{ tenantInfo?.info_color }}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Branding Colors -->
-        <div class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🎨 Branding</h3>
-          <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <div class="flex flex-col items-center">
-              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.primary_color }"></div>
-              <p class="text-xs text-gray-600 text-center">Primary</p>
-              <p class="text-xs font-mono">{{ tenantInfo?.primary_color }}</p>
-            </div>
-            <div class="flex flex-col items-center">
-              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.secondary_color }"></div>
-              <p class="text-xs text-gray-600 text-center">Secondary</p>
-              <p class="text-xs font-mono">{{ tenantInfo?.secondary_color }}</p>
-            </div>
-            <div class="flex flex-col items-center">
-              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.accent_color }"></div>
-              <p class="text-xs text-gray-600 text-center">Accent</p>
-              <p class="text-xs font-mono">{{ tenantInfo?.accent_color }}</p>
-            </div>
-            <div class="flex flex-col items-center">
-              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.success_color }"></div>
-              <p class="text-xs text-gray-600 text-center">Success</p>
-              <p class="text-xs font-mono">{{ tenantInfo?.success_color }}</p>
-            </div>
-            <div class="flex flex-col items-center">
-              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.error_color }"></div>
-              <p class="text-xs text-gray-600 text-center">Error</p>
-              <p class="text-xs font-mono">{{ tenantInfo?.error_color }}</p>
-            </div>
-            <div class="flex flex-col items-center">
-              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.info_color }"></div>
-              <p class="text-xs text-gray-600 text-center">Info</p>
-              <p class="text-xs font-mono">{{ tenantInfo?.info_color }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Social Media & Web -->
-        <div v-if="hasSocialMedia" class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🌐 Social & Web</h3>
-          <div class="space-y-2 text-sm">
-            <div v-if="tenantInfo?.website_url">
-              <p class="text-xs text-gray-500">Website</p>
-              <p class="font-semibold text-xs break-all">{{ tenantInfo.website_url }}</p>
-            </div>
-            <div v-if="tenantInfo?.domain">
-              <p class="text-xs text-gray-500">Domain</p>
-              <p class="font-semibold text-xs break-all">{{ tenantInfo.domain }}</p>
-            </div>
-            <div v-if="tenantInfo?.social_facebook" class="text-xs">Facebook: {{ tenantInfo.social_facebook }}</div>
-            <div v-if="tenantInfo?.social_instagram" class="text-xs">Instagram: {{ tenantInfo.social_instagram }}</div>
-            <div v-if="tenantInfo?.social_twitter" class="text-xs">Twitter: {{ tenantInfo.social_twitter }}</div>
-            <div v-if="tenantInfo?.social_linkedin" class="text-xs">LinkedIn: {{ tenantInfo.social_linkedin }}</div>
-          </div>
-        </div>
-
-        <!-- Categories & Pricing -->
-        <div v-if="categories.length > 0" class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">💰 Kategorien & Preise</h3>
-          <div class="space-y-3">
-            <div v-for="category in categories" :key="category.id" class="border border-gray-200 rounded-lg p-3 bg-gray-50">
-              <div class="font-semibold text-sm mb-2">{{ category.name }}</div>
-              <div class="text-xs space-y-1">
-                <div v-if="category.parent" class="text-gray-600">👨 Parent: {{ category.parent }}</div>
-                <div class="text-gray-600">📝 Code: <span class="font-mono">{{ category.code }}</span></div>
-                
-                <!-- Show pricing for this category -->
-                <div v-if="getPricingForCategory(category.code).length > 0" class="mt-2 bg-white rounded p-2">
-                  <div class="text-xs font-semibold mb-1">Preise:</div>
-                  <div v-for="pricing in getPricingForCategory(category.code)" :key="pricing.id" class="text-xs flex justify-between">
-                    <span>{{ pricing.duration_minutes }} min:</span>
-                    <span class="font-semibold">CHF {{ (pricing.price / 100).toFixed(2) }}</span>
+          <!-- Categories & Pricing Section -->
+          <div>
+            <button @click="expandedSections.pricing = !expandedSections.pricing" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">💰</span>
+                <h3 class="font-semibold text-gray-700">Kategorien & Preise</h3>
+              </div>
+              <span class="text-gray-500 transition" :class="expandedSections.pricing ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="expandedSections.pricing" class="p-4 bg-gray-50 space-y-3">
+              <div v-for="category in categories" :key="category.id" class="border border-gray-200 rounded-lg p-3 bg-white">
+                <div class="font-semibold text-sm mb-2">{{ category.name }}</div>
+                <div class="text-xs space-y-1">
+                  <div v-if="category.parent" class="text-gray-600">👨 Parent: {{ category.parent }}</div>
+                  <div class="text-gray-600">📝 Code: <span class="font-mono">{{ category.code }}</span></div>
+                  
+                  <!-- Show pricing for this category -->
+                  <div v-if="getPricingForCategory(category.code).length > 0" class="mt-2 bg-gray-50 rounded p-2">
+                    <div class="text-xs font-semibold mb-1">Preise:</div>
+                    <div v-for="pricing in getPricingForCategory(category.code)" :key="pricing.id" class="text-xs flex justify-between">
+                      <span>{{ pricing.duration_minutes }} min:</span>
+                      <span class="font-semibold">CHF {{ (pricing.price / 100).toFixed(2) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Social & Web Section -->
+          <div v-if="hasSocialMedia">
+            <button @click="expandedSections.social = !expandedSections.social" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🌐</span>
+                <h3 class="font-semibold text-gray-700">Social & Web</h3>
+              </div>
+              <span class="text-gray-500 transition" :class="expandedSections.social ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="expandedSections.social" class="p-4 bg-gray-50 space-y-2 text-sm">
+              <div v-if="tenantInfo?.website_url">
+                <p class="text-xs text-gray-500">Website</p>
+                <p class="font-semibold text-xs break-all">{{ tenantInfo.website_url }}</p>
+              </div>
+              <div v-if="tenantInfo?.domain">
+                <p class="text-xs text-gray-500">Domain</p>
+                <p class="font-semibold text-xs break-all">{{ tenantInfo.domain }}</p>
+              </div>
+              <div v-if="tenantInfo?.social_facebook" class="text-xs">Facebook: {{ tenantInfo.social_facebook }}</div>
+              <div v-if="tenantInfo?.social_instagram" class="text-xs">Instagram: {{ tenantInfo.social_instagram }}</div>
+              <div v-if="tenantInfo?.social_twitter" class="text-xs">Twitter: {{ tenantInfo.social_twitter }}</div>
+              <div v-if="tenantInfo?.social_linkedin" class="text-xs">LinkedIn: {{ tenantInfo.social_linkedin }}</div>
             </div>
           </div>
         </div>
@@ -568,6 +621,14 @@ const tenantInfo = ref<any>(null)
 const staffList = ref<any[]>([])
 const categories = ref<any[]>([])
 const stats = ref<any>(null)
+const expandedSections = ref({
+  company: false,
+  contact: false,
+  system: false,
+  branding: false,
+  pricing: false,
+  social: false
+})
 
 const successRate = computed(() => 88) // TODO: Calculate from app data
 const totalStudents = computed(() => 245)
