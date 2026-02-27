@@ -362,12 +362,12 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
     }
   }
   
-  // Category (can be null for "other" event types like meetings, training)
-  if (data.type !== undefined && data.type !== null) {
-    const categoryValidation = validateDrivingCategory(data.type)
-    if (!categoryValidation.valid) {
-      errors.type = categoryValidation.error!
-    }
+  // ✅ UPDATED: Category validation is now done via API in save.post.ts
+  // We don't validate here because categories are dynamic and include subcategories
+  // The dynamic validation via /api/validate/category will catch invalid categories
+  // Just check that it's a string if provided
+  if (data.type !== undefined && data.type !== null && typeof data.type !== 'string') {
+    errors.type = 'Fahrkategorie muss eine Zeichenkette sein'
   }
   
   // Event type
