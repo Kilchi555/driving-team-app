@@ -3,6 +3,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 const client = new Anthropic()
 
