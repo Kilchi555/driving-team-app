@@ -843,7 +843,6 @@ const isCheckingEmail = ref(false)
 
 // Validation functions
 let emailCheckTimeout: ReturnType<typeof setTimeout>
-const isCheckingEmail = ref(false)
 
 const validateEmail = async () => {
   if (!formData.value.email) {
