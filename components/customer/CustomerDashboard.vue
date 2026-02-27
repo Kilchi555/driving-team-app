@@ -1504,8 +1504,9 @@ const navigateToPayments = async () => {
 }
 
 const navigateToLessonBooking = async () => {
-  // Navigiere zur Coming Soon Seite
-  await navigateTo('/customer/coming-soon')
+  // Navigate to booking availability page with tenant slug
+  const tenantSlug = currentTenant.value?.slug || 'driving-team'
+  await navigateTo(`/booking/availability/${tenantSlug}`)
 }
 
 const navigateToCourseBooking = async () => {
