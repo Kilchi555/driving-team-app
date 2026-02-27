@@ -36,24 +36,8 @@
       <div class="w-full px-8 py-6 lg:px-16">
         <!-- Summary Header (always visible) -->
         <div class="pb-6 border-b border-gray-200">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="text-center">
-              <p class="text-2xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
-              <p class="text-xs text-gray-600 mt-1">Unternehmen</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold text-green-600">{{ categories.length }}</p>
-              <p class="text-xs text-gray-600 mt-1">Kategorien</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold text-purple-600">{{ appServices.length }}</p>
-              <p class="text-xs text-gray-600 mt-1">Preise</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold text-orange-600">⭐ {{ stats?.avg_rating || '-' }}/5</p>
-              <p class="text-xs text-gray-600 mt-1">Bewertung</p>
-            </div>
-          </div>
+          <p class="text-3xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
+          <p class="text-sm text-gray-600 mt-2">Unternehmen</p>
         </div>
 
         <!-- Expandable Sections -->
