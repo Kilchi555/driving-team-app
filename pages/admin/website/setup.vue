@@ -447,11 +447,62 @@ const saveWebsite = async () => {
 
 onMounted(async () => {
   try {
-    const { data } = await $fetch('/api/website/init-data')
+    const response = await $fetch('/api/website/init-data')
+    const data = response.data || response
+
+    // ✅ Load Services
     appServices.value = data.services || []
+    
+    // ✅ Load Testimonials
     topTestimonials.value = data.testimonials || []
+    
+    // ✅ Prefill Form Step 1 - Name & Bio from Tenant
+    if (data.tenant?.name) {
+      formData.value.name = data.tenant.name
+    }
+    if (data.suggestions?.bio) {
+      formData.value.bio = data.suggestions.bio
+    }
+
+    // ✅ Prefill Contact Info
+    if (data.tenant?.email) {
+      formData.value.email = data.tenant.email
+    }
+    if (data.tenant?.phone) {
+      formData.value.phone = data.tenant.phone
+    }
+    if (data.tenant?.address) {
+      formData.value.address = data.tenant.address
+    }
+
+    // ✅ Auto-populate specializations from categories
+    if (data.categories && data.categories.length > 0) {
+      const categoryNames = data.categories.map((c: any) => c.name)
+      formData.value.specializations = categoryNames.filter((name: string) =>
+        specializations.some(spec => spec.includes(name))
+      )
+    }
+
+    // ✅ Prefill SEO fields with suggestions
+    if (data.suggestions?.headline) {
+      formData.value.seo_title = data.suggestions.headline
+    }
+    if (data.tenant?.description) {
+      formData.value.seo_description = data.tenant.description
+    }
+
+    // ✅ Pre-select best testimonials
+    if (data.testimonials && data.testimonials.length > 0) {
+      selectedTestimonials.value = data.testimonials.slice(0, 3).map((t: any) => t.id)
+    }
+
+    console.log('✅ Website setup data loaded successfully:', {
+      services: appServices.value.length,
+      testimonials: topTestimonials.value.length,
+      categories: data.categories?.length || 0
+    })
   } catch (error) {
-    console.error('Failed to load initial data:', error)
+    console.error('❌ Failed to load website setup data:', error)
   }
 })
 </script>
