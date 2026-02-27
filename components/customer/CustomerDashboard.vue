@@ -2539,6 +2539,30 @@ const handlePayNow = async () => {
     
     const orderId = buildMerchantReference(merchantReferenceDetails)
     logger.debug('📌 Generated merchant reference:', orderId)
+
+    // ✅ NEW: Convert payment to online if needed (same as payments.vue)
+    if (payment.payment_method !== 'wallee') {
+      logger.debug('🔄 Converting payment to online first:', payment.id)
+      
+      try {
+        const userData = currentUser.value
+        const result = await $fetch('/api/payments/convert-to-online', {
+          method: 'POST',
+          body: {
+            paymentId: payment.id,
+            customerEmail: userData?.email
+          }
+        }) as { success: boolean }
+        
+        if (result.success) {
+          logger.debug('✅ Payment converted to online')
+          payment.payment_method = 'wallee'
+        }
+      } catch (conversionError) {
+        logger.warn('⚠️ Payment conversion failed (not critical):', conversionError)
+        // Continue anyway - payment might already be wallee or conversion not needed
+      }
+    }
     
     // ✅ Call secure payment API (same as /customer/payments page)
     const walleeResponse = await $fetch('/api/payments/process', {
