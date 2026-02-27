@@ -79,6 +79,7 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-availability-data') {
       // ✅ CONSOLIDATED: Load all availability data for booking page
       // Replaces 8+ direct queries from the booking page
+      // ✅ OPTIMIZED: All queries run in parallel
 
       if (!staff_id || !start_date || !end_date) {
         throw createError({
@@ -87,44 +88,44 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // 1. Load appointments for staff in date range
-      // Include ALL appointments except deleted ones (includes pending_confirmation, confirmed, completed)
-      const { data: appointments, error: appointmentsError } = await supabase
-        .from('appointments')
-        .select('id, start_time, end_time, title, status')
-        .eq('staff_id', staff_id)
-        .not('status', 'eq', 'deleted')
-        .is('deleted_at', null)
-        .lte('start_time', end_date)
-        .gte('end_time', start_date)
+      // ✅ PARALLEL: Load all queries at once instead of sequentially
+      const [appointmentsResult, workingHoursResult, externalBusyResult] = await Promise.all([
+        // 1. Load appointments for staff in date range
+        supabase
+          .from('appointments')
+          .select('id, start_time, end_time, title, status')
+          .eq('staff_id', staff_id)
+          .not('status', 'eq', 'deleted')
+          .is('deleted_at', null)
+          .lte('start_time', end_date)
+          .gte('end_time', start_date),
+        
+        // 2. Load working hours for staff
+        supabase
+          .from('staff_working_hours')
+          .select('day_of_week, start_time, end_time, is_active')
+          .eq('staff_id', staff_id)
+          .eq('is_active', true),
+        
+        // 3. Load external busy times (from external calendar sync)
+        supabase
+          .from('external_busy_times')
+          .select('start_time, end_time')
+          .eq('staff_id', staff_id)
+          .gte('end_time', start_date)
+          .lte('start_time', end_date)
+      ])
 
-      if (appointmentsError) throw appointmentsError
-
-      // 2. Load working hours for staff
-      const { data: workingHours, error: whError } = await supabase
-        .from('staff_working_hours')
-        .select('day_of_week, start_time, end_time, is_active')
-        .eq('staff_id', staff_id)
-        .eq('is_active', true)
-
-      if (whError) throw whError
-
-      // 3. Load external busy times (from external calendar sync)
-      const { data: externalBusyTimes, error: extError } = await supabase
-        .from('external_busy_times')
-        .select('start_time, end_time')
-        .eq('staff_id', staff_id)
-        .gte('end_time', start_date)
-        .lte('start_time', end_date)
-
-      if (extError) throw extError
+      if (appointmentsResult.error) throw appointmentsResult.error
+      if (workingHoursResult.error) throw workingHoursResult.error
+      if (externalBusyResult.error) throw externalBusyResult.error
 
       return {
         success: true,
         data: {
-          appointments: appointments || [],
-          working_hours: workingHours || [],
-          external_busy_times: externalBusyTimes || []
+          appointments: appointmentsResult.data || [],
+          working_hours: workingHoursResult.data || [],
+          external_busy_times: externalBusyResult.data || []
         }
       }
     }
@@ -132,34 +133,77 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-booking-setup') {
       // ✅ CONSOLIDATED: Get tenant, categories, event types, locations, settings
       // Replaces 5+ direct queries
+      // ✅ OPTIMIZED: All queries run in parallel
 
       if (!tenant_id) {
         throw createError({ statusCode: 400, message: 'Missing tenant_id' })
       }
 
-      // 1. Get tenant data
-      const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', tenant_id)
-        .single()
+      // ✅ PARALLEL: Load all queries at once
+      const promises = [
+        // 1. Get tenant data
+        supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', tenant_id)
+          .single(),
+        
+        // 2. Get categories (with hierarchy support)
+        supabase
+          .from('categories')
+          .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color, icon_svg')
+          .eq('tenant_id', tenant_id)
+          .eq('is_active', true)
+          .order('parent_category_id', { ascending: true })
+          .order('name', { ascending: true }),
+        
+        // 3. Get event types
+        supabase
+          .from('event_types')
+          .select('*')
+          .eq('tenant_id', tenant_id)
+          .eq('is_active', true),
+        
+        // 4. Get locations
+        supabase
+          .from('locations')
+          .select('id, name, address, is_active')
+          .eq('tenant_id', tenant_id)
+          .eq('is_active', true),
+        
+        // 5. Get settings
+        supabase
+          .from('tenant_settings')
+          .select('setting_key, setting_value')
+          .eq('tenant_id', tenant_id)
+      ]
 
-      if (tenantError) throw tenantError
+      // 6. Add staff locations query if needed
+      if (staff_id && staff_id !== 'placeholder') {
+        promises.push(
+          supabase
+            .from('staff_locations')
+            .select('id, location_id, is_online_bookable')
+            .eq('staff_id', staff_id)
+        )
+      }
 
-      // 2. Get categories (with hierarchy support)
-      const { data: allCategories, error: catError } = await supabase
-        .from('categories')
-        .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color, icon_svg')
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-        .order('parent_category_id', { ascending: true })
-        .order('name', { ascending: true })
+      const results = await Promise.all(promises)
+      
+      const [tenantResult, categoriesResult, eventTypesResult, locationsResult, settingsResult, ...staffLocationsResult] = results
+      
+      if (tenantResult.error) throw tenantResult.error
+      if (categoriesResult.error) throw categoriesResult.error
+      if (eventTypesResult.error) throw eventTypesResult.error
+      if (locationsResult.error) throw locationsResult.error
+      if (settingsResult.error) throw settingsResult.error
 
-      if (catError) throw catError
+      const tenant = tenantResult.data
+      const allCategories = categoriesResult.data || []
 
       // Build category hierarchy
-      const mainCategories = allCategories?.filter((cat: any) => !cat.parent_category_id) || []
-      const subCategories = allCategories?.filter((cat: any) => cat.parent_category_id) || []
+      const mainCategories = allCategories.filter((cat: any) => !cat.parent_category_id)
+      const subCategories = allCategories.filter((cat: any) => cat.parent_category_id)
       
       // Map subcategories to their parent
       const categories = mainCategories.map((main: any) => ({
@@ -167,42 +211,12 @@ export default defineEventHandler(async (event) => {
         children: subCategories.filter((sub: any) => sub.parent_category_id === main.id)
       }))
 
-      // 3. Get event types
-      const { data: eventTypes, error: etError } = await supabase
-        .from('event_types')
-        .select('*')
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-
-      if (etError) throw etError
-
-      // 4. Get locations
-      const { data: locations, error: locError } = await supabase
-        .from('locations')
-        .select('id, name, address, is_active')
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-
-      if (locError) throw locError
-
-      // 5. Get settings
-      const { data: settings, error: setError } = await supabase
-        .from('tenant_settings')
-        .select('setting_key, setting_value')
-        .eq('tenant_id', tenant_id)
-
-      if (setError) throw setError
-
-      // 6. Get staff locations (only if staff_id is valid)
+      // Handle staff locations result if it exists
       let staffLocations = []
-      if (staff_id && staff_id !== 'placeholder') {
-        const { data: sl, error: slError } = await supabase
-          .from('staff_locations')
-          .select('id, location_id, is_online_bookable')
-          .eq('staff_id', staff_id)
-
-        if (slError) throw slError
-        staffLocations = sl || []
+      if (staffLocationsResult.length > 0) {
+        const slResult = staffLocationsResult[0]
+        if (slResult.error) throw slResult.error
+        staffLocations = slResult.data || []
       }
 
       return {
