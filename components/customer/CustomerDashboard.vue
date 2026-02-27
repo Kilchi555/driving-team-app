@@ -1003,7 +1003,6 @@ logger.debug('🔍 Process server:', process.server)
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo, useRoute } from '#app'
-import { buildMerchantReference } from '~/utils/merchantReference'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'

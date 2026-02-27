@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .gt('admin_fee_rappen', 0)
-      .in('payment_status', ['pending', 'completed'])
+      .in('payment_status', ['pending', 'completed', 'authorized'])
 
     if (error) {
       logger.error('❌ Error checking admin fee payments:', error)

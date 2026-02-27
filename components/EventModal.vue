@@ -1316,10 +1316,17 @@ const handleSaveAppointment = async () => {
     
     isLoading.value = false
     
-    // Close the modal IMMEDIATELY - don't wait for background tasks
+    // Run invites BEFORE closing - needs mounted component ref for CustomerInviteSelector
+    try {
+      await handleCustomerInvites(savedAppointment)
+    } catch (inviteError: any) {
+      logger.warn('⚠️ Customer invite failed:', inviteError.message)
+    }
+    
+    // Close the modal IMMEDIATELY after invites - don't wait for credit
     emit('close')
     
-    // ✅ BACKGROUND: Run non-critical operations after modal is closed (fire-and-forget)
+    // BACKGROUND: Only credit logic runs here (uses captured values, no component refs needed)
     const bgSavedAppointment = savedAppointment
     const bgSelectedStudent = selectedStudent.value
     const bgStudentCredit = studentCredit.value
@@ -1327,9 +1334,8 @@ const handleSaveAppointment = async () => {
     const bgSelectedProducts = selectedProducts.value
     const bgDynamicPricing = dynamicPricing.value
     
-    Promise.resolve().then(async () => {
-      // Apply credit
-      if (props.mode === 'create' && bgSelectedStudent && bgStudentCredit && bgStudentCredit.balance_rappen > 0) {
+    if (props.mode === 'create' && bgSelectedStudent && bgStudentCredit && bgStudentCredit.balance_rappen > 0) {
+      Promise.resolve().then(async () => {
         try {
           const lessonPrice = (bgFormData.duration_minutes || 45) * (bgDynamicPricing.pricePerMinute || 2.11) * 100
           let productsPrice = 0
@@ -1353,15 +1359,8 @@ const handleSaveAppointment = async () => {
         } catch (creditError: any) {
           logger.warn('⚠️ Background credit apply failed:', creditError.message)
         }
-      }
-      
-      // Handle customer invites
-      try {
-        await handleCustomerInvites(bgSavedAppointment)
-      } catch (inviteError: any) {
-        logger.warn('⚠️ Background invite failed:', inviteError.message)
-      }
-    }).catch(err => logger.warn('⚠️ Background tasks error:', err))
+      }).catch(err => logger.warn('⚠️ Background credit error:', err))
+    }
     
   } catch (error: any) {
     console.error('❌ Error saving appointment:', error)
