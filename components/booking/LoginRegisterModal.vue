@@ -293,7 +293,7 @@
 
           <button
             type="submit"
-            :disabled="isLoading || (registerForm.password && registerForm.password_confirm && registerForm.password !== registerForm.password_confirm)"
+            :disabled="isLoading || !uploadedDocument || (registerForm.password && registerForm.password_confirm && registerForm.password !== registerForm.password_confirm)"
             class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isLoading ? 'Wird registriert...' : 'Registrieren' }}
