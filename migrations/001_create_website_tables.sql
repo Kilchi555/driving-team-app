@@ -174,24 +174,33 @@ ALTER TABLE website_tenants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own website tenant"
   ON website_tenants FOR SELECT
   USING (
-    tenant_id IN (
-      SELECT id FROM tenants WHERE staff_id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.tenant_id = website_tenants.tenant_id 
+      AND users.id = auth.uid()
+      AND users.role IN ('staff', 'admin')
     )
   );
 
 CREATE POLICY "Users can update their own website tenant"
   ON website_tenants FOR UPDATE
   USING (
-    tenant_id IN (
-      SELECT id FROM tenants WHERE staff_id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.tenant_id = website_tenants.tenant_id 
+      AND users.id = auth.uid()
+      AND users.role IN ('staff', 'admin')
     )
   );
 
 CREATE POLICY "Users can insert website tenant if they own the tenant"
   ON website_tenants FOR INSERT
   WITH CHECK (
-    tenant_id IN (
-      SELECT id FROM tenants WHERE staff_id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.tenant_id = tenant_id 
+      AND users.id = auth.uid()
+      AND users.role IN ('staff', 'admin')
     )
   );
 
@@ -203,8 +212,11 @@ CREATE POLICY "Users can view/edit pages for their website"
   USING (
     website_id IN (
       SELECT id FROM website_tenants 
-      WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE staff_id = auth.uid()
+      WHERE EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.tenant_id = website_tenants.tenant_id 
+        AND users.id = auth.uid()
+        AND users.role IN ('staff', 'admin')
       )
     )
   );
@@ -219,8 +231,11 @@ CREATE POLICY "Users can view/edit blocks for their pages"
       SELECT id FROM website_pages 
       WHERE website_id IN (
         SELECT id FROM website_tenants 
-        WHERE tenant_id IN (
-          SELECT id FROM tenants WHERE staff_id = auth.uid()
+        WHERE EXISTS (
+          SELECT 1 FROM users 
+          WHERE users.tenant_id = website_tenants.tenant_id 
+          AND users.id = auth.uid()
+          AND users.role IN ('staff', 'admin')
         )
       )
     )
@@ -234,8 +249,11 @@ CREATE POLICY "Users can view AI history for their website"
   USING (
     website_id IN (
       SELECT id FROM website_tenants 
-      WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE staff_id = auth.uid()
+      WHERE EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.tenant_id = website_tenants.tenant_id 
+        AND users.id = auth.uid()
+        AND users.role IN ('staff', 'admin')
       )
     )
   );
@@ -248,8 +266,11 @@ CREATE POLICY "Users can view analytics for their website"
   USING (
     website_id IN (
       SELECT id FROM website_tenants 
-      WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE staff_id = auth.uid()
+      WHERE EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.tenant_id = website_tenants.tenant_id 
+        AND users.id = auth.uid()
+        AND users.role IN ('staff', 'admin')
       )
     )
   );
@@ -262,8 +283,11 @@ CREATE POLICY "Users can view/edit settings for their website"
   USING (
     website_id IN (
       SELECT id FROM website_tenants 
-      WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE staff_id = auth.uid()
+      WHERE EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.tenant_id = website_tenants.tenant_id 
+        AND users.id = auth.uid()
+        AND users.role IN ('staff', 'admin')
       )
     )
   );
