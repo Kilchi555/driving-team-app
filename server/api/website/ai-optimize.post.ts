@@ -2,11 +2,19 @@
 // Generate AI optimization suggestions using Claude
 
 import Anthropic from '@anthropic-ai/sdk'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const client = new Anthropic()
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Unauthorized'
+    })
+  }
+
   const { content, content_type, optimization_type } = await readBody(event)
 
   if (!content || content.length < 5) {
