@@ -35,81 +35,143 @@
     <div class="max-w-2xl mx-auto px-4 py-8 pb-24">
       <!-- Tenant Info Dashboard (always visible) -->
       <div class="bg-white rounded-lg p-6 mb-8 shadow-sm border border-gray-100">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Tenant Info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Company Info -->
           <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">📊 Tenant Info</h3>
-            <div class="space-y-2">
+            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🏢 Unternehmen</h3>
+            <div class="space-y-2 text-sm">
               <div>
                 <p class="text-xs text-gray-500">Name</p>
-                <p class="font-semibold">{{ tenantInfo?.name || 'Laden...' }}</p>
+                <p class="font-semibold">{{ tenantInfo?.name || '-' }}</p>
               </div>
               <div>
-                <p class="text-xs text-gray-500">Stadt/Region</p>
+                <p class="text-xs text-gray-500">Rechtlicher Name</p>
+                <p class="font-semibold">{{ tenantInfo?.legal_company_name || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Typ</p>
+                <p class="font-semibold capitalize">{{ tenantInfo?.business_type?.replace('_', ' ') || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Plan</p>
+                <p class="font-semibold capitalize">{{ tenantInfo?.subscription_plan || '-' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Info -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">📞 Kontakt</h3>
+            <div class="space-y-2 text-sm">
+              <div>
+                <p class="text-xs text-gray-500">Email</p>
+                <p class="font-semibold text-xs break-all">{{ tenantInfo?.contact_email || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Telefon</p>
+                <p class="font-semibold">{{ tenantInfo?.contact_phone || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Adresse</p>
+                <p class="font-semibold text-xs">{{ tenantInfo?.address || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Ort</p>
                 <p class="font-semibold">{{ tenantInfo?.city || '-' }}</p>
               </div>
               <div>
-                <p class="text-xs text-gray-500">Email</p>
-                <p class="font-semibold text-sm">{{ tenantInfo?.email || '-' }}</p>
+                <p class="text-xs text-gray-500">PLZ</p>
+                <p class="font-semibold">{{ tenantInfo?.postal_code || '-' }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Statistics -->
+          <!-- System Info -->
           <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">📈 Statistiken</h3>
-            <div class="space-y-2">
+            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">⚙️ System</h3>
+            <div class="space-y-2 text-sm">
               <div>
-                <p class="text-xs text-gray-500">Gesamte Termine</p>
-                <p class="font-semibold text-lg">{{ stats?.total_appointments || 0 }}</p>
+                <p class="text-xs text-gray-500">Zeitzone</p>
+                <p class="font-semibold">{{ tenantInfo?.timezone || '-' }}</p>
               </div>
               <div>
-                <p class="text-xs text-gray-500">Ø Bewertung</p>
-                <p class="font-semibold">⭐ {{ stats?.avg_rating || '-' }}/5</p>
+                <p class="text-xs text-gray-500">Sprache</p>
+                <p class="font-semibold uppercase">{{ tenantInfo?.language || '-' }}</p>
               </div>
               <div>
-                <p class="text-xs text-gray-500">Kategorien aktiv</p>
-                <p class="font-semibold">{{ categories.length }}</p>
+                <p class="text-xs text-gray-500">Währung</p>
+                <p class="font-semibold">{{ tenantInfo?.currency || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Status</p>
+                <p class="font-semibold">
+                  <span v-if="tenantInfo?.is_active" class="text-green-600">✓ Aktiv</span>
+                  <span v-else class="text-red-600">✗ Inaktiv</span>
+                </p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Slug</p>
+                <p class="font-semibold text-xs break-all">{{ tenantInfo?.slug || '-' }}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Staff Members -->
-        <div v-if="staffList.length > 0" class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">👥 Fahrlehrer/Staff</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div v-for="staff in staffList" :key="staff.id" class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-              <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                {{ staff.name.charAt(0) }}
-              </div>
-              <div>
-                <p class="font-semibold text-sm">{{ staff.name }}</p>
-                <p class="text-xs text-gray-600">{{ staff.email }}</p>
-              </div>
+        <!-- Branding Colors -->
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🎨 Branding</h3>
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+            <div class="flex flex-col items-center">
+              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.primary_color }"></div>
+              <p class="text-xs text-gray-600 text-center">Primary</p>
+              <p class="text-xs font-mono">{{ tenantInfo?.primary_color }}</p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.secondary_color }"></div>
+              <p class="text-xs text-gray-600 text-center">Secondary</p>
+              <p class="text-xs font-mono">{{ tenantInfo?.secondary_color }}</p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.accent_color }"></div>
+              <p class="text-xs text-gray-600 text-center">Accent</p>
+              <p class="text-xs font-mono">{{ tenantInfo?.accent_color }}</p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.success_color }"></div>
+              <p class="text-xs text-gray-600 text-center">Success</p>
+              <p class="text-xs font-mono">{{ tenantInfo?.success_color }}</p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.error_color }"></div>
+              <p class="text-xs text-gray-600 text-center">Error</p>
+              <p class="text-xs font-mono">{{ tenantInfo?.error_color }}</p>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.info_color }"></div>
+              <p class="text-xs text-gray-600 text-center">Info</p>
+              <p class="text-xs font-mono">{{ tenantInfo?.info_color }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Services Summary -->
-        <div v-if="appServices.length > 0" class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🎓 Services/Kategorien</h3>
-          <div class="flex flex-wrap gap-2">
-            <span v-for="service in appServices.slice(0, 5)" :key="service.id" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-              {{ service.category || 'Fahrstunde' }} ({{ service.duration_minutes }}min)
-            </span>
-            <span v-if="appServices.length > 5" class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-              +{{ appServices.length - 5 }} mehr
-            </span>
+        <!-- Social Media & Web -->
+        <div v-if="hasSocialMedia" class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">🌐 Social & Web</h3>
+          <div class="space-y-2 text-sm">
+            <div v-if="tenantInfo?.website_url">
+              <p class="text-xs text-gray-500">Website</p>
+              <p class="font-semibold text-xs break-all">{{ tenantInfo.website_url }}</p>
+            </div>
+            <div v-if="tenantInfo?.domain">
+              <p class="text-xs text-gray-500">Domain</p>
+              <p class="font-semibold text-xs break-all">{{ tenantInfo.domain }}</p>
+            </div>
+            <div v-if="tenantInfo?.social_facebook" class="text-xs">Facebook: {{ tenantInfo.social_facebook }}</div>
+            <div v-if="tenantInfo?.social_instagram" class="text-xs">Instagram: {{ tenantInfo.social_instagram }}</div>
+            <div v-if="tenantInfo?.social_twitter" class="text-xs">Twitter: {{ tenantInfo.social_twitter }}</div>
+            <div v-if="tenantInfo?.social_linkedin" class="text-xs">LinkedIn: {{ tenantInfo.social_linkedin }}</div>
           </div>
         </div>
-
-        <!-- Testimonials Count -->
-        <div v-if="topTestimonials.length > 0" class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">⭐ Bewertungen</h3>
-          <p class="text-sm">{{ topTestimonials.length }} 5-Stern Bewertungen verfügbar für Website</p>
-        </div>
-      </div>
 
       <!-- Step 1: Who Are You? -->
       <div v-if="currentStep === 0" class="space-y-6 animate-in fade-in">
@@ -485,6 +547,14 @@ const stats = ref<any>(null)
 
 const successRate = computed(() => 88) // TODO: Calculate from app data
 const totalStudents = computed(() => 245)
+const hasSocialMedia = computed(() => {
+  return tenantInfo.value?.website_url || 
+         tenantInfo.value?.domain || 
+         tenantInfo.value?.social_facebook || 
+         tenantInfo.value?.social_instagram || 
+         tenantInfo.value?.social_twitter || 
+         tenantInfo.value?.social_linkedin
+})
 const bookingLink = computed(() => {
   return `${window.location.origin}/book`
 })
