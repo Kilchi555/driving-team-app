@@ -55,8 +55,8 @@
                   <p class="font-semibold">{{ tenantInfo?.contact_phone || '-' }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-500">Ort / PLZ</p>
-                  <p class="font-semibold">{{ tenantInfo?.city || '-' }} {{ tenantInfo?.postal_code || '' }}</p>
+                  <p class="text-xs text-gray-500">Adresse</p>
+                  <p class="font-semibold text-xs">{{ tenantInfo?.address || '-' }}</p>
                 </div>
               </div>
             </div>
