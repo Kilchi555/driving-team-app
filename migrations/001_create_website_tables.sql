@@ -174,24 +174,24 @@ ALTER TABLE website_tenants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own website tenant"
   ON website_tenants FOR SELECT
   USING (
-    auth.uid()::text = (
-      SELECT user_id::text FROM tenants WHERE id = tenant_id LIMIT 1
+    tenant_id IN (
+      SELECT id FROM tenants WHERE staff_id = auth.uid()
     )
   );
 
 CREATE POLICY "Users can update their own website tenant"
   ON website_tenants FOR UPDATE
   USING (
-    auth.uid()::text = (
-      SELECT user_id::text FROM tenants WHERE id = tenant_id LIMIT 1
+    tenant_id IN (
+      SELECT id FROM tenants WHERE staff_id = auth.uid()
     )
   );
 
 CREATE POLICY "Users can insert website tenant if they own the tenant"
   ON website_tenants FOR INSERT
   WITH CHECK (
-    auth.uid()::text = (
-      SELECT user_id::text FROM tenants WHERE id = tenant_id LIMIT 1
+    tenant_id IN (
+      SELECT id FROM tenants WHERE staff_id = auth.uid()
     )
   );
 
@@ -204,7 +204,7 @@ CREATE POLICY "Users can view/edit pages for their website"
     website_id IN (
       SELECT id FROM website_tenants 
       WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE user_id = auth.uid()
+        SELECT id FROM tenants WHERE staff_id = auth.uid()
       )
     )
   );
@@ -220,7 +220,7 @@ CREATE POLICY "Users can view/edit blocks for their pages"
       WHERE website_id IN (
         SELECT id FROM website_tenants 
         WHERE tenant_id IN (
-          SELECT id FROM tenants WHERE user_id = auth.uid()
+          SELECT id FROM tenants WHERE staff_id = auth.uid()
         )
       )
     )
@@ -235,7 +235,7 @@ CREATE POLICY "Users can view AI history for their website"
     website_id IN (
       SELECT id FROM website_tenants 
       WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE user_id = auth.uid()
+        SELECT id FROM tenants WHERE staff_id = auth.uid()
       )
     )
   );
@@ -249,7 +249,7 @@ CREATE POLICY "Users can view analytics for their website"
     website_id IN (
       SELECT id FROM website_tenants 
       WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE user_id = auth.uid()
+        SELECT id FROM tenants WHERE staff_id = auth.uid()
       )
     )
   );
@@ -263,7 +263,7 @@ CREATE POLICY "Users can view/edit settings for their website"
     website_id IN (
       SELECT id FROM website_tenants 
       WHERE tenant_id IN (
-        SELECT id FROM tenants WHERE user_id = auth.uid()
+        SELECT id FROM tenants WHERE staff_id = auth.uid()
       )
     )
   );
