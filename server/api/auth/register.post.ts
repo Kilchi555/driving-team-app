@@ -272,7 +272,7 @@ async function registerCustomer(event: any, body: RegisterRequest) {
       email: userData.email,
       first_name: userData.first_name,
       last_name: userData.last_name,
-      // Add auth_user_id for consistency if needed by frontend
+      tenant_id: userData.tenant_id,
       auth_user_id: authData.user.id
     },
     // Return session info for client-side Supabase session
