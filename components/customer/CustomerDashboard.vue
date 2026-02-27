@@ -2522,24 +2522,6 @@ const handlePayNow = async () => {
     const payment = currentPayment.value
     const appointment = currentPaymentAppointment.value
     
-    // Build merchant reference
-    const customerName = currentUser.value
-      ? `${currentUser.value.user_metadata?.first_name || ''} ${currentUser.value.user_metadata?.last_name || ''}`.trim()
-      : ''
-    
-    const merchantReferenceDetails = {
-      appointmentId: appointment.id,
-      eventTypeCode: appointment.event_type_code || appointment.type,
-      categoryCode: appointment.type,
-      categoryName: appointment.category_name,
-      staffName: customerName,
-      startTime: appointment.start_time,
-      durationMinutes: appointment.duration_minutes
-    }
-    
-    const orderId = buildMerchantReference(merchantReferenceDetails)
-    logger.debug('📌 Generated merchant reference:', orderId)
-
     // ✅ NEW: Convert payment to online if needed (same as payments.vue)
     if (payment.payment_method !== 'wallee') {
       logger.debug('🔄 Converting payment to online first:', payment.id)
@@ -2569,7 +2551,6 @@ const handlePayNow = async () => {
       method: 'POST',
       body: {
         paymentId: payment.id,
-        orderId,
         successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
         failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
       }
