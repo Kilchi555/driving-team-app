@@ -114,20 +114,12 @@ export default defineEventHandler(async (event) => {
           continue
         }
 
-        // Clear existing busy times for this calendar within window
-        // IMPORTANT: Use a buffer to catch deletions that happened today/yesterday
-        // and check BOTH start_time and end_time to catch events that span boundaries
-        const clearStart = new Date()
-        clearStart.setDate(clearStart.getDate() - 1) // Include yesterday
-        
+        // Clear ALL existing busy times for this calendar (clean slate approach)
+        // This ensures deletions in Apple Calendar are properly reflected
         const { error: clearError } = await supabase
           .from('external_busy_times')
           .delete()
           .eq('external_calendar_id', calendar.id)
-          // Delete if event ends after clearStart AND starts before horizon
-          // This catches all overlapping events including ones that span boundaries
-          .lt('end_time', horizon.toISOString())
-          .gt('start_time', clearStart.toISOString())
 
         if (clearError) {
           logger.warn(`⚠️ Failed to clear busy times for ${calendar.calendar_name}:`, clearError.message)
