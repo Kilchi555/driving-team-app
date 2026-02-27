@@ -234,38 +234,41 @@
               />
             </div>
 
-            <!-- ZIP -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                PLZ *
-              </label>
-              <input
-                v-model="formData.zip"
-                type="text"
-                required
-                pattern="[0-9]{4}"
-                @blur="validateZip"
-                :class="[
-                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
-                  fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                ]"
-                placeholder="8000"
-              />
-              <p v-if="fieldErrors.zip" class="mt-1 text-sm text-red-600">{{ fieldErrors.zip }}</p>
-            </div>
+            <!-- ZIP and City (same row) -->
+            <div class="grid grid-cols-2 gap-4">
+              <!-- ZIP -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  PLZ *
+                </label>
+                <input
+                  v-model="formData.zip"
+                  type="text"
+                  required
+                  pattern="[0-9]{4}"
+                  @blur="validateZip"
+                  :class="[
+                    'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
+                    fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  ]"
+                  placeholder="8000"
+                />
+                <p v-if="fieldErrors.zip" class="mt-1 text-sm text-red-600">{{ fieldErrors.zip }}</p>
+              </div>
 
-            <!-- City -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Ort *
-              </label>
-              <input
-                v-model="formData.city"
-                type="text"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Zürich"
-              />
+              <!-- City -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Ort *
+                </label>
+                <input
+                  v-model="formData.city"
+                  type="text"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Zürich"
+                />
+              </div>
             </div>
           </div>
 
@@ -410,18 +413,34 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 E-Mail-Adresse *
               </label>
-              <input
-                v-model="formData.email"
-                type="email"
-                autocomplete="email"
-                required
-                @blur="validateEmail"
-                :class="[
-                  'w-full px-4 py-3 border rounded-lg focus:ring-2',
-                  fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
-                ]"
-                placeholder="ihre.email@beispiel.ch"
-              />
+              <div class="relative">
+                <input
+                  v-model="formData.email"
+                  type="email"
+                  autocomplete="email"
+                  required
+                  @blur="validateEmail"
+                  @change="validateEmail"
+                  :class="[
+                    'w-full px-4 py-3 border rounded-lg focus:ring-2 pr-10',
+                    fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                  ]"
+                  placeholder="ihre.email@beispiel.ch"
+                />
+                <!-- Email Check Status Indicator -->
+                <div v-if="isCheckingEmail" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div class="animate-spin">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div v-else-if="!fieldErrors.email && formData.email && !isCheckingEmail" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+              </div>
               <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
             </div>
 
@@ -820,19 +839,65 @@ const fieldErrors = ref<Record<string, string>>({
   zip: ''
 })
 
+const isCheckingEmail = ref(false)
+
 // Validation functions
-const validateEmail = () => {
+let emailCheckTimeout: ReturnType<typeof setTimeout>
+const isCheckingEmail = ref(false)
+
+const validateEmail = async () => {
   if (!formData.value.email) {
     fieldErrors.value.email = ''
+    isCheckingEmail.value = false
     return
   }
   
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(formData.value.email)) {
     fieldErrors.value.email = 'Ungültige E-Mail-Adresse'
-  } else {
-    fieldErrors.value.email = ''
+    isCheckingEmail.value = false
+    return
   }
+  
+  // Clear previous timeout
+  clearTimeout(emailCheckTimeout)
+  
+  // Set checking state
+  isCheckingEmail.value = true
+  
+  // Debounce the check (wait 500ms after user stops typing)
+  emailCheckTimeout = setTimeout(async () => {
+    try {
+      const response = await fetch('/api/auth/check-email-exists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.value.email.toLowerCase().trim(),
+          tenantId: activeTenantId.value || tenantId.value
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        fieldErrors.value.email = 'Fehler beim Prüfen der E-Mail'
+        isCheckingEmail.value = false
+        return
+      }
+      
+      if (data.exists) {
+        fieldErrors.value.email = '✗ Diese E-Mail-Adresse ist bereits registriert'
+      } else {
+        fieldErrors.value.email = ''
+      }
+    } catch (err: any) {
+      console.warn('⚠️ Email check failed:', err)
+      // Don't show error - just allow submission
+      fieldErrors.value.email = ''
+    } finally {
+      isCheckingEmail.value = false
+    }
+  }, 500)
 }
 
 const validatePhone = () => {
