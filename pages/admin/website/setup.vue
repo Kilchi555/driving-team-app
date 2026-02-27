@@ -66,7 +66,6 @@
 
           <!-- Branding Colors (2nd row, smaller) -->
           <div class="mt-6 pt-6 border-t border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">🎨 Branding</h3>
             <div class="grid grid-cols-4 md:grid-cols-6 gap-2">
               <div class="flex flex-col items-center">
                 <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.primary_color }"></div>
