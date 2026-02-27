@@ -172,6 +172,7 @@
             <div v-if="tenantInfo?.social_linkedin" class="text-xs">LinkedIn: {{ tenantInfo.social_linkedin }}</div>
           </div>
         </div>
+      </div>
 
       <!-- Step 1: Who Are You? -->
       <div v-if="currentStep === 0" class="space-y-6 animate-in fade-in">
