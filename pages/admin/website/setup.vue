@@ -42,35 +42,6 @@
 
         <!-- Expandable Sections -->
         <div class="divide-y divide-gray-200">
-          <!-- Company Info Section -->
-          <div class="border-b border-gray-200">
-            <button @click="expandedSections.company = !expandedSections.company" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">🏢</span>
-                <h3 class="font-semibold text-gray-700">Unternehmen</h3>
-              </div>
-              <span class="text-gray-500 transition" :class="expandedSections.company ? 'rotate-180' : ''">▼</span>
-            </button>
-            <div v-if="expandedSections.company" class="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p class="text-xs text-gray-500">Name</p>
-                <p class="font-semibold">{{ tenantInfo?.name || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Rechtlicher Name</p>
-                <p class="font-semibold text-sm">{{ tenantInfo?.legal_company_name || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Typ</p>
-                <p class="font-semibold capitalize">{{ tenantInfo?.business_type?.replace('_', ' ') || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Plan</p>
-                <p class="font-semibold capitalize">{{ tenantInfo?.subscription_plan || '-' }}</p>
-              </div>
-            </div>
-          </div>
-
           <!-- Contact Info Section -->
           <div>
             <button @click="expandedSections.contact = !expandedSections.contact" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
