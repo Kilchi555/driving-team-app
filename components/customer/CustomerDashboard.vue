@@ -1020,6 +1020,37 @@ const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
 const { currentTenant, loadTenant, setTenant } = useTenant()
 
+// ===== DASHBOARD CACHE =====
+const CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+const CACHE_PREFIX = 'cdb_'
+
+function getCached<T>(key: string): T | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + key)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > CACHE_TTL) {
+      sessionStorage.removeItem(CACHE_PREFIX + key)
+      return null
+    }
+    return data as T
+  } catch { return null }
+}
+
+function setCache(key: string, data: any) {
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data, ts: Date.now() }))
+  } catch { /* storage full or unavailable */ }
+}
+
+function clearDashboardCache() {
+  try {
+    Object.keys(sessionStorage)
+      .filter(k => k.startsWith(CACHE_PREFIX))
+      .forEach(k => sessionStorage.removeItem(k))
+  } catch { /* ignore */ }
+}
+
 // State
 const isLoading = ref(true)
 const error = ref<string | null>(null)
@@ -1323,6 +1354,7 @@ const totalUnpaidAmount = computed(() => {
 const refreshData = async () => {
   isLoading.value = true
   error.value = null
+  clearDashboardCache()
   try {
     const results = await Promise.allSettled([
       loadAllData(),
@@ -1330,7 +1362,6 @@ const refreshData = async () => {
       loadPendingConfirmations()
     ])
     
-    // Check results for errors
     const failed = results.filter((r, idx) => {
       if (r.status === 'rejected') {
         console.error(`❌ Refresh task ${idx} failed:`, r.reason)
@@ -1615,13 +1646,15 @@ const loadAllData = async () => {
 
 // ✅ Load pending confirmation appointments
 const loadPendingConfirmations = async () => {
-  if (!currentUser.value?.id) {
+  if (!currentUser.value?.id) return
+
+  const cached = getCached<any[]>('pendingConfirmations')
+  if (cached) {
+    pendingConfirmations.value = cached
     return
   }
 
   try {
-    // ✅ Use backend API to fetch pending confirmations with ALL data
-    // (staff, payments, categories, payment_items - all in ONE call!)
     const response = await $fetch('/api/customer/get-pending-confirmations', {
       method: 'GET'
     }) as any
@@ -1634,17 +1667,14 @@ const loadPendingConfirmations = async () => {
 
     if (!confirmationsData || confirmationsData.length === 0) {
       pendingConfirmations.value = []
+      setCache('pendingConfirmations', [])
       return
     }
 
-    // ✅ Data already enriched by API - just set it directly!
-    // No need for separate queries:
-    // - Payments: already loaded
-    // - Categories: already loaded
-    // - Staff: already loaded
     pendingConfirmations.value = confirmationsData.map((apt: any) => ({
       ...apt
     }))
+    setCache('pendingConfirmations', pendingConfirmations.value)
 
     logger.debug('✅ Pending confirmations loaded with full data from API')
   } catch (err: any) {
@@ -1807,6 +1837,7 @@ const confirmAppointment = async (appointment: any) => {
       
       // ✅ Force refresh pending confirmations - load all remaining
       logger.debug('🔄 Refreshing pending confirmations after confirmation...')
+      clearDashboardCache()
       await loadPendingConfirmations()
       
       // ✅ Schließe das Modal
@@ -1865,6 +1896,7 @@ const confirmAppointment = async (appointment: any) => {
       showConfirmationModal.value = false
       
       // ✅ Refresh pending confirmations
+      clearDashboardCache()
       await loadPendingConfirmations()
       
       return // Fertig!
@@ -1922,8 +1954,15 @@ const confirmAppointment = async (appointment: any) => {
 const loadAppointments = async () => {
   if (!currentUser.value?.id) return
 
+  // Check cache first
+  const cached = getCached<any[]>('appointments')
+  if (cached) {
+    logger.debug('⚡ Appointments loaded from cache')
+    appointments.value = cached
+    return
+  }
+
   try {
-    // ✅ Use backend API to fetch appointments with staff data (bypasses RLS)
     const response = await $fetch('/api/customer/get-appointments', {
       method: 'GET'
     }) as any
@@ -2136,6 +2175,7 @@ const loadAppointments = async () => {
     logger.debug('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
 
     appointments.value = lessonsWithEvaluations
+    setCache('appointments', lessonsWithEvaluations)
     
     // ✅ Initialize lessons with appointments (will be merged with course sessions later)
     lessons.value = lessonsWithEvaluations
@@ -2154,39 +2194,56 @@ const loadAppointments = async () => {
 }
 
 const loadLocations = async () => {
+  const cached = getCached<any[]>('locations')
+  if (cached) {
+    locations.value = cached
+    return
+  }
   try {
-    // ✅ Use secure API instead of direct DB query
     const response = await $fetch('/api/customer/get-locations', {
       method: 'GET'
     }) as any
     
     locations.value = response?.data || response?.locations || []
+    setCache('locations', locations.value)
   } catch (err: any) {
     console.error('❌ Error loading locations:', err)
   }
 }
 
 const loadStaff = async () => {
+  const cached = getCached<any[]>('staff')
+  if (cached) {
+    staff.value = cached
+    return
+  }
   try {
-    // ✅ Use backend API to fetch staff (bypasses RLS)
     const response = await $fetch('/api/customer/get-staff-names', {
       method: 'GET'
     }) as any
     
     if (response?.success && response?.data) {
       staff.value = response.data
+      setCache('staff', staff.value)
       logger.debug('✅ Staff loaded via API:', staff.value.length)
     } else {
       throw new Error('Invalid API response')
     }
   } catch (err: any) {
     console.error('❌ Error loading staff:', err)
-    // Fallback: continue without staff data
     staff.value = []
   }
 }
 
 const loadCourseRegistrations = async () => {
+  const cached = getCached<any[]>('courseRegistrations')
+  if (cached) {
+    lessons.value = [
+      ...(appointments.value || []),
+      ...cached
+    ]
+    return
+  }
   try {
     const response = await $fetch('/api/customer/upcoming-course-registrations', {
       method: 'GET'
@@ -2242,10 +2299,10 @@ const loadCourseRegistrations = async () => {
       return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     })
 
+    setCache('courseRegistrations', courseLessons)
     logger.debug('✅ Course registrations loaded:', courseRegistrations.length, 'Total lessons:', lessons.value.length)
   } catch (err: any) {
     logger.error('❌ Error loading course registrations:', err)
-    // Don't fail the entire load if this fails
   }
 }
 
@@ -2585,6 +2642,7 @@ const handlePayLater = async () => {
   
   // Reload the dashboard data so "pending confirmations" disappears
   logger.debug('🔄 Reloading dashboard data...')
+  clearDashboardCache()
   try {
     await loadAllData()
     await loadPayments()
