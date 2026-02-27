@@ -224,9 +224,9 @@ export default defineEventHandler(async (event) => {
         data: {
           tenant,
           categories: categories || [],
-          event_types: eventTypes || [],
-          locations: locations || [],
-          settings: settings || [],
+          event_types: eventTypesResult.data || [],
+          locations: locationsResult.data || [],
+          settings: settingsResult.data || [],
           staff_locations: staffLocations
         }
       }
