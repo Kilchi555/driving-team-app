@@ -1312,8 +1312,6 @@ const handleSaveAppointment = async () => {
       emit('save-event', { type: 'updated', data: savedAppointment })
     }
     
-    emit('refresh-calendar')
-    
     isLoading.value = false
     
     // Run invites BEFORE closing - needs mounted component ref for CustomerInviteSelector
@@ -1323,8 +1321,20 @@ const handleSaveAppointment = async () => {
       logger.warn('⚠️ Customer invite failed:', inviteError.message)
     }
     
-    // Close the modal IMMEDIATELY after invites - don't wait for credit
+    // ✅ FAST: Close the modal IMMEDIATELY without waiting for calendar refresh
     emit('close')
+    logger.debug('✅ Modal closed (calendar loading in background)')
+    
+    // ✅ BACKGROUND PROGRESSIVE LOADING: Calendar refresh happens async
+    Promise.resolve().then(async () => {
+      try {
+        logger.debug('🔄 Background: Triggering calendar refresh...')
+        emit('refresh-calendar')
+        logger.debug('✅ Background: Calendar refresh completed')
+      } catch (err: any) {
+        logger.warn('⚠️ Background calendar refresh failed:', err.message)
+      }
+    }).catch(err => logger.warn('⚠️ Background calendar error:', err))
     
     // BACKGROUND: Only credit logic runs here (uses captured values, no component refs needed)
     const bgSavedAppointment = savedAppointment
