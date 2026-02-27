@@ -1446,6 +1446,21 @@ const openRegulationModal = async (type: string) => {
 
 // Initialize
 onMounted(async () => {
+  // ✅ NEW: Redirect if already logged in
+  const authStore = useAuthStore()
+  if (authStore.isLoggedIn) {
+    logger.info('ℹ️ User already logged in, redirecting to dashboard')
+    // Redirect to appropriate dashboard based on role
+    if (authStore.isAdmin) {
+      await navigateTo('/admin/dashboard')
+    } else if (authStore.isStaff) {
+      await navigateTo('/staff/dashboard')
+    } else {
+      await navigateTo('/customer-dashboard')
+    }
+    return
+  }
+
   // Check registration risk first
   try {
     const riskCheck = await $fetch('/api/auth/check-registration-risk', {
