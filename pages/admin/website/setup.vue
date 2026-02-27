@@ -172,6 +172,29 @@
             <div v-if="tenantInfo?.social_linkedin" class="text-xs">LinkedIn: {{ tenantInfo.social_linkedin }}</div>
           </div>
         </div>
+
+        <!-- Categories & Pricing -->
+        <div v-if="categories.length > 0" class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">💰 Kategorien & Preise</h3>
+          <div class="space-y-3">
+            <div v-for="category in categories" :key="category.id" class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+              <div class="font-semibold text-sm mb-2">{{ category.name }}</div>
+              <div class="text-xs space-y-1">
+                <div v-if="category.parent" class="text-gray-600">👨 Parent: {{ category.parent }}</div>
+                <div class="text-gray-600">📝 Code: <span class="font-mono">{{ category.code }}</span></div>
+                
+                <!-- Show pricing for this category -->
+                <div v-if="getPricingForCategory(category.code).length > 0" class="mt-2 bg-white rounded p-2">
+                  <div class="text-xs font-semibold mb-1">Preise:</div>
+                  <div v-for="pricing in getPricingForCategory(category.code)" :key="pricing.id" class="text-xs flex justify-between">
+                    <span>{{ pricing.duration_minutes }} min:</span>
+                    <span class="font-semibold">CHF {{ (pricing.price / 100).toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Step 1: Who Are You? -->
@@ -559,6 +582,10 @@ const hasSocialMedia = computed(() => {
 const bookingLink = computed(() => {
   return `${window.location.origin}/book`
 })
+
+const getPricingForCategory = (categoryCode: string) => {
+  return appServices.value.filter(s => s.category === categoryCode)
+}
 
 const toggleSpecialization = (spec: string) => {
   const idx = formData.value.specializations.indexOf(spec)
