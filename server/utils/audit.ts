@@ -34,7 +34,8 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
     // We'll rely on ip_address for tracking
     const isAnonymous = !entry.user_id && !entry.auth_user_id
     if (isAnonymous && !entry.ip_address) {
-      console.warn('Invalid audit log entry - anonymous action without IP address')
+      // Silently skip anonymous actions without IP tracking (security measure)
+      // This is not an error, just a data quality filter
       return
     }
 
