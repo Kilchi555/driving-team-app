@@ -475,7 +475,6 @@ const handleRegister = async () => {
         ...(registerForm.value.category && { category: registerForm.value.category }),
         slug
       },
-      // IMPORTANT: Mark this as an auth endpoint so the interceptor doesn't redirect
       headers: {
         'X-Auth-Request': 'true'
       }
@@ -486,6 +485,35 @@ const handleRegister = async () => {
     }
 
     logger.debug('✅ Registration successful')
+
+    // Upload document if selected (uses existing /api/auth/upload-document endpoint)
+    if (uploadedDocument.value && response.user?.id) {
+      try {
+        const file = uploadedDocument.value
+        const reader = new FileReader()
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+
+        const categoryCode = registerForm.value.category || 'B'
+        await $fetch('/api/auth/upload-document', {
+          method: 'POST',
+          body: {
+            userId: response.user.id,
+            tenantId: response.user.tenant_id || null,
+            fileData: base64,
+            fileName: file.name,
+            bucket: 'user-documents',
+            path: categoryCode
+          }
+        })
+        logger.debug('✅ Document uploaded successfully after registration')
+      } catch (docErr: any) {
+        logger.warn('⚠️ Document upload failed (registration still successful):', docErr.message)
+      }
+    }
     
     // Wait for cookies to be set on server
     await new Promise(resolve => setTimeout(resolve, 500))

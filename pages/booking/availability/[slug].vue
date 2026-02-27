@@ -1336,9 +1336,8 @@ const bookingSteps = computed(() => {
     { id: 4, label: 'Standort' },
     { id: 5, label: 'Fahrlehrer' },
     { id: 6, label: 'Termin' },
-    { id: 7, label: 'Dokumente' },
     { 
-      id: 8, 
+      id: 7, 
       label: selectedLocation.value?.isPickup ? 'Adresse' : 'Bestätigung' 
     }
   ]
