@@ -6,6 +6,10 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const client = new Anthropic()
 
+// Use Claude 4.5 Haiku for best quality at low cost
+// Latest Haiku model provides best performance and efficiency
+const AI_MODEL = 'claude-haiku-4-5-20250514'
+
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) {
@@ -32,7 +36,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const message = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: AI_MODEL,
       max_tokens: 1024,
       messages: [
         {
