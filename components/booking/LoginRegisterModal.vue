@@ -205,6 +205,49 @@
             >
           </div>
 
+          <!-- Document Upload: Fahrausweis -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Fahrausweis (Kopie) <span class="text-red-500">*</span>
+            </label>
+            <p class="text-xs text-gray-600 mb-3">
+              Bitte laden Sie eine Kopie Ihres gültigen Führerscheins hoch (PDF, JPG, PNG)
+            </p>
+            
+            <!-- File Upload Input -->
+            <div class="relative">
+              <input
+                ref="documentFileInput"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                @change="handleDocumentUpload"
+                class="sr-only"
+              >
+              <button
+                type="button"
+                @click="$refs.documentFileInput?.click()"
+                class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+              >
+                <div class="flex flex-col items-center gap-2">
+                  <svg v-if="!uploadedDocument" class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  <span v-if="!uploadedDocument" class="text-sm text-gray-600">Klicken zum Hochladen</span>
+                  <span v-else class="text-sm text-green-600">✓ {{ uploadedDocument.name }}</span>
+                </div>
+              </button>
+            </div>
+            
+            <!-- Upload Status -->
+            <div v-if="isUploadingDocument" class="mt-2 flex items-center gap-2 text-sm text-blue-600">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span>Wird hochgeladen...</span>
+            </div>
+            <div v-else-if="documentUploadError" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+              {{ documentUploadError }}
+            </div>
+          </div>
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Passwort <span class="text-red-500">*</span>
@@ -288,6 +331,11 @@ const authStore = useAuthStore()
 const activeTab = ref<'login' | 'register'>(props.initialTab)
 const isLoading = ref(false)
 const error = ref('')
+
+// Document Upload state
+const uploadedDocument = ref<File | null>(null)
+const isUploadingDocument = ref(false)
+const documentUploadError = ref('')
 
 const loginForm = ref({
   email: '',
@@ -456,6 +504,47 @@ const handleRegister = async () => {
     error.value = err.message || 'Fehler bei der Registrierung. Bitte versuchen Sie es erneut.'
   } finally {
     isLoading.value = false
+  }
+}
+
+// Handle document upload
+const handleDocumentUpload = async (event: Event) => {
+  try {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    
+    if (!file) return
+    
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+    if (!allowedTypes.includes(file.type)) {
+      documentUploadError.value = 'Nur PDF, JPG und PNG Dateien werden akzeptiert'
+      uploadedDocument.value = null
+      return
+    }
+    
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      documentUploadError.value = 'Datei muss kleiner als 10MB sein'
+      uploadedDocument.value = null
+      return
+    }
+    
+    documentUploadError.value = ''
+    isUploadingDocument.value = true
+    
+    // Store the file (will be uploaded during registration)
+    uploadedDocument.value = file
+    
+    logger.debug('✅ Document selected:', file.name)
+    
+  } catch (err: any) {
+    logger.error('❌ Error handling document upload:', err)
+    documentUploadError.value = 'Fehler beim Hochladen der Datei'
+    uploadedDocument.value = null
+  } finally {
+    isUploadingDocument.value = false
   }
 }
 </script>
