@@ -41,9 +41,9 @@
             <div class="md:col-span-1">
               <p class="text-3xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
             </div>
-            <!-- Contact Info -->
+            <!-- Contact Info & Domain -->
             <div class="md:col-span-2">
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <p class="text-xs text-gray-500">Email</p>
                   <p class="font-semibold text-xs break-all">{{ tenantInfo?.contact_email || '-' }}</p>
@@ -56,109 +56,48 @@
                   <p class="text-xs text-gray-500">Adresse</p>
                   <p class="font-semibold text-xs">{{ tenantInfo?.address || '-' }}</p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Expandable Sections -->
-        <div class="divide-y divide-gray-200">
-          <!-- Branding Section -->
-          <div>
-            <button @click="expandedSections.branding = !expandedSections.branding" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">🎨</span>
-                <h3 class="font-semibold text-gray-700">Branding</h3>
-              </div>
-              <span class="text-gray-500 transition" :class="expandedSections.branding ? 'rotate-180' : ''">▼</span>
-            </button>
-            <div v-if="expandedSections.branding" class="p-4 bg-gray-50">
-              <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.primary_color }"></div>
-                  <p class="text-xs text-gray-600 text-center">Primary</p>
-                  <p class="text-xs font-mono">{{ tenantInfo?.primary_color }}</p>
-                </div>
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.secondary_color }"></div>
-                  <p class="text-xs text-gray-600 text-center">Secondary</p>
-                  <p class="text-xs font-mono">{{ tenantInfo?.secondary_color }}</p>
-                </div>
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.accent_color }"></div>
-                  <p class="text-xs text-gray-600 text-center">Accent</p>
-                  <p class="text-xs font-mono">{{ tenantInfo?.accent_color }}</p>
-                </div>
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.success_color }"></div>
-                  <p class="text-xs text-gray-600 text-center">Success</p>
-                  <p class="text-xs font-mono">{{ tenantInfo?.success_color }}</p>
-                </div>
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.error_color }"></div>
-                  <p class="text-xs text-gray-600 text-center">Error</p>
-                  <p class="text-xs font-mono">{{ tenantInfo?.error_color }}</p>
-                </div>
-                <div class="flex flex-col items-center">
-                  <div class="w-12 h-12 rounded-lg border-2 border-gray-200 mb-2" :style="{ backgroundColor: tenantInfo?.info_color }"></div>
-                  <p class="text-xs text-gray-600 text-center">Info</p>
-                  <p class="text-xs font-mono">{{ tenantInfo?.info_color }}</p>
+                <div v-if="tenantInfo?.domain">
+                  <p class="text-xs text-gray-500">Domain</p>
+                  <p class="font-semibold text-xs break-all">{{ tenantInfo.domain }}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Categories & Pricing Section -->
-          <div>
-            <button @click="expandedSections.pricing = !expandedSections.pricing" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">💰</span>
-                <h3 class="font-semibold text-gray-700">Kategorien & Preise</h3>
+          <!-- Branding Colors (2nd row, smaller) -->
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">🎨 Branding</h3>
+            <div class="grid grid-cols-4 md:grid-cols-6 gap-2">
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.primary_color }"></div>
+                <p class="text-xs text-gray-600 text-center">Primary</p>
+                <p class="text-xs font-mono text-gray-500">{{ tenantInfo?.primary_color }}</p>
               </div>
-              <span class="text-gray-500 transition" :class="expandedSections.pricing ? 'rotate-180' : ''">▼</span>
-            </button>
-            <div v-if="expandedSections.pricing" class="p-4 bg-gray-50 space-y-3">
-              <div v-for="category in categories" :key="category.id" class="border border-gray-200 rounded-lg p-3 bg-white">
-                <div class="font-semibold text-sm mb-2">{{ category.name }}</div>
-                <div class="text-xs space-y-1">
-                  <div v-if="category.parent" class="text-gray-600">👨 Parent: {{ category.parent }}</div>
-                  <div class="text-gray-600">📝 Code: <span class="font-mono">{{ category.code }}</span></div>
-                  
-                  <!-- Show pricing for this category -->
-                  <div v-if="getPricingForCategory(category.code).length > 0" class="mt-2 bg-gray-50 rounded p-2">
-                    <div class="text-xs font-semibold mb-1">Preise:</div>
-                    <div v-for="pricing in getPricingForCategory(category.code)" :key="pricing.id" class="text-xs flex justify-between">
-                      <span>{{ pricing.duration_minutes }} min:</span>
-                      <span class="font-semibold">CHF {{ (pricing.price / 100).toFixed(2) }}</span>
-                    </div>
-                  </div>
-                </div>
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.secondary_color }"></div>
+                <p class="text-xs text-gray-600 text-center">Secondary</p>
+                <p class="text-xs font-mono text-gray-500">{{ tenantInfo?.secondary_color }}</p>
               </div>
-            </div>
-          </div>
-
-          <!-- Social & Web Section -->
-          <div v-if="hasSocialMedia">
-            <button @click="expandedSections.social = !expandedSections.social" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">🌐</span>
-                <h3 class="font-semibold text-gray-700">Social & Web</h3>
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.accent_color }"></div>
+                <p class="text-xs text-gray-600 text-center">Accent</p>
+                <p class="text-xs font-mono text-gray-500">{{ tenantInfo?.accent_color }}</p>
               </div>
-              <span class="text-gray-500 transition" :class="expandedSections.social ? 'rotate-180' : ''">▼</span>
-            </button>
-            <div v-if="expandedSections.social" class="p-4 bg-gray-50 space-y-2 text-sm">
-              <div v-if="tenantInfo?.website_url">
-                <p class="text-xs text-gray-500">Website</p>
-                <p class="font-semibold text-xs break-all">{{ tenantInfo.website_url }}</p>
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.success_color }"></div>
+                <p class="text-xs text-gray-600 text-center">Success</p>
+                <p class="text-xs font-mono text-gray-500">{{ tenantInfo?.success_color }}</p>
               </div>
-              <div v-if="tenantInfo?.domain">
-                <p class="text-xs text-gray-500">Domain</p>
-                <p class="font-semibold text-xs break-all">{{ tenantInfo.domain }}</p>
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.error_color }"></div>
+                <p class="text-xs text-gray-600 text-center">Error</p>
+                <p class="text-xs font-mono text-gray-500">{{ tenantInfo?.error_color }}</p>
               </div>
-              <div v-if="tenantInfo?.social_facebook" class="text-xs">Facebook: {{ tenantInfo.social_facebook }}</div>
-              <div v-if="tenantInfo?.social_instagram" class="text-xs">Instagram: {{ tenantInfo.social_instagram }}</div>
-              <div v-if="tenantInfo?.social_twitter" class="text-xs">Twitter: {{ tenantInfo.social_twitter }}</div>
-              <div v-if="tenantInfo?.social_linkedin" class="text-xs">LinkedIn: {{ tenantInfo.social_linkedin }}</div>
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-lg border-2 border-gray-200 mb-1" :style="{ backgroundColor: tenantInfo?.info_color }"></div>
+                <p class="text-xs text-gray-600 text-center">Info</p>
+                <p class="text-xs font-mono text-gray-500">{{ tenantInfo?.info_color }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -538,14 +477,6 @@ const tenantInfo = ref<any>(null)
 const staffList = ref<any[]>([])
 const categories = ref<any[]>([])
 const stats = ref<any>(null)
-const expandedSections = ref({
-  company: false,
-  contact: false,
-  system: false,
-  branding: false,
-  pricing: false,
-  social: false
-})
 
 const successRate = computed(() => 88) // TODO: Calculate from app data
 const totalStudents = computed(() => 245)
