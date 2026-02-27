@@ -448,7 +448,7 @@ const saveWebsite = async () => {
 onMounted(async () => {
   try {
     const response = await $fetch('/api/website/init-data')
-    const data = response.data || response
+    const data = response?.data || response
 
     // ✅ Load Services
     appServices.value = data.services || []
