@@ -486,7 +486,7 @@ export default defineEventHandler(async (event) => {
         })
         
         const location = geoData 
-          ? `${geoData.city || 'Unbekannt'}, ${geoData.country || 'Unbekannt'}`
+          ? `${geoData.region || ''}, ${geoData.country || 'Unbekannt'}`.replace(/^, /, '')
           : 'Unbekannt'
 
         // Create mailto link with pre-filled content for suspicious login report
