@@ -36,41 +36,35 @@
       <div class="w-full px-8 py-6 lg:px-16">
         <!-- Summary Header (always visible) -->
         <div class="pb-6 border-b border-gray-200">
-          <p class="text-3xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
-          <p class="text-sm text-gray-600 mt-2">Unternehmen</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Company Name -->
+            <div class="md:col-span-1">
+              <p class="text-xs text-gray-500 uppercase mb-2">Unternehmen</p>
+              <p class="text-3xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
+            </div>
+            <!-- Contact Info -->
+            <div class="md:col-span-2">
+              <p class="text-xs text-gray-500 uppercase mb-3">📞 Kontakt</p>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p class="text-xs text-gray-500">Email</p>
+                  <p class="font-semibold text-xs break-all">{{ tenantInfo?.contact_email || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Telefon</p>
+                  <p class="font-semibold">{{ tenantInfo?.contact_phone || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Ort / PLZ</p>
+                  <p class="font-semibold">{{ tenantInfo?.city || '-' }} {{ tenantInfo?.postal_code || '' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Expandable Sections -->
         <div class="divide-y divide-gray-200">
-          <!-- Contact Info Section -->
-          <div>
-            <button @click="expandedSections.contact = !expandedSections.contact" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">📞</span>
-                <h3 class="font-semibold text-gray-700">Kontakt</h3>
-              </div>
-              <span class="text-gray-500 transition" :class="expandedSections.contact ? 'rotate-180' : ''">▼</span>
-            </button>
-            <div v-if="expandedSections.contact" class="p-4 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p class="text-xs text-gray-500">Email</p>
-                <p class="font-semibold text-xs break-all">{{ tenantInfo?.contact_email || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Telefon</p>
-                <p class="font-semibold">{{ tenantInfo?.contact_phone || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Adresse</p>
-                <p class="font-semibold text-xs">{{ tenantInfo?.address || '-' }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500">Ort / PLZ</p>
-                <p class="font-semibold">{{ tenantInfo?.city || '-' }} {{ tenantInfo?.postal_code || '' }}</p>
-              </div>
-            </div>
-          </div>
-
           <!-- System Settings Section -->
           <div>
             <button @click="expandedSections.system = !expandedSections.system" class="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition">
