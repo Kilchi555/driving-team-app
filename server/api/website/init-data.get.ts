@@ -33,10 +33,10 @@ export default defineEventHandler(async (event) => {
 
     const tenant_id = user.tenant_id
 
-    // ============ 1. GET TENANT INFO ============
+    // ============ 1. GET TENANT INFO (ALL FIELDS) ============
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('id, name, slug, description, phone, email, address, city, postal_code')
+      .select('*')
       .eq('id', tenant_id)
       .single()
 
@@ -117,17 +117,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: {
-        tenant: {
-          id: tenant?.id,
-          name: tenant?.name,
-          slug: tenant?.slug,
-          description: tenant?.description,
-          email: tenant?.email,
-          phone: tenant?.phone,
-          address: tenant?.address,
-          city: tenant?.city,
-          postal_code: tenant?.postal_code
-        },
+        tenant: tenant || {},  // Return ALL tenant fields
         staff: (staffMembers || []).map((s: any) => ({
           id: s.id,
           name: `${s.first_name} ${s.last_name}`,
