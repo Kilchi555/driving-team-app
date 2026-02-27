@@ -121,8 +121,7 @@ const getCorrectDuration = (category: Category): number => {
 const availableCategoriesForUser = computed(() => {
   logger.debug('🔍 Computing availableCategoriesForUser:', {
     role: props.currentUserRole,
-    allCategoriesCount: allCategories.value.length,
-    staffDurationsCount: 0 // ✅ ENTFERNT: staffCategoryDurations wird nicht mehr verwendet
+    allCategoriesCount: allCategories.value.length
   })
   
   // ✅ DEFENSIVE: Warte bis Categories geladen sind
@@ -131,22 +130,57 @@ const availableCategoriesForUser = computed(() => {
     return []
   }
   
-  // Alle Benutzer (Admin, Staff, Client) sollen nur Subkategorien sehen können (mit Parent-Fallback Logik)
-  let result: CategoryWithDurations[] = allCategories.value
-    .filter(cat => cat.is_active && cat.parent_category_id !== null) // ✅ NEU: Nur Subkategorien anzeigen
-    .map(cat => ({
-      ...cat,
-      availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-    }))
-  logger.debug('👨‍🏫 All Users: Showing only subcategories:', result.length, result.map(r => r.code))
-
-  // ✅ Sortieren nach Code und dann nach Name (display_order existiert nicht mehr)
-  const sortedResult = result.sort((a, b) => {
-    if (a.code !== b.code) {
-      return a.code.localeCompare(b.code)
+  const activeCategories = allCategories.value.filter(cat => cat.is_active)
+  
+  // ✅ NEW LOGIC: 
+  // 1. Group categories by parent
+  // 2. For each parent: if it has subcategories, show only subcategories
+  // 3. If no subcategories, show the parent
+  
+  const parentCategoryMap = new Map<string | null, Category[]>()
+  
+  activeCategories.forEach(cat => {
+    const parentId = cat.parent_category_id || cat.code // If no parent, use own code as key
+    if (!parentCategoryMap.has(parentId)) {
+      parentCategoryMap.set(parentId, [])
     }
-    return a.name.localeCompare(b.name)
+    parentCategoryMap.get(parentId)!.push(cat)
   })
+  
+  logger.debug('📊 Parent category groups:', {
+    totalGroups: parentCategoryMap.size,
+    groups: Array.from(parentCategoryMap.entries()).map(([key, cats]) => ({
+      parentKey: key,
+      count: cats.length,
+      codes: cats.map(c => c.code)
+    }))
+  })
+  
+  // Build result: show subcategories if available, otherwise show parent
+  let result: CategoryWithDurations[] = []
+  
+  parentCategoryMap.forEach((categoriesInGroup, parentKey) => {
+    // Separate parents and children in this group
+    const parentsInGroup = categoriesInGroup.filter(cat => cat.parent_category_id === null)
+    const childrenInGroup = categoriesInGroup.filter(cat => cat.parent_category_id !== null)
+    
+    logger.debug(`🔍 Group "${parentKey}": ${parentsInGroup.length} parents, ${childrenInGroup.length} children`)
+    
+    // ✅ RULE: If children exist, show only children. Otherwise show parent.
+    const categoriesToShow = childrenInGroup.length > 0 ? childrenInGroup : parentsInGroup
+    
+    categoriesToShow.forEach(cat => {
+      result.push({
+        ...cat,
+        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
+      })
+    })
+  })
+  
+  logger.debug('✅ Categories to display:', result.length, result.map(r => `${r.code} (parent: ${r.parent_category_id})`))
+  
+  // ✅ Sortieren nach Code
+  const sortedResult = result.sort((a, b) => a.code.localeCompare(b.code))
   
   logger.debug('📋 Final sorted categories:', sortedResult.map(cat => ({
     code: cat.code,
