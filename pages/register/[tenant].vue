@@ -1525,26 +1525,7 @@ onMounted(async () => {
     return
   }
 
-  // Check registration risk first
-  try {
-    const riskCheck = await $fetch('/api/auth/check-registration-risk', {
-      method: 'POST'
-    }) as any
-    
-    requiresCaptcha.value = riskCheck.requiresCaptcha || false
-    logger.debug('🔍 Registration risk check:', riskCheck)
-    
-    if (requiresCaptcha.value) {
-      logger.debug('⚠️ Multiple registrations detected from this IP - captcha required')
-    } else {
-      logger.debug('✅ First registration from this IP - no captcha needed')
-    }
-  } catch (err) {
-    logger.warn('⚠️ Risk check failed, defaulting to require captcha:', err)
-    requiresCaptcha.value = true // On error, require captcha to be safe
-  }
-  
-  // Restore form data from localStorage if available
+  // Restore form data from localStorage immediately (sync, no delay)
   if (process.client) {
     const savedData = localStorage.getItem(FORM_DATA_KEY)
     if (savedData) {
@@ -1568,28 +1549,35 @@ onMounted(async () => {
     formData.value.email = prefilledData.value.email || ''
     formData.value.phone = prefilledData.value.phone || ''
   }
-  
-  // Load tenant if tenant slug is provided
+
+  // Load categories immediately (no await needed)
+  loadCategories()
+
+  // Run async tasks in parallel (non-blocking for form display)
+  const asyncTasks: Promise<void>[] = []
+
+  asyncTasks.push(
+    $fetch('/api/auth/check-registration-risk', { method: 'POST' })
+      .then((riskCheck: any) => {
+        requiresCaptcha.value = riskCheck.requiresCaptcha || false
+        logger.debug('🔍 Registration risk check:', riskCheck)
+      })
+      .catch((err) => {
+        logger.warn('⚠️ Risk check failed, defaulting to require captcha:', err)
+        requiresCaptcha.value = true
+      })
+  )
+
   if (tenantSlug.value) {
     logger.debug('🏢 Loading tenant from URL parameter:', tenantSlug.value)
-    try {
-      await loadTenant(tenantSlug.value)
-    } catch (error) {
-      console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
-      // Don't redirect - just continue with the slug
-      // The form will work without tenant data
-    }
+    asyncTasks.push(
+      loadTenant(tenantSlug.value).catch((error) => {
+        console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
+      })
+    )
   }
-  
-  // Skip tenant verification for now - allow registration without tenant data
-  // if (!isAdminRegistration.value && !activeTenantId.value) {
-  //   console.error('❌ No tenant loaded for customer registration, redirecting to tenant selection')
-  //   alert('Bitte wählen Sie zuerst einen Anbieter aus.')
-  //   await navigateTo('/auswahl')
-  //   return
-  // }
-  
-  loadCategories()
+
+  await Promise.allSettled(asyncTasks)
 })
 
 // Watch for service type changes and reload categories
