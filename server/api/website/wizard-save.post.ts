@@ -1,11 +1,34 @@
 // server/api/website/wizard-save.post.ts
 // Save website setup from wizard
 
-export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
-  const body = await readBody(event)
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
+export default defineEventHandler(async (event) => {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Unauthorized'
+    })
+  }
+
+  const body = await readBody(event)
   const supabase = getSupabaseAdmin()
+
+  // Get user profile to get tenant_id
+  const { data: user } = await supabase
+    .from('users')
+    .select('tenant_id')
+    .eq('auth_user_id', authUser.id)
+    .single()
+
+  if (!user?.tenant_id) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'User or tenant not found'
+    })
+  }
 
   // Get or create website
   const { data: website } = await supabase
