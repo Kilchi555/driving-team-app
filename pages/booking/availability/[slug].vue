@@ -492,6 +492,54 @@
               </div>
             </div>
             
+            <!-- Week Navigation Controls (Bottom) -->
+            <div class="flex items-center justify-center mb-4 mt-8">
+              <div class="inline-flex items-stretch rounded-xl bg-white shadow-sm overflow-hidden">
+                <button
+                  @click="prevWeek"
+                  :disabled="currentWeek <= 1"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-gray-900 flex items-center gap-2 rounded-xl transition-all duration-200 transform active:translate-y-0.5"
+                  :style="{
+                    borderColor: currentWeek <= 1 ? '#e5e7eb' : withAlpha(getBrandPrimary(), 0.25),
+                    background: `linear-gradient(145deg, ${lightenColor(getBrandPrimary(), 0.9)}, ${lightenColor(getBrandPrimary(), 0.95)})`,
+                    opacity: currentWeek <= 1 ? 0.6 : 1,
+                    cursor: currentWeek <= 1 ? 'not-allowed' : 'pointer',
+                    boxShadow: 'none',
+                  }"
+                  :class="{
+                    'hover:brightness-95': currentWeek > 1
+                  }"
+                  aria-label="Vorherige Woche"
+                >
+                  <span class="hidden sm:inline">← Vorher</span>
+                  <span class="sm:hidden">←</span>
+                </button>
+                <div class="px-3 sm:px-5 py-2 text-center">
+                  <div class="text-xs text-gray-500">Woche {{ currentWeek }} / {{ maxWeek }}</div>
+                  <div class="text-sm sm:text-base font-semibold text-gray-800">{{ currentWeekRangeLabel }}</div>
+                </div>
+                <button
+                  @click="nextWeek"
+                  :disabled="currentWeek >= maxWeek"
+                  class="px-3 sm:px-4 py-2 text-sm font-medium text-gray-900 flex items-center gap-2 rounded-xl transition-all duration-200 transform active:translate-y-0.5"
+                  :style="{
+                    borderColor: currentWeek >= maxWeek ? '#e5e7eb' : withAlpha(getBrandPrimary(), 0.25),
+                    background: `linear-gradient(145deg, ${lightenColor(getBrandPrimary(), 0.9)}, ${lightenColor(getBrandPrimary(), 0.95)})`,
+                    opacity: currentWeek >= maxWeek ? 0.6 : 1,
+                    cursor: currentWeek >= maxWeek ? 'not-allowed' : 'pointer',
+                    boxShadow: 'none',
+                  }"
+                  :class="{
+                    'hover:brightness-95': currentWeek < maxWeek
+                  }"
+                  aria-label="Nächste Woche"
+                >
+                  <span class="sm:hidden">→</span>
+                  <span class="hidden sm:inline">Nächste →</span>
+                </button>
+              </div>
+            </div>
+            
             <!-- NEW: Button to show proposal form if no suitable slots -->
             <div class="mt-6 text-center">
               <button
