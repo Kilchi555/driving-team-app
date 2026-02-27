@@ -25,13 +25,7 @@
       <div class="bg-red-50 py-8 px-4 shadow sm:rounded-lg sm:px-10">
         <div class="text-center">
           <p class="text-red-600">{{ error }}</p>
-          <div class="mt-4 space-y-2">
-            <button
-              @click="navigateTo('/')"
-              class="block w-full text-green-600 hover:text-green-700 font-medium"
-            >
-              Zur Startseite
-            </button>
+          <div class="mt-4">
             <button
               v-if="userData?.tenant_slug"
               @click="navigateTo(`/${userData.tenant_slug}`)"
