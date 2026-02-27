@@ -121,7 +121,7 @@ Current content to optimize:
 Content type: ${contentType}
 Optimization focus: ${optimizationType}
 
-Generate 3-4 alternative versions of this content that are optimized for ${optimizationType}.
+Generate EXACTLY 3 alternative versions of this content that are optimized for ${optimizationType}.
 
 ${
   optimizationType === 'seo'
