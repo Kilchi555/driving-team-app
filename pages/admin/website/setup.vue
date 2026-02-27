@@ -31,12 +31,11 @@
       />
     </div>
 
-    <!-- Step Content -->
-    <div class="max-w-2xl mx-auto px-4 py-8 pb-24">
-      <!-- Tenant Info Dashboard (always visible, full width, collapsible) -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-8">
+    <!-- Tenant Info Dashboard (full width, collapsible) -->
+    <div class="bg-white border-b border-gray-200">
+      <div class="w-full px-8 py-6 lg:px-16">
         <!-- Summary Header (always visible) -->
-        <div class="p-6 border-b border-gray-200">
+        <div class="pb-6 border-b border-gray-200">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="text-center">
               <p class="text-2xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
@@ -249,7 +248,10 @@
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Step Content (max width container for form content) -->
+    <div class="max-w-2xl mx-auto px-4 py-8 pb-24">
       <!-- Step 1: Who Are You? -->
       <div v-if="currentStep === 0" class="space-y-6 animate-in fade-in">
         <div>
