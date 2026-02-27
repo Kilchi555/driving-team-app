@@ -64,8 +64,22 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     console.error('Claude API error:', error)
+    
+    // Graceful fallback for API errors (no credits, rate limit, etc.)
+    if (error.status === 400 || error.status === 429 || error.status === 503) {
+      console.warn('⚠️ Claude API unavailable, using fallback suggestions')
+      
+      return {
+        success: true,
+        suggestions: generateFallbackSuggestions(content, optimization_type),
+        tokens_used: 0,
+        fallback: true,
+        message: 'AI service temporarily unavailable. Showing placeholder suggestions.'
+      }
+    }
+    
     throw createError({
-      statusCode: 500,
+      statusCode: error.status || 500,
       statusMessage: 'AI optimization failed: ' + error.message
     })
   }
@@ -157,4 +171,37 @@ function parseAIResponse(response: string): any[] {
     console.error('Failed to parse AI response:', error)
     return []
   }
+}
+
+function generateFallbackSuggestions(content: string, optimizationType: string): any[] {
+  // Generate basic suggestions when Claude API is unavailable
+  const fallbackSuggestions = [
+    {
+      suggestion: content.length > 100 ? content.substring(0, 100) + '...' : content,
+      reason: 'Original content - Claude API temporarily unavailable',
+      score: 5
+    }
+  ]
+
+  if (optimizationType === 'seo') {
+    fallbackSuggestions.push({
+      suggestion: `Professionelle ${content.substring(0, 30)}...`,
+      reason: 'Add professional prefix for SEO - helps with keyword targeting',
+      score: 6
+    })
+  } else if (optimizationType === 'conversion') {
+    fallbackSuggestions.push({
+      suggestion: `Jetzt ${content.substring(0, 30)}... - Kostenlos testen!`,
+      reason: 'Add CTA - encourages immediate action from potential customers',
+      score: 6
+    })
+  } else if (optimizationType === 'readability') {
+    fallbackSuggestions.push({
+      suggestion: content.replace(/\. /g, '.\n'),
+      reason: 'Break into shorter sentences for better readability',
+      score: 6
+    })
+  }
+
+  return fallbackSuggestions
 }
