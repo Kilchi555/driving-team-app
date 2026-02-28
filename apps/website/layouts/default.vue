@@ -10,10 +10,14 @@
           <!-- Fahrschule Dropdown -->
           <div class="relative group">
             <a href="#" class="text-gray-600 hover:text-blue-600 transition font-medium">Fahrschule</a>
-            <div class="absolute left-0 mt-0 w-48 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition hidden group-hover:block">
+            <div class="absolute left-0 mt-0 w-48 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50">
+              <a href="/fahrschule-zuerich/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Zürich</a>
               <a href="/fahrschule-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Lachen</a>
-              <a href="/fahrschule-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Uster</a>
-              <a href="/fahrschule-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Zürich</a>
+              <a href="/fahrschule-uster/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Uster</a>
+              <a href="/fahrschule-stgallen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule St.Gallen</a>
+              <a href="/fahrschule-dietikon/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Dietikon</a>
+              <a href="/fahrschule-aargau/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Aargau</a>
+              <a href="/fahrschule-reichenburg/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Reichenburg</a>
             </div>
           </div>
 
