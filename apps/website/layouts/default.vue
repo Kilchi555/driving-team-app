@@ -6,13 +6,63 @@
         <NuxtLink to="/" class="text-2xl font-bold text-blue-600">
           🏎️ Driving Team
         </NuxtLink>
-        <div class="hidden md:flex gap-8">
-            <NuxtLink to="/" class="text-gray-600 hover:text-blue-600 transition">Home</NuxtLink>
-          <a href="/auto-fahrschule/" class="text-gray-600 hover:text-blue-600 transition">Auto</a>
-          <a href="/motorrad-fahrschule/" class="text-gray-600 hover:text-blue-600 transition">Motorrad</a>
-          <a href="/preise/" class="text-gray-600 hover:text-blue-600 transition">Preise</a>
+        <div class="hidden md:flex gap-8 items-center">
+          <!-- Fahrschule Dropdown -->
+          <div class="relative group">
+            <a href="#" class="text-gray-600 hover:text-blue-600 transition font-medium">Fahrschule</a>
+            <div class="absolute left-0 mt-0 w-48 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition hidden group-hover:block">
+              <a href="/fahrschule-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Lachen</a>
+              <a href="/fahrschule-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Uster</a>
+              <a href="/fahrschule-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrschule Zürich</a>
+            </div>
+          </div>
+
+          <!-- Kategorie Dropdown -->
+          <div class="relative group">
+            <a href="#" class="text-gray-600 hover:text-blue-600 transition font-medium">Kategorie</a>
+            <div class="absolute left-0 mt-0 w-48 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition hidden group-hover:block">
+              <a href="/auto-fahrschule/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Auto (B)</a>
+              <a href="/motorrad-fahrschule/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Motorrad (A)</a>
+              <a href="/lastwagen-fahrschule/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Lastwagen (C)</a>
+              <a href="/taxi-fahrschule/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Taxi (BPT)</a>
+              <a href="/motorboot/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Motorboot</a>
+              <a href="/bus-fahrschule/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Bus (D)</a>
+              <a href="/anhaenger-fahrschule/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Anhänger (BE)</a>
+            </div>
+          </div>
+
+          <!-- Kurse Dropdown -->
+          <div class="relative group">
+            <a href="#" class="text-gray-600 hover:text-blue-600 transition font-medium">Kurse</a>
+            <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition hidden group-hover:block">
+              <a href="/nothelferkurs/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 font-medium">Nothelferkurse</a>
+              <a href="/vku-kurse/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">VKU Kurse</a>
+              <a href="/vku-kurs-zuerich/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 pl-8">VKU Kurs Zürich</a>
+              <a href="/vku-kurs-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 pl-8">VKU Kurs Lachen</a>
+              <div class="border-t border-gray-100 my-2"></div>
+              <a href="/motorrad-grundkurs-zuerich/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 font-medium">Motorrad Grundkurse</a>
+              <a href="/motorrad-grundkurs-zuerich/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 pl-8">Zürich</a>
+              <a href="/motorrad-grundkurs-lachen/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 pl-8">Lachen</a>
+              <a href="/motorrad-grundkurs-zug/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 pl-8">Zug</a>
+              <a href="/motorrad-grundkurs-einsiedeln/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 pl-8">Einsiedeln</a>
+            </div>
+          </div>
+
+          <!-- Weiterbildungen Dropdown -->
+          <div class="relative group">
+            <a href="#" class="text-gray-600 hover:text-blue-600 transition font-medium">Weiterbildungen</a>
+            <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition hidden group-hover:block">
+              <a href="/czv-kurse/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">CZV Grundkurs</a>
+              <a href="/czv-weiterbildung/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">CZV Weiterbildung</a>
+              <a href="/fahrlehrerweiterbildung/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Fahrlehrer Weiterbildung</a>
+              <a href="/motorrad-weiterbildung/" class="block px-4 py-2 text-gray-700 hover:bg-blue-50">Motorrad Weiterbildung</a>
+            </div>
+          </div>
+
+          <!-- Einzelne Links -->
           <a href="/uber-uns/" class="text-gray-600 hover:text-blue-600 transition">Über uns</a>
-          <a href="/kontakt/" class="text-gray-600 hover:text-blue-600 transition">Kontakt</a>
+          <a href="/preise/" class="text-gray-600 hover:text-blue-600 transition">Preise</a>
+          <a href="/blog/" class="text-gray-600 hover:text-blue-600 transition">Blog</a>
         </div>
         <a href="tel:+41444310033" class="btn-primary hidden md:inline-block">
           Anrufen
