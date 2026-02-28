@@ -9,152 +9,136 @@
     <!-- Hero -->
     <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
-        <h1 class="heading-lg text-white mb-6">Das ist das Driving Team</h1>
-        <p class="text-xl text-blue-100">Erfahrene, leidenschaftliche und freundliche Fahrlehrer für deine sichere Ausbildung</p>
+        <h1 class="heading-lg text-white mb-6">Über die Fahrschule Driving Team</h1>
+        <p class="text-xl text-blue-100 max-w-3xl mx-auto">Moderne Fahrschule mit Leidenschaft für professionelle Fahrausbildung in Zürich und Umgebung.</p>
       </div>
     </section>
 
-    <!-- Mission -->
-    <section class="section-container">
-      <div class="grid md:grid-cols-2 gap-12 items-center mb-16">
-        <div>
-          <h2 class="heading-md mb-6">Unsere Mission</h2>
-          <p class="text-lg text-gray-700 mb-4">
-            Wir wurden gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.
-          </p>
-          <p class="text-lg text-gray-700 mb-4">
-            Deshalb haben wir eine Fahrschule gegründet, die moderne, effiziente und zielgerichtete Fahrausbildung mit einem persönlichen Touch verbindet.
-          </p>
-          <p class="text-lg text-gray-700">
-            Jeder unserer Fahrlehrer ist nicht nur ein Experte im Strassenverkehr, sondern auch ein motivierter Coach, der dich auf deinem Weg zum Führerschein begleitet.
-          </p>
+    <!-- Mission Section -->
+    <section class="section-container py-20">
+      <h2 class="heading-md text-center mb-16">Unsere Mission</h2>
+      
+      <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
+        <div class="bg-blue-50 rounded-lg p-8 text-center">
+          <p class="text-4xl mb-4">🎯</p>
+          <h3 class="font-bold text-lg mb-2">Professionell</h3>
+          <p class="text-gray-700">Höchste Standards in Fahrausbildung und Kundenservice</p>
         </div>
-        <div class="bg-blue-50 rounded-lg p-8 border-2 border-blue-200">
-          <h3 class="heading-sm mb-6">Unsere Werte</h3>
-          <ul class="space-y-4">
-            <li class="flex gap-3">
-              <span class="text-2xl">🎯</span>
-              <div>
-                <p class="font-bold">Fokussiert</p>
-                <p class="text-sm text-gray-600">Zielgerichtete Vorbereitung auf deine Prüfung</p>
-              </div>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-2xl">😊</span>
-              <div>
-                <p class="font-bold">Freundlich</p>
-                <p class="text-sm text-gray-600">Persönlicher Umgang und individuelle Betreuung</p>
-              </div>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-2xl">⚡</span>
-              <div>
-                <p class="font-bold">Modern</p>
-                <p class="text-sm text-gray-600">Aktuelle Fahrzeuge und Unterrichtsmethoden</p>
-              </div>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-2xl">🏆</span>
-              <div>
-                <p class="font-bold">Professionell</p>
-                <p class="text-sm text-gray-600">Eidgenössisch ausgebildete Fahrlehrer</p>
-              </div>
-            </li>
-          </ul>
+        <div class="bg-blue-50 rounded-lg p-8 text-center">
+          <p class="text-4xl mb-4">💪</p>
+          <h3 class="font-bold text-lg mb-2">Modern</h3>
+          <p class="text-gray-700">Neue Fahrzeuge, aktuelle Lehrmethoden und digitale Lösungen</p>
         </div>
-      </div>
-
-      <!-- Stats -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-        <div class="bg-blue-50 rounded-lg p-6 text-center border-2 border-blue-200">
-          <p class="heading-md text-blue-600">47+</p>
-          <p class="text-gray-700">Bewertungen</p>
-          <p class="text-yellow-500">⭐⭐⭐⭐⭐</p>
-        </div>
-        <div class="bg-blue-50 rounded-lg p-6 text-center border-2 border-blue-200">
-          <p class="heading-md text-blue-600">100%</p>
-          <p class="text-gray-700">Erfolgsquote</p>
-          <p class="text-green-600 font-bold">✓</p>
-        </div>
-        <div class="bg-blue-50 rounded-lg p-6 text-center border-2 border-blue-200">
-          <p class="heading-md text-blue-600">7</p>
-          <p class="text-gray-700">Kategorien</p>
-          <p class="text-blue-600 font-bold">Auto bis Motorboot</p>
-        </div>
-        <div class="bg-blue-50 rounded-lg p-6 text-center border-2 border-blue-200">
-          <p class="heading-md text-blue-600">10+</p>
-          <p class="text-gray-700">Standorte</p>
-          <p class="text-blue-600 font-bold">In der Schweiz</p>
+        <div class="bg-blue-50 rounded-lg p-8 text-center">
+          <p class="text-4xl mb-4">❤️</p>
+          <h3 class="font-bold text-lg mb-2">Leidenschaft</h3>
+          <p class="text-gray-700">Begeisterung für sichere und kompetente Fahrausbildung</p>
         </div>
       </div>
     </section>
 
-    <!-- Team -->
-    <section class="bg-gray-50 py-16">
+    <!-- Team Section -->
+    <section class="bg-gray-50 py-20">
       <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Unser Team</h2>
-        <div class="grid md:grid-cols-3 gap-8 mb-12">
-          <div v-for="member in team" :key="member.name" class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition">
-            <div class="bg-gradient-to-br from-blue-400 to-blue-600 h-40 flex items-center justify-center text-6xl">
-              {{ member.emoji }}
-            </div>
-            <div class="p-6">
-              <h3 class="font-bold text-lg mb-1">{{ member.name }}</h3>
-              <p class="text-blue-600 font-semibold text-sm mb-3">{{ member.role }}</p>
-              <p class="text-gray-600 text-sm mb-3">{{ member.bio }}</p>
-              <div class="flex gap-2">
-                <span v-for="cat in member.categories" :key="cat" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                  {{ cat }}
-                </span>
-              </div>
-            </div>
+        <h2 class="heading-md text-center mb-16">Unser Team</h2>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+          <div class="bg-white rounded-lg p-6 text-center shadow-sm hover:shadow-md transition">
+            <p class="text-6xl mb-4">👨‍🏫</p>
+            <h3 class="font-bold mb-2">Erfahrene Fahrlehrer</h3>
+            <p class="text-gray-600 text-sm">Mit langjähriger Erfahrung und zertifizierten Abschlüssen</p>
+          </div>
+          <div class="bg-white rounded-lg p-6 text-center shadow-sm hover:shadow-md transition">
+            <p class="text-6xl mb-4">🏍️</p>
+            <h3 class="font-bold mb-2">Spezialisten</h3>
+            <p class="text-gray-600 text-sm">Für alle Fahrkategorien von Auto bis Motorboat</p>
+          </div>
+          <div class="bg-white rounded-lg p-6 text-center shadow-sm hover:shadow-md transition">
+            <p class="text-6xl mb-4">🤝</p>
+            <h3 class="font-bold mb-2">Kundenorientiert</h3>
+            <p class="text-gray-600 text-sm">Persönliche Betreuung und flexible Zeitpläne</p>
+          </div>
+          <div class="bg-white rounded-lg p-6 text-center shadow-sm hover:shadow-md transition">
+            <p class="text-6xl mb-4">✅</p>
+            <h3 class="font-bold mb-2">Zuverlässig</h3>
+            <p class="text-gray-600 text-sm">4.8★ Google-Bewertung mit 150+ Reviews</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- History & Values -->
+    <section class="section-container py-20">
+      <h2 class="heading-md text-center mb-16">Unsere Geschichte & Werte</h2>
+      
+      <div class="max-w-4xl mx-auto space-y-8">
+        <div class="flex gap-8">
+          <div class="flex-shrink-0">
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold">📅</div>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-2">Gegründet mit Vision</h3>
+            <p class="text-gray-700">Die Fahrschule Driving Team wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir glauben, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
+          </div>
+        </div>
+
+        <div class="flex gap-8">
+          <div class="flex-shrink-0">
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold">🎓</div>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-2">Professionelle Ausbildung</h3>
+            <p class="text-gray-700">Alle unsere Fahrlehrer haben eine vollständige eidgenössische Ausbildung mit Fachausweis absolviert. Kontinuierliche Weiterbildung ist für uns selbstverständlich.</p>
+          </div>
+        </div>
+
+        <div class="flex gap-8">
+          <div class="flex-shrink-0">
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold">🌟</div>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-2">Qualität & Sicherheit</h3>
+            <p class="text-gray-700">Sicherheit ist unser Antrieb. Wir investieren in moderne Fahrzeuge, aktuelle Lehrmethoden und eine unterstützende Lernumgebung für jeden Schüler.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="bg-blue-600 text-white py-16">
+      <div class="section-container">
+        <div class="grid md:grid-cols-4 gap-8 text-center">
+          <div>
+            <p class="text-5xl font-bold mb-2">20+</p>
+            <p class="text-blue-100">Jahre Erfahrung</p>
+          </div>
+          <div>
+            <p class="text-5xl font-bold mb-2">8</p>
+            <p class="text-blue-100">Fahrlehrer & Instruktoren</p>
+          </div>
+          <div>
+            <p class="text-5xl font-bold mb-2">1000+</p>
+            <p class="text-blue-100">Schüler pro Jahr</p>
+          </div>
+          <div>
+            <p class="text-5xl font-bold mb-2">4.8 ⭐</p>
+            <p class="text-blue-100">Google Bewertung</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="section-container">
-      <div class="bg-blue-600 text-white rounded-lg p-12 text-center">
-        <h2 class="heading-md mb-6 text-white">Lerne dich jetzt von unserem Team kennen!</h2>
-        <p class="text-xl text-blue-100 mb-8">Buche deine erste Fahrstunde und lerne einen unserer Fahrlehrer persönlich kennen.</p>
-        <a href="/booking" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
-          Jetzt Termin buchen
-        </a>
-      </div>
+    <section class="section-container py-20 text-center">
+      <h2 class="heading-md mb-8">Lerne unser Team kennen!</h2>
+      <p class="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">Besuche uns in einem unserer modernen Fahrschulen oder buche direkt einen Termin online.</p>
+      <a href="/booking" class="btn-primary text-lg">
+        📅 Jetzt Termin buchen
+      </a>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-const team = [
-  {
-    name: 'Pascal',
-    role: 'Gründer & Fahrlehrer',
-    emoji: '👨‍🏫',
-    bio: 'Mit über 15 Jahren Erfahrung ist Pascal der Gründer des Driving Team. Spezialisiert auf Auto und Motorrad.',
-    categories: ['Auto', 'Motorrad', 'Anhänger']
-  },
-  {
-    name: 'Keni',
-    role: 'Senior Fahrlehrer',
-    emoji: '🏍️',
-    bio: 'Motorrad-Spezialist mit Leidenschaft für Fahrausbildung. Bekannt für seine Geduld und professionelle Methoden.',
-    categories: ['Motorrad', 'Auto', 'Anhänger']
-  },
-  {
-    name: 'Rijad',
-    role: 'Fahrlehrer',
-    emoji: '🚗',
-    bio: 'Freundlicher und motivierter Fahrlehrer. Spezialisiert auf Anfänger und intensive Prüfungsvorbereitung.',
-    categories: ['Auto', 'Anhänger']
-  },
-  {
-    name: 'Vito',
-    role: 'Fahrlehrer',
-    emoji: '🚚',
-    bio: 'Erfahrener Fahrlehrer für alle Kategorien. Besonders hilfreich bei schwierigen Manövern.',
-    categories: ['Auto', 'Lastwagen', 'Taxi']
-  }
-]
+// Über uns page
 </script>

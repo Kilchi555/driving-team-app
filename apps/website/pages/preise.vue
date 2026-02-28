@@ -1,133 +1,146 @@
 <template>
   <div>
     <Head>
-      <Title>Preise | Driving Team Zürich</Title>
-      <Meta name="description" content="Fahrschule Preise - Transparente & faire Preisgestaltung. Keine versteckten Gebühren. Auto, Motorrad, Taxi & Lastwagen Fahrschule." />
+      <Title>Preise | Driving Team Fahrschule Zürich</Title>
+      <Meta name="description" content="Transparente Fahrschule Preise - Auto, Motorrad, Taxi & Lastwagen Fahrausbildung. Keine versteckten Gebühren, faire Preisgestaltung." />
       <Link rel="canonical" href="https://drivingteam.ch/preise/" />
     </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
-        <h1 class="heading-lg text-white mb-6">Transparente & faire Preise</h1>
-        <p class="text-xl text-blue-100 mb-8">Keine versteckten Gebühren. Was du siehst, ist was du bezahlst.</p>
-        <button @click="goToBooking" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
-          Kostenlos Angebot anfordern
-        </button>
+        <h1 class="heading-lg text-white mb-6">Transparente Preise</h1>
+        <p class="text-xl text-blue-100 max-w-3xl mx-auto">Faire Preisgestaltung ohne versteckte Gebühren. Alle Preise sind in CHF und nachvollziehbar.</p>
       </div>
     </section>
 
-    <!-- Pricing Table -->
-    <section class="section-container">
-      <h2 class="heading-md mb-12 text-center">Unsere Kategorien & Preise</h2>
-      
-      <div class="grid md:grid-cols-2 gap-8 mb-16">
-        <div v-for="cat in categories" :key="cat.slug" class="bg-white border-2 border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition">
-          <div class="bg-blue-50 p-6 border-b-2 border-blue-200">
-            <p class="text-4xl mb-2">{{ cat.icon }}</p>
-            <h3 class="heading-sm">{{ cat.name }}</h3>
-            <p class="text-gray-600 text-sm mt-2">{{ cat.description }}</p>
-          </div>
-          <div class="p-6">
-            <div class="space-y-3 mb-6">
-              <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                <span class="text-gray-700">45-Min. Fahrstunde</span>
-                <span class="font-bold text-lg">CHF 85–95</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                <span class="text-gray-700">Theoriekurs</span>
-                <span class="font-bold text-lg">CHF 200–300</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                <span class="text-gray-700">Prüfungsvorbereitung</span>
-                <span class="font-bold text-lg">CHF 150–250</span>
-              </div>
-              <div class="flex justify-between items-center py-2">
-                <span class="text-gray-700 font-semibold">Admin-Pauschale</span>
-                <span class="font-bold text-lg text-blue-600">CHF 300</span>
-              </div>
-            </div>
-            <button @click="goToBooking" class="btn-primary w-full">
-              Mehr Info
-            </button>
-          </div>
+    <!-- Pricing Section -->
+    <section class="section-container py-20">
+      <h2 class="heading-md text-center mb-16">Fahrschule Preise nach Kategorie</h2>
+
+      <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
+        <!-- Auto -->
+        <div class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg transition">
+          <h3 class="heading-sm mb-6 text-blue-600">🚗 Auto (Kategorie B)</h3>
+          <ul class="space-y-3 text-gray-700 mb-8">
+            <li class="flex justify-between">
+              <span>Fahrstunde (45 min)</span>
+              <span class="font-bold">CHF 80–90</span>
+            </li>
+            <li class="flex justify-between">
+              <span>10er Pass</span>
+              <span class="font-bold">CHF 750–850</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Admin & Versicherung</span>
+              <span class="font-bold">CHF 200</span>
+            </li>
+            <li class="flex justify-between border-t pt-3">
+              <span>Durchschnitt Gesamt</span>
+              <span class="font-bold text-lg">CHF 3500–4500</span>
+            </li>
+          </ul>
+          <a href="/booking?category=auto" class="btn-primary w-full text-center">Termin buchen</a>
+        </div>
+
+        <!-- Motorrad -->
+        <div class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg transition">
+          <h3 class="heading-sm mb-6 text-blue-600">🏍️ Motorrad (A/A2/AM)</h3>
+          <ul class="space-y-3 text-gray-700 mb-8">
+            <li class="flex justify-between">
+              <span>Fahrstunde (45 min)</span>
+              <span class="font-bold">CHF 85–95</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Grundkurs (4 Tage)</span>
+              <span class="font-bold">CHF 600–750</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Admin & Versicherung</span>
+              <span class="font-bold">CHF 250</span>
+            </li>
+            <li class="flex justify-between border-t pt-3">
+              <span>Durchschnitt Gesamt</span>
+              <span class="font-bold text-lg">CHF 2500–3500</span>
+            </li>
+          </ul>
+          <a href="/booking?category=motorrad" class="btn-primary w-full text-center">Termin buchen</a>
+        </div>
+
+        <!-- Taxi -->
+        <div class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg transition">
+          <h3 class="heading-sm mb-6 text-blue-600">🚕 Taxi (BPT)</h3>
+          <ul class="space-y-3 text-gray-700 mb-8">
+            <li class="flex justify-between">
+              <span>BPT Schulung</span>
+              <span class="font-bold">CHF 1500–2000</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Fahrstunden (pro Stunde)</span>
+              <span class="font-bold">CHF 90–100</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Prüfungsvorbereitung</span>
+              <span class="font-bold">CHF 200–400</span>
+            </li>
+            <li class="flex justify-between border-t pt-3">
+              <span>Durchschnitt Gesamt</span>
+              <span class="font-bold text-lg">CHF 3000–4500</span>
+            </li>
+          </ul>
+          <a href="/booking?category=taxi" class="btn-primary w-full text-center">Termin buchen</a>
+        </div>
+
+        <!-- Lastwagen -->
+        <div class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg transition">
+          <h3 class="heading-sm mb-6 text-blue-600">🚚 Lastwagen (C/C1)</h3>
+          <ul class="space-y-3 text-gray-700 mb-8">
+            <li class="flex justify-between">
+              <span>CZV Grundkurs</span>
+              <span class="font-bold">CHF 1200–1600</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Fahrstunden (pro Stunde)</span>
+              <span class="font-bold">CHF 95–110</span>
+            </li>
+            <li class="flex justify-between">
+              <span>Admin & Gebühren</span>
+              <span class="font-bold">CHF 300</span>
+            </li>
+            <li class="flex justify-between border-t pt-3">
+              <span>Durchschnitt Gesamt</span>
+              <span class="font-bold text-lg">CHF 4000–6000</span>
+            </li>
+          </ul>
+          <a href="/booking?category=lastwagen" class="btn-primary w-full text-center">Termin buchen</a>
         </div>
       </div>
 
-      <!-- Important Info -->
-      <div class="max-w-3xl mx-auto bg-blue-50 border-2 border-blue-200 rounded-lg p-8 mb-12">
-        <h3 class="heading-sm mb-4">Wichtige Informationen</h3>
-        <ul class="space-y-3 text-gray-900">
-          <li class="flex gap-3">
-            <span class="text-blue-600 font-bold">✓</span>
-            <span><strong>Transparente Preise:</strong> Keine versteckten Gebühren oder Überraschungen</span>
-          </li>
-          <li class="flex gap-3">
-            <span class="text-blue-600 font-bold">✓</span>
-            <span><strong>Admin-Pauschale:</strong> Einmalig CHF 300 für die ganze Fahrausbildung</span>
-          </li>
-          <li class="flex gap-3">
-            <span class="text-blue-600 font-bold">✓</span>
-            <span><strong>Individuelle Angebote:</strong> Preise können je nach Voraussetzungen variieren</span>
-          </li>
-          <li class="flex gap-3">
-            <span class="text-blue-600 font-bold">✓</span>
-            <span><strong>Ratenzahlung:</strong> Flexible Zahlungsoptionen möglich</span>
-          </li>
+      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 max-w-4xl mx-auto">
+        <h3 class="heading-sm mb-4">💡 Wichtige Hinweise zu den Preisen</h3>
+        <ul class="space-y-3 text-gray-700">
+          <li>• Alle Preise sind in CHF (Schweizer Franken)</li>
+          <li>• Die Kosten variieren je nach Anzahl der benötigten Fahrstunden</li>
+          <li>• Kurse (Nothelferkurse, VKU, Motorrad Grundkurse) sind separat</li>
+          <li>• Wir bieten flexible Zahlungspläne an</li>
+          <li>• Kontaktiere uns für ein persönliches Angebot</li>
         </ul>
-      </div>
-
-      <!-- FAQ -->
-      <h2 class="heading-md mb-8 text-center">Preis-FAQ</h2>
-      <div class="max-w-3xl mx-auto space-y-4 mb-12">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
-          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Wie kann ich bezahlen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
-          </summary>
-          <p class="text-gray-600 mt-4">Wir akzeptieren EC-Karten, Kreditkarten, Banküberweisungen und Barzahlungen. Die Rechnungen werden per E-Mail versendet und können über dein Mobile Banking bezahlt werden.</p>
-        </details>
-
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
-          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Was kostet die gesamte Fahrausbildung bis zur Prüfung?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
-          </summary>
-          <p class="text-gray-600 mt-4">Die Gesamtkosten hängen von der Anzahl der benötigten Fahrstunden ab. Mit durchschnittlich 15-20 Fahrstunden à CHF 90 + CHF 300 Admin-Pauschale ergibt sich ein Gesamtbudget von CHF 1.650–2.100. Kontaktiere uns für ein individuelles Angebot.</p>
-        </details>
-
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
-          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Brauche ich extra Fahrstunden wenn ich durchfalle?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
-          </summary>
-          <p class="text-gray-600 mt-4">Wir bieten Nachholstunden zu reduzierten Preisen an. Allerdings bestehen unsere Fahrschüler die Prüfung in der Regel beim ersten Versuch dank unserer gründlichen Vorbereitung.</p>
-        </details>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="bg-blue-600 text-white py-16">
       <div class="section-container text-center">
-        <h2 class="heading-md mb-6 text-white">Möchtest du wissen, wieviel deine Ausbildung kostet?</h2>
-        <p class="text-xl text-blue-100 mb-8">Kontaktiere uns – wir erstellen dir ein unverbindliches Angebot!</p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <button @click="goToBooking" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
-            Kostenlos anfragen
-          </button>
-          <a href="tel:+41444310033" class="btn-secondary border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
-            📞 Jetzt anrufen
-          </a>
-        </div>
+        <h2 class="heading-md mb-6 text-white">Kostenloser Kostenvoranschlag</h2>
+        <p class="text-xl text-blue-100 mb-8">Kontaktiere uns für ein unverbindliches Angebot!</p>
+        <a href="tel:+41444310033" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          📞 +41 44 431 00 33
+        </a>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { categories } from '~/data'
-
-const goToBooking = () => {
-  window.location.href = '/booking'
-}
+// Preise page
 </script>
