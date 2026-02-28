@@ -25,7 +25,7 @@
       </div>
     </section>
 
-    <!-- Categories Section -->
+    <!-- Categories Section (MOVED TO TOP) -->
     <section class="section-container py-20">
       <h2 class="heading-md text-center mb-16">Die Kategorien unserer Fahrschule...</h2>
       
