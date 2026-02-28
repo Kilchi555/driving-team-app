@@ -8,5 +8,5 @@
 </template>
 
 <script setup lang="ts">
-// Global site config
+import '~/assets/css/main.css'
 </script>
