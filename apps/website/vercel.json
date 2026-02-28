@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "nuxt.config.ts",
+      "use": "@nuxtjs/vercel-builder"
+    }
+  ],
+  "routes": [
+    {
+      "src": "^/pricing/?$",
+      "destination": "/preise/",
+      "status": 301
+    },
+    {
+      "src": "^/about/?$",
+      "destination": "/uber-uns/",
+      "status": 301
+    },
+    {
+      "src": "^/contact/?$",
+      "destination": "/kontakt/",
+      "status": 301
+    },
+    {
+      "src": "^/categories/auto/?$",
+      "destination": "/auto-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/categories/motorrad/?$",
+      "destination": "/motorrad-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/categories/lastwagen/?$",
+      "destination": "/lastwagen-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/categories/taxi/?$",
+      "destination": "/taxi-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/faq/?$",
+      "destination": "/",
+      "status": 301
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ]
+}
