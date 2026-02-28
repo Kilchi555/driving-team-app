@@ -7,11 +7,12 @@
           🏎️ Driving Team
         </NuxtLink>
         <div class="hidden md:flex gap-8">
-        <NuxtLink to="/" class="text-gray-600 hover:text-blue-600 transition">Home</NuxtLink>
-          <NuxtLink to="/categories/auto" class="text-gray-600 hover:text-blue-600 transition">Kategorien</NuxtLink>
-          <NuxtLink to="/pricing" class="text-gray-600 hover:text-blue-600 transition">Preise</NuxtLink>
-          <NuxtLink to="/about" class="text-gray-600 hover:text-blue-600 transition">Über uns</NuxtLink>
-          <NuxtLink to="/contact" class="text-gray-600 hover:text-blue-600 transition">Kontakt</NuxtLink>
+            <NuxtLink to="/" class="text-gray-600 hover:text-blue-600 transition">Home</NuxtLink>
+          <a href="/auto-fahrschule/" class="text-gray-600 hover:text-blue-600 transition">Auto</a>
+          <a href="/motorrad-fahrschule/" class="text-gray-600 hover:text-blue-600 transition">Motorrad</a>
+          <a href="/preise/" class="text-gray-600 hover:text-blue-600 transition">Preise</a>
+          <a href="/uber-uns/" class="text-gray-600 hover:text-blue-600 transition">Über uns</a>
+          <a href="/kontakt/" class="text-gray-600 hover:text-blue-600 transition">Kontakt</a>
         </div>
         <a href="tel:+41444310033" class="btn-primary hidden md:inline-block">
           Anrufen
@@ -38,14 +39,13 @@
             </div>
           </div>
 
-          <!-- Quick Links -->
           <div>
             <h4 class="font-bold mb-4">Kategorien</h4>
             <ul class="space-y-2 text-sm text-gray-400">
-              <li><NuxtLink to="/categories/auto" class="hover:text-white">Auto</NuxtLink></li>
-              <li><NuxtLink to="/categories/motorrad" class="hover:text-white">Motorrad</NuxtLink></li>
-              <li><NuxtLink to="/categories/lastwagen" class="hover:text-white">Lastwagen</NuxtLink></li>
-              <li><NuxtLink to="/categories/taxi" class="hover:text-white">Taxi</NuxtLink></li>
+              <li><a href="/auto-fahrschule/" class="hover:text-white">Auto</a></li>
+              <li><a href="/motorrad-fahrschule/" class="hover:text-white">Motorrad</a></li>
+              <li><a href="/lastwagen-fahrschule/" class="hover:text-white">Lastwagen</a></li>
+              <li><a href="/taxi-fahrschule/" class="hover:text-white">Taxi</a></li>
             </ul>
           </div>
 
@@ -53,10 +53,9 @@
           <div>
             <h4 class="font-bold mb-4">Über uns</h4>
             <ul class="space-y-2 text-sm text-gray-400">
-              <li><NuxtLink to="/about" class="hover:text-white">Das Team</NuxtLink></li>
-              <li><NuxtLink to="/pricing" class="hover:text-white">Preise</NuxtLink></li>
-              <li><NuxtLink to="/faq" class="hover:text-white">FAQ</NuxtLink></li>
-              <li><NuxtLink to="/blog" class="hover:text-white">Blog</NuxtLink></li>
+              <li><a href="/uber-uns/" class="hover:text-white">Das Team</a></li>
+              <li><a href="/preise/" class="hover:text-white">Preise</a></li>
+              <li><a href="/kontakt/" class="hover:text-white">Kontakt</a></li>
             </ul>
           </div>
 

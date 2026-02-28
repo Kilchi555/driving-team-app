@@ -103,13 +103,37 @@
     <section class="section-container">
       <h2 class="heading-md mb-12 text-center">Unsere Fahrschule-Kategorien</h2>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div v-for="cat in categories.slice(0, 4)" :key="cat.slug" class="bg-white border-2 border-gray-100 rounded-lg p-6 hover:shadow-lg transition">
-          <p class="text-5xl mb-4">{{ cat.icon }}</p>
-          <h3 class="font-bold text-xl mb-2">{{ cat.name }}</h3>
-          <p class="text-gray-600 text-sm">{{ cat.description }}</p>
-          <NuxtLink :to="`/categories/${cat.slug}`" class="text-blue-600 font-semibold mt-4 inline-block hover:underline">
+        <div class="bg-white border-2 border-gray-100 rounded-lg p-6 hover:shadow-lg transition">
+          <p class="text-5xl mb-4">🚗</p>
+          <h3 class="font-bold text-xl mb-2">Auto</h3>
+          <p class="text-gray-600 text-sm">Fahrausbildung Kategorie B</p>
+          <a href="/auto-fahrschule/" class="text-blue-600 font-semibold mt-4 inline-block hover:underline">
             Mehr erfahren →
-          </NuxtLink>
+          </a>
+        </div>
+        <div class="bg-white border-2 border-gray-100 rounded-lg p-6 hover:shadow-lg transition">
+          <p class="text-5xl mb-4">🏍️</p>
+          <h3 class="font-bold text-xl mb-2">Motorrad</h3>
+          <p class="text-gray-600 text-sm">Motorrad Fahrausbildung</p>
+          <a href="/motorrad-fahrschule/" class="text-blue-600 font-semibold mt-4 inline-block hover:underline">
+            Mehr erfahren →
+          </a>
+        </div>
+        <div class="bg-white border-2 border-gray-100 rounded-lg p-6 hover:shadow-lg transition">
+          <p class="text-5xl mb-4">🚚</p>
+          <h3 class="font-bold text-xl mb-2">Lastwagen</h3>
+          <p class="text-gray-600 text-sm">Lastwagen Fahrausbildung</p>
+          <a href="/lastwagen-fahrschule/" class="text-blue-600 font-semibold mt-4 inline-block hover:underline">
+            Mehr erfahren →
+          </a>
+        </div>
+        <div class="bg-white border-2 border-gray-100 rounded-lg p-6 hover:shadow-lg transition">
+          <p class="text-5xl mb-4">🚕</p>
+          <h3 class="font-bold text-xl mb-2">Taxi</h3>
+          <p class="text-gray-600 text-sm">Taxi/BPT Fahrausbildung</p>
+          <a href="/taxi-fahrschule/" class="text-blue-600 font-semibold mt-4 inline-block hover:underline">
+            Mehr erfahren →
+          </a>
         </div>
       </div>
     </section>

@@ -3,7 +3,7 @@
     <Head>
       <Title>Kontakt | Driving Team - Fahrschule Zürich</Title>
       <Meta name="description" content="Kontaktiere Driving Team - Fahrschule in Zürich. Telefon, Email, Öffnungszeiten und Standorte." />
-      <Link rel="canonical" href="https://drivingteam.ch/contact" />
+      <Link rel="canonical" href="https://drivingteam.ch/kontakt/" />
     </Head>
 
     <!-- Hero -->

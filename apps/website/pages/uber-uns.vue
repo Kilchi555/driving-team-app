@@ -2,8 +2,8 @@
   <div>
     <Head>
       <Title>Über uns | Driving Team - Fahrschule Zürich</Title>
-      <Meta name="description" content="Lerne unser Team von erfahrenen Fahrlehrern kennen. Moderne Fahrschule mit Leidenschaft für Fahrausbildung." />
-      <Link rel="canonical" href="https://drivingteam.ch/about" />
+      <Meta name="description" content="Lerne unser Team von erfahrenen Fahrlehrern kennen. Moderne Fahrschule mit Leidenschaft für Fahrausbildung in Zürich." />
+      <Link rel="canonical" href="https://drivingteam.ch/uber-uns/" />
     </Head>
 
     <!-- Hero -->
