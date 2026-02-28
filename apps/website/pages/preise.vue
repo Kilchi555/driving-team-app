@@ -1,9 +1,9 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Preise | Driving Team Zürich</Title>
-      <Meta name="description" content="Transparente Preise für Auto, Motorrad, Taxi & Lastwagen Fahrschule. Keine versteckten Gebühren, faire Preisgestaltung." />
-      <Link rel="canonical" href="https://drivingteam.ch/pricing" />
+      <Title>Preise | Driving Team Zürich</Title>
+      <Meta name="description" content="Fahrschule Preise - Transparente & faire Preisgestaltung. Keine versteckten Gebühren. Auto, Motorrad, Taxi & Lastwagen Fahrschule." />
+      <Link rel="canonical" href="https://drivingteam.ch/preise/" />
     </Head>
 
     <!-- Hero -->
