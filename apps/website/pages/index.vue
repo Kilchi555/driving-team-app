@@ -11,8 +11,29 @@
       <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
     </Head>
 
+    <style scoped>
+      @keyframes fadeOutHero {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      
+      @keyframes fadeInCategories {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+      
+      .hero-fade {
+        animation: fadeOutHero 0.8s ease-out 2s forwards;
+      }
+      
+      .categories-fade {
+        animation: fadeInCategories 0.8s ease-in 2s forwards;
+        opacity: 0;
+      }
+    </style>
+
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20">
+    <section class="hero-fade bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20">
       <div class="section-container">
         <div class="max-w-4xl mx-auto text-center">
           <h2 class="text-2xl md:text-3xl font-semibold mb-4 text-blue-200">Willkommen bei der Fahrschule Driving Team</h2>
@@ -26,7 +47,7 @@
     </section>
 
     <!-- Categories Section (MOVED TO TOP) -->
-    <section class="section-container py-20">
+    <section class="categories-fade section-container py-20">
       <h2 class="heading-md text-center mb-16">Die Kategorien unserer Fahrschule...</h2>
       
       <div class="grid md:grid-cols-4 gap-6 mb-12">
