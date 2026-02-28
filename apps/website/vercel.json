@@ -48,6 +48,36 @@
       "status": 301
     },
     {
+      "src": "^/kategorie-a/?$",
+      "destination": "/motorrad-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/kategorie-b/?$",
+      "destination": "/auto-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/kategorie-be/?$",
+      "destination": "/anhaenger-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/kategorie-c/?$",
+      "destination": "/lastwagen-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/kategorie-d/?$",
+      "destination": "/bus-fahrschule/",
+      "status": 301
+    },
+    {
+      "src": "^/kategorie-bpt/?$",
+      "destination": "/taxi-fahrschule/",
+      "status": 301
+    },
+    {
       "handle": "filesystem"
     },
     {
