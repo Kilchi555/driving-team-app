@@ -132,7 +132,7 @@
     <section class="section-container py-20 text-center">
       <h2 class="heading-md mb-8">Lerne unser Team kennen!</h2>
       <p class="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">Besuche uns in einem unserer modernen Fahrschulen oder buche direkt einen Termin online.</p>
-      <a href="/booking" class="btn-primary text-lg">
+      <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
         📅 Jetzt Termin buchen
       </a>
     </section>
@@ -140,5 +140,4 @@
 </template>
 
 <script setup lang="ts">
-// Über uns page
 </script>

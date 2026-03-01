@@ -10,7 +10,11 @@ export default {
     './error.vue',
   ],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        '1200': '1200px',
+      },
+    },
   },
   plugins: [],
 } satisfies Config

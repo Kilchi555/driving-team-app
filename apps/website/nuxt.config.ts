@@ -33,7 +33,7 @@ export default defineNuxtConfig({
 
   // Cache strategy
   routeRules: {
-    '/**': { cache: { maxAge: 60 * 10 } }, // 10 minutes default
+    '/**': { cache: false }, // No cache for hot reload
     '/': { prerender: true },
     '/api/**': { cache: false, swr: 3600 }, // stale-while-revalidate
   },
@@ -51,7 +51,7 @@ export default defineNuxtConfig({
   // Security headers
   nitro: {
     headers: {
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'SAMEORIGIN',
       'X-XSS-Protection': '1; mode=block',
