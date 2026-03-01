@@ -19,7 +19,7 @@
 
     <!-- Preise -->
     <section class="section-container py-16">
-      <div class="max-w-5xl mx-auto space-y-12">
+      <div class="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto space-y-12 md:space-y-0">
         
         <!-- Motorrad Kategorie A -->
         <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
