@@ -474,30 +474,6 @@
       </div>
     </section>
 
-    <!-- Warum Driving Team -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Warum die Fahrschule Driving Team?</h2>
-        
-        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
-          <div>
-            <h3 class="text-xl font-bold text-gray-900 mb-3">Modern, Flexibel, Individuell</h3>
-            <p class="text-gray-700">Kein langweiliges Pauken und starres Lernen beim Driving Team! Unser moderner Ansatz kombiniert interaktive Lernmethoden mit praktischer Erfahrung, um sicherzustellen, dass Du nicht nur die Regeln der Strasse verstehst, sondern auch selbstbewusst und kompetent fahren kannst. Wir passen den Unterricht an Dein Lerntempo an und sorgen dafür, dass Du dich während des gesamten Prozesses wohl fühlst.</p>
-          </div>
-          
-          <div>
-            <h3 class="text-xl font-bold text-gray-900 mb-3">Deine Fahrausbildung, Deine Regeln</h3>
-            <p class="text-gray-700">Wir verstehen, dass jeder Lernende einzigartig ist. Daher bieten wir flexible Unterrichtszeiten an, die sich an Deinen Zeitplan anpassen. Egal, ob Du Schüler, Berufstätiger oder Student bist, wir finden eine Lösung, die zu Dir passt. Unsere massgeschneiderte Herangehensweise stellt sicher, dass Du das Beste aus jeder Lektion herausholst.</p>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-lg p-8 border border-gray-200 max-w-3xl mx-auto">
-          <p class="text-gray-700 mb-6">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir ein Team von engagierten und freundlichen Instruktoren zusammengestellt, die nicht nur Fachwissen haben, sondern auch leidenschaftlich daran arbeiten, Deine Fahrfähigkeiten aufzubauen.</p>
-          <p class="text-gray-700">Egal, ob Du ein Fahranfänger bist, der gerade erst anfängt, oder ob Du bereits Erfahrung hast und Deine Fähigkeiten auffrischen möchtest – beim Driving Team findest Du die richtige Unterstützung. Unsere Fahrschule bietet eine freundliche, positive Atmosphäre, in der Du Dich wohl fühlst und bereit bist, Deine Fahrträume zu verwirklichen.</p>
-        </div>
-      </div>
-    </section>
-
     <!-- FAQ Section -->
     <section class="section-container py-16">
       <h2 class="heading-md mb-12 text-center">Die häufigsten Fragen & Antworten bezüglich der Fahrschule Driving Team</h2>

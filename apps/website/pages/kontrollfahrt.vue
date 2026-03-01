@@ -265,16 +265,6 @@
       </div>
     </section>
 
-    <!-- Warum Driving Team -->
-    <section class="section-container py-20">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="heading-md mb-6">Warum die Fahrschule Driving Team in Zürich?</h2>
-        <p class="text-gray-700 text-lg">
-          Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Fahrschule aufgebaut, in der Fahrlehrer:innen nicht nur Wissen vermitteln, sondern echte Begeisterung für das Fahren wecken.
-        </p>
-      </div>
-    </section>
-
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
