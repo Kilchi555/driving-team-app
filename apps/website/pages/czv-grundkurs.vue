@@ -1,73 +1,63 @@
 <template>
   <div>
     <Head>
-      <Title>CZV Grundkurs | Chauffeur Fahrerqualifikation</Title>
-      <Meta name="description" content="CZV Grundkurs beim Driving Team. Umfassende Fahrerqualifikation für professionelle Lenkerinnen und Lenker von Lastwagen und Bussen." />
-      <Meta name="keywords" content="CZV Grundkurs, Fahrerqualifikation, Lastwagen, Bus" />
+      <Title>CZV Grundkurs | Berufliche Weiterbildung | Driving Team</Title>
+      <Meta name="description" content="CZV Grundkurs für Berufschauffeure. Informationen zum obligatorischen Grundkurs nach der Chauffeurverordnung. Kontaktiere uns für Firmenkurse." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-grundkurs/" />
     </Head>
-    
-    <div class="min-h-screen bg-white">
-      <section class="bg-gradient-to-r from-orange-600 to-orange-700 py-16 px-4 md:px-8">
-        <div class="max-w-4xl mx-auto text-white text-center">
-          <h1 class="text-4xl md:text-5xl font-bold mb-4">CZV Grundkurs</h1>
-          <p class="text-xl mb-6">Fahrerqualifikation für berufliche Lenkerinnen und Lenker</p>
-          <a href="/booking?category=czv" class="inline-block bg-white text-orange-600 font-bold py-3 px-8 rounded-lg hover:bg-gray-100 transition">
-            Jetzt anmelden
+
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+      <div class="section-container">
+        <div class="max-w-3xl">
+          <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
+          <p class="text-xl text-blue-100 mb-8">Der CZV Grundkurs ist für Berufschauffeure obligatorisch und muss vor der ersten Berufsausübung absolviert werden. Kontaktiere uns für mehr Informationen.</p>
+          <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+            ✉️ Anfrage senden
           </a>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="max-w-4xl mx-auto py-16 px-4">
-        <h2 class="text-3xl font-bold mb-6">CZV Grundkurs</h2>
-        <p class="text-lg text-gray-700 mb-6">
-          Der CZV Grundkurs ist eine zwingende Schulung für alle Personen, die beruflich Lastwagen oder Busse lenken. Der Kurs vermittelt dir die notwendigen Fähigkeiten für sicheres und effizietes Fahren im Berufsverkehr.
-        </p>
+    <!-- Über den CZV Grundkurs -->
+    <section class="section-container">
+      <h2 class="heading-md mb-10 text-center">Was ist der CZV Grundkurs?</h2>
+      <div class="max-w-3xl mx-auto space-y-6 text-gray-700">
+        <p>Die Chauffeurverordnung (CZV) schreibt vor, dass Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus/Car) eine grundlegende Berufsbefähigung nachweisen müssen, bevor sie ihren Beruf ausüben dürfen.</p>
+        <p>Der CZV Grundkurs kann entweder als <strong>beschleunigter Kurs (140 Stunden)</strong> oder über die <strong>reguläre Berufsausbildung</strong> absolviert werden. Nach erfolgreichem Abschluss erhält man den Qualifikationsnachweis (95).</p>
+        <p>Anschliessend sind alle 5 Jahre <strong>5 Tage Weiterbildung</strong> zu absolvieren, um die Fahrerlaubnis aufrechtzuerhalten.</p>
+      </div>
+    </section>
 
-        <h3 class="text-2xl font-bold mt-10 mb-4">Kursinhalte</h3>
-        <ul class="list-disc pl-6 space-y-3 text-gray-700">
-          <li>Sichere und verantwortungsvolle Fahrweise</li>
-          <li>Verkehrssicherheit und Risikominderung</li>
-          <li>Fahrzeugtechnik und Wartung</li>
-          <li>Gesundheit und Sicherheit am Arbeitsplatz</li>
-          <li>Sozialvorschriften und Arbeitsrecht</li>
-          <li>Defensive Fahrweise und Notfalltraining</li>
-        </ul>
-
-        <h3 class="text-2xl font-bold mt-10 mb-4">Anforderungen</h3>
-        <p class="text-gray-700 mb-4">
-          Der CZV Grundkurs ist obligatorisch für Lenkerinnen und Lenker von Fahrzeugen über 3,5 Tonnen Gesamtgewicht. Die Schulung dauert mindestens 280 Stunden und ist unterteilt in mehrere Lernbereiche.
-        </p>
-
-        <h3 class="text-2xl font-bold mt-10 mb-4">Häufig gestellte Fragen</h3>
-        <div class="space-y-4">
-          <details class="border-b pb-4">
-            <summary class="font-bold cursor-pointer">Wer muss den CZV Grundkurs besuchen?</summary>
-            <p class="mt-3 text-gray-700">Alle Lenkerinnen und Lenker von Lastwagen und Bussen (über 3,5 Tonnen) müssen den CZV Grundkurs absolvieren.</p>
-          </details>
-          <details class="border-b pb-4">
-            <summary class="font-bold cursor-pointer">Wie lange dauert der Grundkurs?</summary>
-            <p class="mt-3 text-gray-700">Der CZV Grundkurs dauert mindestens 280 Stunden und wird typischerweise über mehrere Wochen verteilt.</p>
-          </details>
-          <details class="border-b pb-4">
-            <summary class="font-bold cursor-pointer">Welche Voraussetzungen gibt es?</summary>
-            <p class="mt-3 text-gray-700">Du benötigst einen gültigen Führerschein der Kategorie C oder D und solltest mindestens 18 Jahre alt sein.</p>
-          </details>
+    <!-- Details -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="heading-md mb-10 text-center">Details & Kontakt</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm space-y-4">
+          <div class="flex items-start gap-3"><span class="text-blue-600 text-xl">📋</span><div><p class="font-semibold text-gray-900">Anforderung</p><p class="text-gray-600">Pflicht für Berufschauffeure Kat. C/CE und D vor der Berufsausübung</p></div></div>
+          <div class="flex items-start gap-3"><span class="text-blue-600 text-xl">⏱️</span><div><p class="font-semibold text-gray-900">Dauer</p><p class="text-gray-600">140 Stunden (beschleunigter Kurs) oder reguläre Berufsausbildung</p></div></div>
+          <div class="flex items-start gap-3"><span class="text-blue-600 text-xl">🎓</span><div><p class="font-semibold text-gray-900">Abschluss</p><p class="text-gray-600">Qualifikationsnachweis (95) – schweizerisch und EU-weit anerkannt</p></div></div>
+          <div class="flex items-start gap-3"><span class="text-blue-600 text-xl">📧</span><div><p class="font-semibold text-gray-900">Kontakt</p><p class="text-gray-600">Für Informationen und Firmenkurse: <a href="mailto:info@drivingteam.ch" class="text-blue-600 hover:underline">info@drivingteam.ch</a></p></div></div>
         </div>
-
-        <div class="mt-12 bg-orange-50 p-8 rounded-lg">
-          <h3 class="text-2xl font-bold mb-4">Anmelden</h3>
-          <a href="/booking?category=czv" class="inline-block bg-orange-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-700 transition">
-            Kurs buchen
-          </a>
+        <div class="max-w-3xl mx-auto mt-6 bg-blue-50 rounded-lg p-5">
+          <p class="text-gray-700 text-sm">Für die <strong>CZV Weiterbildung</strong> (alle 5 Jahre, 5 Tage) bieten wir verschiedene Kurse an. <a href="/czv-weiterbildung" class="text-blue-600 hover:underline font-medium">Mehr zur CZV Weiterbildung →</a></p>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="bg-blue-600 text-white py-16">
+      <div class="section-container text-center">
+        <h2 class="heading-md mb-6 text-white">Interesse am CZV Grundkurs?</h2>
+        <p class="text-blue-100 mb-8">Kontaktiere uns für weitere Informationen oder Firmenkursanfragen.</p>
+        <div class="flex flex-col md:flex-row gap-4 justify-center">
+          <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">✉️ info@drivingteam.ch</a>
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">📞 +41 44 431 00 33</a>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
-<script setup>
-definePageMeta({
-  layout: 'default'
-})
+<script setup lang="ts">
 </script>

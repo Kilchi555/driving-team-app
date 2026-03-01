@@ -2,25 +2,25 @@
   <div class="min-h-screen flex flex-col bg-white">
     <!-- Premium Header/Navigation -->
     <header class="sticky top-0 bg-white z-50 shadow-md">
-      <nav class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
-        <NuxtLink to="/" class="flex items-center gap-2 group">
-          <div class="text-3xl">🏎️</div>
-          <div class="hidden sm:block">
-            <div class="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">Driving Team</div>
-            <div class="text-xs text-gray-500 -mt-1">Fahrschule Zürich</div>
-          </div>
+        <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0">
+          <img src="/images/logo.png" alt="Driving Team Logo" class="h-8 xl:h-12 w-auto object-contain" />
         </NuxtLink>
 
+        <!-- Desktop Menu Button (Hamburger) - Shown on screens below 1200px -->
+        <button v-if="!showDesktopMenu" @click="showDesktopMenu = true" class="1200:hidden text-gray-700 hover:text-blue-600 ml-auto">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+
         <!-- Main Navigation -->
-        <div class="hidden lg:flex gap-1 items-center">
+        <div class="hidden 1200:flex gap-2 items-center">
           <!-- Fahrschule Dropdown -->
           <div class="relative group">
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-blue-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Fahrschule
-              <svg class="w-4 h-4 transform group-hover:rotate-180 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-              </svg>
             </button>
             <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
               <a href="/fahrschule-zuerich/" class="block px-5 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition rounded-lg mx-2">📍 Fahrschule Zürich</a>
@@ -37,9 +37,6 @@
           <div class="relative group">
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-blue-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Kategorie
-              <svg class="w-4 h-4 transform group-hover:rotate-180 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-              </svg>
             </button>
             <div class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
               <a href="/auto-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition rounded-lg mx-2">🚗 Auto (B)</a>
@@ -58,9 +55,6 @@
           <div class="relative group">
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-blue-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Kurse
-              <svg class="w-4 h-4 transform group-hover:rotate-180 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-              </svg>
             </button>
             <div class="absolute left-0 mt-0 w-64 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
               <a href="/auto-theorie/" class="block px-5 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition rounded-lg mx-2 font-medium">📚 Auto Theorie</a>
@@ -88,9 +82,6 @@
           <div class="relative group">
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-blue-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Weiterbildungen
-              <svg class="w-4 h-4 transform group-hover:rotate-180 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-              </svg>
             </button>
             <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
               <a href="/czv-grundkurs/" class="block px-5 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition rounded-lg mx-2">📖 CZV Grundkurs</a>
@@ -107,12 +98,56 @@
         </div>
 
         <!-- CTA Button -->
-        <a href="tel:+41444310033" class="ml-4 hidden md:inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2.5 px-6 rounded-full transition shadow-lg hover:shadow-xl transform hover:scale-105">
-          <span>📞</span>
-          <span>+41 44 431 00 33</span>
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 lg:px-7 rounded-full transition shadow-lg hover:shadow-xl transform hover:scale-105 flex-shrink-0 ml-4 lg:ml-6">
+          <span>Termin Buchen</span>
         </a>
       </nav>
     </header>
+
+    <!-- Mobile Menu Panel -->
+    <div v-if="showDesktopMenu" class="1200:hidden bg-white border-b border-gray-100 w-full">
+      <div class="px-6 py-4">
+        <button @click="showDesktopMenu = false" class="absolute top-6 right-6 text-gray-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+
+        <!-- Mobile Menu Content -->
+        <nav class="space-y-4 mt-4">
+          <div>
+            <button class="font-medium text-gray-700 w-full text-left pb-2 border-b border-gray-200">Fahrschule</button>
+            <div class="pl-4 space-y-2 mt-2">
+              <a href="/fahrschule-zuerich/" class="block text-sm text-gray-600 hover:text-blue-600">📍 Zürich</a>
+              <a href="/fahrschule-lachen/" class="block text-sm text-gray-600 hover:text-blue-600">📍 Lachen</a>
+              <a href="/fahrschule-uster/" class="block text-sm text-gray-600 hover:text-blue-600">📍 Uster</a>
+              <a href="/fahrschule-stgallen/" class="block text-sm text-gray-600 hover:text-blue-600">📍 St.Gallen</a>
+            </div>
+          </div>
+
+          <div>
+            <button class="font-medium text-gray-700 w-full text-left pb-2 border-b border-gray-200">Kategorie</button>
+            <div class="pl-4 space-y-2 mt-2">
+              <a href="/auto-fahrschule/" class="block text-sm text-gray-600 hover:text-blue-600">Auto</a>
+              <a href="/motorrad-fahrschule/" class="block text-sm text-gray-600 hover:text-blue-600">Motorrad</a>
+              <a href="/lastwagen-fahrschule/" class="block text-sm text-gray-600 hover:text-blue-600">Lastwagen</a>
+              <a href="/taxi-fahrschule/" class="block text-sm text-gray-600 hover:text-blue-600">Taxi</a>
+              <a href="/kontrollfahrt/" class="block text-sm text-gray-600 hover:text-blue-600">Kontrollfahrt</a>
+            </div>
+          </div>
+
+          <div>
+            <a href="/uber-uns/" class="font-medium text-gray-700 block pb-2 border-b border-gray-200">Über uns</a>
+            <a href="/preise/" class="font-medium text-gray-700 block pb-2 border-b border-gray-200 mt-2">Preise</a>
+            <a href="/blog/" class="font-medium text-gray-700 block pb-2 border-b border-gray-200 mt-2">Blog</a>
+          </div>
+
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="block bg-blue-600 text-white rounded-full py-3 px-4 text-center font-bold mt-4 hover:bg-blue-700">
+            📅 Termin Buchen
+          </a>
+        </nav>
+      </div>
+    </div>
 
     <!-- Main Content -->
     <main class="flex-1">
@@ -190,5 +225,7 @@
 </template>
 
 <script setup lang="ts">
-// Default layout
+import { ref } from 'vue'
+
+const showDesktopMenu = ref(false)
 </script>

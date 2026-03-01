@@ -1,58 +1,110 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Kurse Schwyz | Fahrpersonal Weiterbildung</Title>
-      <Meta name="description" content="WAB Kurse in Schwyz für professionelle Weiterbildung von Fahrlehrerinnen und Fahrlehrern." />
-      <Meta name="keywords" content="WAB Kurse, Schwyz, Weiterbildung, Fahrlehrerin" />
+      <Title>WAB Kurse Schwyz | 1 Tag zu deinem definitiven Führerausweis | Driving Team</Title>
+      <Meta name="description" content="WAB Kurse im Kanton Schwyz bei Verkehrszentrum Tuggen AG in Tuggen SZ. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse-schwyz/" />
     </Head>
-    
-    <div class="min-h-screen bg-white">
-      <section class="bg-gradient-to-r from-green-600 to-green-700 py-16 px-4 md:px-8">
-        <div class="max-w-4xl mx-auto text-white text-center">
-          <h1 class="text-4xl md:text-5xl font-bold mb-4">WAB Kurse in Schwyz</h1>
-          <p class="text-xl mb-6">Weiterbildung für Ausbildnerinnen und Ausbildner</p>
-          <a href="/booking?category=wab" class="inline-block bg-white text-green-600 font-bold py-3 px-8 rounded-lg hover:bg-gray-100 transition">
-            Jetzt anmelden
+
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+      <div class="section-container">
+        <div class="max-w-3xl">
+          <h1 class="heading-lg text-white mb-6">WAB Kurse Schwyz</h1>
+          <p class="text-xl text-blue-100 mb-8">Die WAB Kurse im Kanton Schwyz werden in Tuggen SZ bei unserer Partnerfahrschule der Verkehrszentrum Tuggen AG durchgeführt. Die WAB Kurs Instruktor:innen zeigen euch mit viel Elan und Freude die wichtigsten Fahrtechniken und Manöver.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+            ✨ Jetzt Kurs anmelden
           </a>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="max-w-4xl mx-auto py-16 px-4">
-        <h2 class="text-3xl font-bold mb-6">WAB Kurse Schwyz</h2>
-        <p class="text-lg text-gray-700 mb-6">
-          Unsere WAB Kurse in Schwyz bieten professionelle Weiterbildung für Fahrlehrerinnen, Fahrlehrer und Ausbildnerinnen von Fahrlehrpersonen.
-        </p>
-
-        <h3 class="text-2xl font-bold mt-10 mb-4">Standort</h3>
-        <p class="text-gray-700 mb-4">
-          Der WAB Kurs in Schwyz findet in unserem modernen Ausbildungszentrum in Lachen statt, perfekt erreichbar für die Region Schwyz und Umgebung.
-        </p>
-
-        <h3 class="text-2xl font-bold mt-10 mb-4">Häufig gestellte Fragen</h3>
-        <div class="space-y-4">
-          <details class="border-b pb-4">
-            <summary class="font-bold cursor-pointer">Wo findet der Kurs statt?</summary>
-            <p class="mt-3 text-gray-700">Der Kurs findet in unserem Ausbildungszentrum in Lachen, Kanton Schwyz statt.</p>
-          </details>
-          <details class="border-b pb-4">
-            <summary class="font-bold cursor-pointer">Wie oft finden die Kurse statt?</summary>
-            <p class="mt-3 text-gray-700">WAB Kurse werden regelmäßig angeboten. Kontaktieren Sie uns für die aktuellen Termine.</p>
-          </details>
+    <!-- Details -->
+    <section class="section-container">
+      <h2 class="heading-md mb-10 text-center">WAB Kurse Schwyz in Tuggen/SZ</h2>
+      <div class="max-w-3xl mx-auto bg-gray-50 rounded-lg p-8 space-y-4">
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">📍</span>
+          <div>
+            <p class="font-semibold text-gray-900">Ort</p>
+            <p class="text-gray-600">Verkehrszentrum Tuggen AG, Betti 80, 8856 Tuggen</p>
+          </div>
         </div>
-
-        <div class="mt-12 bg-green-50 p-8 rounded-lg">
-          <a href="/booking?category=wab" class="inline-block bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition">
-            Anmelden
-          </a>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">💰</span>
+          <div>
+            <p class="font-semibold text-gray-900">Kosten</p>
+            <p class="text-gray-600">Ab CHF 290.- pro Kurs ohne Verpflegung. CHF 70.- Mietfahrzeug pro Tag.</p>
+          </div>
         </div>
-      </section>
-    </div>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">💳</span>
+          <div>
+            <p class="font-semibold text-gray-900">Verrechnung</p>
+            <p class="text-gray-600">Du bekommst eine Rechnung. Bitte begleiche diese bis 3 Tage vor Kursbeginn.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">🎫</span>
+          <div>
+            <p class="font-semibold text-gray-900">Gutscheine</p>
+            <p class="text-gray-600">Werden dir bar am Kurstag ausbezahlt.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">🗣️</span>
+          <div>
+            <p class="font-semibold text-gray-900">Sprachkenntnisse</p>
+            <p class="text-gray-600">Deutschkenntnisse vorausgesetzt.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">🚗</span>
+          <div>
+            <p class="font-semibold text-gray-900">Mitnehmen</p>
+            <p class="text-gray-600">Führerausweis, Fahrzeug in betriebssicherem Zustand (jeder Teilnehmer braucht ein Fahrzeug).</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-600 text-xl">❌</span>
+          <div>
+            <p class="font-semibold text-gray-900">Abmeldung/Umbuchungen</p>
+            <p class="text-gray-600">Gemäss AGB – spätestens 5 Arbeitstage vor Kursstart an info@verkehrszentrum.ch.</p>
+          </div>
+        </div>
+      </div>
+      <div class="max-w-3xl mx-auto mt-8 bg-blue-50 rounded-lg p-6 text-center">
+        <p class="text-gray-700 mb-4">Bei Fragen einfach direkt kontaktieren:</p>
+        <div class="flex flex-col md:flex-row gap-4 justify-center">
+          <a href="tel:0554603333" class="font-semibold text-blue-600 hover:underline">📞 055 460 33 33</a>
+          <a href="mailto:info@verkehrszentrum.ch" class="font-semibold text-blue-600 hover:underline">✉️ info@verkehrszentrum.ch</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Link zu Zürich -->
+    <section class="bg-gray-50 py-12">
+      <div class="section-container text-center">
+        <h2 class="text-xl font-bold mb-4">WAB Kurse auch in Zürich</h2>
+        <a href="/wab-kurse-zuerich" class="btn-primary">Zu den WAB Kursen Zürich →</a>
+      </div>
+    </section>
+
+    <!-- Unsere Gebiete -->
+    <section class="section-container">
+      <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
+      <div class="flex flex-wrap justify-center gap-3 mb-12">
+        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Uster</a>
+        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Dietikon</a>
+      </div>
+    </section>
   </div>
 </template>
 
-<script setup>
-definePageMeta({
-  layout: 'default'
-})
+<script setup lang="ts">
 </script>

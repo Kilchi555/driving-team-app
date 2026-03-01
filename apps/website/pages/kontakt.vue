@@ -20,10 +20,11 @@
         <!-- Phone -->
         <div class="bg-white border-2 border-gray-200 rounded-lg p-8 text-center hover:shadow-lg transition">
           <p class="text-5xl mb-4">📞</p>
-          <h3 class="heading-sm mb-4">Telefon</h3>
+          <h3 class="heading-sm mb-4">Telefon Zürich</h3>
           <a href="tel:+41444310033" class="text-blue-600 font-bold text-lg hover:underline">
             +41 44 431 00 33
           </a>
+          <p class="text-gray-500 text-sm mt-2">Lachen: +41 55 442 00 80</p>
         </div>
 
         <!-- Email -->
@@ -40,9 +41,8 @@
           <p class="text-5xl mb-4">⏰</p>
           <h3 class="heading-sm mb-4">Öffnungszeiten</h3>
           <p class="text-gray-700 text-sm">
-            Mo–Fr: 08:00–18:00<br/>
-            Sa: 09:00–12:00<br/>
-            So: Geschlossen
+            Mo–Fr: 08:00–12:00 / 13:00–17:00<br/>
+            Sa & So: Geschlossen
           </p>
         </div>
       </div>
@@ -56,13 +56,12 @@
         <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <!-- Zürich -->
           <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
-            <h3 class="heading-sm mb-6">🏢 Zürich-Altstetten</h3>
+            <h3 class="heading-sm mb-6">🏢 Fahrschule Zürich</h3>
             <div class="space-y-4 text-gray-700">
               <p>
                 <strong>Adresse:</strong><br/>
-                Fahrschule Driving Team<br/>
-                Hauptstrasse 123<br/>
-                8000 Zürich
+                Baslerstrasse 145<br/>
+                8048 Zürich-Altstetten
               </p>
               <p>
                 <strong>Telefon:</strong><br/>
@@ -70,28 +69,29 @@
               </p>
               <p>
                 <strong>Erreichbarkeit:</strong><br/>
-                Mit öffentlichen Verkehrsmitteln ideal erreichbar
+                2 Gehminuten vom Bahnhof Altstetten.<br/>
+                S3, S5, S12, S14, S19, S42 / Bus 31, 78, 80, 89 / Tram 2
               </p>
             </div>
           </div>
 
           <!-- Lachen -->
           <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
-            <h3 class="heading-sm mb-6">🏢 Lachen/SZ</h3>
+            <h3 class="heading-sm mb-6">🏢 Fahrschule Lachen</h3>
             <div class="space-y-4 text-gray-700">
               <p>
                 <strong>Adresse:</strong><br/>
-                Fahrschule Driving Team<br/>
-                Zentrum 45<br/>
-                8853 Lachen SZ
+                Herrengasse 17<br/>
+                8853 Lachen/SZ
               </p>
               <p>
                 <strong>Telefon:</strong><br/>
-                <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a>
+                <a href="tel:+41554420080" class="text-blue-600 hover:underline">+41 55 442 00 80</a>
               </p>
               <p>
-                <strong>Gebiet:</strong><br/>
-                Fahrstunden bis nach Zug und Schwyz
+                <strong>Erreichbarkeit:</strong><br/>
+                3 Gehminuten vom Bahnhof Lachen.<br/>
+                S2 & S25 / Bus 522, 524 & 525
               </p>
             </div>
           </div>
@@ -134,10 +134,42 @@
       </div>
     </section>
 
-    <!-- FAQ -->
+    <!-- Lehrmittel -->
     <section class="bg-gray-50 py-20">
       <div class="section-container">
-        <h2 class="heading-md text-center mb-16">Häufige Fragen zum Kontakt</h2>
+        <h2 class="heading-md text-center mb-4">Lehrmittel</h2>
+        <p class="text-center text-gray-600 mb-12 max-w-2xl mx-auto">Alle Lehrmittel können bei uns direkt erworben werden.</p>
+        <div class="max-w-3xl mx-auto overflow-x-auto">
+          <table class="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+            <thead>
+              <tr class="bg-blue-600 text-white">
+                <th class="px-6 py-4 text-left font-semibold">Lehrmittel</th>
+                <th class="px-6 py-4 text-right font-semibold">Preis</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-gray-800">Theorieprüfungsbuch «Check the road» mit App-Lizenz</td>
+                <td class="px-6 py-4 text-right text-gray-800 font-semibold">CHF 42.–</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-gray-800">App-Lizenz (1 Jahr, kein Buch)</td>
+                <td class="px-6 py-4 text-right text-gray-800 font-semibold">CHF 26.–</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-gray-800">Lernfahrausweis (Anmeldegebühr)</td>
+                <td class="px-6 py-4 text-right text-gray-800 font-semibold">CHF 30.–</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section-container py-20">
+      <div class="section-container">
+        <h2 class="heading-md text-center mb-16">Häufige Fragen</h2>
         
         <div class="max-w-3xl mx-auto space-y-4">
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -158,10 +190,18 @@
 
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-              Bietet ihr auch Online-Konsultationen an?
+              Bietet ihr auch telefonische Beratung an?
               <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Ja, wir bieten kostenlose Beratungen per Telefon oder Videoanruf an. Reserviere einen Termin und wir rufen dich an!</p>
+            <p class="text-gray-600 mt-4">Ja, wir bieten kostenlose Beratungen per Telefon an. Ruf uns einfach an unter <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a> und wir helfen dir gerne weiter.</p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Welcher Standort ist für mich der richtige?
+              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-600 mt-4">Das hängt davon ab, wo du wohnst oder arbeitest. Unser Hauptstandort in Zürich-Altstetten ist gut mit dem ÖV erreichbar. Unser Standort in Lachen/SZ deckt die Region March, Schwyz und Zug ab. Kontaktiere uns und wir finden gemeinsam den besten Standort für dich.</p>
           </details>
         </div>
       </div>
@@ -171,7 +211,7 @@
     <section class="bg-blue-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit, deine Fahrausbildung zu starten?</h2>
-        <a href="/booking" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
           📅 Jetzt Termin buchen
         </a>
       </div>

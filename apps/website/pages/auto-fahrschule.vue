@@ -14,7 +14,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Auto Fahrschule Kategorie B</h1>
           <p class="text-xl text-blue-100 mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
-          <a href="/booking?category=auto" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -57,16 +57,17 @@
         </li>
       </ul>
       <div class="text-center">
-        <a href="/booking?category=auto" class="btn-primary">
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary">
           Termin reservieren
         </a>
       </div>
+      <p class="text-center text-gray-600 mt-6">Starte jetzt dein Abenteuer Auto bei uns in der Auto Fahrschule! Wir freuen uns darauf, dich auf deinem Weg zum Auto Führerschein der Kategorie B zu begleiten.</p>
     </section>
 
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Weg zur Autoprüfung - In 6 Schritten zur Autoprüfung</h2>
+        <h2 class="heading-md mb-12 text-center">Weg zur Autoprüfung - In 7 Schritten zur Autoprüfung</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
           <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
@@ -78,6 +79,7 @@
                 <h3 class="heading-sm mb-2">Nothelferkurs</h3>
                 <p class="text-gray-600 mb-2">Dein Start zum Führerschein: Gesuch und Nothelferkurs</p>
                 <p class="text-sm text-gray-600">Der erste wichtige Schritt auf dem Weg zu deinem Führerschein ist die Einreichung des Lernfahrgesuchs für die Kategorie B (Auto) beim Strassenverkehrsamt. Parallel dazu musst du den Nothelferkurs absolvieren.</p>
+                <p class="text-sm text-gray-500 mt-2 italic">Gut zu wissen: Falls du bereits einen Nothelferausweis besitzt, ist dieser ab dem Ausstellungsdatum sechs Jahre gültig. Bist du schon im Besitz eines gültigen Lernfahr- oder Führerscheins einer anderen Kategorie, entfällt die Pflicht, den Nothelferkurs erneut zu besuchen.</p>
               </div>
             </div>
           </div>
@@ -90,7 +92,8 @@
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lernfahrgesuch Auto</h3>
                 <p class="text-gray-600 mb-2">Schritt Zwei: Dein Lernfahrgesuch einreichen und Sehtest machen</p>
-                <p class="text-sm text-gray-600">Als nächsten Schritt für deinen Führerschein musst du das Lernfahrgesuch vollständig und wahrheitsgetreu ausfüllen. Achte darauf, die Kategorie B (Auto) anzukreuzen.</p>
+                <p class="text-sm text-gray-600">Als nächsten Schritt für deinen Führerschein musst du das Lernfahrgesuch vollständig und wahrheitsgetreu ausfüllen. Achte darauf, die Kategorie B (Auto) anzukreuzen. Mit diesem Formular gehst du dann zum Strassenverkehrsamt. Danach bringst du das ausgefüllte Anmeldeformular zusammen mit deinem Nothilfeausweis, einem aktuellen farbigen Passfoto und deinem gültigen ID/Pass persönlich zum Strassenverkehrsamt.</p>
+                <p class="text-sm text-gray-500 mt-2 italic">Wichtig: Du kannst das Gesuch frühestens zwei Monate vor deinem 17. Geburtstag stellen.</p>
               </div>
             </div>
           </div>
@@ -103,7 +106,7 @@
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Auto Theorieprüfung</h3>
                 <p class="text-gray-600 mb-2">Deine Theorieprüfung für den Führerschein</p>
-                <p class="text-sm text-gray-600">Nachdem du dein Lernfahrgesuch eingereicht hast, erhältst du eine Anmeldebestätigung mit einem PIN-Code. Dieser Code ist dein Schlüssel zur Anmeldung für die Theorieprüfung.</p>
+                <p class="text-sm text-gray-600">Nachdem du dein Lernfahrgesuch eingereicht hast, erhältst du eine Anmeldebestätigung mit einem PIN-Code. Dieser Code ist dein Schlüssel zur Anmeldung für die Theorieprüfung – ein wichtiger Meilenstein auf dem Weg zu deinem Führerschein. Um dich optimal vorzubereiten, empfehlen wir dir, mit einem Theoriebuch zu lernen und anschliessend die Fragen mit einer Lern-CD oder App zu üben. Sobald du die Theorieprüfung erfolgreich bestanden hast, erhältst du den Lernfahrausweis für die Kategorie B (Auto), welcher 24 Monate gültig ist.</p>
               </div>
             </div>
           </div>
@@ -116,7 +119,8 @@
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Verkehrskunde VKU</h3>
                 <p class="text-gray-600 mb-2">Der Verkehrskundekurs (VKU): Dein Weg zur praktischen Prüfung</p>
-                <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundekurs (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet.</p>
+                <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundekurs (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den Verkehrskundekurs (VKU) gleich zu Beginn deiner praktischen Fahrausbildung zu besuchen. So kannst du das erlernte Wissen direkt in deinen Autofahrstunden umsetzen.</p>
+                <p class="text-sm text-gray-500 mt-2 italic">2 Kursteile à 4 Stunden</p>
               </div>
             </div>
           </div>
@@ -129,7 +133,7 @@
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Auto Fahrstunden</h3>
                 <p class="text-gray-600 mb-2">Die ersten Fahrstunden mit deinem Fahrlehrer</p>
-                <p class="text-sm text-gray-600">Wir empfehlen dir dringend, die ersten Autofahrstunden auf jeden Fall bei einem Fahrlehrer oder einer Fahrlehrerin zu absolvieren.</p>
+                <p class="text-sm text-gray-600">Wir empfehlen dir dringend, die ersten Autofahrstunden auf jeden Fall bei einem Fahrlehrer oder einer Fahrlehrerin zu absolvieren. Falsch erlernte Automatismen lassen sich später nur mit erhöhtem Zeit- und Kostenaufwand korrigieren. Wenn du deinen Lernfahrausweis mit 17, 18 oder 19 Jahren beantragt hast, darfst du frühestens ein Jahr nach Gültigkeitsbeginn deines Lernfahrausweises zur Autofahrprüfung antreten.</p>
               </div>
             </div>
           </div>
@@ -142,14 +146,32 @@
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Praktische Autofahrprüfung</h3>
                 <p class="text-gray-600 mb-2">Erfolgreich zur praktischen Führerscheinprüfung</p>
-                <p class="text-sm text-gray-600">Um die praktische Autofahrprüfung zu bestehen, braucht es heute wegen des erhöhten Verkehrsaufkommens mehr denn je. Trotz dieser hohen Anforderungen hast du mit seriösen und umfangreichen Autofahrstunden gute Chancen.</p>
+                <p class="text-sm text-gray-600">Um die praktische Autofahrprüfung zu bestehen, braucht es heute wegen des erhöhten Verkehrsaufkommens mehr denn je. Trotz dieser hohen Anforderungen hast du mit seriösen und umfangreichen Autofahrstunden gute Chancen. Es ist stets unser Ziel, dass unsere Fahrschüler:innen so wenig Fahrstunden wie möglich machen müssen und gleichzeitig so viele Fahrstunden wie nötig. Nach bestandener Autofahrprüfung erhältst du einen auf drei Jahre befristeten Führerschein auf Probe.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+            <div class="flex items-start gap-6">
+              <div class="flex-shrink-0">
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">7</div>
+              </div>
+              <div class="flex-1">
+                <h3 class="heading-sm mb-2">WAB Kurs</h3>
+                <p class="text-gray-600 mb-2">Nach dem Führerschein: Weiterbildung und unbefristeter Ausweis</p>
+                <p class="text-sm text-gray-600">Wie überall im Leben hat man auch beim Autofahren nie ausgelernt. In den ersten 12 Monaten nach deiner praktischen Fahrprüfung musst du den obligatorischen WAB Kurs (Weiterbildungskurs) absolvieren, der zwei Kurstage umfasst. Nach drei Jahren Probezeit, und sofern du alle Auflagen erfüllt hast, kannst du dann den unbefristeten Führerschein beantragen.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="/wab-kurse-zuerich/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">WAB Kurse Zürich</a>
+                  <a href="/wab-kurse-schwyz/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">WAB Kurse Schwyz</a>
+                  <a href="/wab-course-english/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">WAB Course English</a>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="text-center mt-12">
-          <a href="/booking?category=auto" class="btn-primary text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
             🚀 Jetzt starten!
           </a>
         </div>
@@ -197,7 +219,8 @@
     <section class="bg-gray-50 py-16">
       <div class="section-container">
         <h2 class="heading-md mb-12 text-center">Warum die Fahrschule Driving Team ?</h2>
-        <div class="grid md:grid-cols-3 gap-8">
+        <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Fahrschule aufgebaut, die nicht nur Wissen vermittelt, sondern auch Freude am Fahren weckt.</p>
+        <div class="grid md:grid-cols-3 gap-8 mb-12">
           <div class="bg-white rounded-lg p-8 shadow-sm">
             <p class="text-4xl mb-4">🏆</p>
             <h3 class="font-bold text-lg mb-2">Coole Fahrschule</h3>
@@ -214,6 +237,18 @@
             <p class="text-gray-600">Wir legen hohen Wert auf deine Sicherheit und versuchen, dich bestmöglich auf alle Situationen vorzubereiten.</p>
           </div>
         </div>
+
+        <!-- Unsere Gebiete -->
+        <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
+        <div class="flex flex-wrap justify-center gap-3">
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Uster</a>
+          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Aargau</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule St.Gallen</a>
+        </div>
       </div>
     </section>
 
@@ -222,7 +257,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit zu starten?</h2>
         <p class="text-xl text-blue-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
-        <a href="/booking?category=auto" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
           📅 Termin buchen
         </a>
       </div>
