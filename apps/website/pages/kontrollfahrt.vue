@@ -1,23 +1,23 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Kontrollfahrt Zürich | In 3 Schritten zur Kontrollfahrt | Driving Team</Title>
       <Meta name="description" content="Kontrollfahrt in Zürich – professionelle Vorbereitung mit Driving Team. Individuelle Ausbildung, entspanntes Lernen, beste Vorbereitung für die Kontrollfahrt." />
       <Meta name="keywords" content="Kontrollfahrt Zürich, Kontrollfahrt Vorbereitung, Fahrtüchtigkeit, Führerausweis umschreiben, Driving Team" />
       <Link rel="canonical" href="https://drivingteam.ch/kontrollfahrt/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/kontrollfahrt.webp" alt="Kontrollfahrt" class="absolute inset-0 w-full h-full object-cover opacity-20" />
       <div class="section-container text-center relative z-10">
         <h1 class="heading-lg text-white mb-6">Kontrollfahrt</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="#anmeldung" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="#anmeldung" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-secondary border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-secondary border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             +41 44 431 00 33
           </a>
         </div>
@@ -33,28 +33,28 @@
         </p>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="font-bold text-blue-800 mb-2">Individuelle Ausbildung</h3>
+          <div class="bg-primary-50 rounded-lg p-6">
+            <h3 class="font-bold text-primary-800 mb-2">Individuelle Ausbildung</h3>
             <p class="text-gray-700 text-sm">Unsere Fahrschule passt jede Fahrstunde auf Dich an, so entwickelst Du schnell zur sicheren Fahrzeuglenkerin bzw. zum sicheren Fahrzeuglenker im schweizerischen Strassenverkehr.</p>
           </div>
-          <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="font-bold text-blue-800 mb-2">Entspanntes Lernen</h3>
+          <div class="bg-primary-50 rounded-lg p-6">
+            <h3 class="font-bold text-primary-800 mb-2">Entspanntes Lernen</h3>
             <p class="text-gray-700 text-sm">Angenehme Lernatmosphäre im und um das Fahrzeug. Unsere Fahrschule kombiniert das nötige Mass an Seriosität mit einer Prise Lockerheit.</p>
           </div>
-          <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="font-bold text-blue-800 mb-2">Bestmögliche Vorbereitung</h3>
+          <div class="bg-primary-50 rounded-lg p-6">
+            <h3 class="font-bold text-primary-800 mb-2">Bestmögliche Vorbereitung</h3>
             <p class="text-gray-700 text-sm">Mit uns bestehst du die Kontrollfahrt. Mit einer soliden Fahrausbildung begeistern wir die Verkehrsexpert:innen.</p>
           </div>
-          <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="font-bold text-blue-800 mb-2">Solide Grundlage</h3>
+          <div class="bg-primary-50 rounded-lg p-6">
+            <h3 class="font-bold text-primary-800 mb-2">Solide Grundlage</h3>
             <p class="text-gray-700 text-sm">Unser Hauptziel ist es, Dich für ein unfallfreies Leben als Autofahrer:in vorzubereiten und dafür ist jede einzelne Fahrstunde sinnvoll investiert.</p>
           </div>
-          <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="font-bold text-blue-800 mb-2">Detaillierter Ausbildungsplan</h3>
+          <div class="bg-primary-50 rounded-lg p-6">
+            <h3 class="font-bold text-primary-800 mb-2">Detaillierter Ausbildungsplan</h3>
             <p class="text-gray-700 text-sm">Wir gehen nach einem methodischen und didaktischen Lehrplan vor, um so Dir eine effiziente Fahrausbildung zu ermöglichen.</p>
           </div>
-          <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="font-bold text-blue-800 mb-2">Rechnung per Mail</h3>
+          <div class="bg-primary-50 rounded-lg p-6">
+            <h3 class="font-bold text-primary-800 mb-2">Rechnung per Mail</h3>
             <p class="text-gray-700 text-sm">Zahlbar innert 14 Tagen bequem per QR-Code.</p>
           </div>
         </div>
@@ -85,23 +85,23 @@
 
         <div class="space-y-4">
           <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="font-bold text-lg text-blue-800 mb-3">Vorschulung</h3>
+            <h3 class="font-bold text-lg text-primary-800 mb-3">Vorschulung</h3>
             <p class="text-gray-600">Vorbereitung im Stand, Blick- und Lenktechnik, Gas, Bremsen, Schaltung (Manuell / Automatik), Blicksystematik, Armaturen, Fahrzeugsicherung</p>
           </div>
           <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="font-bold text-lg text-blue-800 mb-3">Grundschulung</h3>
+            <h3 class="font-bold text-lg text-primary-800 mb-3">Grundschulung</h3>
             <p class="text-gray-600">Berganfahren, Einspuren, Abbiegen, Mehrfachblick, Kreisverkehr, Lichtsignale, Lückenbenützung</p>
           </div>
           <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="font-bold text-lg text-blue-800 mb-3">Hauptschulung</h3>
+            <h3 class="font-bold text-lg text-primary-800 mb-3">Hauptschulung</h3>
             <p class="text-gray-600">Rechtsvortritt, Stop/KeinVortritt, Bus/Tram, Bergstrassen, Stadtverkehr</p>
           </div>
           <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="font-bold text-lg text-blue-800 mb-3">Perfektionsschulung</h3>
+            <h3 class="font-bold text-lg text-primary-800 mb-3">Perfektionsschulung</h3>
             <p class="text-gray-600">Wegweiser/Signalisation, Autobahn, Selbständiges Fahren</p>
           </div>
           <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="font-bold text-lg text-blue-800 mb-3">Manöver</h3>
+            <h3 class="font-bold text-lg text-primary-800 mb-3">Manöver</h3>
             <p class="text-gray-600">Fahrzeugsicherung, Rückwärtsfahren, Wenden, Rechtwinklig & seitwärts parkieren, Schnelle sichere Bremsung</p>
           </div>
         </div>
@@ -114,7 +114,7 @@
         <h2 class="heading-md text-center mb-12">Unsere Preise</h2>
         <div class="max-w-2xl mx-auto">
           <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-            <h3 class="text-xl font-bold mb-6 text-center text-blue-800">Einzellektion</h3>
+            <h3 class="text-xl font-bold mb-6 text-center text-primary-800">Einzellektion</h3>
             <ul class="space-y-3 mb-8">
               <li class="flex items-center gap-2 text-gray-700">
                 <span class="text-green-600 font-bold">✓</span>
@@ -147,22 +147,22 @@
         <div class="bg-white border border-gray-200 rounded-lg p-8">
           <form class="space-y-6">
             <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
             <div class="grid md:grid-cols-3 gap-4">
-              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
             <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
-            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Prüfungsort</label>
-              <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required>
+              <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required>
                 <option value="">Bitte auswählen</option>
                 <option>Wettingen</option>
                 <option>Albisgütli</option>
@@ -174,10 +174,10 @@
                 <option>noch offen</option>
               </select>
             </div>
-            <textarea placeholder="Weitere Angaben, Wunschabholort, bevorzugte Zeitfenster, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"></textarea>
+            <textarea placeholder="Weitere Angaben, Wunschabholort, bevorzugte Zeitfenster, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
             <div class="flex items-center gap-3">
               <input type="checkbox" id="agb" class="w-4 h-4" required />
-              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-blue-600 hover:underline">AGB's</a></label>
+              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-primary-600 hover:underline">AGB's</a></label>
             </div>
             <button type="submit" class="btn-primary w-full text-lg">
               Fahrstunden anfragen
@@ -276,10 +276,10 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Fahrstunden für die Kontrollfahrt buchen</h2>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>
       </div>

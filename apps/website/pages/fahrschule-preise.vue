@@ -1,18 +1,20 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Fahrstunden Preise mit 1 Klick | Fahrschule Driving Team</Title>
       <Meta name="description" content="Alle Preise unserer Fahrschule auf einen Blick. Transparente Fahrstunden-Preise für Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich und Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-preise/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 relative overflow-hidden">
+      <img src="/images/categories/auto-fahrschule.webp" alt="Preise" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-4">Unsere Preise</h1>
-          <p class="text-xl text-blue-100 mb-2">Fahrschule Driving Team</p>
-          <p class="text-blue-200 text-sm">Preisänderungen und Irrtümer vorbehalten. Eine Lektion dauert 45 Minuten. Preise in CHF, ohne externe Kosten wie Sehtest, Lernfahrgesuch, Prüfungsgebühr etc.</p>
+          <p class="text-xl text-primary-100 mb-2">Fahrschule Driving Team</p>
+          <p class="text-primary-200 text-sm">Preisänderungen und Irrtümer vorbehalten. Eine Lektion dauert 45 Minuten. Preise in CHF, ohne externe Kosten wie Sehtest, Lernfahrgesuch, Prüfungsgebühr etc.</p>
         </div>
       </div>
     </section>
@@ -30,28 +32,28 @@
                 <p class="font-semibold text-gray-900">Motorrad Einzellektion 45min</p>
                 <p class="text-gray-600 text-sm">Einzellektionen sind gut wenn man ein spezifisches Thema üben möchte.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 95.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 95.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorrad Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich Doppellektionen zu buchen, da so 2-3 Themen geübt werden können.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">In dieser Kategorie verrechnen wir keine Admin- und Versicherungspauschale, da die Fahrzeuge privat versichert sind und die Prüfungstermine von den Fahrschüler:innen organisiert werden.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 0.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 0.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit Fahrschul-Motorrad</p>
                 <p class="text-gray-600 text-sm">Nur Doppellektionen und nur Fahrlektionen vor dem Grundkurs.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 115.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 115.–</p>
             </div>
           </div>
         </div>
@@ -65,35 +67,35 @@
                 <p class="font-semibold text-gray-900">Auto Einzellektion 45min</p>
                 <p class="text-gray-600 text-sm">Einzellektionen sind gut wenn man ein spezifisches Thema üben möchte.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 95.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 95.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Auto Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich Doppellektionen zu buchen, da so 2-3 Themen geübt werden können.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Admin- und Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 120.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 120.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit privatem Auto</p>
                 <p class="text-gray-600 text-sm">Nur wenn der Führerausweis bereits vorhanden ist.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 85.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 85.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 135min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 285.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 285.–</p>
             </div>
           </div>
         </div>
@@ -107,35 +109,35 @@
                 <p class="font-semibold text-gray-900">Anhänger Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich Doppellektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 240.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 240.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 120.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 120.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Mit eigenem Zugfahrzeug</p>
                 <p class="text-gray-600 text-sm">Das Zugfahrzeug muss ca. gleich breit wie unser Anhänger sein.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 100.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 100.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Mit ein eigener Kombination</p>
                 <p class="text-gray-600 text-sm">Die Anhängerkombination muss den Prüfungsanforderungen entsprechen und betriebssicher sein.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 90.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 90.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 135min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 360.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 360.–</p>
             </div>
           </div>
         </div>
@@ -149,35 +151,35 @@
                 <p class="font-semibold text-gray-900">Motorwagen Einzellektion 45min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 150.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 150.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorwagen Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 300.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 300.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 160.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 160.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit eigenem Fahrzeug</p>
                 <p class="text-gray-600 text-sm">Gesamtgewicht mehr als 4t, mindestens 5m lang und einem geschlossenen Aufbau, der so gross ist wie die Führerkabine.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 130.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 130.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 195min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 649.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 649.–</p>
             </div>
           </div>
         </div>
@@ -191,35 +193,35 @@
                 <p class="font-semibold text-gray-900">Lastwagen Einzellektion 45min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 170.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 170.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Lastwagen Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 340.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 340.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 200.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 200.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit eigenem Fahrzeug</p>
                 <p class="text-gray-600 text-sm">Betriebsgewicht mehr als 12t, mindestens 8m lang und 2.30m breit und einem geschlossenen Aufbau, der so gross ist wie die Führerkabine.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 150.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 150.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 195min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 737.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 737.–</p>
             </div>
           </div>
         </div>
@@ -233,35 +235,35 @@
                 <p class="font-semibold text-gray-900">Gesellschaftswagen 45min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 150.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 150.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Gesellschaftswagen 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 300.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 300.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 160.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 160.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit eigenem Fahrzeug</p>
                 <p class="text-gray-600 text-sm">Ein Gesellschaftswagen mit einer Länge von mindestens 10 m und einer Breite von mindestens 2,30 m.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 130.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 130.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 195min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 649.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 649.–</p>
             </div>
           </div>
         </div>
@@ -275,35 +277,35 @@
                 <p class="font-semibold text-gray-900">Bus Einzellektion 45min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 200.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 200.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Bus Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich 3er Lektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 400.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 400.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 300.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 300.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit eigenem Fahrzeug</p>
                 <p class="text-gray-600 text-sm">Ein Gesellschaftswagen mit einer Länge von mindestens 10 m und einer Breite von mindestens 2,30 m.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 180.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 180.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 195min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 1066.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 1066.–</p>
             </div>
           </div>
         </div>
@@ -317,35 +319,35 @@
                 <p class="font-semibold text-gray-900">Motorboot Einzellektion 45min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich Doppellektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 95.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 95.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorboot Doppellektion 90min</p>
                 <p class="text-gray-600 text-sm">Wir empfehlen grundsätzlich Doppellektionen zu buchen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Versicherungspauschale</p>
                 <p class="text-gray-600 text-sm">Einmalig für die ganze Ausbildung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 120.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 120.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Fahrlektion mit eigenem Motorboot</p>
                 <p class="text-gray-600 text-sm">Das Motorboot muss eingelöst, betriebssicher und auf dem oberen Zürichsee sein.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 85.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 85.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
                 <p class="text-gray-600 text-sm">Wir reservieren uns am Prüfungstag 150min für dich.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 317.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 317.–</p>
             </div>
           </div>
         </div>
@@ -359,63 +361,63 @@
                 <p class="font-semibold text-gray-900">Nothelferkurs inkl. Kursbestätigung</p>
                 <p class="text-gray-600 text-sm">Der Nothelferkurs dauert Total 10 Stunden.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 99.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 99.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Theorie Einzellektion à 45min</p>
                 <p class="text-gray-600 text-sm">Persönlich vor Ort in einem unserer Fahrschullokalen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 85.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 85.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Online Theorie-Kurs</p>
                 <p class="text-gray-600 text-sm">Gruppenkurs inkl. Kursdokumentation.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 49.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 49.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Verkehrskunde VKU Zürich</p>
                 <p class="text-gray-600 text-sm">2 x 4 Stunden am Abend oder Samstag Vormittag.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Verkehrskunde VKU Lachen</p>
                 <p class="text-gray-600 text-sm">2 x 4 Stunden am Abend oder Samstag Vormittag.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 250.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 250.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorrad Grundkurs Zürich</p>
                 <p class="text-gray-600 text-sm">3 x 4 Stunden inkl. Kursbestätigung. Nur Teil 3 kostet 190.–</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 499.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 499.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorrad Grundkurs Lachen</p>
                 <p class="text-gray-600 text-sm">3 x 4 Stunden inkl. Kursbestätigung. Nur Teil 3 kostet 210.–</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 570.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 570.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Anhängerkurs Kategorie BE</p>
                 <p class="text-gray-600 text-sm">Gruppenkurs 3 Stunden für Firmen oder Vereine.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">LKW Theoriekurs</p>
                 <p class="text-gray-600 text-sm">Gruppenkurs 8 x 2 Stunden exkl. Lehrmittel.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 800.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 800.–</p>
             </div>
           </div>
         </div>
@@ -429,42 +431,42 @@
                 <p class="font-semibold text-gray-900">CZV Weiterbildung pro Person</p>
                 <p class="text-gray-600 text-sm">Gruppenkurs 7 Stunden für Firmen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">FL-Weiterbildung Kat.B Motorboot</p>
                 <p class="text-gray-600 text-sm">Unser beliebtester Kurs im schönen Hafen von Lachen im Hotel Marina.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 540.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 540.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">FL-Weiterbildung Kat.B Lastwagen</p>
                 <p class="text-gray-600 text-sm">Begib dich in Tuggen/SZ hinter das Lenkrad eines 12 Tonnen Lastwagens.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 490.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 490.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">FL-Weiterbildung Kat. B Anhänger</p>
                 <p class="text-gray-600 text-sm">Mach dich bereit für deine Anhängerausbildung inkl. Broschüre zum Mitnehmen.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 490.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 490.–</p>
             </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorrad Prüfungsvorbereitung</p>
                 <p class="text-gray-600 text-sm">Gruppenkurs 3 Stunden für eine solide Prüfungsvorbereitung.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
             <div class="flex justify-between items-start py-3">
               <div>
                 <p class="font-semibold text-gray-900">Motorrad Schräglagenkurs</p>
                 <p class="text-gray-600 text-sm">Gruppenkurs 3 Stunden für ein sicheres Kurvenfahren.</p>
               </div>
-              <p class="font-bold text-blue-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
           </div>
         </div>
@@ -608,12 +610,12 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Fahrstunden buchen</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">📅 Online buchen</a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">📞 +41 44 431 00 33</a>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Online buchen</a>
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
     </section>

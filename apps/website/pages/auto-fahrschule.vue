@@ -1,21 +1,22 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Auto Fahrschule Kategorie B | Driving Team Zürich</Title>
       <Meta name="description" content="Auto Fahrschule in Zürich für Kategorie B. Erfahrene Fahrlehrer, flexible Preise, garantiert bestanden. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Auto Fahrschule Kategorie B | Driving Team" />
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+    <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Auto Fahrschule Kategorie B</h1>
-          <p class="text-xl text-blue-100 mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -71,10 +72,10 @@
         <h2 class="heading-md mb-12 text-center">Weg zur Autoprüfung - In 7 Schritten zur Autoprüfung</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Nothelferkurs</h3>
@@ -85,10 +86,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lernfahrgesuch Auto</h3>
@@ -99,10 +100,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Auto Theorieprüfung</h3>
@@ -112,10 +113,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Verkehrskunde VKU</h3>
@@ -126,10 +127,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">5</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Auto Fahrstunden</h3>
@@ -139,10 +140,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">6</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">6</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Praktische Autofahrprüfung</h3>
@@ -152,19 +153,19 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">7</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">7</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">WAB Kurs</h3>
                 <p class="text-gray-600 mb-2">Nach dem Führerschein: Weiterbildung und unbefristeter Ausweis</p>
                 <p class="text-sm text-gray-600">Wie überall im Leben hat man auch beim Autofahren nie ausgelernt. In den ersten 12 Monaten nach deiner praktischen Fahrprüfung musst du den obligatorischen WAB Kurs (Weiterbildungskurs) absolvieren, der zwei Kurstage umfasst. Nach drei Jahren Probezeit, und sofern du alle Auflagen erfüllt hast, kannst du dann den unbefristeten Führerschein beantragen.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="/wab-kurse-zuerich/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">WAB Kurse Zürich</a>
-                  <a href="/wab-kurse-schwyz/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">WAB Kurse Schwyz</a>
-                  <a href="/wab-course-english/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">WAB Course English</a>
+                  <a href="/wab-kurse-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Kurse Zürich</a>
+                  <a href="/wab-kurse-schwyz/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Kurse Schwyz</a>
+                  <a href="/wab-course-english/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Course English</a>
                 </div>
               </div>
             </div>
@@ -208,7 +209,7 @@
         </details>
       </div>
 
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 Jetzt anrufen: +41 44 431 00 33
@@ -242,23 +243,23 @@
         <!-- Unsere Gebiete -->
         <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Lachen</a>
-          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Uster</a>
-          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Aargau</a>
-          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule St.Gallen</a>
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
+          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit zu starten?</h2>
-        <p class="text-xl text-blue-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <p class="text-xl text-primary-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Termin buchen
         </a>
       </div>

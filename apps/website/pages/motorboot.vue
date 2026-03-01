@@ -1,18 +1,20 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Motorboot Fahrschule Kategorie A | Driving Team Zürich</Title>
       <Meta name="description" content="Motorboot Fahrschule am Zürichsee. In 4 Schritten zur Motorbootprüfung. Erfahrener Bootsfahrlehrer Marc, flexible Fahrstundenzeiten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/motorboot.webp" alt="Motorboot" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/motorboot.webp" alt="Motorboot" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
-          <p class="text-xl text-blue-100 mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten professionelle Bootsausbildung am Zürichsee.</p>
-          <p class="text-lg text-blue-200 mb-8">Erfahrung und Übung sind beim Bootfahren das A und O! Deshalb empfehlen wir dir, so früh wie möglich mit deinen Motorbootsfahrstunden zu beginnen.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule am Zürichsee</h1>
+          <p class="text-xl text-primary-100 mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten professionelle Bootsausbildung am Zürichsee.</p>
+          <p class="text-lg text-primary-200 mb-8">Erfahrung und Übung sind beim Bootfahren das A und O! Deshalb empfehlen wir dir, so früh wie möglich mit deinen Motorbootsfahrstunden zu beginnen.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
       </div>
@@ -31,30 +33,30 @@
       <div class="section-container">
         <h2 class="heading-md mb-12 text-center">In 4 Schritten zu deiner Motorbootprüfung</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Motorboot Fahrstunden</h3>
                 <p class="text-sm text-gray-600">Deine Motorboot Fahrschule: Werde ein sicherer Schiffskapitän! Als Schiffsführer:in übernimmst du grosse Verantwortung. Du lernst, auf verschiedene Situationen richtig zu reagieren, Manöver korrekt durchzuführen und die Schifffahrtsregeln einzuhalten.</p>
-                <div class="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <p class="text-xs font-semibold text-blue-800">Preise:</p>
-                  <p class="text-xs text-blue-700">Lektion 90min – CHF 190.- | Admin- und Versicherungspauschale (einmalig) – CHF 120.-</p>
-                  <p class="text-xs text-blue-700 mt-1">WarmUp inkl. Prüfungsfahrt – CHF 317.-</p>
+                <div class="mt-3 p-3 bg-primary-50 rounded-lg">
+                  <p class="text-xs font-semibold text-primary-800">Preise:</p>
+                  <p class="text-xs text-primary-700">Lektion 90min – CHF 190.- | Admin- und Versicherungspauschale (einmalig) – CHF 120.-</p>
+                  <p class="text-xs text-primary-700 mt-1">WarmUp inkl. Prüfungsfahrt – CHF 317.-</p>
                 </div>
                 <div class="mt-3">
-                  <a href="/motorboot-fahrstunden-zuerich/" class="text-sm text-blue-600 font-semibold hover:underline">→ Bootsfahrschule Zürich (Zürichsee)</a>
+                  <a href="/motorboot-fahrstunden-zuerich/" class="text-sm text-primary-600 font-semibold hover:underline">→ Bootsfahrschule Zürich (Zürichsee)</a>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Beim Schifffahrtsamt anmelden</h3>
@@ -64,25 +66,25 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Motorboot Theorie</h3>
                 <p class="text-sm text-gray-600">Während der praktischen Motorbootfahrstunden kannst du bereits viel über den theoretischen Inhalt des Motorbootfahrens lernen. Spätestens muss die Theorieprüfung vor Anmeldung zur praktischen Motorbootprüfung bestanden sein.</p>
                 <p class="text-sm text-gray-600 mt-2">Die Motorboottheorie für die Binnenschifffahrt beinhaltet Fragen zum Motorboot sowie auch zum Segelschiff und ist daher nur einmal zu absolvieren.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Gültigkeit der Theorieprüfung: 24 Monate</p>
-                <a href="/motorboot-theorie/" class="text-sm text-blue-600 font-semibold hover:underline mt-2 block">→ Mehr zur Motorboot Theorie</a>
+                <a href="/motorboot-theorie/" class="text-sm text-primary-600 font-semibold hover:underline mt-2 block">→ Mehr zur Motorboot Theorie</a>
               </div>
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Praktische Motorboot Prüfung</h3>
@@ -158,7 +160,7 @@
             <p class="text-gray-600 mt-4">In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden. Bereits ab einem Alter von 18 Jahren darf man den Lernfahrausweis für die Motorbootkategorie bestellen und die Bootsprüfung absolvieren.</p>
           </details>
         </div>
-        <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+        <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
           <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
           <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen: +41 44 431 00 33</a>
         </div>
@@ -217,27 +219,27 @@
         </div>
         <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Lachen</a>
-          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Uster</a>
-          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Aargau</a>
-          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule St.Gallen</a>
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
+          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher mit dem Motorboot unterwegs!</h2>
-        <p class="text-xl text-blue-100 mb-8">Bootsfahrschule am Zürichsee mit erfahrenem Fahrlehrer Marc</p>
+        <p class="text-xl text-primary-100 mb-8">Bootsfahrschule am Zürichsee mit erfahrenem Fahrlehrer Marc</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

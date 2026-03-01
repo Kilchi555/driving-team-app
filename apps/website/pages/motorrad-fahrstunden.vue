@@ -1,17 +1,17 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Motorrad Fahrstunden | 4 Schritte zur Motorradprüfung | Driving Team</Title>
       <Meta name="description" content="Motorrad Fahrstunden bei Driving Team – für alle Kategorien (A1, A 35kW, A). Prüfungsvorbereitung in Zürich, Lachen und Uster. Lektion CHF 95.-" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-fahrstunden/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Motorrad Fahrstunden</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">4 Schritte zur Motorradprüfung</p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">4 Schritte zur Motorradprüfung</p>
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>
       </div>
@@ -26,9 +26,9 @@
         </p>
 
         <!-- Preis -->
-        <div class="bg-blue-50 rounded-lg p-6 mb-8">
-          <h3 class="font-bold text-blue-800 mb-4">Preis Motorrad Fahrstunden</h3>
-          <p class="text-2xl font-bold text-blue-800">CHF 95.–</p>
+        <div class="bg-primary-50 rounded-lg p-6 mb-8">
+          <h3 class="font-bold text-primary-800 mb-4">Preis Motorrad Fahrstunden</h3>
+          <p class="text-2xl font-bold text-primary-800">CHF 95.–</p>
           <p class="text-gray-600">Lektion à 45 Minuten</p>
           <p class="text-gray-500 text-sm mt-2">keine Admin- und Versicherungspauschale</p>
         </div>
@@ -68,22 +68,22 @@
         <div class="bg-white border border-gray-200 rounded-lg p-8">
           <form class="space-y-6">
             <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
             <div class="grid md:grid-cols-3 gap-4">
-              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
             <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
-            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Welcher Ort?</label>
-              <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required>
+              <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required>
                 <option>Zürich-Altstetten</option>
                 <option>Zürich-Albisgütli</option>
                 <option>Lachen</option>
@@ -115,7 +115,7 @@
                 </label>
               </div>
             </div>
-            <textarea placeholder="Weitere Angaben, bevorzugte Zeitfenster, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"></textarea>
+            <textarea placeholder="Weitere Angaben, bevorzugte Zeitfenster, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
             <div>
               <p class="text-sm font-medium text-gray-700 mb-3">Ich bin im Besitz eines Lernfahrausweis der Kategorie</p>
               <div class="grid grid-cols-2 gap-2">
@@ -139,7 +139,7 @@
             </div>
             <div class="flex items-center gap-3">
               <input type="checkbox" id="agb" class="w-4 h-4" required />
-              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-blue-600 hover:underline">AGB's</a></label>
+              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-primary-600 hover:underline">AGB's</a></label>
             </div>
             <button type="submit" class="btn-primary w-full text-lg">
               Fahrstunden anfragen
@@ -150,11 +150,11 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Warum die Fahrschule Driving Team?</h2>
-        <p class="text-blue-100 max-w-2xl mx-auto mb-8">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Lernen am besten mit Begeisterung!</p>
-        <a href="/motorrad-fahrschule" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <p class="text-primary-100 max-w-2xl mx-auto mb-8">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Lernen am besten mit Begeisterung!</p>
+        <a href="/motorrad-fahrschule" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Mehr zur Motorrad Fahrschule
         </a>
       </div>

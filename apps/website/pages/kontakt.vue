@@ -1,16 +1,16 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Kontakt | Driving Team - Fahrschule Zürich</Title>
       <Meta name="description" content="Kontaktiere Driving Team - Fahrschule in Zürich. Telefon, Email, Öffnungszeiten und Standorte." />
       <Link rel="canonical" href="https://drivingteam.ch/kontakt/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Kontakt</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto">Kontaktiere uns gerne – wir freuen uns auf dich!</p>
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto">Kontaktiere uns gerne – wir freuen uns auf dich!</p>
       </div>
     </section>
 
@@ -21,7 +21,7 @@
         <div class="bg-white border-2 border-gray-200 rounded-lg p-8 text-center hover:shadow-lg transition">
           <p class="text-5xl mb-4">📞</p>
           <h3 class="heading-sm mb-4">Telefon Zürich</h3>
-          <a href="tel:+41444310033" class="text-blue-600 font-bold text-lg hover:underline">
+          <a href="tel:+41444310033" class="text-primary-600 font-bold text-lg hover:underline">
             +41 44 431 00 33
           </a>
           <p class="text-gray-500 text-sm mt-2">Lachen: +41 55 442 00 80</p>
@@ -31,7 +31,7 @@
         <div class="bg-white border-2 border-gray-200 rounded-lg p-8 text-center hover:shadow-lg transition">
           <p class="text-5xl mb-4">✉️</p>
           <h3 class="heading-sm mb-4">Email</h3>
-          <a href="mailto:info@drivingteam.ch" class="text-blue-600 font-bold text-lg hover:underline">
+          <a href="mailto:info@drivingteam.ch" class="text-primary-600 font-bold text-lg hover:underline">
             info@drivingteam.ch
           </a>
         </div>
@@ -55,7 +55,7 @@
         
         <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <!-- Zürich -->
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <h3 class="heading-sm mb-6">🏢 Fahrschule Zürich</h3>
             <div class="space-y-4 text-gray-700">
               <p>
@@ -65,7 +65,7 @@
               </p>
               <p>
                 <strong>Telefon:</strong><br/>
-                <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a>
+                <a href="tel:+41444310033" class="text-primary-600 hover:underline">+41 44 431 00 33</a>
               </p>
               <p>
                 <strong>Erreichbarkeit:</strong><br/>
@@ -76,7 +76,7 @@
           </div>
 
           <!-- Lachen -->
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <h3 class="heading-sm mb-6">🏢 Fahrschule Lachen</h3>
             <div class="space-y-4 text-gray-700">
               <p>
@@ -86,7 +86,7 @@
               </p>
               <p>
                 <strong>Telefon:</strong><br/>
-                <a href="tel:+41554420080" class="text-blue-600 hover:underline">+41 55 442 00 80</a>
+                <a href="tel:+41554420080" class="text-primary-600 hover:underline">+41 55 442 00 80</a>
               </p>
               <p>
                 <strong>Erreichbarkeit:</strong><br/>
@@ -97,7 +97,7 @@
           </div>
         </div>
 
-        <div class="mt-12 bg-blue-50 border-2 border-blue-200 rounded-lg p-8 max-w-4xl mx-auto">
+        <div class="mt-12 bg-primary-50 border-2 border-primary-200 rounded-lg p-8 max-w-4xl mx-auto">
           <h3 class="heading-sm mb-4">🎯 Unser Tätigkeitsgebiet</h3>
           <p class="text-gray-700 mb-4">Das Driving Team Zürich ist in folgenden Regionen tätig:</p>
           <ul class="grid md:grid-cols-2 gap-4 text-gray-700">
@@ -121,12 +121,12 @@
       <div class="max-w-2xl mx-auto bg-white border border-gray-200 rounded-lg p-8">
         <form class="space-y-6">
           <div class="grid md:grid-cols-2 gap-4">
-            <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-            <input type="text" placeholder="Nachname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+            <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+            <input type="text" placeholder="Nachname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
           </div>
-          <input type="email" placeholder="Email*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-          <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-          <textarea placeholder="Nachricht" rows="5" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"></textarea>
+          <input type="email" placeholder="Email*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+          <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+          <textarea placeholder="Nachricht" rows="5" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
           <button type="submit" class="btn-primary w-full text-lg">
             ✉️ Senden
           </button>
@@ -142,7 +142,7 @@
         <div class="max-w-3xl mx-auto overflow-x-auto">
           <table class="w-full bg-white rounded-lg shadow-sm border border-gray-200">
             <thead>
-              <tr class="bg-blue-600 text-white">
+              <tr class="bg-primary-600 text-white">
                 <th class="px-6 py-4 text-left font-semibold">Lehrmittel</th>
                 <th class="px-6 py-4 text-right font-semibold">Preis</th>
               </tr>
@@ -193,7 +193,7 @@
               Bietet ihr auch telefonische Beratung an?
               <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Ja, wir bieten kostenlose Beratungen per Telefon an. Ruf uns einfach an unter <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a> und wir helfen dir gerne weiter.</p>
+            <p class="text-gray-600 mt-4">Ja, wir bieten kostenlose Beratungen per Telefon an. Ruf uns einfach an unter <a href="tel:+41444310033" class="text-primary-600 hover:underline">+41 44 431 00 33</a> und wir helfen dir gerne weiter.</p>
           </details>
 
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -208,10 +208,10 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit, deine Fahrausbildung zu starten?</h2>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Jetzt Termin buchen
         </a>
       </div>

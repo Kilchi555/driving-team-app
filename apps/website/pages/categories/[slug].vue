@@ -1,20 +1,20 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>{{ categoryData.title }} | Driving Team Zürich</Title>
       <Meta name="description" :content="`${categoryData.shortDesc} in Zürich. Professionelle Fahrschule mit erfahrenen Fahrlehrern.`" />
       <Meta property="og:title" :content="categoryData.title" />
       <Meta property="og:description" :content="categoryData.shortDesc" />
       <Link rel="canonical" :href="`https://drivingteam.ch/categories/${slug}`" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">{{ categoryData.title }}</h1>
-          <p class="text-xl text-blue-100 mb-8">{{ categoryData.description }}</p>
-          <button @click="goToBooking" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">{{ categoryData.description }}</p>
+          <button @click="goToBooking" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </button>
         </div>
@@ -45,17 +45,17 @@
         <h2 class="heading-md mb-12 text-center">Dein Weg zum Erfolg</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div v-for="(step, idx) in categoryData.steps" :key="idx" class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm hover:shadow-md transition">
+          <div v-for="(step, idx) in categoryData.steps" :key="idx" class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm hover:shadow-md transition">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">
                   {{ idx + 1 }}
                 </div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">{{ step.title }}</h3>
                 <p class="text-gray-600 mb-4">{{ step.desc }}</p>
-                <button @click="goToBooking" class="text-blue-600 font-semibold hover:text-blue-700">
+                <button @click="goToBooking" class="text-primary-600 font-semibold hover:text-primary-700">
                   Los geht's →
                 </button>
               </div>
@@ -84,7 +84,7 @@
         </details>
       </div>
 
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 Jetzt anrufen: +41 44 431 00 33
@@ -117,11 +117,11 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit zu starten?</h2>
-        <p class="text-xl text-blue-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
-        <button @click="goToBooking" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <p class="text-xl text-primary-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
+        <button @click="goToBooking" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Termin buchen
         </button>
       </div>

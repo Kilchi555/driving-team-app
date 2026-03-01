@@ -1,21 +1,22 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>LKW Fahrschule Kategorie C1 | C | CE | Driving Team Zürich</Title>
       <Meta name="description" content="LKW Fahrschule in Zürich und Lachen/SZ für Kategorie C1, C und CE. Professionelle Ausbildung mit erfahrenen Fahrlehrern. CZV Grundkurs und Weiterbildung." />
       <Meta property="og:title" content="LKW Fahrschule Kategorie C1 | C | CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">LKW Fahrschule Kategorie C1 | C | CE</h1>
-          <p class="text-xl text-blue-100 mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -36,10 +37,10 @@
         <h2 class="heading-md mb-12 text-center">Weg zur Lastwagenprüfung - 5 Schritte zu deinem Traumberuf</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lernfahrgesuch Führerschein Kategorie C1 | C | CE</h3>
@@ -55,10 +56,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Verkehrsmedizinische Kontrolluntersuchung</h3>
@@ -68,10 +69,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Fahrstunden für den LKW Führerschein – auch vor der Theorieprüfung!</h3>
@@ -81,10 +82,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lastwagen Theorieprüfung</h3>
@@ -93,16 +94,16 @@
                   <p class="text-xs text-gray-600">Die maximale Fehlerpunktezahl ist 4. Du musst 40 Fragen in 45 Minuten beantworten (jeweils 1 Antwort richtig). Die Theorieprüfung der Kategorie C wird gerne unterschätzt!</p>
                 </div>
                 <div class="mt-3">
-                  <a href="/lastwagen-theorie/" class="text-sm text-blue-600 font-semibold hover:underline">→ Mehr zur Lastwagen Theorie</a>
+                  <a href="/lastwagen-theorie/" class="text-sm text-primary-600 font-semibold hover:underline">→ Mehr zur Lastwagen Theorie</a>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">5</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lastwagenfahrprüfung Kategorie C | C1 | CE</h3>
@@ -138,35 +139,35 @@
       <h2 class="heading-md mb-10 text-center">Unsere Preise</h2>
       <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
-          <h3 class="font-bold text-xl text-center mb-6 text-blue-600">Kategorie C1</h3>
+          <h3 class="font-bold text-xl text-center mb-6 text-primary-600">Kategorie C1</h3>
           <ul class="space-y-3 text-sm text-gray-600">
-            <li class="flex gap-2"><span class="text-blue-500">✓</span> Effiziente Fahrausbildung</li>
-            <li class="flex gap-2"><span class="text-blue-500">✓</span> Freundliche Fahrlehrer:innen</li>
-            <li class="flex gap-2"><span class="text-blue-500">✓</span> Rechnung per E-Mail</li>
+            <li class="flex gap-2"><span class="text-primary-500">✓</span> Effiziente Fahrausbildung</li>
+            <li class="flex gap-2"><span class="text-primary-500">✓</span> Freundliche Fahrlehrer:innen</li>
+            <li class="flex gap-2"><span class="text-primary-500">✓</span> Rechnung per E-Mail</li>
           </ul>
           <div class="mt-6 pt-4 border-t border-gray-100 space-y-2">
             <p class="text-sm text-gray-500">Versicherungspauschale: <strong>CHF 160.-</strong> (einmalig)</p>
             <p class="text-sm text-gray-500">WarmUp inkl. Prüfungsfahrt: <strong>CHF 649.-</strong></p>
           </div>
         </div>
-        <div class="bg-blue-600 rounded-lg p-8 shadow-md text-white">
+        <div class="bg-primary-600 rounded-lg p-8 shadow-md text-white">
           <h3 class="font-bold text-xl text-center mb-6">Kategorie C</h3>
-          <ul class="space-y-3 text-sm text-blue-100">
+          <ul class="space-y-3 text-sm text-primary-100">
             <li class="flex gap-2"><span>✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span>✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span>✓</span> Rechnung per E-Mail</li>
           </ul>
-          <div class="mt-6 pt-4 border-t border-blue-500 space-y-2">
-            <p class="text-sm text-blue-200">Versicherungspauschale: <strong class="text-white">CHF 200.-</strong> (einmalig)</p>
-            <p class="text-sm text-blue-200">WarmUp inkl. Prüfungsfahrt: <strong class="text-white">CHF 737.-</strong></p>
+          <div class="mt-6 pt-4 border-t border-primary-500 space-y-2">
+            <p class="text-sm text-primary-200">Versicherungspauschale: <strong class="text-white">CHF 200.-</strong> (einmalig)</p>
+            <p class="text-sm text-primary-200">WarmUp inkl. Prüfungsfahrt: <strong class="text-white">CHF 737.-</strong></p>
           </div>
         </div>
         <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
-          <h3 class="font-bold text-xl text-center mb-6 text-blue-600">Kategorie CE</h3>
+          <h3 class="font-bold text-xl text-center mb-6 text-primary-600">Kategorie CE</h3>
           <ul class="space-y-3 text-sm text-gray-600">
-            <li class="flex gap-2"><span class="text-blue-500">✓</span> Effiziente Fahrausbildung</li>
-            <li class="flex gap-2"><span class="text-blue-500">✓</span> Freundliche Fahrlehrer:innen</li>
-            <li class="flex gap-2"><span class="text-blue-500">✓</span> Rechnung per E-Mail</li>
+            <li class="flex gap-2"><span class="text-primary-500">✓</span> Effiziente Fahrausbildung</li>
+            <li class="flex gap-2"><span class="text-primary-500">✓</span> Freundliche Fahrlehrer:innen</li>
+            <li class="flex gap-2"><span class="text-primary-500">✓</span> Rechnung per E-Mail</li>
           </ul>
           <div class="mt-6 pt-4 border-t border-gray-100 space-y-2">
             <p class="text-sm text-gray-500">Versicherungspauschale: <strong>CHF 250.-</strong> (einmalig)</p>
@@ -239,7 +240,7 @@
         </details>
       </div>
 
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 Jetzt anrufen: +41 44 431 00 33
@@ -271,27 +272,27 @@
         </div>
         <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Lachen</a>
-          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Uster</a>
-          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Aargau</a>
-          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule St.Gallen</a>
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
+          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Starte deine Lastwagen-Karriere!</h2>
-        <p class="text-xl text-blue-100 mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
+        <p class="text-xl text-primary-100 mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

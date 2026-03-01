@@ -1,10 +1,10 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>CZV Weiterbildungskurse | 5 Kurse in 5 Jahren | Driving Team</Title>
       <Meta name="description" content="CZV Weiterbildungskurse beim Driving Team. Prävention, Traffic Health, ARV1, Radwechsel & Brandbekämpfung. CHF 190.- pro Kurs inkl. SARI-Bestätigung." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-weiterbildung/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-16 md:py-24">
@@ -82,7 +82,7 @@
 
     <!-- Gruppen / Firmen -->
     <section class="section-container">
-      <div class="max-w-3xl mx-auto bg-blue-50 rounded-lg p-8">
+      <div class="max-w-3xl mx-auto bg-primary-50 rounded-lg p-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-4">Für Gruppen oder Firmen</h2>
         <p class="text-gray-700">Seid ihr eine Gruppe von Chauffeuren bzw. Chauffeusen oder eine Firma mit mindestens 10 Kursteilnehmer:innen, dann können wir euch euren speziell zusammengestellten CZV-Weiterbildungskurs anbieten. Kontaktiert uns direkt für ein individuelles Angebot.</p>
         <div class="flex flex-col md:flex-row gap-4 mt-6">
@@ -140,13 +140,13 @@
     <section class="section-container">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Zürich</a>
-        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Lachen</a>
-        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Uster</a>
-        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Aargau</a>
-        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Reichenburg</a>
-        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule St.Gallen</a>
-        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
     </section>
   </div>

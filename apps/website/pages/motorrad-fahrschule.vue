@@ -1,21 +1,22 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Motorrad Fahrschule | Driving Team | Zürich & Lachen/SZ</Title>
       <Meta name="description" content="Motorrad Fahrschule in Zürich für Kategorie A1, A35kW und A. Professionelle Ausbildung mit erfahrenen Fahrlehrern. Grundkurse, Fahrstunden, Prüfungsvorbereitung." />
       <Meta property="og:title" content="Motorrad Fahrschule | Driving Team | Zürich & Lachen/SZ" />
       <Meta property="og:description" content="Motorrad Fahrschule für alle Kategorien in Zürich und Umgebung" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-fahrschule/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/motorrad-fahrschule.webp" alt="Motorrad Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/motorrad-fahrschule.webp" alt="Motorrad Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Motorrad Fahrschule Kategorie A1 | A35kW | A</h1>
-          <p class="text-xl text-blue-100 mb-8">Bist du bereit, die Strasse mit deinem Motorrad zu erobern? Unsere Motorrad Fahrschule bietet dir professionelle Ausbildung für alle Kategorien (A1, A35kW, A) mit erfahrenen Fahrlehrern in Zürich und Lachen/SZ.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Bist du bereit, die Strasse mit deinem Motorrad zu erobern? Unsere Motorrad Fahrschule bietet dir professionelle Ausbildung für alle Kategorien (A1, A35kW, A) mit erfahrenen Fahrlehrern in Zürich und Lachen/SZ.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Fahrstunden anfragen
           </a>
         </div>
@@ -71,20 +72,20 @@
         <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
           <ul class="space-y-4">
             <li class="flex gap-3">
-              <span class="text-blue-600 font-bold flex-shrink-0">✓</span>
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
               <p class="text-gray-700">Gültiger Lern-/ Fahrausweis der Kategorie A1 | A35kW | A</p>
             </li>
             <li class="flex gap-3">
-              <span class="text-blue-600 font-bold flex-shrink-0">✓</span>
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
               <p class="text-gray-700">Motorrad Sicherheitsbekleidung (mindestens Helm & Handschuhe | Motorradjacke, -hose und -schuhe sind empfehlenswert)</p>
             </li>
             <li class="flex gap-3">
-              <span class="text-blue-600 font-bold flex-shrink-0">✓</span>
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
               <p class="text-gray-700">Eigenes betriebssicheres Motorrad/Roller</p>
             </li>
           </ul>
-          <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p class="text-sm text-blue-800">Du bist noch nie Motorrad gefahren? Kein Problem! Wir begleiten dich sicher auf deinen ersten Metern. Fahrschul-Motorrad für 20.- pro Lektion auf Anfrage in Zürich vorhanden (nur für Fahrstunden vor dem Grundkurs).</p>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Du bist noch nie Motorrad gefahren? Kein Problem! Wir begleiten dich sicher auf deinen ersten Metern. Fahrschul-Motorrad für 20.- pro Lektion auf Anfrage in Zürich vorhanden (nur für Fahrstunden vor dem Grundkurs).</p>
           </div>
         </div>
       </div>
@@ -95,10 +96,10 @@
       <h2 class="heading-md mb-12 text-center">Allgemeiner Ausbildungsablauf</h2>
       
       <div class="space-y-8 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">1</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Nothelferkurs</h3>
@@ -108,10 +109,10 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">2</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Lernfahrgesuch Motorrad | Roller</h3>
@@ -129,10 +130,10 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">3</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Theorieprüfung</h3>
@@ -142,10 +143,10 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">4</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Verkehrskunde VKU</h3>
@@ -155,46 +156,46 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">5</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Motorrad | Roller Fahrstunden</h3>
               <p class="text-sm text-gray-600">Wir legen dir ans Herz, deine ersten Motorrad Fahrstunden gleich zu Beginn bei unseren qualifizierten Motorrad Fahrlehrer:innen in Angriff zu nehmen. Falsch erlernte Angewohnheiten und Automatismen lassen sich später nur mit erhöhtem Zeit- und Kostenaufwand korrigieren.</p>
               <p class="text-sm text-gray-600 mt-2">Unser Fahrschul-Motorrad steht dir zur Verfügung und kann für nur 20 CHF pro Lektion gemietet werden. Für die Prüfungsvorbereitung empfehlen wir, den letzten Schliff bei deinem Motorrad Fahrlehrer zu holen.</p>
-              <div class="mt-3 p-3 bg-blue-50 rounded-lg">
-                <p class="text-xs font-semibold text-blue-800">Preise:</p>
-                <p class="text-xs text-blue-700">Motorrad | Roller Doppellektion CHF 190.- (90 Minuten) | Aus Gründen der Effizienz machen wir nur Doppellektionen.</p>
-                <p class="text-xs text-blue-700 mt-1">Admin- und Versicherungspauschale: keine (Da Motorrad | Roller bereits versichert ist und Prüfungstermin machen die Fahrschüler:innen selber.)</p>
+              <div class="mt-3 p-3 bg-primary-50 rounded-lg">
+                <p class="text-xs font-semibold text-primary-800">Preise:</p>
+                <p class="text-xs text-primary-700">Motorrad | Roller Doppellektion CHF 190.- (90 Minuten) | Aus Gründen der Effizienz machen wir nur Doppellektionen.</p>
+                <p class="text-xs text-primary-700 mt-1">Admin- und Versicherungspauschale: keine (Da Motorrad | Roller bereits versichert ist und Prüfungstermin machen die Fahrschüler:innen selber.)</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">6</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">6</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Motorrad | Roller Grundkurs</h3>
               <p class="text-sm text-gray-600">Wenn du die Kategorie A1 nach dem 01.01.2021 erworben hast und jetzt die Kategorie A35kW absolvieren möchtest, musst du den Grundkurs nicht mehr besuchen. Um dein Fahrzeug besser und sicherer unter Kontrolle zu haben, empfehlen wir dir den Grundkurs trotzdem zu besuchen. Mögliche Themen sind zum Beispiel Manöver, Kurvenfahren, eine schnelle & sichere Bremsung und vieles mehr.</p>
               <div class="mt-3 flex flex-wrap gap-2">
-                <a href="/motorrad-grundkurs-zuerich/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">Grundkurs Zürich</a>
-                <a href="/motorrad-grundkurs-lachen/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">Grundkurs Lachen</a>
-                <a href="/motorrad-grundkurs-einsiedeln/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">Grundkurs Einsiedeln</a>
-                <a href="/motorrad-grundkurs-zug/" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">Grundkurs Zug</a>
+                <a href="/motorrad-grundkurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Grundkurs Zürich</a>
+                <a href="/motorrad-grundkurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Grundkurs Lachen</a>
+                <a href="/motorrad-grundkurs-einsiedeln/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Grundkurs Einsiedeln</a>
+                <a href="/motorrad-grundkurs-zug/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Grundkurs Zug</a>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+        <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
           <div class="flex items-start gap-6">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">7</div>
+              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">7</div>
             </div>
             <div class="flex-1">
               <h3 class="heading-sm mb-2">Praktische Motorradprüfung</h3>
@@ -237,7 +238,7 @@
           </a>
         </div>
         <div class="text-center mt-8">
-          <a href="/motorrad-weiterbildung/" class="text-blue-600 font-semibold hover:underline">→ Motorrad-Weiterbildung für erfahrene Fahrer</a>
+          <a href="/motorrad-weiterbildung/" class="text-primary-600 font-semibold hover:underline">→ Motorrad-Weiterbildung für erfahrene Fahrer</a>
         </div>
       </div>
     </section>
@@ -271,7 +272,7 @@
         </details>
       </div>
 
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 Jetzt anrufen: +41 44 431 00 33
@@ -305,27 +306,27 @@
         <!-- Unsere Gebiete -->
         <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Lachen</a>
-          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Uster</a>
-          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Aargau</a>
-          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule St.Gallen</a>
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
+          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit für dein Motorrad-Abenteuer?</h2>
-        <p class="text-xl text-blue-100 mb-8">Starte jetzt deine Motorrad-Ausbildung bei Driving Team!</p>
+        <p class="text-xl text-primary-100 mb-8">Starte jetzt deine Motorrad-Ausbildung bei Driving Team!</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Fahrstunden anfragen
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

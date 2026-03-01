@@ -1,16 +1,16 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Datenschutz | Driving Team Fahrschule</Title>
       <Meta name="description" content="Datenschutzerklärung der Fahrschule Driving Team – Informationen zur Verarbeitung von Personendaten, Cookies, Google Maps und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/datenschutz/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-4">Datenschutz</h1>
-        <p class="text-blue-100">Stand: 1. Januar 2025</p>
+        <p class="text-primary-100">Stand: 1. Januar 2025</p>
       </div>
     </section>
 
@@ -123,12 +123,12 @@
           </p>
         </div>
 
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="bg-primary-50 border border-primary-200 rounded-lg p-6">
           <h3 class="font-bold text-gray-900 mb-3">Kontakt Datenschutz</h3>
           <p class="text-gray-700">
             Bei Fragen zum Datenschutz kontaktiere uns unter:
-            <a href="mailto:info@drivingteam.ch" class="text-blue-600 hover:underline">info@drivingteam.ch</a>
-            oder <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a>.
+            <a href="mailto:info@drivingteam.ch" class="text-primary-600 hover:underline">info@drivingteam.ch</a>
+            oder <a href="tel:+41444310033" class="text-primary-600 hover:underline">+41 44 431 00 33</a>.
           </p>
         </div>
       </div>

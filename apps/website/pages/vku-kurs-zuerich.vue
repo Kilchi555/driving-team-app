@@ -1,18 +1,18 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>VKU Kurs Zürich | Mit 2 x 4h VKU Fahrstunden sparen | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Zürich beim Driving Team. 8 Stunden Verkehrskundeunterricht in 2 Teilen à 4 Stunden. CHF 190.- inkl. Dokumentation. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-zuerich/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">VKU Kurs Zürich</h1>
-          <p class="text-xl text-blue-100 mb-8">Im total achtstündigen VKU Kurs wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss dieses VKU Kurs ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Im total achtstündigen VKU Kurs wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss dieses VKU Kurs ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>
         </div>
@@ -22,7 +22,7 @@
     <!-- Info -->
     <section class="section-container">
       <div class="max-w-3xl mx-auto space-y-4">
-        <div class="bg-blue-50 rounded-lg p-6">
+        <div class="bg-primary-50 rounded-lg p-6">
           <p class="text-gray-700">Der VKU Kurs ist in der ganzen Schweiz der gleiche und die Bestätigung ist ebenfalls für die ganze Schweiz gültig. Es ist also rechtlich egal, von welchem Kanton dein Lernfahrausweis ausgestellt wurde – der VKU Kurs Zürich gilt überall.</p>
         </div>
         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
@@ -38,28 +38,28 @@
         <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           <div class="bg-white rounded-lg p-6 shadow-sm">
             <div class="flex items-center gap-3 mb-4">
-              <span class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</span>
+              <span class="bg-primary-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</span>
               <h3 class="font-bold text-gray-900">1. Teil</h3>
             </div>
             <p class="text-gray-600">Die Funktion der Sinnesorgane, Gefahrenlehre, Verkehrssicherheitslehre, Blicktechnik, Blickführung.</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm">
             <div class="flex items-center gap-3 mb-4">
-              <span class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</span>
+              <span class="bg-primary-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</span>
               <h3 class="font-bold text-gray-900">2. Teil</h3>
             </div>
             <p class="text-gray-600">Strassen- und Partnerkunde, Witterung, Tageszeiten.</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm">
             <div class="flex items-center gap-3 mb-4">
-              <span class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">3</span>
+              <span class="bg-primary-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">3</span>
               <h3 class="font-bold text-gray-900">3. Teil</h3>
             </div>
             <p class="text-gray-600">Verkehrsdynamik, Verkehrssicherheit, Fahrphysik, Verkehrsbewegungslehre.</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm">
             <div class="flex items-center gap-3 mb-4">
-              <span class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">4</span>
+              <span class="bg-primary-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">4</span>
               <h3 class="font-bold text-gray-900">4. Teil</h3>
             </div>
             <p class="text-gray-600">Verkehrstaktik, Fahrfähigkeit, umweltbewusstes Fahren, taktische Regeln für sicheres Fahren.</p>
@@ -85,7 +85,7 @@
         <div class="bg-gray-50 rounded-lg p-6 text-center">
           <p class="text-3xl mb-3">💰</p>
           <h3 class="font-bold text-gray-900 mb-2">Preis</h3>
-          <p class="text-2xl font-bold text-blue-600">CHF 190.-</p>
+          <p class="text-2xl font-bold text-primary-600">CHF 190.-</p>
           <p class="text-gray-600 text-sm">inkl. Dokumentation & Kursbestätigung (online)</p>
         </div>
         <div class="bg-gray-50 rounded-lg p-6 text-center">
@@ -97,7 +97,7 @@
     </section>
 
     <!-- Fahrstunden CTA -->
-    <section class="bg-blue-50 py-12">
+    <section class="bg-primary-50 py-12">
       <div class="section-container text-center">
         <h2 class="heading-md mb-4">Brauchst Du noch Fahrstunden?</h2>
         <p class="text-gray-600 mb-6">Dann melde Dich hier an…</p>
@@ -211,25 +211,25 @@
     <section class="section-container">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Zürich</a>
-        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Lachen</a>
-        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Uster</a>
-        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Aargau</a>
-        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Reichenburg</a>
-        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule St.Gallen</a>
-        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt VKU Kurs anmelden!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt Kurs anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>
