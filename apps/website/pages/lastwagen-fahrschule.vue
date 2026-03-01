@@ -9,8 +9,9 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">LKW Fahrschule Kategorie C1 | C | CE</h1>
           <p class="text-xl text-blue-100 mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>

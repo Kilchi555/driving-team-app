@@ -7,10 +7,9 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
-      <div class="section-container">
-        <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule Kategorie A</h1>
+    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/motorboot.webp" alt="Motorboot" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div class="section-container relative z-10">
           <p class="text-xl text-blue-100 mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten professionelle Bootsausbildung am Zürichsee.</p>
           <p class="text-lg text-blue-200 mb-8">Erfahrung und Übung sind beim Bootfahren das A und O! Deshalb empfehlen wir dir, so früh wie möglich mit deinen Motorbootsfahrstunden zu beginnen.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
