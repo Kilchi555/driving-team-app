@@ -101,6 +101,8 @@
         </div>
       </div>
     </section>
+    <GutscheinSection />
+    <PriceSection />
   </div>
 </template>
 
