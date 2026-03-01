@@ -130,14 +130,6 @@
       </div>
     </section>
 
-    <!-- Warum Driving Team -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-8 text-center">Warum die Fahrschule Driving Team in Lachen?</h2>
-        <p class="text-gray-700 text-center max-w-3xl mx-auto">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
-      </div>
-    </section>
-
     <!-- Unsere Gebiete -->
     <section class="section-container">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>

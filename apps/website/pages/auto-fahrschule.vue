@@ -217,43 +217,6 @@
       </div>
     </section>
 
-    <!-- Why Choose Us -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Warum die Fahrschule Driving Team ?</h2>
-        <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Fahrschule aufgebaut, die nicht nur Wissen vermittelt, sondern auch Freude am Fahren weckt.</p>
-        <div class="grid md:grid-cols-3 gap-8 mb-12">
-          <div class="bg-white rounded-lg p-8 shadow-sm">
-            <p class="text-4xl mb-4">🏆</p>
-            <h3 class="font-bold text-lg mb-2">Coole Fahrschule</h3>
-            <p class="text-gray-600">Wenn Du junge, motivierte und unkomplizierte Fahrlehrer suchst, dann wirst Du in unserer Fahrschule garantiert fündig.</p>
-          </div>
-          <div class="bg-white rounded-lg p-8 shadow-sm">
-            <p class="text-4xl mb-4">⚡</p>
-            <h3 class="font-bold text-lg mb-2">Fahrschule von A bis Z</h3>
-            <p class="text-gray-600">Wir bieten Dir die ganze Fahrausbildung vom Nothelferkurs über Theoriestunden, Verkehrskunde bis hin zu praktischen Fahrstunden.</p>
-          </div>
-          <div class="bg-white rounded-lg p-8 shadow-sm">
-            <p class="text-4xl mb-4">✅</p>
-            <h3 class="font-bold text-lg mb-2">Ihre Sicherheit ist unser Antrieb</h3>
-            <p class="text-gray-600">Wir legen hohen Wert auf deine Sicherheit und versuchen, dich bestmöglich auf alle Situationen vorzubereiten.</p>
-          </div>
-        </div>
-
-        <!-- Unsere Gebiete -->
-        <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
-        <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
-          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
-          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
-          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
-        </div>
-      </div>
-    </section>
-
     <!-- CTA Section -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
