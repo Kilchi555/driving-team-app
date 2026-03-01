@@ -213,9 +213,9 @@
           <div class="flex flex-col md:flex-row justify-between items-center">
             <p class="text-gray-400 text-sm">© 2026 Driving Team. All rights reserved.</p>
             <div class="flex gap-6 text-sm text-gray-400 mt-4 md:mt-0">
-              <NuxtLink to="/privacy" class="hover:text-white">Datenschutz</NuxtLink>
-              <NuxtLink to="/terms" class="hover:text-white">AGB</NuxtLink>
-              <NuxtLink to="/sitemap.xml" class="hover:text-white">Sitemap</NuxtLink>
+              <a href="#" class="hover:text-white">Datenschutz</a>
+              <a href="#" class="hover:text-white">AGB</a>
+              <a href="/sitemap.xml" class="hover:text-white">Sitemap</a>
             </div>
           </div>
         </div>
