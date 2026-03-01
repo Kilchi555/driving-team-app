@@ -14,7 +14,6 @@
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
             ✨ Jetzt anmelden
           </a>
-        </div>
       </div>
     </section>
 

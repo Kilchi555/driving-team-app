@@ -18,7 +18,6 @@
               ✨ Taxi Fahrstunden anmelden
             </a>
           </div>
-        </div>
       </div>
     </section>
 
