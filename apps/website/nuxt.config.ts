@@ -1,16 +1,6 @@
 export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   ssr: true,
-  
-  // Optimize build
-  nitro: {
-    prerender: {
-      crawlLinks: true,
-      routes: ['/sitemap.xml', '/robots.txt', '/'],
-      ignore: ['/admin', '/api'],
-    },
-    cacheMaxAge: 60 * 60 * 24, // 24 hours
-  },
 
   app: {
     head: {
@@ -25,20 +15,11 @@ export default defineNuxtConfig({
       link: [
         { rel: 'canonical', href: 'https://drivingteam.ch' },
         { rel: 'alternate', hreflang: 'de', href: 'https://drivingteam.ch' },
-        { rel: 'sitemap', type: 'application/xml', href: '/sitemap.xml' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       ],
     },
   },
 
-  // Cache strategy
-  routeRules: {
-    '/**': { cache: false }, // No cache for hot reload
-    '/': { prerender: true },
-    '/api/**': { cache: false, swr: 3600 }, // stale-while-revalidate
-  },
-
-  // Performance
   nitro: {
     compressPublicAssets: true,
     minify: true,
@@ -46,15 +27,18 @@ export default defineNuxtConfig({
       crawlLinks: true,
       failOnError: false,
     },
+    routeRules: {
+      '/**': {
+        headers: {
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'X-XSS-Protection': '1; mode=block',
+        },
+      },
+    },
   },
 
-  // Security headers
-  nitro: {
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'SAMEORIGIN',
-      'X-XSS-Protection': '1; mode=block',
-    },
+  routeRules: {
+    '/': { prerender: true },
   },
 })
