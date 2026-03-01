@@ -1,27 +1,27 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Weg zur Motorbootprüfung | In 4 Schritten | Driving Team</Title>
       <Meta name="description" content="In 4 Schritten zur Motorbootprüfung mit der Motorboot Fahrschule Driving Team. Fahrstunden, Anmeldung, Theorie und praktische Prüfung." />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule Kategorie A</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">In 4 Schritten zu Deiner Motorbootprüfung. Jetzt anmelden.</p>
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">In 4 Schritten zu Deiner Motorbootprüfung. Jetzt anmelden.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt anmelden
           </a>
-          <a href="https://sz.ch/verwaltung/volkswirtschaftsdepartement/amt-fuer-strassenverkehr/fahrzeuge/schiffahrt.html/11688-13107" target="_blank" rel="noopener noreferrer" class="btn-secondary border-white text-white hover:bg-white hover:text-blue-600 text-sm">
+          <a href="https://sz.ch/verwaltung/volkswirtschaftsdepartement/amt-fuer-strassenverkehr/fahrzeuge/schiffahrt.html/11688-13107" target="_blank" rel="noopener noreferrer" class="btn-secondary border-white text-white hover:bg-white hover:text-primary-600 text-sm">
             Lernfahrgesuch Schwyz
           </a>
-          <a href="https://www.strassenverkehr.sg.ch/de/services/fahrzeuge/Schifffahrt.html" target="_blank" rel="noopener noreferrer" class="btn-secondary border-white text-white hover:bg-white hover:text-blue-600 text-sm">
+          <a href="https://www.strassenverkehr.sg.ch/de/services/fahrzeuge/Schifffahrt.html" target="_blank" rel="noopener noreferrer" class="btn-secondary border-white text-white hover:bg-white hover:text-primary-600 text-sm">
             Lernfahrgesuch St. Gallen
           </a>
-          <a href="https://www.zh.ch/de/mobilitaet/schifffahrt/motorboote.html" target="_blank" rel="noopener noreferrer" class="btn-secondary border-white text-white hover:bg-white hover:text-blue-600 text-sm">
+          <a href="https://www.zh.ch/de/mobilitaet/schifffahrt/motorboote.html" target="_blank" rel="noopener noreferrer" class="btn-secondary border-white text-white hover:bg-white hover:text-primary-600 text-sm">
             Lernfahrgesuch Zürich
           </a>
         </div>
@@ -36,10 +36,10 @@
         <!-- Step 1 -->
         <div class="mb-16">
           <div class="flex items-center gap-4 mb-6">
-            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">1</div>
+            <div class="w-12 h-12 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">1</div>
             <h3 class="heading-sm">Motorboot Fahrstunden</h3>
           </div>
-          <div class="ml-16 bg-blue-50 rounded-lg p-6">
+          <div class="ml-16 bg-primary-50 rounded-lg p-6">
             <p class="text-gray-700 mb-4">
               <strong>Deine Motorboot Fahrschule: Werde ein sicherer Schiffskapitän!</strong>
             </p>
@@ -61,10 +61,10 @@
         <!-- Step 2 -->
         <div class="mb-16">
           <div class="flex items-center gap-4 mb-6">
-            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">2</div>
+            <div class="w-12 h-12 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">2</div>
             <h3 class="heading-sm">Beim Schifffahrtsamt anmelden</h3>
           </div>
-          <div class="ml-16 bg-blue-50 rounded-lg p-6">
+          <div class="ml-16 bg-primary-50 rounded-lg p-6">
             <p class="text-gray-700 mb-4">
               Nach den ersten paar Motorbootsfahrstunden kannst Du Dich beim Schifffahrtsamt Deines Wohnkantons anmelden.
             </p>
@@ -77,10 +77,10 @@
         <!-- Step 3 -->
         <div class="mb-16">
           <div class="flex items-center gap-4 mb-6">
-            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">3</div>
+            <div class="w-12 h-12 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">3</div>
             <h3 class="heading-sm">Motorboot Theorie</h3>
           </div>
-          <div class="ml-16 bg-blue-50 rounded-lg p-6">
+          <div class="ml-16 bg-primary-50 rounded-lg p-6">
             <p class="text-gray-700 mb-4">
               Während der praktischen Motorbootfahrstunden kannst Du bereits viel über den theoretischen Inhalt des Motorbootfahrens lernen.
             </p>
@@ -90,8 +90,8 @@
             <p class="text-gray-700 mb-4">
               Die Motorboottheorie für die Binnenschifffahrt beinhaltet Fragen zum Motorboot sowie auch zum Segelschiff und ist daher nur einmal zu absolvieren.
             </p>
-            <div class="bg-white rounded-lg px-4 py-3 inline-block border border-blue-200">
-              <span class="font-semibold text-blue-800">Gültigkeit der Theorieprüfung:</span>
+            <div class="bg-white rounded-lg px-4 py-3 inline-block border border-primary-200">
+              <span class="font-semibold text-primary-800">Gültigkeit der Theorieprüfung:</span>
               <span class="text-gray-700"> 24 Monate</span>
             </div>
           </div>
@@ -100,10 +100,10 @@
         <!-- Step 4 -->
         <div class="mb-16">
           <div class="flex items-center gap-4 mb-6">
-            <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">4</div>
+            <div class="w-12 h-12 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0">4</div>
             <h3 class="heading-sm">Praktische Motorboot Prüfung</h3>
           </div>
-          <div class="ml-16 bg-blue-50 rounded-lg p-6">
+          <div class="ml-16 bg-primary-50 rounded-lg p-6">
             <p class="text-gray-700 mb-4">
               Die praktische Motorbootprüfung dauert ca. 60 Minuten und wird mit dem Fahrschulboot durchgeführt. Der Prüfungsexperte möchte sehen, dass Du in jeder Lage selbstständig korrekte Entscheidungen triffst und das Boot sicher führen kannst.
             </p>
@@ -143,8 +143,8 @@
     <section class="section-container py-20">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="heading-md mb-8">Preise Bootsfahrschule</h2>
-        <div class="bg-white rounded-xl border-2 border-blue-600 shadow-sm p-8">
-          <h3 class="text-xl font-bold mb-6 text-blue-800">Kategorie Motorboot</h3>
+        <div class="bg-white rounded-xl border-2 border-primary-600 shadow-sm p-8">
+          <h3 class="text-xl font-bold mb-6 text-primary-800">Kategorie Motorboot</h3>
           <ul class="space-y-3 mb-6 text-left">
             <li class="flex items-center gap-2 text-gray-700"><span class="text-green-600 font-bold">✓</span> Effiziente Fahrausbildung</li>
             <li class="flex items-center gap-2 text-gray-700"><span class="text-green-600 font-bold">✓</span> Freundliche Fahrlehrer:innen</li>
@@ -217,23 +217,23 @@
         <div class="bg-white border border-gray-200 rounded-lg p-8">
           <form class="space-y-6">
             <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
             <div class="grid md:grid-cols-3 gap-4">
-              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
             <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
+              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
             </div>
-            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" required />
-            <textarea placeholder="Weitere Angaben, bevorzugte Zeitfenster & Treffpunkte, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"></textarea>
+            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
+            <textarea placeholder="Weitere Angaben, bevorzugte Zeitfenster & Treffpunkte, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
             <div class="flex items-center gap-3">
               <input type="checkbox" id="agb" class="w-4 h-4" required />
-              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-blue-600 hover:underline">AGB's</a></label>
+              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-primary-600 hover:underline">AGB's</a></label>
             </div>
             <button type="submit" class="btn-primary w-full text-lg">
               Termin anfragen
@@ -244,11 +244,11 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Warum die Motorboot Fahrschule Driving Team?</h2>
-        <p class="text-blue-100 max-w-2xl mx-auto mb-8">Unsere Motorboot Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <p class="text-primary-100 max-w-2xl mx-auto mb-8">Unsere Motorboot Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
+        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>
       </div>

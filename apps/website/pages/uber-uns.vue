@@ -1,16 +1,16 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Über uns | Driving Team - Fahrschule Zürich</Title>
       <Meta name="description" content="Lerne unser Team von erfahrenen Fahrlehrern kennen. Moderne Fahrschule mit Leidenschaft für Fahrausbildung in Zürich." />
       <Link rel="canonical" href="https://drivingteam.ch/uber-uns/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Über die Fahrschule Driving Team</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto">Moderne Fahrschule mit Leidenschaft für professionelle Fahrausbildung in Zürich und Umgebung.</p>
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto">Moderne Fahrschule mit Leidenschaft für professionelle Fahrausbildung in Zürich und Umgebung.</p>
       </div>
     </section>
 
@@ -19,17 +19,17 @@
       <h2 class="heading-md text-center mb-16">Unsere Mission</h2>
       
       <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
-        <div class="bg-blue-50 rounded-lg p-8 text-center">
+        <div class="bg-primary-50 rounded-lg p-8 text-center">
           <p class="text-4xl mb-4">🎯</p>
           <h3 class="font-bold text-lg mb-2">Professionell</h3>
           <p class="text-gray-700">Höchste Standards in Fahrausbildung und Kundenservice</p>
         </div>
-        <div class="bg-blue-50 rounded-lg p-8 text-center">
+        <div class="bg-primary-50 rounded-lg p-8 text-center">
           <p class="text-4xl mb-4">💪</p>
           <h3 class="font-bold text-lg mb-2">Modern</h3>
           <p class="text-gray-700">Neue Fahrzeuge, aktuelle Lehrmethoden und digitale Lösungen</p>
         </div>
-        <div class="bg-blue-50 rounded-lg p-8 text-center">
+        <div class="bg-primary-50 rounded-lg p-8 text-center">
           <p class="text-4xl mb-4">❤️</p>
           <h3 class="font-bold text-lg mb-2">Leidenschaft</h3>
           <p class="text-gray-700">Begeisterung für sichere und kompetente Fahrausbildung</p>
@@ -74,7 +74,7 @@
       <div class="max-w-4xl mx-auto space-y-8">
         <div class="flex gap-8">
           <div class="flex-shrink-0">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold">📅</div>
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold">📅</div>
           </div>
           <div>
             <h3 class="font-bold text-lg mb-2">Gegründet mit Vision</h3>
@@ -84,7 +84,7 @@
 
         <div class="flex gap-8">
           <div class="flex-shrink-0">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold">🎓</div>
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold">🎓</div>
           </div>
           <div>
             <h3 class="font-bold text-lg mb-2">Professionelle Ausbildung</h3>
@@ -94,7 +94,7 @@
 
         <div class="flex gap-8">
           <div class="flex-shrink-0">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold">🌟</div>
+            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold">🌟</div>
           </div>
           <div>
             <h3 class="font-bold text-lg mb-2">Qualität & Sicherheit</h3>
@@ -105,24 +105,24 @@
     </section>
 
     <!-- Stats -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container">
         <div class="grid md:grid-cols-4 gap-8 text-center">
           <div>
             <p class="text-5xl font-bold mb-2">20+</p>
-            <p class="text-blue-100">Jahre Erfahrung</p>
+            <p class="text-primary-100">Jahre Erfahrung</p>
           </div>
           <div>
             <p class="text-5xl font-bold mb-2">8</p>
-            <p class="text-blue-100">Fahrlehrer & Instruktoren</p>
+            <p class="text-primary-100">Fahrlehrer & Instruktoren</p>
           </div>
           <div>
             <p class="text-5xl font-bold mb-2">1000+</p>
-            <p class="text-blue-100">Schüler pro Jahr</p>
+            <p class="text-primary-100">Schüler pro Jahr</p>
           </div>
           <div>
             <p class="text-5xl font-bold mb-2">4.8 ⭐</p>
-            <p class="text-blue-100">Google Bewertung</p>
+            <p class="text-primary-100">Google Bewertung</p>
           </div>
         </div>
       </div>

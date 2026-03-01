@@ -1,18 +1,20 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Auto Fahrschule Lachen | 6 Schritte zu Deiner Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="Fahrschule Lachen – Moderne Fahrausbildung im Kanton Schwyz. Fahrstunden für Auto, Motorrad und mehr. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-lachen/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/locations/lachen-hero.jpg" alt="Fahrschule Lachen" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Willkommen bei der Fahrschule Driving Team Lachen</h1>
-          <p class="text-xl text-blue-100 mb-8">Deine moderne Fahrschule in Lachen/SZ. Melde Dich an und starte deine Fahrausbildung mit erfahrenen Fahrlehrern.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Deine moderne Fahrschule in Lachen/SZ. Melde Dich an und starte deine Fahrausbildung mit erfahrenen Fahrlehrern.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -24,43 +26,43 @@
       <h2 class="heading-md mb-10 text-center">Fahrschule Lachen</h2>
       <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Melde Dich in unserer Fahrschule Lachen an und Du kannst folgende Punkte von uns erwarten…</p>
       <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">Individuelle Ausbildung</h3>
             <p class="text-gray-600 text-sm">Auf Dich zugeschnittene Fahrstunden, welche Dich zur sicheren Fahrzeuglenkerin bzw. zum sicheren Fahrzeuglenker ausbilden.</p>
           </div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">Entspanntes Lernen</h3>
             <p class="text-gray-600 text-sm">Angenehme Lernatmosphäre im und um das Fahrzeug. In unserer Fahrschule kombinieren wir das nötige Mass an Seriosität mit einer Prise Lockerheit.</p>
           </div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">Bestmögliche Vorbereitung</h3>
             <p class="text-gray-600 text-sm">Bei uns bestehen die meisten Fahrschüler:innen beim ersten Mal. Mit einer soliden Fahrausbildung begeistern wir die Verkehrsexpert:innen.</p>
           </div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">Solide Grundlage</h3>
             <p class="text-gray-600 text-sm">In unserer Fahrschule ist das Hauptziel, Dich für ein unfallfreies Leben als Autofahrer:in vorzubereiten.</p>
           </div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">Detaillierter Ausbildungsplan</h3>
             <p class="text-gray-600 text-sm">Unsere Fahrlehrer:innen gehen nach einem methodisch und didaktischem Lehrplan vor, um Dir eine effiziente Fahrausbildung zu ermöglichen.</p>
           </div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">Flexible Treffpunkte</h3>
             <p class="text-gray-600 text-sm">Nach Möglichkeit bieten wir flexible Treffpunkte an. Am Besten kommen wir uns gegenseitig entgegen.</p>
@@ -77,7 +79,7 @@
 
     <!-- Themen -->
     <section class="bg-gray-50 py-16">
-      <div class="section-container">
+      <div class="section-container relative z-10">
         <h2 class="heading-md mb-6 text-center">Fahrschule Lachen – Themen</h2>
         <p class="text-center text-gray-600 mb-10">In unserer Fahrschule Lachen werden folgende Themen angeschaut und bis zur prüfungsreife geübt:</p>
         <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -130,7 +132,7 @@
 
     <!-- Preise -->
     <section class="bg-gray-50 py-16">
-      <div class="section-container">
+      <div class="section-container relative z-10">
         <h2 class="heading-md mb-10 text-center">Unsere Preise…</h2>
         <div class="max-w-sm mx-auto bg-white rounded-lg p-8 shadow-sm border border-gray-200 text-center">
           <h3 class="font-bold text-2xl text-gray-900 mb-4">Einzellektion</h3>
@@ -150,17 +152,17 @@
     <section class="section-container">
       <h2 class="heading-md mb-6 text-center">Tätigkeitsgebiet Fahrschule Lachen</h2>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        <span class="bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm text-blue-700">📍 Altendorf / Lachen</span>
-        <span class="bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm text-blue-700">📍 Feusisberg / Schindellegi</span>
-        <span class="bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm text-blue-700">📍 Wollerau / Samstagern</span>
-        <span class="bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm text-blue-700">📍 Freienbach / Richterswil</span>
-        <span class="bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm text-blue-700">📍 Rapperswil / Jona</span>
+        <span class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700">📍 Altendorf / Lachen</span>
+        <span class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700">📍 Feusisberg / Schindellegi</span>
+        <span class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700">📍 Wollerau / Samstagern</span>
+        <span class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700">📍 Freienbach / Richterswil</span>
+        <span class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700">📍 Rapperswil / Jona</span>
       </div>
     </section>
 
     <!-- FAQ -->
     <section class="bg-gray-50 py-16">
-      <div class="section-container">
+      <div class="section-container relative z-10">
         <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen & Antworten</h2>
         <div class="max-w-3xl mx-auto space-y-4">
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -196,28 +198,28 @@
 
     <!-- Andere Standorte -->
     <section class="bg-gray-50 py-12">
-      <div class="section-container">
+      <div class="section-container relative z-10">
         <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere weiteren Standorte</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Zürich</a>
-          <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Uster</a>
-          <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Aargau</a>
-          <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule St.Gallen</a>
-          <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Dietikon</a>
+          <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+          <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+          <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+          <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+          <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt in Lachen starten!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt Termin buchen
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

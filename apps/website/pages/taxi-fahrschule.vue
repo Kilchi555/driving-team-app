@@ -1,20 +1,22 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Taxi Fahrschule Kategorie BPT | Driving Team Zürich</Title>
       <Meta name="description" content="Taxi Fahrschule in Zürich mit BPT Zertifizierung (Code 121 | 122). Professionelle Ausbildung für Taxi-Fahrer mit allen erforderlichen Kursen, Theorie ARV und praktischen Fahrstunden." />
       <Meta property="og:title" content="Taxi Fahrschule Kategorie BPT | Driving Team" />
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/taxi-fahrschule.webp" alt="Taxi Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/taxi-fahrschule.webp" alt="Taxi Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
-          <p class="text-xl text-blue-100 mb-8">Träumst du davon, als Taxifahrer:in auf den Strassen unterwegs zu sein und Menschen sicher an ihr Ziel zu bringen? Dann bist du bei uns genau richtig! Wir bieten dir die massgeschneiderte Ausbildung für deinen Traumberuf als Taxifahrer:in.</p>
+          <h1 class="heading-lg text-white mb-6">Taxi Fahrschule Kategorie BPT</h1>
+          <p class="text-xl text-primary-100 mb-8">Träumst du davon, als Taxifahrer:in auf den Strassen unterwegs zu sein und Menschen sicher an ihr Ziel zu bringen? Dann bist du bei uns genau richtig! Wir bieten dir die massgeschneiderte Ausbildung für deinen Traumberuf als Taxifahrer:in.</p>
           <div class="flex flex-wrap gap-4">
-            <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+            <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Taxi Fahrstunden anmelden
             </a>
           </div>
@@ -36,10 +38,10 @@
         <h2 class="heading-md mb-12 text-center">Weg zur Taxiprüfung - 5 Schritte zu deinem Traumberuf</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lernfahrgesuch Taxi</h3>
@@ -50,10 +52,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Ärztliche Untersuchung</h3>
@@ -63,26 +65,26 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Taxi Theorie | ARV 2</h3>
                 <p class="text-sm text-gray-600">Im berufsmässigen Personentransport bist du verpflichtet, die Anweisungen über Arbeits-, Lenk- und Ruhezeit einzuhalten. Diese Regelungen sind in der ARV festgehalten und werden mit der Taxi Theorie (ARV 2) geprüft.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Nicht erforderlich für Schüler-, Arbeits-, Behindertentransporte oder Ambulanzfahrzeuge (BPT 122) – weiter mit Schritt 4 Fahrausbildung.</p>
                 <div class="mt-3">
-                  <a href="/taxi-theorie/" class="text-sm text-blue-600 font-semibold hover:underline">→ Mehr zur Taxi Theorie</a>
+                  <a href="/taxi-theorie/" class="text-sm text-primary-600 font-semibold hover:underline">→ Mehr zur Taxi Theorie</a>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Taxi Fahrstunden</h3>
@@ -93,10 +95,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">5</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">BPT Prüfung</h3>
@@ -154,22 +156,22 @@
         <h2 class="heading-md mb-10 text-center">Preise | Taxi Fahrschule</h2>
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           <div class="bg-white rounded-lg p-6 shadow-sm text-center">
-            <p class="text-3xl font-bold text-blue-600 mb-2">CHF 100.-</p>
+            <p class="text-3xl font-bold text-primary-600 mb-2">CHF 100.-</p>
             <p class="text-gray-700 font-semibold">Taxifahrlektion</p>
             <p class="text-gray-500 text-sm mt-1">45 Minuten</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm text-center">
-            <p class="text-3xl font-bold text-blue-600 mb-2">CHF 90.-</p>
+            <p class="text-3xl font-bold text-primary-600 mb-2">CHF 90.-</p>
             <p class="text-gray-700 font-semibold">Mit eigenem Fahrzeug</p>
             <p class="text-gray-500 text-sm mt-1">Pro Lektion 45min</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm text-center">
-            <p class="text-3xl font-bold text-blue-600 mb-2">CHF 120.-</p>
+            <p class="text-3xl font-bold text-primary-600 mb-2">CHF 120.-</p>
             <p class="text-gray-700 font-semibold">Admin- & Versicherungspauschale</p>
             <p class="text-gray-500 text-sm mt-1">Einmalig</p>
           </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm text-center border-2 border-blue-200">
-            <p class="text-3xl font-bold text-blue-600 mb-2">CHF 300.-</p>
+          <div class="bg-white rounded-lg p-6 shadow-sm text-center border-2 border-primary-200">
+            <p class="text-3xl font-bold text-primary-600 mb-2">CHF 300.-</p>
             <p class="text-gray-700 font-semibold">WarmUp inkl. Prüfungsfahrt</p>
             <p class="text-gray-500 text-sm mt-1">Total 135 Minuten</p>
           </div>
@@ -207,7 +209,7 @@
         </details>
       </div>
 
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 Jetzt anrufen: +41 44 431 00 33
@@ -241,27 +243,27 @@
         <!-- Unsere Gebiete -->
         <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Lachen</a>
-          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Uster</a>
-          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Aargau</a>
-          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-blue-400 hover:text-blue-600 transition shadow-sm">Fahrschule St.Gallen</a>
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
+          <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Starte deine Taxi-Karriere!</h2>
-        <p class="text-xl text-blue-100 mb-8">Mit professioneller BPT Ausbildung von Driving Team</p>
+        <p class="text-xl text-primary-100 mb-8">Mit professioneller BPT Ausbildung von Driving Team</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Taxi Fahrstunden anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

@@ -1,18 +1,18 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Bootsfahrschule Zürich | Motorboot Fahrstunden am Zürichsee | Driving Team</Title>
       <Meta name="description" content="Bootsfahrschule am unteren Zürichsee mit flexiblen Treffpunkten. Erfahrener Fahrlehrer Marc, Fahrstunden auch abends und samstags. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Bootsfahrschule Zürich</h1>
-          <p class="text-xl text-blue-100 mb-8">Bootsfahrschule am unteren Zürichsee – flexible Treffpunkte. Professionelle Motorboot Fahrstunden mit erfahrenem Fahrlehrer Marc. Fahrstunden auch abends und samstags!</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Bootsfahrschule am unteren Zürichsee – flexible Treffpunkte. Professionelle Motorboot Fahrstunden mit erfahrenem Fahrlehrer Marc. Fahrstunden auch abends und samstags!</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Termin anfragen
           </a>
         </div>
@@ -58,11 +58,11 @@
       <h2 class="heading-md mb-10 text-center">Preise Bootsfahrschule</h2>
       <div class="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
-          <p class="text-3xl font-bold text-blue-600 mb-2">CHF 190.-</p>
+          <p class="text-3xl font-bold text-primary-600 mb-2">CHF 190.-</p>
           <p class="font-semibold text-gray-800">Lektion 90 Minuten</p>
         </div>
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
-          <p class="text-3xl font-bold text-blue-600 mb-2">CHF 120.-</p>
+          <p class="text-3xl font-bold text-primary-600 mb-2">CHF 120.-</p>
           <p class="font-semibold text-gray-800">Admin- & Versicherungspauschale</p>
           <p class="text-sm text-gray-500 mt-1">Einmalig</p>
         </div>
@@ -130,22 +130,22 @@
           <p class="text-gray-600 mt-4">Ja, die Theorieprüfung muss vor der praktischen Motorbootprüfung bestanden sein. Sie ist für Segel- und Motorbootprüfung die gleiche und nur einmal zu absolvieren.</p>
         </details>
       </div>
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen: +41 44 431 00 33</a>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher auf dem Zürichsee!</h2>
-        <p class="text-xl text-blue-100 mb-8">Professionelle Bootsfahrstunden mit flexiblen Zeiten und Treffpunkten</p>
+        <p class="text-xl text-primary-100 mb-8">Professionelle Bootsfahrstunden mit flexiblen Zeiten und Treffpunkten</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Termin anfragen
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

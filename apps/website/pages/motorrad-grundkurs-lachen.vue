@@ -1,19 +1,19 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Motorrad Grundkurs Lachen | 3 x 4h für Motorrad & Roller | Driving Team</Title>
       <Meta name="description" content="Motorrad Grundkurs Lachen – 3 x 4h praxisorientierter Grundkurs für alle Motorrad-Kategorien. Kompletter Kurs CHF 570.-. Max. 5 Teilnehmer. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-lachen/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-4">Motorrad Grundkurs Lachen</h1>
-          <p class="text-xl text-blue-100 mb-2">Kompletter Kurs in Lachen nur für <strong>CHF 570.–</strong> anstatt 630.-</p>
-          <p class="text-blue-100 mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-2">Kompletter Kurs in Lachen nur für <strong>CHF 570.–</strong> anstatt 630.-</p>
+          <p class="text-primary-100 mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -26,7 +26,7 @@
       <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Wir gestalten den Motorrad Grundkurs in Lachen praxisorientiert, sodass du intensiv üben und stark davon profitieren kannst. Unsere Motorradfahrlehrer:innen zeigen und erklären dir alle relevanten Themen.</p>
 
       <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        <div class="bg-blue-50 rounded-lg p-6">
+        <div class="bg-primary-50 rounded-lg p-6">
           <h3 class="font-bold text-gray-900 mb-4 text-lg">✅ Voraussetzungen</h3>
           <ul class="space-y-2 text-gray-700 text-sm">
             <li>✓ Gültiger Lernfahrausweis der Kategorie A1/A</li>
@@ -34,7 +34,7 @@
             <li>✓ Eigenes Motorrad/Roller inkl. Sicherheitsbekleidung mitbringen</li>
           </ul>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6">
+        <div class="bg-primary-50 rounded-lg p-6">
           <h3 class="font-bold text-gray-900 mb-4 text-lg">📋 Details</h3>
           <ul class="space-y-2 text-gray-700 text-sm">
             <li>🏍️ Kompletter Kurs: <strong>CHF 570.-</strong> (Kosten pro Kursteil CHF 190.-)</li>
@@ -101,12 +101,12 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Motorrad Grundkurs Lachen buchen!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">📅 Jetzt anmelden</a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">📞 +41 44 431 00 33</a>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
     </section>

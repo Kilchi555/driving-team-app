@@ -1,21 +1,22 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Anhänger Fahrschule Kategorie BE | Driving Team Zürich</Title>
       <Meta name="description" content="Anhänger Fahrschule in Zürich und Lachen für Kategorie BE. Praxisnahe Ausbildung, Prüfungsgebiete Albisgütli/Regensdorf/Wettingen. Erfahrene Fahrlehrer." />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule Kategorie BE</h1>
-          <p class="text-xl text-blue-100 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -70,10 +71,10 @@
       <div class="section-container">
         <h2 class="heading-md mb-12 text-center">Weg zur Anhängerprüfung</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Lernfahrgesuch Anhängerprüfung</h3>
@@ -84,10 +85,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Anhänger Fahrstunden</h3>
@@ -98,10 +99,10 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-blue-600 shadow-sm">
+          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
             <div class="flex items-start gap-6">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
               <div class="flex-1">
                 <h3 class="heading-sm mb-2">Anhängerprüfung</h3>
@@ -147,17 +148,17 @@
         <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
           <p class="text-gray-600 mb-4">Unser spezieller Anhänger-Kurs bringt dich in den Anhängerfahrstunden deutlich schneller voran. Du lernst nicht nur aktiv mit, sondern profitierst auch vom Zuhören und Zuschauen. So werden deine Kosten optimiert.</p>
           <p class="text-gray-600 mb-6">Als zusätzliche Unterstützung erhältst du eine Broschüre, die dir eine wichtige theoretische Grundlage für den Kurs bietet. Nach dem Kursbesuch bist du optimal auf die Fahrstunden vorbereitet. Die nötigen Fahrzeuge stellen wir dir zur Verfügung.</p>
-          <div class="grid md:grid-cols-3 gap-4 bg-blue-50 rounded-lg p-4">
+          <div class="grid md:grid-cols-3 gap-4 bg-primary-50 rounded-lg p-4">
             <div class="text-center">
-              <p class="font-bold text-blue-700 text-xl">CHF 190.-</p>
+              <p class="font-bold text-primary-700 text-xl">CHF 190.-</p>
               <p class="text-sm text-gray-600">pro Person</p>
             </div>
             <div class="text-center">
-              <p class="font-bold text-blue-700 text-xl">3 Stunden</p>
+              <p class="font-bold text-primary-700 text-xl">3 Stunden</p>
               <p class="text-sm text-gray-600">Kursdauer</p>
             </div>
             <div class="text-center">
-              <p class="font-bold text-blue-700 text-xl">min. 3 Pers.</p>
+              <p class="font-bold text-primary-700 text-xl">min. 3 Pers.</p>
               <p class="text-sm text-gray-600">für Gruppenrabatt</p>
             </div>
           </div>
@@ -171,27 +172,27 @@
       <h2 class="heading-md mb-10 text-center">Anhänger Fahrschule – Preise</h2>
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <p class="text-2xl font-bold text-blue-600 mb-1">CHF 120.-</p>
+          <p class="text-2xl font-bold text-primary-600 mb-1">CHF 120.-</p>
           <p class="font-semibold text-gray-800">Fahrlektion 45min</p>
           <p class="text-sm text-gray-500 mt-1">Wir empfehlen grundsätzlich Doppellektionen zu buchen.</p>
         </div>
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <p class="text-2xl font-bold text-blue-600 mb-1">CHF 120.-</p>
+          <p class="text-2xl font-bold text-primary-600 mb-1">CHF 120.-</p>
           <p class="font-semibold text-gray-800">Admin- & Versicherungspauschale</p>
           <p class="text-sm text-gray-500 mt-1">Einmalig für die ganze Ausbildung.</p>
         </div>
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <p class="text-2xl font-bold text-blue-600 mb-1">CHF 110.-</p>
+          <p class="text-2xl font-bold text-primary-600 mb-1">CHF 110.-</p>
           <p class="font-semibold text-gray-800">Mit eigenem Zugfahrzeug</p>
           <p class="text-sm text-gray-500 mt-1">Zugfahrzeug muss ca. gleich breit wie unser Anhänger sein.</p>
         </div>
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <p class="text-2xl font-bold text-blue-600 mb-1">CHF 100.-</p>
+          <p class="text-2xl font-bold text-primary-600 mb-1">CHF 100.-</p>
           <p class="font-semibold text-gray-800">Mit eigener Kombination</p>
           <p class="text-sm text-gray-500 mt-1">Kombination muss den Prüfungsanforderungen entsprechen und betriebssicher sein.</p>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 shadow-sm border border-blue-200">
-          <p class="text-2xl font-bold text-blue-600 mb-1">CHF 360.-</p>
+        <div class="bg-primary-50 rounded-lg p-6 shadow-sm border border-primary-200">
+          <p class="text-2xl font-bold text-primary-600 mb-1">CHF 360.-</p>
           <p class="font-semibold text-gray-800">WarmUp inkl. Prüfungsfahrt</p>
           <p class="text-sm text-gray-500 mt-1">Zeitaufwand am Prüfungstag: 120 Minuten.</p>
         </div>
@@ -261,7 +262,7 @@
           <p class="text-gray-600 mt-4">Bereits ab einem Alter von 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen und somit auch Lernfahrten in Begleitung machen.</p>
         </details>
       </div>
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 Jetzt anrufen: +41 44 431 00 33
@@ -270,15 +271,15 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher fahren mit Anhänger!</h2>
-        <p class="text-xl text-blue-100 mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
+        <p class="text-xl text-primary-100 mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Fahrschule Zürich | Deine Driving Team Fahrschule in Zürich - Auto, Motorrad, Taxi</Title>
       <Meta name="description" content="Fahrschule Driving Team Zürich - moderne Fahrausbildung für Auto, Motorrad, Taxi, Lastwagen & Anhänger. Erfahrene Fahrlehrer, flexible Fahrstunden, hohe Prüfungserfolgsquote. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule, Taxi Fahrschule, Lastwagen Fahrschule, Führerschein, Fahrausbildung, Fahrstunden Zürich, Prüfungsvorbereitung" />
@@ -23,7 +23,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Welcome Title -->
     <div class="w-full bg-white py-8 md:py-12 text-center border-b border-gray-200">
@@ -40,13 +40,13 @@
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-              <div class="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 group-hover:from-blue-600 group-hover:to-blue-800 transition-all duration-500"></div>
-              <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
+              <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                   <h3 class="font-black text-2xl text-white mb-2">Auto</h3>
-                  <p class="text-blue-100 font-semibold">Kategorie B</p>
+                  <p class="text-primary-100 font-semibold">Kategorie B</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <p class="text-white text-sm font-semibold leading-snug">Auto Führerschein Klasse B. Professionelle Fahrerausbildung für alle Altersgruppen in Zürich.</p>
@@ -57,7 +57,7 @@
             <!-- Motorrad -->
             <a href="/motorrad-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
-              <img src="/images/categories/motorrad-fahrschule.webp" alt="Motorrad Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <img src="/images/categories/motorrad-fahrschule.webp" alt="Motorrad Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -73,7 +73,7 @@
             <!-- Lastwagen -->
             <a href="/lastwagen-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-yellow-500 to-yellow-700 group-hover:from-yellow-600 group-hover:to-yellow-800 transition-all duration-500"></div>
-              <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -89,7 +89,7 @@
             <!-- Taxi -->
             <a href="/taxi-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 group-hover:from-purple-600 group-hover:to-purple-800 transition-all duration-500"></div>
-              <img src="/images/categories/taxi-fahrschule.webp" alt="Taxi Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <img src="/images/categories/taxi-fahrschule.webp" alt="Taxi Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -105,7 +105,7 @@
             <!-- Bus -->
             <a href="/bus-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.4s">
               <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-green-700 group-hover:from-green-600 group-hover:to-green-800 transition-all duration-500"></div>
-              <img src="/images/categories/bus-fahrschule.webp" alt="Bus Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <img src="/images/categories/bus-fahrschule.webp" alt="Bus Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -121,7 +121,7 @@
             <!-- Anhänger -->
             <a href="/anhaenger-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.5s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
-              <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -137,7 +137,7 @@
             <!-- Motorboot -->
             <a href="/motorboot/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.6s">
               <div class="absolute inset-0 bg-gradient-to-br from-cyan-500 to-cyan-700 group-hover:from-cyan-600 group-hover:to-cyan-800 transition-all duration-500"></div>
-              <img src="/images/categories/motorboot.webp" alt="Motorboot Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <img src="/images/categories/motorboot.webp" alt="Motorboot Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -152,13 +152,13 @@
 
             <!-- Kontrollfahrt -->
             <a href="/kontrollfahrt/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.7s">
-              <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 to-indigo-700 group-hover:from-indigo-600 group-hover:to-indigo-800 transition-all duration-500"></div>
-              <img src="/images/categories/kontrollfahrt.webp" alt="Kontrollfahrt" class="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-50 transition-all duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
+              <img src="/images/categories/kontrollfahrt.webp" alt="Kontrollfahrt" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                   <h3 class="font-black text-2xl text-white mb-2">Kontrollfahrt</h3>
-                  <p class="text-indigo-100 font-semibold">Alle Kategorien</p>
+                  <p class="text-primary-100 font-semibold">Alle Kategorien</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <p class="text-white text-sm font-semibold leading-snug">Kontrollfahrten für alle Führerschein-Kategorien. Professionelle Vorbereitung auf die Prüfung.</p>
@@ -175,7 +175,7 @@
       <div class="max-w-7xl mx-auto px-4">
         <div class="grid md:grid-cols-4 gap-8">
           <div class="text-center group">
-            <div class="mb-4 text-6xl font-black text-blue-400 group-hover:scale-125 transition-transform duration-500">20+</div>
+            <div class="mb-4 text-6xl font-black text-primary-400 group-hover:scale-125 transition-transform duration-500">20+</div>
             <p class="text-gray-300 text-lg">Jahre Erfahrung</p>
           </div>
           <div class="text-center group">
@@ -207,7 +207,8 @@
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8">
             <!-- Auto Theorie -->
             <a href="/auto-theorie/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48">
-              <div class="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 group-hover:from-blue-600 group-hover:to-blue-800 transition-all duration-500"></div>
+              <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
+              <img src="/images/courses/theorie.png" alt="Auto Theorie" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -222,6 +223,7 @@
             <!-- Nothelferkurse -->
             <a href="/nothelferkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
+              <img src="/images/courses/nothelfer.png" alt="Nothelferkurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -236,6 +238,7 @@
             <!-- Motorrad Grundkurs -->
             <a href="/motorrad-grundkurs-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
+              <img src="/images/courses/motorrad-grundkurs.png" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -250,6 +253,7 @@
             <!-- VKU Kurse -->
             <a href="/vku-kurs-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-green-700 group-hover:from-green-600 group-hover:to-green-800 transition-all duration-500"></div>
+              <img src="/images/courses/vku.png" alt="VKU Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -271,7 +275,7 @@
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8">
             <!-- CZV Grundkurs -->
             <a href="/czv-grundkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48">
-              <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 to-indigo-700 group-hover:from-indigo-600 group-hover:to-indigo-800 transition-all duration-500"></div>
+              <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -286,6 +290,7 @@
             <!-- CZV Weiterbildung -->
             <a href="/czv-weiterbildung/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-pink-500 to-pink-700 group-hover:from-pink-600 group-hover:to-pink-800 transition-all duration-500"></div>
+              <img src="/images/courses/czv-weiterbildung.png" alt="CZV Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -341,49 +346,49 @@
         <h2 class="heading-md text-center mb-16">Das sagen unsere Kunden</h2>
         
         <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt. Zudem hat er mir viele hilfreiche Hinweise gegeben."
             </p>
             <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
           </div>
 
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Eine sehr gute Fahrschule und ein cooles Team. Sehr empfehlenswert! Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet."
             </p>
             <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
           </div>
 
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Sehr gute Fahrschule! Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit während meiner Fahrstunden. Rijad gab mir immer präzise und hilfreiche Tipps."
             </p>
             <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
           </div>
 
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Das Driving Team Zürich ist eine moderne, tolle, sehr kompetente Fahrschule. Die Fahrlehrer sind sehr nett und geduldig. Das Lokal ist gut zu erreichen und schön eingerichtet."
             </p>
             <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
           </div>
 
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Sehr gute Fahrschule! Ich hatte mit Keni Fahrstunden, welcher diese lustig und spannend gestaltete. Dadurch konnte ich immer positiv denken und nahm es nicht so streng. Durch ihn konnte ich mich super entwickeln!"
             </p>
             <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
           </div>
 
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Super Fahrschule!! Ich hatte meine Fahrstunden mit Keni. Er hat mich für die praktische Fahrprüfung sehr gut vorbereitet, die ich dann an meinem 18. Geburtstag bestanden habe. TOLL! Hat sehr viel Spaß gemacht."
             </p>
             <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
           </div>
 
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-blue-600">
+          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
             <p class="text-gray-700 mb-4 italic">
               "Die Fahrschule war ausgezeichnet, und mein Fahrlehrer Vito war äusserst hilfreich bei meiner Vorbereitung auf die Fahrprüfung. Ich bin ihm sehr dankbar für seine Unterstützung."
             </p>
@@ -503,7 +508,7 @@
         </details>
       </div>
 
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-8 text-center mt-12">
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center mt-12">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen?</p>
         <a href="tel:+41444310033" class="btn-primary">
           📞 +41 44 431 00 33
@@ -512,11 +517,11 @@
     </section>
 
     <!-- Gift Voucher Section -->
-    <section class="relative py-24 overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800">
+    <section class="relative py-24 overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800">
       <!-- Decorative background elements -->
       <div class="absolute inset-0 opacity-20">
         <div class="absolute top-0 left-0 w-96 h-96 bg-white rounded-full mix-blend-multiply filter blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
       </div>
 
       <div class="section-container relative z-10">
@@ -527,13 +532,13 @@
               <span class="text-6xl">🎁</span>
             </div>
             <h2 class="text-4xl md:text-5xl font-black text-white mb-4">Jetzt Gutschein bestellen</h2>
-            <p class="text-xl md:text-2xl text-blue-100 font-semibold">Schenke Sicherheit und bestelle jetzt einen Gutschein!</p>
+            <p class="text-xl md:text-2xl text-primary-100 font-semibold">Schenke Sicherheit und bestelle jetzt einen Gutschein!</p>
           </div>
 
           <!-- Main Card -->
           <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
             <!-- Card Header with accent -->
-            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-8">
+            <div class="bg-gradient-to-r from-primary-500 to-primary-600 px-8 py-8">
               <p class="text-white text-lg font-semibold text-center">
                 Möchtest du jemandem Sicherheit schenken?
               </p>
@@ -545,26 +550,26 @@
                 Dann schreibe uns eine E-Mail und der Gutschein für Fahrstunden wird schon bald bei dir sein! Die Rechnung wird separat per E-Mail verschickt.
               </p>
 
-              <div class="bg-blue-50 rounded-xl p-8 mb-8 border-l-4 border-blue-600">
+              <div class="bg-primary-50 rounded-xl p-8 mb-8 border-l-4 border-primary-600">
                 <p class="text-gray-900 font-bold mb-6 text-lg">
                   Folgende Punkte müssen in deiner E-Mail mindestens vorhanden sein:
                 </p>
                 
                 <ul class="space-y-4">
                   <li class="flex items-start gap-4 group">
-                    <span class="text-blue-600 font-bold text-2xl flex-shrink-0">✓</span>
+                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
                     <span class="text-gray-700 text-lg pt-1">Vorname und Nachname des Gutscheinempfängers</span>
                   </li>
                   <li class="flex items-start gap-4 group">
-                    <span class="text-blue-600 font-bold text-2xl flex-shrink-0">✓</span>
+                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
                     <span class="text-gray-700 text-lg pt-1">Anzahl der gewünschten Fahrstunden</span>
                   </li>
                   <li class="flex items-start gap-4 group">
-                    <span class="text-blue-600 font-bold text-2xl flex-shrink-0">✓</span>
+                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
                     <span class="text-gray-700 text-lg pt-1">Kategorie (Auto, Motorrad, etc.)</span>
                   </li>
                   <li class="flex items-start gap-4 group">
-                    <span class="text-blue-600 font-bold text-2xl flex-shrink-0">✓</span>
+                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
                     <span class="text-gray-700 text-lg pt-1">Deine Kontaktdaten für Rückfragen</span>
                   </li>
                 </ul>
@@ -572,7 +577,7 @@
 
               <!-- CTA Button -->
               <div class="text-center">
-                <a href="mailto:info@drivingteam.ch?subject=Gutschein%20bestellen" class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold px-10 py-4 rounded-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                <a href="mailto:info@drivingteam.ch?subject=Gutschein%20bestellen" class="inline-flex items-center gap-3 bg-gradient-to-r from-primary-600 to-primary-600 text-white font-bold px-10 py-4 rounded-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                   <span>📧</span>
                   <span>Jetzt E-Mail schreiben</span>
                 </a>
@@ -588,91 +593,97 @@
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">Unsere Preise</h2>
         
-        <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-12">
-          <!-- Individual Lessons -->
-          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
+        <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-8">
+          <!-- Kategorie B - Auto -->
+          <div class="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
             <h3 class="text-2xl font-bold text-gray-900 mb-4">Einzellektion</h3>
             <p class="text-gray-600 mb-6">Kategorie B à 45 Minuten</p>
             <div class="mb-6">
-              <span class="text-4xl font-black text-blue-600">CHF 95</span>
+              <span class="text-4xl font-black text-primary-600">CHF 95</span>
               <span class="text-gray-600 ml-2">pro Lektion</span>
             </div>
             <ul class="space-y-3 text-gray-700">
               <li class="flex items-start gap-2">
-                <span class="text-blue-600 font-bold">✓</span>
+                <span class="text-primary-600 font-bold">✓</span>
                 <span>Effiziente Fahrausbildung</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="text-blue-600 font-bold">✓</span>
+                <span class="text-primary-600 font-bold">✓</span>
                 <span>Freundliche Fahrlehrer</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="text-blue-600 font-bold">✓</span>
+                <span class="text-primary-600 font-bold">✓</span>
                 <span>Online buchbar & zahlbar</span>
               </li>
             </ul>
-            <p class="text-sm text-gray-600 mt-6 pt-6 border-t border-blue-200">
+            <p class="text-sm text-gray-600 mt-6 pt-6 border-t border-primary-200">
               <strong>exkl. Versicherungspauschale:</strong> CHF 120.- (einmalig)<br>
               <strong>exkl. WarmUp + Prüfungsfahrt:</strong> CHF 285.-
             </p>
           </div>
 
-          <!-- Package -->
-          <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all border-2 border-indigo-400">
-            <div class="mb-4">
-              <span class="inline-block bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold">EMPFOHLEN</span>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Paket</h3>
-            <p class="text-gray-600 mb-6">10er Lektionen Paket</p>
+          <!-- Kategorie A - Motorrad -->
+          <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Motorrad Lektion</h3>
+            <p class="text-gray-600 mb-6">Kategorie A à 45 Minuten</p>
             <div class="mb-6">
-              <span class="text-4xl font-black text-indigo-600">CHF 900</span>
-              <span class="text-gray-600 ml-2">10 Lektionen</span>
+              <span class="text-4xl font-black text-red-600">CHF 95</span>
+              <span class="text-gray-600 ml-2">pro Lektion</span>
             </div>
             <ul class="space-y-3 text-gray-700">
               <li class="flex items-start gap-2">
-                <span class="text-indigo-600 font-bold">✓</span>
-                <span>10% Rabatt</span>
+                <span class="text-red-600 font-bold">✓</span>
+                <span>Professionelle Ausbildung</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="text-indigo-600 font-bold">✓</span>
-                <span>Flexible Nutzung</span>
+                <span class="text-red-600 font-bold">✓</span>
+                <span>Erfahrene Motorrad-Lehrer</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="text-indigo-600 font-bold">✓</span>
-                <span>Beste Prüfungsvorbereitung</span>
+                <span class="text-red-600 font-bold">✓</span>
+                <span>Sicheres Fahren auf zwei Rädern</span>
               </li>
             </ul>
-            <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="mt-8 w-full block text-center bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition">
-              Jetzt Paket buchen
-            </a>
+            <p class="text-sm text-gray-600 mt-6 pt-6 border-t border-red-200">
+              <strong>exkl. Versicherungspauschale:</strong> CHF 0.- (privat versichert)<br>
+              <strong>Fahrschul-Motorrad-Miete:</strong> CHF 115.-
+            </p>
           </div>
 
-          <!-- All Categories -->
-          <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Alle Kategorien</h3>
-            <p class="text-gray-600 mb-6">Auto, Motorrad, Taxi & mehr</p>
+          <!-- Kategorie BE - Anhänger -->
+          <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Anhänger Lektion</h3>
+            <p class="text-gray-600 mb-6">Kategorie BE à 90 Minuten</p>
             <div class="mb-6">
-              <span class="text-xl font-black text-green-600">Individuelle</span>
-              <span class="text-gray-600 block">Preisgestaltung</span>
+              <span class="text-4xl font-black text-amber-600">CHF 240</span>
+              <span class="text-gray-600 ml-2">Doppellektion</span>
             </div>
             <ul class="space-y-3 text-gray-700">
               <li class="flex items-start gap-2">
-                <span class="text-green-600 font-bold">✓</span>
-                <span>Motorrad, Anhänger, Bus</span>
+                <span class="text-amber-600 font-bold">✓</span>
+                <span>Empfohlene Doppellektionen</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="text-green-600 font-bold">✓</span>
-                <span>Lastwagen & Motorboot</span>
+                <span class="text-amber-600 font-bold">✓</span>
+                <span>Spezialisierte Ausbildung</span>
               </li>
               <li class="flex items-start gap-2">
-                <span class="text-green-600 font-bold">✓</span>
-                <span>Jetzt Angebot anfordern</span>
+                <span class="text-amber-600 font-bold">✓</span>
+                <span>Sichere Anhängerprüfung</span>
               </li>
             </ul>
-            <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="mt-8 w-full block text-center bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">
-              Kategorie wählen
-            </a>
+            <p class="text-sm text-gray-600 mt-6 pt-6 border-t border-amber-200">
+              <strong>exkl. Versicherungspauschale:</strong> CHF 120.- (einmalig)<br>
+              <strong>exkl. WarmUp + Prüfungsfahrt:</strong> CHF 360.-
+            </p>
           </div>
+        </div>
+
+        <!-- Link to Full Price List -->
+        <div class="text-center mb-12">
+          <a href="/fahrschule-preise" class="inline-block bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg">
+            ➜ Alle Preise & Kategorien anschauen
+          </a>
         </div>
       </div>
     </section>
@@ -758,11 +769,11 @@
         
         <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
           <!-- Zürich -->
-          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 shadow-md hover:shadow-lg transition">
+          <div class="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-6 shadow-md hover:shadow-lg transition">
             <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule Zürich</h3>
             <p class="text-sm text-gray-600 mb-4">Zürich-Altstetten & Umgebung</p>
             <p class="text-xs text-gray-500">Baden, Limmattal, Bülach, Knonaueramt, Uster Oberland</p>
-            <a href="/fahrschule-zuerich/" class="text-blue-600 font-semibold text-sm mt-4 inline-block hover:text-blue-800">Mehr erfahren →</a>
+            <a href="/fahrschule-zuerich/" class="text-primary-600 font-semibold text-sm mt-4 inline-block hover:text-primary-800">Mehr erfahren →</a>
           </div>
 
           <!-- Lachen -->
@@ -806,11 +817,11 @@
           </div>
 
           <!-- Reichenburg -->
-          <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-6 shadow-md hover:shadow-lg transition">
+          <div class="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-6 shadow-md hover:shadow-lg transition">
             <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule Reichenburg</h3>
             <p class="text-sm text-gray-600 mb-4">Kanton Schwyz</p>
             <p class="text-xs text-gray-500">Alle Fahrzeugkategorien</p>
-            <a href="/fahrschule-reichenburg/" class="text-indigo-600 font-semibold text-sm mt-4 inline-block hover:text-indigo-800">Mehr erfahren →</a>
+            <a href="/fahrschule-reichenburg/" class="text-primary-600 font-semibold text-sm mt-4 inline-block hover:text-primary-800">Mehr erfahren →</a>
           </div>
 
           <!-- Kontakt -->
@@ -819,11 +830,11 @@
             <div class="space-y-3 text-sm">
               <p class="text-gray-300">
                 <strong>Telefon:</strong><br>
-                <a href="tel:+41444310033" class="text-blue-300 hover:text-blue-100">+41 44 431 00 33</a>
+                <a href="tel:+41444310033" class="text-primary-300 hover:text-primary-100">+41 44 431 00 33</a>
               </p>
               <p class="text-gray-300">
                 <strong>Email:</strong><br>
-                <a href="mailto:info@drivingteam.ch" class="text-blue-300 hover:text-blue-100">info@drivingteam.ch</a>
+                <a href="mailto:info@drivingteam.ch" class="text-primary-300 hover:text-primary-100">info@drivingteam.ch</a>
               </p>
             </div>
           </div>

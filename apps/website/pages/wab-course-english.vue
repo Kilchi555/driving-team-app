@@ -1,22 +1,22 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>WAB Course English | Register for your mandatory course! | Driving Team</Title>
       <Meta name="description" content="WAB Courses in English in the canton of Zurich (Pfäffikon ZH) and Schwyz (Tuggen). Register now for your mandatory WAB refresher course." />
       <Meta name="keywords" content="WAB Course English, WAB Kurs Englisch, professional driver training, Driving Team" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-course-english/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">WAB Course in English</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">Register for your mandatory WAB refresher course in English</p>
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">Register for your mandatory WAB refresher course in English</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="mailto:info@wabenglish.ch" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="mailto:info@wabenglish.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Apply here
           </a>
-          <a href="tel:+41794194170" class="btn-secondary border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41794194170" class="btn-secondary border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             079 419 41 70
           </a>
         </div>
@@ -30,11 +30,11 @@
           The WAB courses in the canton of Zurich are held in Pfäffikon ZH at our partner driving school, <strong>Transportschule AG</strong>, and in the canton Schwyz at <strong>Verkehrszentrum Tuggen AG</strong>. The instructors will show you and your employees how to drive more safely and efficiently.
         </p>
         <p class="text-lg text-gray-700 mb-8">
-          If you have any questions, simply call <a href="tel:+41794194170" class="text-blue-600 hover:underline">079 419 41 70</a> or send an e-mail to <a href="mailto:info@wabenglish.ch" class="text-blue-600 hover:underline">info@wabenglish.ch</a>.
+          If you have any questions, simply call <a href="tel:+41794194170" class="text-primary-600 hover:underline">079 419 41 70</a> or send an e-mail to <a href="mailto:info@wabenglish.ch" class="text-primary-600 hover:underline">info@wabenglish.ch</a>.
         </p>
 
-        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 class="font-bold text-lg text-blue-800 mb-2">Do You need driving lessons in English?</h3>
+        <div class="mt-8 bg-primary-50 border border-primary-200 rounded-lg p-6">
+          <h3 class="font-bold text-lg text-primary-800 mb-2">Do You need driving lessons in English?</h3>
           <p class="text-gray-700">We also offer driving lessons and courses in English. Contact us for more information.</p>
         </div>
       </div>
@@ -68,7 +68,7 @@
               </div>
               <div class="px-6 py-4 flex gap-4">
                 <span class="font-semibold text-gray-800 w-32 flex-shrink-0">Cancellation:</span>
-                <p class="text-gray-700">In accordance with the GTC – at the latest 5 working days before the start of the course to <a href="mailto:fahrtraining@transportschule.ch" class="text-blue-600 hover:underline">fahrtraining@transportschule.ch</a>.</p>
+                <p class="text-gray-700">In accordance with the GTC – at the latest 5 working days before the start of the course to <a href="mailto:fahrtraining@transportschule.ch" class="text-primary-600 hover:underline">fahrtraining@transportschule.ch</a>.</p>
               </div>
             </div>
           </div>
@@ -77,11 +77,11 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Register for WAB Course in English</h2>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="mailto:info@wabenglish.ch" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="mailto:info@wabenglish.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Apply here → info@wabenglish.ch
           </a>
         </div>

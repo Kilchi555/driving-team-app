@@ -1,18 +1,18 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>CZV Kurse | Berufliche Weiterbildung Lastwagen & Bus | Driving Team</Title>
       <Meta name="description" content="CZV Kurse beim Driving Team. Grundkurs (140h) und Weiterbildung für Berufschauffeure. CZV Weiterbildung ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren. Jetzt informieren!" />
       <Link rel="canonical" href="https://drivingteam.ch/czv-kurse/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">CZV Kurse</h1>
-        <p class="text-xl text-blue-100 mb-4">Obligatorische Berufliche Weiterbildung für Lastwagen- und Busfahrer</p>
-        <p class="text-blue-200 mb-8">CZV Grundkurs (140h) und Weiterbildung (5 x 7h in 5 Jahren)</p>
-        <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <p class="text-xl text-primary-100 mb-4">Obligatorische Berufliche Weiterbildung für Lastwagen- und Busfahrer</p>
+        <p class="text-primary-200 mb-8">CZV Grundkurs (140h) und Weiterbildung (5 x 7h in 5 Jahren)</p>
+        <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           ✉️ Anfrage stellen
         </a>
       </div>
@@ -32,19 +32,19 @@
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">Unser CZV Angebot</h2>
         <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <a href="/czv-grundkurs/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-blue-400 transition">
+          <a href="/czv-grundkurs/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-primary-400 transition">
             <p class="text-4xl mb-4">🎓</p>
             <h3 class="heading-sm mb-3">CZV Grundkurs</h3>
             <p class="text-gray-600 mb-3">Obligatorischer Grundkurs für alle neuen Berufschauffeure. 140 Stunden Ausbildung. Qualifikationsnachweis (Schlüsselzahl 95).</p>
             <p class="text-gray-500 text-sm mb-4">Hinweis: Wir nehmen derzeit nur Unternehmensanfragen an.</p>
-            <span class="text-blue-600 font-semibold">Mehr erfahren →</span>
+            <span class="text-primary-600 font-semibold">Mehr erfahren →</span>
           </a>
-          <a href="/czv-weiterbildung/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-blue-400 transition">
+          <a href="/czv-weiterbildung/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-primary-400 transition">
             <p class="text-4xl mb-4">🔄</p>
             <h3 class="heading-sm mb-3">CZV Weiterbildung</h3>
             <p class="text-gray-600 mb-3">5 Kurse in 5 Jahren (je 7 Stunden). Prävention, Traffic Health, ARV1, Radwechsel & Feuerlöschen u.a.</p>
             <p class="text-gray-500 text-sm mb-4">CHF 190.- pro Kurstag | Max. 15 Personen</p>
-            <span class="text-blue-600 font-semibold">Mehr erfahren →</span>
+            <span class="text-primary-600 font-semibold">Mehr erfahren →</span>
           </a>
         </div>
       </div>
@@ -82,13 +82,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">CZV Kurs anfragen</h2>
-        <p class="text-xl text-blue-100 mb-8">Melde dich bei uns für mehr Informationen zu den CZV Kursen.</p>
+        <p class="text-xl text-primary-100 mb-8">Melde dich bei uns für mehr Informationen zu den CZV Kursen.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">✉️ info@drivingteam.ch</a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">📞 +41 44 431 00 33</a>
+          <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">✉️ info@drivingteam.ch</a>
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
     </section>

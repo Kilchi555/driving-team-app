@@ -1,16 +1,16 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>FAQ | Häufig gestellte Fragen | Driving Team Fahrschule</Title>
       <Meta name="description" content="Häufig gestellte Fragen zur Fahrschule Driving Team – Fahrstunden, Preise, Kategorien, Lernfahrten und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/faq/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">FAQ</h1>
-        <p class="text-xl text-blue-100 max-w-3xl mx-auto">Häufig gestellte Fragen</p>
+        <p class="text-xl text-primary-100 max-w-3xl mx-auto">Häufig gestellte Fragen</p>
       </div>
     </section>
 
@@ -20,7 +20,7 @@
         <p class="text-lg text-gray-700 mb-12">
           Hier findest du die gängigsten Fragen rund um das Thema Fahrschule bzw. Fahren lernen.
           Hast du dennoch weitere Fragen, schreibe uns oder ruf uns an unter
-          <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a>.
+          <a href="tel:+41444310033" class="text-primary-600 hover:underline">+41 44 431 00 33</a>.
         </p>
 
         <div class="space-y-4">
@@ -126,10 +126,10 @@
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Noch Fragen? Kontaktiere uns!</h2>
-        <a href="/kontakt" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+        <a href="/kontakt" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Zum Kontakt
         </a>
       </div>

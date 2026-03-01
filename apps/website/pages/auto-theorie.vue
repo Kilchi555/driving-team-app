@@ -1,18 +1,18 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Auto Theorieprüfung | Jetzt für Theoriestunden anmelden | Driving Team</Title>
       <Meta name="description" content="Auto Theorieprüfung vorbereitung beim Driving Team. Praxisorientierte Lektionen. CHF 85.- pro 45 Minuten. Zürich-Altstetten und Lachen/SZ. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-theorie/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Auto Theorieprüfung</h1>
-          <p class="text-xl text-blue-100 mb-8">In unseren praxisorientierten Theorie Lektionen erhältst Du wichtiges Hintergrundwissen zur Verkehrsregeltheorie, welches Dir das Bestehen der Auto Theorieprüfung entscheidend vereinfacht.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">In unseren praxisorientierten Theorie Lektionen erhältst Du wichtiges Hintergrundwissen zur Verkehrsregeltheorie, welches Dir das Bestehen der Auto Theorieprüfung entscheidend vereinfacht.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -23,20 +23,20 @@
     <section class="section-container">
       <h2 class="heading-md mb-10 text-center">Themen Auto Theorieprüfung</h2>
       <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Rechtsvortritt</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Kein Vortritt / Stop</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Lichtsignale</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Halten / Parkieren</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Tram und Bus</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Geschwindigkeit</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Signale und Markierungen</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Autobahn und Autostrassen</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Verkehrspartner</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Spezielle Fahrzeuge</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Betriebs- und Verkehrssicherheit</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Kreisverkehrsplätze</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Spezielle Strassen</div>
-        <div class="bg-blue-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Verhalten bei Stau, Panne und Unfall</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Rechtsvortritt</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Kein Vortritt / Stop</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Lichtsignale</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Halten / Parkieren</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Tram und Bus</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Geschwindigkeit</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Signale und Markierungen</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Autobahn und Autostrassen</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Verkehrspartner</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Spezielle Fahrzeuge</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Betriebs- und Verkehrssicherheit</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Kreisverkehrsplätze</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Spezielle Strassen</div>
+        <div class="bg-primary-50 rounded-lg p-4 text-center text-sm font-medium text-gray-800">Verhalten bei Stau, Panne und Unfall</div>
       </div>
     </section>
 
@@ -47,13 +47,13 @@
         <div class="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
           <div class="bg-white rounded-lg p-6 shadow-sm text-center">
             <p class="text-3xl mb-2">💰</p>
-            <p class="text-2xl font-bold text-blue-600 mb-2">CHF 85.-</p>
+            <p class="text-2xl font-bold text-primary-600 mb-2">CHF 85.-</p>
             <p class="font-semibold text-gray-800">Pro 45 Minuten</p>
             <p class="text-sm text-gray-500 mt-1">(Einzelstunde oder Gruppe)</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm text-center">
             <p class="text-3xl mb-2">💻</p>
-            <p class="text-2xl font-bold text-blue-600 mb-2">CHF 49.-</p>
+            <p class="text-2xl font-bold text-primary-600 mb-2">CHF 49.-</p>
             <p class="font-semibold text-gray-800">Online Gruppenlektion</p>
             <p class="text-sm text-gray-500 mt-1">2 Stunden in der Gruppe</p>
           </div>
@@ -64,7 +64,7 @@
           </div>
         </div>
         <div class="max-w-3xl mx-auto mt-6">
-          <div class="bg-blue-50 rounded-lg p-6">
+          <div class="bg-primary-50 rounded-lg p-6">
             <p class="text-gray-700 text-center">Die Lektionen für die Vorbereitung zur Auto Theorieprüfung werden grundsätzlich in <strong>Deutsch</strong> durchgeführt. Möchtest du die Lektionen in einer anderen Sprache, erwähne dies bitte bei der Anmeldung.</p>
           </div>
         </div>
@@ -103,19 +103,19 @@
           <div class="bg-white rounded-lg p-6 shadow-sm text-center border border-gray-200">
             <p class="text-3xl mb-3">💻</p>
             <h3 class="font-bold text-gray-800 mb-2">Lernplattform Online</h3>
-            <p class="text-xl font-bold text-blue-600 mb-2">CHF 29.-</p>
+            <p class="text-xl font-bold text-primary-600 mb-2">CHF 29.-</p>
             <p class="text-sm text-gray-600">365 Tage Login für eine Lernplattform mit offiziellen Prüfungsfragen. Verfügbar auf Computer, Tablet & Smartphone.</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm text-center border border-gray-200">
             <p class="text-3xl mb-3">📚</p>
             <h3 class="font-bold text-gray-800 mb-2">Lern-Bücher</h3>
-            <p class="text-xl font-bold text-blue-600 mb-2">CHF 24.90.-</p>
+            <p class="text-xl font-bold text-primary-600 mb-2">CHF 24.90.-</p>
             <p class="text-sm text-gray-600">Theoriebuch für das Verständnis der Verkehrsregeltheorie.</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm text-center border border-gray-200">
             <p class="text-3xl mb-3">💿</p>
             <h3 class="font-bold text-gray-800 mb-2">Lern-CD inkl. Theorie-Buch</h3>
-            <p class="text-xl font-bold text-blue-600 mb-2">CHF 59.90.-</p>
+            <p class="text-xl font-bold text-primary-600 mb-2">CHF 59.90.-</p>
             <p class="text-sm text-gray-600">CD mit aktuellen Prüfungsfragen für zeitlich unbeschränktes Lernen.</p>
           </div>
         </div>
@@ -188,25 +188,25 @@
     <section class="section-container">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Zürich</a>
-        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Lachen</a>
-        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Uster</a>
-        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Aargau</a>
-        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Reichenburg</a>
-        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule St.Gallen</a>
-        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt für Theoriestunden anmelden!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
             📞 +41 44 431 00 33
           </a>
         </div>

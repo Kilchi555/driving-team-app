@@ -1,13 +1,13 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>AGB | Allgemeine Geschäftsbedingungen | Driving Team Fahrschule</Title>
       <Meta name="description" content="Allgemeine Geschäftsbedingungen der Fahrschule Driving Team – Fahrausweis, Versicherung, Zahlungskonditionen und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/agb/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-4">Allgemeine Geschäftsbedingungen Fahrschule</h1>
       </div>
@@ -73,11 +73,11 @@
           </p>
         </div>
 
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="bg-primary-50 border border-primary-200 rounded-lg p-6">
           <p class="text-gray-700">
             Bei Fragen zu unseren AGB kontaktiere uns gerne unter
-            <a href="tel:+41444310033" class="text-blue-600 hover:underline">+41 44 431 00 33</a> oder
-            <a href="mailto:info@drivingteam.ch" class="text-blue-600 hover:underline">info@drivingteam.ch</a>.
+            <a href="tel:+41444310033" class="text-primary-600 hover:underline">+41 44 431 00 33</a> oder
+            <a href="mailto:info@drivingteam.ch" class="text-primary-600 hover:underline">info@drivingteam.ch</a>.
           </p>
         </div>
       </div>

@@ -1,9 +1,9 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Danke - Anhänger Fahrstunden Lachen | Driving Team</Title>
       <Link rel="canonical" href="https://drivingteam.ch/danke-anhanger-fahrstunden-lachen/" />
-    </Head>
+    </NuxtHead>
     <section class="section-container py-20 text-center">
       <h1 class="heading-lg mb-8">Danke!</h1>
       <p class="text-lg text-gray-700 mb-8">Vielen Dank für deine Anmeldung zu Anhänger Fahrstunden in Lachen!</p>

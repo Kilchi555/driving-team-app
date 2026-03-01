@@ -1,18 +1,20 @@
 <template>
   <div>
-    <Head>
+    <NuxtHead>
       <Title>Auto Fahrschule Uster | 6 Schritte zur Autofahrprüfung | Driving Team</Title>
       <Meta name="description" content="Fahrschule Uster – Moderne Fahrausbildung im Zürcher Oberland. Fahrstunden für Auto, Motorrad und mehr. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-uster/" />
-    </Head>
+    </NuxtHead>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/locations/uster-hero.jpg" alt="Fahrschule Uster" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Willkommen bei der Fahrschule Driving Team Uster</h1>
-          <p class="text-xl text-blue-100 mb-8">Deine moderne Fahrschule in Uster und dem Zürcher Oberland. Erfahrene Fahrlehrer, flexible Zeiten und individuelle Ausbildung.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
+          <p class="text-xl text-primary-100 mb-8">Deine moderne Fahrschule in Uster und dem Zürcher Oberland. Erfahrene Fahrlehrer, flexible Zeiten und individuelle Ausbildung.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -24,20 +26,20 @@
       <h2 class="heading-md mb-10 text-center">Fahrschule Uster</h2>
       <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Melde Dich in unserer Fahrschule in Uster an und Du kannst folgende Punkte von uns erwarten…</p>
       <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div><h3 class="font-bold text-gray-900 mb-1">Individuelle Ausbildung</h3><p class="text-gray-600 text-sm">Auf Dich zugeschnittene Fahrstunden, welche Dich zur sicheren Fahrzeuglenkerin bzw. zum sicheren Fahrzeuglenker ausbilden.</p></div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div><h3 class="font-bold text-gray-900 mb-1">Entspanntes Lernen</h3><p class="text-gray-600 text-sm">Angenehme Lernatmosphäre im und um das Fahrzeug. Das nötige Mass an Seriosität mit einer Prise Lockerheit.</p></div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div><h3 class="font-bold text-gray-900 mb-1">Bestmögliche Vorbereitung</h3><p class="text-gray-600 text-sm">Bei uns bestehen die meisten Fahrschüler:innen beim ersten Mal. Mit einer soliden Fahrausbildung begeistern wir die Verkehrsexpert:innen.</p></div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-6 flex items-start gap-3">
-          <span class="text-blue-600 text-xl mt-1">✅</span>
+        <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">
+          <span class="text-primary-600 text-xl mt-1">✅</span>
           <div><h3 class="font-bold text-gray-900 mb-1">Flexible Treffpunkte</h3><p class="text-gray-600 text-sm">Nach Möglichkeit bieten wir flexible Treffpunkte an. Termine online buchen & zahlen jederzeit möglich.</p></div>
         </div>
       </div>
@@ -51,7 +53,7 @@
 
     <!-- Themen -->
     <section class="bg-gray-50 py-16">
-      <div class="section-container">
+      <div class="section-container relative z-10">
         <h2 class="heading-md mb-6 text-center">Fahrschule Uster – Themen</h2>
         <p class="text-center text-gray-600 mb-10">In unserer Fahrschule Uster werden folgende Themen angeschaut und bis zur prüfungsreife geübt:</p>
         <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -77,7 +79,7 @@
 
     <!-- Warum Driving Team -->
     <section class="bg-gray-50 py-16">
-      <div class="section-container">
+      <div class="section-container relative z-10">
         <h2 class="heading-md mb-8 text-center">Warum die Fahrschule Driving Team in Uster?</h2>
         <p class="text-gray-700 text-center max-w-3xl mx-auto">Unsere Fahrschule in Uster wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Lernumgebung geschaffen, die sowohl motivierend als auch effektiv ist.</p>
       </div>
@@ -87,22 +89,22 @@
     <section class="section-container">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere weiteren Standorte</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Zürich</a>
-        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Lachen</a>
-        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Aargau</a>
-        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Reichenburg</a>
-        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule St.Gallen</a>
-        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-aargau" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="bg-blue-600 text-white py-16">
+    <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt in Uster starten!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">📅 Jetzt Termin buchen</a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg">📞 +41 44 431 00 33</a>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt Termin buchen</a>
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
     </section>
