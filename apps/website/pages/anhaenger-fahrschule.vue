@@ -12,6 +12,8 @@
     <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
       <div class="section-container relative z-10">
+        <div class="max-w-3xl">
+          <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule Kategorie BE</h1>
           <p class="text-xl text-blue-100 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
             ✨ Jetzt anmelden
