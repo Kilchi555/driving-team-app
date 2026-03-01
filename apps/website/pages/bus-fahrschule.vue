@@ -7,10 +7,9 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
-      <div class="section-container">
-        <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Bus Fahrschule Kategorie D1 | D</h1>
+    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/bus-fahrschule.webp" alt="Bus Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div class="section-container relative z-10">
           <p class="text-xl text-blue-100 mb-8">Möchtest du deinen Bus Führerschein machen? Bei unserer Bus Fahrschule wirst du von einem erfahrenen Fahrlehrer unterrichtet, der seine Begeisterung für grosse Fahrzeuge mit dir teilt. Freu dich auf lehrreiche und spannende Fahrstunden!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-blue-600 hover:bg-blue-50 text-lg">
             ✨ Jetzt anmelden

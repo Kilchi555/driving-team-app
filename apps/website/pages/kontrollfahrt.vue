@@ -8,8 +8,9 @@
     </Head>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24">
-      <div class="section-container text-center">
+    <section class="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/categories/kontrollfahrt.webp" alt="Kontrollfahrt" class="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div class="section-container text-center relative z-10">
         <h1 class="heading-lg text-white mb-6">Kontrollfahrt</h1>
         <p class="text-xl text-blue-100 max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
