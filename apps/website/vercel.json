@@ -1,11 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "nuxt.config.ts",
-      "use": "@nuxtjs/vercel-builder"
-    }
-  ],
   "routes": [
     {
       "src": "^/pricing/?$",
@@ -41,18 +34,6 @@
       "src": "^/categories/taxi/?$",
       "destination": "/taxi-fahrschule/",
       "status": 301
-    },
-    {
-      "src": "^/faq/?$",
-      "destination": "/",
-      "status": 301
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/"
     }
   ]
 }
