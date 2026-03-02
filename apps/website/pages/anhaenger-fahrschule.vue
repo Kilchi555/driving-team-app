@@ -199,34 +199,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic text-sm mb-3">„Habe Anhänger Fahrstunden bei Keni genommen, und kann ihn als sehr geduldig, motiviert, souveräner und sehr freundlicher Coach nur weiterempfehlen."</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic text-sm mb-3">„Keni ist ein super Fahrlehrer, habe die Anhänger Prüfung bestanden. Vielen Dank."</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic text-sm mb-3">„Habe die Motorrad und die Anhänger Prüfung gemacht. Das Fachwissen der Fahrlehrer ist sehr gross, keine Frage blieb unbeantwortet. Habe beides beim 1. Mal bestanden!"</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic text-sm mb-3">„Anhänger Prüfung bestanden! Eine tolle Fahrschule! Die Fahrstunden waren super und sehr lehrreich. Kann ich nur weiter empfehlen!"</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic text-sm mb-3">„Ich habe die Anhänger Prüfung bestanden, Keni ist der beste Fahrlehrer in Zürich!! Danke!"</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="anhaenger" />
 
     <!-- FAQ Section -->
     <section class="section-container">

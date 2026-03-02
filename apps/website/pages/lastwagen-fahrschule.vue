@@ -177,30 +177,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic mb-4">„Ich kann diese Fahrschule sehr empfehlen. Ich hatte als Fahrlehrer Peter Thoma und bin sehr zufrieden. Er hat eine ruhige Ader und gutes Einfühlungsvermögen. Mit ihm habe ich meine Angst bzw. Aufregung verloren."</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic mb-4">„Die Fahrlehrer und Fahrlehrerinnen waren sehr geduldig, respektvoll und nett. Sie sagen ganz direkt, was man falsch gemacht hat. Ich kann Sie nur weiterempfehlen, weil Sie mich bis zum Schluss super begleitet haben."</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic mb-4">„Die Fahrschule Drivingteam kann ich auf jeden Fall weiterempfehlen! Die Fahrlehrer sind freundlich und geduldig und werden nicht müde, immer wieder dasselbe zu erklären! Vielen Dank André für die tolle Ausbildung!"</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic mb-4">„Kompetente Fahrlehrer, harmonische Art – man fühlt sich gleich willkommen."</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="lastwagen" />
 
     <!-- FAQ Section -->
     <section class="section-container">

@@ -66,16 +66,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Kann das Driving Team wirklich weiterempfehlen. Durch Marc, Sybille, Peter und André habe ich meine Autoprüfung beim ersten Mal bestanden!"</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren. Dadurch konnte man sich bestens auf die Prüfung vorbereiten."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Das Driving Team Lachen gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell Marc – you are the BEST!"</p></div>
-      </div>
-    </section>
+    <ReviewsSection category="reichenburg" />
 
     <!-- Andere Standorte -->
     <section class="bg-gray-50 py-12">

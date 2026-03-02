@@ -71,28 +71,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Sehr gute und aufschlussreiche Theorie Lektion per Google Teams. Alles sehr verständlich und sehr benutzerfreundlich. Hat Spass gemacht. Danke, Alexandra"</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Ich hatte heute einen Onlinekurs bei Pascal zur Vorbereitung auf die Theorieprüfung und muss sagen: richtig gut! Pascal hat mir verschiedene Verkehrssituationen verständlich erklärt."</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Habe hier meinen VKU absolviert und Fahrstunden (Kat. B) mit Vito und Keni genommen. Die beiden sind echt top Fahrlehrer."</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Hier der Beweis, dass man die Fahrprüfung mit 50 noch schaffen kann. Ich habe Nothelfer und VKU im Driving Team absolviert und die Kursleiter immer freundlich, professionell und zuvorkommend erlebt."</p>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="auto-theorie" />
 
     <!-- Lehrmittel zuhause lernen -->
     <section class="bg-gray-50 py-16">

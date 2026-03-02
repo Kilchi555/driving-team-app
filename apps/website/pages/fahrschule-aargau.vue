@@ -70,16 +70,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Eine sehr gute Fahrschule und ein cooles Team. Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit. Rijad gab mir immer präzise und hilfreiche Tipps."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Die Fahrschule war ausgezeichnet, und mein Fahrlehrer Vito war äusserst hilfreich bei meiner Vorbereitung auf die Fahrprüfung."</p></div>
-      </div>
-    </section>
+    <ReviewsSection category="aargau" />
 
     <!-- Andere Standorte -->
     <section class="bg-gray-50 py-12">

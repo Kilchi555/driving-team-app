@@ -340,63 +340,7 @@
       </div>
     </section>
 
-    <!-- Testimonials Section -->
-    <section class="bg-gray-50 py-20">
-      <div class="section-container">
-        <h2 class="heading-md text-center mb-16">Das sagen unsere Kunden</h2>
-        
-        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt. Zudem hat er mir viele hilfreiche Hinweise gegeben."
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Eine sehr gute Fahrschule und ein cooles Team. Sehr empfehlenswert! Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet."
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Sehr gute Fahrschule! Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit während meiner Fahrstunden. Rijad gab mir immer präzise und hilfreiche Tipps."
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Das Driving Team Zürich ist eine moderne, tolle, sehr kompetente Fahrschule. Die Fahrlehrer sind sehr nett und geduldig. Das Lokal ist gut zu erreichen und schön eingerichtet."
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Sehr gute Fahrschule! Ich hatte mit Keni Fahrstunden, welcher diese lustig und spannend gestaltete. Dadurch konnte ich immer positiv denken und nahm es nicht so streng. Durch ihn konnte ich mich super entwickeln!"
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Super Fahrschule!! Ich hatte meine Fahrstunden mit Keni. Er hat mich für die praktische Fahrprüfung sehr gut vorbereitet, die ich dann an meinem 18. Geburtstag bestanden habe. TOLL! Hat sehr viel Spaß gemacht."
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-8 shadow-sm border-l-4 border-primary-600">
-            <p class="text-gray-700 mb-4 italic">
-              "Die Fahrschule war ausgezeichnet, und mein Fahrlehrer Vito war äusserst hilfreich bei meiner Vorbereitung auf die Fahrprüfung. Ich bin ihm sehr dankbar für seine Unterstützung."
-            </p>
-            <p class="font-semibold text-gray-900">⭐⭐⭐⭐⭐</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection />
 
     <!-- FAQ Section -->
     <section class="section-container py-20">
