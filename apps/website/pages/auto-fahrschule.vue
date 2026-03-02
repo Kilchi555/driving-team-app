@@ -262,8 +262,12 @@
         </a>
       </div>
     </section>
+    
+    <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="auto" />
+    <CtaSection title="Jetzt mit der Auto Fahrschule starten!" />
+    <StandorteSection />
   </div>
 </template>
 

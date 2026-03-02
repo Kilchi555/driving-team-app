@@ -6,12 +6,12 @@
       <div class="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
         <div>
           <h3 class="heading-sm mb-4">🚀 Coole Fahrschule</h3>
-          <p class="text-gray-700 mb-4">Wenn Du junge, motivierte und unkomplizierte Fahrlehrer suchst, dann wirst Du in unserer Fahrschule garantiert fündig. Die Fahrschule Driving Team in Zürich steht für eine moderne, effiziente und zielgerichtete Fahrausbildung.</p>
+          <p class="text-gray-700 mb-4">Wenn Du junge, motivierte und unkomplizierte Fahrlehrer suchst, dann wirst Du in unserer Fahrschule garantiert fündig. Die Fahrschule Driving Team {{ locationLabel }} steht für eine moderne, effiziente und zielgerichtete Fahrausbildung.</p>
         </div>
 
         <div>
           <h3 class="heading-sm mb-4">🌍 Fahrschule zu Land und Wasser</h3>
-          <p class="text-gray-700 mb-4">Egal ob Du die Auto-, Motorrad-, Anhänger-, Taxi-, Motorboot- oder Lastwagen-Prüfung machen möchtest, mit unserer Fahrschule bestehst Du Deine Fahrprüfung garantiert.</p>
+          <p class="text-gray-700 mb-4">Egal ob Du die Auto-, Motorrad-, Anhänger-, Taxi-, Motorboot- oder Lastwagen-Prüfung machen möchtest, mit unserer Fahrschule {{ locationLabel }} bestehst Du Deine Fahrprüfung garantiert.</p>
         </div>
 
         <div>
@@ -21,20 +21,17 @@
 
         <div>
           <h3 class="heading-sm mb-4">🛡️ Ihre Sicherheit ist unser Antrieb</h3>
-          <p class="text-gray-700 mb-4">Wir legen höchsten Wert auf Sicherheit und Professionalität in jedem Aspekt unserer Fahrschule.</p>
+          <p class="text-gray-700 mb-4">Wir legen höchsten Wert auf Sicherheit und Professionalität in jedem Aspekt unserer Fahrschule {{ locationLabel }}.</p>
         </div>
       </div>
 
-      <div class="text-center mt-12">
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
-          Jetzt unverbindliches Angebot anfordern
-        </a>
-      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps({
   category: {
     type: String,
@@ -59,5 +56,23 @@ const categoryTitles: Record<string, string> = {
   reichenburg: 'Warum die Fahrschule Driving Team Reichenburg?',
 }
 
+const locationLabels: Record<string, string> = {
+  zuerich: 'in Zürich',
+  lachen: 'in Lachen',
+  uster: 'in Uster',
+  stgallen: 'in St. Gallen',
+  dietikon: 'in Dietikon',
+  aargau: 'in Aargau',
+  reichenburg: 'in Reichenburg',
+  auto: 'für die Auto Kategorie',
+  motorrad: 'für die Motorrad Kategorie',
+  lastwagen: 'für die Lastwagen Kategorie',
+  taxi: 'für die Taxi Kategorie',
+  bus: 'für die Bus Kategorie',
+  motorboot: 'für die Motorboot Kategorie',
+  anhaenger: 'für die Anhänger Kategorie',
+}
+
 const title = computed(() => categoryTitles[props.category] ?? 'Warum die Fahrschule Driving Team?')
+const locationLabel = computed(() => locationLabels[props.category] ?? '')
 </script>

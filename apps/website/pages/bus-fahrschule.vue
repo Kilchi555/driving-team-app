@@ -240,8 +240,12 @@
         </div>
       </div>
     </section>
+    
+    <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="bus" />
+    <CtaSection title="Jetzt mit der Bus Fahrschule starten!" />
+    <StandorteSection />
   </div>
 </template>
 

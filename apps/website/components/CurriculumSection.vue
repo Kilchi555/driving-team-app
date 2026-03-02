@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 const props = defineProps({
   category: {
     type: String,
@@ -77,20 +78,20 @@ const props = defineProps({
 })
 
 const titleMap: Record<string, string> = {
-  auto: 'Auto Fahrschule Themen - Unser Curriculum',
-  motorrad: 'Motorrad Fahrschule Themen - Unser Curriculum',
-  lastwagen: 'Lastwagen Fahrschule Themen - Unser Curriculum',
-  taxi: 'Taxi Fahrschule Themen - Unser Curriculum',
-  bus: 'Bus Fahrschule Themen - Unser Curriculum',
-  motorboot: 'Motorboot Fahrschule Themen - Unser Curriculum',
-  anhaenger: 'Anhänger Fahrschule Themen - Unser Curriculum',
-  zuerich: 'Fahrschule Zürich - Unser Curriculum',
-  lachen: 'Fahrschule Lachen - Unser Curriculum',
-  uster: 'Fahrschule Uster - Unser Curriculum',
-  stgallen: 'Fahrschule St.Gallen - Unser Curriculum',
-  dietikon: 'Fahrschule Dietikon - Unser Curriculum',
-  aargau: 'Fahrschule Aargau - Unser Curriculum',
-  reichenburg: 'Fahrschule Reichenburg - Unser Curriculum',
+  auto: 'Themen - Auto Fahrschule',
+  motorrad: 'Themen - Motorrad Fahrschule',
+  lastwagen: 'Themen - Lastwagen Fahrschule',
+  taxi: 'Themen - Taxi Fahrschule',
+  bus: 'Themen - Bus Fahrschule',
+  motorboot: 'Themen - Motorboot Fahrschule',
+  anhaenger: 'Themen - Anhänger Fahrschule',
+  zuerich: 'Themen - Fahrschule Zürich',
+  lachen: 'Themen - Fahrschule Lachen',
+  uster: 'Themen - Fahrschule Uster',
+  stgallen: 'Themen - Fahrschule St.Gallen ',
+  dietikon: 'Themen - Fahrschule Dietikon ',
+  aargau: 'Themen - Fahrschule Aargau',
+  reichenburg: 'Themen - Fahrschule Reichenburg',
 }
 
 const subtitleMap: Record<string, string> = {
@@ -103,6 +104,6 @@ const subtitleMap: Record<string, string> = {
   reichenburg: 'In unserer Fahrschule in Reichenburg werden folgende Themen systematisch angeschaut und bis zur Prüfungsreife geübt:',
 }
 
-const title = computed(() => titleMap[props.category] ?? 'Fahrschule Themen - Unser Curriculum')
-const subtitle = computed(() => subtitleMap[props.category] ?? 'In unserer Fahrschule in Zürich werden folgende Themen systematisch angeschaut und bis zur Prüfungsreife geübt:')
+const title = computed(() => titleMap[props.category] ?? 'Themen - Fahrschule Driving Team')
+const subtitle = computed(() => subtitleMap[props.category] ?? 'In unserer Fahrschule Driving Team werden folgende Themen systematisch angeschaut und bis zur Prüfungsreife geübt:')
 </script>
