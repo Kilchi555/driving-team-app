@@ -71,13 +71,17 @@
       <div class="section-container">
         <h2 class="heading-md mb-12 text-center">Weg zur Anhängerprüfung</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Lernfahrgesuch Anhängerprüfung</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Lernfahrgesuch Anhängerprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Der erste Schritt: Fülle das Lernfahrgesuch vollständig aus und sende es direkt an das Strassenverkehrsamt. Nach der Einreichung erhältst du deinen Lernfahrausweis bequem per Post. Dieser ist 24 Monate lang gültig.</p>
                 <p class="text-sm text-gray-600 mt-2">Auch wenn du mit dem Lernfahrausweis bereits alleine Fahrten unternehmen darfst, empfehlen wir dir dringend, dich frühzeitig bei unserer Fahrschule anzumelden.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Ab 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen.</p>
@@ -88,36 +92,41 @@
                   <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
                   <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
                 </div>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Anhänger Fahrstunden</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Anhänger Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Wir unterrichten dich direkt in den gängigen Prüfungsgebieten. Für unsere Fahrschule in Zürich sind das Albisgütli, Regensdorf und Wettingen (Aargau). In Lachen lernst du in den dortigen Prüfungsgebieten.</p>
                 <p class="text-sm text-gray-600 mt-2">In unseren Anhänger Fahrstunden schauen wir uns sämtliche Prüfungsanforderungen detailliert an, üben sie gründlich und festigen dein Können. Egal, ob du schon viel oder wenig Erfahrung hast – wir passen uns an dein Niveau an.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Sobald du den Lernfahrausweis BE hast, kannst du bereits privat mit Anhängern üben. Diese zusätzliche Fahrpraxis ist Gold wert!</p>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Anhängerprüfung</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Anhängerprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Wir begleiten dich selbstverständlich zur Anhängerfahrprüfung. Du musst dir keine Gedanken um das Fahrzeug machen, denn wir stellen dir das Prüfungsfahrzeug. Als deine Anhängerfahrschule sorgen wir zudem von Anfang an für einen positiven ersten Eindruck beim Prüfungsexperten.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Für den BE-Führerausweis brauchst du lediglich den Lernfahrausweis der Kategorie BE – keine Theorieprüfung nötig!</p>
-              </div>
             </div>
-          </div>
+          </details>
         </div>
       </div>
     </section>

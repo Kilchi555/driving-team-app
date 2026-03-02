@@ -47,13 +47,17 @@
       <div class="section-container">
         <h2 class="heading-md mb-12 text-center">Weg zur Busprüfung – 6 Schritte zu deinem Traumberuf</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Lernfahrgesuch Bus</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Lernfahrgesuch Bus</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Anschliessend gehst du damit zu einem Optiker oder Arzt, um einen Sehtest durchführen zu lassen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Voraussetzungen: Mindestens 21 Jahre alt, Kategorie B seit mindestens 2 Jahren.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -63,72 +67,86 @@
                   <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
                   <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
                 </div>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Verkehrsmedizinische Kontrolluntersuchung</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Verkehrsmedizinische Kontrolluntersuchung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Nachdem du dein Gesuchsformular eingereicht hast, erhältst du vom Strassenverkehrsamt ein Schreiben mit einer Aufforderung zur medizinischen Kontrolluntersuchung. Fällt diese positiv aus, sendet dir das Strassenverkehrsamt deinen Lernfahrausweis (24 Monate gültig) zu.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Hinweis: Bist du bereits Berufschauffeur? Dann musst du diesen Schritt eventuell nicht machen.</p>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Bus Fahrstunden</h3>
-                <p class="text-sm text-gray-600">Sobald du deinen Lernfahrausweis hast, darfst du mit den Bus Fahrstunden beginnen. Wir empfehlen dir, uns direkt zu kontaktieren, damit du deine Ausbildung gleich richtig startest.</p>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Bus Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
               </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
+                <p class="text-sm text-gray-600">Sobald du deinen Lernfahrausweis hast, darfst du mit den Bus Fahrstunden beginnen. Wir empfehlen dir, uns direkt zu kontaktieren, damit du deine Ausbildung gleich richtig startest.</p>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Bus Theorie</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Bus Theorie</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Die Bus Theorie kannst du jederzeit parallel zu den Fahrstunden lernen. Möchtest du sie lieber gemeinsam mit unserem Bus Fahrlehrer vertiefen und üben? Kein Problem – wir sorgen dafür, dass du optimal vorbereitet bist.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">40 Fragen, 45 Minuten, max. 4 Fehlerpunkte. Die Theorieprüfung der Kategorie D wird gerne unterschätzt!</p>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Bus Fahrprüfung</h3>
-                <p class="text-sm text-gray-600">Du absolvierst die Prüfung mit einem modernen Bus von Schuler Reisen. Unser erfahrener Bus Fahrlehrer begleitet dich persönlich. Ihr trefft euch frühzeitig, um letzte Details zu klären und eine entspannte Aufwärmrunde zu drehen. Die Bus Fahrprüfung dauert ca. 120 Minuten.</p>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Bus Fahrprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
               </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
+                <p class="text-sm text-gray-600">Du absolvierst die Prüfung mit einem modernen Bus von Schuler Reisen. Unser erfahrener Bus Fahrlehrer begleitet dich persönlich. Ihr trefft euch frühzeitig, um letzte Details zu klären und eine entspannte Aufwärmrunde zu drehen. Die Bus Fahrprüfung dauert ca. 120 Minuten.</p>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-gray-400 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-gray-400 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-gray-400 text-white font-bold text-lg">6</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">CZV Grundkurs (für Berufschauffeure)</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">CZV Grundkurs (für Berufschauffeure)</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Wer beruflich Bus fahren möchte, braucht einen Fähigkeitsausweis (CZV). Du brauchst sehr gute Deutschkenntnisse und die bestandene Theorieprüfung der Kat. D. Wir bieten optimale Prüfungsvorbereitung, zeitgemässe Lehrmittel und Unterricht am Modell.</p>
                 <a href="/czv-grundkurs/" class="text-sm text-primary-600 font-semibold hover:underline mt-2 block">→ Mehr zum CZV Grundkurs</a>
-              </div>
             </div>
-          </div>
+          </details>
         </div>
         <div class="text-center mt-12">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
