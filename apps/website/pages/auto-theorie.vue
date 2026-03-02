@@ -10,8 +10,9 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Auto Theorieprüfung</h1>
-          <p class="text-xl text-primary-100 mb-8">In unseren praxisorientierten Theorie Lektionen erhältst Du wichtiges Hintergrundwissen zur Verkehrsregeltheorie, welches Dir das Bestehen der Auto Theorieprüfung entscheidend vereinfacht.</p>
+          <h1 class="heading-lg text-white mb-4">Auto Theorieprüfung</h1>
+          <p class="text-xl text-primary-100 mb-4">In unseren praxisorientierten Theorie Lektionen erhältst Du wichtiges Hintergrundwissen zur Verkehrsregeltheorie, welches Dir das Bestehen der Auto Theorieprüfung entscheidend vereinfacht und eine speditive Fahrausbildung ermöglicht.</p>
+          <p class="text-primary-100 mb-8">Melde dich jetzt zu unseren Online Theoriestunden an, wo ein erfahrener Fahrlehrer alle deine Fragen beantwortet und dir wichtiges Hintergrundwissen mitgibt – damit du die Auto Theorieprüfung beim ersten Mal bestehst.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
@@ -63,9 +64,15 @@
             <p class="text-gray-600 text-sm">Termin nach Vereinbarung</p>
           </div>
         </div>
-        <div class="max-w-3xl mx-auto mt-6">
+        <div class="max-w-3xl mx-auto mt-6 space-y-4">
           <div class="bg-primary-50 rounded-lg p-6">
             <p class="text-gray-700 text-center">Die Lektionen für die Vorbereitung zur Auto Theorieprüfung werden grundsätzlich in <strong>Deutsch</strong> durchgeführt. Möchtest du die Lektionen in einer anderen Sprache, erwähne dies bitte bei der Anmeldung.</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-6">
+            <p class="text-gray-700 text-center text-sm">Egal ob du alleine oder mit deinen Kolleginnen/Kollegen kommst, der Preis bleibt der gleiche – denn wer die Auto Theorieprüfung im Griff hat, braucht weniger Fahrstunden.</p>
+          </div>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <p class="text-gray-700 text-center text-sm">Die Auto Theorieprüfung kann in der Schweiz in Deutsch, Französisch, Italienisch und Englisch durchgeführt werden. Die Theorieprüfungen der Kategorie A1, A35kW und B sind identisch – sie muss daher nur einmal absolviert werden (jeweils beim ersten Mal beantragen einer dieser Kategorien).</p>
           </div>
         </div>
       </div>
@@ -99,7 +106,7 @@
           </div>
         </div>
         <div class="text-center mt-8">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary">
+          <a href="https://www.ctmalder.ch/theoriepruefung-bestellen-lernmittel-fuer-fahrschueler-und-fahrlehrer-von-theorie24/" target="_blank" rel="noopener noreferrer" class="btn-primary">
             📦 Lehrmittel bestellen
           </a>
         </div>
@@ -150,7 +157,35 @@
             Ab welchem Alter kann ich starten?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Für 50ccm Motorräder bzw. Roller kannst du dich bereits mit 15 Jahren anmelden. Den Nothelferkurs kannst du bereits vorher besuchen und 1 Monat vor deinem 15. Geburtstag kannst du das Lernfahrgesuch einreichen.</p>
+          <p class="text-gray-600 mt-4">Für 50ccm Motorräder bzw. Roller kannst du dich bereits mit 15 Jahren anmelden. Den Nothelferkurs kannst du bereits vorher besuchen und 1 Monat vor deinem 15. Geburtstag kannst du das Lernfahrgesuch einreichen. Ab 16 Jahren darfst du bereits 125ccm fahren. Lernfahrten fürs Auto sind ab dem 17. Geburtstag erlaubt.</p>
+        </details>
+        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie rechtfertigen sich eure Preise?
+            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Unser stetiges Bestreben nach Professionalität setzen wir in unserer ganzen Fahrschule um. Unsere Fahrlehrer:innen können langfristig nur eine seriöse Arbeit abliefern, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge haben. Dank diesen optimalen Voraussetzungen erreichen wir das Wichtigste: zufriedene Kunden, die eine umfangreiche, speditive und praxisorientierte Ausbildung geniessen.</p>
+        </details>
+        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was haben eure Fahrlehrer:innen für eine Ausbildung?
+            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Unsere Fahrlehrer:innen haben alle eine vollumfängliche und intensive Ausbildung zum/zur Fahrlehrer:in mit eidgenössischem Fachausweis absolviert. Für weitere Fahrzeugkategorien haben die jeweiligen Ausbildner noch Zusatzausbildungen genossen. Jedes Jahr müssen unsere Fahrlehrer:innen mindestens einen Weiterbildungstag absolvieren.</p>
+        </details>
+        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Warum sind eure Verkehrskundekurse so teuer?
+            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Unsere Verkehrskundekurse sind im oberen Preissegment, weil wir auch in diesem Bereich sehr bemüht sind, zu den besten Fahrschulen zu gehören und euch einen möglichst grossen Nutzen für die Fahrstunden zu gewährleisten. Eines der Ziele ist, dass ihr durch den Besuch unseres Verkehrskundekurses neu erlerntes Wissen direkt in den Fahrstunden umsetzen könnt und somit am Ende weniger Fahrstunden benötigt.</p>
+        </details>
+        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie kann ich eure Rechnungen auf dem Smartphone bezahlen?
+            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Wir versenden dir die Rechnung per E-Mail mit einer PDF-Datei im Anhang. Öffne diese PDF-Datei, geh dann auf «Teilen» und öffne die PDF-Datei mit deinem Mobile-Banking App. So kannst du unsere Rechnung unkompliziert bezahlen.</p>
         </details>
       </div>
     </section>

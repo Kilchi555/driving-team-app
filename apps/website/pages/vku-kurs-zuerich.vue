@@ -12,7 +12,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">VKU Kurs Zürich</h1>
           <p class="text-xl text-primary-100 mb-8">Im total achtstündigen VKU Kurs wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss dieses VKU Kurs ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>
         </div>
@@ -101,7 +101,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-4">Brauchst Du noch Fahrstunden?</h2>
         <p class="text-gray-600 mb-6">Dann melde Dich hier an…</p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
+        <a href="/fahrschule-zuerich" class="btn-primary text-lg">
           ✨ Auto Fahrstunden anmelden
         </a>
       </div>
@@ -226,7 +226,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt VKU Kurs anmelden!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt Kurs anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
