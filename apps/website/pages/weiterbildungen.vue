@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Weiterbildungen | CZV, WAB, Motorrad | Driving Team</Title>
       <Meta name="description" content="Weiterbildungen für Fahrer beim Driving Team. CZV Kurse, WAB Kurse, Motorrad Weiterbildung und Fahrlehrer Weiterbildung. Professionelle Schulung in Zürich und Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/weiterbildungen/" />
-    </NuxtHead>
+    </Head>
 
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">

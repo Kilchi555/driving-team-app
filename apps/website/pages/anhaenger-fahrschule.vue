@@ -1,21 +1,21 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Anhänger Fahrschule Kategorie BE | Driving Team Zürich</Title>
       <Meta name="description" content="Anhänger Fahrschule in Zürich und Lachen für Kategorie BE. Praxisnahe Ausbildung, Prüfungsgebiete Albisgütli/Regensdorf/Wettingen. Erfahrene Fahrlehrer." />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule Kategorie BE</h1>
-          <p class="text-xl text-primary-100 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
@@ -263,7 +263,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher fahren mit Anhänger!</h2>
-        <p class="text-xl text-primary-100 mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
+        <p class="hidden xs:block text-xl text-primary-100 mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden

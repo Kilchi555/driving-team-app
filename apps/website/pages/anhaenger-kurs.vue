@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Anhänger Kurs | Gruppentraining Kategorie BE | Driving Team</Title>
       <Meta name="description" content="Anhänger Kurs beim Driving Team. Spezial-Gruppentraining für Kategorie BE. CHF 190.- pro Person, 3 Stunden, mind. 3 Personen. Sicher Anhänger fahren lernen!" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-kurs/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

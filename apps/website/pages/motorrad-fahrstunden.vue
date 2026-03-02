@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorrad Fahrstunden | 4 Schritte zur Motorradprüfung | Driving Team</Title>
       <Meta name="description" content="Motorrad Fahrstunden bei Driving Team – für alle Kategorien (A1, A 35kW, A). Prüfungsvorbereitung in Zürich, Lachen und Uster. Lektion CHF 95.-" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-fahrstunden/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

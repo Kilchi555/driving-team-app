@@ -1,13 +1,13 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorboot Fahrschule Kategorie A | Driving Team Zürich</Title>
       <Meta name="description" content="Motorboot Fahrschule am Zürichsee. In 4 Schritten zur Motorbootprüfung. Erfahrener Bootsfahrlehrer Marc, flexible Fahrstundenzeiten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/motorboot.webp" alt="Motorboot" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
@@ -234,7 +234,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher mit dem Motorboot unterwegs!</h2>
-        <p class="text-xl text-primary-100 mb-8">Bootsfahrschule am Zürichsee mit erfahrenem Fahrlehrer Marc</p>
+        <p class="hidden xs:block text-xl text-primary-100 mb-8">Bootsfahrschule am Zürichsee mit erfahrenem Fahrlehrer Marc</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden

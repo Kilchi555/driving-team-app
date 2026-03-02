@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>WAB Kurse Zürich Oberland | Driving Team</Title>
       <Meta name="description" content="WAB Kurse im Kanton Zürich bei unserer Partnerfahrschule Transportschule AG in Pfäffikon ZH. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse-zuerich/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

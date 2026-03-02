@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>CZV Kurse | Berufliche Weiterbildung Lastwagen & Bus | Driving Team</Title>
       <Meta name="description" content="CZV Kurse beim Driving Team. Grundkurs (140h) und Weiterbildung für Berufschauffeure. CZV Weiterbildung ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren. Jetzt informieren!" />
       <Link rel="canonical" href="https://drivingteam.ch/czv-kurse/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

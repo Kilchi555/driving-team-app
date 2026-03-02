@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Fahrlehrer Weiterbildung | Driving Team</Title>
       <Meta name="description" content="Fahrlehrer Weiterbildung beim Driving Team. Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für mehr Informationen." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-weiterbildung/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorrad Grundkurs Zürich | Sicher Motorrad fahren lernen | Driving Team</Title>
       <Meta name="description" content="Motorrad Grundkurs Zürich – 3 x 4h praxisorientierter Grundkurs für alle Motorrad-Kategorien. Kompletter Kurs CHF 499.-. Max. 5 Teilnehmer. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

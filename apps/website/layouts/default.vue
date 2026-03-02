@@ -4,14 +4,17 @@
     <header class="sticky top-0 bg-white z-50 shadow-md">
       <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
-        <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0">
+        <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="showDesktopMenu = false">
           <img src="/images/logo.png" alt="Driving Team Logo" class="h-8 xl:h-12 w-auto object-contain" />
         </NuxtLink>
 
-        <!-- Desktop Menu Button (Hamburger) - Shown on screens below 1200px -->
-        <button v-if="!showDesktopMenu" @click="showDesktopMenu = true" class="1200:hidden text-gray-700 hover:text-primary-600 ml-auto">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Hamburger / Close Button -->
+        <button @click="showDesktopMenu = !showDesktopMenu" class="1200:hidden text-gray-700 hover:text-primary-600 ml-auto">
+          <svg v-if="!showDesktopMenu" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+          <svg v-else class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
 
@@ -104,50 +107,102 @@
       </nav>
     </header>
 
+    <!-- Backdrop -->
+    <Transition name="fade">
+      <div
+        v-if="showDesktopMenu"
+        class="1200:hidden fixed inset-0 bg-black/40 z-40"
+        @click="showDesktopMenu = false"
+      />
+    </Transition>
+
     <!-- Mobile Menu Panel -->
-    <div v-if="showDesktopMenu" class="1200:hidden bg-white border-b border-gray-100 w-full">
-      <div class="px-6 py-4">
-        <button @click="showDesktopMenu = false" class="absolute top-6 right-6 text-gray-700">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-
+    <Transition name="slide-down">
+      <div v-if="showDesktopMenu" class="1200:hidden fixed top-[72px] left-0 right-0 bg-white z-40 shadow-xl rounded-b-2xl max-h-[calc(100vh-72px)] overflow-y-auto">
+        <div class="px-6 py-4">
         <!-- Mobile Menu Content -->
-        <nav class="space-y-4 mt-4">
-          <div>
-            <button class="font-medium text-gray-700 w-full text-left pb-2 border-b border-gray-200">Fahrschule</button>
-            <div class="pl-4 space-y-2 mt-2">
-              <a href="/fahrschule-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600">📍 Zürich</a>
-              <a href="/fahrschule-lachen/" class="block text-sm text-gray-600 hover:text-primary-600">📍 Lachen</a>
-              <a href="/fahrschule-uster/" class="block text-sm text-gray-600 hover:text-primary-600">📍 Uster</a>
-              <a href="/fahrschule-stgallen/" class="block text-sm text-gray-600 hover:text-primary-600">📍 St.Gallen</a>
-            </div>
+        <nav class="pb-4">
+
+          <!-- Fahrschule -->
+          <button @click="openSection = openSection === 'fahrschule' ? '' : 'fahrschule'" class="flex items-center justify-between w-full py-3 border-b border-gray-200 font-semibold text-gray-800">
+            <span>Fahrschule</span>
+            <svg class="w-4 h-4 transition-transform duration-200" :class="openSection === 'fahrschule' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-show="openSection === 'fahrschule'" class="pl-2 py-2 space-y-1">
+            <a href="/fahrschule-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Zürich</a>
+            <a href="/fahrschule-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Lachen</a>
+            <a href="/fahrschule-uster/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Uster</a>
+            <a href="/fahrschule-stgallen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 St.Gallen</a>
+            <a href="/fahrschule-dietikon/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Dietikon</a>
+            <a href="/fahrschule-aargau/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Aargau</a>
+            <a href="/fahrschule-reichenburg/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Reichenburg</a>
           </div>
 
-          <div>
-            <button class="font-medium text-gray-700 w-full text-left pb-2 border-b border-gray-200">Kategorie</button>
-            <div class="pl-4 space-y-2 mt-2">
-              <a href="/auto-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600">Auto</a>
-              <a href="/motorrad-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600">Motorrad</a>
-              <a href="/lastwagen-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600">Lastwagen</a>
-              <a href="/taxi-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600">Taxi</a>
-              <a href="/kontrollfahrt/" class="block text-sm text-gray-600 hover:text-primary-600">Kontrollfahrt</a>
-            </div>
+          <!-- Kategorie -->
+          <button @click="openSection = openSection === 'kategorie' ? '' : 'kategorie'" class="flex items-center justify-between w-full py-3 border-b border-gray-200 font-semibold text-gray-800">
+            <span>Kategorie</span>
+            <svg class="w-4 h-4 transition-transform duration-200" :class="openSection === 'kategorie' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-show="openSection === 'kategorie'" class="pl-2 py-2 space-y-1">
+            <a href="/auto-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚗 Auto (B)</a>
+            <a href="/motorrad-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🏍️ Motorrad (A)</a>
+            <a href="/lastwagen-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚛 Lastwagen (C)</a>
+            <a href="/taxi-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚕 Taxi (BPT)</a>
+            <a href="/motorboot/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">⛵ Motorboot</a>
+            <a href="/bus-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚌 Bus (D)</a>
+            <a href="/anhaenger-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚗 Anhänger (BE)</a>
+            <a href="/kontrollfahrt/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">✅ Kontrollfahrt</a>
           </div>
 
-          <div>
-            <a href="/uber-uns/" class="font-medium text-gray-700 block pb-2 border-b border-gray-200">Über uns</a>
-            <a href="/preise/" class="font-medium text-gray-700 block pb-2 border-b border-gray-200 mt-2">Preise</a>
-            <a href="/blog/" class="font-medium text-gray-700 block pb-2 border-b border-gray-200 mt-2">Blog</a>
+          <!-- Kurse -->
+          <button @click="openSection = openSection === 'kurse' ? '' : 'kurse'" class="flex items-center justify-between w-full py-3 border-b border-gray-200 font-semibold text-gray-800">
+            <span>Kurse</span>
+            <svg class="w-4 h-4 transition-transform duration-200" :class="openSection === 'kurse' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-show="openSection === 'kurse'" class="pl-2 py-2">
+            <a href="/auto-theorie/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📚 Auto Theorie</a>
+            <a href="/nothelferkurs/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">❤️ Nothelferkurse</a>
+
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-3 mb-1">Motorrad Grundkurse</p>
+            <a href="/motorrad-grundkurs-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zürich</a>
+            <a href="/motorrad-grundkurs-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Lachen</a>
+            <a href="/motorrad-grundkurs-zug/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zug</a>
+            <a href="/motorrad-grundkurs-einsiedeln/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Einsiedeln</a>
+
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-3 mb-1">VKU Kurse</p>
+            <a href="/vku-kurs-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zürich</a>
+            <a href="/vku-kurs-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Lachen</a>
+
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-3 mb-1">WAB Kurse</p>
+            <a href="/wab-kurse-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zürich</a>
+            <a href="/wab-kurse-schwyz/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Schwyz</a>
+            <a href="/wab-course-english/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">🌍 English</a>
           </div>
 
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="block bg-primary-600 text-white rounded-full py-3 px-4 text-center font-bold mt-4 hover:bg-primary-700">
+          <!-- Weiterbildungen -->
+          <button @click="openSection = openSection === 'weiterbildungen' ? '' : 'weiterbildungen'" class="flex items-center justify-between w-full py-3 border-b border-gray-200 font-semibold text-gray-800">
+            <span>Weiterbildungen</span>
+            <svg class="w-4 h-4 transition-transform duration-200" :class="openSection === 'weiterbildungen' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-show="openSection === 'weiterbildungen'" class="pl-2 py-2 space-y-1">
+            <a href="/czv-grundkurs/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📖 CZV Grundkurs</a>
+            <a href="/czv-weiterbildung/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📖 CZV Weiterbildung</a>
+            <a href="/fahrlehrerweiterbildung/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">👨‍🏫 Fahrlehrer-Weiterbildung</a>
+            <a href="/motorrad-weiterbildung/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🏍️ Motorrad-Weiterbildung</a>
+          </div>
+
+          <!-- Direkte Links -->
+          <a href="/team/" class="flex items-center justify-between py-3 border-b border-gray-200 font-semibold text-gray-800 hover:text-primary-600" @click="showDesktopMenu = false">Team & Geschichte</a>
+          <a href="/fahrschule-preise/" class="flex items-center justify-between py-3 border-b border-gray-200 font-semibold text-gray-800 hover:text-primary-600" @click="showDesktopMenu = false">Preise</a>
+          <a href="/blog/" class="flex items-center justify-between py-3 border-b border-gray-200 font-semibold text-gray-800 hover:text-primary-600" @click="showDesktopMenu = false">Blog</a>
+
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="block bg-primary-600 text-white rounded-full py-3 px-4 text-center font-bold mt-6 hover:bg-primary-700" @click="showDesktopMenu = false">
             📅 Termin Buchen
           </a>
         </nav>
+        </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- Main Content -->
     <main class="flex-1">
@@ -240,4 +295,13 @@
 import { ref } from 'vue'
 
 const showDesktopMenu = ref(false)
+const openSection = ref('')
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.slide-down-enter-active, .slide-down-leave-active { transition: transform 0.3s ease, opacity 0.3s ease; }
+.slide-down-enter-from, .slide-down-leave-to { transform: translateY(-100%); opacity: 0; }
+</style>

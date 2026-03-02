@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Verkehrskunde Kurs Lachen | VKU Kurs Lachen | Driving Team</Title>
       <Meta name="description" content="Verkehrskunde Kurs Lachen (VKU) bei Driving Team – 2 x 4h, Herrengasse 17, 8853 Lachen. CHF 250.- inkl. Dokumentation & Kursbestätigung." />
       <Link rel="canonical" href="https://drivingteam.ch/verkehrskunde-kurs-lachen/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

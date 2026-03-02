@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>WAB Kurse | Weiterbildung nach Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="WAB Kurse (Weiterausbildung) beim Driving Team. In Zürich und Schwyz. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker innert 12 Monaten nach Fahrprüfung." />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

@@ -1,14 +1,14 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Kontrollfahrt Zürich | In 3 Schritten zur Kontrollfahrt | Driving Team</Title>
       <Meta name="description" content="Kontrollfahrt in Zürich – professionelle Vorbereitung mit Driving Team. Individuelle Ausbildung, entspanntes Lernen, beste Vorbereitung für die Kontrollfahrt." />
       <Meta name="keywords" content="Kontrollfahrt Zürich, Kontrollfahrt Vorbereitung, Fahrtüchtigkeit, Führerausweis umschreiben, Driving Team" />
       <Link rel="canonical" href="https://drivingteam.ch/kontrollfahrt/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/kontrollfahrt.webp" alt="Kontrollfahrt" class="absolute inset-0 w-full h-full object-cover opacity-20" />
       <div class="section-container text-center relative z-10">
         <h1 class="heading-lg text-white mb-6">Kontrollfahrt</h1>

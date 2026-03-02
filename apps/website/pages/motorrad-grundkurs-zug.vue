@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorrad Grundkurs Zug | 3 x 4h für Motorrad & Roller | Driving Team</Title>
       <Meta name="description" content="Motorrad Grundkurs Zug – 3 x 4h praxisorientierter Grundkurs in Steinhausen. In Kooperation mit Fahrschule Schoch. Kompletter Kurs CHF 600.-. Max. 5 Teilnehmer." />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zug/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

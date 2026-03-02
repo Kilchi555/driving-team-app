@@ -1,19 +1,19 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Auto Fahrschule Aargau | 6 Schritte zur Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="Auto Fahrschule Aargau – professionelle Fahrausbildung im Kanton Aargau. Auf Deutsch und Albanisch. Jetzt Termin buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-aargau/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/locations/aargau-hero.jpg" alt="Fahrschule Aargau" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Deine Auto Fahrschule Aargau</h1>
-          <p class="text-xl text-primary-100 mb-8">Melde Dich in unserer Fahrschule Aargau an – individuelle Ausbildung, flexible Treffpunkte und professionelle Fahrlehrer.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Melde Dich in unserer Fahrschule Aargau an – individuelle Ausbildung, flexible Treffpunkte und professionelle Fahrlehrer.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

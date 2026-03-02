@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Weg zur Motorbootprüfung | In 4 Schritten | Driving Team</Title>
       <Meta name="description" content="In 4 Schritten zur Motorbootprüfung mit der Motorboot Fahrschule Driving Team. Fahrstunden, Anmeldung, Theorie und praktische Prüfung." />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

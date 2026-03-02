@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Verkehrskunde Kurs Zürich | VKU Kurs Zürich | Driving Team</Title>
       <Meta name="description" content="Verkehrskunde Kurs Zürich (VKU) bei Driving Team – 2 x 4h, Baslerstrasse 145, 8048 Zürich-Altstetten. CHF 190.- inkl. Dokumentation & Kursbestätigung." />
       <Link rel="canonical" href="https://drivingteam.ch/verkehrskunde-kurs-zuerich/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

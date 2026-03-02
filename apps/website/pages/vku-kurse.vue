@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>VKU Kurse | Verkehrskunde Kurs Zürich & Lachen | Driving Team</Title>
       <Meta name="description" content="VKU Kurse beim Driving Team in Zürich und Lachen. Obligatorischer 8-stündiger Verkehrskundeunterricht. CHF 190.- in Zürich, CHF 250.- in Lachen. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurse/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

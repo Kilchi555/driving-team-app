@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Taxi Fahrschule Zürich | BPT Ausbildung | Driving Team</Title>
       <Meta name="description" content="Taxi Fahrschule in Zürich. BPT Ausbildung (Code 121 | 122) in Zürich-Altstetten. Professionelle Fahrlehrer, faire Preise. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule-zuerich/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

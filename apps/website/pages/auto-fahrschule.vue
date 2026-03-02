@@ -1,21 +1,21 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Auto Fahrschule Kategorie B | Driving Team Zürich</Title>
       <Meta name="description" content="Auto Fahrschule in Zürich für Kategorie B. Erfahrene Fahrlehrer, flexible Preise, garantiert bestanden. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Auto Fahrschule Kategorie B | Driving Team" />
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Auto Fahrschule Kategorie B</h1>
-          <p class="text-xl text-primary-100 mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -256,7 +256,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit zu starten?</h2>
-        <p class="text-xl text-primary-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
+        <p class="hidden xs:block text-xl text-primary-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Termin buchen
         </a>

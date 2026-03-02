@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Taxi Theorie | ARV 2 Prüfung bestehen | Driving Team</Title>
       <Meta name="description" content="Taxi Theorie (ARV 2) beim Driving Team. Theoriestunden und Wegleitung ARV2. CHF 90.- pro 45 Minuten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-theorie/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

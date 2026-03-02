@@ -1,20 +1,20 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Fahrschule Zürich | Jetzt in 6 Schritten zur Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="Fahrschule Zürich – professionelle Fahrstunden für Auto, Motorrad & mehr in Zürich-Altstetten. Englisch & Albanisch möglich. Jetzt Termin buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Prüfungsvorbereitung Zürich" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/locations/zuerich-hero.jpg" alt="Fahrschule Zürich" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrschule Zürich</h1>
-          <p class="text-xl text-primary-100 mb-8">Willkommen bei der Fahrschule Driving Team Zürich. Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Willkommen bei der Fahrschule Driving Team Zürich. Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

@@ -1,12 +1,12 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>{{ categoryData.title }} | Driving Team Zürich</Title>
       <Meta name="description" :content="`${categoryData.shortDesc} in Zürich. Professionelle Fahrschule mit erfahrenen Fahrlehrern.`" />
       <Meta property="og:title" :content="categoryData.title" />
       <Meta property="og:description" :content="categoryData.shortDesc" />
       <Link rel="canonical" :href="`https://drivingteam.ch/categories/${slug}`" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

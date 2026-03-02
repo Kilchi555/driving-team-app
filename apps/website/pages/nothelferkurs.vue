@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Nothelferkurs | In 10 Stunden zum Nothelferausweis | Driving Team</Title>
       <Meta name="description" content="Nothelferkurs beim Driving Team. 10 Stunden in 2 Teilen. CHF 99.- inkl. Nothelferausweis. In Zürich-Altstetten und Lachen. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-red-600 to-red-800 text-white py-16 md:py-24">

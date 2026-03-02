@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>WAB Kurse Schwyz | 1 Tag zu deinem definitiven Führerausweis | Driving Team</Title>
       <Meta name="description" content="WAB Kurse im Kanton Schwyz bei Verkehrszentrum Tuggen AG in Tuggen SZ. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse-schwyz/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
