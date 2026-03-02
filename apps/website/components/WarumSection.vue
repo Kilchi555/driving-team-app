@@ -1,7 +1,7 @@
 <template>
   <section class="bg-gray-50 py-20">
     <div class="section-container">
-      <h2 class="heading-md text-center mb-16">Warum die Fahrschule Driving Team?</h2>
+      <h2 class="heading-md text-center mb-16">{{ title }}</h2>
 
       <div class="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
         <div>
@@ -33,3 +33,31 @@
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+const props = defineProps({
+  category: {
+    type: String,
+    default: ''
+  }
+})
+
+const categoryTitles: Record<string, string> = {
+  auto: 'Warum die Auto Fahrschule Driving Team?',
+  motorrad: 'Warum die Motorrad Fahrschule Driving Team?',
+  lastwagen: 'Warum die Lastwagen Fahrschule Driving Team?',
+  taxi: 'Warum die Taxi Fahrschule Driving Team?',
+  bus: 'Warum die Bus Fahrschule Driving Team?',
+  motorboot: 'Warum die Motorboot Fahrschule Driving Team?',
+  anhaenger: 'Warum die Anhänger Fahrschule Driving Team?',
+  zuerich: 'Warum die Fahrschule Driving Team Zürich?',
+  lachen: 'Warum die Fahrschule Driving Team Lachen?',
+  uster: 'Warum die Fahrschule Driving Team Uster?',
+  stgallen: 'Warum die Fahrschule Driving Team St.Gallen?',
+  dietikon: 'Warum die Fahrschule Driving Team Dietikon?',
+  aargau: 'Warum die Fahrschule Driving Team Aargau?',
+  reichenburg: 'Warum die Fahrschule Driving Team Reichenburg?',
+}
+
+const title = computed(() => categoryTitles[props.category] ?? 'Warum die Fahrschule Driving Team?')
+</script>

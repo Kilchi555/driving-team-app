@@ -213,7 +213,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="bus" />
   </div>
 </template>
 

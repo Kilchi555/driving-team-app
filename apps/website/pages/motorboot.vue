@@ -246,7 +246,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="motorboot" />
   </div>
 </template>
 
