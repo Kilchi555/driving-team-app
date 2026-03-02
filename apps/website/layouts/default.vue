@@ -227,8 +227,8 @@
           </div>
 
           <p class="text-gray-500 text-xs">
-            Designed with care by
-            <a href="https://www.delphis.ch" target="_blank" rel="noopener noreferrer" class="hover:text-gray-300 transition">Delphis Web Design & Development</a>
+            Designed by 
+            <a href="https://www.simy.ch" target="_blank" rel="noopener noreferrer" class="hover:text-gray-300 transition">Simy IT Systems Kilchenmann</a>
           </p>
         </div>
       </div>

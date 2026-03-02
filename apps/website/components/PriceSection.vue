@@ -63,15 +63,15 @@
         <!-- Kategorie BE - Anhänger -->
         <div v-if="showAnhaenger" class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all">
           <h3 class="text-2xl font-bold text-gray-900 mb-4">Anhänger Lektion</h3>
-          <p class="text-gray-600 mb-6">Kategorie BE à 90 Minuten</p>
+          <p class="text-gray-600 mb-6">Kategorie BE à 45 Minuten</p>
           <div class="mb-6">
-            <span class="text-4xl font-black text-amber-600">CHF 240</span>
-            <span class="text-gray-600 ml-2">Doppellektion</span>
+            <span class="text-4xl font-black text-amber-600">CHF 120</span>
+            <span class="text-gray-600 ml-2">pro Lektion</span>
           </div>
           <ul class="space-y-3 text-gray-700">
             <li class="flex items-start gap-2">
               <span class="text-amber-600 font-bold">✓</span>
-              <span>Empfohlene Doppellektionen</span>
+              <span>Empfohlen: Doppellektionen</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-amber-600 font-bold">✓</span>
@@ -99,6 +99,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps({
   category: {
     type: String,
@@ -118,13 +120,13 @@ const gridClass = computed(() => {
 })
 
 const titleMap: Record<string, string> = {
-  auto: 'Preise Auto Fahrschule',
-  motorrad: 'Preise Motorrad Fahrschule',
-  anhaenger: 'Preise Anhänger Fahrschule',
-  taxi: 'Unsere Preise',
-  bus: 'Unsere Preise',
-  lastwagen: 'Unsere Preise',
-  motorboot: 'Unsere Preise',
+  auto: 'Preise - Auto Fahrschule',
+  motorrad: 'Preise - Motorrad Fahrschule',
+  anhaenger: 'Preise - Anhänger Fahrschule',
+  taxi: 'Preise - Taxi Fahrschule',
+  bus: 'Preise - Bus Fahrschule',
+  lastwagen: 'Preise - Lastwagen Fahrschule',
+  motorboot: 'Preise - Motorboot Fahrschule',
 }
 
 const title = computed(() => titleMap[props.category] ?? 'Unsere Preise')

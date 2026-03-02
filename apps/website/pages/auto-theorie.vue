@@ -191,12 +191,7 @@
     </section>
 
     <!-- Warum Driving Team -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-8 text-center">Warum Lektionen für die Auto Theorieprüfung beim Driving Team?</h2>
-        <p class="text-gray-700 text-center max-w-3xl mx-auto">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Lernumgebung geschaffen, die sowohl motivierend als auch effektiv ist.</p>
-      </div>
-    </section>
+    <WarumSection category="auto" />
 
     <!-- Unsere Gebiete -->
     <section class="section-container">

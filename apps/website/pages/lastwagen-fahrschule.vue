@@ -310,6 +310,8 @@
     </section>
     <GutscheinSection />
     <PriceSection category="lastwagen" />
+    <CtaSection title="Jetzt mit der Lastwagen Fahrschule starten!" />
+    <StandorteSection />
   </div>
 </template>
 

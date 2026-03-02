@@ -367,8 +367,12 @@
         </div>
       </div>
     </section>
+    
+    <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="motorrad" />
+    <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
+    <StandorteSection />
   </div>
 </template>
 

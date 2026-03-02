@@ -247,6 +247,8 @@
     </section>
     <GutscheinSection />
     <PriceSection category="motorboot" />
+    <CtaSection title="Jetzt mit der Motorboot Fahrschule starten!" />
+    <StandorteSection />
   </div>
 </template>
 

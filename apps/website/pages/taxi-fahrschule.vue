@@ -291,8 +291,12 @@
         </div>
       </div>
     </section>
+    
+    <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="taxi" />
+    <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" />
+    <StandorteSection />
   </div>
 </template>
 
