@@ -48,6 +48,13 @@
                 <p class="text-sm text-gray-600">Fülle im ersten Schritt zur Taxiprüfung das Lernfahrgesuch vollständig und wahrheitsgetreu aus und gehe damit zu einem Optiker oder Augenarzt, um den Sehtest eintragen zu lassen.</p>
                 <p class="text-sm text-gray-600 mt-2">Gehe anschliessend mit dem ausgefüllten Anmeldeformular, einem farbigen Passfoto und ID/Pass persönlich beim Strassenverkehrsamt oder bei der Einwohnerkontrolle vorbei.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Bitte bedenke, dass du den Führerausweis der Kategorie B bereits mindestens 1 Jahr lang besitzen musst.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
+                </div>
               </div>
             </div>
           </div>

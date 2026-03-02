@@ -56,6 +56,13 @@
                 <h3 class="heading-sm mb-2">Lernfahrgesuch Bus</h3>
                 <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Anschliessend gehst du damit zu einem Optiker oder Arzt, um einen Sehtest durchführen zu lassen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Voraussetzungen: Mindestens 21 Jahre alt, Kategorie B seit mindestens 2 Jahren.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
+                </div>
               </div>
             </div>
           </div>
@@ -150,16 +157,19 @@
     <section class="bg-gray-50 py-16">
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">Preise | Bus Fahrschule</h2>
-        <div class="max-w-sm mx-auto bg-white rounded-lg p-8 shadow-sm border border-gray-200">
-          <h3 class="font-bold text-xl text-center mb-6 text-primary-600">Kategorie D</h3>
-          <ul class="space-y-3 text-sm text-gray-600 mb-6">
-            <li class="flex gap-2"><span class="text-primary-500">✓</span> Effiziente Fahrausbildung</li>
-            <li class="flex gap-2"><span class="text-primary-500">✓</span> Freundliche Fahrlehrer:innen</li>
-            <li class="flex gap-2"><span class="text-primary-500">✓</span> Rechnung per E-Mail</li>
+        <div class="max-w-sm mx-auto bg-primary-600 rounded-lg p-8 shadow-md text-white">
+          <h3 class="font-bold text-xl text-center mb-2">Kategorie D</h3>
+          <p class="text-center text-3xl font-bold mb-1">CHF 200.-</p>
+          <p class="text-center text-sm text-primary-200 mb-4">à 45 Minuten</p>
+          <ul class="space-y-3 text-sm text-primary-100 mb-6">
+            <li class="flex gap-2"><span>✓</span> Effiziente Fahrausbildung</li>
+            <li class="flex gap-2"><span>✓</span> Freundliche Fahrlehrer:innen</li>
+            <li class="flex gap-2"><span>✓</span> Rechnung per E-Mail</li>
+            <li class="flex gap-2"><span>i</span> unlimited</li>
           </ul>
-          <div class="border-t border-gray-100 pt-4 space-y-2">
-            <p class="text-sm text-gray-500">Versicherungspauschale: <strong>CHF 200.-</strong> (einmalig)</p>
-            <p class="text-sm text-gray-500">WarmUp inkl. Prüfungsfahrt: <strong>CHF 1'066.-</strong></p>
+          <div class="border-t border-primary-500 pt-4 space-y-2">
+            <p class="text-sm text-primary-200">Versicherungspauschale: <strong class="text-white">CHF 200.-</strong> (einmalig)</p>
+            <p class="text-sm text-primary-200">WarmUp inkl. Prüfungsfahrt: <strong class="text-white">CHF 1'066.-</strong></p>
           </div>
         </div>
       </div>

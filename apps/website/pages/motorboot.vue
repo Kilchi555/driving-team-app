@@ -62,6 +62,11 @@
                 <h3 class="heading-sm mb-2">Beim Schifffahrtsamt anmelden</h3>
                 <p class="text-sm text-gray-600">Nach den ersten paar Motorbootsfahrstunden kannst du dich beim Schifffahrtsamt deines Wohnkantons anmelden. Wer dann die Theorie- und/oder die praktische Motorbootsprüfung in einem anderen Kanton absolvieren will, benötigt dazu eine Bewilligung des Schifffahrtsamtes im Wohnkanton.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Mindestalter: Ab 18 Jahren darf man den Lernfahrausweis bestellen und die Bootsprüfung absolvieren. In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="https://www.zh.ch/de/mobilitaet/schifffahrt/schiffsfuehrerpruefung.html" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Zürich</a>
+                  <a href="https://www.sz.ch/verwaltung/baudepartement/verkehrsamt/schifffahrt/schiffsfuehrer_in.html/8756-8758-8802-9276-9293-9327-9350" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Schwyz</a>
+                  <a href="https://www.sg.ch/content/dam/sgch/verkehr/schifffahrt/schiffsfuehrer/gesuch_schiffsfuehrerausweis.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung St.Gallen</a>
+                </div>
               </div>
             </div>
           </div>
@@ -115,7 +120,7 @@
               Wie viele Fahrstunden benötige ich?
               <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Das hängt davon ab, wie schnell du dich mit dem Motorboot vertraut machen kannst. Der bisher schnellste Fahrschüler hat innert 5 Wochen die Prüfung bestanden.</p>
+            <p class="text-gray-600 mt-4">Das hängt davon ab, wie schnell du dich mit dem Motorboot vertraut machen kannst. Vor allem das Manövrieren braucht einige Erfahrung bis man es beherrscht. Die meisten brauchen mindestens 8–10 Doppellektionen. Der bisher schnellste Fahrschüler hat innert 5 Wochen die Prüfung bestanden.</p>
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
@@ -151,26 +156,30 @@
       <h2 class="heading-md mb-8 text-center">Zuhause Theorie lernen</h2>
       <p class="text-center text-gray-600 mb-10">Mit diesen Lehrmitteln kannst du ganz bequem von Zuhause auf die Theorieprüfung lernen.</p>
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-        <div class="bg-gray-50 rounded-lg p-6 text-center">
+        <a href="https://www.boatdriver.ch/e-learning-praxis-motorboot" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">💻</p>
           <h3 class="font-bold text-gray-800 mb-2">BoatDriver Online</h3>
           <p class="text-sm text-gray-600">Alle offiziellen Prüfungsfragen. Von Bootsfahrschulen empfohlen. Über 100'000 zufriedene Kunden.</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-6 text-center">
+          <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
+        </a>
+        <a href="https://www.boatdriver.ch/boatdriver-praxisbuch-motorboot-kat-a-d-10226" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">📚</p>
           <h3 class="font-bold text-gray-800 mb-2">BoatDriver Praxis (Buch)</h3>
           <p class="text-sm text-gray-600">Praxis-Handbuch für eine sichere Vorbereitung zur Schweizerischen Motorbootprüfung.</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-6 text-center">
+          <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
+        </a>
+        <a href="https://boatdriver.ch/" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">⚓</p>
           <h3 class="font-bold text-gray-800 mb-2">Yacht-Bordbuch</h3>
           <p class="text-sm text-gray-600">Handbuch fürs Cockpit.</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-6 text-center">
+          <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
+        </a>
+        <a href="https://www.boatdriver.ch/boatdriver-map-2" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">🗺️</p>
           <h3 class="font-bold text-gray-800 mb-2">BoatDriver Map Zürichsee</h3>
           <p class="text-sm text-gray-600">Wasserfeste Seekarte mit Tiefenangaben und Hafenplänen – Zürichsee, Walensee, Linthkanal.</p>
-        </div>
+          <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
+        </a>
       </div>
     </section>
 
