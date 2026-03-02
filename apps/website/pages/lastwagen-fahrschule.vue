@@ -299,7 +299,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="lastwagen" />
   </div>
 </template>
 

@@ -286,7 +286,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="anhaenger" />
   </div>
 </template>
 

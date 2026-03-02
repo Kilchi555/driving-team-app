@@ -333,7 +333,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="motorrad" />
   </div>
 </template>
 

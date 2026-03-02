@@ -228,7 +228,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="auto" />
   </div>
 </template>
 

@@ -270,7 +270,7 @@
       </div>
     </section>
     <GutscheinSection />
-    <PriceSection />
+    <PriceSection category="taxi" />
   </div>
 </template>
 
