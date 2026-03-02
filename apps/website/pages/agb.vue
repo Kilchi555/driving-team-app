@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>AGB | Allgemeine Geschäftsbedingungen | Driving Team Fahrschule</Title>
       <Meta name="description" content="Allgemeine Geschäftsbedingungen der Fahrschule Driving Team – Fahrausweis, Versicherung, Zahlungskonditionen und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/agb/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16">

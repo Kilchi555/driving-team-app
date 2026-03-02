@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Auto Theorieprüfung | Jetzt für Theoriestunden anmelden | Driving Team</Title>
       <Meta name="description" content="Auto Theorieprüfung vorbereitung beim Driving Team. Praxisorientierte Lektionen. CHF 85.- pro 45 Minuten. Zürich-Altstetten und Lachen/SZ. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-theorie/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

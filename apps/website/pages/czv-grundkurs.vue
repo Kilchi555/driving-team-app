@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>CZV Grundkurs | Berufliche Weiterbildung | Driving Team</Title>
       <Meta name="description" content="CZV Grundkurs für Berufschauffeure. Informationen zum obligatorischen Grundkurs nach der Chauffeurverordnung. Kontaktiere uns für Firmenkurse." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-grundkurs/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

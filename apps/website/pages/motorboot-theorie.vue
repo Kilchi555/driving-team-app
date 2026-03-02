@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorboot Theorie | Bootführerschein Theoriestunden | Driving Team</Title>
       <Meta name="description" content="Motorboot Theoriestunden beim Driving Team. Optimale Vorbereitung auf die Theorieprüfung mit Tipps und Tricks. CHF 90.- pro 45 Minuten in Lachen SZ." />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-theorie/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

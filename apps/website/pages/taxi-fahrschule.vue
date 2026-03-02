@@ -1,20 +1,20 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Taxi Fahrschule Kategorie BPT | Driving Team Zürich</Title>
       <Meta name="description" content="Taxi Fahrschule in Zürich mit BPT Zertifizierung (Code 121 | 122). Professionelle Ausbildung für Taxi-Fahrer mit allen erforderlichen Kursen, Theorie ARV und praktischen Fahrstunden." />
       <Meta property="og:title" content="Taxi Fahrschule Kategorie BPT | Driving Team" />
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/taxi-fahrschule.webp" alt="Taxi Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Taxi Fahrschule Kategorie BPT</h1>
-          <p class="text-xl text-primary-100 mb-8">Träumst du davon, als Taxifahrer:in auf den Strassen unterwegs zu sein und Menschen sicher an ihr Ziel zu bringen? Dann bist du bei uns genau richtig! Wir bieten dir die massgeschneiderte Ausbildung für deinen Traumberuf als Taxifahrer:in.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Träumst du davon, als Taxifahrer:in auf den Strassen unterwegs zu sein und Menschen sicher an ihr Ziel zu bringen? Dann bist du bei uns genau richtig! Wir bieten dir die massgeschneiderte Ausbildung für deinen Traumberuf als Taxifahrer:in.</p>
           <div class="flex flex-wrap gap-4">
             <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Taxi Fahrstunden anmelden
@@ -280,7 +280,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Starte deine Taxi-Karriere!</h2>
-        <p class="text-xl text-primary-100 mb-8">Mit professioneller BPT Ausbildung von Driving Team</p>
+        <p class="hidden xs:block text-xl text-primary-100 mb-8">Mit professioneller BPT Ausbildung von Driving Team</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Taxi Fahrstunden anmelden

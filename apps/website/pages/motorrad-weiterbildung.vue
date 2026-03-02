@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorrad Weiterbildung | Kurse die Dich sicherer machen | Driving Team</Title>
       <Meta name="description" content="Motorrad Weiterbildung beim Driving Team. Schräglagen-Training und Prüfungsvorbereitungskurs. CHF 190.- pro Kurs, max. 5 Teilnehmer. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-weiterbildung/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-16 md:py-24">

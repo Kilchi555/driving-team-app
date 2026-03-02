@@ -25,10 +25,7 @@
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
     </Head>
 
-    <!-- Welcome Title -->
-    <div class="w-full bg-white py-8 md:py-12 text-center border-b border-gray-200">
-      <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Herzlich Willkommen bei der Fahrschule Driving Team</h1>
-    </div>
+    <h1 class="sr-only">Willkommen bei der Fahrschule Driving Team</h1>
 
     <!-- Immersive Hero Intro Section WITH Categories -->
     <section class="hero-intro-section relative flex flex-col items-center justify-center overflow-hidden bg-white">
@@ -330,12 +327,6 @@
               </div>
             </a>
           </div>
-        </div>
-
-        <div class="text-center mt-12">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary">
-            Kurs oder Fahrstunde buchen
-          </a>
         </div>
       </div>
     </section>

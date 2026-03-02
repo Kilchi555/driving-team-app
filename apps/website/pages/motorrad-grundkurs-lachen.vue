@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Motorrad Grundkurs Lachen | 3 x 4h für Motorrad & Roller | Driving Team</Title>
       <Meta name="description" content="Motorrad Grundkurs Lachen – 3 x 4h praxisorientierter Grundkurs für alle Motorrad-Kategorien. Kompletter Kurs CHF 570.-. Max. 5 Teilnehmer. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-lachen/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

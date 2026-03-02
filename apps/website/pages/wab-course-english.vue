@@ -1,11 +1,11 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>WAB Course English | Register for your mandatory course! | Driving Team</Title>
       <Meta name="description" content="WAB Courses in English in the canton of Zurich (Pfäffikon ZH) and Schwyz (Tuggen). Register now for your mandatory WAB refresher course." />
       <Meta name="keywords" content="WAB Course English, WAB Kurs Englisch, professional driver training, Driving Team" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-course-english/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

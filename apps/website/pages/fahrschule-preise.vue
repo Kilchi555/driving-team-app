@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Fahrstunden Preise mit 1 Klick | Fahrschule Driving Team</Title>
       <Meta name="description" content="Alle Preise unserer Fahrschule auf einen Blick. Transparente Fahrstunden-Preise für Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich und Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-preise/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 relative overflow-hidden">

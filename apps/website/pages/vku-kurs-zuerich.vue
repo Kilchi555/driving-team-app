@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>VKU Kurs Zürich | Mit 2 x 4h VKU Fahrstunden sparen | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Zürich beim Driving Team. 8 Stunden Verkehrskundeunterricht in 2 Teilen à 4 Stunden. CHF 190.- inkl. Dokumentation. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-zuerich/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

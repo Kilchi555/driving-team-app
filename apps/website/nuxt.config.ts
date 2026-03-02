@@ -40,5 +40,6 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true },
+    '/uber-uns': { redirect: { to: '/team', statusCode: 301 } },
   },
 })

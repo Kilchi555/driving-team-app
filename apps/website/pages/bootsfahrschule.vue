@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Bootsfahrschule Lachen | Motorboot Führerschein am Zürichsee | Driving Team</Title>
       <Meta name="description" content="Bootsfahrschule am oberen Zürichsee in Lachen – flexible Treffpunkte, professionelle Motorboot-Fahrstunden für den Führerschein. Lektion 90min CHF 190.-" />
       <Link rel="canonical" href="https://drivingteam.ch/bootsfahrschule/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

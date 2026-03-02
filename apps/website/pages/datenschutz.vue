@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Datenschutz | Driving Team Fahrschule</Title>
       <Meta name="description" content="Datenschutzerklärung der Fahrschule Driving Team – Informationen zur Verarbeitung von Personendaten, Cookies, Google Maps und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/datenschutz/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16">

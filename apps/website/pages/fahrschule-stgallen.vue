@@ -1,19 +1,19 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Fahrschule St.Gallen | Auto Fahrstunden | Driving Team</Title>
       <Meta name="description" content="Fahrschule St.Gallen – Fahrstunden für Auto, Motorrad und mehr. Erfahrene Fahrlehrer, flexible Zeiten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-stgallen/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 relative overflow-hidden">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/locations/stgallen-hero.jpg" alt="Fahrschule St. Gallen" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrschule St.Gallen</h1>
-          <p class="text-xl text-primary-100 mb-8">Deine Fahrschule in St.Gallen. Melde Dich an und starte deine Fahrausbildung mit dem Driving Team.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Deine Fahrschule in St.Gallen. Melde Dich an und starte deine Fahrausbildung mit dem Driving Team.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

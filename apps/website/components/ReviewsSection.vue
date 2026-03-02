@@ -4,20 +4,34 @@
       <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
 
       <!-- Mobile: Scroll Snap Slider -->
-      <div class="md:hidden flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide">
-        <a
-          v-for="(review, i) in reviews"
-          :key="i"
-          :href="review.link"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="snap-start shrink-0 w-[85vw] bg-white rounded-lg p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition"
+      <div class="md:hidden">
+        <div
+          ref="sliderRef"
+          class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 scrollbar-hide scroll-pl-4 pl-4 pr-4"
+          @scroll.passive="onScroll"
         >
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">{{ review.text }}</p>
-          <p v-if="review.author" class="text-sm font-semibold mt-3 text-gray-600">— {{ review.author }}</p>
-          <p class="text-xs text-primary-600 mt-3 font-semibold">→ Auf Google lesen</p>
-        </a>
+          <a
+            v-for="(review, i) in reviews"
+            :key="i"
+            :href="review.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="snap-start shrink-0 w-[85vw] bg-white rounded-lg p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition"
+          >
+            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
+            <p class="text-gray-700 italic text-sm">{{ review.text }}</p>
+            <p v-if="review.author" class="text-sm font-semibold mt-3 text-gray-600">— {{ review.author }}</p>
+            <p class="text-xs text-primary-600 mt-3 font-semibold">→ Auf Google lesen</p>
+          </a>
+        </div>
+        <div class="flex justify-center gap-1.5 mt-3">
+          <span
+            v-for="(_, i) in reviews"
+            :key="i"
+            class="block rounded-full transition-all duration-300"
+            :class="i === activeIndex ? 'w-4 h-1.5 bg-primary-500' : 'w-1.5 h-1.5 bg-gray-300'"
+          />
+        </div>
       </div>
 
       <!-- Tablet + Desktop: Grid -->
@@ -41,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   category: {
@@ -124,4 +138,14 @@ const allReviews: Record<string, { text: string; author?: string; link: string }
 }
 
 const reviews = computed(() => allReviews[props.category] ?? allReviews.default)
+
+const sliderRef = ref<HTMLElement | null>(null)
+const activeIndex = ref(0)
+
+function onScroll() {
+  const el = sliderRef.value
+  if (!el) return
+  const cardWidth = el.scrollWidth / reviews.value.length
+  activeIndex.value = Math.round(el.scrollLeft / cardWidth)
+}
 </script>

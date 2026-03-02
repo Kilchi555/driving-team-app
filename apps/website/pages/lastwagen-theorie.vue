@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Lkw Theorie | 8 Kursteile für die Lastwagen Theorieprüfung | Driving Team</Title>
       <Meta name="description" content="Lkw Theorie Kurs für die Kategorien C1, C, D1, D bei Driving Team Zürich und Lachen. Gruppenkurs CHF 800.–, Einzelkurs CHF 1360.–." />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-theorie/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

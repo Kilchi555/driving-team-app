@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>LKW Fahrschule Kategorie C3 | CZV Grundkurs | Driving Team</Title>
       <Meta name="description" content="LKW Fahrschule Kategorie C3 beim Driving Team. CZV Grundkurs und berufliche Weiterbildung für Berufschauffeure. Zürich und Lachen. Kontaktiere uns!" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule-3/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

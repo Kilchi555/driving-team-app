@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>CZV Weiterbildungskurse | 5 Kurse in 5 Jahren | Driving Team</Title>
       <Meta name="description" content="CZV Weiterbildungskurse beim Driving Team. Prävention, Traffic Health, ARV1, Radwechsel & Brandbekämpfung. CHF 190.- pro Kurs inkl. SARI-Bestätigung." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-weiterbildung/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-16 md:py-24">

@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>VKU Kurs Lachen | Mit 2 x 4h VKU Kurs sparst du Fahrstunden | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Lachen beim Driving Team. 8 Stunden Verkehrskundeunterricht in 2 Teilen à 4 Stunden. CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-lachen/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

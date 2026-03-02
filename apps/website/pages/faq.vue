@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>FAQ | Häufig gestellte Fragen | Driving Team Fahrschule</Title>
       <Meta name="description" content="Häufig gestellte Fragen zur Fahrschule Driving Team – Fahrstunden, Preise, Kategorien, Lernfahrten und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/faq/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">

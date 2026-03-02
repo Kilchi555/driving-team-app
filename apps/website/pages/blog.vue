@@ -1,10 +1,10 @@
 <template>
   <div>
-    <NuxtHead>
+    <Head>
       <Title>Blog | Fahrschule Driving Team</Title>
       <Meta name="description" content="Blog der Fahrschule Driving Team. Tipps zur Theorieprüfung, VKU Kurs, Fahrprüfungsangst, Führerschein umschreiben und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/blog/" />
-    </NuxtHead>
+    </Head>
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
