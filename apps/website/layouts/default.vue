@@ -93,7 +93,7 @@
 
           <!-- Einzelne Links -->
           <a href="/uber-uns/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Über uns</a>
-          <a href="/preise/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Preise</a>
+          <a href="/fahrschule-preise/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Preise</a>
           <a href="/blog/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Blog</a>
         </div>
 
@@ -156,68 +156,80 @@
 
     <!-- Footer -->
     <footer class="bg-gray-900 text-white mt-20">
-      <div class="section-container">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <!-- Company Info -->
-          <div>
-            <h3 class="font-bold text-lg mb-4">Driving Team</h3>
-            <p class="text-gray-400 text-sm mb-4">Moderne Fahrschule mit erfahrenen Fahrlehrern für Auto, Motorrad, Taxi & Lastwagen.</p>
-            <div class="flex gap-4">
-              <a href="https://facebook.com/drivingtea mzurich" class="text-gray-400 hover:text-white">Facebook</a>
-              <a href="https://instagram.com/drivingtea mzurich" class="text-gray-400 hover:text-white">Instagram</a>
-            </div>
-          </div>
+      <div class="section-container py-12">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
 
+          <!-- Kontakt -->
           <div>
-            <h4 class="font-bold mb-4">Kategorien</h4>
-            <ul class="space-y-2 text-sm text-gray-400">
-              <li><a href="/auto-fahrschule/" class="hover:text-white">Auto</a></li>
-              <li><a href="/motorrad-fahrschule/" class="hover:text-white">Motorrad</a></li>
-              <li><a href="/lastwagen-fahrschule/" class="hover:text-white">Lastwagen</a></li>
-              <li><a href="/taxi-fahrschule/" class="hover:text-white">Taxi</a></li>
+            <h2 class="font-bold text-lg mb-5">Kontakt</h2>
+            <ul class="space-y-3 text-sm text-gray-300">
+              <li>
+                <a href="tel:0444310033" class="hover:text-white transition">044 431 00 33</a>
+              </li>
+              <li>
+                <a href="mailto:info@drivingteam.ch" class="hover:text-white transition">info@drivingteam.ch</a>
+              </li>
+              <li class="text-gray-400">Montag bis Freitag : 08:00 - 12:00 / 13:00 - 17:00</li>
             </ul>
           </div>
 
-          <!-- Info -->
+          <!-- Unsere Gebiete -->
           <div>
-            <h4 class="font-bold mb-4">Über uns</h4>
-            <ul class="space-y-2 text-sm text-gray-400">
-              <li><a href="/uber-uns/" class="hover:text-white">Das Team</a></li>
-              <li><a href="/preise/" class="hover:text-white">Preise</a></li>
-              <li><a href="/kontakt/" class="hover:text-white">Kontakt</a></li>
+            <h3 class="font-bold text-lg mb-5">Unsere Gebiete</h3>
+            <ul class="space-y-2 text-sm text-gray-300">
+              <li><a href="/fahrschule-zuerich/" class="hover:text-white transition">Fahrschule Zürich</a></li>
+              <li><a href="/fahrschule-lachen/" class="hover:text-white transition">Fahrschule Lachen</a></li>
+              <li><a href="/fahrschule-uster/" class="hover:text-white transition">Fahrschule Uster</a></li>
+              <li><a href="/fahrschule-aargau/" class="hover:text-white transition">Fahrschule Aargau</a></li>
+              <li><a href="/fahrschule-reichenburg/" class="hover:text-white transition">Fahrschule Reichenburg</a></li>
+              <li><a href="/fahrschule-stgallen/" class="hover:text-white transition">Fahrschule St.Gallen</a></li>
+              <li><a href="/fahrschule-dietikon/" class="hover:text-white transition">Fahrschule Dietikon</a></li>
             </ul>
           </div>
 
-          <!-- Contact -->
+          <!-- Navigation -->
           <div>
-            <h4 class="font-bold mb-4">Kontakt</h4>
-            <div class="space-y-2 text-sm text-gray-400">
-              <p class="flex items-center gap-2">
-                <span>📞</span>
-                <a href="tel:+41444310033" class="hover:text-white">+41 44 431 00 33</a>
-              </p>
-              <p class="flex items-center gap-2">
-                <span>📧</span>
-                <a href="mailto:info@drivingteam.ch" class="hover:text-white">info@drivingteam.ch</a>
-              </p>
-              <p class="flex items-start gap-2">
-                <span>📍</span>
-                <span>Bahnhofstrasse 145<br>8048 Zürich</span>
-              </p>
-            </div>
+            <h3 class="font-bold text-lg mb-5">Navigation</h3>
+            <ul class="space-y-2 text-sm text-gray-300">
+              <li><a href="/auto-fahrschule/" class="hover:text-white transition">Auto</a></li>
+              <li><a href="/anhaenger-fahrschule/" class="hover:text-white transition">Anhänger</a></li>
+              <li><a href="/taxi-fahrschule/" class="hover:text-white transition">Taxi</a></li>
+              <li><a href="/motorboot/" class="hover:text-white transition">Motorboot</a></li>
+              <li><a href="/motorrad-fahrschule/" class="hover:text-white transition">Motorrad</a></li>
+              <li><a href="/lastwagen-fahrschule/" class="hover:text-white transition">Lastwagen</a></li>
+              <li><a href="/bus-fahrschule/" class="hover:text-white transition">Bus</a></li>
+              <li><a href="/czv-weiterbildung/" class="hover:text-white transition">Weiterbildung</a></li>
+            </ul>
           </div>
+
+          <!-- Links -->
+          <div>
+            <h3 class="font-bold text-lg mb-5">Links</h3>
+            <ul class="space-y-2 text-sm text-gray-300">
+              <li><a href="/kontakt/" class="hover:text-white transition">Kontakt</a></li>
+              <li><a href="/uber-uns/" class="hover:text-white transition">Team</a></li>
+              <li><a href="/fahrschule-preise/" class="hover:text-white transition">Preise</a></li>
+              <li><a href="/agb/" class="hover:text-white transition">AGB</a></li>
+              <li><a href="/datenschutz/" class="hover:text-white transition">Datenschutz</a></li>
+              <li><a href="https://www.ninakae.ch" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Fotos von Nina Kälin</a></li>
+            </ul>
+          </div>
+
         </div>
 
-        <!-- Divider -->
-        <div class="border-t border-gray-800 pt-8">
-          <div class="flex flex-col md:flex-row justify-between items-center">
-            <p class="text-gray-400 text-sm">© 2026 Driving Team. All rights reserved.</p>
-            <div class="flex gap-6 text-sm text-gray-400 mt-4 md:mt-0">
-              <a href="#" class="hover:text-white">Datenschutz</a>
-              <a href="#" class="hover:text-white">AGB</a>
-              <a href="/sitemap.xml" class="hover:text-white">Sitemap</a>
-            </div>
+        <!-- Divider + Bottom bar -->
+        <div class="border-t border-gray-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p class="text-gray-400 text-sm">Copyright © Driving Team | All rights reserved.</p>
+
+          <div class="flex items-center gap-6 text-sm text-gray-300">
+            <a href="https://www.facebook.com/drivingteamzurich" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Facebook</a>
+            <a href="https://www.instagram.com/drivingteamzurich" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Instagram</a>
           </div>
+
+          <p class="text-gray-500 text-xs">
+            Designed with care by
+            <a href="https://www.delphis.ch" target="_blank" rel="noopener noreferrer" class="hover:text-gray-300 transition">Delphis Web Design & Development</a>
+          </p>
         </div>
       </div>
     </footer>
