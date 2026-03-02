@@ -88,18 +88,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-        <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Sehr gute und aufschlussreiche Theorie Lektion per Google Teams. Alles sehr verständlich und Benutzerfreundlich."</p><p class="text-sm font-semibold mt-3 text-gray-600">— Alexandra</p></div>
-          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Skander ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Auto Prüfung vorbereitet. Ich habe heute Prüfung bestanden!"</p></div>
-          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Das Driving Team ist Weltklasse. Professionell und unglaublich sympathisch. Hier kann man alle Kategorien – Motorrad, Auto, Motorboot – lernen."</p></div>
-          <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Toller Team-Spirit! Die Fahrstunden mit Vito waren immer sehr angenehm. Mit Humor, Empathie, Geduld und Fachwissen hat er mich super unterstützt."</p></div>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="zuerich" />
 
     <!-- FAQ -->
     <section class="section-container">

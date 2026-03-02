@@ -107,28 +107,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Ich habe sehr gute Erfahrungen mit meinem Fahrlehrer Marc gemacht. Er hat mich auf die Prüfung sehr gut vorbereitet."</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Kann das Driving Team wirklich weiterempfehlen. Hatte mehrere, verschiedene Feedbacks bekommen durch Marc, Sybille, Peter und André. Durch all das habe ich meine Autoprüfung beim ersten Mal bestanden!"</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle davon waren pünktlich, verständnisvoll und konnten mich auf meinem Weg zum Führerschein top begleiten."</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">„Das Driving Team Lachen gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Ich danke dem ganzen Driving Team und speziell meinem Fahrlehrer Marc. Danke, you are the BEST!!!"</p>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="lachen" />
 
     <!-- Preise -->
     <section class="bg-gray-50 py-16">

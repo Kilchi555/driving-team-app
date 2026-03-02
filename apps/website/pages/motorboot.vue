@@ -103,28 +103,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-        <div class="bg-gray-50 rounded-lg p-6">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm mb-3">„Top Bootsfahrschule am Zürichsee! Kann ich nur weiterempfehlen! Marc ist sehr geduldig und kann die Inhalte sehr verständlich vermitteln. Flexibel in den Fahrstundenzeiten (auch abends und Samstag)."</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-6">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm mb-3">„Diesen Sommer habe ich dank Marc die Bootsprüfung beim ersten Mal bestanden. Super Ausbildung, Fahrstunden waren auch an Randzeiten möglich. Top modernes Motorboot."</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-6">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm mb-3">„Sehr angenehme und professionelle Bootsfahrschule. Dankeschön."</p>
-        </div>
-        <div class="bg-gray-50 rounded-lg p-6">
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm mb-3">„Sensationelle Bootsfahrlehrer!"</p>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="motorboot" />
 
     <!-- FAQ -->
     <section class="bg-gray-50 py-16">

@@ -65,16 +65,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Habe hier meinen VKU absolviert und Fahrstunden (Kat. B) mit Vito und Keni genommen. Die beiden sind echt top Fahrlehrer. Man kann sehr entspannt mit denen fahren und viel lachen."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Das Driving Team ist Weltklasse. Dieses Team kann ich jedem empfehlen. Professionell und unglaublich sympathisch."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Ich empfehle diese Fahrschule und insbesondere Samuel als Fahrlehrer von Herzen allen weiter, die ihren Führerschein machen möchten."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Toller Team-Spirit! Die Fahrstunden mit Vito waren immer sehr angenehm. Mit viel Humor, Empathie, Geduld und Fachwissen hat er mich immer super unterstützt."</p></div>
-      </div>
-    </section>
+    <ReviewsSection category="dietikon" />
 
     <!-- Andere Standorte -->
     <section class="bg-gray-50 py-12">

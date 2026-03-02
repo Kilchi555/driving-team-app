@@ -66,16 +66,7 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Die beste Fahrschule! Alle super freundlich und seriös! Durch Pascal habe ich die Fahrprüfung mit bravour bestanden, vielen Dank!"</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Kompetent, geduldig und sehr erfahren. Bei allen Fahrlehrer/innen beim Driving Team wird man super zum Ziel kommen. Einfach eine Fahrschule mit Herz."</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Junges, dynamisches, sympathisches und sehr geduldiges Team. Es lohnt sich, beim Driving Team das Fahren zu lernen!"</p></div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100"><p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p><p class="text-gray-700 italic text-sm">„Sehr empfehlenswert. Ich habe meinen Grundkurs und einige Prüfungsvorbereitungen bei Pascal gemacht. Er war geduldig, konstruktiv und sachkundig – ein grossartiger Unterrichtsstil."</p></div>
-      </div>
-    </section>
+    <ReviewsSection category="uster" />
 
     <!-- Andere Standorte -->
     <section class="section-container">
