@@ -105,6 +105,9 @@
               <h3 class="heading-sm mb-2">Nothelferkurs</h3>
               <p class="text-sm text-gray-600">Bevor du das Lernfahrgesuch beim Strassenverkehrsamt einreichen kannst, musst du den Nothelferkurs absolvieren. Falls du bereits im Besitz eines Nothelferausweises bist, ist dieser ab Ausstellungsdatum sechs Jahre gültig.</p>
               <p class="text-sm text-gray-500 mt-2 italic">Für Inhaber:innen der Kategorie B Auto ist dies nicht notwendig – weiter mit Schritt 2.</p>
+              <div class="mt-3">
+                <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">→ Jetzt Nothelferkurs anmelden</a>
+              </div>
             </div>
           </div>
         </div>
@@ -125,6 +128,13 @@
                   <li>• Kategorie A beschränkt bis 35kW ab 18 Jahren</li>
                   <li>• Kategorie A unbeschränkt: 2 Jahre Fahrpraxis mit A beschränkt + 2. Fahrprüfung</li>
                 </ul>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
+                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
+                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
+                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
+                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
               </div>
             </div>
           </div>
@@ -152,6 +162,10 @@
               <h3 class="heading-sm mb-2">Verkehrskunde VKU</h3>
               <p class="text-sm text-gray-600">Im total achtstündigen Verkehrskundekurs VKU wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den VKU gleich zu Beginn der praktischen Fahrausbildung zu besuchen.</p>
               <p class="text-sm text-gray-500 mt-2 italic">Nicht notwendig für Inhaber:innen der Kategorie B (Auto) – weiter mit Schritt 5 Fahrstunden. | 2 Kursteile à 4 Stunden</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Zürich</a>
+                <a href="/vku-kurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Lachen</a>
+              </div>
             </div>
           </div>
         </div>

@@ -82,6 +82,9 @@
                 <p class="text-gray-600 mb-2">Dein Start zum Führerschein: Gesuch und Nothelferkurs</p>
                 <p class="text-sm text-gray-600">Der erste wichtige Schritt auf dem Weg zu deinem Führerschein ist die Einreichung des Lernfahrgesuchs für die Kategorie B (Auto) beim Strassenverkehrsamt. Parallel dazu musst du den Nothelferkurs absolvieren.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Gut zu wissen: Falls du bereits einen Nothelferausweis besitzt, ist dieser ab dem Ausstellungsdatum sechs Jahre gültig. Bist du schon im Besitz eines gültigen Lernfahr- oder Führerscheins einer anderen Kategorie, entfällt die Pflicht, den Nothelferkurs erneut zu besuchen.</p>
+                <div class="mt-3">
+                  <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">→ Jetzt Nothelferkurs anmelden</a>
+                </div>
               </div>
             </div>
           </div>
@@ -96,6 +99,13 @@
                 <p class="text-gray-600 mb-2">Schritt Zwei: Dein Lernfahrgesuch einreichen und Sehtest machen</p>
                 <p class="text-sm text-gray-600">Als nächsten Schritt für deinen Führerschein musst du das Lernfahrgesuch vollständig und wahrheitsgetreu ausfüllen. Achte darauf, die Kategorie B (Auto) anzukreuzen. Mit diesem Formular gehst du dann zum Strassenverkehrsamt. Danach bringst du das ausgefüllte Anmeldeformular zusammen mit deinem Nothilfeausweis, einem aktuellen farbigen Passfoto und deinem gültigen ID/Pass persönlich zum Strassenverkehrsamt.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Wichtig: Du kannst das Gesuch frühestens zwei Monate vor deinem 17. Geburtstag stellen.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
+                </div>
               </div>
             </div>
           </div>
@@ -123,6 +133,10 @@
                 <p class="text-gray-600 mb-2">Der Verkehrskundekurs (VKU): Dein Weg zur praktischen Prüfung</p>
                 <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundekurs (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den Verkehrskundekurs (VKU) gleich zu Beginn deiner praktischen Fahrausbildung zu besuchen. So kannst du das erlernte Wissen direkt in deinen Autofahrstunden umsetzen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">2 Kursteile à 4 Stunden</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Zürich</a>
+                  <a href="/vku-kurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Lachen</a>
+                </div>
               </div>
             </div>
           </div>
