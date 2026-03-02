@@ -33,13 +33,17 @@
       <div class="section-container">
         <h2 class="heading-md mb-12 text-center">In 4 Schritten zu deiner Motorbootprüfung</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Motorboot Fahrstunden</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Motorboot Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Deine Motorboot Fahrschule: Werde ein sicherer Schiffskapitän! Als Schiffsführer:in übernimmst du grosse Verantwortung. Du lernst, auf verschiedene Situationen richtig zu reagieren, Manöver korrekt durchzuführen und die Schifffahrtsregeln einzuhalten.</p>
                 <div class="mt-3 p-3 bg-primary-50 rounded-lg">
                   <p class="text-xs font-semibold text-primary-800">Preise:</p>
@@ -49,17 +53,20 @@
                 <div class="mt-3">
                   <a href="/motorboot-fahrstunden-zuerich/" class="text-sm text-primary-600 font-semibold hover:underline">→ Bootsfahrschule Zürich (Zürichsee)</a>
                 </div>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Beim Schifffahrtsamt anmelden</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Beim Schifffahrtsamt anmelden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Nach den ersten paar Motorbootsfahrstunden kannst du dich beim Schifffahrtsamt deines Wohnkantons anmelden. Wer dann die Theorie- und/oder die praktische Motorbootsprüfung in einem anderen Kanton absolvieren will, benötigt dazu eine Bewilligung des Schifffahrtsamtes im Wohnkanton.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Mindestalter: Ab 18 Jahren darf man den Lernfahrausweis bestellen und die Bootsprüfung absolvieren. In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -67,38 +74,43 @@
                   <a href="https://www.sz.ch/verwaltung/baudepartement/verkehrsamt/schifffahrt/schiffsfuehrer_in.html/8756-8758-8802-9276-9293-9327-9350" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Schwyz</a>
                   <a href="https://www.sg.ch/content/dam/sgch/verkehr/schifffahrt/schiffsfuehrer/gesuch_schiffsfuehrerausweis.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung St.Gallen</a>
                 </div>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Motorboot Theorie</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Motorboot Theorie</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Während der praktischen Motorbootfahrstunden kannst du bereits viel über den theoretischen Inhalt des Motorbootfahrens lernen. Spätestens muss die Theorieprüfung vor Anmeldung zur praktischen Motorbootprüfung bestanden sein.</p>
                 <p class="text-sm text-gray-600 mt-2">Die Motorboottheorie für die Binnenschifffahrt beinhaltet Fragen zum Motorboot sowie auch zum Segelschiff und ist daher nur einmal zu absolvieren.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Gültigkeit der Theorieprüfung: 24 Monate</p>
                 <a href="/motorboot-theorie/" class="text-sm text-primary-600 font-semibold hover:underline mt-2 block">→ Mehr zur Motorboot Theorie</a>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Praktische Motorboot Prüfung</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Praktische Motorboot Prüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Die praktische Motorbootprüfung dauert ca. 60 Minuten und wird mit dem Fahrschulboot durchgeführt. Der Prüfungsexperte möchte sehen, dass du in jeder Lage selbstständig korrekte Entscheidungen triffst.</p>
                 <p class="text-sm text-gray-600 mt-2">Wenn du dann noch mit solidem theoretischen Wissen über das Motorbootfahren überzeugen kannst, hast du den Schiffsführerausweis bereits sicher in der Tasche.</p>
                 <p class="text-sm text-gray-500 mt-2 italic font-medium">...immer mindestens eine Handbreite Wasser unter dem Kiel!</p>
-              </div>
             </div>
-          </div>
+          </details>
         </div>
         <div class="text-center mt-12">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">

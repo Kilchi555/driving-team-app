@@ -38,13 +38,17 @@
         <h2 class="heading-md mb-12 text-center">Weg zur Taxiprüfung - 5 Schritte zu deinem Traumberuf</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Lernfahrgesuch Taxi</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Lernfahrgesuch Taxi</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Fülle im ersten Schritt zur Taxiprüfung das Lernfahrgesuch vollständig und wahrheitsgetreu aus und gehe damit zu einem Optiker oder Augenarzt, um den Sehtest eintragen zu lassen.</p>
                 <p class="text-sm text-gray-600 mt-2">Gehe anschliessend mit dem ausgefüllten Anmeldeformular, einem farbigen Passfoto und ID/Pass persönlich beim Strassenverkehrsamt oder bei der Einwohnerkontrolle vorbei.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Bitte bedenke, dass du den Führerausweis der Kategorie B bereits mindestens 1 Jahr lang besitzen musst.</p>
@@ -55,64 +59,75 @@
                   <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
                   <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
                 </div>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Ärztliche Untersuchung</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Ärztliche Untersuchung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Nach Einreichung des Anmeldeformulars erhältst du eine Aufforderung für einen Gesundheits-Check. Diesen kannst du im Normalfall bei einem Arzt deiner Wahl durchführen.</p>
                 <p class="text-sm text-gray-600 mt-2">Da es um berufsmässigen Personentransport geht, werden die Gesundheitsanforderungen höher eingestuft als bei der normalen Kategorie B. Der Arzt wird die Ergebnisse dem Strassenverkehrsamt weiterleiten und du wirst anschliessend bei positivem Verlauf zur Zusatztheorie (ARV) zugelassen.</p>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Taxi Theorie | ARV 2</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Taxi Theorie | ARV 2</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Im berufsmässigen Personentransport bist du verpflichtet, die Anweisungen über Arbeits-, Lenk- und Ruhezeit einzuhalten. Diese Regelungen sind in der ARV festgehalten und werden mit der Taxi Theorie (ARV 2) geprüft.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Nicht erforderlich für Schüler-, Arbeits-, Behindertentransporte oder Ambulanzfahrzeuge (BPT 122) – weiter mit Schritt 4 Fahrausbildung.</p>
                 <div class="mt-3">
                   <a href="/taxi-theorie/" class="text-sm text-primary-600 font-semibold hover:underline">→ Mehr zur Taxi Theorie</a>
                 </div>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">Taxi Fahrstunden</h3>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">Taxi Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
                 <p class="text-sm text-gray-600">Taxifahrer gehören zu den Profis im Strassenverkehr, und so sollen sie auch Auto fahren können. Eine solch professionelle Fahrweise erlernst du in unseren BPT Fahrlektionen.</p>
                 <p class="text-sm text-gray-600 mt-2">Die Möglichkeit, erlernte Fertigkeiten privat üben zu können, erleichtert die ganze Ausbildung sehr. Gute Ortskenntnisse sind kein MUSS, um die BPT Führerprüfung zu bestehen, jedoch von Vorteil. Nach einer seriösen Fahrausbildung gehst du mit unserem Fahrzeug an die Taxiprüfung und hinterlässt somit bereits einen ersten wichtigen positiven Eindruck!</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Als Taxifahrer übernimmst du eine grosse Verantwortung. Eine gute Ausbildung ist dabei entscheidend.</p>
-              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="bg-white rounded-lg p-8 border-l-4 border-primary-600 shadow-sm">
-            <div class="flex items-start gap-6">
+          <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
+            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
               </div>
-              <div class="flex-1">
-                <h3 class="heading-sm mb-2">BPT Prüfung</h3>
-                <p class="text-sm text-gray-600">Nach der Fahrausbildung bist du bereit für die praktische BPT Prüfung. Mit unserer gründlichen Vorbereitung hast du optimale Chancen, die Prüfung beim ersten Versuch zu bestehen.</p>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="heading-sm">BPT Prüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
               </div>
+            </summary>
+            <div class="px-8 pb-6 ml-[72px]">
+                <p class="text-sm text-gray-600">Nach der Fahrausbildung bist du bereit für die praktische BPT Prüfung. Mit unserer gründlichen Vorbereitung hast du optimale Chancen, die Prüfung beim ersten Versuch zu bestehen.</p>
             </div>
-          </div>
+          </details>
         </div>
 
         <div class="text-center mt-12">
