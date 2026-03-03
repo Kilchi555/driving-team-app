@@ -34,20 +34,20 @@
         </div>
       </div>
 
-      <!-- Tablet + Desktop: Grid -->
-      <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      <!-- Tablet + Desktop: Grid with hover expand -->
+      <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
         <a
           v-for="(review, i) in reviews"
           :key="i"
           :href="review.link"
           target="_blank"
           rel="noopener noreferrer"
-          class="bg-white rounded-lg p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition cursor-pointer"
+          class="review-card-grid"
         >
-          <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-          <p class="text-gray-700 italic text-sm">{{ review.text }}</p>
-          <p v-if="review.author" class="text-sm font-semibold mt-3 text-gray-600">— {{ review.author }}</p>
-          <p class="text-xs text-primary-600 mt-3 font-semibold">→ Auf Google lesen</p>
+          <p class="text-yellow-500 text-sm mb-2">⭐⭐⭐⭐⭐</p>
+          <p class="font-bold text-gray-900 text-base mb-1">{{ review.author }}</p>
+          <p class="review-text text-gray-800 text-sm italic leading-relaxed">{{ review.text }}</p>
+          <p class="text-xs text-gray-700 mt-3 font-semibold">→ Auf Google lesen</p>
         </a>
       </div>
     </div>
@@ -149,3 +149,43 @@ function onScroll() {
   activeIndex.value = Math.round(el.scrollLeft / cardWidth)
 }
 </script>
+
+<style scoped>
+.review-card-grid {
+  display: block;
+  background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(1, 158, 229, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+.review-card-grid:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(1, 158, 229, 0.4);
+}
+
+.review-card-grid:nth-child(3n+2) {
+  background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
+}
+
+.review-card-grid:nth-child(3n+3) {
+  background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
+}
+
+.review-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: -webkit-line-clamp 0.3s ease, max-height 0.4s ease;
+  max-height: 4.5em;
+}
+
+.review-card-grid:hover .review-text {
+  -webkit-line-clamp: unset;
+  max-height: 20em;
+}
+</style>
