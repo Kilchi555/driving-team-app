@@ -7,11 +7,11 @@
       <div class="relative">
         <div
           ref="sliderRef"
-          class="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide scroll-smooth"
+          class="flex gap-5 overflow-x-auto snap-x snap-center pb-4 -mr-4 pr-4 scrollbar-hide scroll-smooth"
           @scroll.passive="onScroll"
         >
           <!-- Kategorie B - Auto -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚗</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Auto</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie B · 45 Min</p>
@@ -31,7 +31,7 @@
           </div>
 
           <!-- Kategorie A - Motorrad -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🏍️</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Motorrad</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie A · 45 Min</p>
@@ -51,7 +51,7 @@
           </div>
 
           <!-- Kategorie BE - Anhänger -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚛</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Anhänger</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie BE · 45 Min</p>
@@ -70,8 +70,28 @@
             </p>
           </div>
 
+          <!-- Kategorie C1/D1 - Gesellschaftswagen -->
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-6 shadow-lg">
+            <div class="text-3xl mb-3">🚐</div>
+            <h3 class="text-xl font-bold text-gray-900 mb-1">Gesellschaftswagen</h3>
+            <p class="text-sm text-gray-600 mb-5">Kategorie C1/D1 · 45 Min</p>
+            <div class="mb-5">
+              <span class="text-4xl font-black text-indigo-600">CHF 150</span>
+              <span class="text-sm text-gray-600 ml-1">/ Lektion</span>
+            </div>
+            <ul class="space-y-2 text-sm text-gray-700 mb-5">
+              <li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">✓</span> Empfohlen: 3er Lektionen</li>
+              <li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">✓</span> Spezialisierte Ausbildung</li>
+              <li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">✓</span> Bis 7.5t / 16 Personen</li>
+            </ul>
+            <p class="text-xs text-gray-500 border-t border-indigo-200 pt-4">
+              <strong>exkl. Versicherungspauschale:</strong> CHF 150.– (einmalig)<br>
+              <strong>exkl. WarmUp + Prüfungsfahrt:</strong> CHF 649.–
+            </p>
+          </div>
+
           <!-- Kategorie C - Lastwagen -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚚</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Lastwagen</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie C · 45 Min</p>
@@ -82,7 +102,7 @@
             <ul class="space-y-2 text-sm text-gray-700 mb-5">
               <li class="flex items-start gap-2"><span class="text-slate-600 font-bold">✓</span> Erfahrener LKW-Fahrlehrer</li>
               <li class="flex items-start gap-2"><span class="text-slate-600 font-bold">✓</span> Moderner Fahrschul-Lastwagen</li>
-              <li class="flex items-start gap-2"><span class="text-slate-600 font-bold">✓</span> Prüfungsvorbereitung inklusive</li>
+              <li class="flex items-start gap-2"><span class="text-slate-600 font-bold">✓</span> Ab 7.5t Gesamtgewicht</li>
             </ul>
             <p class="text-xs text-gray-500 border-t border-slate-200 pt-4">
               <strong>exkl. Versicherungspauschale:</strong> CHF 200.– (einmalig)<br>
@@ -91,7 +111,7 @@
           </div>
 
           <!-- Motorboot -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🛥️</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Motorboot</h3>
             <p class="text-sm text-gray-600 mb-5">Bootsführerschein · 45 Min</p>
@@ -111,7 +131,7 @@
           </div>
 
           <!-- Taxi -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚕</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Taxi (BPT)</h3>
             <p class="text-sm text-gray-600 mb-5">Berufspraktische Taxiprüfung · 45 Min</p>
@@ -131,7 +151,7 @@
           </div>
 
           <!-- Bus -->
-          <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 shadow-lg">
+          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚌</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Bus</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie D · 45 Min</p>
@@ -175,7 +195,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-const cardCount = 7
+const cardCount = 8
 
 const sliderRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
