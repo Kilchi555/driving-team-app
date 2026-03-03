@@ -216,7 +216,15 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('✅ Payment record created:', paymentRecord.id)
     
-    // Build clean merchant reference: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
+    // Helper: sanitize any string to printable ASCII only (Wallee requirement)
+    const toAscii = (value: string): string => value
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+      .replace(/[^\x20-\x7E]/g, '')    // remove all non-printable / non-ASCII
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    // Build clean merchant reference: "payment-{paymentId} | CustomerName | CourseName | Location | Date"
     // ✅ CRITICAL: Include payment ID as fallback for webhook search!
     // ✅ USE STANDARDIZED FUNCTION: Use the same sanitization as process.post.ts
     let merchantRef = `payment-${paymentRecord.id} | ${buildMerchantReference({
@@ -225,14 +233,14 @@ export default defineEventHandler(async (event) => {
     })}`
     
     if (course?.name) {
-      merchantRef += ` | ${course.name.substring(0, 50)}`
+      merchantRef += ` | ${toAscii(course.name).substring(0, 50)}`
     }
     
     if (course?.description) {
       // Extract location from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
       const locationMatch = course.description.match(/(\b[A-Z][a-z]+\b)(?:\s|,|$)/)
       if (locationMatch) {
-        merchantRef += ` | ${locationMatch[1]}`
+        merchantRef += ` | ${toAscii(locationMatch[1])}`
       }
     }
     
@@ -247,11 +255,13 @@ export default defineEventHandler(async (event) => {
     }
     
     // Enforce max length (Wallee limit is 100 chars for merchant reference)
-    // ✅ Reserve space for "payment-{uuid} | " prefix (about 45 chars)
     const maxMerchantRefLength = 100
     if (merchantRef.length > maxMerchantRefLength) {
-      merchantRef = merchantRef.substring(0, maxMerchantRefLength - 3) + '...'
+      merchantRef = merchantRef.substring(0, maxMerchantRefLength)
     }
+
+    // Final safety net: strip any remaining non-printable ASCII chars
+    merchantRef = merchantRef.replace(/[^\x20-\x7E]/g, '')
     
     logger.debug('📝 Merchant reference:', merchantRef)
 
