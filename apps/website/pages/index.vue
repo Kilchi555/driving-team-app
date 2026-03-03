@@ -168,28 +168,7 @@
     </section>
 
     <!-- Facts Section -->
-    <section class="bg-gray-900 text-white py-20 md:py-32">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="grid md:grid-cols-4 gap-8">
-          <div class="text-center group">
-            <div class="mb-4 text-6xl font-black text-primary-400 group-hover:scale-125 transition-transform duration-500">20+</div>
-            <p class="text-gray-300 text-lg">Jahre Erfahrung</p>
-          </div>
-          <div class="text-center group">
-            <div class="mb-4 text-6xl font-black text-green-400 group-hover:scale-125 transition-transform duration-500">8</div>
-            <p class="text-gray-300 text-lg">Fahrlehrer & Instruktoren</p>
-          </div>
-          <div class="text-center group">
-            <div class="mb-4 text-6xl font-black text-yellow-400 group-hover:scale-125 transition-transform duration-500">1000+</div>
-            <p class="text-gray-300 text-lg">Schüler pro Jahr</p>
-          </div>
-          <div class="text-center group">
-            <div class="mb-4 text-6xl font-black text-red-400 group-hover:scale-125 transition-transform duration-500">4.9 ⭐</div>
-            <p class="text-gray-300 text-lg">Google Bewertung</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    <StatsSection />
 
     <!-- Courses Section -->
     <section class="py-20 bg-white">
@@ -343,7 +322,7 @@
             Wieviele Fahrstunden benötige ich?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Ein Fahrzeug fahren lernen kannst Du mit dem Erlernen einer neuen Sportart, eines neuen Instruments oder einer neuen Sprache vergleichen. Jeder Mensch ist unterschiedlich talentiert und verfügt über unterschiedliche Vorkenntnisse. Durchschnittlich benötigt ein Fahrschüler zwischen 40-60 Fahrstunden bis zur bestandenen Fahrprüfung.</p>
+          <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Ein Fahrzeug fahren lernen kannst Du mit dem Erlernen einer neuen Sportart, eines neuen Instruments oder einer Fremdsprache vergleichen. Zu Beginn wirst Du die noch völlig unbekannte Sache als sehr schwierig empfinden und das von Dir gesteckte Ziel scheint noch unerreichbar zu sein. Wenn Du das Projekt Fahrprüfung jedoch seriös angehst, sprich die Tipps und Tricks des Fahrlehrers ernst nimmst und probierst umzusetzen, dann wirst Du Dein Ziel in nützlicher Zeit erreichen. Die meisten Auto-Fahrschüler:innen haben bis zur Fahrprüfung zwischen 15-30 Fahrlektionen. Wenn man keine Möglichkeit hat, um privat zu üben, dann bewegen sich die benötigten Fahrstunden in der Regel zwischen 30-50 Stück. </p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -351,7 +330,7 @@
             Wie kann ich meine Fahrausbildung beschleunigen?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Das Wichtigste ist sicher Üben, Üben und nochmals Üben. Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrstunden, sondern zum Beispiel 1 Fahrlektion und 1 Mal privat repetieren mit einem Bekannten.</p>
+          <p class="text-gray-600 mt-4">Das Wichtigste ist sicher….Üben, Üben und nochmals Üben. Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrstunden, sondern zum Beispiel 1 Fahrlektion und 1 Mal privat repetieren oder 2 Fahrlektionen und 2 Mal repetieren. Ganz wichtig beim privat Üben ist, dass Du genau so fährst, wie es Dir Dein Fahrlehrer gezeigt hat. Nur so entwickelst Du Automatismen und fühlst Dich schnell sicherer auf der Strasse. Hast Du keine Möglichkeit um privat zu üben, dann musst Du Dir bewusst sein, dass es wahrscheinlich mehr Fahrstunden benötigt als sonst. Bist du noch innerhalb der 12-Monatigen Lernphase, dann empfehlen wir zu Beginn ca. 5-10 Fahrlektion bei der Fahrschule zu machen und anschliessend regelmässige private Lernfahrten mit parallelen Fahrlektion bei der Fahrschule. Wenn der Prüfungstermin dann näher rückt, macht es Sinn die  Fahrlektionen bei Fahrschule wieder in kürzeren Abständen durchzuführen, damit du so richtig gut vorbereitet bist und die Fahrprüfung beim ersten Mal bestehst.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -359,7 +338,7 @@
             Wieso dauert die Fahrstunde des Driving Teams 45 Minuten?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst.</p>
+          <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vorallem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -367,7 +346,7 @@
             Wie rechtfertigen sich eure Preise?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke unserer Fahrschule umsetzen. Dies beginnt bei den Fahrlehrern, die nur langfristig eine seriöse und kundengerechte Fahrausbildung gewährleisten können.</p>
+          <p class="text-gray-600 mt-4">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke unserer Fahrschule umsetzen. Dies beginnt bei den  Fahrlehrer:innen, die nur langfristig eine seriöse und kundengerechte Arbeit abliefern können, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge auf sicher haben. Ebenso runden bezahlte Ferien, ein machbares Arbeitspensum, eine jährliche Gratifikation und flexible gestaltbare Arbeitszeiten die Work-Life-Balance in unserer Fahrschule ab. Eine weitere wichtige Voraussetzung, um eine professionelle Fahrschule betreiben zu können, ist eine moderne Infrastruktur. Unsere Fahrzeuge, egal ob Auto, Motorrad, Anhänger oder Motorboot, befinden sich stets in einem top gewarteten Zustand und auf dem neuesten Stand der Technik. Auch bei den Unterrichtslokalen sind wir uptodate. Moderne Fernseher, diverse Lernmittel und Whiteboards/ Flipcharts ermöglichen einen unterhaltsamen und lehrreichen Unterricht. Dank diesen optimalen Vorraussetzungen erreichen wir das Wichtigste und das sind zufriedene Kunden, die eine umfangreiche, speditive und praxisorientierte Ausbildung zur sicheren Fahrzeuglenkerin oder zum sicheren Fahrzeuglenker geniessen dürfen.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -375,7 +354,7 @@
             Wo bietet Ihr Fahrstunden an?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Unsere Lokale befinden sich in Zürich-Altstetten und in Lachen/SZ. Das Tätigkeitsgebiet des Driving Team Zürich erstreckt sich von Zürich bis nach Schwyz und Zug.</p>
+          <p class="text-gray-600 mt-4">Unsere Lokale befinden sich in Zürich-Altstetten und in Lachen/SZ. Dort finden alle Kurse wie Nothelfer, Theorie und Verkehrskunde statt. Das Tätigkeitsgebiet des Driving Team Zürich erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/ Bonstetten im Knonaueramt. Bei den Autofahrlektionen können wir nach Möglichkeit flexible Treffpunkte vereinbaren sprich euch nach Möglichkeit entgegen kommen. Bei der Anhänger- und Motorradausbildung beschränkt sich der Treffpunkt auf Zürich-Altstetten. Seit ein paar Jahren geben wir auch im Zürcher Oberland rundum Uster Auto- und Motorradfahrstunden. Beim Driving Team Lachen erstreckt sich das Tätigkeitsgebiet von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind ebenfalls flexibel, das heisst wir holen euch, wenn möglich, zu Hause oder bei der Arbeit ab.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -383,7 +362,7 @@
             Ab welchem Alter kann ich bei eurer Fahrschule starten?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Für 50ccm Motorräder bzw. Roller kannst du dich bereits mit 15 Jahren anmelden. Der Nothelferkurs kannst du bereits vorher besuchen und 1 Monat vor deinem 15 Geburtstag kannst du das Lernfahrgesuch einreichen.</p>
+          <p class="text-gray-600 mt-4">Für 50ccm Motorräder bzw. Roller kannst du dich bereits mit 15 Jahren anmelden. Der Nothelferkurs kannst du bereits vorher besuchen und 1 Monat vor deinem 15 Geburtstag kannst du das Lernfahrgesuch einreichen. Ab 16 Jahren darfst du dann bereits 125ccm fahren. Lernfahrten fürs Auto sind dann ab dem 17 Geburtstag erlaubt. Dafür brauchst allerdings einen Lernfahrausweis für die Kategorie B, den du wiederum separat per Lernfahrgesuch bestellen musst.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -391,7 +370,7 @@
             Wieviel kostet ungefähr die Fahrausbildung bis zur Auto Prüfung?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Die Gesamtkosten der Fahrausbildung bis zur Autoprüfung ist sehr unterschiedlich und hauptsächlich abhängig von der Anzahl der benötigten Auto Fahrstunden. Wenn man mit 15 Lektionen rechnet kommt man auf ca. CHF 4000-5000.</p>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten der Fahrausbildung bis zur Autoprüfung ist sehr unterschiedlich und hauptsächlich abhängig von der Anzahl der benötigten Auto Fahrstunden. Wenn man mit 15 Lektionen rechnet kommt man inkl. allen Kursen und Gebühren des Strassenverkehrsamtes auf ca. 2250.- und wenn man von 30 Lektionen ausgeht ergeben die Gesamtkosten ca. 3530.-.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -399,7 +378,7 @@
             Soll ich Fahrstunden mit einem geschalteten oder automatischen Fahrzeug nehmen?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Das muss grundsätzlich jeder für sich entscheiden. Rechtlich gesehen ist es egal, mit was ihr die Prüfung ablegt, ihr dürft nach bestandener Prüfung so oder so beides fahren. Natürlich ist es so, wenn ihr mit einem Automatikgetriebe fahrt, habt ihr dann als Führerscheininhaber die Einschränkung nur Automatic fahren zu dürfen.</p>
+          <p class="text-gray-600 mt-4">Das muss grundsätzlich jeder für sich entscheiden. Rechtlich gesehen ist es egal, mit was ihr die Prüfung ablegt, ihr dürft nach bestandener Prüfung so oder so beides fahren. Natürlich ist es so, wenn ihr noch nie mit einem geschalteten Fahrzeug gefahren seid, es doch sehr schwierig und auch gefährlich wäre, wenn ihr es das erste Mal alleine probieren würdet. In einer Notfallsituation oder in gewissen Ländern wäre es daher sehr sinnvoll, wenn ihr mindestens schon einmal ein paar Fahrlektionen in einem geschalteten Fahrzeug gehabt hättet. Ihr könnt diese direkt zu Beginn der Fahrausbildung absolvieren und dann anschliessend auf Automatik wechseln oder ihr beginnt gleich auf Automatik und meldet euch erst nach bestandener Fahrprüfung für geschaltete Fahrlektionen an.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -407,15 +386,21 @@
             Was sind die Voraussetzungen, um private Lernfahrten durchführen zu dürfen?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Private Lernfahrten werden häufig unterschätzt. Daher empfehlen wir ganz klar die ersten Fahrversuche bei einer Fahrschule durchzuführen. So können wichtige Automatismen geschult werden.</p>
-        </details>
+          <p class="text-gray-600 mt-4">Private Lernfahrten werden häufig unterschätzt. Daher empfehlen wir ganz klar die ersten Fahrversuche bei einer Fahrschule durchzuführen. So können wichtige Automatismen geschult werden, die ihr dann privat repetieren könnt. Ganz wichtig für die privaten Lernfahrten sind ebenfalls folgende Punkte:
+            <ul>
+              <li>die Begleitperson muss im Besitz eines unbeschränkt gültigen Führerausweises der entsprechender Kategorie oder höher und in nüchternem (0,0 Promille) und fahrfähigem Zustand sein.</li>
+              <li>beim Auto kommt dann noch dazu: Begleitperson muss mindestens 23 Jahre alt sein und die Fahrprüfung vor mindestens 3 Jahren bestanden haben.</li>
+              <li>die Handbremse muss für die Begleitperson gut erreichbar und dosierbar sein und während der Fahrt auch Wirkung haben (trotz drücken des Gaspedals des Lernfahrers/der Lernfahrerin).</li>
+            </ul>
+          </p>        
+          </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was ist die Admin- und Versicherungspauschale?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits auch die Versicherung des Fahrzeugs während der Fahrstunden.</p>
+          <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits benötigt ein Fahrschulfahrzeug eine spezielle Vollkaskoversicherung, welche jegliche Fahrzeuglenker:innen abdecken.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -423,7 +408,7 @@
             Was haben eure Fahrlehrer:innen für eine Ausbildung?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Unsere Fahrlehrer:Innen haben alle eine vollumfängliche und intensive Ausbildung zum Fahrlehrer:In mit eidgenössischem Fachausweis absolviert. Für weitere Fahrzeugkategorien haben dann die jeweiligen Fahrlehrer:Innen weitere Zusatzausbildungen.</p>
+          <p class="text-gray-600 mt-4">Unsere Fahrlehrer:Innen haben alle eine vollumfängliche und intensive Ausbildung zum Fahrlehrer:In mit eidgenössischem Fachausweis absolviert. Für weitere Fahrzeugkategorien haben dann die jeweiligen Ausbildner noch Zusatzausbildungen in den betroffenen Bereichen genossen. Jedes Jahr müssen unsere Fahrlehrer:Innen mindestens einen Weiterbildungstag absolvieren und teamintern kommt noch eine weitere Weiterbildungseinheit dazu. Denn auch innerhalb des Driving Teams lernen wir jeden Tag von einander.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
@@ -431,22 +416,22 @@
             Warum sind eure Verkehrskundekurse so teuer?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Unsere Verkehrskundekurse sind im oberen Preissegment, weil wir auch in diesem Bereich sehr bemüht sind zu den besten Fahrschulen zu gehören und euch einen möglichst grossen Nutzen für die Fahrstunden zu bieten.</p>
+          <p class="text-gray-600 mt-4">Unsere Verkehrskundekurse sind im oberen Preissegment, weil wir auch in diesem Bereich sehr bemüht sind zu den besten Fahrschulen zu gehören und euch einen möglichst grossen Nutzen für die Fahrstunden zu gewährleisten. Ihr erhält diverse für den Strassenverkehr wichtigen Unterlagen und es werden viele praxisnahe Themen diskutiert, angeschaut und geübt. Eines der Ziele ist ganz klar, dass Ihr durch den Besuch unseres Verkehrskundekurses neu erlerntes Wissen direkt in den Fahrstunden umsetzen könnt und somit auch am Ende weniger Fahrstunde benötigt. Das heisst, die Kosten des Verkehrskundekurses sind gut investiert, vorallem geht es am Schluss immer um eine sichere Fahrweise und dass wir keine Unfälle verursachen.</p>
         </details>
 
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Wie kann ich eure Rechnungen auf dem Smartphone bezahlen?
+            Wie kann ich eure Fahrlektionen und Kurse bezahlen?
             <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Wir versenden dir die Rechnung per E-Mail mit einer PDF-Datei im Anhang. Öffne diese PDF-Datei, geh dann auf «Teilen» und öffne die PDF-Datei mit deinem Mobile-Banking App. So kannst du unsere Rechnungen direkt via Mobile-Banking zahlen.</p>
+          <p class="text-gray-600 mt-4">Wir sind Freunde des Online-Payments. Das heisst du kannst alle unsere Fahrlektionen und Kurse direkt online bezahlen. Möchtest du lieber bar bezahlen, ist das natürlich auch möglich. Für Firmen erstellen wir natürlich auch Rechnungen.</p>
         </details>
       </div>
 
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center mt-12">
-        <p class="text-lg text-gray-900 mb-4">Weitere Fragen?</p>
-        <a href="tel:+41444310033" class="btn-primary">
-          📞 +41 44 431 00 33
+        <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Schreibe uns!</p>
+        <a href="mailto:info@drivingteam.ch" class="btn-primary">
+          E-Mail schreiben
         </a>
       </div>
     </section>

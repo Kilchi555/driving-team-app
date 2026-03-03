@@ -478,7 +478,7 @@
     <section class="section-container py-16">
       <h2 class="heading-md mb-12 text-center">Die häufigsten Fragen & Antworten bezüglich der Fahrschule Driving Team</h2>
       
-      <div class="max-w-3xl mx-auto space-y-4">
+      <div class="faq-masonry">
         <details class="group bg-white border border-gray-200 rounded-lg p-6">
           <summary class="flex cursor-pointer items-center justify-between font-semibold text-gray-900">
             Wieviele Fahrstunden benötige ich?

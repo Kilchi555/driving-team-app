@@ -10,6 +10,25 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  .faq-masonry {
+    max-width: 72rem;
+    margin-left: auto;
+    margin-right: auto;
+    column-count: 1;
+    column-gap: 1.5rem;
+  }
+
+  .faq-masonry > * {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    .faq-masonry {
+      column-count: 2;
+    }
+  }
 }
 
 @layer components {
