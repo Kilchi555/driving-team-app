@@ -609,9 +609,16 @@ const getStudentCategory = (appointment: any) => {
   // Wenn der User mehrere Kategorien hat (z.B. 'B,A'), verwende den Termin-Typ
   // oder die erste Kategorie aus der User-Kategorie-Liste
   if (!category || category === 'A') {
-    if (appointment?.users?.category) {
-      const userCategories = appointment.users.category.split(',')
-      category = userCategories[0] // Verwende die erste Kategorie
+    const rawCategory = appointment?.users?.category
+    if (rawCategory) {
+      // category kann ein String ('B,A'), ein Array (['B','A']), oder ein einzelner Wert sein
+      if (Array.isArray(rawCategory)) {
+        category = rawCategory[0] ?? 'A'
+      } else if (typeof rawCategory === 'string') {
+        category = rawCategory.split(',')[0] ?? 'A'
+      } else {
+        category = String(rawCategory)
+      }
     }
   }
   
