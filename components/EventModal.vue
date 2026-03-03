@@ -5699,7 +5699,7 @@ watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
   }
 })
 
-watch(() => selectedStudent.value, (newStudent, oldStudent) => {
+watch(() => selectedStudent.value, async (newStudent, oldStudent) => {
   try {
     if (newStudent && !oldStudent) {
       logger.debug('🔍 Student selection detected:', newStudent.first_name, newStudent.last_name)
