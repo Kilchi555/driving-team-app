@@ -5707,11 +5707,11 @@ watch(() => selectedStudent.value, (newStudent, oldStudent) => {
     }
     
     // ✅ Trigger pricing calculation when student changes
-    if (newStudent?.category && formData.value.eventType === 'lesson') {
-      calculatePriceForCurrentData()
+    if (newStudent && formData.value.eventType === 'lesson' && formData.value.type) {
+      await calculatePriceForCurrentData()
     }
     
-    // ✅ NEU: Admin-Fee berechnen wenn Schüler sich ändert
+    // ✅ NEU: Admin-Fee berechnen wenn Schüler sich ändert (redundant aber als Fallback)
     if (newStudent && props.mode === 'create' && formData.value.eventType === 'lesson') {
       const categoryCode = formData.value.type || 'A'
       calculateAdminFeeAsync(categoryCode, newStudent.id)
@@ -5726,12 +5726,12 @@ watch(() => selectedStudent.value, (newStudent, oldStudent) => {
   }
 })
 
-// ✅ Admin-Fee neu berechnen wenn Kategorie sich ändert
-watch(() => formData.value.type, (newType) => {
-  if (selectedStudent.value && newType && props.mode === 'create' && formData.value.eventType === 'lesson') {
-    calculateAdminFeeAsync(newType, selectedStudent.value.id)
+// ✅ Admin-Fee und Preis neu berechnen wenn Kategorie sich ändert
+watch(() => formData.value.type, async (newType) => {
+  if (selectedStudent.value && newType && formData.value.eventType === 'lesson') {
+    await calculatePriceForCurrentData()
   }
-}, { immediate: false }) // ✅ WICHTIG: immediate: false verhindert automatische Ausführung
+}, { immediate: false })
 
 // ✅ Doppelte Watches entfernt - wird bereits oben behandelt
 
