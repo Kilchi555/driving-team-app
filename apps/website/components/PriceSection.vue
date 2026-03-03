@@ -92,7 +92,7 @@
 
           <!-- Motorboot -->
           <div class="price-card snap-start shrink-0 w-[70vw] sm:w-[45vw] md:w-[32vw] lg:w-[22vw] max-w-xs bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
-            <div class="text-3xl mb-3">⛵</div>
+            <div class="text-3xl mb-3">🛥️</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Motorboot</h3>
             <p class="text-sm text-gray-600 mb-5">Bootsführerschein · 45 Min</p>
             <div class="mb-5">

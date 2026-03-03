@@ -164,6 +164,16 @@
             </a>
           </div>
         </div>
+
+        <!-- Button zu Kursen -->
+        <div class="text-center mt-10">
+          <a
+            href="#kurse"
+            class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg text-lg"
+          >
+            Zu den Kursen ↓
+          </a>
+        </div>
       </div>
     </section>
 
@@ -171,7 +181,7 @@
     <StatsSection />
 
     <!-- Courses Section -->
-    <section class="py-20 bg-white">
+    <section id="kurse" class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">Unsere Fahrschule führt folgende Kurse durch</h2>
         

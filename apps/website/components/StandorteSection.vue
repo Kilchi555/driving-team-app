@@ -30,7 +30,7 @@
           <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule St.Gallen</h3>
           <p class="text-sm text-gray-600 mb-4">Rapperwil bis Kaltbrunn</p>
           <p class="text-xs text-gray-500">Rapperswil, Uznach, Kaltbrunn, Benken, Ziegelbrücke</p>
-          <a href="/fahrschule-st-gallen/" class="text-red-600 font-semibold text-sm mt-4 inline-block hover:text-red-800">Mehr erfahren →</a>
+          <a href="/fahrschule-stgallen/" class="text-red-600 font-semibold text-sm mt-4 inline-block hover:text-red-800">Mehr erfahren →</a>
         </div>
 
         <div v-if="exclude !== 'dietikon'" class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 shadow-md hover:shadow-lg transition">

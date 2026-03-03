@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -63,7 +66,7 @@
 
   /* Hero Intro Styles */
   .hero-intro-section {
-    @apply relative flex items-center justify-center overflow-hidden bg-white py-6;
+    @apply relative flex items-center justify-center bg-white py-6;
   }
 
   /* Category Cards */
