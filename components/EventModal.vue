@@ -1103,11 +1103,14 @@ const handleSaveAppointment = async () => {
       const saveStartTime = performance.now()
       logger.info('🕐 Starting appointment save...')
       
-      // Calculate price before saving if needed
+      // Calculate price before saving only if not already calculated
       if (formData.value.eventType === 'lesson' && formData.value.type) {
-        logger.debug('⏳ Calculating price before saving...')
-        await calculatePriceForCurrentData()
-        // Price is now in formData.value.price
+        if (!dynamicPricing.value.totalPriceChf || dynamicPricing.value.isLoading) {
+          logger.debug('⏳ Price not yet calculated - calculating before saving...')
+          await calculatePriceForCurrentData()
+        } else {
+          logger.debug('✅ Price already calculated, skipping pre-save recalculation:', dynamicPricing.value.totalPriceChf)
+        }
       }
       
       const priceTime = performance.now()
