@@ -3,11 +3,10 @@
     <div class="section-container">
       <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
 
-      <!-- Mobile: Scroll Snap Slider -->
-      <div class="md:hidden">
+      <div class="relative">
         <div
           ref="sliderRef"
-          class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 scrollbar-hide scroll-pl-4 pl-4 pr-4"
+          class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 pl-4 pr-4 scroll-pl-4 scrollbar-hide scroll-smooth"
           @scroll.passive="onScroll"
         >
           <a
@@ -16,39 +15,24 @@
             :href="review.link"
             target="_blank"
             rel="noopener noreferrer"
-            class="snap-start shrink-0 w-[85vw] bg-white rounded-lg p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition"
+            class="review-card snap-start shrink-0 w-[80vw] sm:w-[55vw] md:w-[38vw] lg:w-[28vw] max-w-sm"
           >
-            <p class="text-yellow-500 mb-3">⭐⭐⭐⭐⭐</p>
-            <p class="text-gray-700 italic text-sm">{{ review.text }}</p>
-            <p v-if="review.author" class="text-sm font-semibold mt-3 text-gray-600">— {{ review.author }}</p>
-            <p class="text-xs text-primary-600 mt-3 font-semibold">→ Auf Google lesen</p>
+            <p class="text-yellow-500 text-sm mb-2">⭐⭐⭐⭐⭐</p>
+            <p class="font-bold text-gray-900 text-base mb-1">{{ review.author }}</p>
+            <p class="review-text text-gray-800 text-sm italic leading-relaxed">{{ review.text }}</p>
+            <p class="text-xs text-gray-700 mt-3 font-semibold">→ Auf Google lesen</p>
           </a>
         </div>
-        <div class="flex justify-center gap-1.5 mt-3">
+
+        <div class="flex justify-center gap-1.5 mt-4">
           <span
             v-for="(_, i) in reviews"
             :key="i"
-            class="block rounded-full transition-all duration-300"
+            class="block rounded-full transition-all duration-300 cursor-pointer"
             :class="i === activeIndex ? 'w-4 h-1.5 bg-primary-500' : 'w-1.5 h-1.5 bg-gray-300'"
+            @click="scrollTo(i)"
           />
         </div>
-      </div>
-
-      <!-- Tablet + Desktop: Grid with hover expand -->
-      <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
-        <a
-          v-for="(review, i) in reviews"
-          :key="i"
-          :href="review.link"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="review-card-grid"
-        >
-          <p class="text-yellow-500 text-sm mb-2">⭐⭐⭐⭐⭐</p>
-          <p class="font-bold text-gray-900 text-base mb-1">{{ review.author }}</p>
-          <p class="review-text text-gray-800 text-sm italic leading-relaxed">{{ review.text }}</p>
-          <p class="text-xs text-gray-700 mt-3 font-semibold">→ Auf Google lesen</p>
-        </a>
       </div>
     </div>
   </section>
@@ -148,10 +132,17 @@ function onScroll() {
   const cardWidth = el.scrollWidth / reviews.value.length
   activeIndex.value = Math.round(el.scrollLeft / cardWidth)
 }
+
+function scrollTo(i: number) {
+  const el = sliderRef.value
+  if (!el) return
+  const cardWidth = el.scrollWidth / reviews.value.length
+  el.scrollTo({ left: i * cardWidth, behavior: 'smooth' })
+}
 </script>
 
 <style scoped>
-.review-card-grid {
+.review-card {
   display: block;
   background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
   border-radius: 16px;
@@ -159,32 +150,23 @@ function onScroll() {
   text-decoration: none;
   box-shadow: 0 4px 16px rgba(1, 158, 229, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  overflow: hidden;
 }
 
-.review-card-grid:hover {
+.review-card:hover {
   transform: translateY(-4px) scale(1.02);
   box-shadow: 0 12px 32px rgba(1, 158, 229, 0.4);
 }
 
-.review-card-grid:nth-child(3n+2) {
-  background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
-}
-
-.review-card-grid:nth-child(3n+3) {
-  background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
-}
-
 .review-text {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  transition: -webkit-line-clamp 0.3s ease, max-height 0.4s ease;
-  max-height: 4.5em;
+  max-height: 6em;
+  transition: max-height 0.4s ease;
 }
 
-.review-card-grid:hover .review-text {
+.review-card:hover .review-text {
   -webkit-line-clamp: unset;
   max-height: 20em;
 }
