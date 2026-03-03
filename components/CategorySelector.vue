@@ -124,71 +124,40 @@ const availableCategoriesForUser = computed(() => {
     allCategoriesCount: allCategories.value.length
   })
   
-  // ✅ DEFENSIVE: Warte bis Categories geladen sind
   if (allCategories.value.length === 0) {
     logger.debug('⏳ Categories not loaded yet, returning empty')
     return []
   }
   
   const activeCategories = allCategories.value.filter(cat => cat.is_active)
-  
-  // ✅ NEW LOGIC: 
-  // 1. Group categories by parent
-  // 2. For each parent: if it has subcategories, show only subcategories
-  // 3. If no subcategories, show the parent
-  
-  const parentCategoryMap = new Map<string | null, Category[]>()
-  
-  activeCategories.forEach(cat => {
-    const parentId = cat.parent_category_id || cat.code // If no parent, use own code as key
-    if (!parentCategoryMap.has(parentId)) {
-      parentCategoryMap.set(parentId, [])
-    }
-    parentCategoryMap.get(parentId)!.push(cat)
-  })
-  
-  logger.debug('📊 Parent category groups:', {
-    totalGroups: parentCategoryMap.size,
-    groups: Array.from(parentCategoryMap.entries()).map(([key, cats]) => ({
-      parentKey: key,
-      count: cats.length,
-      codes: cats.map(c => c.code)
-    }))
-  })
-  
-  // Build result: show subcategories if available, otherwise show parent
-  let result: CategoryWithDurations[] = []
-  
-  parentCategoryMap.forEach((categoriesInGroup, parentKey) => {
-    // Separate parents and children in this group
-    const parentsInGroup = categoriesInGroup.filter(cat => cat.parent_category_id === null)
-    const childrenInGroup = categoriesInGroup.filter(cat => cat.parent_category_id !== null)
-    
-    logger.debug(`🔍 Group "${parentKey}": ${parentsInGroup.length} parents, ${childrenInGroup.length} children`)
-    
-    // ✅ RULE: If children exist, show only children. Otherwise show parent.
-    const categoriesToShow = childrenInGroup.length > 0 ? childrenInGroup : parentsInGroup
-    
-    categoriesToShow.forEach(cat => {
-      result.push({
-        ...cat,
-        availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes || 45)]
-      })
-    })
-  })
-  
-  logger.debug('✅ Categories to display:', result.length, result.map(r => `${r.code} (parent: ${r.parent_category_id})`))
-  
-  // ✅ Sortieren nach Code
+
+  // Sammle alle IDs die als parent_category_id referenziert werden
+  const parentIds = new Set(
+    activeCategories
+      .map(cat => cat.parent_category_id)
+      .filter(Boolean)
+  )
+
+  // Zeige nur Kategorien die NICHT als Parent referenziert werden
+  // d.h. wenn eine Kategorie Kinder hat, wird sie ausgeblendet
+  const filtered = activeCategories.filter(cat => !parentIds.has(cat.id as any))
+
+  logger.debug('📊 Parent IDs found:', Array.from(parentIds))
+  logger.debug('✅ Categories after filtering parents with children:', filtered.map(c => `${c.code} (parent: ${c.parent_category_id})`))
+
+  const result: CategoryWithDurations[] = filtered.map(cat => ({
+    ...cat,
+    availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes?.[0] || 45)]
+  }))
+
   const sortedResult = result.sort((a, b) => a.code.localeCompare(b.code))
-  
+
   logger.debug('📋 Final sorted categories:', sortedResult.map(cat => ({
     code: cat.code,
     name: cat.name,
     parent_category_id: cat.parent_category_id,
-    durations: cat.availableDurations
   })))
-  
+
   return sortedResult
 })
 
