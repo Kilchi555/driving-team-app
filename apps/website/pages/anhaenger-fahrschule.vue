@@ -23,65 +23,25 @@
       </div>
     </section>
 
-    <!-- Highlights/Benefits -->
-    <section class="section-container">
-      <h2 class="heading-md mb-12">Was wir bieten</h2>
-      <ul class="grid md:grid-cols-2 gap-6 mb-12 space-y-0">
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Neuling im Anhängerfahren? Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen BE-Führerschein benötigst.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Individuelle Förderung? Buche massgeschneiderte Fahrlektionen, um deine Fahrfähigkeiten gezielt zu verbessern.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Praxisorientiertes Lernen? Unsere Anhängerlektionen sind darauf ausgelegt, dir das nötige praktische Wissen und die Fertigkeiten für das Fahren mit Anhänger zu vermitteln.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Prüfungssimulation? Bereite dich optimal auf die Anhängerprüfung vor, damit am grossen Tag nichts schiefgeht.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Auffrischungskurs? Auch wenn du bereits den BE-Führerausweis besitzt und dich in speziellen Situationen (z.B. Rangieren auf engem Raum) verbessern möchtest, bist du bei uns richtig.</p>
-          </div>
-        </li>
-      </ul>
-      <p class="text-center text-gray-600 mb-6">Starte jetzt dein Abenteuer Anhänger bei uns in der Fahrschule! Wir freuen uns darauf, dich auf deinem Weg zum BE-Führerschein zu begleiten.</p>
-      <div class="text-center">
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary">
-          Jetzt anmelden
-        </a>
-      </div>
-    </section>
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="anhaengerBenefits" />
 
     <!-- Ausbildungsablauf -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Weg zur Anhängerprüfung</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Weg zur Anhängerprüfung</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lernfahrgesuch Anhängerprüfung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lernfahrgesuch Anhängerprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Der erste Schritt: Fülle das Lernfahrgesuch vollständig aus und sende es direkt an das Strassenverkehrsamt. Nach der Einreichung erhältst du deinen Lernfahrausweis bequem per Post. Dieser ist 24 Monate lang gültig.</p>
                 <p class="text-sm text-gray-600 mt-2">Auch wenn du mit dem Lernfahrausweis bereits alleine Fahrten unternehmen darfst, empfehlen wir dir dringend, dich frühzeitig bei unserer Fahrschule anzumelden.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Ab 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen.</p>
@@ -96,16 +56,16 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Anhänger Fahrstunden</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Anhänger Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Wir unterrichten dich direkt in den gängigen Prüfungsgebieten. Für unsere Fahrschule in Zürich sind das Albisgütli, Regensdorf und Wettingen (Aargau). In Lachen lernst du in den dortigen Prüfungsgebieten.</p>
                 <p class="text-sm text-gray-600 mt-2">In unseren Anhänger Fahrstunden schauen wir uns sämtliche Prüfungsanforderungen detailliert an, üben sie gründlich und festigen dein Können. Egal, ob du schon viel oder wenig Erfahrung hast – wir passen uns an dein Niveau an.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Sobald du den Lernfahrausweis BE hast, kannst du bereits privat mit Anhängern üben. Diese zusätzliche Fahrpraxis ist Gold wert!</p>
@@ -113,16 +73,16 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Anhängerprüfung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Anhängerprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Wir begleiten dich selbstverständlich zur Anhängerfahrprüfung. Du musst dir keine Gedanken um das Fahrzeug machen, denn wir stellen dir das Prüfungsfahrzeug. Als deine Anhängerfahrschule sorgen wir zudem von Anfang an für einen positiven ersten Eindruck beim Prüfungsexperten.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Für den BE-Führerausweis brauchst du lediglich den Lernfahrausweis der Kategorie BE – keine Theorieprüfung nötig!</p>
             </div>
@@ -133,7 +93,7 @@
 
     <!-- Themen -->
     <section class="section-container">
-      <h2 class="heading-md mb-8 text-center">Anhänger Fahrschule – Themen</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Anhänger Fahrschule – Themen</h2>
       <p class="text-center text-gray-600 mb-8">Der Inhalt einer Fahrausbildung in unserer Anhänger Fahrschule der Kategorie BE:</p>
       <div class="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-12">
         <div class="bg-gray-50 rounded-lg p-4">
@@ -160,7 +120,7 @@
     <!-- Anhängerkurs für Gruppen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-6 text-center">Anhängerkurs für Gruppenanmeldungen</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Anhängerkurs für Gruppenanmeldungen</h2>
         <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
           <p class="text-gray-600 mb-4">Unser spezieller Anhänger-Kurs bringt dich in den Anhängerfahrstunden deutlich schneller voran. Du lernst nicht nur aktiv mit, sondern profitierst auch vom Zuhören und Zuschauen. So werden deine Kosten optimiert.</p>
           <p class="text-gray-600 mb-6">Als zusätzliche Unterstützung erhältst du eine Broschüre, die dir eine wichtige theoretische Grundlage für den Kurs bietet. Nach dem Kursbesuch bist du optimal auf die Fahrstunden vorbereitet. Die nötigen Fahrzeuge stellen wir dir zur Verfügung.</p>
@@ -185,7 +145,7 @@
 
     <!-- Preise -->
     <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Anhänger Fahrschule – Preise</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-10 text-center">Anhänger Fahrschule – Preise</h2>
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
         <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <p class="text-2xl font-bold text-primary-600 mb-1">CHF 120.-</p>
@@ -219,34 +179,34 @@
 
     <!-- FAQ Section -->
     <section class="section-container">
-      <h2 class="heading-md mb-6 text-center">Häufige Fragen – Anhänger Fahrschule</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Häufige Fragen – Anhänger Fahrschule</h2>
       <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Hier findest du Antworten auf die häufigsten Fragen rund um das Thema Anhängerfahrschule.</p>
       <div class="max-w-3xl mx-auto space-y-4 mb-12">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Brauche ich bereits einen Auto-Führerschein?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ja, für die Anhänger Ausbildung (Kategorie BE) brauchst du bereits einen gültigen Führerausweis der Kategorie B.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Gibt es eine Theorieprüfung für den BE?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Nein! Um den Anhängerführerausweis der Kategorie BE zu erlangen, brauchst du lediglich den Lernfahrausweis der Kategorie BE und musst dann erfolgreich die praktische Fahrprüfung bestehen.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Darf ich mit dem Lernfahrausweis alleine Anhänger fahren?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ja, das darfst du sogar alleine. Wir empfehlen allerdings immer eine Begleitperson dabei zu haben, besonders für das Rückwärtsfahren. Wenn du unter 18 Jahre alt bist, ist eine Begleitperson Pflicht.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Ab welchem Alter kann ich den BE machen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Bereits ab einem Alter von 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen und somit auch Lernfahrten in Begleitung machen.</p>
         </details>
@@ -282,4 +242,26 @@
 </template>
 
 <script setup lang="ts">
+const anhaengerBenefits = [
+  {
+    title: 'Neuling im Anhängerfahren?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen BE-Führerschein benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Fahrlektionen, um deine Fahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Praxisorientiertes Lernen?',
+    description: 'Unsere Anhängerlektionen sind darauf ausgelegt, dir das nötige praktische Wissen und die Fertigkeiten für das Fahren mit Anhänger zu vermitteln.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Anhängerprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Auffrischungskurs?',
+    description: 'Auch wenn du bereits den BE-Führerausweis besitzt und dich in speziellen Situationen (z.B. Rangieren auf engem Raum) verbessern möchtest, bist du bei uns richtig.'
+  }
+]
 </script>

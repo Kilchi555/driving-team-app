@@ -24,82 +24,82 @@
         </p>
 
         <div class="space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wieviele Fahrstunden benötige ich?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Die Anzahl der benötigten Fahrstunden ist sehr von deiner Erfahrung mit dem Autofahren abhängig. Bist du schon sicher und geübt mit privaten Lernfahrten, wirst du weniger Fahrstunden benötigen. Hast du noch keine Erfahrung, wirst du mehr Stunden brauchen. Im Durchschnitt brauchen unsere Schüler:innen zwischen 15 und 25 Fahrstunden.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie kann ich meine Fahrausbildung beschleunigen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Das Wichtigste ist sicher… Üben, Üben und nochmals Üben. Optimal wären 2–4 Fahrten pro Woche. Das heisst nicht unbedingt 2–4 Fahrstunden, sondern zum Beispiel 1 Fahrlektion und 1 Mal privat repetieren. Je mehr du übst, desto schneller lernst du.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wieso dauert die Fahrstunde des Driving Teams 45 Minuten?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand und Wunsch des/der Fahrschüler:in können auch Doppellektionen (90 Minuten) absolviert werden.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie rechtfertigen sich eure Preise?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Unsere Preise sind marktüblich und widerspiegeln die Qualität unserer Ausbildung. Wir bieten 45-minütige Lektionen mit top ausgebildeten Fahrlehrern:innen an. Durch die strukturierte Ausbildung und die gute Vorbereitung bestehen unsere Schüler:innen die Prüfung oft schon beim ersten Versuch – das spart langfristig Geld.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wo bietet ihr Fahrstunden an?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Unsere Lokale befinden sich in Zürich-Altstetten und in Lachen/SZ. Dort finden alle Kurse wie Nothelfer, Theorie und Verkehrskunde statt. Das Tätigkeitsgebiet des Driving Team Zürich erstreckt sich von Zürich über Lachen, Zug, Uster, Dietikon, Aargau, Reichenburg bis nach St.Gallen.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Soll ich Fahrstunden mit einem geschalteten oder automatischen Fahrzeug nehmen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Das ist eine persönliche Entscheidung. Wenn du mit einem Schaltgetriebe lernst, darfst du später sowohl Schalt- als auch Automatikfahrzeuge fahren. Mit einem Automatikausweis hingegen darfst du nur Automatikfahrzeuge fahren. Wir empfehlen in der Regel das Schalten zu lernen – so hast du mehr Flexibilität.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was sind die Voraussetzungen, um private Lernfahrten durchführen zu dürfen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Private Lernfahrten sind mit ausländischem Führerausweis ohne Begleitperson in den ersten 12 Monaten nach Einreise erlaubt. Nach diesen 12 Monaten erlischt die Fahrerlaubnis, ausser du bist im Besitz eines gültigen Lernfahrausweises. Für den Lernfahrausweis brauchst du einen bestandenen Theorietest und du musst mindestens 17 Jahre alt sein. Die Begleitperson muss mindestens 23 Jahre alt sein und ihren Führerausweis seit mindestens 3 Jahren besitzen.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was ist die Admin- und Versicherungspauschale?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits ist auch eine Kfz-Versicherung für Personen- und Sachschäden inbegriffen, die bei der Fahrausbildung entstehen können.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was haben eure Fahrlehrer:innen für eine Ausbildung?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Unsere Fahrlehrer:Innen haben alle eine vollumfängliche und intensive Ausbildung zum Fahrlehrer:In mit eidgenössischem Fachausweis absolviert. Für weitere Fahrzeugkategorien haben dann die jeweiligen Fahrlehrer:innen entsprechende Zusatzausbildungen absolviert.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Welches sind die häufigsten Prüfungsrouten ab Zürich-Albisgütli?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <div class="text-gray-600 mt-4">
               <p class="mb-3">Grundsätzlich können die Verkehrsexperten die Prüfungsroute frei wählen. Im Allgemeinen werden folgende Gebiete befahren:</p>
@@ -114,10 +114,10 @@
             </div>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie kann ich eure E-Mail Rechnungen auf dem Smartphone bezahlen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Wir versenden dir die Rechnung per E-Mail mit einer PDF-Datei im Anhang. Öffne diese PDF-Datei, geh dann auf «Teilen» und öffne die PDF-Datei mit deinem Mobile-Banking App. So kannst du unsere Rechnungen direkt auf deinem Smartphone bezahlen.</p>
           </details>

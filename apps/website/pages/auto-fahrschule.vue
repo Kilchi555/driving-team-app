@@ -23,66 +23,26 @@
       </div>
     </section>
 
-    <!-- Highlights/Benefits -->
-    <section class="section-container">
-      <h2 class="heading-md mb-12">Was wir bieten</h2>
-      <ul class="grid md:grid-cols-2 gap-6 mb-16 space-y-0">
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Blutiger Anfänger? Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen Führerschein der Kategorie B benötigst.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Individuelle Förderung? Buche massgeschneiderte Privatstunden, um deine Fahrfähigkeiten gezielt zu verbessern.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Gemeinsam Lernen? Unsere Gruppenkurse bieten eine motivierende Atmosphäre.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Prüfungssimulation? Bereite dich optimal auf die Autoprüfung vor, damit am grossen Tag nichts schiefgeht.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Auffrischungskurs? Auch wenn du bereits im Besitz des Auto Führerausweises bist und deine Fahrfähigkeiten auffrischen möchtest, bist du in unseren Auto Fahrstunden bestens aufgehoben.</p>
-          </div>
-        </li>
-      </ul>
-      <div class="text-center">
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary">
-          Termin reservieren
-        </a>
-      </div>
-      <p class="text-center text-gray-600 mt-6">Starte jetzt dein Abenteuer Auto bei uns in der Auto Fahrschule! Wir freuen uns darauf, dich auf deinem Weg zum Auto Führerschein der Kategorie B zu begleiten.</p>
-    </section>
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="autoBenefits" />
 
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Weg zur Autoprüfung - In 7 Schritten zur Autoprüfung</h2>
+        <h2 class="text-xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Weg zur Autoprüfung - In 7 Schritten zur Autoprüfung</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Nothelferkurs</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Nothelferkurs</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Dein Start zum Führerschein: Gesuch und Nothelferkurs</p>
                 <p class="text-sm text-gray-600">Der erste wichtige Schritt auf dem Weg zu deinem Führerschein ist die Einreichung des Lernfahrgesuchs für die Kategorie B (Auto) beim Strassenverkehrsamt. Parallel dazu musst du den Nothelferkurs absolvieren.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Gut zu wissen: Falls du bereits einen Nothelferausweis besitzt, ist dieser ab dem Ausstellungsdatum sechs Jahre gültig. Bist du schon im Besitz eines gültigen Lernfahr- oder Führerscheins einer anderen Kategorie, entfällt die Pflicht, den Nothelferkurs erneut zu besuchen.</p>
@@ -93,16 +53,16 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lernfahrgesuch Auto</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lernfahrgesuch Auto</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Schritt Zwei: Dein Lernfahrgesuch einreichen und Sehtest machen</p>
                 <p class="text-sm text-gray-600">Als nächsten Schritt für deinen Führerschein musst du das Lernfahrgesuch vollständig und wahrheitsgetreu ausfüllen. Achte darauf, die Kategorie B (Auto) anzukreuzen. Mit diesem Formular gehst du dann zum Strassenverkehrsamt. Danach bringst du das ausgefüllte Anmeldeformular zusammen mit deinem Nothilfeausweis, einem aktuellen farbigen Passfoto und deinem gültigen ID/Pass persönlich zum Strassenverkehrsamt.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Wichtig: Du kannst das Gesuch frühestens zwei Monate vor deinem 17. Geburtstag stellen.</p>
@@ -117,32 +77,32 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Auto Theorieprüfung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Auto Theorieprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Deine Theorieprüfung für den Führerschein</p>
                 <p class="text-sm text-gray-600">Nachdem du dein Lernfahrgesuch eingereicht hast, erhältst du eine Anmeldebestätigung mit einem PIN-Code. Dieser Code ist dein Schlüssel zur Anmeldung für die Theorieprüfung – ein wichtiger Meilenstein auf dem Weg zu deinem Führerschein. Um dich optimal vorzubereiten, empfehlen wir dir, mit einem Theoriebuch zu lernen und anschliessend die Fragen mit einer Lern-CD oder App zu üben. Sobald du die Theorieprüfung erfolgreich bestanden hast, erhältst du den Lernfahrausweis für die Kategorie B (Auto), welcher 24 Monate gültig ist.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Verkehrskunde VKU</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Verkehrskunde VKU</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Der Verkehrskundekurs (VKU): Dein Weg zur praktischen Prüfung</p>
                 <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundekurs (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den Verkehrskundekurs (VKU) gleich zu Beginn deiner praktischen Fahrausbildung zu besuchen. So kannst du das erlernte Wissen direkt in deinen Autofahrstunden umsetzen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">2 Kursteile à 4 Stunden</p>
@@ -154,48 +114,48 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">5</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Auto Fahrstunden</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Auto Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Die ersten Fahrstunden mit deinem Fahrlehrer</p>
                 <p class="text-sm text-gray-600">Wir empfehlen dir dringend, die ersten Autofahrstunden auf jeden Fall bei einem Fahrlehrer oder einer Fahrlehrerin zu absolvieren. Falsch erlernte Automatismen lassen sich später nur mit erhöhtem Zeit- und Kostenaufwand korrigieren. Wenn du deinen Lernfahrausweis mit 17, 18 oder 19 Jahren beantragt hast, darfst du frühestens ein Jahr nach Gültigkeitsbeginn deines Lernfahrausweises zur Autofahrprüfung antreten.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">6</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">6</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Praktische Autofahrprüfung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Praktische Autofahrprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Erfolgreich zur praktischen Führerscheinprüfung</p>
                 <p class="text-sm text-gray-600">Um die praktische Autofahrprüfung zu bestehen, braucht es heute wegen des erhöhten Verkehrsaufkommens mehr denn je. Trotz dieser hohen Anforderungen hast du mit seriösen und umfangreichen Autofahrstunden gute Chancen. Es ist stets unser Ziel, dass unsere Fahrschüler:innen so wenig Fahrstunden wie möglich machen müssen und gleichzeitig so viele Fahrstunden wie nötig. Nach bestandener Autofahrprüfung erhältst du einen auf drei Jahre befristeten Führerschein auf Probe.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">7</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">7</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">WAB Kurs</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">WAB Kurs</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Nach dem Führerschein: Weiterbildung und unbefristeter Ausweis</p>
                 <p class="text-sm text-gray-600">Wie überall im Leben hat man auch beim Autofahren nie ausgelernt. In den ersten 12 Monaten nach deiner praktischen Fahrprüfung musst du den obligatorischen WAB Kurs (Weiterbildungskurs) absolvieren, der zwei Kurstage umfasst. Nach drei Jahren Probezeit, und sofern du alle Auflagen erfüllt hast, kannst du dann den unbefristeten Führerschein beantragen.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -219,26 +179,26 @@
     <section class="section-container">
       <h2 class="heading-md mb-12 text-center">Häufig gestellte Fragen</h2>
       <div class="max-w-3xl mx-auto space-y-4 mb-12">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wieviele Fahrstunden benötige ich?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das ist unterschiedlich und hängt von deinem Alter, Erfahrung und Lerntempo ab. Im Durchschnitt benötigen unsere Schüler 15-20 Fahrstunden. Wir beraten dich gerne individuell.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie kann ich meine Fahrausbildung beschleunigen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrlektionen, sondern z.B. 1 Fahrlektion und 1 Mal privat repetieren mit einer Begleitperson.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wieso dauert die Fahrstunde 45 Minuten?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen.</p>
         </details>
@@ -273,4 +233,27 @@
 
 <script setup lang="ts">
 // Auto Fahrschule page
+
+const autoBenefits = [
+  {
+    title: 'Blutiger Anfänger?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen Führerschein der Kategorie B benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Privatstunden, um deine Fahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Gemeinsam Lernen?',
+    description: 'Unsere Gruppenkurse bieten eine motivierende Atmosphäre.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Autoprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Auffrischungskurs?',
+    description: 'Auch wenn du bereits im Besitz des Auto Führerausweises bist und deine Fahrfähigkeiten auffrischen möchtest, bist du in unseren Auto Fahrstunden bestens aufgehoben.'
+  }
+]
 </script>

@@ -207,6 +207,64 @@
     <!-- Main Content -->
     <main class="flex-1">
       <slot />
+    <!-- Weiterbildungen Modal -->
+    <ClientOnly>
+      <Transition name="fade">
+        <div v-if="showWeiterbildungenModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-6 flex items-center justify-between">
+              <h2 class="text-2xl font-bold text-white">Weiterbildungen</h2>
+              <button @click="showWeiterbildungenModal = false" class="text-white hover:text-gray-200 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a v-for="item in weiterbildungen" :key="item.title" :href="item.link" @click="showWeiterbildungenModal = false" class="group p-4 border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition flex items-center gap-3">
+                  <div class="text-3xl flex-shrink-0">{{ item.icon }}</div>
+                  <h3 class="font-bold text-gray-900 group-hover:text-primary-600">{{ item.title }}</h3>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </ClientOnly>
+
+    <!-- Kurse Modal (Motorrad, VKU, WAB) -->
+    <ClientOnly>
+      <Transition name="fade">
+        <div v-if="showKurseModal && activeKursCategory" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-6 flex items-center justify-between">
+              <h2 class="text-2xl font-bold text-white">{{ kurseModalTitle }}</h2>
+              <button @click="closeKursModal" class="text-white hover:text-gray-200 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a v-for="item in currentKurseItems" :key="item.title" :href="item.link" @click="closeKursModal" class="group p-4 border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition flex items-center gap-3">
+                  <div class="text-3xl flex-shrink-0">{{ item.icon }}</div>
+                  <h3 class="font-bold text-gray-900 group-hover:text-primary-600">{{ item.title }}</h3>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </ClientOnly>
+
     </main>
 
     <!-- Footer -->
@@ -253,7 +311,19 @@
               <li><a href="/motorrad-fahrschule/" class="hover:text-white transition">Motorrad</a></li>
               <li><a href="/lastwagen-fahrschule/" class="hover:text-white transition">Lastwagen</a></li>
               <li><a href="/bus-fahrschule/" class="hover:text-white transition">Bus</a></li>
-              <li><a href="/czv-weiterbildung/" class="hover:text-white transition">Weiterbildung</a></li>
+              <li><a href="#" @click.prevent="showWeiterbildungenModal = true" class="hover:text-white transition cursor-pointer">Weiterbildung</a></li>
+            </ul>
+          </div>
+
+          <!-- Kurse -->
+          <div>
+            <h3 class="font-bold text-lg mb-5">Kurse</h3>
+            <ul class="space-y-2 text-sm text-gray-300">
+              <li><a href="/auto-theorie/" class="hover:text-white transition">Auto Theorie</a></li>
+              <li><a href="#" @click.prevent="showKursModalFn('motorrad')" class="hover:text-white transition cursor-pointer">Motorrad Grundkurse</a></li>
+              <li><a href="/nothelferkurs/" class="hover:text-white transition">Nothelferkurse</a></li>
+              <li><a href="#" @click.prevent="showKursModalFn('vku')" class="hover:text-white transition cursor-pointer">VKU Kurse</a></li>
+              <li><a href="#" @click.prevent="showKursModalFn('wab')" class="hover:text-white transition cursor-pointer">WAB Kurse</a></li>
             </ul>
           </div>
 
@@ -292,10 +362,94 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const showDesktopMenu = ref(false)
 const openSection = ref('')
+const showWeiterbildungenModal = ref(false)
+const showKurseModal = ref(false)
+const activeKursCategory = ref<string | null>(null)
+
+const weiterbildungen = [
+  {
+    title: 'CZV Grundkurs',
+    icon: '📖',
+    description: 'Grundkurs für Berufskraftfahrer. Fachlich kompetent und zeiteffizient.',
+    link: '/czv-grundkurs/'
+  },
+  {
+    title: 'CZV Weiterbildung',
+    icon: '📈',
+    description: 'Kontinuierliche Weiterbildung für Fahrzeuglenker. Professionelle Schulung.',
+    link: '/czv-weiterbildung/'
+  },
+  {
+    title: 'Fahrlehrer-Weiterbildung',
+    icon: '👨‍🏫',
+    description: 'Spezielle Weiterbildung für Fahrlehrerinnen und Fahrlehrer.',
+    link: '/fahrlehrerweiterbildung/'
+  },
+  {
+    title: 'Motorrad-Weiterbildung',
+    icon: '🏍️',
+    description: 'Weiterbildung für erfahrene Motorrad-Fahrer. Sicherheit & Fahrtechnik.',
+    link: '/motorrad-weiterbildung/'
+  }
+]
+
+const kurseCategories = {
+  motorrad: {
+    title: 'Motorrad Grundkurse',
+    icon: '🏍️',
+    items: [
+      { title: 'Zürich', icon: '📍', link: '/motorrad-grundkurs-zuerich/' },
+      { title: 'Lachen', icon: '📍', link: '/motorrad-grundkurs-lachen/' },
+      { title: 'Zug', icon: '📍', link: '/motorrad-grundkurs-zug/' },
+      { title: 'Einsiedeln', icon: '📍', link: '/motorrad-grundkurs-einsiedeln/' }
+    ]
+  },
+  vku: {
+    title: 'VKU Kurse',
+    icon: '🛣️',
+    items: [
+      { title: 'Zürich', icon: '📍', link: '/vku-kurs-zuerich/' },
+      { title: 'Lachen', icon: '📍', link: '/vku-kurs-lachen/' }
+    ]
+  },
+  wab: {
+    title: 'WAB Kurse',
+    icon: '🚗',
+    items: [
+      { title: 'Zürich', icon: '📍', link: '/wab-kurse-zuerich/' },
+      { title: 'Schwyz', icon: '📍', link: '/wab-kurse-schwyz/' },
+      { title: '🌍 English', icon: '🌍', link: '/wab-course-english/' }
+    ]
+  }
+}
+
+const kurseModalTitle = computed(() => {
+  if (activeKursCategory.value && kurseCategories[activeKursCategory.value as keyof typeof kurseCategories]) {
+    return kurseCategories[activeKursCategory.value as keyof typeof kurseCategories].title
+  }
+  return ''
+})
+
+const currentKurseItems = computed(() => {
+  if (activeKursCategory.value && kurseCategories[activeKursCategory.value as keyof typeof kurseCategories]) {
+    return kurseCategories[activeKursCategory.value as keyof typeof kurseCategories].items
+  }
+  return []
+})
+
+const showKursModalFn = (category: string) => {
+  activeKursCategory.value = category
+  showKurseModal.value = true
+}
+
+const closeKursModal = () => {
+  showKurseModal.value = false
+  activeKursCategory.value = null
+}
 </script>
 
 <style scoped>

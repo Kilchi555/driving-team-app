@@ -32,9 +32,9 @@ withDefaults(defineProps<{
 
 const topics = [
   { icon: '📚', title: 'Vorschulung', text: 'Vorbereitung im Stand, Blick- und Lenktechnik, Gas, Bremsen, Schaltung, Blicksystematik, Armaturen, Fahrzeugsicherung' },
-  { icon: '🚗', title: 'Grundschulung', text: 'Berganfahren, Einspuren, Abbiegen, Mehrfachblick, Kreisverkehr, Lichtsignale, Lückenbenützung' },
-  { icon: '🏙️', title: 'Hauptschulung', text: 'Rechtsvortritt, Stop/Kein Vortritt, Bus/Tram, Bergstrassen, Stadtverkehr' },
-  { icon: '🛣️', title: 'Perfektionsschulung', text: 'Wegweiser/Signalisation, Autobahn, Selbständiges Fahren' },
+  { icon: '🚗', title: 'Grundschulung', text: 'Berganfahren, Einspuren, Abbiegen, Mehrfachblick, Kreisverkehr, Lichtsignale, Lückenbenützung, Abstände, Signale' },
+  { icon: '🏙️', title: 'Hauptschulung', text: 'Rechtsvortritt, Stop/Kein Vortritt, Bus/Tram, Bergstrassen, Fussgänger, Stadtverkehr, Spurhaltung, Differenzierte Geschwindigkeit' },
+  { icon: '🛣️', title: 'Perfektionsschulung', text: 'Wegweiser/Signalisation, Autobahn allgemein, Autobahn Auffahrt, Autobahn Einfahrt, Selbständiges Fahren, Fahrerassistenzsysteme' },
   { icon: '🔄', title: 'Manöver', text: 'Fahrzeugsicherung, Rückwärtsfahren, Wenden, Rechtwinklig & seitwärts parkieren, Schnelle & sichere Bremsung' },
 ]
 

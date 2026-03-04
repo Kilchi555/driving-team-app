@@ -183,7 +183,7 @@
     <!-- Courses Section -->
     <section id="kurse" class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
-        <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">Unsere Fahrschule führt folgende Kurse durch</h2>
+        <h2 class="sr-only">Unsere Fahrschule führt folgende Kurse durch</h2>
         
         <!-- Theorie & Grundkurse -->
         <div class="mb-16">
@@ -327,112 +327,113 @@
       <h2 class="heading-md text-center mb-16">Die häufigsten Fragen & Antworten bezüglich der Fahrschule Driving Team</h2>
       
       <div class="max-w-4xl mx-auto space-y-4">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wieviele Fahrstunden benötige ich?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Ein Fahrzeug fahren lernen kannst Du mit dem Erlernen einer neuen Sportart, eines neuen Instruments oder einer Fremdsprache vergleichen. Zu Beginn wirst Du die noch völlig unbekannte Sache als sehr schwierig empfinden und das von Dir gesteckte Ziel scheint noch unerreichbar zu sein. Wenn Du das Projekt Fahrprüfung jedoch seriös angehst, sprich die Tipps und Tricks des Fahrlehrers ernst nimmst und probierst umzusetzen, dann wirst Du Dein Ziel in nützlicher Zeit erreichen. Die meisten Auto-Fahrschüler:innen haben bis zur Fahrprüfung zwischen 15-30 Fahrlektionen. Wenn man keine Möglichkeit hat, um privat zu üben, dann bewegen sich die benötigten Fahrstunden in der Regel zwischen 30-50 Stück. </p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie kann ich meine Fahrausbildung beschleunigen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das Wichtigste ist sicher….Üben, Üben und nochmals Üben. Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrstunden, sondern zum Beispiel 1 Fahrlektion und 1 Mal privat repetieren oder 2 Fahrlektionen und 2 Mal repetieren. Ganz wichtig beim privat Üben ist, dass Du genau so fährst, wie es Dir Dein Fahrlehrer gezeigt hat. Nur so entwickelst Du Automatismen und fühlst Dich schnell sicherer auf der Strasse. Hast Du keine Möglichkeit um privat zu üben, dann musst Du Dir bewusst sein, dass es wahrscheinlich mehr Fahrstunden benötigt als sonst. Bist du noch innerhalb der 12-Monatigen Lernphase, dann empfehlen wir zu Beginn ca. 5-10 Fahrlektion bei der Fahrschule zu machen und anschliessend regelmässige private Lernfahrten mit parallelen Fahrlektion bei der Fahrschule. Wenn der Prüfungstermin dann näher rückt, macht es Sinn die  Fahrlektionen bei Fahrschule wieder in kürzeren Abständen durchzuführen, damit du so richtig gut vorbereitet bist und die Fahrprüfung beim ersten Mal bestehst.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wieso dauert die Fahrstunde des Driving Teams 45 Minuten?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vorallem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie rechtfertigen sich eure Preise?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke unserer Fahrschule umsetzen. Dies beginnt bei den  Fahrlehrer:innen, die nur langfristig eine seriöse und kundengerechte Arbeit abliefern können, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge auf sicher haben. Ebenso runden bezahlte Ferien, ein machbares Arbeitspensum, eine jährliche Gratifikation und flexible gestaltbare Arbeitszeiten die Work-Life-Balance in unserer Fahrschule ab. Eine weitere wichtige Voraussetzung, um eine professionelle Fahrschule betreiben zu können, ist eine moderne Infrastruktur. Unsere Fahrzeuge, egal ob Auto, Motorrad, Anhänger oder Motorboot, befinden sich stets in einem top gewarteten Zustand und auf dem neuesten Stand der Technik. Auch bei den Unterrichtslokalen sind wir uptodate. Moderne Fernseher, diverse Lernmittel und Whiteboards/ Flipcharts ermöglichen einen unterhaltsamen und lehrreichen Unterricht. Dank diesen optimalen Vorraussetzungen erreichen wir das Wichtigste und das sind zufriedene Kunden, die eine umfangreiche, speditive und praxisorientierte Ausbildung zur sicheren Fahrzeuglenkerin oder zum sicheren Fahrzeuglenker geniessen dürfen.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wo bietet Ihr Fahrstunden an?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Unsere Lokale befinden sich in Zürich-Altstetten und in Lachen/SZ. Dort finden alle Kurse wie Nothelfer, Theorie und Verkehrskunde statt. Das Tätigkeitsgebiet des Driving Team Zürich erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/ Bonstetten im Knonaueramt. Bei den Autofahrlektionen können wir nach Möglichkeit flexible Treffpunkte vereinbaren sprich euch nach Möglichkeit entgegen kommen. Bei der Anhänger- und Motorradausbildung beschränkt sich der Treffpunkt auf Zürich-Altstetten. Seit ein paar Jahren geben wir auch im Zürcher Oberland rundum Uster Auto- und Motorradfahrstunden. Beim Driving Team Lachen erstreckt sich das Tätigkeitsgebiet von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind ebenfalls flexibel, das heisst wir holen euch, wenn möglich, zu Hause oder bei der Arbeit ab.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Ab welchem Alter kann ich bei eurer Fahrschule starten?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Für 50ccm Motorräder bzw. Roller kannst du dich bereits mit 15 Jahren anmelden. Der Nothelferkurs kannst du bereits vorher besuchen und 1 Monat vor deinem 15 Geburtstag kannst du das Lernfahrgesuch einreichen. Ab 16 Jahren darfst du dann bereits 125ccm fahren. Lernfahrten fürs Auto sind dann ab dem 17 Geburtstag erlaubt. Dafür brauchst allerdings einen Lernfahrausweis für die Kategorie B, den du wiederum separat per Lernfahrgesuch bestellen musst.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wieviel kostet ungefähr die Fahrausbildung bis zur Auto Prüfung?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Die Gesamtkosten der Fahrausbildung bis zur Autoprüfung ist sehr unterschiedlich und hauptsächlich abhängig von der Anzahl der benötigten Auto Fahrstunden. Wenn man mit 15 Lektionen rechnet kommt man inkl. allen Kursen und Gebühren des Strassenverkehrsamtes auf ca. 2250.- und wenn man von 30 Lektionen ausgeht ergeben die Gesamtkosten ca. 3530.-.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Soll ich Fahrstunden mit einem geschalteten oder automatischen Fahrzeug nehmen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das muss grundsätzlich jeder für sich entscheiden. Rechtlich gesehen ist es egal, mit was ihr die Prüfung ablegt, ihr dürft nach bestandener Prüfung so oder so beides fahren. Natürlich ist es so, wenn ihr noch nie mit einem geschalteten Fahrzeug gefahren seid, es doch sehr schwierig und auch gefährlich wäre, wenn ihr es das erste Mal alleine probieren würdet. In einer Notfallsituation oder in gewissen Ländern wäre es daher sehr sinnvoll, wenn ihr mindestens schon einmal ein paar Fahrlektionen in einem geschalteten Fahrzeug gehabt hättet. Ihr könnt diese direkt zu Beginn der Fahrausbildung absolvieren und dann anschliessend auf Automatik wechseln oder ihr beginnt gleich auf Automatik und meldet euch erst nach bestandener Fahrprüfung für geschaltete Fahrlektionen an.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was sind die Voraussetzungen, um private Lernfahrten durchführen zu dürfen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Private Lernfahrten werden häufig unterschätzt. Daher empfehlen wir ganz klar die ersten Fahrversuche bei einer Fahrschule durchzuführen. So können wichtige Automatismen geschult werden, die ihr dann privat repetieren könnt. Ganz wichtig für die privaten Lernfahrten sind ebenfalls folgende Punkte:
-            <ul>
+          <div class="text-gray-600 mt-4">
+            <p>Private Lernfahrten werden häufig unterschätzt. Daher empfehlen wir ganz klar die ersten Fahrversuche bei einer Fahrschule durchzuführen. So können wichtige Automatismen geschult werden, die ihr dann privat repetieren könnt. Ganz wichtig für die privaten Lernfahrten sind ebenfalls folgende Punkte:</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
               <li>die Begleitperson muss im Besitz eines unbeschränkt gültigen Führerausweises der entsprechender Kategorie oder höher und in nüchternem (0,0 Promille) und fahrfähigem Zustand sein.</li>
               <li>beim Auto kommt dann noch dazu: Begleitperson muss mindestens 23 Jahre alt sein und die Fahrprüfung vor mindestens 3 Jahren bestanden haben.</li>
               <li>die Handbremse muss für die Begleitperson gut erreichbar und dosierbar sein und während der Fahrt auch Wirkung haben (trotz drücken des Gaspedals des Lernfahrers/der Lernfahrerin).</li>
             </ul>
-          </p>        
+          </div>        
           </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was ist die Admin- und Versicherungspauschale?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits benötigt ein Fahrschulfahrzeug eine spezielle Vollkaskoversicherung, welche jegliche Fahrzeuglenker:innen abdecken.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was haben eure Fahrlehrer:innen für eine Ausbildung?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Unsere Fahrlehrer:Innen haben alle eine vollumfängliche und intensive Ausbildung zum Fahrlehrer:In mit eidgenössischem Fachausweis absolviert. Für weitere Fahrzeugkategorien haben dann die jeweiligen Ausbildner noch Zusatzausbildungen in den betroffenen Bereichen genossen. Jedes Jahr müssen unsere Fahrlehrer:Innen mindestens einen Weiterbildungstag absolvieren und teamintern kommt noch eine weitere Weiterbildungseinheit dazu. Denn auch innerhalb des Driving Teams lernen wir jeden Tag von einander.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Warum sind eure Verkehrskundekurse so teuer?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Unsere Verkehrskundekurse sind im oberen Preissegment, weil wir auch in diesem Bereich sehr bemüht sind zu den besten Fahrschulen zu gehören und euch einen möglichst grossen Nutzen für die Fahrstunden zu gewährleisten. Ihr erhält diverse für den Strassenverkehr wichtigen Unterlagen und es werden viele praxisnahe Themen diskutiert, angeschaut und geübt. Eines der Ziele ist ganz klar, dass Ihr durch den Besuch unseres Verkehrskundekurses neu erlerntes Wissen direkt in den Fahrstunden umsetzen könnt und somit auch am Ende weniger Fahrstunde benötigt. Das heisst, die Kosten des Verkehrskundekurses sind gut investiert, vorallem geht es am Schluss immer um eine sichere Fahrweise und dass wir keine Unfälle verursachen.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie kann ich eure Fahrlektionen und Kurse bezahlen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Wir sind Freunde des Online-Payments. Das heisst du kannst alle unsere Fahrlektionen und Kurse direkt online bezahlen. Möchtest du lieber bar bezahlen, ist das natürlich auch möglich. Für Firmen erstellen wir natürlich auch Rechnungen.</p>
         </details>
@@ -446,80 +447,9 @@
       </div>
     </section>
 
-    <!-- Gift Voucher Section -->
-    <section class="relative py-24 overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800">
-      <!-- Decorative background elements -->
-      <div class="absolute inset-0 opacity-20">
-        <div class="absolute top-0 left-0 w-96 h-96 bg-white rounded-full mix-blend-multiply filter blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
-      </div>
-
-      <div class="section-container relative z-10">
-        <div class="max-w-4xl mx-auto">
-          <!-- Header -->
-          <div class="text-center mb-16">
-            <div class="inline-block mb-4">
-              <span class="text-6xl">🎁</span>
-            </div>
-            <h2 class="text-4xl md:text-5xl font-black text-white mb-4">Jetzt Gutschein bestellen</h2>
-            <p class="text-xl md:text-2xl text-primary-100 font-semibold">Schenke Sicherheit und bestelle jetzt einen Gutschein!</p>
-          </div>
-
-          <!-- Main Card -->
-          <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <!-- Card Header with accent -->
-            <div class="bg-gradient-to-r from-primary-500 to-primary-600 px-8 py-8">
-              <p class="text-white text-lg font-semibold text-center">
-                Möchtest du jemandem Sicherheit schenken?
-              </p>
-            </div>
-
-            <!-- Card Content -->
-            <div class="px-8 md:px-12 py-12">
-              <p class="text-gray-700 text-lg mb-8 leading-relaxed">
-                Dann schreibe uns eine E-Mail und der Gutschein für Fahrstunden wird schon bald bei dir sein! Die Rechnung wird separat per E-Mail verschickt.
-              </p>
-
-              <div class="bg-primary-50 rounded-xl p-8 mb-8 border-l-4 border-primary-600">
-                <p class="text-gray-900 font-bold mb-6 text-lg">
-                  Folgende Punkte müssen in deiner E-Mail mindestens vorhanden sein:
-                </p>
-                
-                <ul class="space-y-4">
-                  <li class="flex items-start gap-4 group">
-                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
-                    <span class="text-gray-700 text-lg pt-1">Vorname und Nachname des Gutscheinempfängers</span>
-                  </li>
-                  <li class="flex items-start gap-4 group">
-                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
-                    <span class="text-gray-700 text-lg pt-1">Anzahl der gewünschten Fahrstunden</span>
-                  </li>
-                  <li class="flex items-start gap-4 group">
-                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
-                    <span class="text-gray-700 text-lg pt-1">Kategorie (Auto, Motorrad, etc.)</span>
-                  </li>
-                  <li class="flex items-start gap-4 group">
-                    <span class="text-primary-600 font-bold text-2xl flex-shrink-0">✓</span>
-                    <span class="text-gray-700 text-lg pt-1">Deine Kontaktdaten für Rückfragen</span>
-                  </li>
-                </ul>
-              </div>
-
-              <!-- CTA Button -->
-              <div class="text-center">
-                <a href="mailto:info@drivingteam.ch?subject=Gutschein%20bestellen" class="inline-flex items-center gap-3 bg-gradient-to-r from-primary-600 to-primary-600 text-white font-bold px-10 py-4 rounded-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                  <span>📧</span>
-                  <span>Jetzt E-Mail schreiben</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <PriceSection />
-    <CurriculumSection />
+    <AusbildungsthemenSection />
+    <GutscheinSection />
     <StandorteSection />
     <WarumSection />
   </div>

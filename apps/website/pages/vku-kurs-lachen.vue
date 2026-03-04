@@ -103,31 +103,31 @@
     <section class="section-container">
       <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen bezüglich VKU Kurs Lachen</h2>
       <div class="max-w-3xl mx-auto space-y-4">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was ist ein VKU Kurs und warum ist er notwendig?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ein VKU Kurs bei Driving Team Lachen vermittelt essenzielle Fähigkeiten für sicheres Autofahren. Er ist gesetzlich vorgeschrieben, um sicherzustellen, dass alle Autofahrer:innen in der Schweiz die notwendigen Kenntnisse für die Teilnahme am Strassenverkehr besitzen. Dieser Kurs senkt das Unfallrisiko und steigert die Sicherheit auf den Strassen.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wer muss einen VKU Kurs in der Schweiz absolvieren?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">In der Schweiz ist der VKU Kurs Pflicht für alle, die einen Führerausweis der Kategorie A oder B zum ersten Mal anstreben. Dieser VKU Kurs ist ein wesentlicher Schritt, um die nötige Befähigung für sicheres Autofahren zu erlangen und den Weg zum Autoführerausweis erfolgreich zu meistern.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie viele Stunden umfasst der VKU Kurs bei Driving Team in Lachen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs bei Driving Team in Lachen umfasst insgesamt 8 Stunden, aufgeteilt in 2 Kursteile à 4 Stunden. Diese Struktur gewährleistet eine umfassende Ausbildung in allen wichtigen Bereichen des Autofahrens.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Welche Themen werden im VKU Kurs behandelt?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <div class="text-gray-600 mt-4">
             <p class="mb-3">Der Kurs ist in 2 Teile gegliedert:</p>
@@ -138,52 +138,52 @@
             <p class="mt-3">Der VKU Kurs ist nach Absolvierung für immer gültig und muss daher bei Ablaufen des Lernfahrausweises nicht noch einmal besucht werden.</p>
           </div>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie kann ich mich für einen VKU Kurs bei Driving Team Lachen anmelden?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Die Anmeldung für einen VKU Kurs bei Driving Team in Lachen ist einfach und unkompliziert. Klicke auf einen der «Jetzt anmelden»-Buttons auf dieser Seite. Wähle ein Kursdatum (beide Daten müssen passen und die Reihenfolge muss eingehalten werden) aus und fülle das Formular vollständig aus. Die Lernfahrausweis-ID findest du in deinem Lernfahrausweis.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie viel kostet der VKU Kurs bei Driving Team in Lachen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Bei Driving Team in Lachen beträgt die Gebühr für den VKU Kurs CHF 250.- inklusive Lehrmittel und Kursbestätigung. Diese Investition in deine Sicherheit stellt sicher, dass du bestens für die Teilnahme am Strassenverkehr vorbereitet bist.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Welche Zahlungsmethoden werden akzeptiert?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Nach deiner Anmeldung zum VKU Kurs bei Driving Team in Lachen erhältst du eine Rechnung, die innerhalb von 14 Tagen beglichen werden muss. Bitte beachte, dass die Zahlung fristgerecht erfolgen sollte, um deinen Platz im Kurs zu sichern.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Gibt es eine Rückerstattungspolitik, falls ich nicht am Kurs teilnehmen kann?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ja, bei Driving Team in Lachen verstehen wir, dass Pläne sich ändern können. Frühzeitige Umbuchungen oder Absagen sind daher kostenlos möglich. Bei Umbuchungen oder Absagen weniger als 14 Tage vor Kursbeginn erheben wir eine Umtriebsentschädigung von CHF 80.-. Für unentschuldigtes Fernbleiben oder Absagen weniger als 24 Stunden vor Kursbeginn müssen leider die vollen Kurskosten verrechnet werden.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wo findet der VKU Kurs statt?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs von Driving Team Lachen wird in unserem Fahrschullokal in Lachen durchgeführt: Herrengasse 17, 8853 Lachen/SZ (2 Gehminuten vom Bahnhof Lachen).</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Welche Sprachen werden für den VKU Kurs angeboten?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs bei Driving Team in Lachen wird grundsätzlich in Deutsch durchgeführt. Du kannst jemanden für die Übersetzung mitnehmen, wenn du Grundkenntnisse in deutscher Sprache hast, ist dies bereits genug.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Gibt es spezielle Vorbereitungen vor dem Kurs?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Um sich am VKU Kurs bei Driving Team in Lachen anmelden zu können, musst du im Besitz eines gültigen Lernfahrausweises sein. Ist dies noch nicht der Fall, können wir leider keine Anmeldungen entgegennehmen. Auch während des ganzen VKU Kurs musst du im Besitz des gültigen Lernfahrausweises sein.</p>
         </details>
