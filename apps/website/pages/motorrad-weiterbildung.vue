@@ -72,52 +72,52 @@
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen bezüglich Motorrad Kursen</h2>
         <div class="max-w-3xl mx-auto space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was ist eine Motorrad-Weiterbildung und warum ist sie notwendig?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Eine Motorrad-Weiterbildung bei Driving Team vermittelt essenzielle Fähigkeiten für sicheres Motorradfahren, darunter die korrekte Sitzposition, Fahrzeugbedienung, Kurvenfahren, schnelles Bremsen und andere wichtige Techniken.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie viele Stunden umfasst die Motorrad-Weiterbildung?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Die Motorrad-Weiterbildung bei der Fahrschule Driving Team umfasst insgesamt 3 Stunden. Dies gewährleistet eine umfassende Weiterbildung in allen genannten Bereichen des Motorradfahrens.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Welche Motorräder stellt Driving Team für die Weiterbildung zur Verfügung?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Grundsätzlich empfehlen wir diesen Kurs mit dem eigenen Motorrad zu absolvieren. Wer kurzfristig kein Motorrad zur Verfügung hat, kann uns gerne für die Miete eines Fahrschul-Motorrades kontaktieren.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie viel kostet die Motorrad-Weiterbildung?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Bei der Fahrschule Driving Team beträgt die Gebühr für die Motorrad-Weiterbildung CHF 190.-. Nach deiner Anmeldung erhältst du eine Rechnung, die du bitte innerhalb von 14 Tagen begleichst.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was passiert bei schlechtem Wetter?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Bei der Fahrschule Driving Team legen wir grossen Wert auf Sicherheit. Sollten die Wetterbedingungen, wie Temperaturen unter 5 Grad Celsius oder heftige Niederschläge, ein sicheres Fahren nicht zulassen, wird der Kurs verschoben.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Welche Sicherheitsausrüstung ist erforderlich?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Für die Motorrad-Weiterbildung ist das Tragen eines Motorradhelms gesetzlich vorgeschrieben und somit das absolute Minimum. Empfohlen wird vollständige Motorrad-Sicherheitsbekleidung: Helm, Handschuhe, Jacke, Hose und Stiefel.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie erhalte ich die unlimitierte Kategorie A?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Um die unlimitierte Kategorie A in der Schweiz zu erhalten, musst du zunächst die praktische Prüfung für die beschränkte Kategorie A (35 kW) erfolgreich bestehen. Anschliessend sind zwei Jahre Fahrpraxis und eine weitere Prüfung erforderlich.</p>
           </details>

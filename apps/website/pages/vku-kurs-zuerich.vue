@@ -111,31 +111,31 @@
     <section class="section-container">
       <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen bezüglich VKU Kurs Zürich</h2>
       <div class="max-w-3xl mx-auto space-y-4">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was ist ein VKU Kurs und warum ist er notwendig?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ein VKU Kurs bei Driving Team Zürich vermittelt essenzielle Fähigkeiten für sicheres Autofahren. Er ist gesetzlich vorgeschrieben, um sicherzustellen, dass alle Autofahrer:innen in der Schweiz die notwendigen Kenntnisse und Fähigkeiten besitzen, um sicher und verantwortungsbewusst am Strassenverkehr teilzunehmen.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wer muss einen VKU Kurs in der Schweiz absolvieren?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">In der Schweiz ist der VKU Kurs Pflicht für alle, die einen Führerausweis der Kategorie A oder B zum ersten Mal anstreben. Dieser VKU Kurs ist ein wesentlicher Schritt, um die nötige Befähigung für sicheres Fahren zu erlangen.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie viele Stunden umfasst der VKU Kurs?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs bei Driving Team in Zürich umfasst insgesamt 8 Stunden, aufgeteilt in 2 Kursteile à 4 Stunden. Diese Struktur gewährleistet eine umfassende Ausbildung in allen wichtigen Bereichen des Autofahrens.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Welche Themen werden im VKU Kurs behandelt?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <div class="text-gray-600 mt-4">
             <p class="mb-3">Im VKU Kurs bei Driving Team in Zürich decken wir eine umfassende Bandbreite an Themen ab. Der Kurs ist in 2 Teile gegliedert:</p>
@@ -145,52 +145,52 @@
             </ul>
           </div>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie lange ist der VKU Kurs gültig?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs ist nach Absolvierung für immer gültig und muss daher bei Ablaufen des Lernfahrausweises bzw. Beantragung eines neuen Lernfahrausweis nicht noch einmal besucht werden.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie kann ich mich für einen VKU Kurs anmelden?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Die Anmeldung für einen VKU Kurs bei Driving Team in Zürich ist einfach und unkompliziert. Auf unserer Website findest du mehrere «Jetzt anmelden»-Buttons. Klicke einfach auf einen davon, um zum Anmeldeformular zu gelangen.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie viel kostet der VKU Kurs?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Bei Driving Team in Zürich beträgt die Gebühr für den VKU Kurs 190 CHF inklusive Lehrmittel und Kursbestätigung.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Gibt es eine Rückerstattungspolitik?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ja, bei Driving Team in Zürich verstehen wir, dass Pläne sich ändern können. Frühzeitige Umbuchungen oder Absagen sind daher kostenlos möglich. Bei Umbuchungen oder Absagen weniger als 14 Tage vor Kursbeginn wird eine Gebühr erhoben.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wo findet der VKU Kurs statt?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs von Driving Team Zürich wird in unserem Fahrschullokal in Zürich (Baslerstrasse 145, 8048 Zürich, 2 Gehminuten vom Bahnhof Altstetten) durchgeführt.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             In welcher Sprache wird der VKU Kurs durchgeführt?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der VKU Kurs bei Driving Team in Zürich wird grundsätzlich in Deutsch durchgeführt. Du kannst jemanden für die Übersetzung mitnehmen. Wenn du Grundkenntnisse in deutscher Sprache hast, ist dies bereits ausreichend.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Gibt es spezielle Vorbereitungen vor dem Kurs?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Um sich am VKU Kurs bei Driving Team in Zürich anmelden zu können, musst du im Besitz eines gültigen Lernfahrausweises sein. Ist dies noch nicht der Fall, können wir leider keine Anmeldungen entgegennehmen.</p>
         </details>

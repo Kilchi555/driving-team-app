@@ -196,50 +196,50 @@
         </p>
 
         <div class="max-w-3xl mx-auto space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wieviele Fahrstunden benötige ich für die Kontrollfahrt?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Die Anzahl der benötigten Fahrstunden ist sehr von deiner Erfahrung mit dem Autofahren abhängig. Bist du schon sicher und geübt mit privaten Lernfahrten, wirst du weniger Fahrstunden benötigen.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie kann ich meine Fahrausbildung für die Kontrollfahrt beschleunigen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Das Wichtigste ist sicher… Üben, Üben und nochmals Üben. Optimal wären 2–4 Fahrten pro Woche. Das heisst nicht unbedingt 2–4 Fahrstunden, sondern zum Beispiel 1 Fahrlektion und 1 Mal privat repetieren.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Mit welchem Fahrzeug wird die Kontrollfahrt durchgeführt?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">In der Regel führen wir Fahrstunden für die Kontrollfahrt mit einem Automatik-Fahrzeug durch. Du bekommst nach bestandener Kontrollfahrt einen schweizerischen Führerausweis, der dir beides erlaubt zu fahren – also sowohl Automatik als auch Schaltgetriebe (sofern du ursprünglich mit Schaltung gelernt hast).</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Darf ich mit ausländischem Führerausweis in der Schweiz fahren?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Private Lernfahrten sind mit ausländischem Führerausweis ohne Begleitperson in den ersten 12 Monaten nach Einreise erlaubt. Nach diesen 12 Monaten erlischt die Fahrerlaubnis, ausser du bist im Besitz eines gültigen Lernfahrausweises.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was ist die Admin- und Versicherungspauschale?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits ist auch eine Kfz-Versicherung für Personen- und Sachschäden inbegriffen.</p>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Welches sind die häufigsten Prüfungsrouten ab Zürich-Albisgütli?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <div class="text-gray-600 mt-4">
               <p class="mb-3">Grundsätzlich können die Verkehrsexperten die Prüfungsroute frei wählen. Im Allgemeinen werden folgende Gebiete befahren:</p>
@@ -254,10 +254,10 @@
             </div>
           </details>
 
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie kann ich eure E-Mail Rechnungen auf dem Smartphone bezahlen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Wir versenden dir die Rechnung per E-Mail mit einer PDF-Datei im Anhang. Öffne diese PDF-Datei, geh dann auf «Teilen» und öffne die PDF-Datei mit deinem Mobile-Banking App. So kannst du unsere Rechnungen direkt auf deinem Smartphone bezahlen.</p>
           </details>

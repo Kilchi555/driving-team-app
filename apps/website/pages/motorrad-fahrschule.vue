@@ -23,52 +23,13 @@
       </div>
     </section>
 
-    <!-- Highlights/Benefits -->
-    <section class="section-container">
-      <h2 class="heading-md mb-12">Was wir bieten</h2>
-      <ul class="grid md:grid-cols-2 gap-6 mb-16 space-y-0">
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Blutiger Anfänger? Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen A1 Führerschein oder die grösseren Kategorien A35kW oder A benötigst.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Individuelle Förderung? Buche massgeschneiderte Privatstunden, um deine Fahrfähigkeiten gezielt zu verbessern.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Gemeinsam Lernen? Unsere Gruppenkurse bieten eine motivierende Atmosphäre.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Prüfungssimulation? Bereite dich optimal auf die Motorradprüfung vor, damit am grossen Tag nichts schiefgeht.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="text-3xl flex-shrink-0">✓</span>
-          <div>
-            <p class="text-lg text-gray-900">Auffrischungskurs? Auch wenn du bereits im Besitz des Motorrad Führerausweises bist und deine Fahrfähigkeiten auffrischen möchtest, bist du in unseren Motorrad Fahrstunden bestens aufgehoben.</p>
-          </div>
-        </li>
-      </ul>
-      <div class="text-center">
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary">
-          Fahrstunden anfragen
-        </a>
-      </div>
-    </section>
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="motorradBenefits" />
 
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-8 text-center">Voraussetzungen</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
         <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
           <ul class="space-y-4">
             <li class="flex gap-3">
@@ -93,20 +54,20 @@
 
     <!-- Process Steps -->
     <section class="section-container py-16">
-      <h2 class="heading-md mb-12 text-center">Allgemeiner Ausbildungsablauf</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Allgemeiner Ausbildungsablauf</h2>
       
       <div class="space-y-8 max-w-4xl mx-auto">
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Nothelferkurs</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Nothelferkurs</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Bevor du das Lernfahrgesuch beim Strassenverkehrsamt einreichen kannst, musst du den Nothelferkurs absolvieren. Falls du bereits im Besitz eines Nothelferausweises bist, ist dieser ab Ausstellungsdatum sechs Jahre gültig.</p>
               <p class="text-sm text-gray-500 mt-2 italic">Für Inhaber:innen der Kategorie B Auto ist dies nicht notwendig – weiter mit Schritt 2.</p>
               <div class="mt-3">
@@ -116,16 +77,16 @@
         </details>
 
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Lernfahrgesuch Motorrad | Roller</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Lernfahrgesuch Motorrad | Roller</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus und gehe damit zu einem Optiker oder Augenarzt, um den Sehtest eintragen zu lassen. Anschliessend musst du mit dem ausgefüllten Anmeldeformular, Nothelferausweis, einem farbigen Passfoto und ID/Pass persönlich beim Strassenverkehrsamt vorbeigehen.</p>
               <div class="mt-3 p-3 bg-gray-50 rounded-lg">
                 <p class="text-xs font-semibold text-gray-700 mb-1">Neue Regeln seit 01.01.2021:</p>
@@ -147,32 +108,32 @@
         </details>
 
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Theorieprüfung</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Theorieprüfung</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Nach erfolgter Anmeldung erhältst du eine Bestätigung mit PIN-Code, mit dem du dich an die Theorieprüfung anmelden kannst. Um dich optimal vorzubereiten, empfehlen wir dir, mit einem Theoriebuch zu lernen und anschliessend die Fragen mit einer Lern-CD oder App zu üben. Denn eine solide theoretische Grundlage spart Fahrstunden!</p>
               <p class="text-sm text-gray-500 mt-2 italic">Für Inhaber:innen der Kategorie B (Auto) ist dies nicht notwendig – weiter mit Schritt 5 (Fahrstunden).</p>
           </div>
         </details>
 
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Verkehrskunde VKU</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Verkehrskunde VKU</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Im total achtstündigen Verkehrskundekurs VKU wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den VKU gleich zu Beginn der praktischen Fahrausbildung zu besuchen.</p>
               <p class="text-sm text-gray-500 mt-2 italic">Nicht notwendig für Inhaber:innen der Kategorie B (Auto) – weiter mit Schritt 5 Fahrstunden. | 2 Kursteile à 4 Stunden</p>
               <div class="mt-3 flex flex-wrap gap-2">
@@ -183,16 +144,16 @@
         </details>
 
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">5</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Motorrad | Roller Fahrstunden</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Motorrad | Roller Fahrstunden</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Wir legen dir ans Herz, deine ersten Motorrad Fahrstunden gleich zu Beginn bei unseren qualifizierten Motorrad Fahrlehrer:innen in Angriff zu nehmen. Falsch erlernte Angewohnheiten und Automatismen lassen sich später nur mit erhöhtem Zeit- und Kostenaufwand korrigieren.</p>
               <p class="text-sm text-gray-600 mt-2">Unser Fahrschul-Motorrad steht dir zur Verfügung und kann für nur 20 CHF pro Lektion gemietet werden. Für die Prüfungsvorbereitung empfehlen wir, den letzten Schliff bei deinem Motorrad Fahrlehrer zu holen.</p>
               <div class="mt-3 p-3 bg-primary-50 rounded-lg">
@@ -204,16 +165,16 @@
         </details>
 
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">6</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">6</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Motorrad | Roller Grundkurs</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Motorrad | Roller Grundkurs</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Wenn du die Kategorie A1 nach dem 01.01.2021 erworben hast und jetzt die Kategorie A35kW absolvieren möchtest, musst du den Grundkurs nicht mehr besuchen. Um dein Fahrzeug besser und sicherer unter Kontrolle zu haben, empfehlen wir dir den Grundkurs trotzdem zu besuchen. Mögliche Themen sind zum Beispiel Manöver, Kurvenfahren, eine schnelle & sichere Bremsung und vieles mehr.</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <a href="/motorrad-grundkurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Grundkurs Zürich</a>
@@ -225,16 +186,16 @@
         </details>
 
         <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-          <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+          <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
             <div class="flex-shrink-0">
-              <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">7</div>
+              <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">7</div>
             </div>
             <div class="flex-1 flex items-center justify-between">
-              <h3 class="heading-sm">Praktische Motorradprüfung</h3>
-              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+              <h3 class="text-base md:text-lg lg:text-xl font-bold">Praktische Motorradprüfung</h3>
+              <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
             </div>
           </summary>
-          <div class="px-8 pb-6 ml-[72px]">
+          <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
               <p class="text-sm text-gray-600">Um die praktische Motorradprüfung zu bestehen, braucht es heute mehr denn je. Trotz diesen hohen Anforderungen hast du mit einer seriösen und umfangreichen Fahrausbildung gute Erfolgschancen.</p>
               <p class="text-sm text-gray-600 mt-2">Die Motorradfahrprüfung beginnt in der Regel mit dem Manöverteil wie z. B. Spurgasse, versetzter Slalom und die 8-fahren. Anschliessend möchte der Verkehrsexperte sehen, wie du dein Motorrad von 50km/h möglichst schnell und sicher zum Stillstand bringst.</p>
               <p class="text-sm text-gray-600 mt-2">Bei der Kategorie A35kW oder A unlimitiert musst du noch beweisen, dass es für dich kein Problem darstellt, mit einer zweiten Person auf deinem Motorrad im Strassenverkehr unterwegs zu sein.</p>
@@ -252,7 +213,7 @@
     <!-- Motorrad Kurse -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-6 text-center">Motorrad Kurse</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Motorrad Kurse</h2>
         <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Wie überall im Leben hat man auch beim Motorradfahren nie ausgelernt. Mehrmals im Jahr veranstalten wir Events und Trainings, bei denen du deine Fähigkeiten vertiefen kannst.</p>
         <div class="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto">
           <a href="/motorrad-grundkurs-zuerich/" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
@@ -282,26 +243,26 @@
     <section class="section-container">
       <h2 class="heading-md mb-12 text-center">Häufig gestellte Fragen</h2>
       <div class="max-w-3xl mx-auto space-y-4 mb-12">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Welche Kategorien gibt es für Motorräder?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">A1 (bis 50ccm ab 15 J. / bis 125ccm ab 16 J.), A35kW beschränkt (ab 18 J.) und A unbeschränkt (nach 2 Jahren A35kW-Praxis). Wir bieten Ausbildung für alle Kategorien an.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Ist der Grundkurs obligatorisch?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Der Grundkurs ist für die meisten Kategorien obligatorisch. Seit 01.01.2021 gilt: Wer die Kategorie A1 nach diesem Datum erworben hat und jetzt A35kW machen möchte, muss den Grundkurs nicht mehr besuchen. Wir empfehlen ihn dennoch für mehr Sicherheit.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Kann ich ein Fahrschul-Motorrad mieten?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Ja! In Zürich-Altstetten können Anfänger:innen unser Fahrschul-Motorrad (Kat. 35kW) für 20.- pro Lektion mieten. Auf Wunsch kann auch ein Helm für 10.- pro Termin dazugemietet werden.</p>
         </details>
@@ -318,7 +279,7 @@
     <!-- Why Choose Us -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-6 text-center">Warum die Motorrad Fahrschule Driving Team?</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Warum die Motorrad Fahrschule Driving Team?</h2>
         <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Unsere Motorrad Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Fahrschule aufgebaut, die nicht nur Wissen vermittelt, sondern auch Freude am Fahren weckt.</p>
         <div class="grid md:grid-cols-3 gap-8 mb-12">
           <div class="bg-white rounded-lg p-8 shadow-sm">
@@ -355,7 +316,7 @@
     <!-- CTA Section -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
-        <h2 class="heading-md mb-6 text-white">Bereit für dein Motorrad-Abenteuer?</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Bereit für dein Motorrad-Abenteuer?</h2>
         <p class="hidden xs:block text-xl text-primary-100 mb-8">Starte jetzt deine Motorrad-Ausbildung bei Driving Team!</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
@@ -377,4 +338,26 @@
 </template>
 
 <script setup lang="ts">
+const motorradBenefits = [
+  {
+    title: 'Blutiger Anfänger?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen A1 Führerschein oder die grösseren Kategorien A35kW oder A benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Privatstunden, um deine Fahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Gemeinsam Lernen?',
+    description: 'Unsere Gruppenkurse bieten eine motivierende Atmosphäre.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Motorradprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Auffrischungskurs?',
+    description: 'Auch wenn du bereits im Besitz des Motorrad Führerausweises bist und deine Fahrfähigkeiten auffrischen möchtest, bist du in unseren Motorrad Fahrstunden bestens aufgehoben.'
+  }
+]
 </script>

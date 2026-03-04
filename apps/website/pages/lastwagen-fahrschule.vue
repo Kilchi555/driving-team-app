@@ -34,20 +34,20 @@
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Weg zur Lastwagenprüfung - 5 Schritte zu deinem Traumberuf</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Weg zur Lastwagenprüfung - 5 Schritte zu deinem Traumberuf</h2>
         
         <div class="space-y-8 max-w-4xl mx-auto">
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lernfahrgesuch Führerschein Kategorie C1 | C | CE</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lernfahrgesuch Führerschein Kategorie C1 | C | CE</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Der erste Schritt zu deinem LKW Führerschein ist der Antrag für den Lernfahrausweis. Lade das Gesuchsformular herunter und kreuze die gewünschte Kategorie an (Führerschein C für schwere Motorwagen über 3.5t). Bevor du das Formular einreichst, benötigst du einen aktuellen Sehtest beim Optiker oder Augenarzt.</p>
                 <div class="mt-3 p-3 bg-gray-50 rounded-lg">
                   <p class="text-xs font-semibold text-gray-700 mb-1">Voraussetzungen:</p>
@@ -66,48 +66,48 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Verkehrsmedizinische Kontrolluntersuchung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Verkehrsmedizinische Kontrolluntersuchung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Nachdem du das Gesuchsformular eingereicht hast, ist eine obligatorische medizinische Kontrolluntersuchung erforderlich. Das Strassenverkehrsamt wird dir per Post eine Liste mit den Vertrauensärzten zuschicken. Diese Untersuchung überprüft deine Fahrtauglichkeit speziell für das Führen von schweren Motorfahrzeugen.</p>
                 <p class="text-sm text-gray-600 mt-2">Fällt dieser Gesundheitscheck positiv aus, erhältst du deinen Lernfahrausweis – deine offizielle Berechtigung, mit den Fahrstunden zu beginnen.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Fahrstunden für den LKW Führerschein – auch vor der Theorieprüfung!</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Fahrstunden für den LKW Führerschein – auch vor der Theorieprüfung!</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Sobald du deinen Lernfahrausweis hast, kannst du direkt mit den praktischen Fahrstunden beginnen. Wir empfehlen dir dringend, uns umgehend zu kontaktieren. Je früher du mit den Fahrstunden beginnst, desto besser! Es macht sogar Sinn, die Lastwagen Theorie parallel zu den praktischen Fahrstunden zu lernen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Tipp: Mach gleich den Führerschein C statt nur C1 – der zusätzliche Aufwand ist gering, aber die Möglichkeiten sind viel grösser!</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lastwagen Theorieprüfung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lastwagen Theorieprüfung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Der vierte Schritt ist die Lastwagentheorieprüfung. Du kannst das Lernen für die Theorie parallel zu deinen praktischen Fahrstunden absolvieren – so kannst du das theoretisch erworbene Wissen direkt in die Praxis umsetzen.</p>
                 <div class="mt-3 p-3 bg-gray-50 rounded-lg">
                   <p class="text-xs text-gray-600">Die maximale Fehlerpunktezahl ist 4. Du musst 40 Fragen in 45 Minuten beantworten (jeweils 1 Antwort richtig). Die Theorieprüfung der Kategorie C wird gerne unterschätzt!</p>
@@ -119,32 +119,32 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">5</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lastwagenfahrprüfung Kategorie C | C1 | CE</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lastwagenfahrprüfung Kategorie C | C1 | CE</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Der krönende Abschluss ist die praktische Lastwagenfahrprüfung. Diese absolvierst du souverän mit unserem modernen Fahrschul-Lastwagen. Am Tag deiner Lastwagenprüfung treffen wir uns frühzeitig. So hast du genügend Zeit, dich in Ruhe vorzubereiten.</p>
                 <p class="text-sm text-gray-600 mt-2">Die eigentliche Lastwagenprüfung dauert circa 90 Minuten und findet beim Strassenverkehrsamt deiner Wahl statt. Sobald du bereit für die praktische Prüfung bist, meldet dich der Fahrlehrer beim Strassenverkehrsamt an.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-gray-400 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-gray-400 text-white font-bold text-lg">+</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-gray-400 text-white font-bold text-sm md:text-lg">+</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lastwagen Anhänger CE – Bonus!</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lastwagen Anhänger CE – Bonus!</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Du möchtest noch mehr erreichen und die grössten Fahrzeugkombinationen fahren? Dann ist die LKW Anhängerprüfung der Kategorie CE dein nächstes Ziel! Ein grosser Vorteil: Nach erfolgreicher CE-Prüfung erhältst du automatisch die Anhängerberechtigung für alle anderen Kategorien.</p>
             </div>
           </details>
@@ -160,7 +160,7 @@
 
     <!-- Preise -->
     <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Unsere Preise</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-10 text-center">Unsere Preise</h2>
       <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
           <h3 class="font-bold text-xl text-center mb-2 text-primary-600">Kategorie C1</h3>
@@ -214,37 +214,37 @@
 
     <!-- FAQ Section -->
     <section class="section-container">
-      <h2 class="heading-md mb-6 text-center">Die häufigsten Fragen & Antworten</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Die häufigsten Fragen & Antworten</h2>
       <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Hier findest du die gängigsten Fragen rund um das Thema Lastwagenprüfung der Kategorie C.</p>
       <div class="max-w-3xl mx-auto space-y-4 mb-12">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie viele Fahrstunden brauche ich?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das ist individuell verschieden. Es hängt davon ab, wie schnell du dich mit dem Fahrzeug vertraut machen kannst. Vom Erhalt des Lernfahrausweises bis zur bestandenen praktischen Führerprüfung war der bisher schnellste Fahrschüler innert 5 Wochen fertig.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was beinhaltet die Versicherungspauschale?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet die Aufwände ausserhalb der Fahrlektionen, wie z.B. die Anmeldung zur Führerprüfung, sowie die Fahrzeugversicherung während der Fahrausbildung.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Muss ich zuerst die Theorie bestehen bevor ich Fahrstunden machen kann?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Nein! Du benötigst lediglich den Lernfahrausweis, um mit den Lastwagen Fahrstunden starten zu können. Es macht sogar Sinn, die Lastwagen Theorie parallel zu den praktischen Fahrstunden zu lernen – so hast du beides frisch im Kopf.</p>
         </details>
 
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Was brauche ich für den CZV?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Wer beruflich Lastwagen fahren möchte, braucht einen Fähigkeitsausweis (CZV). Du brauchst sehr gute Deutschkenntnisse und die bestandene Theorieprüfung der Kat. C. Wir bieten eine optimale Prüfungsvorbereitung, zeitgemässe Lehrmittel, Unterricht am Modell sowie Verpflegung.</p>
         </details>
@@ -261,7 +261,7 @@
     <!-- Why Choose Us -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-6 text-center">Warum die Lastwagen Fahrschule Driving Team in Zürich & Lachen/SZ?</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Warum die Lastwagen Fahrschule Driving Team in Zürich & Lachen/SZ?</h2>
         <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Unsere LKW Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
         <div class="grid md:grid-cols-3 gap-8 mb-12">
           <div class="bg-white rounded-lg p-8 shadow-sm">
@@ -296,7 +296,7 @@
     <!-- CTA Section -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
-        <h2 class="heading-md mb-6 text-white">Starte deine Lastwagen-Karriere!</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Starte deine Lastwagen-Karriere!</h2>
         <p class="hidden xs:block text-xl text-primary-100 mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">

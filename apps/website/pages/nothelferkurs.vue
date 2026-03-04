@@ -110,66 +110,66 @@
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">Die häufigen Fragen & Antworten</h2>
         <div class="max-w-3xl mx-auto space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie viele Stunden dauert der Nothelferkurs?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Der Nothelferkurs bei der Fahrschule Driving Team dauert total 10 Stunden. Normalerweise ist der Nothelferkurs in zwei Teile aufgeteilt. Der erste Teil findet in der Regel am Abend statt und dauert 3 Stunden. Der zweite Teil findet an einem anderen Tag statt und dauert 7 Stunden.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Muss die Reihenfolge der Kursteile eingehalten werden?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Ja, dies ist gesetzlich so vorgeschrieben. Es dürfen keine Ausnahmen gemacht werden. Der Kurs ist auch von den Themen her logisch aufgebaut.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was passiert, wenn ich beim Teil 2 kurzfristig absagen muss?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Gegen eine Umtriebsentschädigung kannst du den Teil 2 an einem anderen Tag nachholen. Kontaktiere dafür bitte den Veranstalter Flying-Instructor: 043 543 98 98 oder info@flying-instructor.ch.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie viel kostet der Nothelferkurs?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Der Nothelferkurs beim Driving Team wird durch die Leute vom Flying-Instructor durchgeführt und kostet CHF 99.- inkl. Nothelferausweis. Der Kurs ist bei Kursbeginn bar zu bezahlen.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wo finden die Nothelferkurse statt?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Die Nothelferkurse von der Fahrschule Driving Team finden in den Kurslokalen in Zürich-Altstetten und Lachen/SZ statt.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was sind die Voraussetzungen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Grundsätzlich keine. Ab dem 11. Lebensjahr darf man am Nothelferkurs teilnehmen.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               In welcher Sprache werden die Kurse durchgeführt?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Grundsätzlich werden die Kurse in Deutsch durchgeführt. Verstehst du Hochdeutsch, dann reicht dies bereits für die Teilnahme. Falls nicht, dann darfst du auch einen Übersetzer an den Kurs mitbringen.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie lange ist der Nothelferausweis gültig?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Der Nothelferausweis ist 6 Jahre gültig.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was passiert, wenn ich zu spät erscheine?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Eine Verspätung von maximal 15 Minuten wird akzeptiert. Danach muss der Kurs leider an einem anderen Tag absolviert werden. Die Kurskosten werden zu 100% verrechnet.</p>
           </details>

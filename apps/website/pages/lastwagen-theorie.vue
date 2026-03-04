@@ -117,24 +117,24 @@
       <div class="section-container">
         <h2 class="heading-md text-center mb-12">Häufige Fragen</h2>
         <div class="max-w-3xl mx-auto space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wieviele Theorielektionen benötige ich, um die Lkw Theorieprüfung zu bestehen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Dies ist sehr unterschiedlich. Der Lkw Theorie Kurs ist sicher sehr zu empfehlen. In seltenen Fällen schafft es jemand die Lkw Theorieprüfung zu bestehen, ohne den Lastwagen Theorie Kurs besucht zu haben.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wo bietet ihr Lkw Theorie Kurse an?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">In unseren Fahrschullokalen in Zürich-Altstetten und Lachen/SZ bieten wir Lkw Theorie Kurse für die Kategorien C1, C, D1 und D an.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was sind die Voraussetzungen, um am Lkw Theorie Kurs teilzunehmen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <div class="text-gray-600 mt-4">
               <p class="mb-2">Grundsätzlich darf jede Person am Lkw Theorie Kurs teilnehmen, es macht jedoch Sinn folgende Voraussetzungen zu erfüllen:</p>

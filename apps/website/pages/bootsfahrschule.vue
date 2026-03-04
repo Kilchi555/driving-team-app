@@ -115,17 +115,17 @@
       <div class="section-container">
         <h2 class="heading-md text-center mb-12">Häufigste Fragen in der Bootsfahrschule</h2>
         <div class="max-w-3xl mx-auto space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wieviele Fahrstunden benötige ich?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Auch bei der Bootfahrausbildung ist das eine Frage die man nur schwierig beantworten kann. Es ist auch hier sehr davon abhängig wie schnell du dich mit dem Motorboot vertraut machen kannst.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was ist das Mindestalter?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden. Bereits ab einem Alter von 18 Jahren darf man den Lernfahrausweis für die Motorbootkategorie bestellen und die Bootsprüfung absolvieren.</p>
           </details>

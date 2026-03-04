@@ -97,38 +97,38 @@
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">CZV – Häufige Fragen</h2>
         <div class="max-w-3xl mx-auto space-y-4">
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Warum gibt es CZV-Weiterbildungen?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Mit der Weiterbildung von Chauffeuren und Chauffeusen soll erreicht werden, dass Erfahrungen aus der praktischen Tätigkeit zusammen mit Fachpersonen diskutiert, Defizite in der praktischen Berufsausübung behoben und berufliche Kenntnisse vertieft werden.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Was ist das SARI?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">SARI (System für Administration, Registrierung und Information) dient dazu, in der ganzen Schweiz via Internet einfach und sicher Teilnahmebestätigungen für CZV-Weiterbildung bei der asa zu beziehen und zu verwalten.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie werden Absagen geregelt?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Das Driving Team behält sich das Recht vor, Kurse bei denen die Mindestteilnehmerzahl nicht erreicht wird, die Lehrperson verhindert ist oder aus Sicherheitsgründen kurzfristig abzusagen oder zu verschieben.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Welche Zahlungsmethoden werden akzeptiert?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Nach deiner Anmeldung zur CZV Weiterbildung beim Driving Team erhältst du ca. 30 Tage vor Kursbeginn eine Rechnung, die innerhalb von 14 Tagen beglichen werden muss.</p>
           </details>
-          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
               Wie erfolgt der Nachweis der CZV Weiterbildung?
-              <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
             <p class="text-gray-600 mt-4">Für die Erneuerung des Fähigkeitsausweises musst du fünf Tage Weiterbildung innerhalb von fünf Jahren vor Ablauf der Gültigkeitsdauer nachweisen können. Deshalb wird nach jedem Kurstag eine Kursbestätigung über SARI ausgestellt.</p>
           </details>

@@ -21,7 +21,7 @@
 
     <!-- Obligatorische Fahrstunden -->
     <section class="section-container">
-      <h2 class="heading-md mb-8">Obligatorische Fahrstunden für den Busführerschein</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8">Obligatorische Fahrstunden für den Busführerschein</h2>
       <p class="text-gray-600 mb-6">Die Anzahl der benötigten Fahrstunden für deinen Bus Führerschein hängt von deinen Vorkenntnissen ab:</p>
       <div class="grid md:grid-cols-3 gap-6 mb-8">
         <div class="bg-gray-50 rounded-lg p-6">
@@ -45,19 +45,19 @@
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-12 text-center">Weg zur Busprüfung – 6 Schritte zu deinem Traumberuf</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Weg zur Busprüfung – 6 Schritte zu deinem Traumberuf</h2>
         <div class="space-y-8 max-w-4xl mx-auto">
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">1</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Lernfahrgesuch Bus</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lernfahrgesuch Bus</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Anschliessend gehst du damit zu einem Optiker oder Arzt, um einen Sehtest durchführen zu lassen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Voraussetzungen: Mindestens 21 Jahre alt, Kategorie B seit mindestens 2 Jahren.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -71,47 +71,47 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">2</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Verkehrsmedizinische Kontrolluntersuchung</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Verkehrsmedizinische Kontrolluntersuchung</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Nachdem du dein Gesuchsformular eingereicht hast, erhältst du vom Strassenverkehrsamt ein Schreiben mit einer Aufforderung zur medizinischen Kontrolluntersuchung. Fällt diese positiv aus, sendet dir das Strassenverkehrsamt deinen Lernfahrausweis (24 Monate gültig) zu.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Hinweis: Bist du bereits Berufschauffeur? Dann musst du diesen Schritt eventuell nicht machen.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">3</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Bus Fahrstunden</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Bus Fahrstunden</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Sobald du deinen Lernfahrausweis hast, darfst du mit den Bus Fahrstunden beginnen. Wir empfehlen dir, uns direkt zu kontaktieren, damit du deine Ausbildung gleich richtig startest.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">4</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Bus Theorie</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Bus Theorie</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Die Bus Theorie kannst du jederzeit parallel zu den Fahrstunden lernen. Möchtest du sie lieber gemeinsam mit unserem Bus Fahrlehrer vertiefen und üben? Kein Problem – wir sorgen dafür, dass du optimal vorbereitet bist.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">40 Fragen, 45 Minuten, max. 4 Fehlerpunkte. Die Theorieprüfung der Kategorie D wird gerne unterschätzt!</p>
             </div>
@@ -133,16 +133,16 @@
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-gray-400 shadow-sm group">
-            <summary class="flex items-start gap-6 p-8 cursor-pointer list-none select-none">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-12 w-12 rounded-full bg-gray-400 text-white font-bold text-lg">6</div>
+                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-gray-400 text-white font-bold text-sm md:text-lg">6</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">CZV Grundkurs (für Berufschauffeure)</h3>
-                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">CZV Grundkurs (für Berufschauffeure)</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
-            <div class="px-8 pb-6 ml-[72px]">
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Wer beruflich Bus fahren möchte, braucht einen Fähigkeitsausweis (CZV). Du brauchst sehr gute Deutschkenntnisse und die bestandene Theorieprüfung der Kat. D. Wir bieten optimale Prüfungsvorbereitung, zeitgemässe Lehrmittel und Unterricht am Modell.</p>
                 <a href="/czv-grundkurs/" class="text-sm text-primary-600 font-semibold hover:underline mt-2 block">→ Mehr zum CZV Grundkurs</a>
             </div>
@@ -158,7 +158,7 @@
 
     <!-- Themen -->
     <section class="section-container">
-      <h2 class="heading-md mb-8 text-center">Themen | Bus Fahrstunden</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Themen | Bus Fahrstunden</h2>
       <p class="text-center text-gray-600 mb-8">Folgende Themen werden in den Bus Fahrstunden angeschaut und bis zur Prüfungsreife geübt:</p>
       <div class="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-12">
         <div class="bg-gray-50 rounded-lg p-4"><p class="text-gray-700">✓ Ausweise, Gewichte, Masse, Vorschriften</p></div>
@@ -174,7 +174,7 @@
     <!-- Preise -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Preise | Bus Fahrschule</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-10 text-center">Preise | Bus Fahrschule</h2>
         <div class="max-w-sm mx-auto bg-primary-600 rounded-lg p-8 shadow-md text-white">
           <h3 class="font-bold text-xl text-center mb-2">Kategorie D</h3>
           <p class="text-center text-3xl font-bold mb-1">CHF 200.-</p>
@@ -195,26 +195,26 @@
 
     <!-- FAQ -->
     <section class="section-container">
-      <h2 class="heading-md mb-12 text-center">Häufig gestellte Fragen</h2>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Häufig gestellte Fragen</h2>
       <div class="max-w-3xl mx-auto space-y-4 mb-12">
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Ab welchem Alter kann ich den Bus Führerschein machen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Bereits ab einem Alter von 21 Jahren darf man den Lernfahrausweis für die Kategorie D bestellen, wenn man die Kategorie B mindestens seit 2 Jahren besitzt.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Wie lange dauert die Ausbildung?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das hängt von dir ab. Der bisher schnellste Fahrschüler hat den Lernfahrausweis bis zur bestandenen Prüfung innert 7 Wochen geschafft.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
             Muss ich zuerst die Theorie machen?
-            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Nein. Du benötigst lediglich den Lernfahrausweis, um mit den Bus Fahrstunden zu starten. Es macht Sinn, die Bus Theorie parallel zu den praktischen Fahrstunden zu lernen.</p>
         </details>
@@ -228,7 +228,7 @@
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
-        <h2 class="heading-md mb-6 text-white">Starte deine Bus-Fahrer-Karriere!</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Starte deine Bus-Fahrer-Karriere!</h2>
         <p class="hidden xs:block text-xl text-primary-100 mb-8">Mit professioneller Ausbildung von Driving Team in Zürich</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
