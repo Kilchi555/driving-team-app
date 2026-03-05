@@ -313,7 +313,10 @@ export default defineEventHandler(async (event) => {
         }
       }
     } else {
-      // Create new appointment
+      // Create new appointment — always force confirmed status
+      if (!appointmentData.status || ['scheduled', 'pending_confirmation', 'booked'].includes(appointmentData.status)) {
+        appointmentData.status = 'confirmed'
+      }
       const { data, error: insertError } = await supabase
         .from('appointments')
         .insert(appointmentData)
