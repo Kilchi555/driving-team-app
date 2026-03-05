@@ -1356,25 +1356,9 @@ const refreshData = async () => {
   error.value = null
   clearDashboardCache()
   try {
-    const results = await Promise.allSettled([
-      loadAllData(),
-      loadPayments(),
-      loadPendingConfirmations()
-    ])
+    await loadAllData()
     
-    const failed = results.filter((r, idx) => {
-      if (r.status === 'rejected') {
-        console.error(`❌ Refresh task ${idx} failed:`, r.reason)
-        return true
-      }
-      return false
-    })
-    
-    if (failed.length > 0) {
-      console.warn(`⚠️ ${failed.length} refresh task(s) failed, but continuing`)
-    } else {
-      logger.debug('✅ Data refreshed successfully')
-    }
+    logger.debug('✅ Data refreshed successfully')
   } catch (err: any) {
     console.error('❌ Critical refresh error:', err)
     error.value = `Fehler beim Aktualisieren: ${err.message}`
@@ -1602,10 +1586,6 @@ const loadAllData = async () => {
       await navigateTo('/login')
       return
     }
-
-    // 🚀 PRIORITY 1: Load pending confirmations FIRST (most important for customer)
-    logger.debug('🎯 Loading pending confirmations first (priority)...')
-    await loadPendingConfirmations()
 
     // 🔄 Load all data (appointments must load immediately for upcoming lessons count)
     logger.debug('⏳ Loading all customer data...')
@@ -2547,7 +2527,6 @@ onMounted(async () => {
     }
     
     await loadAllData()
-    await loadPayments()
     if (paymentSuccess) {
       await loadPendingConfirmations()
     }
