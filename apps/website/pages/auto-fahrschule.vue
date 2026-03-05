@@ -202,6 +202,70 @@
           </summary>
           <p class="text-gray-600 mt-4">Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen.</p>
         </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet der Führerschein Kategorie B insgesamt?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Führerschein der Kategorie B betragen in der Schweiz durchschnittlich CHF 3'500–3'600. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), VKU-Kurs (CHF 200–300), Fahrstunden (durchschnittlich 15–20 à CHF 100–120), praktische Prüfung (CHF 130) und WAB-Kurs (CHF 350). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was sind die Voraussetzungen für den Führerschein?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Um einen Führerschein der Kategorie B zu erhalten, benötigst du: Mindestalter von 18 Jahren (oder 17 Jahre beim begleiteten Fahren), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst zudem in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie lange dauert die komplette Fahrausbildung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Dauer der Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 6–8 Wochen mit 12 Unterrichtsabenden à 90 Minuten. Die praktische Ausbildung mit 15–20 Fahrstunden dauert 2–4 Monate. Insgesamt solltest du mit 4–6 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainingst.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was ist der VKU Kurs und ist er obligatorisch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der VKU (Verkehrskundeunterricht) ist ein obligatorischer 8-stündiger Kurs, den du absolvieren musst, bevor du zur praktischen Prüfung antreten kannst. Der Kurs findet an zwei Tagen zu je 4 Stunden statt und behandelt Themen wie Verkehrssicherheit, Verhaltensregeln und praktisches Wissen. Er ist eine wichtige Vorbereitung auf die Prüfung und kostet etwa CHF 200–300.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Kann ich bereits mit 17 Jahren fahren?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Ja! In der Schweiz gibt es die Möglichkeit des begleiteten Fahrens ab 17 Jahren. Dafür benötigst du einen speziellen Lernfahrausweis (ab 17 Jahren möglich). Du darfst dann fahren, wenn eine Begleitperson (mindestens 24 Jahre alt, mit gültigem Führerschein) im Fahrzeug sitzt. Dies ermöglicht dir, bereits früher praktische Fahrerfahrung zu sammeln.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet eine Fahrstunde bei euch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Eine Fahrstunde (45 Minuten) kostet bei uns CHF 100–120, je nach Kurs- und Zeittyp. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120 einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was tun bei Durchfall der praktischen Prüfung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Wenn du die praktische Prüfung nicht bestehst, ist das kein Problem – viele benötigen einen zweiten Versuch! Wir helfen dir gerne mit zusätzlichen Fahrstunden, um deine Schwachstellen zu verbessern. Dein Lernfahrausweis bleibt 24 Monate gültig, du kannst die Prüfung beliebig oft wiederholen. Eine Wiederholungsprüfung kostet CHF 130 und kann frühestens nach einer Woche erneut angemeldet werden.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Muss ich einen Erste-Hilfe-Kurs machen?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Ja, der Nothelferkurs (Erste-Hilfe-Kurs) ist obligatorisch und eine Voraussetzung für den Führerschein. Der Kurs dauert etwa 3–4 Stunden und vermittelt essenzielle Notfallmassnahmen. Dein Nothelferkurs-Zertifikat ist ab dem Ausstellungsdatum 6 Jahre gültig. Der Kurs kostet etwa CHF 100–150 und kann bei verschiedenen Organisationen absolviert werden.</p>
+        </details>
       </div>
 
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">

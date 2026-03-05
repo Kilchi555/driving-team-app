@@ -256,7 +256,7 @@
             Ist der Grundkurs obligatorisch?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Der Grundkurs ist für die meisten Kategorien obligatorisch. Seit 01.01.2021 gilt: Wer die Kategorie A1 nach diesem Datum erworben hat und jetzt A35kW machen möchte, muss den Grundkurs nicht mehr besuchen. Wir empfehlen ihn dennoch für mehr Sicherheit.</p>
+          <p class="text-gray-600 mt-4">Der Grundkurs ist für alle drei Kategorien obligatorisch. Seit 01.01.2021 gilt: Wer die Kategorie A1 nach diesem Datum erworben hat und jetzt A35kW machen möchte, muss den Grundkurs nicht mehr besuchen. Wir empfehlen ihn dennoch für mehr Sicherheit.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -264,7 +264,71 @@
             Kann ich ein Fahrschul-Motorrad mieten?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Ja! In Zürich-Altstetten können Anfänger:innen unser Fahrschul-Motorrad (Kat. 35kW) für 20.- pro Lektion mieten. Auf Wunsch kann auch ein Helm für 10.- pro Termin dazugemietet werden.</p>
+          <p class="text-gray-600 mt-4">Ja! In Zürich-Altstetten können Anfänger:innen unser Fahrschul-Motorrad (Kat. 35kW) für 20.- pro Lektion mieten. Helm und Sicherheitsausrüstung müssen selber organisiert werden.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet die Motorrad Fahrausbildung insgesamt?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Motorrad-Führerschein betragen in der Schweiz durchschnittlich CHF 1'500–2'500, abhängig von der Anzahl benötigter Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 20), Lernfahrausweis (CHF 40), Theorieprüfung (CHF 40), Grundkurs (CHF ca.500), Fahrstunden (durchschnittlich 10–15 à CHF 95), praktische Prüfung (CHF 100) und den Fahrausweis (CHF 60). Die genauen Kosten hängen von deiner Kategorie und der Anzahl benötigter Fahrstunden ab.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was sind die Voraussetzungen für den Führerschein?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Um einen Motorrad-Führerschein zu erhalten, benötigst du: das erforderliche Mindestalter (A1: ab 15/16 J., A35kW: ab 18 J., A: ab 20 J. mit 2 Jahren A35kW), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie lange dauert die komplette Fahrausbildung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Dauer der Motorrad-Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 4–6 Wochen. Der Grundkurs dauert 1–2 Tage. Die praktische Ausbildung mit 10–15 Fahrstunden dauert 2–4 Wochen. Insgesamt solltest du mit 2–3 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainierst.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was ist der VKU Kurs und ist er obligatorisch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der VKU (Verkehrskundeunterricht) ist ein obligatorischer 8-stündiger Kurs, den du absolvieren musst, bevor du zur praktischen Prüfung antreten kannst. Der Kurs findet an zwei Tagen zu je 4 Stunden statt und behandelt Themen wie Verkehrssicherheit, Verhaltensregeln und praktisches Wissen. Er ist eine wichtige Vorbereitung auf die Prüfung und kostet etwa CHF 200–300.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Kann ich bereits mit 17 Jahren fahren?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Das hängt von der Kategorie ab. Für A1 kannst du bereits ab 15 Jahren fahren (oder ab 16 mit 125ccm). Für A35kW benötigst du ein Mindestalter von 18 Jahren. Für die unbeschränkte Kategorie A brauchst du mindestens 20 Jahre und 2 Jahre Erfahrung mit A35kW. Es gibt auch die Möglichkeit des begleiteten Fahrens ab 17 Jahren für A35kW.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet eine Fahrstunde bei euch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Eine Motorrad-Fahrstunde (45 Minuten) kostet bei uns CHF 100–120, je nach Kategorie und Zeittyp. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120 einmalig) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was tun bei Durchfall der praktischen Prüfung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Wenn du die praktische Prüfung nicht bestehst, ist das kein Problem – viele benötigen einen zweiten Versuch! Wir helfen dir gerne mit zusätzlichen Fahrstunden, um deine Schwachstellen zu verbessern. Dein Lernfahrausweis bleibt 24 Monate gültig, du kannst die Prüfung beliebig oft wiederholen. Eine Wiederholungsprüfung kostet CHF 130 und kann frühestens nach einer Woche erneut angemeldet werden.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Muss ich einen Erste-Hilfe-Kurs machen?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Ja, der Nothelferkurs (Erste-Hilfe-Kurs) ist obligatorisch und eine Voraussetzung für den Führerschein. Der Kurs dauert etwa 3–4 Stunden und vermittelt essenzielle Notfallmassnahmen. Dein Nothelferkurs-Zertifikat ist ab dem Ausstellungsdatum 6 Jahre gültig. Der Kurs kostet etwa CHF 100–150 und kann bei verschiedenen Organisationen absolviert werden.</p>
         </details>
       </div>
 

@@ -103,6 +103,7 @@ const isLoading = ref(false)
 const error = ref<string | null>(null)
 const isAutoEmitting = ref(false)
 const isInitializing = ref(false)
+const hasFiredCategorySelected = ref(false) // ✅ Tracks whether category-selected was ever emitted
 
 // Computed
 const selectedCategory = computed(() => {
@@ -397,28 +398,65 @@ const loadCategories = async () => {
   } finally {
     isLoading.value = false
     
-    // ✅ GARANTIERTE DURATION-EMISSION IM OFFLINE-MODUS
-    if (props.modelValue) {
-      logger.debug('🔄 Categories loaded (offline), checking current selection:', props.modelValue)
-      const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
-      
-      if (selected) {
-        logger.debug('✅ Re-emitting durations for loaded category (offline):', selected.availableDurations)
-        
-        // ✅ Sofortige Emission im Offline-Modus
-        setTimeout(() => {
-          if (!isAutoEmitting.value) {
-            emit('durations-changed', selected.availableDurations)
-          }
-        }, 50)  // Kürzere Verzögerung im Offline-Modus
-      }
-    }
-    
     // Initialization Mode beenden
     setTimeout(() => {
       isInitializing.value = false
       logger.debug('✅ CategorySelector initialization completed (offline mode)')
-    }, 100)  // Kürzere Verzögerung im Offline-Modus
+      
+      // ✅ POST-INIT: category-selected nachholen falls noch nie gefeuert
+      // (passiert wenn formData.type schon gesetzt war bevor Kategorien geladen wurden)
+      if (!hasFiredCategorySelected.value) {
+        logger.debug('🔄 Post-init: category-selected never fired, triggering now...')
+        
+        let targetCode: string | null = null
+        
+        // Falls User gesetzt: User-Kategorie bevorzugen
+        if (props.selectedUser?.category) {
+          const rawCategory = Array.isArray(props.selectedUser.category)
+            ? props.selectedUser.category[0]
+            : props.selectedUser.category?.split(',')[0]
+          targetCode = rawCategory?.trim() || null
+          logger.debug('🔄 Post-init: using user category:', targetCode)
+        }
+        
+        // Fallback: aktuell gesetztes modelValue (z.B. 'B' vom EventModal)
+        if (!targetCode && props.modelValue) {
+          targetCode = props.modelValue
+          logger.debug('🔄 Post-init: using existing modelValue as target:', targetCode)
+        }
+        
+        if (targetCode) {
+          let selected = availableCategoriesForUser.value.find(cat => cat.code === targetCode)
+          
+          // Falls Parent-Kategorie (herausgefiltert): erstes Kind nehmen
+          if (!selected) {
+            const parentCat = allCategories.value.find(cat => cat.code === targetCode)
+            if (parentCat) {
+              selected = availableCategoriesForUser.value.find(cat => cat.parent_category_id === parentCat.id)
+              logger.debug('🎯 Post-init: falling back to first child category:', selected?.code)
+            }
+          }
+          
+          if (selected) {
+            logger.debug('🎯 Post-init: emitting category-selected for:', selected.code)
+            hasFiredCategorySelected.value = true
+            isAutoEmitting.value = true
+            emit('update:modelValue', selected.code)
+            emit('category-selected', selected)
+            emit('price-changed', 2.11)
+            emit('durations-changed', selected.availableDurations)
+            setTimeout(() => { isAutoEmitting.value = false }, 200)
+          } else {
+            logger.debug('⚠️ Post-init: no matching category found for:', targetCode)
+            // Garantiere zumindest durations-changed für modelValue
+            const fallback = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+            if (fallback) {
+              emit('durations-changed', fallback.availableDurations)
+            }
+          }
+        }
+      }
+    }, 100)
   }
 }
 
@@ -455,6 +493,7 @@ const handleCategoryChange = (event: Event) => {
   logger.debug('🎯 CategorySelector - Selected category:', selected)
   logger.debug('🎯 CategorySelector - Available durations:', selected?.availableDurations)
   
+  hasFiredCategorySelected.value = true
   emit('category-selected', selected)
   
   if (selected) {
@@ -504,6 +543,7 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
     if (defaultCategory) {
       logger.debug('🎯 Auto-selected default category:', defaultCategory)
       isAutoEmitting.value = true
+      hasFiredCategorySelected.value = true
       
       emit('update:modelValue', 'B')
       emit('category-selected', defaultCategory)
@@ -520,37 +560,58 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
   if (oldUser?.id === newUser.id) return
 
  
- if (newUser?.category && newUser.category !== props.modelValue) {
+ if (newUser?.category) {
    logger.debug('👤 User category detected:', newUser.category)
    
-   // ✅ FIX: Nur erste Kategorie nehmen wenn mehrere
-   const primaryCategory = newUser.category.split(',')[0].trim()
+   // ✅ FIX: category kann ein Array (text[]) oder String sein
+   const rawCategory = Array.isArray(newUser.category)
+     ? newUser.category[0]
+     : newUser.category.split(',')[0]
+   const primaryCategory = rawCategory?.trim()
+   
+   if (!primaryCategory) return
+   
    logger.debug('🎯 Using primary category:', primaryCategory)
+   
+   // ✅ Direkt in der gefilterten Liste suchen (ohne Parents)
+   let selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
+   
+   // ✅ Falls Kategorie ein Parent ist (wird rausgefiltert): erstes Kind nehmen
+   if (!selected) {
+     logger.debug('🔍 Primary category not in filtered list (likely a parent), looking for first child...')
+     const parentCat = allCategories.value.find(cat => cat.code === primaryCategory)
+     if (parentCat) {
+       selected = availableCategoriesForUser.value.find(cat => cat.parent_category_id === parentCat.id)
+       logger.debug('🎯 Falling back to first child category:', selected?.code)
+     }
+   }
+   
+   if (!selected) {
+     logger.debug('⚠️ No matching category found for:', primaryCategory)
+     return
+   }
+   
+   // ✅ Kategorie bereits korrekt gesetzt, aber category-selected noch nie gefeuert?
+   // (passiert wenn EventModal formData.type vorab auf 'B' setzt)
+   if (props.modelValue === selected.code && hasFiredCategorySelected.value) {
+     logger.debug('🚫 Auto-category selection skipped - already set to:', selected.code)
+     return
+   }
+   
+   logger.debug('🎯 Watcher: emitting category-selected for:', selected.code, '(hasFired:', hasFiredCategorySelected.value, ')')
    
    // ✅ Mark als Auto-Selection
    isAutoEmitting.value = true
+   hasFiredCategorySelected.value = true
    
-   emit('update:modelValue', primaryCategory)
+   emit('update:modelValue', selected.code)
+   emit('category-selected', selected)
+   emit('price-changed', 2.11)
+   emit('durations-changed', selected.availableDurations)
    
-   // 🔥 KRITISCHER FIX: Suche nach primaryCategory statt newUser.category
-   const selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
-   
-   if (selected) {
-     logger.debug('🎯 Auto-selected category:', selected)
-     emit('category-selected', selected)
-     
-     const pricePerMinute = 2.11
-     emit('price-changed', pricePerMinute)
-     
-     // ✅ RACE-SAFE Auto-Emit
-     logger.debug('⏱️ Auto-emitting durations-changed:', selected.availableDurations)
-     emit('durations-changed', selected.availableDurations)
-     
-     // ✅ Reset Auto-Emit Flag
-     setTimeout(() => {
-       isAutoEmitting.value = false
-     }, 200)
-   }
+   setTimeout(() => {
+     isAutoEmitting.value = false
+   }, 200)
  }
 }, { immediate: false })
 

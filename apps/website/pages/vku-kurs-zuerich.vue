@@ -6,7 +6,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-zuerich/" />
     </Head>
 
-    <!-- Hero Section -->
+    <!-- 1. Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
@@ -19,8 +19,8 @@
       </div>
     </section>
 
-    <!-- Info -->
-    <section class="section-container">
+    <!-- 2. Info -->
+    <section class="section-container py-12">
       <div class="max-w-3xl mx-auto space-y-4">
         <div class="bg-primary-50 rounded-lg p-6">
           <p class="text-gray-700">Der VKU Kurs ist in der ganzen Schweiz der gleiche und die Bestätigung ist ebenfalls für die ganze Schweiz gültig. Es ist also rechtlich egal, von welchem Kanton dein Lernfahrausweis ausgestellt wurde – der VKU Kurs Zürich gilt überall.</p>
@@ -31,7 +31,7 @@
       </div>
     </section>
 
-    <!-- Programm -->
+    <!-- 3. Programm -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">VKU Kurs Programm</h2>
@@ -68,9 +68,9 @@
       </div>
     </section>
 
-    <!-- Weitere Angaben -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Weitere Angaben zum VKU Kurs</h2>
+    <!-- 4. Praktische Details (Zeit, Ort, Preis) -->
+    <section class="section-container py-16">
+      <h2 class="heading-md mb-10 text-center">Praktische Informationen</h2>
       <div class="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
         <div class="bg-gray-50 rounded-lg p-6 text-center">
           <p class="text-3xl mb-3">🕐</p>
@@ -91,12 +91,21 @@
         <div class="bg-gray-50 rounded-lg p-6 text-center">
           <p class="text-3xl mb-3">💳</p>
           <h3 class="font-bold text-gray-900 mb-2">Zahlung</h3>
-          <p class="text-gray-600 text-sm">Rechnung per Mail zahlbar innert 14 Tagen</p>
+          <p class="text-gray-600 text-sm">Online direkt bei der Anmeldung mit Twint, Debit- oder Kreditkarte.</p>
         </div>
       </div>
     </section>
 
-    <!-- Fahrstunden CTA -->
+    <!-- 5. Map Section (Standort zeigen) -->
+    <StandortMapSection locationKey="zuerich" />
+
+    <!-- 6. Reviews Section (Soziale Beweis) -->
+    <ReviewsSection category="zuerich" />
+
+    <!-- 7. Why Section (Überzeugung) -->
+    <WarumSection category="zuerich" />
+
+    <!-- 8. Fahrstunden CTA -->
     <section class="bg-primary-50 py-12">
       <div class="section-container text-center">
         <h2 class="heading-md mb-4">Brauchst Du noch Fahrstunden?</h2>
@@ -107,9 +116,9 @@
       </div>
     </section>
 
-    <!-- FAQ -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen bezüglich VKU Kurs Zürich</h2>
+    <!-- 9. FAQ -->
+    <section class="section-container py-16">
+      <h2 class="heading-md mb-10 text-center">Häufig gestellte Fragen</h2>
       <div class="max-w-3xl mx-auto space-y-4">
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
@@ -197,18 +206,8 @@
       </div>
     </section>
 
-    <!-- Warum Driving Team -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-8 text-center">Warum den VKU Kurs beim Driving Team in Zürich?</h2>
-        <div class="max-w-3xl mx-auto">
-          <p class="text-gray-700 text-center mb-10">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir eine Lernumgebung geschaffen, die sowohl motivierend als auch effektiv ist.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Unsere Gebiete -->
-    <section class="section-container">
+    <!-- 10. Unsere Gebiete -->
+    <section class="section-container py-12">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
         <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
@@ -221,7 +220,7 @@
       </div>
     </section>
 
-    <!-- CTA -->
+    <!-- 11. Final CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt VKU Kurs anmelden!</h2>

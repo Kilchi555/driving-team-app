@@ -229,6 +229,70 @@
           </summary>
           <p class="text-gray-600 mt-4">BPT 121 ist für Taxifahrer die zahlende Kundschaft befördern (z.B. Taxiunternehmen). Die Taxi Theorie ARV 2 ist dann zwingend. BPT 122 ist für Schüler-, Arbeits-, Behindertentransporte oder Ambulanzfahrzeuge – hier ist die ARV Theorie nicht erforderlich.</p>
         </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet der Taxi Führerschein insgesamt?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Taxi-Führerschein betragen in der Schweiz durchschnittlich CHF 2'500–4'000, abhängig von der Anzahl der benötigten Fahrstunden und dem BPT-Typ. Dies beinhaltet Fahrstunden (durchschnittlich 15–25 à CHF 90–100), die Admin- und Versicherungspauschale (CHF 120), das WarmUp mit Prüfungsfahrt (CHF 300), sowie ggf. Theorielektionen und Fahrprüfungsgebühren. Die genauen Kosten hängen von deinen Vorkenntnissen und der BPT-Variante ab.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was sind die Voraussetzungen für den Führerschein?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Um eine BPT Ausbildung (Berufliche Grundausbildung für Personentransporte) zu erhalten, benötigst du: einen gültigen Auto-Führerschein (Kategorie B) seit mindestens 1 Jahr, eine bestandene ärztliche Untersuchung (höhere Gesundheitsanforderungen), Anmeldung in einer Fahrschule, sowie je nach BPT-Typ die Theorie ARV 2. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie lange dauert die komplette Fahrausbildung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Dauer der Taxi-Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die praktische Ausbildung mit 15–25 Fahrstunden dauert typischerweise 2–4 Wochen. Falls du die Theorie ARV 2 absolvieren musst (BPT 121), dauert diese etwa 2–3 Wochen mit Unterrichtsabenden. Insgesamt solltest du mit 3–8 Wochen rechnen, abhängig vom BPT-Typ und deiner Fahrerfahrung.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was ist der VKU Kurs und ist er obligatorisch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der VKU (Verkehrskundeunterricht) ist für die Taxi-BPT Ausbildung nicht erforderlich. Stattdessen ist bei BPT 121 (Taxifahren mit zahlender Kundschaft) die ARV 2 Theorie obligatorisch. Diese behandelt spezialisierte Inhalte für den beruflichen Personentransport und kostet etwa CHF 300–400. Bei BPT 122 ist auch ARV 2 nicht erforderlich.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Kann ich bereits mit 17 Jahren fahren?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Nein. Für die BPT Ausbildung benötigst du einen Auto-Führerschein (Kategorie B) bereits seit mindestens 1 Jahr. Du musst also bereits 18 Jahre alt sein (oder älter). Es ist kein begleitetes Fahren ab 17 Jahren für diese Ausbildung möglich.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet eine Fahrstunde bei euch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Eine Taxifahrstunde (45 Minuten) kostet bei uns CHF 100 mit Schulfahrzeug oder CHF 90 mit eigenem Fahrzeug. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine einmalige Admin- und Versicherungspauschale (CHF 120) und der WarmUp-Kurs mit Prüfungsfahrt (CHF 300) an. Eine Theorielektion (45 Minuten) kostet CHF 85. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was tun bei Durchfall der praktischen Prüfung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Wenn du die praktische Prüfung nicht bestehst, ist das kein Problem – viele benötigen einen zweiten Versuch! Wir helfen dir gerne mit zusätzlichen Fahrstunden, um deine Schwachstellen zu verbessern. Du kannst die Prüfung beliebig oft wiederholen. Eine Wiederholungsprüfung kostet CHF 150–200 und kann frühestens nach einer Woche erneut angemeldet werden.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Muss ich einen Erste-Hilfe-Kurs machen?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der Nothelferkurs (Erste-Hilfe-Kurs) ist nicht zwingend für die BPT Ausbildung erforderlich, aber wir empfehlen dir, ihn zu absolvieren. Der Kurs dauert etwa 3–4 Stunden und vermittelt essenzielle Notfallmassnahmen. Dein Nothelferkurs-Zertifikat ist ab dem Ausstellungsdatum 6 Jahre gültig. Der Kurs kostet etwa CHF 100–150 und kann bei verschiedenen Organisationen absolviert werden.</p>
+        </details>
       </div>
 
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">

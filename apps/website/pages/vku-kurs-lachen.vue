@@ -20,7 +20,7 @@
     </section>
 
     <!-- Info -->
-    <section class="section-container">
+    <section class="section-container py-12">
       <div class="max-w-3xl mx-auto space-y-4">
         <div class="bg-primary-50 rounded-lg p-6">
           <p class="text-gray-700">Durch den Verkehrskunde Kurs wird das Autofahrenlernen entscheidend vereinfacht. Der VKU Kurs ist in der ganzen Schweiz der gleiche und die Bestätigung ist ebenfalls für die ganze Schweiz gültig.</p>
@@ -65,30 +65,42 @@
             <p class="text-gray-600">Verkehrstaktik, Fahrfähigkeit, umweltbewusstes Fahren, taktische Regeln für sicheres Fahren.</p>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Details -->
-        <div class="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto mt-10">
-          <div class="bg-white rounded-lg p-6 shadow-sm text-center">
-            <p class="text-3xl mb-2">🕐</p>
-            <h3 class="font-bold text-gray-900 mb-2">Zeiten</h3>
-            <p class="text-gray-600 text-sm">2 Mal à 4 Stunden verteilt auf 1-2 Wochen</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm text-center">
-            <p class="text-3xl mb-2">📍</p>
-            <h3 class="font-bold text-gray-900 mb-2">Ort</h3>
-            <p class="text-gray-600 text-sm">Theorielokal Driving Team Lachen<br>Herrengasse 17<br>8853 Lachen/SZ<br>(2 Gehminuten vom Bhf Lachen)</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm text-center">
-            <p class="text-3xl mb-2">💰</p>
-            <h3 class="font-bold text-gray-900 mb-2">Preis</h3>
-            <p class="text-2xl font-bold text-primary-600">CHF 250.-</p>
-            <p class="text-gray-600 text-sm">inkl. Dokumentation & Kursbestätigung (online)</p>
-          </div>
+    <!-- 4. Praktische Informationen -->
+    <section class="section-container py-16">
+      <h2 class="heading-md mb-10 text-center">Praktische Informationen</h2>
+      <div class="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+        <div class="bg-white rounded-lg p-6 shadow-sm text-center">
+          <p class="text-3xl mb-2">🕐</p>
+          <h3 class="font-bold text-gray-900 mb-2">Zeiten</h3>
+          <p class="text-gray-600 text-sm">2 Mal à 4 Stunden verteilt auf 1-2 Wochen</p>
+        </div>
+        <div class="bg-white rounded-lg p-6 shadow-sm text-center">
+          <p class="text-3xl mb-2">📍</p>
+          <h3 class="font-bold text-gray-900 mb-2">Ort</h3>
+          <p class="text-gray-600 text-sm">Theorielokal Driving Team Lachen<br>Herrengasse 17<br>8853 Lachen/SZ<br>(2 Gehminuten vom Bhf Lachen)</p>
+        </div>
+        <div class="bg-white rounded-lg p-6 shadow-sm text-center">
+          <p class="text-3xl mb-2">💰</p>
+          <h3 class="font-bold text-gray-900 mb-2">Preis</h3>
+          <p class="text-2xl font-bold text-primary-600">CHF 250.-</p>
+          <p class="text-gray-600 text-sm">inkl. Dokumentation & Kursbestätigung (online)</p>
         </div>
       </div>
     </section>
 
-    <!-- Fahrstunden CTA -->
+    <!-- 5. Map Section -->
+    <StandortMapSection locationKey="lachen" />
+
+    <!-- 6. Reviews Section -->
+    <ReviewsSection category="lachen" />
+
+    <!-- 7. Why Section -->
+    <WarumSection category="lachen" />
+
+    <!-- 8. Fahrstunden CTA -->
     <section class="bg-primary-50 py-12">
       <div class="section-container text-center">
         <h2 class="heading-md mb-4">Brauchst Du noch Fahrstunden?</h2>
@@ -99,9 +111,9 @@
       </div>
     </section>
 
-    <!-- FAQ -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen bezüglich VKU Kurs Lachen</h2>
+    <!-- 9. FAQ -->
+    <section class="section-container py-16">
+      <h2 class="heading-md mb-10 text-center">Häufig gestellte Fragen</h2>
       <div class="max-w-3xl mx-auto space-y-4">
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
@@ -187,11 +199,27 @@
           </summary>
           <p class="text-gray-600 mt-4">Um sich am VKU Kurs bei Driving Team in Lachen anmelden zu können, musst du im Besitz eines gültigen Lernfahrausweises sein. Ist dies noch nicht der Fall, können wir leider keine Anmeldungen entgegennehmen. Auch während des ganzen VKU Kurs musst du im Besitz des gültigen Lernfahrausweises sein.</p>
         </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie geht es nach dem Abschluss des VKU Kurses weiter?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Nach erfolgreichem Abschluss des VKU Kurses bei Driving Team in Lachen empfehlen wir, das Erlernte kontinuierlich zu üben, um sich optimal auf die praktische Führerprüfung vorzubereiten. Wir bieten Fahrstunden an, die eine Prüfungssimulation mit einem dir unbekannten Autofahrlehrer umfassen. Diese zusätzliche Vorbereitung kann dir helfen, mehr Sicherheit im Umgang mit dem Fahrzeug zu gewinnen und die Prüfung erfolgreich zu bestehen.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Gibt es medizinische Anforderungen für die Teilnahme?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Es gibt keine speziellen medizinischen Anforderungen für die Teilnahme am VKU Kurs. Es genügt, einen gültigen Lernfahrausweis zu haben. Falls du besondere Anforderungen hast (z.B. körperliche Einschränkungen), kontaktiere uns bitte vorab, damit wir entsprechende Massnahmen treffen können.</p>
+        </details>
       </div>
     </section>
 
-    <!-- Unsere Gebiete -->
-    <section class="section-container">
+    <!-- 10. Unsere Gebiete -->
+    <section class="section-container py-12">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
         <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
@@ -204,7 +232,7 @@
       </div>
     </section>
 
-    <!-- CTA -->
+    <!-- 11. Final CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt VKU Kurs Lachen anmelden!</h2>
