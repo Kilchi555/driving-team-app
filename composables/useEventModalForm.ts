@@ -78,14 +78,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     user_id: '',
     staff_id: '',
     location_id: '',
-    // ✅ price_per_minute removed - not in appointments table
-    status: 'booked',
-    eventType: 'lesson',
-    selectedSpecialType: '',
-    // ✅ is_paid removed - not in appointments table
-    discount: 0,
-    discount_type: 'fixed',
-    discount_reason: '',
+    status: 'confirmed',
     // ✅ Additional missing fields
     custom_location_address: undefined,
     custom_location_name: undefined,
@@ -169,8 +162,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       user_id: '',
       staff_id: currentUser?.id || '',
       location_id: '',
-      // ✅ price_per_minute removed - not in appointments table
-      status: 'booked',
+      status: 'confirmed',
       eventType: 'lesson',
       appointment_type: 'lesson', // ✅ Standard lesson type setzen
       selectedSpecialType: '',
