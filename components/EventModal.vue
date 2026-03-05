@@ -2515,7 +2515,11 @@ const handleStudentSelected = async (student: Student | null) => {
   
   // ✅ WICHTIG: Bei Freeslot-Modus Schülerauswahl erlauben, aber nicht automatisch
   // Der User kann manuell einen Schüler wählen
-  selectedStudent.value = student
+  // NOTE: selectedStudent wird erst NACH dem Laden des letzten Termins gesetzt,
+  // damit der CategorySelector-Watcher bereits formData.type vorfindet und nicht überschreibt
+  if (!(props.mode === 'create' && !(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot') && student?.id)) {
+    selectedStudent.value = student
+  }
   formData.value.user_id = student?.id || ''
   
   logger.debug('✅ Student selected successfully:', student?.first_name)
@@ -2711,6 +2715,9 @@ const handleStudentSelected = async (student: Student | null) => {
         }
       }
     }
+    // ✅ Erst jetzt selectedStudent setzen, damit CategorySelector-Watcher bereits
+    // formData.type (letzte Kategorie) vorfindet und nicht mit student.category überschreibt
+    selectedStudent.value = student
   } else if (student?.id && (props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')) {
     logger.debug('🎯 Freeslot mode detected - but still loading student-specific data')
     
@@ -2799,6 +2806,7 @@ const handleStudentSelected = async (student: Student | null) => {
     } catch (error) {
       logger.debug('⚠️ Could not load student-specific data in freeslot mode:', error)
     }
+    selectedStudent.value = student
   }
   
   logger.debug('✅ Student selection completed - selectedStudent:', selectedStudent.value?.first_name)
