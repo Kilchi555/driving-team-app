@@ -210,6 +210,70 @@
           </summary>
           <p class="text-gray-600 mt-4">Bereits ab einem Alter von 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen und somit auch Lernfahrten in Begleitung machen.</p>
         </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet der Anhänger Führerschein insgesamt?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Anhänger-Führerschein betragen in der Schweiz durchschnittlich CHF 1'200–2'000, da keine Theorieprüfung erforderlich ist. Dies beinhaltet den Lernfahrausweis (CHF 80), Fahrstunden (durchschnittlich 5–8 à CHF 120–140), praktische Prüfung (CHF 130), sowie die Versicherungspauschale (CHF 120) und WarmUp-Kurs mit Prüfungsfahrt (CHF 360). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was sind die Voraussetzungen für den Führerschein?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Um einen Anhänger-Führerschein (Kategorie BE) zu erhalten, benötigst du: einen gültigen Auto-Führerschein (Kategorie B), Mindestalter 17 Jahren (mit Begleitperson) oder 18 Jahren (für volle Eigenständigkeit), einen gültigen Lernfahrausweis der Kategorie BE und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie lange dauert die komplette Fahrausbildung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die Dauer der Anhänger-Fahrausbildung ist üblicherweise sehr kurz, da keine Theorieprüfung erforderlich ist. Die praktische Ausbildung mit 5–8 Fahrstunden dauert typischerweise 1–2 Wochen. Du kannst die Prüfung oft schon nach wenigen Tagen ablegen, wenn du bereits viel Auto-Fahrerfahrung hast.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was ist der VKU Kurs und ist er obligatorisch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der VKU (Verkehrskundeunterricht) ist für die Anhänger-Ausbildung (Kategorie BE) nicht erforderlich, da es keine Theorieprüfung gibt. Du benötigst nur praktische Fahrstunden und die bestandene praktische Prüfung. Dies spart dir Zeit und Kosten gegenüber anderen Fahrschein-Kategorien.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Kann ich bereits mit 17 Jahren fahren?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Ja! Du kannst bereits ab 17 Jahren den Lernfahrausweis für die Kategorie BE beantragen. Du darfst dann mit Anhänger fahren, wenn eine Begleitperson (mindestens 24 Jahre alt, mit gültigem Führerschein) im Fahrzeug sitzt. Ab 18 Jahren darfst du auch alleine fahren (ausser in speziellen Situationen, die dann beschränkt bleiben).</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was kostet eine Fahrstunde bei euch?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Eine Anhänger-Fahrstunde (45 Minuten) kostet bei uns CHF 120–140. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120 einmalig) und der WarmUp-Kurs mit Prüfungsfahrt (CHF 360) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Was tun bei Durchfall der praktischen Prüfung?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Wenn du die praktische Prüfung nicht bestehst, ist das kein Problem – viele benötigen einen zweiten Versuch! Wir helfen dir gerne mit zusätzlichen Fahrstunden, um deine Schwachstellen zu verbessern. Dein Lernfahrausweis bleibt 24 Monate gültig, du kannst die Prüfung beliebig oft wiederholen. Eine Wiederholungsprüfung kostet CHF 130 und kann frühestens nach einer Woche erneut angemeldet werden.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Muss ich einen Erste-Hilfe-Kurs machen?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der Nothelferkurs (Erste-Hilfe-Kurs) ist für die Anhänger-Ausbildung nicht zwingend erforderlich, da du bereits im Besitz eines Auto-Führerscheins bist und diesen Kurs bereits gemacht haben solltest. Wenn du noch keinen Nothelferkurs absolviert hast, empfehlen wir dir, dies nachzuholen. Der Kurs kostet etwa CHF 100–150 und kann bei verschiedenen Organisationen absolviert werden.</p>
+        </details>
       </div>
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
