@@ -1975,7 +1975,7 @@ const pasteAppointmentDirectly = async () => {
       
       // Typ-Felder (NOT NULL)
       type: category,
-      status: 'pending_confirmation',
+      status: 'confirmed',
       
       // Optional aber wichtig
       event_type_code: clipboardAppointment.value.event_type_code || 'lesson',

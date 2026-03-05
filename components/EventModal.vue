@@ -3392,7 +3392,7 @@ const resetForm = () => {
     staff_id: (props.currentUser?.role === 'staff') ? props.currentUser.id : '',
     // ✅ price_per_minute removed - not in appointments table, handled in pricing system
     user_id: '',
-    status: 'pending_confirmation',
+    status: 'confirmed',
     // ✅ is_paid removed - not in appointments table, handled in payments table
     description: '',
     eventType: 'lesson' as 'lesson',
