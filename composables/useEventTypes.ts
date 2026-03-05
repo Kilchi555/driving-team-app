@@ -2,19 +2,30 @@
 import { ref, computed } from 'vue'
 import { logger } from '~/utils/logger'
 
+// ✅ Globaler Cache ausserhalb der Factory — wird über alle Instanzen geteilt
+const _eventTypesCache = ref<string[]>([])
+const _eventTypesFullCache = ref<any[]>([])
+const _isEventTypesLoaded = ref(false)
+const _isFullLoaded = ref(false)
+
 export const useEventTypes = () => {
-  const eventTypesCache = ref<string[]>([])
-  const eventTypesFullCache = ref<any[]>([]) // ✅ NEU: Für komplette Objekte
-  const isEventTypesLoaded = ref(false)
+  const eventTypesCache = _eventTypesCache
+  const eventTypesFullCache = _eventTypesFullCache
+  const isEventTypesLoaded = _isEventTypesLoaded
   
-  // useEventModalForm.ts - erweitern Sie die loadEventTypes Funktion
   const loadEventTypes = async (excludeTypes: string[] = [], loadFullObjects: boolean = false) => {
-    if (isEventTypesLoaded.value && !loadFullObjects) return eventTypesCache.value
+    // ✅ Cache für Full-Objects (EventTypeSelector)
+    if (loadFullObjects && _isFullLoaded.value && excludeTypes.length === 0) {
+      logger.debug('✅ Using cached full event types')
+      return eventTypesFullCache.value
+    }
+    
+    // ✅ Cache für nur Codes (andere Aufrufer)
+    if (!loadFullObjects && isEventTypesLoaded.value) return eventTypesCache.value
     
     try {
       logger.debug('🔄 Loading event types via API...')
       
-      // ✅ Use secure API endpoint instead of direct DB access
       const response = await $fetch('/api/event-types/list', {
         method: 'GET'
       }) as any
@@ -27,37 +38,36 @@ export const useEventTypes = () => {
 
       logger.debug('🔍 All event type codes from API:', (data || []).map((et: any) => et.code))
       
+      // ✅ Immer beide Caches befüllen
+      const allCodes = data?.map((et: any) => et.code) || []
+      eventTypesCache.value = allCodes
+      isEventTypesLoaded.value = true
+
+      const fullData = data || []
+      eventTypesFullCache.value = fullData
+      _isFullLoaded.value = true
+      
       if (loadFullObjects) {
-        // Filter anwenden für komplette Objekte
-        const filteredData = (data || []).filter((eventType: any) => 
-          !excludeTypes.includes(eventType.code)
-        )
+        const filteredData = excludeTypes.length > 0
+          ? fullData.filter((eventType: any) => !excludeTypes.includes(eventType.code))
+          : fullData
         
         logger.debug('✅ Full event types loaded (filtered):', filteredData.length, 'of', data?.length, 'total')
-        eventTypesFullCache.value = filteredData
         return filteredData
         
       } else {
-        // Original Code logic für nur Codes
-        const allCodes = data?.map((et: any) => et.code) || []
-        logger.debug('🔍 All event type codes from API:', allCodes)
-        
-        eventTypesCache.value = allCodes.filter((code: string) => !excludeTypes.includes(code))
-        isEventTypesLoaded.value = true
-        
-        logger.debug('✅ Event types loaded:', eventTypesCache.value, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
-        return eventTypesCache.value
+        const filtered = allCodes.filter((code: string) => !excludeTypes.includes(code))
+        logger.debug('✅ Event types loaded:', filtered, excludeTypes.length > 0 ? `(excluded: ${excludeTypes.join(', ')})` : '')
+        return filtered
       }
       
     } catch (err: any) {
       console.error('❌ Error loading event types from API:', err)
       
       if (loadFullObjects) {
-        // Fallback: Return empty array - will use online fallback
         logger.debug('⚠️ Using empty fallback for event types (loadFullObjects mode)')
         return []
       } else {
-        // Fallback ohne excluded types
         logger.debug('⚠️ Using fallback event types')
         eventTypesCache.value = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
         isEventTypesLoaded.value = true
@@ -73,5 +83,3 @@ export const useEventTypes = () => {
     loadEventTypes
   }
 }
-
-

@@ -5,15 +5,14 @@
     </label>
 
     <template v-if="showButtons">
-      <!-- Nur kostenpflichtige Typen als Dropdown -->
+      <!-- Kostenpflichtige Typen als Dropdown — Fallback sofort, dynamisch beim ersten Öffnen -->
       <div>
         <select
           v-model="selectedPaidCode"
+          @focus="onDropdownFocus"
           @change="onSelectPaid()"
-          :disabled="paidEventTypes.length === 0"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-sm"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         >
-          <option value="" disabled>Bitte wählen</option>
           <option v-for="eventType in paidEventTypes" :key="'paid-opt-' + eventType.code" :value="eventType.code">
             {{ eventType.emoji }} {{ eventType.name }}
           </option>
@@ -30,8 +29,9 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useEventTypes } from '~/composables/useEventTypes'
+import { logger } from '~/utils/logger'
 
 // Types
 interface LessonType {
@@ -61,53 +61,64 @@ const emit = defineEmits<{
 
 // State
 const selectedType = ref(props.selectedType)
+const selectedPaidCode = ref<string>(props.selectedType || 'lesson')
+const isLoadingDynamic = ref(false)
+const dynamicLoaded = ref(false)
 
-// Event types
-const eventTypes = ref<LessonType[]>([])
+// Hardcoded Fallback-Typen — sofort sichtbar, kein Warten
+const fallbackTypes: LessonType[] = [
+  { code: 'lesson', name: 'Fahrlektion', emoji: '🚗', require_payment: true },
+  { code: 'exam', name: 'Prüfung', emoji: '📋', require_payment: true },
+  { code: 'theory', name: 'Theorie', emoji: '📚', require_payment: true },
+]
+const eventTypes = ref<LessonType[]>([...fallbackTypes])
 const paidEventTypes = computed(() => eventTypes.value.filter((et: any) => et.require_payment))
-const freeEventTypes = computed(() => eventTypes.value.filter((et: any) => !et.require_payment))
-const selectedPaidCode = ref<string>('')
+
 const { loadEventTypes } = useEventTypes()
+
+// Lazy load: erst wenn Dropdown geöffnet wird
+const onDropdownFocus = async () => {
+  if (dynamicLoaded.value || isLoadingDynamic.value) return
+  isLoadingDynamic.value = true
+  try {
+    const data = await loadEventTypes([], true) as LessonType[]
+    if (data && data.length > 0) {
+      eventTypes.value = data
+      // Falls geladener Typ nicht mehr im aktuellen selectedPaidCode → beibehalten
+      logger.debug('✅ LessonTypeSelector: dynamic types loaded:', data.map(e => e.code))
+    }
+    dynamicLoaded.value = true
+  } catch (err) {
+    logger.debug('⚠️ LessonTypeSelector: dynamic load failed, keeping fallback')
+  } finally {
+    isLoadingDynamic.value = false
+  }
+}
 
 // Methods
 const selectLessonType = (lessonType: LessonType) => {
   logger.debug('🎯 Lesson type selected:', lessonType)
-  
-  // ✅ FIX: selectedType aktualisieren
   selectedType.value = lessonType.code
-  
   emit('lesson-type-selected', lessonType)
   emit('update:modelValue', lessonType.code)
 }
 
 const getSelectedLessonTypeName = () => {
   const lessonType = eventTypes.value.find(t => t.code === selectedType.value)
-  return lessonType ? lessonType.name : 'Unbekannt'
+  return lessonType ? lessonType.name : selectedType.value || 'Unbekannt'
 }
 
-// ✅ Watch for prop changes
-watch(() => props.selectedType, (newType, oldType) => {
-  logger.debug('🎯 LessonTypeSelector: selectedType prop changed:', {
-    from: oldType,
-    to: newType,
-    will_update_internal: !!newType
-  })
+// Watch for prop changes
+watch(() => props.selectedType, (newType) => {
   if (newType) {
     selectedType.value = newType
-    // ✅ WICHTIG: Auch selectedPaidCode synchronisieren für das Select-Element
     selectedPaidCode.value = newType
-    logger.debug('✅ LessonTypeSelector: internal selectedType updated to:', selectedType.value, 'selectedPaidCode:', selectedPaidCode.value)
+    logger.debug('✅ LessonTypeSelector: updated to:', newType)
   }
 }, { immediate: true })
 
-// Initialize
-onMounted(async () => {
-  const data = await loadEventTypes([], true)
-  eventTypes.value = data as any
-})
-
 const onSelectPaid = () => {
-  const et: any = paidEventTypes.value.find(e => e.code === selectedPaidCode.value)
+  const et = paidEventTypes.value.find(e => e.code === selectedPaidCode.value)
   if (et) selectLessonType(et)
 }
 </script>
