@@ -279,7 +279,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       staff_id: appointment.staff_id || appointment.extendedProps?.staff_id || currentUser?.id || '',
       location_id: appointment.location_id || appointment.extendedProps?.location_id || '',
       // ✅ price_per_minute removed - not in appointments table
-      status: appointment.status || appointment.extendedProps?.status || 'confirmed',
+      // 'scheduled' is an intermediate webhook state — treat as 'confirmed' in the UI
+      status: (['scheduled', 'pending_confirmation'].includes(appointment.status || appointment.extendedProps?.status) ? 'confirmed' : (appointment.status || appointment.extendedProps?.status || 'confirmed')),
       eventType: isOtherEvent ? appointmentType : 'lesson',
       selectedSpecialType: isOtherEvent ? appointmentType : '',
       // ✅ is_paid removed - not in appointments table
