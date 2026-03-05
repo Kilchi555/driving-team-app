@@ -54,8 +54,8 @@
         </div>
       </div>
 
-    <!-- ✅ BANNER: Bestätigung erforderlich -->
-    <div v-if="showContent && pendingConfirmations.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <!-- BANNER: Bestätigung erforderlich (deaktiviert - Termine werden direkt als 'confirmed' gesetzt) -->
+    <div v-if="false && showContent && pendingConfirmations.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div 
         @click="showConfirmationModal = true"
         class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg p-6 cursor-pointer hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-[1.01]"
@@ -609,8 +609,8 @@
       </div>
     </div>
 
-    <!-- ✅ MODAL: Bestätigung mit automatischer Zahlung -->
-    <div v-if="showConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <!-- MODAL: Bestätigung (deaktiviert - Termine werden direkt als 'confirmed' gesetzt) -->
+    <div v-if="false && showConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
           <!-- Header -->
@@ -2491,6 +2491,7 @@ onMounted(async () => {
       logger.debug('💳 Payment success detected, refreshing data...')
       // Small delay to ensure webhook processed
       await new Promise(resolve => setTimeout(resolve, 2000))
+      clearDashboardCache()
     }
     
     // ✅ Reset payment modal if user navigates back from Wallee
@@ -2547,6 +2548,9 @@ onMounted(async () => {
     
     await loadAllData()
     await loadPayments()
+    if (paymentSuccess) {
+      await loadPendingConfirmations()
+    }
     
     // Show payment status toast
     if (paymentSuccess) {

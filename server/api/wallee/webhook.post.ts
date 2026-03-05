@@ -690,13 +690,20 @@ export default defineEventHandler(async (event) => {
       if (appointmentIds.length > 0) {
         const appointmentStatus = paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
         
-        const { error: appointmentError } = await supabase
+        const updateQuery = supabase
           .from('appointments')
           .update({
             status: appointmentStatus,
             updated_at: new Date().toISOString()
           })
           .in('id', appointmentIds)
+        
+        // Don't downgrade a 'confirmed' appointment back to 'scheduled' on AUTHORIZED state
+        if (paymentStatus === 'authorized') {
+          updateQuery.not('status', 'eq', 'confirmed')
+        }
+        
+        const { error: appointmentError } = await updateQuery
         
         if (appointmentError) {
           logger.warn('⚠️ Error updating appointments:', appointmentError)

@@ -920,9 +920,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         duration_minutes: formData.value.duration_minutes,
         // ✅ IMPORTANT: Set type to null for "other event types" (VKU, Nothelfer, etc.)
         type: isOtherEventType ? null : formData.value.type,
-        // For chargeable lessons, newly created appointments should require confirmation first
-        // For other events or edits, use pending_confirmation as default
-        status: (mode === 'create' || isChargeableLesson) ? 'pending_confirmation' : (formData.value.status || 'pending_confirmation'),
+        status: formData.value.status || 'confirmed',
         // ✅ Missing fields added
         event_type_code: eventTypeCode,
         custom_location_address: formData.value.custom_location_address || undefined,
