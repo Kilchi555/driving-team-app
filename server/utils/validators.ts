@@ -272,7 +272,7 @@ export function validateEventType(value: any, fieldName: string = 'Event Typ'): 
  * Validate appointment status
  */
 export function validateAppointmentStatus(value: any, fieldName: string = 'Status'): { valid: boolean; error?: string } {
-  const validStatuses = ['pending_confirmation', 'confirmed', 'completed', 'cancelled', 'no_show', 'rescheduled']
+  const validStatuses = ['pending_confirmation', 'confirmed', 'completed', 'cancelled', 'no_show', 'rescheduled', 'scheduled']
   
   if (!value || !validStatuses.includes(String(value).toLowerCase())) {
     return { valid: false, error: `${fieldName} muss einer der folgenden Werte sein: ${validStatuses.join(', ')}` }
@@ -378,7 +378,7 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
     }
   }
   
-  // Status (required - default to pending_confirmation if not provided)
+  // Status (required)
   if (!data.status) {
     errors.status = 'Status ist erforderlich'
   } else {
