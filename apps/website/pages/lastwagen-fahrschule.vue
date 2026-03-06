@@ -31,6 +31,47 @@
       </div>
     </section>
 
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="lastwageBenefits" />
+
+    <!-- Voraussetzungen -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
+          <ul class="space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Mindestalter: 18 Jahre (Kategorie C1) oder 21 Jahre (Kategorie C und CE)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie C1, C oder CE</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Bestandener Sehtest (spezielle Anforderungen für LKW-Fahrer)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Ärztliche Grunduntersuchung gemäss VZV-Anforderungen</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+            </li>
+          </ul>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Der CZV Grundkurs ist obligatorisch für alle LKW-Kategorien und muss vor der praktischen Prüfung absolviert werden. Wenn du bereits die Kategorie C hast und C1 machen möchtest, vereinfacht sich die Ausbildung.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -373,6 +414,7 @@
       </div>
     </section>
     <GutscheinSection />
+    <WarumSection category="lastwagen" />
     <PriceSection category="lastwagen" />
     <CtaSection title="Jetzt mit der Lastwagen Fahrschule starten!" />
     <StandorteSection />
@@ -380,4 +422,26 @@
 </template>
 
 <script setup lang="ts">
+const lastwageBenefits = [
+  {
+    title: 'Dein Traumberuf Lastwagenfahrer?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen C Führerschein benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Fahrlektionen, um deine Fahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Grossen Fahrzeugen vertrauen?',
+    description: 'Lerne mit modernen Fahrschul-LKWs, um perfekt auf die Prüfung vorbereitet zu sein.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Lastwagenprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Sichere Karriere?',
+    description: 'Starte deine Karriere als professioneller Lastwagenfahrer mit fundierter Ausbildung.'
+  }
+]
 </script>

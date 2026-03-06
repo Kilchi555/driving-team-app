@@ -43,6 +43,9 @@
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Lachen starten!" />
 
+    <PriceSection />
+
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -115,10 +118,9 @@
       </div>
     </section>
 
-    <!-- 8. Preise (grau-50) -->
+    <!-- 8. Gutschein-->
     <div class="bg-gray-50">
       <GutscheinSection />
-      <PriceSection />
     </div>
 
     <!-- 9. Finale CTA (primary) -->
@@ -126,6 +128,9 @@
 
     <!-- 10. Andere Standorte (weiß) -->
     <StandorteSection exclude="lachen" />
+
+    <WarumSection category="lachen" />
+
   </div>
 </template>
 

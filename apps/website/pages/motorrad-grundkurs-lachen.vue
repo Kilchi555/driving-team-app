@@ -7,12 +7,14 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/courses/motorrad-grundkurs.png" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-4">Motorrad Grundkurs Lachen</h1>
-          <p class="text-xl text-primary-100 mb-2">Kompletter Kurs in Lachen nur für <strong>CHF 570.–</strong> anstatt 630.-</p>
-          <p class="text-primary-100 mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-2">Kompletter Kurs in Lachen nur für <strong>CHF 570.–</strong> anstatt 630.-</p>
+          <p class="hidden xs:block text-primary-100 mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
           <a href="https://www.simy.ch/customer/courses/driving-team/?category=PGS&location=Lachen" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>

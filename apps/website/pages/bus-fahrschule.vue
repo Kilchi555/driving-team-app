@@ -19,6 +19,9 @@
       </div>
     </section>
 
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="busBenefits" />
+
     <!-- Obligatorische Fahrstunden -->
     <section class="section-container">
       <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8">Obligatorische Fahrstunden für den Busführerschein</h2>
@@ -41,6 +44,46 @@
         </div>
       </div>
     </section>
+
+    <!-- Voraussetzungen -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
+          <ul class="space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B oder C</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Mindestalter: 24 Jahre (D1 ab 18 Jahren mit Bedingungen)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie D1 oder D</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Bestandener Sehtest (spezielle Anforderungen für Busfahrer)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Ärztliche Grunduntersuchung gemäss VZV-Anforderungen</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+            </li>
+          </ul>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Für Bus-Fahrschule Kategorie D1: Du kannst bereits ab 18 Jahren beginnen, benötigst aber spezifische medizinische Anforderungen. Der CZV Grundkurs ist obligatorisch vor der Prüfung.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <cta-section />
 
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
@@ -123,7 +166,7 @@
                 <div class="flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 text-white font-bold text-lg">5</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="heading-sm">Bus Fahrprüfung</h3>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Bus Fahrprüfung</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-4 text-lg">▼</span>
               </div>
             </summary>
@@ -285,7 +328,7 @@
       </div>
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
-        <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen: +41 44 431 00 33</a>
+        <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen!</a>
       </div>
     </section>
 
@@ -310,8 +353,31 @@
     <PriceSection category="bus" />
     <CtaSection title="Jetzt mit der Bus Fahrschule starten!" />
     <StandorteSection />
+    <WarumSection category="bus" />
   </div>
 </template>
 
 <script setup lang="ts">
+const busBenefits = [
+  {
+    title: 'Dein Traumberuf Busfahrer?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen D Führerschein benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Fahrlektionen, um deine Fahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Grossen Fahrzeugen vertrauen?',
+    description: 'Lerne mit modernen Fahrschul-Bussen, um perfekt auf die Prüfung vorbereitet zu sein.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Busprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Professionelle Karriere?',
+    description: 'Starte deine Karriere als professioneller Busfahrer mit fundierter Ausbildung.'
+  }
+]
 </script>

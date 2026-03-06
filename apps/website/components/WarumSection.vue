@@ -77,13 +77,13 @@ const locationLabels: Record<string, string> = {
   dietikon: 'in Dietikon',
   aargau: 'in Aargau',
   reichenburg: 'in Reichenburg',
-  auto: 'für die Auto Kategorie',
-  motorrad: 'für die Motorrad Kategorie',
-  lastwagen: 'für die Lastwagen Kategorie',
-  taxi: 'für die Taxi Kategorie',
-  bus: 'für die Bus Kategorie',
-  motorboot: 'für die Motorboot Kategorie',
-  anhaenger: 'für die Anhänger Kategorie',
+  auto: 'der Auto Fahrschule',
+  motorrad: 'der Motorrad Fahrschule',
+  lastwagen: 'der Lastwagen Fahrschule',
+  taxi: 'der Taxi Fahrschule',
+  bus: 'der Bus Fahrschule',
+  motorboot: 'der Motorboot Fahrschule',
+  anhaenger: 'der Anhänger Fahrschule',
 }
 
 const title = computed(() => categoryTitles[props.category] ?? 'Warum die Fahrschule Driving Team?')

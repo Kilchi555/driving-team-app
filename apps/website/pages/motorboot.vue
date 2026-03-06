@@ -28,6 +28,49 @@
       </div>
     </section>
 
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="motorbootBenefits" />
+
+    <!-- Voraussetzungen -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
+          <ul class="space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Mindestalter: 18 Jahre (für Prüfung und Führerschein)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Ab 12 Jahren in Begleitung möglich</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Bestandene Motorboot Theorieprüfung</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Ausreichend praktische Motorbootsfahrstunden</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Anmeldung beim Schifffahrtsamt des Wohnkantons</p>
+            </li>
+          </ul>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Die Motorboottheorie für Binnenschifffahrt beinhaltet Fragen zu Motorbooten, Segelbooten und Schifffahrtsregeln. Die Theorieprüfung ist 24 Monate lang gültig. In der Schweiz gibt es keine Altersuntergrenze für begleitetes Motorbootfahren ab 12 Jahren.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <cta-section />
+
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -155,10 +198,26 @@
             </summary>
             <p class="text-gray-600 mt-4">In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden. Bereits ab einem Alter von 18 Jahren darf man den Lernfahrausweis für die Motorbootkategorie bestellen und die Bootsprüfung absolvieren.</p>
           </details>
+
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Was ist die Admin- und Versicherungspauschale?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits hat unser Motorboot eine spezielle Vollkaskoversicherung, welche jegliche Lenker:innen abdecken.</p>
+          </details>
+
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Wie lange dauert die Bootfahrausbildung?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-600 mt-4">Das hängt ganz von dir ab. Vom Erhalt des Lernfahrausweises bis zur bestandenen praktischen Führerprüfung war der bisher schnellste Fahrschüler innert 5 Wochen fertig. Es gibt jedoch auch Beispiele, da haben es Leute geschafft, fast 2 Lernfahrausweise zu nutzen und dann unter Zeitdruck an die Fahrprüfung zu gehen. Es ist also sehr unterschiedlich.</p>
+          </details>
         </div>
         <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
           <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
-          <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen: +41 44 431 00 33</a>
+          <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen!</a>
         </div>
       </div>
     </section>
@@ -249,8 +308,31 @@
     <PriceSection category="motorboot" />
     <CtaSection title="Jetzt mit der Motorboot Fahrschule starten!" />
     <StandorteSection />
+    <WarumSection category="motorboot" />
   </div>
 </template>
 
 <script setup lang="ts">
+const motorbootBenefits = [
+  {
+    title: 'Sicherer Bootsfahrer?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen Motorbootführerschein benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Fahrlektionen, um deine Bootsfahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Auf dem Wasser sicher?',
+    description: 'Lerne mit einem erfahrenen Bootsfahrlehrer am schönen Zürichsee.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Motorbootprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Flexible Zeiten?',
+    description: 'Fahrstunden auch abends und samstags möglich – wir passen uns deinem Zeitplan an.'
+  }
+]
 </script>

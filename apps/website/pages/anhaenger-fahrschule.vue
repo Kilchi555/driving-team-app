@@ -26,6 +26,38 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="anhaengerBenefits" />
 
+    <!-- Voraussetzungen -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
+          <ul class="space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Mindestalter: 17 Jahre (mit Begleitperson) oder 18 Jahre (volle Eigenständigkeit)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie BE</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+            </li>
+          </ul>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Gute Nachricht: Für die Anhänger Ausbildung (Kategorie BE) brauchst du keine Theorieprüfung und keinen neuen Nothelferkurs – dein Auto-Führerschein reicht aus!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <cta-section />
+
     <!-- Ausbildungsablauf -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -278,7 +310,7 @@
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
-          📞 Jetzt anrufen: +41 44 431 00 33
+          📞 Jetzt anrufen!
         </a>
       </div>
     </section>
@@ -302,6 +334,7 @@
     <PriceSection category="anhaenger" />
     <CtaSection title="Jetzt mit der Anhänger Fahrschule starten!" />
     <StandorteSection />
+    <WarumSection category="anhaenger" />
   </div>
 </template>
 

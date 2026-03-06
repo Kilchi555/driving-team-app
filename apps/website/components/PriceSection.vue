@@ -193,12 +193,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+
+const props = defineProps<{ category?: string }>()
 
 const cardCount = 8
 
+const categoryIndexMap: Record<string, number> = {
+  auto: 0,
+  motorrad: 1,
+  anhaenger: 2,
+  gesellschaftswagen: 3,
+  lastwagen: 4,
+  motorboot: 5,
+  taxi: 6,
+  bus: 7,
+}
+
 const sliderRef = ref<HTMLElement | null>(null)
-const activeIndex = ref(0)
+const activeIndex = ref(props.category ? (categoryIndexMap[props.category] ?? 0) : 0)
 
 function onScroll() {
   const el = sliderRef.value
@@ -213,6 +226,12 @@ function scrollTo(i: number) {
   const cardWidth = el.scrollWidth / cardCount
   el.scrollTo({ left: i * cardWidth, behavior: 'smooth' })
 }
+
+onMounted(() => {
+  if (props.category && categoryIndexMap[props.category] !== undefined) {
+    scrollTo(categoryIndexMap[props.category])
+  }
+})
 
 const title = computed(() => 'Unsere Preise')
 </script>

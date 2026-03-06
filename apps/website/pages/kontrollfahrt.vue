@@ -138,54 +138,7 @@
       </div>
     </section>
 
-    <!-- Anmeldung -->
-    <section id="anmeldung" class="section-container py-20">
-      <div class="max-w-2xl mx-auto">
-        <h2 class="heading-md text-center mb-4">Kontrollfahrt – Fahrstunden anmelden</h2>
-        <p class="text-center text-gray-600 mb-12">Diese Anmeldung ist unverbindlich und Deine Daten werden vertraulich behandelt.</p>
-        
-        <div class="bg-white border border-gray-200 rounded-lg p-8">
-          <form class="space-y-6">
-            <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-              <input type="text" placeholder="Name*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-            </div>
-            <div class="grid md:grid-cols-3 gap-4">
-              <input type="text" placeholder="Strasse*" class="md:col-span-2 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-              <input type="text" placeholder="Nr.*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-            </div>
-            <div class="grid md:grid-cols-2 gap-4">
-              <input type="text" placeholder="PLZ*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-              <input type="text" placeholder="Wohnort*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-            </div>
-            <input type="email" placeholder="E-Mail*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-            <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Prüfungsort</label>
-              <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required>
-                <option value="">Bitte auswählen</option>
-                <option>Wettingen</option>
-                <option>Albisgütli</option>
-                <option>Regensdorf</option>
-                <option>Bassersdorf</option>
-                <option>Hinwil</option>
-                <option>Pfäffikon/SZ</option>
-                <option>Kaltbrunn/SG</option>
-                <option>noch offen</option>
-              </select>
-            </div>
-            <textarea placeholder="Weitere Angaben, Wunschabholort, bevorzugte Zeitfenster, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
-            <div class="flex items-center gap-3">
-              <input type="checkbox" id="agb" class="w-4 h-4" required />
-              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-primary-600 hover:underline">AGB's</a></label>
-            </div>
-            <button type="submit" class="btn-primary w-full text-lg">
-              Fahrstunden anfragen
-            </button>
-          </form>
-        </div>
-      </div>
-    </section>
+    <cta-section />
 
     <!-- FAQ -->
     <section class="bg-gray-50 py-20">
@@ -274,6 +227,11 @@
         </a>
       </div>
     </section>
+    <GutscheinSection/>
+    <PriceSection category="kontrollfahrt" />
+    <CtaSection title="Jetzt mit der Kontrollfahrt Fahrschule starten!" />
+    <StandorteSection />
+    <WarumSection category="kontrollfahrt" />
   </div>
 </template>
 

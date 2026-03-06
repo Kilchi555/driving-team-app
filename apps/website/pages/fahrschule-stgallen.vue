@@ -39,8 +39,11 @@
     <!-- 5. Reviews (grau-50) -->
     <ReviewsSection />
 
-    <!-- 6. CTA (primary) -->
+    <!-- 6. CTA (primary) & Preise -->
     <CtaSection title="Jetzt in St. Gallen starten!" />
+
+    <PriceSection />
+
 
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
@@ -124,8 +127,10 @@
     <!-- 8. Preise (grau-50) -->
     <div class="bg-gray-50">
       <GutscheinSection />
-      <PriceSection />
     </div>
+
+    <!-- WarumSection -->
+    <WarumSection category="stgallen" />
 
     <!-- 9. Finale CTA (primary) -->
     <CtaSection title="Bereit? Jetzt Termin buchen!" />

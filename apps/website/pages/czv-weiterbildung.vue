@@ -7,12 +7,14 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/courses/czv-weiterbildung.png" alt="CZV Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Weiterbildungskurse</h1>
-          <p class="text-xl text-orange-100 mb-4">Für die Erneuerung des Fähigkeitsausweises musst du 5 Tage Weiterbildung innerhalb von 5 Jahren nachweisen. Die CZV-Ziele sind:</p>
-          <ul class="text-orange-100 space-y-2 mb-8 list-disc pl-6">
+          <p class="hidden xs:block text-xl text-orange-100 mb-4">Für die Erneuerung des Fähigkeitsausweises musst du 5 Tage Weiterbildung innerhalb von 5 Jahren nachweisen. Die CZV-Ziele sind:</p>
+          <ul class="hidden xs:block text-orange-100 space-y-2 mb-8 list-disc pl-6">
             <li>Verbesserung der Verkehrssicherheit</li>
             <li>Aufwertung des Chauffeurberufs</li>
             <li>Umweltverträgliche und energieeffiziente Verwendung des Fahrzeugs</li>

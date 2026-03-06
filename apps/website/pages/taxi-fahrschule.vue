@@ -23,6 +23,9 @@
       </div>
     </section>
 
+    <!-- Benefits Section -->
+    <WhyWeBenefitsSection :benefits="taxiBenefits" />
+
     <!-- Intro -->
     <section class="section-container">
       <div class="max-w-3xl mx-auto">
@@ -31,6 +34,42 @@
         <p class="text-lg text-gray-700">Lass uns gemeinsam den Grundstein für deine erfolgreiche Karriere legen. Buche jetzt deine Taxifahrstunden und starte dein Abenteuer als professionelle:r Taxifahrer:in!</p>
       </div>
     </section>
+
+    <!-- Voraussetzungen -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
+          <ul class="space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B (mindestens 1 Jahr im Besitz)</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Mindestalter: 21 Jahre</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie BPT</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Bestandener Sehtest</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+            </li>
+          </ul>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Achtung: Für die Taxi-Ausbildung brauchst du mindestens 1 Jahr Fahrerfahrung mit dem Auto-Führerschein. Dein Auto-Führerschein darf nicht älter als 15 Jahre sein.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <cta-section />
 
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
@@ -298,7 +337,7 @@
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
-          📞 Jetzt anrufen: +41 44 431 00 33
+          📞 Jetzt anrufen!
         </a>
       </div>
     </section>
@@ -361,8 +400,31 @@
     <PriceSection category="taxi" />
     <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" />
     <StandorteSection />
+    <WarumSection category="taxi" />
   </div>
 </template>
 
 <script setup lang="ts">
+const taxiBenefits = [
+  {
+    title: 'Dein Traumberuf Taxifahrer?',
+    description: 'Wir begleiten dich von der ersten Stunde an und bringen dir alles bei, was du für deinen BPT Führerschein benötigst.'
+  },
+  {
+    title: 'Individuelle Förderung?',
+    description: 'Buche massgeschneiderte Fahrlektionen, um deine Fahrfähigkeiten gezielt zu verbessern.'
+  },
+  {
+    title: 'Kundenorientiertes Fahren?',
+    description: 'Lerne professionelle Umgangsformen und wie du dich als Taxifahrer:in richtig verhältst.'
+  },
+  {
+    title: 'Prüfungssimulation?',
+    description: 'Bereite dich optimal auf die Taxiprüfung vor, damit am grossen Tag nichts schiefgeht.'
+  },
+  {
+    title: 'Komplette Ausbildung?',
+    description: 'Von der Theorie über ARV bis zur praktischen Fahrausbildung – alles aus einer Hand.'
+  }
+]
 </script>

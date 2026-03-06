@@ -7,11 +7,13 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-red-600 to-red-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-red-600 to-red-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/courses/nothelfer.png" alt="Nothelferkurs" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Nothelferkurs</h1>
-          <p class="text-xl text-red-100 mb-8">Helfen ist wichtig, DU bist wichtig. Jeder Mensch ist dazu in der Lage ein Leben zu retten – sei es auf der Strasse bei einem Autounfall oder im privaten Umfeld. In 10 Stunden zum Nothelferausweis!</p>
+          <p class="hidden xs:block text-xl text-red-100 mb-8">Helfen ist wichtig, DU bist wichtig. Jeder Mensch ist dazu in der Lage ein Leben zu retten – sei es auf der Strasse bei einem Autounfall oder im privaten Umfeld. In 10 Stunden zum Nothelferausweis!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>
