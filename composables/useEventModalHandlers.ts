@@ -182,14 +182,17 @@ const handleCategorySelected = async (category: any) => {
       }) as any
 
       if (response?.success && response?.data) {
-        const durations = [response.data.lesson_duration, response.data.exam_duration]
         logger.debug('💰 Category data loaded from API')
         selectedCategory.value = { 
           ...category, 
           lesson_duration_minutes: response.data.lesson_duration,
           exam_duration_minutes: response.data.exam_duration
         }
-        availableDurations.value = durations
+        // ✅ Use correct durations based on appointment_type
+        const isExam = formData.value.appointment_type === 'exam'
+        availableDurations.value = isExam
+          ? [response.data.exam_duration || 135]
+          : [response.data.lesson_duration || 45]
       }
     } catch (err) {
       console.error('❌ Error loading category from API:', err)
@@ -328,10 +331,14 @@ const handleDurationsChanged = (durations: number[]) => {
   
   logger.debug('📊 Flattened durations:', flatDurations)
   
-  // ✅ FIX: Bei Prüfungen die exam_duration aus selectedCategory verwenden
+  // ✅ FIX: Bei Prüfungen die exam_duration aus den empfangenen durations ODER selectedCategory verwenden
   if (formData.value.appointment_type === 'exam') {
-    const examDuration = selectedCategory.value?.exam_duration_minutes || 135
-    logger.debug('📝 OVERRIDE: Using exam duration instead of received durations:', examDuration)
+    // Der CategorySelector sendet bei appointment_type='exam' bereits exam_duration_minutes
+    // Nutze diese direkt, fallback auf selectedCategory oder 135
+    const examDuration = (flatDurations.length === 1 && flatDurations[0] > 0)
+      ? flatDurations[0]
+      : selectedCategory.value?.exam_duration_minutes || 135
+    logger.debug('📝 OVERRIDE: Using exam duration:', examDuration)
     availableDurations.value = [examDuration]
     formData.value.duration_minutes = examDuration
   } else {

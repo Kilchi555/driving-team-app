@@ -2127,30 +2127,33 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
       return
     }
     
-    if (categoryData && categoryData.lesson_duration_minutes) {
-      // ✅ ROBUSTE BEHANDLUNG: Stelle sicher, dass wir immer ein Array von Zahlen haben
+    if (categoryData && (categoryData.lesson_duration_minutes || categoryData.exam_duration_minutes)) {
+      // ✅ Use exam_duration_minutes when appointment_type is 'exam'
+      const isExam = formData.value.appointment_type === 'exam' || selectedLessonType.value === 'exam'
+      
       let durations: number[] = []
       
-      if (Array.isArray(categoryData.lesson_duration_minutes)) {
-        // Falls es bereits ein Array ist
-        durations = categoryData.lesson_duration_minutes.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
-      } else if (typeof categoryData.lesson_duration_minutes === 'string') {
-        // Falls es ein String ist, versuche es zu parsen
-        try {
-          const parsed = JSON.parse(categoryData.lesson_duration_minutes)
-          durations = Array.isArray(parsed) 
-            ? parsed.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
-            : [parseInt(parsed.toString(), 10)].filter((d: number) => !isNaN(d))
-        } catch {
-          // Falls kein JSON, versuche Komma-getrennte Werte zu parsen
-          durations = categoryData.lesson_duration_minutes.split(',')
-            .map((d: any) => parseInt(d.trim(), 10))
-            .filter((d: number) => !isNaN(d))
-        }
+      if (isExam && categoryData.exam_duration_minutes) {
+        const examDuration = parseInt(categoryData.exam_duration_minutes.toString(), 10)
+        durations = isNaN(examDuration) ? [135] : [examDuration]
+        logger.debug('✅ Using exam_duration_minutes for category:', categoryCode, durations)
       } else {
-        // Fallback: Einzelner Wert
-        const singleValue = parseInt(categoryData.lesson_duration_minutes.toString(), 10)
-        durations = isNaN(singleValue) ? [45] : [singleValue]
+        const rawDurations = categoryData.lesson_duration_minutes
+        if (Array.isArray(rawDurations)) {
+          durations = rawDurations.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
+        } else if (typeof rawDurations === 'string') {
+          try {
+            const parsed = JSON.parse(rawDurations)
+            durations = Array.isArray(parsed)
+              ? parsed.map((d: any) => parseInt(d.toString(), 10)).filter((d: number) => !isNaN(d))
+              : [parseInt(parsed.toString(), 10)].filter((d: number) => !isNaN(d))
+          } catch {
+            durations = rawDurations.split(',').map((d: any) => parseInt(d.trim(), 10)).filter((d: number) => !isNaN(d))
+          }
+        } else {
+          const singleValue = parseInt(rawDurations?.toString(), 10)
+          durations = isNaN(singleValue) ? [45] : [singleValue]
+        }
       }
       
       // ✅ NEU: Stelle sicher, dass wir ein flaches Array haben
