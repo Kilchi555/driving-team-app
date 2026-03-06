@@ -43,6 +43,9 @@
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Dietikon starten!" />
 
+    <PriceSection />
+
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -118,7 +121,6 @@
     <!-- 8. Preise (grau-50) -->
     <div class="bg-gray-50">
       <GutscheinSection />
-      <PriceSection />
     </div>
 
     <!-- 9. Finale CTA (primary) -->
@@ -126,6 +128,9 @@
 
     <!-- 10. Andere Standorte (weiß) -->
     <StandorteSection exclude="dietikon" />
+
+    <WarumSection category="dietikon" />
+
   </div>
 </template>
 

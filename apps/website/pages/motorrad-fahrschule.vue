@@ -17,7 +17,7 @@
           <h1 class="heading-lg text-white mb-6">Motorrad Fahrschule Kategorie A1 | A35kW | A</h1>
           <p class="hidden xs:block text-xl text-primary-100 mb-8">Bist du bereit, die Strasse mit deinem Motorrad zu erobern? Unsere Motorrad Fahrschule bietet dir professionelle Ausbildung für alle Kategorien (A1, A35kW, A) mit erfahrenen Fahrlehrern in Zürich und Lachen/SZ.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Fahrstunden anfragen
+            ✨ Fahrstunden buchen
           </a>
         </div>
       </div>
@@ -51,6 +51,8 @@
         </div>
       </div>
     </section>
+
+    <cta-section />
 
     <!-- Process Steps -->
     <section class="section-container py-16">
@@ -210,31 +212,44 @@
       </div>
     </section>
 
+    <ReviewsSection category="motorrad" />
+
+    <PriceSection category="motorrad" />
+
+    <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
+
+
     <!-- Motorrad Kurse -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Motorrad Kurse</h2>
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-center">Motorrad Kurse</h2>
         <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Wie überall im Leben hat man auch beim Motorradfahren nie ausgelernt. Mehrmals im Jahr veranstalten wir Events und Trainings, bei denen du deine Fähigkeiten vertiefen kannst.</p>
-        <div class="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          <a href="/motorrad-grundkurs-zuerich/" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-            <p class="text-2xl mb-2">🏍️</p>
-            <p class="font-semibold text-gray-900">Grundkurs Zürich</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          <a href="/motorrad-grundkurs-zuerich/" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-primary-200 p-6 text-center">
+            <p class="text-3xl mb-3">🏍️</p>
+            <p class="font-bold text-gray-900 text-sm">Grundkurs</p>
+            <p class="text-xs text-primary-600 font-semibold mt-1">Zürich</p>
           </a>
-          <a href="/motorrad-grundkurs-lachen/" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-            <p class="text-2xl mb-2">🏍️</p>
-            <p class="font-semibold text-gray-900">Grundkurs Lachen</p>
+          <a href="/motorrad-grundkurs-lachen/" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-primary-200 p-6 text-center">
+            <p class="text-3xl mb-3">🏍️</p>
+            <p class="font-bold text-gray-900 text-sm">Grundkurs</p>
+            <p class="text-xs text-primary-600 font-semibold mt-1">Lachen</p>
           </a>
-          <a href="/motorrad-grundkurs-einsiedeln/" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-            <p class="text-2xl mb-2">🏍️</p>
-            <p class="font-semibold text-gray-900">Grundkurs Einsiedeln</p>
+          <a href="/motorrad-grundkurs-einsiedeln/" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-primary-200 p-6 text-center">
+            <p class="text-3xl mb-3">🏍️</p>
+            <p class="font-bold text-gray-900 text-sm">Grundkurs</p>
+            <p class="text-xs text-primary-600 font-semibold mt-1">Einsiedeln</p>
           </a>
-          <a href="/motorrad-grundkurs-zug/" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-            <p class="text-2xl mb-2">🏍️</p>
-            <p class="font-semibold text-gray-900">Grundkurs Zug</p>
+          <a href="/motorrad-grundkurs-zug/" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-primary-200 p-6 text-center">
+            <p class="text-3xl mb-3">🏍️</p>
+            <p class="font-bold text-gray-900 text-sm">Grundkurs</p>
+            <p class="text-xs text-primary-600 font-semibold mt-1">Zug</p>
           </a>
         </div>
         <div class="text-center mt-8">
-          <a href="/motorrad-weiterbildung/" class="text-primary-600 font-semibold hover:underline">→ Motorrad-Weiterbildung für erfahrene Fahrer</a>
+          <a href="/motorrad-weiterbildung/" class="inline-flex items-center gap-2 bg-primary-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-primary-700 transition shadow-md">
+            🏍️ Motorrad-Weiterbildung für erfahrene Fahrer
+          </a>
         </div>
       </div>
     </section>
@@ -277,10 +292,10 @@
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Was sind die Voraussetzungen für den Führerschein?
+            Was sind die Voraussetzungen für die Motorrad Führerausweis?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Um einen Motorrad-Führerschein zu erhalten, benötigst du: das erforderliche Mindestalter (A1: ab 15/16 J., A35kW: ab 18 J., A: ab 20 J. mit 2 Jahren A35kW), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
+          <p class="text-gray-600 mt-4">Um einen Motorrad Füphrerausweis zu erhalten, benötigst du das erforderliche Mindestalter (A1: ab 15/16 J., A35kW: ab 18 J., A: ab 20 J. mit 2 Jahren A35kW), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -335,7 +350,7 @@
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
-          📞 Jetzt anrufen: +41 44 431 00 33
+          📞 Jetzt anrufen!
         </a>
       </div>
     </section>
@@ -378,26 +393,12 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-primary-600 text-white py-16">
-      <div class="section-container text-center">
-        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Bereit für dein Motorrad-Abenteuer?</h2>
-        <p class="hidden xs:block text-xl text-primary-100 mb-8">Starte jetzt deine Motorrad-Ausbildung bei Driving Team!</p>
-        <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            📅 Fahrstunden anfragen
-          </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
-            📞 +41 44 431 00 33
-          </a>
-        </div>
-      </div>
-    </section>
+    <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
     
     <ReviewsSection category="default" />
     <GutscheinSection />
-    <PriceSection category="motorrad" />
-    <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
     <StandorteSection />
+    <WarumSection category="motorrad" />
   </div>
 </template>
 

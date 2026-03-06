@@ -7,11 +7,13 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/czv-grundkurs.png" alt="CZV Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
-          <p class="text-xl text-primary-100 mb-8">Der CZV Grundkurs ist für Berufschauffeure obligatorisch und muss vor der ersten Berufsausübung absolviert werden. Kontaktiere uns für mehr Informationen.</p>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Der CZV Grundkurs ist für Berufschauffeure obligatorisch und muss vor der ersten Berufsausübung absolviert werden. Kontaktiere uns für mehr Informationen.</p>
           <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Anfrage senden
           </a>

@@ -43,6 +43,9 @@
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Reichenburg starten!" />
 
+    <PriceSection />
+
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -115,11 +118,13 @@
       </div>
     </section>
 
-    <!-- 8. Preise (grau-50) -->
+    <!-- 8. Gutschein-->
     <div class="bg-gray-50">
       <GutscheinSection />
-      <PriceSection />
     </div>
+
+    <!-- WarumSection -->
+    <WarumSection category="reichenburg" />
 
     <!-- 9. Finale CTA (primary) -->
     <CtaSection title="Bereit? Jetzt Termin buchen!" />

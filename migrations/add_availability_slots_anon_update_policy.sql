@@ -1,35 +1,10 @@
--- Migration: Add UPDATE policy for anonymous users to reserve slots
--- Date: 2026-02-13
--- 
--- PURPOSE:
--- Allow anonymous users to update only 'reserved_by_session' and 'reserved_until'
--- columns on availability_slots, with proper safety checks to prevent race conditions.
---
--- SECURITY:
--- - Only anon and authenticated users can use this policy
--- - Can only update if slot is free (reserved_by_session IS NULL) OR
---   reservation has expired (reserved_until < NOW()) OR
---   same session is extending its own reservation (reserved_by_session = new.reserved_by_session)
--- - Can only modify reserved_by_session and reserved_until columns
--- - All other columns must remain unchanged
+-- Drop old trigger if exists
+DROP TRIGGER IF EXISTS trigger_validate_availability_slot_update ON availability_slots;
 
--- Add UPDATE policy for anon users to reserve slots
-CREATE POLICY "availability_anon_update_reserve_slot" ON availability_slots
-  FOR UPDATE
-  TO anon, authenticated
-  USING (
-    -- Allow UPDATE attempt if:
-    -- 1. Slot is currently free, OR
-    -- 2. Previous reservation has expired
-    reserved_by_session IS NULL OR
-    reserved_until < NOW()
-  );
-
--- Add trigger function to validate that only reservation fields are modified
+-- Recreate the trigger function
 CREATE OR REPLACE FUNCTION validate_availability_slot_update()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Ensure only reserved_by_session and reserved_until can be changed
   IF (
     NEW.id != OLD.id OR
     NEW.tenant_id != OLD.tenant_id OR
@@ -53,15 +28,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger to validate updates
-DROP TRIGGER IF EXISTS trigger_validate_availability_slot_update ON availability_slots;
+-- Create trigger without WHEN clause
 CREATE TRIGGER trigger_validate_availability_slot_update
   BEFORE UPDATE ON availability_slots
   FOR EACH ROW
   EXECUTE FUNCTION validate_availability_slot_update();
-
--- Verify policies are in place
-DO $$
-BEGIN
-  RAISE NOTICE 'UPDATE policy for anonymous slot reservation has been created successfully';
-END $$;

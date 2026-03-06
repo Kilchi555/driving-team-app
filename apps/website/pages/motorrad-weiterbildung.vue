@@ -7,11 +7,13 @@
     </Head>
 
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-16 md:py-24">
-      <div class="section-container">
+    <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
+      <img src="/images/motorrad-weiterbildung.png" alt="Motorrad Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Motorrad Weiterbildung</h1>
-          <p class="text-xl text-orange-100 mb-8">In unseren Motorrad Weiterbildungen geht es darum, dich zu einer sichereren Motorradfahrerin oder einem sichereren Motorradfahrer zu machen. In unseren Motorradkursen sind erfahrene Motorrad-Fahrlehrer dabei.</p>
+          <p class="hidden xs:block text-xl text-orange-100 mb-8">In unseren Motorrad Weiterbildungen geht es darum, dich zu einer sichereren Motorradfahrerin oder einem sichereren Motorradfahrer zu machen. In unseren Motorradkursen sind erfahrene Motorrad-Fahrlehrer dabei.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
             ✨ Jetzt anmelden
           </a>

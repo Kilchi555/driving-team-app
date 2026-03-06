@@ -26,6 +26,35 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="autoBenefits" />
 
+    <!-- Voraussetzungen -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Voraussetzungen</h2>
+        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm">
+          <ul class="space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Nothelferkurs frühestens mit 14 Jahren</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Lernfahrgesuch wahrehitsgetreu inkl. Sehtest (2 Jahre gültig) eingereicht</p>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <p class="text-gray-700">Gültiger Lernfahrausweis und Mindestalter 17 Jahre um mit Lernfahrten beginnen zu dürfen</p>
+            </li>
+        
+          </ul>
+          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Wenn du bereits im Besitz eines gültigen Lernfahr- oder Fahrausweises einer anderen Kategorie (z.B. Motorrad) bist, musst du den Nothelferkurs, den Verkehrskundekurs und die Theorie nicht erneut absolvieren.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <cta-section />
+
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -175,6 +204,12 @@
       </div>
     </section>
 
+    <ReviewsSection category="default" />
+
+
+    <PriceSection category="auto" />
+
+
     <!-- FAQ Section -->
     <section class="section-container">
       <h2 class="heading-md mb-12 text-center">Häufig gestellte Fragen</h2>
@@ -271,27 +306,18 @@
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
-          📞 Jetzt anrufen: +41 44 431 00 33
+          📞 Jetzt anrufen!
         </a>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-primary-600 text-white py-16">
-      <div class="section-container text-center">
-        <h2 class="heading-md mb-6 text-white">Bereit zu starten?</h2>
-        <p class="hidden xs:block text-xl text-primary-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-          📅 Termin buchen
-        </a>
-      </div>
-    </section>
-    
-    <ReviewsSection category="default" />
+  
+    <CtaSection title="Jetzt mit der Auto Fahrschule starten!" />
     <GutscheinSection />
-    <PriceSection category="auto" />
     <CtaSection title="Jetzt mit der Auto Fahrschule starten!" />
     <StandorteSection />
+    <WarumSection category="auto" />
   </div>
 </template>
 

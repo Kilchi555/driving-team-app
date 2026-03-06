@@ -41,8 +41,11 @@
     <!-- 5. Reviews (grau-50) — Was sagen andere -->
     <ReviewsSection category="zuerich" />
 
-    <!-- 6. CTA (primary) — Jetzt buchen -->
+    <!-- 6. CTA (primary) & Preise — Jetzt buchen -->
     <CtaSection title="Jetzt in Zürich starten!" />
+
+    <PriceSection />
+
 
     <!-- 7. FAQ (weiß) — Letzte Fragen -->
     <section class="py-16 bg-white">
@@ -113,11 +116,13 @@
       </div>
     </section>
 
-    <!-- 8. Preise (grau-50) — Was kostet es -->
+    <!-- 8. Gutschein-->
     <div class="bg-gray-50">
       <GutscheinSection />
-      <PriceSection />
     </div>
+
+    <!-- WarumSection -->
+    <WarumSection category="zuerich" />
 
     <!-- 9. Finale CTA (primary) -->
     <CtaSection title="Bereit? Jetzt Termin buchen!" />
