@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Bus Fahrschule Kategorie D1 | D | Driving Team Zürich</Title>
-      <Meta name="description" content="Bus Fahrschule in Zürich für Kategorie D1 und D. Erfahrener Bus Fahrlehrer, obligatorische Fahrstunden, CZV Grundkurs. Jetzt anmelden!" />
+      <Title>Bus Fahrschule | D1, D | Driving Team</Title>
+      <Meta name="description" content="Bus Fahrschule Zürich - D1 & D Kategorien. 52-24 Fahrstunden, expert instruction. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
     </Head>
 

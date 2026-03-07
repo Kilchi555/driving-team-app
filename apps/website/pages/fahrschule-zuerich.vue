@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich | Jetzt in 6 Schritten zur Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Zürich – professionelle Fahrstunden für Auto, Motorrad & mehr in Zürich-Altstetten. Englisch & Albanisch möglich. Jetzt Termin buchen!" />
+      <Title>Fahrschule Zürich | Auto, Motorrad, Kurse | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich - Auto, Motorrad, Kurse. Flexible Fahrstunden, erfahrene Fahrlehrer. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Prüfungsvorbereitung Zürich" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
     </Head>

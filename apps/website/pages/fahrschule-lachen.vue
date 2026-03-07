@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Lachen | 6 Schritte zu Deiner Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Lachen – Moderne Fahrausbildung im Kanton Schwyz. Fahrstunden für Auto, Motorrad und mehr. Jetzt anmelden!" />
+      <Title>Fahrschule Lachen | Auto, Motorrad | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Lachen - Auto, Motorrad, Kurse. Flexible Fahrstunden im Kanton Schwyz. Jetzt buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-lachen/" />
     </Head>
 

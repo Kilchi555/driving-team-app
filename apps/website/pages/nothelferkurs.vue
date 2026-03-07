@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Nothelferkurs | In 10 Stunden zum Nothelferausweis | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs beim Driving Team. 10 Stunden in 2 Teilen. CHF 99.- inkl. Nothelferausweis. In Zürich-Altstetten und Lachen. Jetzt anmelden!" />
+      <Title>Nothelferkurs | First Aid Course | Driving Team</Title>
+      <Meta name="description" content="Nothelferkurs (First Aid) - Obligatorisch für Führerschein. CHF 99.-. Flexible Kurse in Zürich, Lachen. Jetzt buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs/" />
     </Head>
 
