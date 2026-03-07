@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>LKW Fahrschule Kategorie C1 | C | CE | Driving Team Zürich</Title>
-      <Meta name="description" content="LKW Fahrschule in Zürich und Lachen/SZ für Kategorie C1, C und CE. Professionelle Ausbildung mit erfahrenen Fahrlehrern. CZV Grundkurs und Weiterbildung." />
+      <Title>LKW Fahrschule | C1, C, CE | Driving Team</Title>
+      <Meta name="description" content="LKW Fahrschule Zürich - Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge. CZV Grundkurs. Jetzt anmelden!" />
       <Meta property="og:title" content="LKW Fahrschule Kategorie C1 | C | CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
@@ -358,7 +358,7 @@
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">
-          📞 Jetzt anrufen: +41 44 431 00 33
+          📞 Jetzt anrufen!
         </a>
       </div>
     </section>
@@ -414,10 +414,11 @@
       </div>
     </section>
     <GutscheinSection />
-    <WarumSection category="lastwagen" />
     <PriceSection category="lastwagen" />
     <CtaSection title="Jetzt mit der Lastwagen Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
+    <WarumSection category="lastwagen" />
+
   </div>
 </template>
 

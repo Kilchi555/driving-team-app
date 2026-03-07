@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Grundkurs Zürich | Sicher Motorrad fahren lernen | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Zürich – 3 x 4h praxisorientierter Grundkurs für alle Motorrad-Kategorien. Kompletter Kurs CHF 499.-. Max. 5 Teilnehmer. Jetzt anmelden!" />
+      <Title>Motorrad Grundkurs Zürich | Driving Team</Title>
+      <Meta name="description" content="Motorrad Grundkurs Zürich - 3x4h für alle Kategorien. Praktische Ausbildung, max. 5 Teilnehmer. Jetzt buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
     </Head>
 

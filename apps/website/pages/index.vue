@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich | Deine Driving Team Fahrschule in Zürich - Auto, Motorrad, Taxi</Title>
-      <Meta name="description" content="Fahrschule Driving Team Zürich - moderne Fahrausbildung für Auto, Motorrad, Taxi, Lastwagen & Anhänger. Erfahrene Fahrlehrer, flexible Fahrstunden, hohe Prüfungserfolgsquote. Jetzt buchen!" />
+      <Title>Fahrschule Schweiz | Auto, Motorrad, Kurse | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Driving Team - Auto, Motorrad, LKW, Bus & Kurse. 95% Erfolgsquote, flexible Zeiten, ab CHF 100/Lektion. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule, Taxi Fahrschule, Lastwagen Fahrschule, Führerschein, Fahrausbildung, Fahrstunden Zürich, Prüfungsvorbereitung" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
