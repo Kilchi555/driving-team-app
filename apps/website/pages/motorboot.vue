@@ -54,15 +54,12 @@
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Ab 12 Jahren in Begleitung möglich</p>
+              <p class="text-gray-700">Ab 14 Jahren in Begleitung möglich</p>
             </li>
+          
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Bestandene Motorboot Theorieprüfung</p>
+              <p class="text-gray-700">Bestandene Motorboot Theorieprüfung vor Anmeldung zur praktischen Prüfung</p>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
@@ -74,7 +71,7 @@
             </li>
           </ul>
           <div class="mt-6 p-4 bg-primary-50 rounded-lg">
-            <p class="text-sm text-primary-800">Die Motorboottheorie für Binnenschifffahrt beinhaltet Fragen zu Motorbooten, Segelbooten und Schifffahrtsregeln. Die Theorieprüfung ist 24 Monate lang gültig. In der Schweiz gibt es keine Altersuntergrenze für begleitetes Motorbootfahren ab 12 Jahren.</p>
+            <p class="text-sm text-primary-800">Die Motorboottheorie für Binnenschifffahrt beinhaltet Fragen zu Motorbooten, Segelbooten und Schifffahrtsregeln. Die Theorieprüfung ist 24 Monate lang gültig.</p>
           </div>
         </div>
       </div>
