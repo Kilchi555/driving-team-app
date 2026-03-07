@@ -14,11 +14,8 @@
         <h1 class="heading-lg text-white mb-6">Kontrollfahrt</h1>
         <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="#anmeldung" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt anmelden
-          </a>
-          <a href="tel:+41444310033" class="btn-secondary border-white text-white hover:bg-white hover:text-primary-600 text-lg">
-            +41 44 431 00 33
           </a>
         </div>
       </div>
