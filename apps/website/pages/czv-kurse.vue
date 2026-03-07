@@ -81,6 +81,234 @@
       </div>
     </section>
 
+    <!-- CZV Grundausbildung Info -->
+    <section class="section-container py-20">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md mb-8">CZV Grundausbildung</h2>
+        <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
+          <p>
+            Unsere CZV Kurse bereiten dich vollumfänglich auf deine CZV-Prüfungen vor. Nach diesen 5 Kurstagen bist du bereit, um dich selbständig auf die Berufsprüfungen vorzubereiten. Ein(e) aufgestellte(r) und kompetente(r) Kursleiter:in führt dich durch die CZV Kurse und beantwortet alle deine Fragen. Moderne Räumlichkeiten und eine feine Verpflegung runden den lehrreichen Kurstag ab. Wir freuen uns dich in unseren CZV Kursen begrüssen zu dürfen.
+          </p>
+          <p>
+            Auf Anfrage unterstützen wir dich auch nach dem CZV-Kurs gerne bei der Prüfungsvorbereitung. Melde dich dazu nach dem Kurs direkt beim Kursleiter. Bei allgemeinen Fragen darfst du dich jederzeit per E-Mail unter <a href="mailto:info@drivingteam.ch" class="text-primary-600 hover:underline">info@drivingteam.ch</a> oder per Telefon unter <a href="tel:+41444310033" class="text-primary-600 hover:underline">044 431 00 33</a> bei uns melden.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CZV Ausbildungsbestätigung -->
+    <section class="section-container py-20 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md mb-8">CZV Ausbildungsbestätigung</h2>
+        <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
+          <p>
+            Wenn du dich bei unseren CZV Kursen anmeldest, erhältst du von uns eine Ausbildungsbestätigung. Eine Ausbildungsbestätigung für den Personen- oder den Gütertransport erhältst du jedoch nur, wenn du noch nie einen Fähigkeitsausweis der entsprechenden Kategorie durch eine Prüfung erworben oder nach fünf Weiterbildungstagen verlängert hast.
+          </p>
+          <p>
+            Du erhältst diese CZV Ausbildungsbestätigung indem du dich für einen unserer 5-tägigen CZV Ausbildungsprogramme anmeldest und die Kurskosten beglichen hast. Diese Ausbildungsbestätigung musst du auf allen Fahrten zusammen mit dem Führerausweis mitführen, damit du gegenüber den Kontrollorganen bestätigen kannst, dass du in der Schweiz ohne Fähigkeitsausweis Güter oder Personen transportieren darfst.
+          </p>
+          <p class="font-semibold text-orange-600">
+            ⚠️ Fahrten ins Ausland sind nicht erlaubt.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CZV Prüfungsinhalt -->
+    <section class="section-container py-20">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md mb-8">CZV Prüfungsinhalt</h2>
+        <p class="text-gray-700 mb-8">
+          Wer sich oder andere auf die CZV Prüfung vorbereiten will, findet den gesamten Prüfungsstoff im Katalog der Lernziele. Der Prüfungsstoff ergibt sich aus den Vorgaben, wie sie im Anhang der Chauffeurzulassungsverordnung aufgelistet sind. Folgende inhaltliche Schwerpunkte stehen dabei im Vordergrund:
+        </p>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-blue-50 rounded-lg p-6 border border-blue-200">
+            <h3 class="font-bold text-blue-900 mb-3">🔧 Betrieb und Unterhalt des Fahrzeugs</h3>
+            <p class="text-sm text-gray-700">Sicherheitsausstattung, Kinematische Kette, Treibstoffverbrauch, Fahrdynamik, Fahrzeug spezifische Elemente</p>
+          </div>
+          <div class="bg-green-50 rounded-lg p-6 border border-green-200">
+            <h3 class="font-bold text-green-900 mb-3">📦 Güter transportieren</h3>
+            <p class="text-sm text-gray-700">Nutzlast und Nutzvolumen, Verteilung der Ladung, Verpackung und Lastträger, Ladungssicherung, spezifische Transportgüter, Güterumschlag, Vorschriften</p>
+          </div>
+          <div class="bg-purple-50 rounded-lg p-6 border border-purple-200">
+            <h3 class="font-bold text-purple-900 mb-3">👥 Personen transportieren</h3>
+            <p class="text-sm text-gray-700">Sicherheit und Wohlbefinden der Fahrgäste, Kontakt mit Fahrgästen, Linienverkehr, Gesellschaftsreisen, Fahrzeug und Sicherheitsausstattung, Vorschriften</p>
+          </div>
+          <div class="bg-orange-50 rounded-lg p-6 border border-orange-200">
+            <h3 class="font-bold text-orange-900 mb-3">⚖️ Verantwortung der Fahrer:innen</h3>
+            <p class="text-sm text-gray-700">ARV, Fahrtschreiber, Gesundheit und Unfallprävention, Arbeitsunfälle, Kommunikation, Arbeitsorganisation</p>
+          </div>
+          <div class="bg-red-50 rounded-lg p-6 border border-red-200">
+            <h3 class="font-bold text-red-900 mb-3">🚨 Ausserordentliche Situationen</h3>
+            <p class="text-sm text-gray-700">Verkehrsunfälle, technische Mängel, Kriminalität</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CZV Prüfungsablauf -->
+    <section class="section-container py-20 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md mb-8">CZV Prüfungsablauf</h2>
+        <p class="text-gray-700 mb-8">
+          Nach der schriftlichen Zusatztheorieprüfung und der Prüfungsfahrt beim Strassenverkehrsamt, die für den Erhalt des Führerausweises erforderlich sind, müssen für den CZV Fähigkeitsausweis heute folgende fünf Teilprüfungen bestanden werden.
+        </p>
+
+        <div class="space-y-6">
+          <!-- Teilprüfung 1 -->
+          <div class="bg-white rounded-lg p-6 border border-gray-200">
+            <h3 class="heading-sm mb-4">📝 CZV Teilprüfung 1: Schriftliche Theorieprüfung</h3>
+            <p class="text-gray-700 mb-4">Die schriftliche Theorieprüfung muss als erstes absolviert werden:</p>
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+              <div class="bg-blue-50 p-4 rounded">
+                <h4 class="font-bold text-gray-900 mb-2">Kategorie: C-CZV</h4>
+                <ul class="space-y-1 text-sm text-gray-700">
+                  <li>Art: Single Choice</li>
+                  <li>Fragen: 40</li>
+                  <li>Max. Fehlerpunkte: 4</li>
+                  <li>Zeit: 90 Min</li>
+                </ul>
+              </div>
+              <div class="bg-blue-50 p-4 rounded">
+                <h4 class="font-bold text-gray-900 mb-2">Kategorie: D-CZV</h4>
+                <ul class="space-y-1 text-sm text-gray-700">
+                  <li>Art: Single Choice</li>
+                  <li>Fragen: 40</li>
+                  <li>Max. Fehlerpunkte: 4</li>
+                  <li>Zeit: 90 Min</li>
+                </ul>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 p-3 bg-blue-100 rounded">
+              💡 Theorieprüfungen werden mittels CUT (Computer Unterstützte Theorieprüfung) durchgeführt. <a href="https://www.cut-demo.ch" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">Demo mit 20 Fragen testen →</a>
+            </p>
+          </div>
+
+          <!-- Teilprüfung 2 & 3 -->
+          <div class="bg-white rounded-lg p-6 border border-gray-200">
+            <h3 class="heading-sm mb-4">📊 CZV Teilprüfung 2 & 3: E-Prüfungen beim Strassenverkehrsamt</h3>
+            <p class="text-gray-700">
+              Nachdem du die schriftliche Theorieprüfung absolviert hast, kannst du zwei E-Prüfungen durchlaufen. Eine E-Prüfung ist eine Praxissituation mit 5 Fragen (2x5 und 3x4 Antwortoptionen mit Bildern), die mittels Drag-and-Drop in die Lösungsfelder gezogen werden müssen.
+            </p>
+          </div>
+
+          <!-- Teilprüfung 4 -->
+          <div class="bg-white rounded-lg p-6 border border-gray-200">
+            <h3 class="heading-sm mb-4">💬 CZV Teilprüfung 4: Mündliche Prüfung (30 Minuten)</h3>
+            <p class="text-gray-700 mb-3">
+              Der Kandidat wird von den beiden Prüfungsexperten begrüsst und erhält einen Prüfungsbogen. Es stehen 5 Minuten Vorbereitung zur Verfügung. Das Prüfungsgespräch dauert 30 Minuten und ist ein freies Gespräch zur Erörterung der Fragestellung.
+            </p>
+          </div>
+
+          <!-- Teilprüfung 5 -->
+          <div class="bg-white rounded-lg p-6 border border-gray-200">
+            <h3 class="heading-sm mb-4">🔧 CZV Teilprüfung 5: Praktische Prüfung (30 Minuten)</h3>
+            <p class="text-gray-700">
+              Der Kandidat erhält ein Fahrzeug (Bus oder Lastwagen) und einen Prüfungsbogen mit der Aufgabe. Nach 5 Minuten Vorbereitung führt er alle erforderlichen Handlungen durch und erklärt dem Prüfungsexperten dabei, was er macht und weshalb. Die praktische Prüfung dauert 30 Minuten.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CZV Kosten & Dauer -->
+    <section class="section-container py-20">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md mb-8">CZV Kurs – Kosten & Dauer</h2>
+        
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-6 border border-primary-200">
+            <h3 class="heading-sm text-primary-900 mb-4">⏱️ Kursdauer</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start gap-2">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span><strong>6 Tage Total</strong></span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>4 Tage - Alle Themen</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>1 Tag - Repetition & Fragen</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>1 Tag - Prüfungssimulation</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+            <h3 class="heading-sm text-green-900 mb-4">⏳ Gesamtdauer bis Prüfung</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start gap-2">
+                <span class="text-green-600 font-bold">⚡</span>
+                <span><strong>Min. 2 Monate</strong> (intensiv)</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-green-600 font-bold">✓</span>
+                <span><strong>3-6 Monate</strong> (optimal)</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-orange-600 font-bold">⚠️</span>
+                <span>Max. 9 Monate</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-red-600 font-bold">❌</span>
+                <span><strong>Nach 12M läuft Ausweis ab</strong></span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <p class="text-gray-700">
+            <strong>Mit unserem Konzept gewährleisten wir eine solide Vorbereitung zur CZV Prüfung und erhöhen die Erfolgsquote stark.</strong> Die CZV Kurse finden jeweils an einem Tag pro Woche statt. Kontaktiere uns für einen passenden Termin.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ CZV -->
+    <section class="section-container py-20 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md text-center mb-12">Häufig gestellte Fragen</h2>
+        
+        <div class="space-y-4">
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Wieviel Aufwand benötigt es die CZV Prüfung zu bestehen?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-700 mt-4">
+              Die CZV Kurse dauern bei uns 6 Tage inkl. Prüfungssimulation. Dazwischen und danach ist Selbstudium notwendig. Den grössten Aufwand benötigt die CZV Theorieprüfung, denn da ist auch die Durchfallquote am Höchsten. Wichtig: Das Gelernte im Berufsalltag üben und mit Mitarbeitenden diskutieren. Das tägliche Beschäftigen mit den Themen bringt am Meisten.
+            </p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Wie lange dauert die ganze CZV Grundausbildung?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-700 mt-4">
+              Das hängt ganz von dir ab. Vom ersten Kurstag bis zur letzten bestandenen Prüfung dauert es mindestens 2 Monate (intensives Lernen). 3-6 Monate ist das gesunde Mass - die meisten schaffen es in dieser Zeitspanne. Länger als 9 Monate empfehlen wir nicht zu warten, denn nach 12 Monaten läuft die CZV Ausbildungsbestätigung ab.
+            </p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Muss ich die Lastwagen Prüfung vor den CZV Kursen bestanden haben?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-700 mt-4">
+              Lediglich die Theorieprüfung musst du bestanden haben. Danach kannst du dich parallel zur praktischen Fahrstundenausbildung auch an die CZV Grundausbildung ran machen.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
