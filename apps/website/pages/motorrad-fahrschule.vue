@@ -401,6 +401,41 @@
           📞 Jetzt anrufen!
         </a>
       </div>
+      
+      <!-- FAQPage Schema -->
+      <Script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Welche Kategorien gibt es für Motorräder?",
+            "acceptedAnswer": {"@type": "Answer", "text": "A1 (bis 50ccm ab 15 J. / bis 125ccm ab 16 J.), A35kW beschränkt (ab 18 J.) und A unbeschränkt (nach 2 Jahren A35kW-Praxis). Wir bieten Ausbildung für alle Kategorien an."}
+          },
+          {
+            "@type": "Question",
+            "name": "Ist der Grundkurs obligatorisch?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Der Grundkurs ist für alle drei Kategorien obligatorisch. Seit 01.01.2021 gilt: Wer die Kategorie A1 nach diesem Datum erworben hat und jetzt A35kW machen möchte, muss den Grundkurs nicht mehr besuchen. Wir empfehlen ihn dennoch für mehr Sicherheit."}
+          },
+          {
+            "@type": "Question",
+            "name": "Kann ich ein Fahrschul-Motorrad mieten?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Ja! In Zürich-Altstetten können Anfänger:innen unser Fahrschul-Motorrad (Kat. 35kW) für 20.- pro Lektion mieten. Helm und Sicherheitsausrüstung müssen selber organisiert werden."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was kostet die Motorrad Fahrausbildung insgesamt?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten für einen Motorrad-Führerschein betragen in der Schweiz durchschnittlich CHF 1'500–2'500, abhängig von der Anzahl benötigter Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 20), Lernfahrausweis (CHF 40), Theorieprüfung (CHF 40), Grundkurs (CHF ca.500), Fahrstunden (durchschnittlich 10–15 à CHF 95), praktische Prüfung (CHF 100) und den Fahrausweis (CHF 60)."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was sind die Voraussetzungen für die Motorrad Führerausweis?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Um einen Motorrad Führerschein zu erhalten, benötigst du das erforderliche Mindestalter (A1: ab 15/16 J., A35kW: ab 18 J., A: ab 20 J. mit 2 Jahren A35kW), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule."}
+          }
+        ]
+      }
+      </Script>
     </section>
 
     <!-- Why Choose Us -->
