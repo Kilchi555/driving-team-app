@@ -103,12 +103,12 @@ export default defineEventHandler(async (event) => {
     }
 
     // Build list of category codes to check against.
-    // "B Automatik" shares the admin fee with "B" and "B Schaltung":
+    // B, B Schaltung and B Automatik share the admin fee:
     // if the fee was already paid in any of these categories, don't charge again.
+    const B_CATEGORY_GROUP = new Set(['B', 'B Schaltung', 'B Automatik'])
     const categoriesToCheck = new Set<string>([categoryCode])
-    if (categoryCode === 'B Automatik') {
-      categoriesToCheck.add('B')
-      categoriesToCheck.add('B Schaltung')
+    if (B_CATEGORY_GROUP.has(categoryCode)) {
+      B_CATEGORY_GROUP.forEach(c => categoriesToCheck.add(c))
     }
 
     // Filter by category: use appointment.type (reliable) OR metadata.category (fallback)
