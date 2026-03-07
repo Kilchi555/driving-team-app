@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Dietikon | In 6 Schritten zur Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Dietikon – Moderne Fahrausbildung im Limmattal. Fahrstunden auf Deutsch und Albanisch. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule Dietikon - Auto, Motorrad, Lastwagen Fahrstunden im Limmattal. Deutsch & Albanisch, 95% Erfolgsquote, ab CHF 100/Lektion. Jetzt Termin buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-dietikon/" />
     </Head>
 

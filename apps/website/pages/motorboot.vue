@@ -32,18 +32,10 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule am Zürichsee</h1>
-          <p class="text-xl text-primary-100 mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten professionelle Bootsausbildung am Zürichsee.</p>
+          <p class="text-xl text-primary-100 mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten das <span class="font-bold text-white text-2xl">ganze Jahr</span> über professionelle Bootsausbildung auf dem oberen Zürichsee.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
-      </div>
-    </section>
-
-    <!-- Intro -->
-    <section class="section-container">
-      <div class="max-w-3xl mx-auto">
-        <p class="text-lg text-gray-700 mb-4">Unser Ziel in der Bootsfahrschule ist es, dich zu einem/einer kompetenten Schiffskapitän:in zu formen, der/die in jeder noch so brenzligen Situation die Ruhe und den Überblick bewahrt. Du lernst, auf verschiedene Situationen richtig zu reagieren.</p>
-        <p class="text-lg text-gray-700">Normalerweise ist Motorbootfahren sehr entspannend, doch die Situation kann sich schnell ändern – sei es durch Wetter, Wellen oder andere Boote. Reserviere noch heute deine erste Motorbootsfahrstunde! Wir geben das ganze Jahr über Motorbootsfahrstunden, den See gibt es immer.</p>
       </div>
     </section>
 

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Auto Fahrschule Aargau | 6 Schritte zur Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Aargau – professionelle Fahrausbildung im Kanton Aargau. Auf Deutsch und Albanisch. Jetzt Termin buchen!" />
+      <Meta name="description" content="Fahrschule Aargau - Auto, Motorrad, Lastwagen Fahrstunden. 95% Erfolgsquote, ab CHF 100/Lektion, Deutsch & Albanisch. Flexible Zeiten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-aargau/" />
     </Head>
 
