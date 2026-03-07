@@ -56,6 +56,7 @@
                   height="1500"
                   src="https://namb.ch/iframe/nothelferkurs-altstetten"
                   style="border-style: none; width: 100%; padding: 2px; pointer-events: auto;"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
                 ></iframe>
               </div>
               <p class="text-sm text-gray-600 mt-4">
@@ -71,6 +72,7 @@
                   src="https://flying-instructor.ch/iframe/Dxez1tKe5Z4ITnBy2iRdexoOXgvVrshe.eiurNYlQ"
                   title="Flying-Instructor - Buchungsformular"
                   frameborder="0"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
                 ></iframe>
               </div>
               <p class="text-sm text-gray-600 mt-4">
