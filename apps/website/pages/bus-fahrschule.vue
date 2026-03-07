@@ -350,6 +350,41 @@
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
         <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen!</a>
       </div>
+      
+      <!-- FAQPage Schema -->
+      <Script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Was ist der Unterschied zwischen D1 und D Kategorie?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Kategorie D1: Busse bis 16 Plätze (ab 18 J.). Kategorie D: Busse mit über 16 Plätzen (ab 24 J.). Für D brauchst du oft auch mehrjährige Erfahrung mit anderen Kategorien."}
+          },
+          {
+            "@type": "Question",
+            "name": "Wie viele Fahrstunden benötige ich für Bus?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Für die Bus Ausbildung benötigst du durchschnittlich 24-52 Fahrstunden, abhängig von deiner bisherigen Fahrerfahrung und Lerngeschwindigkeit. Professionelle Fahrer haben oft Vorkenntnisse."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was kostet die Bus Fahrschule?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 3'000–6'000, abhängig von Fahrstundenzahl, Theorie und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 120–150."}
+          },
+          {
+            "@type": "Question",
+            "name": "Brauche ich Vorfahrererfahrung für Bus?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Ja, für die Kategorie D brauchst du einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung. Für D1 ist weniger Erfahrung erforderlich."}
+          },
+          {
+            "@type": "Question",
+            "name": "Wie lange dauert die Bus Ausbildung?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von der Intensität deiner Fahrstunden und deinem persönlichen Lernfortschritt. Mit intensivem Training geht es schneller."}
+          }
+        ]
+      }
+      </Script>
     </section>
 
     <!-- CTA -->

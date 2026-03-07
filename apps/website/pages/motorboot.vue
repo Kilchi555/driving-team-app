@@ -77,7 +77,7 @@
       </div>
     </section>
 
-    <cta-section />
+    <cta-section category="motorboot" excludeCourseButton="true" />
 
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
@@ -227,6 +227,41 @@
           <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
           <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen!</a>
         </div>
+        
+        <!-- FAQPage Schema -->
+        <Script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Was ist die Motorboot Fahrschule Kategorie A?",
+              "acceptedAnswer": {"@type": "Answer", "text": "Kategorie A ist der Bootsführerschein für Motorboote. Er berechtigt dich, Motorboote am Zürichsee und anderen Schweizer Gewässern zu führen. Du lernst Navigation, Sicherheit und praktisches Bootfahren."}
+            },
+            {
+              "@type": "Question",
+              "name": "Brauche ich Vorkenntnisse für Motorboot?",
+              "acceptedAnswer": {"@type": "Answer", "text": "Nein, du brauchst keine Vorkenntnisse! Unsere Kurse sind für absolute Anfänger geeignet. Du lernst alles von Grund auf, vom Starten des Boots bis zu Navigation und Sicherheit."}
+            },
+            {
+              "@type": "Question",
+              "name": "Wie viele Fahrstunden brauche ich?",
+              "acceptedAnswer": {"@type": "Answer", "text": "Für den Motorboat-Führerschein brauchst du durchschnittlich 4-6 Fahrstunden. Die Anzahl hängt von deinem Lernfortschritt und deiner physischen Fitness ab."}
+            },
+            {
+              "@type": "Question",
+              "name": "Was kostet die Motorboot Fahrschule?",
+              "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 800–1'500, abhängig von Fahrstunden und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 150–200 am Zürichsee."}
+            },
+            {
+              "@type": "Question",
+              "name": "Ab welchem Alter kann ich Motorboot fahren?",
+              "acceptedAnswer": {"@type": "Answer", "text": "Du musst mindestens 18 Jahre alt sein, um einen Motorbootführerschein zu erhalten und eigenständig ein Boot zu führen. Bis 18 darfst du unter Aufsicht fahren."}
+            }
+          ]
+        }
+        </Script>
       </div>
     </section>
 
