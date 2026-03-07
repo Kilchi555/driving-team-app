@@ -8,7 +8,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
       
       <!-- JSON-LD Schema Markup -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -19,13 +19,13 @@
         "educationLevel": "Advanced",
         "keywords": "Lastwagen Fahrschule, LKW Führerschein, Kategorie C, CZV Grundkurs"
       }
-      </script>
-      <script type="application/ld+json">
+      </Script>
+      <Script type="application/ld+json">
       {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
         {"@type": "ListItem", "position": 2, "name": "Lastwagen Fahrschule", "item": "https://drivingteam.ch/lastwagen-fahrschule/"}
       ]}
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -465,4 +465,4 @@ const lastwageBenefits = [
     description: 'Starte deine Karriere als professioneller Lastwagenfahrer mit fundierter Ausbildung.'
   }
 ]
-</script>
+</Script>

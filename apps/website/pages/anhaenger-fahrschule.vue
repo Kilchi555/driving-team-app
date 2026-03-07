@@ -8,7 +8,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
       
       <!-- JSON-LD Schema Markup -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -19,13 +19,13 @@
         "educationLevel": "Intermediate",
         "keywords": "Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung"
       }
-      </script>
-      <script type="application/ld+json">
+      </Script>
+      <Script type="application/ld+json">
       {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
         {"@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/"}
       ]}
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -381,4 +381,4 @@ const anhaengerBenefits = [
     description: 'Auch wenn du bereits den BE-Führerausweis besitzt und dich in speziellen Situationen (z.B. Rangieren auf engem Raum) verbessern möchtest, bist du bei uns richtig.'
   }
 ]
-</script>
+</Script>
