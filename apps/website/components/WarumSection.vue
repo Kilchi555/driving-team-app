@@ -114,6 +114,13 @@ const locationWords: Record<string, string> = {
   dietikon: 'Dietikon',
   aargau: 'Aargau',
   reichenburg: 'Reichenburg',
+  auto: 'Auto',
+  motorrad: 'Motorrad',
+  lastwagen: 'Lastwagen',
+  taxi: 'Taxi',
+  bus: 'Bus',
+  motorboot: 'Motorboot',
+  anhaenger: 'Anhänger',
 }
 
 const title = computed(() => categoryTitles[props.category] ?? 'Warum die Fahrschule Driving Team?')
