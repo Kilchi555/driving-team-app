@@ -170,10 +170,35 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-              Was passiert, wenn ich zu spät erscheine?
+              Welche Themen werden im Nothelferkurs behandelt?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Eine Verspätung von maximal 15 Minuten wird akzeptiert. Danach muss der Kurs leider an einem anderen Tag absolviert werden. Die Kurskosten werden zu 100% verrechnet.</p>
+            <div class="text-gray-600 mt-4 space-y-2">
+              <p>Im Nothelferkurs werden folgende wichtigen Themen behandelt:</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>Das grundsätzliche Verhalten in einer Notsituation</li>
+                <li>Sicherung der Unfallstelle, Bergung von verletzten Personen</li>
+                <li>Was muss bei einer effizienten Alarmierung alles beachtet werden</li>
+                <li>Erstellen einer Überlebensgrundlage bis zum Eintreffen der Rettungssanitäter</li>
+                <li>Wundbehandlung, Verbrennungen/Verätzungen, Druckverband etc.</li>
+                <li>Instruktion an Übungs-Defibrillator</li>
+                <li>Herzmassage mit Beatmung an Übungspuppen</li>
+              </ul>
+            </div>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Was haben eure Kursleiter:innen für eine Ausbildung?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-600 mt-4">Unsere Kursleiter:innen sind anerkannte Nothelferkursleiter:innen und üben ihren Beruf mit viel Engagement und Freude aus. Sie bringen umfangreiche Erfahrung und Leidenschaft mit, um dir die lebensrettenden Massnahmen praxisnah beizubringen.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+              Wie kann ich den Kurskosten bezahlen?
+              <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+            </summary>
+            <p class="text-gray-600 mt-4">Der Nothelferkurs ist bei Kursbeginn <strong>bar zu bezahlen</strong>. Eine andere Bezahlungsmöglichkeit gibt es nicht. Bitte bring die CHF 99.- in bar zum ersten Kurstag mit.</p>
           </details>
         </div>
       </div>
