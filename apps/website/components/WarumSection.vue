@@ -2,7 +2,7 @@
   <section class="bg-gray-50 py-20">
     <div class="section-container">
       <h2 class="heading-md text-center mb-6">{{ title }}</h2>
-      <p class="text-center text-gray-600 max-w-3xl mx-auto mb-16">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir ein Team von engagierten und freundlichen Instruktoren zusammengestellt, die nicht nur Fachwissen haben, sondern auch leidenschaftlich daran arbeiten, deine Fahrfähigkeiten aufzubauen.</p>
+      <p class="text-center text-gray-600 max-w-3xl mx-auto mb-16">Unsere {{ categoryWord }} Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht. Deshalb haben wir ein Team von engagierten und freundlichen Instruktoren zusammengestellt, die nicht nur Fachwissen haben, sondern auch leidenschaftlich daran arbeiten, deine Fahrfähigkeiten aufzubauen.</p>
 
       <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
