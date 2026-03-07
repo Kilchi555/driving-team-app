@@ -7,34 +7,41 @@
       <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
           <p class="text-3xl mb-4">🚀</p>
-          <h3 class="font-bold text-lg text-gray-900 mb-3">Modern, Flexibel, Individuell</h3>
-          <p class="text-gray-600">Kein langweiliges Pauken beim Driving Team {{ locationLabel }}! Unser moderner Ansatz kombiniert interaktive Lernmethoden mit praktischer Erfahrung. Wir passen den Unterricht an dein Lerntempo an, damit du selbstbewusst und kompetent fahren kannst.</p>
+          <h3 class="font-bold text-lg text-gray-900 mb-3">Moderner Unterricht, flexibel angepasst</h3>
+          <p class="text-gray-600" v-if="categoryWord">Unser innovativer Ansatz macht die {{ categoryWord }}-Ausbildung spannend und effektiv. Wir kombinieren moderne Lernmethoden mit praktischer Erfahrung im Fahrzeug und passen den Unterricht an dein persönliches Lerntempo an.</p>
+          <p class="text-gray-600" v-else>Unser innovativer Ansatz macht die Fahrausbildung spannend und effektiv. Wir kombinieren moderne Lernmethoden mit praktischer Erfahrung im Fahrzeug und passen den Unterricht an dein persönliches Lerntempo an.</p>
         </div>
 
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
           <p class="text-3xl mb-4">🗓️</p>
-          <h3 class="font-bold text-lg text-gray-900 mb-3">Deine Fahrausbildung, deine Regeln</h3>
-          <p class="text-gray-600">Wir bieten flexible Unterrichtszeiten, die sich an deinen Zeitplan anpassen. Egal ob Schüler, Berufstätiger oder Student – unsere massgeschneiderte Herangehensweise stellt sicher, dass du das Beste aus jeder Lektion {{ locationLabel }} herausholst.</p>
+          <h3 class="font-bold text-lg text-gray-900 mb-3">Deine Fahrausbildung, deine Zeiten</h3>
+          <p class="text-gray-600" v-if="locationLabel">Flexible Unterrichtszeiten, angepasst an deinen Alltag – ob Schüler, Berufstätiger oder Student. Bei unserer Fahrschule {{ locationLabel }} bestimmst du, wann es passt. Individuelle Lernpläne sorgen dafür, dass du schnell und sicher zum Führerschein kommst.</p>
+          <p class="text-gray-600" v-else>Flexible Unterrichtszeiten, angepasst an deinen Alltag – ob Schüler, Berufstätiger oder Student. Bei unserer Fahrschule bestimmst du, wann es passt. Individuelle Lernpläne sorgen dafür, dass du schnell und sicher zum Führerschein kommst.</p>
         </div>
 
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
-          <p class="text-3xl mb-4">🌍</p>
-          <h3 class="font-bold text-lg text-gray-900 mb-3">Fahrschule zu Land und Wasser</h3>
-          <p class="text-gray-600" v-if="categoryWord">Ob {{ categoryWord }}-Prüfung oder andere Kategorien – mit der Fahrschule Driving Team {{ locationLabel }} bestehst du deine Prüfung. Wir begleiten dich von A bis Z.</p>
-          <p class="text-gray-600" v-else>Egal ob Auto-, Motorrad-, Anhänger-, Taxi-, Motorboot- oder Lastwagen-Prüfung – mit der Fahrschule Driving Team {{ locationLabel }} bestehst du deine Prüfung. Wir begleiten dich von A bis Z.</p>
+          <p class="text-3xl mb-4">🎯</p>
+          <h3 class="font-bold text-lg text-gray-900 mb-3" v-if="categoryWord">Spezialisiert auf {{ categoryWord }}-Ausbildung</h3>
+          <h3 class="font-bold text-lg text-gray-900 mb-3" v-else>Spezialisiert auf alle Fahrausbildungen</h3>
+          <p class="text-gray-600" v-if="categoryWord">Mit jahrelanger Erfahrung in der {{ categoryWord }}-Fahrausbildung kennen wir die spezifischen Anforderungen und Herausforderungen genau. Unsere Instruktoren bereiten dich gezielt auf deine {{ categoryWord }}-Prüfung vor – mit höchster Erfolgsquote.</p>
+          <p class="text-gray-600" v-else>Egal ob Auto-, Motorrad-, Anhänger-, Lastwagen-, Bus-, Taxi- oder Motorboot-Ausbildung – wir sind Spezialisten in jeder Kategorie. Unsere Instruktoren bereiten dich gezielt auf deine Prüfung vor.</p>
         </div>
 
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
           <p class="text-3xl mb-4">🛡️</p>
-          <h3 class="font-bold text-lg text-gray-900 mb-3">Sicherheit als oberstes Gebot</h3>
-          <p class="text-gray-600">Wir legen höchsten Wert auf Sicherheit und Professionalität. Unsere Fahrzeuge sind stets top gewartet, unsere Fahrlehrer:innen regelmässig weitergebildet – für eine Fahrschule {{ locationLabel }}, der du vertrauen kannst.</p>
+          <h3 class="font-bold text-lg text-gray-900 mb-3">Sicherheit & Professionalität garantiert</h3>
+          <p class="text-gray-600" v-if="locationLabel">Höchste Standards in Sicherheit und Qualität – das ist unser Versprechen {{ locationLabel }}. Regelmässig gewartete Fahrzeuge, erfahrene und kontinuierlich geschulte Instruktoren. Du kannst uns vertrauen.</p>
+          <p class="text-gray-600" v-else>Höchste Standards in Sicherheit und Qualität – das ist unser Versprechen. Regelmässig gewartete Fahrzeuge, erfahrene und kontinuierlich geschulte Instruktoren. Du kannst uns vertrauen.</p>
         </div>
       </div>
 
       <div class="bg-primary-600 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto text-center text-white">
-        <p class="text-2xl font-bold mb-4">Komm an Bord beim Driving Team!</p>
-        <p class="text-primary-100 mb-8" v-if="categoryWord">Ob Fahranfänger oder Wiedereinsteiger im Bereich {{ categoryWord }} – beim Driving Team {{ locationLabel }} findest du die richtige Unterstützung in einer freundlichen, positiven Atmosphäre. Bereite dich auf eine aufregende Fahrt vor!</p>
-        <p class="text-primary-100 mb-8" v-else>Ob Fahranfänger oder Wiedereinsteiger – beim Driving Team {{ locationLabel }} findest du die richtige Unterstützung in einer freundlichen, positiven Atmosphäre. Bereite dich auf eine aufregende Fahrt vor!</p>
+        <p class="text-2xl font-bold mb-4" v-if="categoryWord">Starte deine {{ categoryWord }}-Ausbildung jetzt!</p>
+        <p class="text-2xl font-bold mb-4" v-else>Starte deine Fahrausbildung jetzt!</p>
+        <p class="text-primary-100 mb-8" v-if="categoryWord && locationLabel">Du möchtest {{ categoryWord }} fahren lernen {{ locationLabel }}? Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan, der dich sicher zur bestandenen Prüfung führt.</p>
+        <p class="text-primary-100 mb-8" v-else-if="categoryWord">Du möchtest {{ categoryWord }} fahren lernen? Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan, der dich sicher zur bestandenen Prüfung führt.</p>
+        <p class="text-primary-100 mb-8" v-else-if="locationLabel">Bei Driving Team {{ locationLabel }} findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan für deine Fahrausbildung.</p>
+        <p class="text-primary-100 mb-8" v-else>Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan für deine Fahrausbildung.</p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 font-bold px-8 py-4 rounded-lg hover:bg-gray-100 transition text-lg">
           📅 Jetzt Termin buchen
         </a>
