@@ -50,10 +50,11 @@
             <div v-if="activeProvider === 'nothelfer'" class="w-full">
               <p class="text-gray-600 mb-4 text-center">Buchungsformular wird geladen...</p>
               <iframe
-                style="width:100%;height:800px!important;"
-                src="https://nothelferambahnhof.ch/iframe/booking"
-                title="Nothelfer am Bahnhof - Buchungsformular"
-                frameborder="0"
+                id="courses-altstetten"
+                title="Nothelferkurs Altstetten"
+                height="1500"
+                src="https://namb.ch/iframe/nothelferkurs-altstetten"
+                style="border-style: none; width: 100%; padding: 2px"
               ></iframe>
               <p class="text-sm text-gray-600 mt-4">
                 ✓ Buchungsformular von Nothelfer am Bahnhof | Support: <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">nothelferambahnhof.ch/support →</a>
