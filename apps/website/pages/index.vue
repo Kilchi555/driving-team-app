@@ -386,6 +386,47 @@
       </div>
     </section>
 
+    <!-- Internal Linking Hubs Section -->
+    <section class="section-container py-16 bg-primary-50">
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-3xl font-bold text-center mb-12">Schnelle Navigation</h2>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+          <!-- Category Hub -->
+          <div class="bg-white rounded-xl p-8 shadow-lg border-t-4 border-primary-600">
+            <h3 class="text-2xl font-bold text-primary-600 mb-4">📊 Alle Kategorien vergleichen</h3>
+            <p class="text-gray-600 mb-6">
+              Unsicher welche Fahrschule zu dir passt? Vergleiche alle 7 Kategorien nach Kosten, Dauer und Anforderungen.
+            </p>
+            <ul class="space-y-2 mb-6 text-sm text-gray-600">
+              <li>✓ Detaillierte Vergleichstabelle</li>
+              <li>✓ Kosten & Dauer übersichtlich</li>
+              <li>✓ Anforderungen pro Kategorie</li>
+            </ul>
+            <a href="/fahrschule-kategorien/" class="inline-block bg-primary-600 text-white px-6 py-2 rounded hover:bg-primary-700 transition" aria-label="Zu Fahrschule Kategorien Vergleich">
+              Kategorien vergleichen →
+            </a>
+          </div>
+
+          <!-- Location Hub -->
+          <div class="bg-white rounded-xl p-8 shadow-lg border-t-4 border-green-600">
+            <h3 class="text-2xl font-bold text-green-600 mb-4">📍 Fahrschule in deiner Nähe</h3>
+            <p class="text-gray-600 mb-6">
+              Finde unsere 7 Standorte in der Schweiz. Mit Öffnungszeiten, Kategorien und direktem Kontakt.
+            </p>
+            <ul class="space-y-2 mb-6 text-sm text-gray-600">
+              <li>✓ Alle Standorte im Überblick</li>
+              <li>✓ Öffnungszeiten & Kontakt</li>
+              <li>✓ Verfügbare Kategorien pro Ort</li>
+            </ul>
+            <a href="/fahrschule-standorte/" class="inline-block bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition" aria-label="Zu Fahrschule Standorte">
+              Standorte ansehen →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <ReviewsSection />
 
     <!-- FAQ Section -->
