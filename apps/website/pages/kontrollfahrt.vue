@@ -229,7 +229,7 @@
     </section>
     <GutscheinSection/>
     <PriceSection category="kontrollfahrt" />
-    <CtaSection title="Jetzt mit der Kontrollfahrt Fahrschule starten!" />
+    <CtaSection title="Jetzt mit der Kontrollfahrt Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
     <WarumSection category="kontrollfahrt" />
   </div>

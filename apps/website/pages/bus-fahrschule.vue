@@ -351,7 +351,7 @@
     <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="bus" />
-    <CtaSection title="Jetzt mit der Bus Fahrschule starten!" />
+    <CtaSection title="Jetzt mit der Bus Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
     <WarumSection category="bus" />
   </div>
