@@ -309,6 +309,114 @@
       </div>
     </section>
 
+    <!-- Kursdaten & Preise -->
+    <section class="section-container py-20">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md mb-12">CZV Kurs – Kursdaten & Preise</h2>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+          <!-- Kursdaten -->
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-8 border border-blue-200">
+            <h3 class="heading-sm text-blue-900 mb-6">📅 Nächste Kursdaten</h3>
+            <div class="space-y-3 mb-6">
+              <div class="bg-white rounded p-3">
+                <p class="font-semibold text-gray-900">Immer Mittwochs</p>
+                <ul class="text-sm text-gray-700 space-y-1 mt-2">
+                  <li>5., 12., 19., 26. November</li>
+                  <li>3., 10. Dezember 2025</li>
+                </ul>
+              </div>
+              <div class="bg-white rounded p-3">
+                <p class="font-semibold text-gray-900">⏰ Zeit</p>
+                <p class="text-sm text-gray-700">08:00 - 17:00 Uhr</p>
+              </div>
+              <div class="bg-white rounded p-3">
+                <p class="font-semibold text-gray-900">📍 Ort</p>
+                <p class="text-sm text-gray-700">Herrengasse 17<br/>8853 Lachen/SZ</p>
+              </div>
+            </div>
+            <a href="tel:+41444310033" class="block text-center bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold">
+              📞 Anmelden
+            </a>
+          </div>
+
+          <!-- Preise & Details -->
+          <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-8 border border-green-200">
+            <h3 class="heading-sm text-green-900 mb-6">💰 Preise & Optionen</h3>
+            <div class="space-y-4">
+              <div class="bg-white rounded p-4 border-l-4 border-green-600">
+                <p class="font-semibold text-gray-900 mb-1">CZV Grundkurs</p>
+                <p class="text-2xl font-bold text-green-600">CHF 2'200.–</p>
+                <p class="text-xs text-gray-600 mt-2">inkl. Ausbildungsbestätigung</p>
+              </div>
+              <div class="bg-white rounded p-4">
+                <p class="font-semibold text-gray-900 mb-2">✓ Im Preis enthalten:</p>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>✓ 6 Tage Kursunterricht</li>
+                  <li>✓ Prüfungssimulation</li>
+                  <li>✓ Verpflegung</li>
+                  <li>✓ Ausbildungsbestätigung</li>
+                </ul>
+              </div>
+              <a href="tel:+41444310033" class="block text-center bg-green-600 text-white py-2 rounded hover:bg-green-700 transition font-semibold">
+                📞 Kurs buchen
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <p class="text-gray-700 text-center">
+            <strong>💡 Nach Bestellung der Ausbildungsbestätigung:</strong> Rechnung per E-Mail. Nach Bezahlung erhältst du die CZV Ausbildungsbestätigung für max. 12 Monate Gültigkeit in der Schweiz.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Standorte -->
+    <section class="section-container py-20 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="heading-md text-center mb-12">Unsere CZV Kurse Standorte</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <a href="/fahrschule-zuerich/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 Zürich</p>
+            <p class="text-gray-600 text-sm">Fahrschule Zürich</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+          <a href="/fahrschule-lachen/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 Lachen</p>
+            <p class="text-gray-600 text-sm">Herrengasse 17, 8853 Lachen/SZ</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+          <a href="/fahrschule-uster/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 Uster</p>
+            <p class="text-gray-600 text-sm">Fahrschule Uster</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+          <a href="/fahrschule-stgallen/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 St. Gallen</p>
+            <p class="text-gray-600 text-sm">Fahrschule St. Gallen</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+          <a href="/fahrschule-dietikon/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 Dietikon</p>
+            <p class="text-gray-600 text-sm">Fahrschule Dietikon</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+          <a href="/fahrschule-aargau/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 Aargau</p>
+            <p class="text-gray-600 text-sm">Fahrschule Aargau</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+          <a href="/fahrschule-reichenburg/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+            <p class="text-2xl mb-2">📍 Reichenburg</p>
+            <p class="text-gray-600 text-sm">Fahrschule Reichenburg</p>
+            <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
