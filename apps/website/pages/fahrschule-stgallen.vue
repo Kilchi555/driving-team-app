@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule St.Gallen | Auto Fahrstunden | Driving Team</Title>
-      <Meta name="description" content="Fahrschule St.Gallen – Fahrstunden für Auto, Motorrad und mehr. Erfahrene Fahrlehrer, flexible Zeiten. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule St.Gallen - Auto, Motorrad, Lastwagen & Kurse. 95% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten. Professionelle Fahrausbildung. Jetzt buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-stgallen/" />
     </Head>
 

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Zürich | Auto, Motorrad, Kurse | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Zürich - Auto, Motorrad, Kurse. Flexible Fahrstunden, erfahrene Fahrlehrer. Jetzt buchen!" />
+      <Meta name="description" content="Fahrschule Zürich - Auto, Motorrad, Lastwagen, Bus, Taxi & mehr. 95% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten. Professionelle Fahrausbildung in Zürich-Altstetten. Jetzt Termin buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Prüfungsvorbereitung Zürich" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
     </Head>

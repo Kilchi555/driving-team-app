@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Auto Fahrschule Uster | 6 Schritte zur Autofahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Uster – Moderne Fahrausbildung im Zürcher Oberland. Fahrstunden für Auto, Motorrad und mehr. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule Uster - Auto, Motorrad, Lastwagen Fahrstunden im Zürcher Oberland. 95% Erfolgsquote, erfahrene Fahrlehrer, flexible Zeiten. Jetzt Termin buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-uster/" />
     </Head>
 
