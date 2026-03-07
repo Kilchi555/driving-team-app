@@ -21,22 +21,11 @@
       </div>
     </section>
 
-    <!-- Anbieter -->
-    <section class="section-container">
-      <h2 class="heading-md mb-8 text-center">Unsere Nothelferkurs-Anbieter</h2>
-      <p class="text-center text-gray-600 mb-10">Aktuell arbeiten wir mit zwei Anbietern für Nothelferkurse zusammen. Wähle deinen gewünschten Anbieter aus:</p>
-      <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h3 class="font-bold text-xl text-gray-900 mb-3">Nothelfer am Bahnhof</h3>
-          <p class="text-gray-600 text-sm mb-4">Für die Nothelferkurse gelten die AGB's von Nothelfer am Bahnhof, diese findest du direkt hier: <a href="https://www.nothelferambahnhof.ch/terms" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">nothelferambahnhof.ch/terms</a></p>
-          <p class="text-gray-600 text-sm">Hast du Fragen bezüglich freien Plätzen, einer Umbuchung oder musst dich wegen Krankheit abmelden, kontaktiere doch bitte direkt das Office: <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">nothelferambahnhof.ch/support</a></p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h3 class="font-bold text-xl text-gray-900 mb-3">Flying-Instructor</h3>
-          <p class="text-gray-600 text-sm mb-4">Für die Nothelferkurse gelten die AGB's von Flying-Instructor, diese findest du direkt hier: <a href="https://www.flying-instructor.ch/agb" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">flying-instructor.ch/agb</a></p>
-          <p class="text-gray-600 text-sm">Hast du Fragen bezüglich freien Plätzen, einer Umbuchung oder musst dich wegen Krankheit abmelden, kontaktiere doch bitte direkt das Office unter <a href="tel:0435439898" class="text-red-600 hover:underline">043 543 98 98</a> oder schreibe eine Mail an: <a href="mailto:info@flying-instructor.ch" class="text-red-600 hover:underline">info@flying-instructor.ch</a></p>
-        </div>
-      </div>
+    <!-- Booking Modal Component -->
+    <section class="section-container py-20">
+      <h2 class="heading-md mb-8 text-center">Jetzt Nothelferkurs buchen</h2>
+      <p class="text-center text-gray-600 mb-10 max-w-2xl mx-auto">Wähle deinen gewünschten Kursanbieter aus und melde dich direkt an. Die Buchung ist unkompliziert und schnell!</p>
+      <BookingModal />
     </section>
 
     <!-- Inhalt -->
