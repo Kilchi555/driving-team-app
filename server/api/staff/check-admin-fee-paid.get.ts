@@ -102,10 +102,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Build list of category codes to check against.
+    // "B Automatik" shares the admin fee with "B" and "B Schaltung":
+    // if the fee was already paid in any of these categories, don't charge again.
+    const categoriesToCheck = new Set<string>([categoryCode])
+    if (categoryCode === 'B Automatik') {
+      categoriesToCheck.add('B')
+      categoriesToCheck.add('B Schaltung')
+    }
+
     // Filter by category: use appointment.type (reliable) OR metadata.category (fallback)
     const paymentsWithAdminFee = (payments || []).filter((payment: any) => {
       const appointmentCategory = payment.appointments?.type
-      if (appointmentCategory === categoryCode) return true
+      if (appointmentCategory && categoriesToCheck.has(appointmentCategory)) return true
 
       // Fallback: check metadata for newer payments that have it set
       let metadataObj: any = {}
@@ -116,7 +125,7 @@ export default defineEventHandler(async (event) => {
           metadataObj = payment.metadata
         }
       } catch (_e) { /* ignore */ }
-      return metadataObj?.category === categoryCode
+      return metadataObj?.category && categoriesToCheck.has(metadataObj.category)
     })
 
     const hasPaid = paymentsWithAdminFee.length > 0
@@ -124,6 +133,7 @@ export default defineEventHandler(async (event) => {
     logger.debug(`📊 Admin fee check: ${hasPaid ? 'Already paid' : 'Not yet paid'}`, {
       userId,
       categoryCode,
+      categoriesToCheck: [...categoriesToCheck],
       totalPaymentsWithFee: (payments || []).length,
       matchingCategory: paymentsWithAdminFee.length
     })
