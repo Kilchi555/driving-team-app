@@ -481,6 +481,28 @@
     <ReviewsSection category="default" />
     <GutscheinSection />
     <StandorteSection />
+    
+    <!-- Related/See Also Section -->
+    <section class="section-container py-12 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6">Interessierst du dich auch für andere Kategorien?</h2>
+        <p class="text-gray-600 mb-8">
+          Vergleiche die Motorrad Fahrschule mit anderen Fahrzeugklassen oder finde einen Standort in deiner Nähe.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/fahrschule-kategorien/" class="inline-block bg-primary-600 text-white px-6 py-2 rounded hover:bg-primary-700 transition" aria-label="Alle Fahrschule Kategorien vergleichen">
+            📊 Alle Kategorien vergleichen
+          </a>
+          <a href="/fahrschule-standorte/" class="inline-block bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition" aria-label="Fahrschule Standorte ansehen">
+            📍 Standorte finden
+          </a>
+          <a href="/auto-fahrschule/" class="inline-block border-2 border-primary-600 text-primary-600 px-6 py-2 rounded hover:bg-primary-50 transition" aria-label="Auto Fahrschule ansehen">
+            🚗 Auto Fahrschule
+          </a>
+        </div>
+      </div>
+    </section>
+    
     <WarumSection category="motorrad" />
   </div>
 </template>

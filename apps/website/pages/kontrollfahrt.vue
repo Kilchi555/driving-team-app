@@ -124,7 +124,7 @@
       </div>
     </section>
 
-    <cta-section />
+    <cta-section title="Jetzt mit der Kontrollfahrt Vorbereitung starten!" :hideCourseButton="true" />
 
     <!-- FAQ -->
     <section class="bg-gray-50 py-20">
@@ -140,7 +140,7 @@
               Wieviele Fahrstunden benötige ich für die Kontrollfahrt?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Die Anzahl der benötigten Fahrstunden ist sehr von deiner Erfahrung mit dem Autofahren abhängig. Bist du schon sicher und geübt mit privaten Lernfahrten, wirst du weniger Fahrstunden benötigen.</p>
+            <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Die Anzahl der benötigten Fahrstunden ist sehr von deiner Erfahrung mit dem Autofahren abhängig. Bist du schon sicher und geübt mit privaten Lernfahrten, wirst du 5-10 Fahrstunden benötigen. Mit wenig Erfahrung mit dem Autofahren wirst du ca. 20-30 Fahrstunden benötigen.</p>
           </details>
 
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -164,7 +164,7 @@
               Darf ich mit ausländischem Führerausweis in der Schweiz fahren?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Private Lernfahrten sind mit ausländischem Führerausweis ohne Begleitperson in den ersten 12 Monaten nach Einreise erlaubt. Nach diesen 12 Monaten erlischt die Fahrerlaubnis, ausser du bist im Besitz eines gültigen Lernfahrausweises.</p>
+            <p class="text-gray-600 mt-4">Private Lernfahrten sind mit ausländischem Führerausweis ohne Begleitperson in den ersten 12 Monaten nach Einreise erlaubt. Nach diesen 12 Monaten erlischt die Fahrerlaubnis, ausser du bist im Besitz eines Prüfungtermins.</p>
           </details>
 
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -172,7 +172,7 @@
               Was ist die Admin- und Versicherungspauschale?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits ist auch eine Kfz-Versicherung für Personen- und Sachschäden inbegriffen.</p>
+            <p class="text-gray-600 mt-4">Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet einerseits die Aufwände ausserhalb der Fahrlektionen, wie zum Beispiel die Anmeldung zur Führerprüfung. Andererseits ist auch eine Fahrzeug-Versicherung für Personen- und Sachschäden inbegriffen.</p>
           </details>
 
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -195,10 +195,10 @@
 
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-              Wie kann ich eure E-Mail Rechnungen auf dem Smartphone bezahlen?
+              Wie kann ich eure Fahrstunden bezahlen?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Wir versenden dir die Rechnung per E-Mail mit einer PDF-Datei im Anhang. Öffne diese PDF-Datei, geh dann auf «Teilen» und öffne die PDF-Datei mit deinem Mobile-Banking App. So kannst du unsere Rechnungen direkt auf deinem Smartphone bezahlen.</p>
+              <p class="text-gray-600 mt-4">Du kannst unsere Fahrstunden online via Twint, Debit- oder Kreditkarte bezahlen.</p>
           </details>
         </div>
       </div>
@@ -217,6 +217,28 @@
     <PriceSection category="kontrollfahrt" />
     <CtaSection title="Jetzt mit der Kontrollfahrt Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
+    
+    <!-- Related/See Also Section -->
+    <section class="section-container py-12 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6">Interessierst du dich auch für Fahrstunden?</h2>
+        <p class="text-gray-600 mb-8">
+          Möchtest du zunächst deine Fahrzeugklasse absolvieren oder findest du einen Standort in deiner Nähe?
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/fahrschule-kategorien/" class="inline-block bg-primary-600 text-white px-6 py-2 rounded hover:bg-primary-700 transition" aria-label="Alle Fahrschule Kategorien vergleichen">
+            📊 Alle Kategorien vergleichen
+          </a>
+          <a href="/fahrschule-standorte/" class="inline-block bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition" aria-label="Fahrschule Standorte ansehen">
+            📍 Standorte finden
+          </a>
+          <a href="/auto-fahrschule/" class="inline-block border-2 border-primary-600 text-primary-600 px-6 py-2 rounded hover:bg-primary-50 transition" aria-label="Auto Fahrschule ansehen">
+            🚗 Auto Fahrschule
+          </a>
+        </div>
+      </div>
+    </section>
+    
     <WarumSection category="kontrollfahrt" />
   </div>
 </template>
