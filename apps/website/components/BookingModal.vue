@@ -30,7 +30,7 @@
         @click.self="closeModal"
       >
         <!-- Modal Content -->
-        <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto z-50">
+        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto z-50 pointer-events-auto">
           <!-- Header -->
           <div class="sticky top-0 bg-red-600 text-white p-6 flex justify-between items-center">
             <h2 class="heading-sm text-white">
@@ -46,29 +46,33 @@
           </div>
 
           <!-- iframe Container -->
-          <div class="p-6">
-            <div v-if="activeProvider === 'nothelfer'" class="w-full">
+          <div class="p-6 pointer-events-auto">
+            <div v-if="activeProvider === 'nothelfer'" class="w-full pointer-events-auto">
               <p class="text-gray-600 mb-4 text-center">Buchungsformular wird geladen...</p>
-              <iframe
-                id="courses-altstetten"
-                title="Nothelferkurs Altstetten"
-                height="1500"
-                src="https://namb.ch/iframe/nothelferkurs-altstetten"
-                style="border-style: none; width: 100%; padding: 2px"
-              ></iframe>
+              <div class="pointer-events-auto">
+                <iframe
+                  id="courses-altstetten"
+                  title="Nothelferkurs Altstetten"
+                  height="1500"
+                  src="https://namb.ch/iframe/nothelferkurs-altstetten"
+                  style="border-style: none; width: 100%; padding: 2px; pointer-events: auto;"
+                ></iframe>
+              </div>
               <p class="text-sm text-gray-600 mt-4">
                 ✓ Buchungsformular von Nothelfer am Bahnhof | Support: <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">nothelferambahnhof.ch/support →</a>
               </p>
             </div>
 
-            <div v-if="activeProvider === 'flying'" class="w-full">
+            <div v-if="activeProvider === 'flying'" class="w-full pointer-events-auto">
               <p class="text-gray-600 mb-4 text-center">Buchungsformular wird geladen...</p>
-              <iframe
-                style="width:100%;height:800px!important;"
-                src="https://flying-instructor.ch/iframe/Dxez1tKe5Z4ITnBy2iRdexoOXgvVrshe.eiurNYlQ"
-                title="Flying-Instructor - Buchungsformular"
-                frameborder="0"
-              ></iframe>
+              <div class="pointer-events-auto">
+                <iframe
+                  style="width:100%;height:800px!important; pointer-events: auto;"
+                  src="https://flying-instructor.ch/iframe/Dxez1tKe5Z4ITnBy2iRdexoOXgvVrshe.eiurNYlQ"
+                  title="Flying-Instructor - Buchungsformular"
+                  frameborder="0"
+                ></iframe>
+              </div>
               <p class="text-sm text-gray-600 mt-4">
                 ✓ Buchungsformular von Flying-Instructor | <a href="tel:0435439898" class="text-red-600 hover:underline">043 543 98 98</a> | <a href="mailto:info@flying-instructor.ch" class="text-red-600 hover:underline">info@flying-instructor.ch</a>
               </p>
