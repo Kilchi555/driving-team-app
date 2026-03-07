@@ -45,55 +45,32 @@
             </button>
           </div>
 
-          <!-- Content -->
-          <div class="p-6 text-center">
-            <div v-if="activeProvider === 'nothelfer'" class="w-full space-y-6">
-              <div>
-                <p class="text-gray-600 mb-4">
-                  Buche deinen Nothelferkurs direkt bei Nothelfer am Bahnhof. Du wirst auf ihre Website weitergeleitet.
-                </p>
-                <a 
-                  href="https://www.nothelferambahnhof.ch/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  class="inline-block bg-red-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-red-700 transition"
-                >
-                  🌐 Zur Buchungsseite →
-                </a>
-              </div>
-              <div class="border-t pt-4">
-                <p class="text-sm text-gray-600 mb-3">Fragen oder Support?</p>
-                <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline text-sm">
-                  📞 Support-Portal →
-                </a>
-              </div>
+          <!-- iframe Container -->
+          <div class="p-6">
+            <div v-if="activeProvider === 'nothelfer'" class="w-full">
+              <p class="text-gray-600 mb-4 text-center">Buchungsformular wird geladen...</p>
+              <iframe
+                style="width:100%;height:800px!important;"
+                src="https://nothelferambahnhof.ch/iframe/booking"
+                title="Nothelfer am Bahnhof - Buchungsformular"
+                frameborder="0"
+              ></iframe>
+              <p class="text-sm text-gray-600 mt-4">
+                ✓ Buchungsformular von Nothelfer am Bahnhof | Support: <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">nothelferambahnhof.ch/support →</a>
+              </p>
             </div>
 
-            <div v-if="activeProvider === 'flying'" class="w-full space-y-6">
-              <div>
-                <p class="text-gray-600 mb-4">
-                  Buche deinen Nothelferkurs direkt bei Flying-Instructor. Du wirst auf ihre Website weitergeleitet.
-                </p>
-                <a 
-                  href="https://www.flying-instructor.ch/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  class="inline-block bg-red-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-red-700 transition"
-                >
-                  🌐 Zur Buchungsseite →
-                </a>
-              </div>
-              <div class="border-t pt-4">
-                <p class="text-sm text-gray-600 mb-3">Direkter Kontakt:</p>
-                <div class="space-y-2">
-                  <a href="tel:0435439898" class="block text-red-600 hover:underline">
-                    📞 043 543 98 98
-                  </a>
-                  <a href="mailto:info@flying-instructor.ch" class="block text-red-600 hover:underline">
-                    📧 info@flying-instructor.ch
-                  </a>
-                </div>
-              </div>
+            <div v-if="activeProvider === 'flying'" class="w-full">
+              <p class="text-gray-600 mb-4 text-center">Buchungsformular wird geladen...</p>
+              <iframe
+                style="width:100%;height:800px!important;"
+                src="https://flying-instructor.ch/iframe/Dxez1tKe5Z4ITnBy2iRdexoOXgvVrshe.eiurNYlQ"
+                title="Flying-Instructor - Buchungsformular"
+                frameborder="0"
+              ></iframe>
+              <p class="text-sm text-gray-600 mt-4">
+                ✓ Buchungsformular von Flying-Instructor | <a href="tel:0435439898" class="text-red-600 hover:underline">043 543 98 98</a> | <a href="mailto:info@flying-instructor.ch" class="text-red-600 hover:underline">info@flying-instructor.ch</a>
+              </p>
             </div>
           </div>
 
