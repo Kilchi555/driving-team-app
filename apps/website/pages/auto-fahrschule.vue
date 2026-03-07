@@ -6,6 +6,54 @@
       <Meta property="og:title" content="Auto Fahrschule Kategorie B | Driving Team" />
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <!-- Course Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Auto Fahrschule - Kategorie B",
+        "description": "Professionelle Auto Fahrausbildung für Kategorie B. 95% Erfolgsquote, flexible Fahrstunden, erfahrene Fahrlehrer in Zürich",
+        "provider": {
+          "@type": "Organization",
+          "name": "Driving Team",
+          "url": "https://drivingteam.ch"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "100-120",
+          "priceCurrency": "CHF",
+          "url": "https://simy.ch/booking/availability/driving-team",
+          "availability": "InStock"
+        },
+        "educationLevel": "Intermediate",
+        "learningResourceType": "Driving Course",
+        "keywords": "Auto Fahrschule, Kategorie B Fahrstunden, Auto Führerschein, Fahrausbildung Zürich"
+      }
+      </script>
+      
+      <!-- Breadcrumb Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://drivingteam.ch/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Auto Fahrschule",
+            "item": "https://drivingteam.ch/auto-fahrschule/"
+          }
+        ]
+      }
+      </script>
     </Head>
 
     <!-- Hero Section -->
@@ -309,6 +357,41 @@
           📞 Jetzt anrufen!
         </a>
       </div>
+      
+      <!-- FAQPage Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Wieviele Fahrstunden benötige ich?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Das ist unterschiedlich und hängt von deinem Alter, Erfahrung und Lerntempo ab. Im Durchschnitt benötigen unsere Schüler 15-20 Fahrstunden. Wir beraten dich gerne individuell."}
+          },
+          {
+            "@type": "Question",
+            "name": "Wie kann ich meine Fahrausbildung beschleunigen?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrlektionen, sondern z.B. 1 Fahrlektion und 1 Mal privat repetieren mit einer Begleitperson."}
+          },
+          {
+            "@type": "Question",
+            "name": "Wieso dauert die Fahrstunde 45 Minuten?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was kostet der Führerschein Kategorie B insgesamt?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten für einen Führerschein der Kategorie B betragen in der Schweiz durchschnittlich CHF 3'500–3'600. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), VKU-Kurs (CHF 200–300), Fahrstunden (durchschnittlich 15–20 à CHF 100–120), praktische Prüfung (CHF 130) und WAB-Kurs (CHF 350)."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was sind die Voraussetzungen für den Führerschein?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Um einen Führerschein der Kategorie B zu erhalten, benötigst du: Mindestalter von 18 Jahren (oder 17 Jahre beim begleiteten Fahren), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule."}
+          }
+        ]
+      }
+      </script>
     </section>
 
     <!-- CTA Section -->

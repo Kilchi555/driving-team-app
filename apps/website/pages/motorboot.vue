@@ -4,6 +4,26 @@
       <Title>Motorboot Fahrschule Kategorie A | Driving Team Zürich</Title>
       <Meta name="description" content="Motorboot Fahrschule am Zürichsee. In 4 Schritten zur Motorbootprüfung. Erfahrener Bootsfahrlehrer Marc, flexible Fahrstundenzeiten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Motorboot Fahrschule - Kategorie A",
+        "description": "Motorboot Fahrausbildung am Zürichsee. Kategorie A, erfahrener Bootsfahrlehrer, flexible Fahrstundenzeiten, ohne Vorkenntnisse",
+        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
+        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
+        "educationLevel": "Beginner",
+        "keywords": "Motorboot Fahrschule, Bootsführerschein, Zürichsee, Motorbootausbildung"
+      }
+      </script>
+      <script type="application/ld+json">
+      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
+        {"@type": "ListItem", "position": 2, "name": "Motorboot Fahrschule", "item": "https://drivingteam.ch/motorboot/"}
+      ]}
+      </script>
     </Head>
 
     <!-- Hero Section -->
@@ -13,7 +33,6 @@
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule am Zürichsee</h1>
           <p class="text-xl text-primary-100 mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten professionelle Bootsausbildung am Zürichsee.</p>
-          <p class="text-lg text-primary-200 mb-8">Erfahrung und Übung sind beim Bootfahren das A und O! Deshalb empfehlen wir dir, so früh wie möglich mit deinen Motorbootsfahrstunden zu beginnen.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>

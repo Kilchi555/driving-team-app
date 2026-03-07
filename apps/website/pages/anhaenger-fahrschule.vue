@@ -6,6 +6,26 @@
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Anhänger Fahrschule - Kategorie BE",
+        "description": "Praxisnahe Anhänger Fahrausbildung für Kategorie BE. Erfahrene Fahrlehrer, flexible Zeiten in Zürich und Lachen",
+        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
+        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
+        "educationLevel": "Intermediate",
+        "keywords": "Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung"
+      }
+      </script>
+      <script type="application/ld+json">
+      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
+        {"@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/"}
+      ]}
+      </script>
     </Head>
 
     <!-- Hero Section -->

@@ -6,6 +6,26 @@
       <Meta property="og:title" content="LKW Fahrschule Kategorie C1 | C | CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Lastwagen Fahrschule - Kategorie C1, C, CE",
+        "description": "Professionelle Lastwagen Fahrausbildung für Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge, CZV Grundkurs in Zürich",
+        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
+        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
+        "educationLevel": "Advanced",
+        "keywords": "Lastwagen Fahrschule, LKW Führerschein, Kategorie C, CZV Grundkurs"
+      }
+      </script>
+      <script type="application/ld+json">
+      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
+        {"@type": "ListItem", "position": 2, "name": "Lastwagen Fahrschule", "item": "https://drivingteam.ch/lastwagen-fahrschule/"}
+      ]}
+      </script>
     </Head>
 
     <!-- Hero Section -->
