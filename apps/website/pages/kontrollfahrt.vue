@@ -57,19 +57,7 @@
         </div>
 
         <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <p class="text-gray-700">Unsere Fahrlektionen werden grundsätzlich in Deutsch durchgeführt. Wenn du eine Fahrlektion in einer von uns angebotenen Sprachen buchen möchtest, erwähne dies bitte unter den Bemerkungen.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Standorte -->
-    <section class="bg-gray-50 py-12">
-      <div class="section-container">
-        <div class="flex flex-wrap gap-4 justify-center">
-          <span class="px-4 py-2 bg-white border border-gray-200 rounded-full text-gray-700 font-medium">📍 Zürich</span>
-          <span class="px-4 py-2 bg-white border border-gray-200 rounded-full text-gray-700 font-medium">📍 Schwyz</span>
-          <span class="px-4 py-2 bg-white border border-gray-200 rounded-full text-gray-700 font-medium">📍 Aargau</span>
-          <span class="px-4 py-2 bg-white border border-gray-200 rounded-full text-gray-700 font-medium">📍 St.Gallen</span>
+          <p class="text-gray-700">Unsere Fahrlektionen werden grundsätzlich in Deutsch durchgeführt. Wenn du eine Fahrlektion in einer von uns angebotenen Sprachen buchen möchtest, erwähne dies bitte bei der Anmeldung.</p>
         </div>
       </div>
     </section>
@@ -111,7 +99,8 @@
         <h2 class="heading-md text-center mb-12">Unsere Preise</h2>
         <div class="max-w-2xl mx-auto">
           <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-            <h3 class="text-xl font-bold mb-6 text-center text-primary-800">Einzellektion</h3>
+            <h3 class="text-xl font-bold mb-2 text-center text-primary-800">Einzellektion</h3>
+            <p class="text-4xl font-bold text-center text-green-600 mb-6">CHF 95.–</p>
             <ul class="space-y-3 mb-8">
               <li class="flex items-center gap-2 text-gray-700">
                 <span class="text-green-600 font-bold">✓</span>
