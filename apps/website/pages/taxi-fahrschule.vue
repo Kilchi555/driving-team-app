@@ -376,6 +376,41 @@
           📞 Jetzt anrufen!
         </a>
       </div>
+      
+      <!-- FAQPage Schema -->
+      <Script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Was ist eine Taxi Fahrschule?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Eine Taxi Fahrschule bietet professionelle Ausbildung für den Beruf als Taxifahrer. Sie vermittelt nicht nur Fahrtechniken, sondern auch Kundenservice, Verkehrsregeln und die spezifischen Anforderungen im Taxibetrieb."}
+          },
+          {
+            "@type": "Question",
+            "name": "Welche BPT Zertifikate gibt es?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die wichtigsten sind BPT 121 (Basis-Zertifikat) und BPT 122 (erweitertes Zertifikat mit zusätzlichen Qualifikationen). Beide sind in der Schweiz anerkannt und erforderlich für professionelle Taxifahrer."}
+          },
+          {
+            "@type": "Question",
+            "name": "Wie lange dauert die Taxi Ausbildung?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von deinem Lernfortschritt, der Häufigkeit der Fahrstunden und deiner Erfahrung. Intensive Programme können kürzer sein."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was kostet die Taxi Fahrschule insgesamt?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen durchschnittlich zwischen CHF 2'000–4'000, abhängig von der Anzahl der Fahrstunden und Theorieinhalte. Dies beinhaltet Fahrstunden, Theorie, Prüfungsvorbereitung und BPT Zertifizierung."}
+          },
+          {
+            "@type": "Question",
+            "name": "Kann ich als Anfänger Taxi fahren lernen?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Ja, du benötigst einen gültigen Auto-Führerschein (Kategorie B) mit mindestens 2-3 Jahren Fahrerfahrung. Vollständige Anfänger sollten zuerst Auto Fahrstunden nehmen, bevor sie eine Taxi Ausbildung beginnen."}
+          }
+        ]
+      }
+      </Script>
     </section>
 
     <!-- Why Choose Us -->

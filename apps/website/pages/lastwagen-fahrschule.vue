@@ -381,6 +381,41 @@
           📞 Jetzt anrufen!
         </a>
       </div>
+      
+      <!-- FAQPage Schema -->
+      <Script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Was ist der Unterschied zwischen C1, C und CE?",
+            "acceptedAnswer": {"@type": "Answer", "text": "C1: Lastwagen bis 7'500kg (ab 18 J.). C: Lastwagen über 7'500kg (ab 21 J.). CE: Lastzug mit Anhänger (ab 18 J. mit C). Jede Kategorie hat unterschiedliche Anforderungen und Fahrzeugbeschränkungen."}
+          },
+          {
+            "@type": "Question",
+            "name": "Brauche ich den CZV Grundkurs?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Ja, für die Kategorien C1, C und CE ist der CZV Grundkurs (Grundkurs für Berufskraftfahrer) obligatorisch. Er dauert mehrere Tage und vermittelt wichtiges Wissen über Verkehrssicherheit und professionelles Fahren."}
+          },
+          {
+            "@type": "Question",
+            "name": "Wie viele Fahrstunden brauche ich für LKW?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Für die Lastwagen Ausbildung benötigst du durchschnittlich 20-40 Fahrstunden, abhängig von deiner Vorfahrererfahrung und Lerngeschwindigkeit. Mit guter Vorausbildung geht es schneller."}
+          },
+          {
+            "@type": "Question",
+            "name": "Was kostet die Lastwagen Fahrschule?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 4'000–8'000, abhängig von Fahrstunden, CZV Kursen und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 150–180."}
+          },
+          {
+            "@type": "Question",
+            "name": "Welche Voraussetzungen brauche ich?",
+            "acceptedAnswer": {"@type": "Answer", "text": "Du benötigst einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung für C1, und für C/CE mindestens 21 Jahre alt sein. Ein medizinisches Attest ist oft erforderlich."}
+          }
+        ]
+      }
+      </Script>
     </section>
 
     <!-- Why Choose Us -->
