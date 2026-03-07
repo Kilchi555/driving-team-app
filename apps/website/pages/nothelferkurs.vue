@@ -13,10 +13,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Nothelferkurs</h1>
-          <p class="hidden xs:block text-xl text-red-100 mb-8">Helfen ist wichtig, DU bist wichtig. Jeder Mensch ist dazu in der Lage ein Leben zu retten – sei es auf der Strasse bei einem Autounfall oder im privaten Umfeld. In 10 Stunden zum Nothelferausweis!</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
-            ✨ Jetzt Kurs anmelden
-          </a>
+          <p class=" mb-8">Helfen ist wichtig, DU bist wichtig. Jeder Mensch ist dazu in der Lage ein Leben zu retten – sei es auf der Strasse bei einem Autounfall oder im privaten Umfeld. In 10 Stunden zum Nothelferausweis!</p>
+        
         </div>
       </div>
     </section>
