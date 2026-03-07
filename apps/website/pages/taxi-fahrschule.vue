@@ -6,6 +6,42 @@
       <Meta property="og:title" content="Taxi Fahrschule Kategorie BPT | Driving Team" />
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Taxi Fahrschule - BPT (121 | 122)",
+        "description": "Professionelle Taxi Fahrausbildung mit BPT Zertifizierung. Complete Training, Theorie & Praxis, flexible Fahrstunden in Zürich",
+        "provider": {
+          "@type": "Organization",
+          "name": "Driving Team",
+          "url": "https://drivingteam.ch"
+        },
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": "CHF",
+          "url": "https://simy.ch/booking/availability/driving-team",
+          "availability": "InStock"
+        },
+        "educationLevel": "Advanced",
+        "learningResourceType": "Professional Driving Course",
+        "keywords": "Taxi Fahrschule, BPT Zertifizierung, Taxi Führerschein, professionelle Taxiausbildung"
+      }
+      </script>
+      
+      <!-- Breadcrumb Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
+          {"@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/"}
+        ]
+      }
+      </script>
     </Head>
 
     <!-- Hero Section -->

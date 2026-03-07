@@ -4,6 +4,26 @@
       <Title>Bus Fahrschule | D1, D | Driving Team</Title>
       <Meta name="description" content="Bus Fahrschule Zürich - D1 & D Kategorien. 52-24 Fahrstunden, expert instruction. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Bus Fahrschule - Kategorie D1 & D",
+        "description": "Professionelle Bus Fahrausbildung für Kategorie D1 & D. 52-24 Fahrstunden, erfahrene Fahrlehrer, flexible Zeiten",
+        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
+        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
+        "educationLevel": "Advanced",
+        "keywords": "Bus Fahrschule, Kategorie D, Bus Führerschein, professionelle Fahrausbildung"
+      }
+      </script>
+      <script type="application/ld+json">
+      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
+        {"@type": "ListItem", "position": 2, "name": "Bus Fahrschule", "item": "https://drivingteam.ch/bus-fahrschule/"}
+      ]}
+      </script>
     </Head>
 
     <!-- Hero Section -->

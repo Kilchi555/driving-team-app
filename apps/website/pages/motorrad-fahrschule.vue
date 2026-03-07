@@ -6,6 +6,54 @@
       <Meta property="og:title" content="Motorrad Fahrschule | Driving Team | Zürich & Lachen/SZ" />
       <Meta property="og:description" content="Motorrad Fahrschule für alle Kategorien in Zürich und Umgebung" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-fahrschule/" />
+      
+      <!-- JSON-LD Schema Markup -->
+      <!-- Course Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Motorrad Fahrschule - Kategorie A1, A35kW, A",
+        "description": "Professionelle Motorrad Fahrausbildung für Kategorie A1, A35kW und A. Expert Training, moderne Bikes, flexible Fahrstunden in Zürich und Lachen",
+        "provider": {
+          "@type": "Organization",
+          "name": "Driving Team",
+          "url": "https://drivingteam.ch"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "100-120",
+          "priceCurrency": "CHF",
+          "url": "https://simy.ch/booking/availability/driving-team",
+          "availability": "InStock"
+        },
+        "educationLevel": "Intermediate",
+        "learningResourceType": "Driving Course",
+        "keywords": "Motorrad Fahrschule, Kategorie A Fahrstunden, Motorrad Führerschein, Fahrausbildung Zürich"
+      }
+      </script>
+      
+      <!-- Breadcrumb Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://drivingteam.ch/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Motorrad Fahrschule",
+            "item": "https://drivingteam.ch/motorrad-fahrschule/"
+          }
+        ]
+      }
+      </script>
     </Head>
 
     <!-- Hero Section -->
