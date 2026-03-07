@@ -69,7 +69,7 @@
       </div>
     </section>
 
-    <cta-section />
+    <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" :hideCourseButton="true" />
 
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
@@ -398,7 +398,7 @@
     <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="taxi" />
-    <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" />
+    <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
     <WarumSection category="taxi" />
   </div>

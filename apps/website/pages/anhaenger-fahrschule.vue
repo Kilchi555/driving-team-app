@@ -332,7 +332,7 @@
     </section>
     <GutscheinSection />
     <PriceSection category="anhaenger" />
-    <CtaSection title="Jetzt mit der Anhänger Fahrschule starten!" />
+    <CtaSection title="Jetzt mit der Anhänger Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
     <WarumSection category="anhaenger" />
   </div>

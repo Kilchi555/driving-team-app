@@ -2,7 +2,7 @@
   <section class="bg-primary-600 py-16">
     <div class="max-w-3xl mx-auto px-4 text-center">
       <h2 class="text-3xl md:text-4xl font-bold text-white mb-10">{{ title }}</h2>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <div :class="['flex flex-col sm:flex-row gap-4 justify-center', buttonLayout]">
         <a
           href="https://simy.ch/booking/availability/driving-team"
           target="_blank"
@@ -12,6 +12,7 @@
           📅 Termin buchen
         </a>
         <a
+          v-if="showCourseButton"
           href="https://www.simy.ch/customer/courses/driving-team"
           target="_blank"
           rel="noopener noreferrer"
@@ -25,9 +26,17 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{
+import { computed } from 'vue'
+
+const props = withDefaults(defineProps<{
   title?: string
+  hideCourseButton?: boolean
+  buttonLayout?: string
 }>(), {
-  title: 'Jetzt starten!'
+  title: 'Jetzt starten!',
+  hideCourseButton: false,
+  buttonLayout: ''
 })
+
+const showCourseButton = computed(() => !props.hideCourseButton)
 </script>

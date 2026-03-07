@@ -306,7 +306,7 @@
     </section>
     <GutscheinSection />
     <PriceSection category="motorboot" />
-    <CtaSection title="Jetzt mit der Motorboot Fahrschule starten!" />
+    <CtaSection title="Jetzt mit der Motorboot Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
     <WarumSection category="motorboot" />
   </div>
