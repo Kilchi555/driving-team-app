@@ -51,12 +51,13 @@
               <iframe
                 src="https://www.nothelferambahnhof.ch/"
                 title="Nothelfer am Bahnhof - Buchungsformular"
-                class="w-full border-0 rounded"
-                style="height: 600px"
+                class="w-full border border-gray-200 rounded"
+                style="height: 700px"
                 loading="lazy"
+                allowfullscreen
               ></iframe>
               <p class="text-sm text-gray-600 mt-4">
-                Für Fragen: <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">nothelferambahnhof.ch/support</a>
+                ✓ Buchungsformular wird direkt geladen | Für Support: <a href="https://www.nothelferambahnhof.ch/support" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">Support →</a>
               </p>
             </div>
 
@@ -64,12 +65,13 @@
               <iframe
                 src="https://www.flying-instructor.ch/"
                 title="Flying-Instructor - Buchungsformular"
-                class="w-full border-0 rounded"
-                style="height: 600px"
+                class="w-full border border-gray-200 rounded"
+                style="height: 700px"
                 loading="lazy"
+                allowfullscreen
               ></iframe>
               <p class="text-sm text-gray-600 mt-4">
-                Für Fragen: <a href="tel:0435439898" class="text-red-600 hover:underline">043 543 98 98</a> oder <a href="mailto:info@flying-instructor.ch" class="text-red-600 hover:underline">info@flying-instructor.ch</a>
+                ✓ Buchungsformular wird direkt geladen | <a href="tel:0435439898" class="text-red-600 hover:underline">043 543 98 98</a> | <a href="mailto:info@flying-instructor.ch" class="text-red-600 hover:underline">info@flying-instructor.ch</a>
               </p>
             </div>
           </div>
