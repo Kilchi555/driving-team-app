@@ -10,7 +10,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/motorrad-fahrschule.webp" alt="Motorrad Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/categories/motorrad-fahrschule.webp" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW, A mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -73,7 +73,7 @@
               <p class="text-sm text-gray-600">Bevor du das Lernfahrgesuch beim Strassenverkehrsamt einreichen kannst, musst du den Nothelferkurs absolvieren. Falls du bereits im Besitz eines Nothelferausweises bist, ist dieser ab Ausstellungsdatum sechs Jahre gültig.</p>
               <p class="text-sm text-gray-500 mt-2 italic">Für Inhaber:innen der Kategorie B Auto ist dies nicht notwendig – weiter mit Schritt 2.</p>
               <div class="mt-3">
-                <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">→ Jetzt Nothelferkurs anmelden</a>
+                <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Nothelferkurs anmelden - Erste Hilfe Ausbildung">Jetzt Nothelferkurs anmelden</a>
               </div>
           </div>
         </details>
@@ -99,13 +99,13 @@
                   <li>• Kategorie A unbeschränkt: 2 Jahre Fahrpraxis mit A beschränkt + 2. Fahrprüfung</li>
                 </ul>
               </div>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
-                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
-                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
-                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
-                <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
-              </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Zürich herunterladen - PDF">Lernfahrgesuch Zürich (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Schwyz herunterladen - PDF">Lernfahrgesuch Schwyz (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch St.Gallen herunterladen - PDF">Lernfahrgesuch St.Gallen (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Aargau herunterladen - PDF">Lernfahrgesuch Aargau (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Glarus herunterladen - PDF">Lernfahrgesuch Glarus (PDF)</a>
+                </div>
           </div>
         </details>
 
@@ -206,9 +206,9 @@
       </div>
 
       <div class="text-center mt-12">
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
-          🚀 Jetzt starten!
-        </a>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg" aria-label="Motorrad Fahrstunden jetzt buchen - Flexible Fahrschule Zürich">
+            Jetzt Motorrad Fahrstunden buchen
+          </a>
       </div>
     </section>
 

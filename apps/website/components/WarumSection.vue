@@ -15,7 +15,7 @@
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
           <p class="text-3xl mb-4">🗓️</p>
           <h3 class="font-bold text-lg text-gray-900 mb-3">Deine Fahrausbildung, deine Zeiten</h3>
-          <p class="text-gray-600" v-if="locationLabel">Flexible Unterrichtszeiten, angepasst an deinen Alltag – ob Schüler, Berufstätiger oder Student. Bei unserer Fahrschule {{ locationLabel }} bestimmst du, wann es passt. Individuelle Lernpläne sorgen dafür, dass du schnell und sicher zum Führerschein kommst.</p>
+          <p class="text-gray-600" v-if="locationLabel">Flexible Unterrichtszeiten, angepasst an deinen Alltag – ob Schüler, Berufstätiger oder Student. Bei unserer {{ categoryWord }} Fahrschule {{ locationWord }} bestimmst du, wann es passt. Individuelle Lernpläne sorgen dafür, dass du schnell und sicher zum Führerschein kommst.</p>
           <p class="text-gray-600" v-else>Flexible Unterrichtszeiten, angepasst an deinen Alltag – ob Schüler, Berufstätiger oder Student. Bei unserer Fahrschule bestimmst du, wann es passt. Individuelle Lernpläne sorgen dafür, dass du schnell und sicher zum Führerschein kommst.</p>
         </div>
 

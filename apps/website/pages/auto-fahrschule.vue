@@ -10,7 +10,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -76,7 +76,7 @@
                 <p class="text-sm text-gray-600">Der erste wichtige Schritt auf dem Weg zu deinem Führerschein ist die Einreichung des Lernfahrgesuchs für die Kategorie B (Auto) beim Strassenverkehrsamt. Parallel dazu musst du den Nothelferkurs absolvieren.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Gut zu wissen: Falls du bereits einen Nothelferausweis besitzt, ist dieser ab dem Ausstellungsdatum sechs Jahre gültig. Bist du schon im Besitz eines gültigen Lernfahr- oder Führerscheins einer anderen Kategorie, entfällt die Pflicht, den Nothelferkurs erneut zu besuchen.</p>
                 <div class="mt-3">
-                  <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">→ Jetzt Nothelferkurs anmelden</a>
+                  <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Nothelferkurs anmelden - Erste Hilfe Ausbildung">Jetzt Nothelferkurs anmelden</a>
                 </div>
             </div>
           </details>
@@ -96,11 +96,11 @@
                 <p class="text-sm text-gray-600">Als nächsten Schritt für deinen Führerschein musst du das Lernfahrgesuch vollständig und wahrheitsgetreu ausfüllen. Achte darauf, die Kategorie B (Auto) anzukreuzen. Mit diesem Formular gehst du dann zum Strassenverkehrsamt. Danach bringst du das ausgefüllte Anmeldeformular zusammen mit deinem Nothilfeausweis, einem aktuellen farbigen Passfoto und deinem gültigen ID/Pass persönlich zum Strassenverkehrsamt.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Wichtig: Du kannst das Gesuch frühestens zwei Monate vor deinem 17. Geburtstag stellen.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Zürich herunterladen - PDF">Lernfahrgesuch Zürich (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Schwyz herunterladen - PDF">Lernfahrgesuch Schwyz (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch St.Gallen herunterladen - PDF">Lernfahrgesuch St.Gallen (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Aargau herunterladen - PDF">Lernfahrgesuch Aargau (PDF)</a>
+                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Glarus herunterladen - PDF">Lernfahrgesuch Glarus (PDF)</a>
                 </div>
             </div>
           </details>
@@ -136,8 +136,8 @@
                 <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundekurs (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den Verkehrskundekurs (VKU) gleich zu Beginn deiner praktischen Fahrausbildung zu besuchen. So kannst du das erlernte Wissen direkt in deinen Autofahrstunden umsetzen.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">2 Kursteile à 4 Stunden</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Zürich</a>
-                  <a href="/vku-kurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Lachen</a>
+                  <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="VKU Verkehrskundekurs in Zürich buchen">VKU Kurs Zürich</a>
+                  <a href="/vku-kurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="VKU Verkehrskundekurs in Lachen buchen">VKU Kurs Lachen</a>
                 </div>
             </div>
           </details>
@@ -188,17 +188,17 @@
                 <p class="text-gray-600 mb-2">Nach dem Führerschein: Weiterbildung und unbefristeter Ausweis</p>
                 <p class="text-sm text-gray-600">Wie überall im Leben hat man auch beim Autofahren nie ausgelernt. In den ersten 12 Monaten nach deiner praktischen Fahrprüfung musst du den obligatorischen WAB Kurs (Weiterbildungskurs) absolvieren, der zwei Kurstage umfasst. Nach drei Jahren Probezeit, und sofern du alle Auflagen erfüllt hast, kannst du dann den unbefristeten Führerschein beantragen.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="/wab-kurse-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Kurse Zürich</a>
-                  <a href="/wab-kurse-schwyz/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Kurse Schwyz</a>
-                  <a href="/wab-course-english/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Course English</a>
+                  <a href="/wab-kurse-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="WAB Weiterbildungskurs in Zürich buchen">WAB Kurs Zürich</a>
+                  <a href="/wab-kurse-schwyz/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="WAB Weiterbildungskurs in Schwyz buchen">WAB Kurs Schwyz</a>
+                  <a href="/wab-course-english/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="WAB Course in English - Weiterbildung">WAB Course English</a>
                 </div>
             </div>
           </details>
         </div>
 
         <div class="text-center mt-12">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
-            🚀 Jetzt starten!
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg" aria-label="Auto Fahrstunden jetzt buchen - Flexible Fahrschule Zürich">
+            Jetzt Auto Fahrstunden buchen
           </a>
         </div>
       </div>
