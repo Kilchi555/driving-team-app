@@ -6,7 +6,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
       
       <!-- JSON-LD Schema Markup -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -17,13 +17,13 @@
         "educationLevel": "Beginner",
         "keywords": "Motorboot Fahrschule, Bootsführerschein, Zürichsee, Motorbootausbildung"
       }
-      </script>
-      <script type="application/ld+json">
+      </Script>
+      <Script type="application/ld+json">
       {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
         {"@type": "ListItem", "position": 2, "name": "Motorboot Fahrschule", "item": "https://drivingteam.ch/motorboot/"}
       ]}
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -354,4 +354,4 @@ const motorbootBenefits = [
     description: 'Fahrstunden auch abends und samstags möglich – wir passen uns deinem Zeitplan an.'
   }
 ]
-</script>
+</Script>

@@ -9,7 +9,7 @@
       
       <!-- JSON-LD Schema Markup -->
       <!-- Course Schema -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -31,10 +31,10 @@
         "learningResourceType": "Driving Course",
         "keywords": "Auto Fahrschule, Kategorie B Fahrstunden, Auto Führerschein, Fahrausbildung Zürich"
       }
-      </script>
+      </Script>
       
       <!-- Breadcrumb Schema -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -53,7 +53,7 @@
           }
         ]
       }
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -359,7 +359,7 @@
       </div>
       
       <!-- FAQPage Schema -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "FAQPage",
@@ -391,7 +391,7 @@
           }
         ]
       }
-      </script>
+      </Script>
     </section>
 
     <!-- CTA Section -->

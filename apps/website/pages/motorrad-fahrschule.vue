@@ -9,7 +9,7 @@
       
       <!-- JSON-LD Schema Markup -->
       <!-- Course Schema -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -31,10 +31,10 @@
         "learningResourceType": "Driving Course",
         "keywords": "Motorrad Fahrschule, Kategorie A Fahrstunden, Motorrad Führerschein, Fahrausbildung Zürich"
       }
-      </script>
+      </Script>
       
       <!-- Breadcrumb Schema -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -53,7 +53,7 @@
           }
         ]
       }
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -473,4 +473,4 @@ const motorradBenefits = [
     description: 'Auch wenn du bereits im Besitz des Motorrad Führerausweises bist und deine Fahrfähigkeiten auffrischen möchtest, bist du in unseren Motorrad Fahrstunden bestens aufgehoben.'
   }
 ]
-</script>
+</Script>

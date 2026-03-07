@@ -8,7 +8,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
       
       <!-- JSON-LD Schema Markup -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -29,10 +29,10 @@
         "learningResourceType": "Professional Driving Course",
         "keywords": "Taxi Fahrschule, BPT Zertifizierung, Taxi Führerschein, professionelle Taxiausbildung"
       }
-      </script>
+      </Script>
       
       <!-- Breadcrumb Schema -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -41,7 +41,7 @@
           {"@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/"}
         ]
       }
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -463,4 +463,4 @@ const taxiBenefits = [
     description: 'Von der Theorie über ARV bis zur praktischen Fahrausbildung – alles aus einer Hand.'
   }
 ]
-</script>
+</Script>

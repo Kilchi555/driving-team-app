@@ -25,7 +25,7 @@
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
       
       <!-- JSON-LD Schema Markup -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Organization",
@@ -51,10 +51,10 @@
           "https://www.instagram.com/drivingtea"
         ]
       }
-      </script>
+      </Script>
       
       <!-- LocalBusiness Schema for Zürich -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
@@ -85,7 +85,7 @@
           "reviewCount": "150"
         }
       }
-      </script>
+      </Script>
     </Head>
 
     <h1 class="sr-only">Willkommen bei der Fahrschule Driving Team</h1>
@@ -523,4 +523,4 @@
 
 <script setup lang="ts">
 // Homepage - exactly matching old drivingteam.ch structure
-</script>
+</Script>

@@ -6,7 +6,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
       
       <!-- JSON-LD Schema Markup -->
-      <script type="application/ld+json">
+      <Script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Course",
@@ -17,13 +17,13 @@
         "educationLevel": "Advanced",
         "keywords": "Bus Fahrschule, Kategorie D, Bus Führerschein, professionelle Fahrausbildung"
       }
-      </script>
-      <script type="application/ld+json">
+      </Script>
+      <Script type="application/ld+json">
       {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
         {"@type": "ListItem", "position": 2, "name": "Bus Fahrschule", "item": "https://drivingteam.ch/bus-fahrschule/"}
       ]}
-      </script>
+      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -400,4 +400,4 @@ const busBenefits = [
     description: 'Starte deine Karriere als professioneller Busfahrer mit fundierter Ausbildung.'
   }
 ]
-</script>
+</Script>
