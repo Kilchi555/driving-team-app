@@ -23,39 +23,27 @@
     </section>
 
     <!-- Kursübersicht -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Motorrad Grundkurs Zürich</h2>
-      <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Wir gestalten den Motorrad Grundkurs in Zürich praxisorientiert, sodass du intensiv üben und stark davon profitieren kannst. Unsere Motorradfahrlehrer:innen zeigen und erklären dir alle relevanten Themen.</p>
-
-      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        <!-- Voraussetzungen -->
-        <div class="bg-primary-50 rounded-lg p-6">
-          <h3 class="font-bold text-gray-900 mb-4 text-lg">✅ Voraussetzungen</h3>
-          <ul class="space-y-2 text-gray-700 text-sm">
-            <li>✓ Gültiger Lernfahrausweis der Kategorie A1 / A35kW / A</li>
-            <li>✓ Selbständiges Fahren von A nach B möglich</li>
-            <li>✓ Eigenes Motorrad/Roller (Fahrschul-Fahrzeuge für CHF 80.- pro Kursteil auf Anfrage vorhanden)</li>
-            <li>✓ Eigene Motorrad-Sicherheitsbekleidung inkl. Helm</li>
-          </ul>
-        </div>
-        <!-- Details -->
-        <div class="bg-primary-50 rounded-lg p-6">
-          <h3 class="font-bold text-gray-900 mb-4 text-lg">📋 Details</h3>
-          <ul class="space-y-2 text-gray-700 text-sm">
-            <li>🏍️ Kompletter Kurs: <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-)</li>
-            <li>👥 Maximal 5 Teilnehmer</li>
-            <li>📜 Inkl. Kursbestätigung & Getränk</li>
-            <li>📍 Treffpunkt: Driving Team Zürich, Baslerstrasse 145, 8048 Zürich</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Wichtig -->
-      <div class="max-w-4xl mx-auto mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-5">
-        <h3 class="font-bold text-gray-900 mb-2">⚠️ Wichtig!</h3>
-        <p class="text-gray-700 text-sm">Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.</p>
-      </div>
-    </section>
+    <CourseOverviewSection
+      title="Motorrad Grundkurs Zürich"
+      description="Wir gestalten den Motorrad Grundkurs in Zürich praxisorientiert, sodass du intensiv üben und stark davon profitieren kannst. Unsere Motorradfahrlehrer:innen zeigen und erklären dir alle relevanten Themen."
+      :requirements="[
+        'Gültiger Lernfahrausweis der Kategorie A1 / A35kW / A',
+        'Selbständiges Fahren von A nach B möglich',
+        'Eigenes Motorrad/Roller (Fahrschul-Fahrzeuge für CHF 80.- pro Kursteil auf Anfrage vorhanden)',
+        'Eigene Motorrad-Sicherheitsbekleidung inkl. Helm'
+      ]"
+      :details="[
+        '🏍️ Kompletter Kurs: <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-)',
+        '👥 Maximal <strong>5 Teilnehmer</strong>',
+        '📜 Inkl. <strong>Kursbestätigung & Getränk</strong>',
+        '📍 Treffpunkt: <strong>Driving Team Zürich, Baslerstrasse 145, 8048 Zürich</strong>'
+      ]"
+      :important-notes="[
+        'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
+        'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.'
+      ]"
+      :stats="{ requirements: 4, details: 4, hours: '12h' }"
+    />
 
     <!-- Kategorien -->
     <ClientOnly>
@@ -158,6 +146,11 @@
 
     <!-- Warum Section -->
     <WarumSection category="motorrad" />
+
+    <!-- Standort & Map -->
+    <LocationMapSection
+      :location="{ address: 'Baslerstrasse 145, 8048 Zürich', lat: 47.3769, lng: 8.5225, mapUrl: 'https://maps.google.com/maps?q=47.3769,8.5225' }"
+    />
 
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">

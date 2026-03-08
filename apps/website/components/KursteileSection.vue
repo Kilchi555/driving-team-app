@@ -80,7 +80,7 @@
             <ul class="space-y-3 text-gray-700 text-sm">
               <li class="flex items-start gap-3">
                 <span class="text-yellow-500 font-bold mt-0.5">✓</span>
-                <span>Schnelle & sichere Bremsmanöver</span>
+                <span>Schnelle & sichere Bremsung</span>
               </li>
               <li class="flex items-start gap-3">
                 <span class="text-yellow-500 font-bold mt-0.5">✓</span>
@@ -126,7 +126,7 @@
             <ul class="space-y-3 text-gray-700 text-sm">
               <li class="flex items-start gap-3">
                 <span class="text-green-600 font-bold mt-0.5">✓</span>
-                <span>Sicheres Kurvenfahren & Neigung</span>
+                <span>Sicheres Kurvenfahren (bergauf und bergab)</span>
               </li>
               <li class="flex items-start gap-3">
                 <span class="text-green-600 font-bold mt-0.5">✓</span>
@@ -183,7 +183,7 @@
             <p class="text-gray-600 text-sm">Total Kursdauer (3 x 4 Stunden)</p>
           </div>
           <div>
-            <div class="text-3xl font-bold text-primary-600 mb-2">1 Woche</div>
+            <div class="text-3xl font-bold text-primary-600 mb-2">1-3 Wochen</div>
             <p class="text-gray-600 text-sm">Flexible Kursplanung nach deinen Bedürfnissen</p>
           </div>
           <div>
