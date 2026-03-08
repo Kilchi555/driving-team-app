@@ -70,38 +70,39 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Pre-fetch all required travel times
+    // Pre-fetch all required travel times in parallel
     const travelTimeCache = new Map<string, number>()
     const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || ''
 
-    for (const apt of existingAppointments) {
-      if (apt.postal_code && apt.postal_code !== proposedLocationPostalCode) {
-        const cacheKey = `${apt.postal_code}-${proposedLocationPostalCode}`
-        
-        if (!travelTimeCache.has(cacheKey)) {
-          try {
-            const travelTime = await getTravelTime(
-              apt.postal_code,
-              proposedLocationPostalCode,
-              new Date(),
-              googleApiKey,
-              {
-                morning_start: '07:00',
-                morning_end: '09:00',
-                evening_start: '17:00',
-                evening_end: '19:00'
-              }
-            )
+    const uniquePairs = existingAppointments
+      .filter(apt => apt.postal_code && apt.postal_code !== proposedLocationPostalCode)
+      .map(apt => apt.postal_code as string)
+      .filter((plz, idx, arr) => arr.indexOf(plz) === idx)
 
-            if (travelTime !== null) {
-              travelTimeCache.set(cacheKey, travelTime)
+    await Promise.all(
+      uniquePairs.map(async (fromPlz) => {
+        const cacheKey = `${fromPlz}-${proposedLocationPostalCode}`
+        try {
+          const travelTime = await getTravelTime(
+            fromPlz,
+            proposedLocationPostalCode,
+            new Date(),
+            googleApiKey,
+            {
+              morning_start: '07:00',
+              morning_end: '09:00',
+              evening_start: '17:00',
+              evening_end: '19:00'
             }
-          } catch (err: any) {
-            logger.warn('⚠️ Error fetching travel time:', err.message)
+          )
+          if (travelTime !== null) {
+            travelTimeCache.set(cacheKey, travelTime)
           }
+        } catch (err: any) {
+          logger.warn('⚠️ Error fetching travel time:', err.message)
         }
-      }
-    }
+      })
+    )
 
     // Check each slot for conflicts
     const results: SlotConflictResult[] = []

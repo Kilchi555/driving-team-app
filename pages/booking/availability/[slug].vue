@@ -3385,11 +3385,6 @@ const setTenantFromSlug = async (slugOrId: string) => {
     availableStaff.value = []
     hasSearched.value = false
     
-    // Load categories only (settings already loaded via loadTenantSettings called separately)
-    await Promise.all([
-      loadCategories()
-    ])
-    
     logger.debug('✅ Tenant set from slug/ID:', tenantData?.name)
   } catch (err) {
     console.error('❌ Error setting tenant from slug/ID:', err)
@@ -3828,6 +3823,8 @@ onMounted(async () => {
     }
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
+    // Store reference so onBeforeUnmount can remove it correctly
+    ;(window as any).__bookingResizeHandler = checkScreenSize
     
     // ✅ Reload time slots when returning to this page (e.g., from EventModal after booking)
     watch(() => route.path, async () => {
@@ -3938,14 +3935,6 @@ onMounted(async () => {
   }
 })
 
-watch(
-  [selectedCategory, selectedDuration, selectedLocation, selectedInstructor],
-  () => {
-    showProposalFormManually.value = false
-  },
-  { deep: true }
-)
-
 // Reset proposal form flag when selection changes
 watch(
   [selectedCategory, selectedDuration, selectedLocation, selectedInstructor],
@@ -3957,9 +3946,11 @@ watch(
 
 // Cleanup on unmount
 onBeforeUnmount(async () => {
-  window.removeEventListener('resize', () => {
-    isScreenSmall.value = window.innerWidth < 1000
-  })
+  const resizeHandler = (window as any).__bookingResizeHandler
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+    delete (window as any).__bookingResizeHandler
+  }
 
   // Release slot reservation if user leaves without completing booking
   if (reservedSlotId.value && sessionId.value) {
