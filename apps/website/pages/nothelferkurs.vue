@@ -19,11 +19,32 @@
       </div>
     </section>
 
-    <!-- Booking Modal Component -->
+    <!-- Booking Section -->
     <section class="section-container py-20">
       <h2 class="heading-md mb-8 text-center">Jetzt Nothelferkurs buchen</h2>
       <p class="text-center text-gray-600 mb-10 max-w-2xl mx-auto">Wähle deinen gewünschten Kursanbieter aus und melde dich direkt an. Die Buchung ist unkompliziert und schnell!</p>
-      <BookingModal />
+      
+      <!-- Provider Selection Links -->
+      <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <NuxtLink
+          to="/nothelferkurs-buchen/nothelfer/"
+          class="block bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-400 transition cursor-pointer"
+        >
+          <p class="text-4xl mb-4">🏥</p>
+          <h3 class="font-bold text-xl text-gray-900 mb-3">Nothelfer am Bahnhof</h3>
+          <p class="text-gray-600 text-sm mb-4">Flexible Kurse mit professionellen Instruktoren</p>
+          <span class="text-red-600 font-semibold">Jetzt buchen →</span>
+        </NuxtLink>
+        <NuxtLink
+          to="/nothelferkurs-buchen/flying/"
+          class="block bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-400 transition cursor-pointer"
+        >
+          <p class="text-4xl mb-4">✈️</p>
+          <h3 class="font-bold text-xl text-gray-900 mb-3">Flying-Instructor</h3>
+          <p class="text-gray-600 text-sm mb-4">Spezialisiert auf Nothelferkurse mit Engagement</p>
+          <span class="text-red-600 font-semibold">Jetzt buchen →</span>
+        </NuxtLink>
+      </div>
     </section>
 
     <!-- Inhalt -->
