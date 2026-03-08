@@ -3,24 +3,38 @@
     <div class="section-container">
       <h2 class="heading-md mb-10 text-center">Motorrad Kategorien</h2>
       <div class="max-w-4xl mx-auto space-y-4">
-        <details 
+        <div 
           v-for="kategorie in kategorien" 
           :key="kategorie.id"
-          class="bg-white rounded-lg shadow-sm border border-gray-200 cursor-pointer group"
+          class="bg-white rounded-lg shadow-sm border border-gray-200"
         >
-          <summary class="font-bold text-gray-900 p-6 flex justify-between items-center hover:bg-gray-50">
+          <button
+            @click="toggleOpen(kategorie.id)"
+            class="w-full font-bold text-gray-900 p-6 flex justify-between items-center hover:bg-gray-50 transition-colors text-left"
+          >
             {{ kategorie.titel }}
-            <span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span>
-          </summary>
-          <div class="px-6 pb-6 pt-2 border-t border-gray-100">
-            <ul class="text-gray-600 text-sm space-y-2">
-              <li v-for="punkt in kategorie.punkte" :key="punkt" class="flex items-start gap-2">
-                <span class="text-green-600 font-semibold">✓</span>
-                <span>{{ punkt }}</span>
-              </li>
-            </ul>
-          </div>
-        </details>
+            <span 
+              class="text-gray-400 transition-transform duration-200 flex-shrink-0"
+              :class="{ 'rotate-180': openStates[kategorie.id] }"
+            >
+              ▼
+            </span>
+          </button>
+          
+          <Transition name="expand">
+            <div 
+              v-if="openStates[kategorie.id]"
+              class="px-6 pb-6 pt-2 border-t border-gray-100"
+            >
+              <ul class="text-gray-600 text-sm space-y-2">
+                <li v-for="punkt in kategorie.punkte" :key="punkt" class="flex items-start gap-2">
+                  <span class="text-green-600 font-semibold flex-shrink-0">✓</span>
+                  <span>{{ punkt }}</span>
+                </li>
+              </ul>
+            </div>
+          </Transition>
+        </div>
       </div>
 
       <div class="max-w-4xl mx-auto mt-8 bg-gray-50 rounded p-4 text-xs text-gray-500 border border-gray-200">
@@ -32,6 +46,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 const kategorien = [
   {
     id: 'a1-50',
@@ -70,4 +86,38 @@ const kategorien = [
     ]
   }
 ]
+
+const openStates = ref<Record<string, boolean>>({
+  'a1-50': false,
+  'a1-125': false,
+  'a-35': false,
+  'a-unlimited': false
+})
+
+const toggleOpen = (id: string) => {
+  openStates.value[id] = !openStates.value[id]
+}
 </script>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+}
+
+.expand-enter-from {
+  opacity: 0;
+  max-height: 0;
+}
+
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 500px;
+}
+</style>
