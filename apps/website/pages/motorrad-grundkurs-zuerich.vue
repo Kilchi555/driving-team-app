@@ -58,7 +58,9 @@
     </section>
 
     <!-- Kategorien -->
-    <MotorradKategorienSection />
+    <ClientOnly>
+      <MotorradKategorienSection />
+    </ClientOnly>
 
     <!-- Kurs Themen -->
     <section class="section-container">
