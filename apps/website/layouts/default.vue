@@ -4,7 +4,7 @@
     <header class="sticky top-0 bg-white z-50 shadow-md">
       <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
-        <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="showDesktopMenu = false">
+        <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="handleLogoClick">
           <img src="/images/logo.png" alt="Driving Team Logo" class="h-8 xl:h-12 w-auto object-contain" />
         </NuxtLink>
 
@@ -25,14 +25,15 @@
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Fahrschule
             </button>
-            <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
-              <a href="/fahrschule-zuerich/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule Zürich</a>
-              <a href="/fahrschule-lachen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule Lachen</a>
-              <a href="/fahrschule-uster/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule Uster</a>
-              <a href="/fahrschule-stgallen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule St.Gallen</a>
-              <a href="/fahrschule-dietikon/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule Dietikon</a>
-              <a href="/fahrschule-aargau/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule Aargau</a>
-              <a href="/fahrschule-reichenburg/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📍 Fahrschule Reichenburg</a>
+            <div class="absolute left-0 mt-0 w-72 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
+              <a href="/fahrschule-zuerich/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Zürich</a>
+              <a href="/fahrschule-lachen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Lachen</a>
+              <a href="/fahrschule-pfaeffikon/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Pfäffikon/SZ</a>
+              <a href="/fahrschule-uster/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Uster</a>
+              <a href="/fahrschule-stgallen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule St.Gallen</a>
+              <a href="/fahrschule-dietikon/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Dietikon</a>
+              <a href="/fahrschule-aargau/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Aargau</a>
+              <a href="/fahrschule-reichenburg/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Reichenburg</a>
             </div>
           </div>
 
@@ -41,16 +42,72 @@
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Kategorie
             </button>
-            <div class="absolute left-0 mt-0 w-48 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
-              <a href="/auto-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🚗 Auto (B)</a>
-              <a href="/motorrad-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🏍️ Motorrad (A)</a>
-              <a href="/lastwagen-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🚛 Lastwagen (C)</a>
-              <a href="/taxi-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🚕 Taxi (BPT)</a>
-              <a href="/motorboot/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">⛵ Motorboot</a>
-              <a href="/bus-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🚌 Bus (D)</a>
-              <a href="/anhaenger-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🚗 Anhänger (BE)</a>
+            <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
+              <a href="/auto-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🚗</span>
+                  <div>
+                    <div class="font-medium">Auto</div>
+                    <div class="text-xs text-gray-500">Kategorie B</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/motorrad-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🏍️</span>
+                  <div>
+                    <div class="font-medium">Motorrad</div>
+                    <div class="text-xs text-gray-500">Kategorie A</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/lastwagen-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🚛</span>
+                  <div>
+                    <div class="font-medium">Lastwagen</div>
+                    <div class="text-xs text-gray-500">Kategorie C</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/taxi-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🚕</span>
+                  <div>
+                    <div class="font-medium">Taxi</div>
+                    <div class="text-xs text-gray-500">Kategorie BPT</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/motorboot/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">⛵</span>
+                  <div>
+                    <div class="font-medium">Motorboot</div>
+                    <div class="text-xs text-gray-500">Wasser</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/bus-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🚌</span>
+                  <div>
+                    <div class="font-medium">Bus</div>
+                    <div class="text-xs text-gray-500">Kategorie D</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/anhaenger-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🚗</span>
+                  <div>
+                    <div class="font-medium">Anhänger</div>
+                    <div class="text-xs text-gray-500">Kategorie BE</div>
+                  </div>
+                </div>
+              </a>
               <div class="border-t border-gray-100 my-2"></div>
-              <a href="/kontrollfahrt/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">✅ Kontrollfahrt</a>
+              <a href="/kontrollfahrt/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">✅ Kontrollfahrt</a>
             </div>
           </div>
 
@@ -62,7 +119,7 @@
             <div class="absolute left-0 mt-0 w-64 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
               <a href="/auto-theorie/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 font-medium">📚 Auto Theorie</a>
               <div class="border-t border-gray-100 my-1"></div>
-              <div class="px-5 py-2 text-xs font-bold text-gray-500 uppercase">Motorrad Grundkurse</div>
+              <div class="px-5 py-3 text-base font-bold text-gray-900">Motorrad Grundkurse</div>
               <a href="/motorrad-grundkurs-zuerich/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Zürich</a>
               <a href="/motorrad-grundkurs-lachen/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Lachen</a>
               <a href="/motorrad-grundkurs-zug/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Zug</a>
@@ -70,11 +127,11 @@
               <div class="border-t border-gray-100 my-1"></div>
               <a href="/nothelferkurs/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 font-medium">❤️ Nothelferkurse</a>
               <div class="border-t border-gray-100 my-1"></div>
-              <div class="px-5 py-2 text-xs font-bold text-gray-500 uppercase">VKU Kurse</div>
+              <div class="px-5 py-3 text-base font-bold text-gray-900">VKU Kurse</div>
               <a href="/vku-kurs-zuerich/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Zürich</a>
               <a href="/vku-kurs-lachen/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Lachen</a>
               <div class="border-t border-gray-100 my-1"></div>
-              <div class="px-5 py-2 text-xs font-bold text-gray-500 uppercase">WAB Kurse</div>
+              <div class="px-5 py-3 text-base font-bold text-gray-900">WAB Kurse</div>
               <a href="/wab-kurse-zuerich/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Zürich</a>
               <a href="/wab-kurse-schwyz/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">Schwyz</a>
               <a href="/wab-course-english/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 text-sm">🌍 English</a>
@@ -86,11 +143,31 @@
             <button class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition flex items-center gap-1 group-hover:bg-gray-50 rounded-lg">
               Weiterbildungen
             </button>
-            <div class="absolute left-0 mt-0 w-56 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
-              <a href="/czv-grundkurs/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📖 CZV Grundkurs</a>
-              <a href="/czv-weiterbildung/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">📖 CZV Weiterbildung</a>
-              <a href="/fahrlehrerweiterbildung/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">👨‍🏫 Fahrlehrer-Weiterbildung</a>
-              <a href="/motorrad-weiterbildung/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">🏍️ Motorrad-Weiterbildung</a>
+            <div class="absolute left-0 mt-0 w-72 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
+              <a href="/czv-grundkurs/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">📖</span>
+                  <div class="font-medium">CZV Grundkurs</div>
+                </div>
+              </a>
+              <a href="/czv-weiterbildung/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">📈</span>
+                  <div class="font-medium">CZV Weiterbildung</div>
+                </div>
+              </a>
+              <a href="/fahrlehrerweiterbildung/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">👨‍🏫</span>
+                  <div class="font-medium">Fahrlehrer-Weiterbildung</div>
+                </div>
+              </a>
+              <a href="/motorrad-weiterbildung/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🏍️</span>
+                  <div class="font-medium">Motorrad-Weiterbildung</div>
+                </div>
+              </a>
             </div>
           </div>
 
@@ -131,6 +208,7 @@
           <div v-show="openSection === 'fahrschule'" class="pl-2 py-2 space-y-1">
             <a href="/fahrschule-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Zürich</a>
             <a href="/fahrschule-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Lachen</a>
+            <a href="/fahrschule-pfaeffikon/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Pfäffikon/SZ</a>
             <a href="/fahrschule-uster/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Uster</a>
             <a href="/fahrschule-stgallen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 St.Gallen</a>
             <a href="/fahrschule-dietikon/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Dietikon</a>
@@ -144,13 +222,34 @@
             <svg class="w-4 h-4 transition-transform duration-200" :class="openSection === 'kategorie' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
           <div v-show="openSection === 'kategorie'" class="pl-2 py-2 space-y-1">
-            <a href="/auto-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚗 Auto (B)</a>
-            <a href="/motorrad-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🏍️ Motorrad (A)</a>
-            <a href="/lastwagen-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚛 Lastwagen (C)</a>
-            <a href="/taxi-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚕 Taxi (BPT)</a>
-            <a href="/motorboot/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">⛵ Motorboot</a>
-            <a href="/bus-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚌 Bus (D)</a>
-            <a href="/anhaenger-fahrschule/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">🚗 Anhänger (BE)</a>
+            <a href="/auto-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>🚗 Auto</span>
+              <span class="text-xs text-gray-400">Kategorie B</span>
+            </a>
+            <a href="/motorrad-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>🏍️ Motorrad</span>
+              <span class="text-xs text-gray-400">Kategorie A</span>
+            </a>
+            <a href="/lastwagen-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>🚛 Lastwagen</span>
+              <span class="text-xs text-gray-400">Kategorie C</span>
+            </a>
+            <a href="/taxi-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>🚕 Taxi</span>
+              <span class="text-xs text-gray-400">Kategorie BPT</span>
+            </a>
+            <a href="/motorboot/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>⛵ Motorboot</span>
+              <span class="text-xs text-gray-400">Wasser</span>
+            </a>
+            <a href="/bus-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>🚌 Bus</span>
+              <span class="text-xs text-gray-400">Kategorie D</span>
+            </a>
+            <a href="/anhaenger-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+              <span>🚗 Anhänger</span>
+              <span class="text-xs text-gray-400">Kategorie BE</span>
+            </a>
             <a href="/kontrollfahrt/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">✅ Kontrollfahrt</a>
           </div>
 
@@ -163,20 +262,35 @@
             <a href="/auto-theorie/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📚 Auto Theorie</a>
             <a href="/nothelferkurs/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">❤️ Nothelferkurse</a>
 
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-3 mb-1">Motorrad Grundkurse</p>
-            <a href="/motorrad-grundkurs-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zürich</a>
-            <a href="/motorrad-grundkurs-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Lachen</a>
-            <a href="/motorrad-grundkurs-zug/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zug</a>
-            <a href="/motorrad-grundkurs-einsiedeln/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Einsiedeln</a>
+            <button @click="openSubSection = openSubSection === 'motorrad-kurse' ? '' : 'motorrad-kurse'" class="flex items-center justify-between w-full py-3 px-0 text-sm font-bold text-gray-900 hover:text-primary-600 mt-2">
+              <span>Motorrad Grundkurse</span>
+              <svg class="w-3 h-3 transition-transform duration-200" :class="openSubSection === 'motorrad-kurse' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSubSection === 'motorrad-kurse'" class="pl-2 py-1 space-y-1">
+              <a href="/motorrad-grundkurs-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Zürich</a>
+              <a href="/motorrad-grundkurs-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Lachen</a>
+              <a href="/motorrad-grundkurs-zug/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Zug</a>
+              <a href="/motorrad-grundkurs-einsiedeln/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Einsiedeln</a>
+            </div>
 
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-3 mb-1">VKU Kurse</p>
-            <a href="/vku-kurs-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zürich</a>
-            <a href="/vku-kurs-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Lachen</a>
+            <button @click="openSubSection = openSubSection === 'vku-kurse' ? '' : 'vku-kurse'" class="flex items-center justify-between w-full py-3 px-0 text-sm font-bold text-gray-900 hover:text-primary-600 mt-2">
+              <span>VKU Kurse</span>
+              <svg class="w-3 h-3 transition-transform duration-200" :class="openSubSection === 'vku-kurse' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSubSection === 'vku-kurse'" class="pl-2 py-1 space-y-1">
+              <a href="/vku-kurs-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Zürich</a>
+              <a href="/vku-kurs-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Lachen</a>
+            </div>
 
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-3 mb-1">WAB Kurse</p>
-            <a href="/wab-kurse-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Zürich</a>
-            <a href="/wab-kurse-schwyz/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">Schwyz</a>
-            <a href="/wab-course-english/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5 pl-2" @click="showDesktopMenu = false">🌍 English</a>
+            <button @click="openSubSection = openSubSection === 'wab-kurse' ? '' : 'wab-kurse'" class="flex items-center justify-between w-full py-3 px-0 text-sm font-bold text-gray-900 hover:text-primary-600 mt-2">
+              <span>WAB Kurse</span>
+              <svg class="w-3 h-3 transition-transform duration-200" :class="openSubSection === 'wab-kurse' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSubSection === 'wab-kurse'" class="pl-2 py-1 space-y-1">
+              <a href="/wab-kurse-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Zürich</a>
+              <a href="/wab-kurse-schwyz/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">Schwyz</a>
+              <a href="/wab-course-english/" class="block text-sm text-gray-600 hover:text-primary-600 py-1" @click="showDesktopMenu = false">🌍 English</a>
+            </div>
           </div>
 
           <!-- Weiterbildungen -->
@@ -292,6 +406,7 @@
             <ul class="space-y-2 text-sm text-gray-300">
               <li><a href="/fahrschule-zuerich/" class="hover:text-white transition">Fahrschule Zürich</a></li>
               <li><a href="/fahrschule-lachen/" class="hover:text-white transition">Fahrschule Lachen</a></li>
+              <li><a href="/fahrschule-pfaeffikon/" class="hover:text-white transition">Fahrschule Pfäffikon/SZ</a></li>
               <li><a href="/fahrschule-uster/" class="hover:text-white transition">Fahrschule Uster</a></li>
               <li><a href="/fahrschule-aargau/" class="hover:text-white transition">Fahrschule Aargau</a></li>
               <li><a href="/fahrschule-reichenburg/" class="hover:text-white transition">Fahrschule Reichenburg</a></li>
@@ -366,9 +481,15 @@ import { ref, computed } from 'vue'
 
 const showDesktopMenu = ref(false)
 const openSection = ref('')
+const openSubSection = ref('')
 const showWeiterbildungenModal = ref(false)
 const showKurseModal = ref(false)
 const activeKursCategory = ref<string | null>(null)
+
+const handleLogoClick = () => {
+  showDesktopMenu.value = false
+  window.scrollTo(0, 0)
+}
 
 const weiterbildungen = [
   {

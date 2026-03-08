@@ -3385,9 +3385,8 @@ const setTenantFromSlug = async (slugOrId: string) => {
     availableStaff.value = []
     hasSearched.value = false
     
-    // Load tenant settings and categories
+    // Load categories only (settings already loaded via loadTenantSettings called separately)
     await Promise.all([
-      loadTenantSettings(),
       loadCategories()
     ])
     
@@ -3851,16 +3850,16 @@ onMounted(async () => {
       logger.debug('⚠️ No referrer parameter found')
     }
     
-    // Lade Features um Prüfung durchführen zu können
-    await loadFeatures()
+    // Lade Features und Tenant parallel (unabhängig voneinander)
+    const slug = route.params.slug as string
+    await Promise.all([
+      loadFeatures(),
+      slug ? setTenantFromSlug(slug) : Promise.resolve()
+    ])
     
     // Nur Tenant laden wenn Online-Buchung aktiviert ist
     if (isOnlineBookingEnabled.value) {
-      const slug = route.params.slug as string
-      
       if (slug) {
-        // Set the tenant from slug
-        await setTenantFromSlug(slug)
         logger.debug('✅ Tenant set from slug:', slug)
         
         // Load categories for all visitors (not just prefill)
@@ -3883,9 +3882,6 @@ onMounted(async () => {
           if (categoryToSelect) {
             // Pre-select category (this loads staff and locations)
             await selectSubcategory(categoryToSelect)
-            
-            // Wait a bit for data to load
-            await new Promise(resolve => setTimeout(resolve, 500))
             
             // Pre-select duration
             const durationValue = parseInt(route.query.duration as string)

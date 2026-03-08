@@ -29,6 +29,9 @@
       :extras="['Fahrstunden auch auf <strong>Englisch</strong> möglich!']"
     />
 
+    <!-- 2.5. Instructors (weiß mit gradient) -->
+    <InstructorProfileSection :instructors="instructors" />
+
     <!-- 3. Standort Map (grau-50) -->
     <div class="bg-gray-50">
       <StandortMapSection location-key="reichenburg" />
@@ -135,4 +138,8 @@
 </template>
 
 <script setup lang="ts">
+import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
+import { getInstructorsByLocation } from '~/instructor-data'
+
+const instructors = getInstructorsByLocation('reichenburg')
 </script>
