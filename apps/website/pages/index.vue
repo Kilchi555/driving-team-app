@@ -234,7 +234,7 @@
             href="#kurse"
             class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg text-lg"
           >
-            Zu den Kursen ↓
+            Fahrschule Kurse: Theorie, Grundkurse & Nothelferkurs ↓
           </a>
         </div>
       </div>

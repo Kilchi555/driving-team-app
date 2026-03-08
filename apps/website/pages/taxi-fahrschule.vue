@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Taxi Fahrschule | BPT (121 | 122) | Driving Team</Title>
-      <Meta name="description" content="Taxi Fahrschule Zürich - BPT Zertifizierung (121 | 122). Complete Training, Theory & Practice. Jetzt anmelden!" />
+      <Title>Taxi Fahrstunden BPT (121/122) - Zertifizierte Ausbildung | Driving Team</Title>
+      <Meta name="description" content="Taxi Fahrstunden Zürich - BPT zertifizierte Ausbildung (121/122). Theory & Practice, professionelle Trainerführerschein-Vorbereitung. Jetzt anmelden!" />
       <Meta property="og:title" content="Taxi Fahrschule Kategorie BPT | Driving Team" />
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />

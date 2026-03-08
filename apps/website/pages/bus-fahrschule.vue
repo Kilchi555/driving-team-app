@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Bus Fahrschule | D1, D | Driving Team</Title>
-      <Meta name="description" content="Bus Fahrschule Zürich - D1 & D Kategorien. 52-24 Fahrstunden, expert instruction. Jetzt anmelden!" />
+      <Title>Bus Fahrstunden D1/D - Berufliche Busfahrer-Ausbildung | Driving Team</Title>
+      <Meta name="description" content="Bus Fahrstunden Zürich für D1 & D Kategorien. Professionelle Busfahrer-Ausbildung mit erfahrenen Fahrlehrern. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
       
       <!-- JSON-LD Schema Markup -->
