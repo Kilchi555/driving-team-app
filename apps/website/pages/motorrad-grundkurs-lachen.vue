@@ -194,10 +194,22 @@
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Sprachen werden für den Motorrad-Grundkurs angeboten?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
           <p class="text-gray-600 mt-4 text-sm">Der Motorrad-Grundkurs bei Driving Team in Lachen wird grundsätzlich in Deutsch durchgeführt.</p>
         </details>
-        <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
-          <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie erhalte ich die unlimitierte Kategorie A?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
-          <p class="text-gray-600 mt-4 text-sm">Um die unlimitierte Kategorie A in der Schweiz zu erhalten, musst du zunächst die praktische Prüfung für die beschränkte Kategorie A (35 kW) erfolgreich bestehen. Anschliessend sind zwei Jahre Fahrpraxis mit dieser Beschränkung erforderlich. Nach Ablauf dieser zwei Jahre muss eine weitere praktische Prüfung absolviert werden. Bestehst du auch diese, wird dir die unlimitierte Kategorie A ohne Leistungsbeschränkung erteilt.</p>
-        </details>
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es spezielle Vorbereitungen, die ich vor dem Kurs treffen sollte?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Vor der Teilnahme am Motorrad-Grundkurs bei Driving Team Lachen ist es wichtig, dass du zumindest grundlegende Fähigkeiten im selbstständigen Fahren deines Motorrads besitzt. Es sind keine weiteren speziellen Vorbereitungen erforderlich. Solltest du dich jedoch unsicher fühlen oder das Fahren deines Motorrads noch nicht beherrschen, bieten wir individuelle Fahrstunden an. In diesen persönlichen 1-zu-1 Fahrstunden kannst du unter Anleitung unserer erfahrenen Motorradfahrlehrer die grundlegende Handhabung und das Fahren üben, um bestens auf den Grundkurs vorbereitet zu sein.</p>
+          </details>
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie geht es nach dem Abschluss des Motorrad-Grundkurses weiter?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Nach erfolgreichem Abschluss des Motorrad-Grundkurses bei Driving Team Lachen empfehlen wir, das Erlernte kontinuierlich zu üben, um dich optimal auf die praktische Führerscheinprüfung vorzubereiten. Um deine Fähigkeiten weiter zu verbessern und dich bestmöglich auf die Prüfungssituation einzustellen, bieten wir spezielle Prüfungsvorbereitungskurse oder Fahrstunden an, die eine Prüfungssimulation mit unseren erfahrenen Motorradfahrlehrern umfassen. Diese zusätzliche Vorbereitung kann dir helfen, mehr Sicherheit im Umgang mit dem Motorrad zu gewinnen und die Prüfung erfolgreich zu bestehen.</p>
+          </details>
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Bietet Driving Team weitere Trainings oder Kurse für Motorradfahrer an?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Ja, neben dem Motorrad-Grundkurs bietet Driving Team Lachen eine Vielzahl an zusätzlichen Kursen an, die auf die Bedürfnisse und Fähigkeiten von Motorradfahrern zugeschnitten sind. Dazu gehören Schräglagentrainings, die deine Fertigkeiten in Kurvenfahrten verbessern, Soziusfahrkurse, die sich auf das Fahren mit einem Beifahrer konzentrieren, sowie spezielle Prüfungsvorbereitungskurse, die darauf abzielen, dich bestmöglich auf die Motorradführerscheinprüfung vorzubereiten. Diese Kurse sind ideal, um deine Fahrtechnik zu verfeinern und deine Sicherheit auf der Strasse zu erhöhen.</p>
+          </details>
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie erhalte ich die unlimitierte Kategorie A?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Um die unlimitierte Kategorie A in der Schweiz zu erhalten, musst du zunächst die praktische Prüfung für die beschränkte Kategorie A (35 kW) erfolgreich bestehen. Anschliessend sind zwei Jahre Fahrpraxis mit dieser Beschränkung erforderlich. Nach Ablauf dieser zwei Jahre muss eine weitere praktische Prüfung absolviert werden. Bestehst du auch diese, wird dir die unlimitierte Kategorie A ohne Leistungsbeschränkung erteilt.</p>
+          </details>
       </div>
     </section>
 
