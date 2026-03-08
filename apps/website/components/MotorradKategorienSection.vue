@@ -103,21 +103,25 @@ const toggleOpen = (id: string) => {
 .expand-enter-active,
 .expand-leave-active {
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .expand-enter-from {
   opacity: 0;
   max-height: 0;
+  overflow: hidden;
 }
 
 .expand-leave-to {
   opacity: 0;
   max-height: 0;
+  overflow: hidden;
 }
 
 .expand-enter-to,
 .expand-leave-from {
   opacity: 1;
   max-height: 500px;
+  overflow: hidden;
 }
 </style>
