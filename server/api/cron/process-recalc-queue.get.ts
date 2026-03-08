@@ -30,9 +30,11 @@ export default defineEventHandler(async (event) => {
     const cronSecret = process.env.CRON_SECRET
     if (cronSecret && cronSecret.trim() !== '') {
       const authHeader = getHeader(event, 'authorization')
-      const expectedAuth = `Bearer ${cronSecret}`
+      const vercelCronHeader = getHeader(event, 'x-vercel-cron')
+      const isValidSecret = authHeader === `Bearer ${cronSecret}`
+      const isVercelCron = vercelCronHeader === '1'
       
-      if (authHeader !== expectedAuth) {
+      if (!isValidSecret && !isVercelCron) {
         logger.warn('⚠️ Unauthorized cron access attempt - missing or invalid CRON_SECRET')
         throw createError({
           statusCode: 401,
