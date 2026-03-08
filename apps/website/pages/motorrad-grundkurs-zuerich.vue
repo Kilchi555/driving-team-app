@@ -208,6 +208,9 @@
       </div>
     </section>
 
+    <!-- Warum Section -->
+    <WarumSection category="motorrad" />
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
