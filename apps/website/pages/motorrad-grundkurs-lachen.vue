@@ -79,33 +79,7 @@
     </section>
 
     <!-- Reviews -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-gray-600 text-sm italic mb-4">«Das Driving Team Lachen ist ein super nettes Team. Ich habe mich sofort wohlgefühlt, ab der ersten Sekunde an. Ich habe bei Pascal den Grundkurs/Fahrstunden für das Motorrad gemacht und fand es mega spannend und lehrreich.»</p>
-            <p class="font-semibold text-gray-900 text-sm">Alain S.</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-gray-600 text-sm italic mb-4">«Sehr kompetenter und netter Motorradfahrlehrer (Pascal K.). Ist auf alle Fragen eingegangen. Es gab gute Übungen. Sehr viele Tricks und Tipps erhalten. Habe den Motorrad Grundkurs in Lachen besucht, mit einer Harley Superlow. Gut gemacht! Weiter so!»</p>
-            <p class="font-semibold text-gray-900 text-sm">Bastian H.</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-gray-600 text-sm italic mb-4">«Habe die Motorrad und die Anhänger Prüfung gemacht. Das Fachwissen der Fahrlehrer ist sehr gross, keine Frage blieb unbeantwortet. Die Vorbereitung auf die Prüfung fand ich super – habe beides beim 1. Mal bestanden.»</p>
-            <p class="font-semibold text-gray-900 text-sm">Tim S.</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-gray-600 text-sm italic mb-4">«Ausgezeichnete Schule für jeden, der lernen möchte, wie man richtig Motorrad fährt. Er hat mir grossartiges Feedback gegeben, wodurch ich mein Reiten verbessert und die Prüfung bestanden habe! Auch Englisch ist kein Problem.»</p>
-            <p class="font-semibold text-gray-900 text-sm">Araz T.</p>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <p class="text-gray-600 text-sm italic mb-4">«Das Driving Team Lachen ist eine tolle Adresse für die Führerprüfung. Ich habe meinen Motorradkurs dort absolviert. Pascal hat mich stets richtig eingeschätzt und erkannte gleich meine Schwächen beim Fahren. Ich würde eine Ausbildung bei Driving Team auf jeden Fall weiterempfehlen.»</p>
-            <p class="font-semibold text-gray-900 text-sm">Tomy K.</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="motorrad" />
 
     <!-- FAQ -->
     <section class="section-container">

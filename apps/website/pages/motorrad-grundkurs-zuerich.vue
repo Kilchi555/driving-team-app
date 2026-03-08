@@ -82,31 +82,7 @@
     </section>
 
     <!-- Reviews -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-gray-600 text-sm italic mb-4">«Die Motorrad-Fahrstunden bei Pascal waren extrem lehrreich und massgeblich für meine erfolgreiche Motorrad-Führerprüfung. Die Fahrschule, sowie Pascal als Fahrlehrer, kann ich nur wärmstens empfehlen. Sehr kompetent, sympathisch und freundlich.»</p>
-          <p class="font-semibold text-gray-900 text-sm">Filip B.</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-gray-600 text-sm italic mb-4">«Wir können die Fahrschule Driving Team Zürich wärmstens empfehlen. Vito ist ein super toller Fahrlehrer, der über viel Einfühlvermögen verfügt und seine langjährige Erfahrungen sehr gut weitergeben kann. Der Grundkurs hat sehr viel Spass gemacht!»</p>
-          <p class="font-semibold text-gray-900 text-sm">Kpsc</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-gray-600 text-sm italic mb-4">«Ich kann die Fahrschule nur weiter empfehlen, habe bei der Fahrschule Kategorie B und A erfolgreich abgeschlossen. Vito und Pascal sind wirklich tolle Fahrlehrer und nehmen sich immer Zeit für euch.»</p>
-          <p class="font-semibold text-gray-900 text-sm">Cristian A.</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-gray-600 text-sm italic mb-4">«Ich habe den Grundkurs fürs Motorrad bei Driving Team Zürich absolviert. Es hat sehr Spass gemacht und ich habe vieles dazu gelernt. Vito ist wie eine Nadel im Heuhaufen, genau so einen Fahrlehrer wünschen sich alle.»</p>
-          <p class="font-semibold text-gray-900 text-sm">Marco C.</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <p class="text-gray-600 text-sm italic mb-4">«Motorrad-Prüfung bestanden! Danke Pascal! Der Grundkurs und die Fahrstunden waren sehr lehrreich und haben vor allem auch Spass gemacht. Pascals ruhige und gelassene Art vermittelt Sicherheit. Liebes Driving Team, macht weiter so!»</p>
-          <p class="font-semibold text-gray-900 text-sm">Irena D.</p>
-        </div>
-      </div>
-    </section>
+    <ReviewsSection category="motorrad" />
 
     <!-- FAQ -->
     <section class="bg-gray-50 py-16">
