@@ -2161,33 +2161,24 @@ const selectSubcategory = async (category: any) => {
   // Reset prices map for new category
   durationPrices.value.clear()
   
-  // Load prices for all available durations in parallel
-  logger.debug('💰 Loading prices for all durations...')
-  try {
-    await Promise.all(
-      durationOptions.value.map(duration => loadPricingForDuration(duration))
-    )
-    logger.debug('✅ All prices loaded')
-  } catch (err: any) {
-    logger.error('⚠️ Error loading prices:', err)
-    // Don't return, just continue without prices
-  }
-  
   // Reset pickup state
   pickupPLZ.value = ''
   pickupCheckResult.value = null
   selectedPickupLocation.value = null
-  
-  // Load staff for this category
-  try {
-    logger.debug('🔄 Calling loadStaffForCategory...')
-    await loadStaffForCategory()
-    logger.debug('✅ loadStaffForCategory completed')
-  } catch (err: any) {
-    logger.error('❌ loadStaffForCategory failed:', err)
+
+  // Load prices and staff in parallel
+  logger.debug('💰 Loading prices + staff in parallel...')
+  const [, staffResult] = await Promise.allSettled([
+    Promise.all(durationOptions.value.map(duration => loadPricingForDuration(duration))),
+    loadStaffForCategory()
+  ])
+
+  if (staffResult.status === 'rejected') {
+    logger.error('❌ loadStaffForCategory failed:', staffResult.reason)
     return
   }
-  
+  logger.debug('✅ Prices and staff loaded')
+
   // Get unique locations from staff
   // Build unique locations from all staff, avoiding duplicates
   // ONLY include locations that support the selected category
@@ -2197,11 +2188,9 @@ const selectSubcategory = async (category: any) => {
   if (!availableStaff.value || availableStaff.value.length === 0) {
     logger.warn('⚠️ No available staff loaded - cannot build locations map')
   } else {
-    // ✅ NEW: Get ALL standard locations for the category (from first staff member's locations)
     availableStaff.value.forEach((staff: any) => {
       if (staff.available_locations && Array.isArray(staff.available_locations)) {
         staff.available_locations.forEach((location: any) => {
-          // Filter: Only include locations that have the selected category
           const supportedCategories = location.available_categories || []
           const categoryCode = selectedCategory.value?.code
           
@@ -2216,7 +2205,6 @@ const selectSubcategory = async (category: any) => {
           }
           
           if (!locationsMap.has(location.id)) {
-            // Get all staff from availableStaff that work at this location
             const staffAtLocation = availableStaff.value.filter((s: any) => {
               const locIds = (s.available_locations || []).map((l: any) => l.id)
               return locIds.includes(location.id)
@@ -2233,7 +2221,6 @@ const selectSubcategory = async (category: any) => {
             })
             logger.debug(`✅ Added location "${location.name}" with ${staffAtLocation.length} staff`)
           } else {
-            // Merge available_staff, avoiding duplicates
             const locationEntry = locationsMap.get(location.id)
             if (locationEntry) {
               (availableStaff.value || []).forEach((s: any) => {
@@ -2254,67 +2241,16 @@ const selectSubcategory = async (category: any) => {
   // Convert map to array
   availableLocations.value = Array.from(locationsMap.values())
   logger.debug(`✅ Built locations map: ${availableLocations.value.length} unique locations`)
-  
-  // 🔒 LOAD ALL STAFF LOCATIONS for online_bookable filtering
-  // We need this for all staff, not just selectedInstructor, because user hasn't selected one yet
-  try {
-    const staffIds = Array.from(new Set(
-      availableStaff.value
-        ?.filter((s: any) => s.id)
-        .map((s: any) => s.id) || []
-    ))
 
-    if (staffIds.length > 0) {
-      logger.debug('🔒 Pre-loading staff_locations for online_bookable filtering', {
-        staffCount: staffIds.length,
-        locationCount: availableLocations.value.length
-      })
-
-      const response = await $fetch<{
-        success: boolean
-        data: Array<{
-          staff_id: string
-          location_id: string
-          is_online_bookable: boolean
-        }>
-      }>('/api/staff/get-staff-locations', {
-        method: 'POST',
-        body: { staff_ids: staffIds }
-      })
-
-      if (response?.success && response.data) {
-        // Store in a map for filtering per staff/location
-        const staffLocMap = new Map<string, Map<string, boolean>>()
-        for (const sl of response.data) {
-          if (!staffLocMap.has(sl.staff_id)) {
-            staffLocMap.set(sl.staff_id, new Map())
-          }
-          staffLocMap.get(sl.staff_id)!.set(sl.location_id, sl.is_online_bookable)
-        }
-
-        // Add is_online_bookable info - ONLY for staff that are available for this location
-        availableLocations.value = availableLocations.value.map((loc: any) => ({
-          ...loc,
-          // Only include staff_online_bookable for staff that are available for this location
-          staffOnlineBookable: (loc.available_staff || []).map((staff: any) => ({
-            staffId: staff.id,
-            // Look up is_online_bookable from the staff_locations data
-            isOnlineBookable: staffLocMap.get(staff.id)?.get(loc.id) === true // Only true, not default
-          }))
-        }))
-
-        logger.debug(`✅ Enriched locations with staff_locations data`, {
-          locationsCount: availableLocations.value.length,
-          exampleLocation: availableLocations.value[0]?.name,
-          exampleStaffOnlineBookableCount: availableLocations.value[0]?.staffOnlineBookable?.length || 0,
-          exampleStaffOnlineBookable: availableLocations.value[0]?.staffOnlineBookable
-        })
-      }
-    }
-  } catch (err: any) {
-    logger.warn('⚠️ Could not pre-load staff_locations:', err.message)
-    // Continue without pre-loaded data - filtering will happen at display time
-  }
+  // Enrich locations with is_online_bookable from already-loaded staff data (no extra API call needed)
+  availableLocations.value = availableLocations.value.map((loc: any) => ({
+    ...loc,
+    staffOnlineBookable: (loc.available_staff || []).map((staff: any) => ({
+      staffId: staff.id,
+      isOnlineBookable: staff.is_online_bookable === true
+    }))
+  }))
+  logger.debug(`✅ Enriched locations with is_online_bookable from staff data`)
   
   await waitForPressEffect()
   currentStep.value = 3
