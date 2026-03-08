@@ -24,38 +24,28 @@
     </section>
 
     <!-- Kursübersicht -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Motorrad Grundkurs Zug</h2>
-      <p class="text-center text-gray-600 mb-10 max-w-3xl mx-auto">Wir gestalten den Motorrad Grundkurs in Zug praxisorientiert, sodass du intensiv üben und stark davon profitieren kannst. In Kooperation mit der Fahrschule Schoch.</p>
-
-      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        <div class="bg-primary-50 rounded-lg p-6">
-          <h3 class="font-bold text-gray-900 mb-4 text-lg">✅ Voraussetzungen</h3>
-          <ul class="space-y-2 text-gray-700 text-sm">
-            <li>✓ Gültiger Lernfahrausweis der Kategorie A1/A 35kW</li>
-            <li>✓ Selbständiges Fahren von A nach B möglich</li>
-            <li>✓ Eigenes Motorrad/Roller</li>
-            <li>✓ Eigene Motorrad-Sicherheitsbekleidung inkl. Helm</li>
-          </ul>
-        </div>
-        <div class="bg-primary-50 rounded-lg p-6">
-          <h3 class="font-bold text-gray-900 mb-4 text-lg">📋 Details</h3>
-          <ul class="space-y-2 text-gray-700 text-sm">
-            <li>🏍️ Kompletter Kurs: <strong>CHF 600.-</strong> (Kosten pro Kursteil CHF 200.-)</li>
-            <li>👥 Maximal 5 Teilnehmer</li>
-            <li>📜 Inkl. Kursbestätigung & Getränk</li>
-            <li>📍 Treffpunkt: Steinhausen (Kanton Zug) – Fahrschule Schoch</li>
-            <li>🌍 Kurse in Deutsch, Englisch oder Italienisch auf Anfrage</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="max-w-4xl mx-auto mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-5">
-        <h3 class="font-bold text-gray-900 mb-2">⚠️ Wichtig!</h3>
-        <p class="text-gray-700 text-sm mb-2">Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)</p>
-        <p class="text-gray-700 text-sm">Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.</p>
-      </div>
-    </section>
+    <CourseOverviewSection
+      title="Motorrad Grundkurs Zug"
+      description="Wir gestalten den Motorrad Grundkurs in Zug praxisorientiert, sodass du intensiv üben und stark davon profitieren kannst. In Kooperation mit der Fahrschule Schoch."
+      :requirements="[
+        'Gültiger Lernfahrausweis der Kategorie A1/A 35kW',
+        'Selbständiges Fahren von A nach B möglich',
+        'Eigenes Motorrad/Roller',
+        'Eigene Motorrad-Sicherheitsbekleidung inkl. Helm'
+      ]"
+      :details="[
+        '🏍️ Kompletter Kurs: <strong>CHF 600.-</strong> (Kosten pro Kursteil CHF 200.-)',
+        '👥 Maximal <strong>5 Teilnehmer</strong>',
+        '📜 Inkl. <strong>Kursbestätigung & Getränk</strong>',
+        '📍 Treffpunkt: <strong>Steinhausen (Kanton Zug) – Fahrschule Schoch</strong>',
+        '🌍 Kurse in <strong>Deutsch, Englisch oder Italienisch</strong> auf Anfrage'
+      ]"
+      :important-notes="[
+        'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
+        'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.'
+      ]"
+      :stats="{ requirements: 4, details: 5, hours: '12h' }"
+    />
 
     <!-- Kategorien -->
     <ClientOnly>
@@ -164,6 +154,11 @@
 
     <!-- Warum Section -->
     <WarumSection category="motorrad" />
+
+    <!-- Standort & Map -->
+    <LocationMapSection
+      :location="{ address: 'Sennweidstrasse 30, 6312 Steinhausen', lat: 47.1697, lng: 8.5111, mapUrl: 'https://maps.google.com/maps?q=47.1697,8.5111' }"
+    />
 
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
