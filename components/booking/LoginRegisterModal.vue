@@ -20,23 +20,17 @@
       <div class="flex border-b border-gray-200">
         <button
           @click="activeTab = 'login'"
-          :class="[
-            'flex-1 py-3 px-4 text-sm font-medium transition-colors',
-            activeTab === 'login'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          ]"
+          class="flex-1 py-3 px-4 text-sm font-medium transition-colors"
+          :class="activeTab === 'login' ? '' : 'text-gray-600 hover:text-gray-900'"
+          :style="activeTab === 'login' ? { color: primaryColor, borderBottom: `2px solid ${primaryColor}` } : {}"
         >
           Anmelden
         </button>
         <button
           @click="activeTab = 'register'"
-          :class="[
-            'flex-1 py-3 px-4 text-sm font-medium transition-colors',
-            activeTab === 'register'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          ]"
+          class="flex-1 py-3 px-4 text-sm font-medium transition-colors"
+          :class="activeTab === 'register' ? '' : 'text-gray-600 hover:text-gray-900'"
+          :style="activeTab === 'register' ? { color: primaryColor, borderBottom: `2px solid ${primaryColor}` } : {}"
         >
           Registrieren
         </button>
@@ -54,7 +48,9 @@
               v-model="loginForm.email"
               type="email"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-colors"
+              :style="{ '--tw-ring-color': primaryColor }"
+              style="focus-ring-color: var(--tw-ring-color)"
               placeholder="ihre@email.com"
             >
           </div>
@@ -67,7 +63,7 @@
               v-model="loginForm.password"
               type="password"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-colors"
               placeholder="••••••••"
             >
           </div>
@@ -79,7 +75,8 @@
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-3 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ backgroundColor: primaryColor }"
           >
             {{ isLoading ? 'Wird angemeldet...' : 'Anmelden' }}
           </button>
@@ -96,7 +93,7 @@
                 v-model="registerForm.first_name"
                 type="text"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
                 placeholder="Max"
               >
             </div>
@@ -109,7 +106,7 @@
                 v-model="registerForm.last_name"
                 type="text"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
                 placeholder="Mustermann"
               >
             </div>
@@ -123,7 +120,7 @@
               v-model="registerForm.email"
               type="email"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               placeholder="ihre@email.com"
             >
           </div>
@@ -136,7 +133,7 @@
               v-model="registerForm.phone"
               type="tel"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               placeholder="+41 79 123 45 67"
             >
           </div>
@@ -149,7 +146,7 @@
               v-model="registerForm.birthdate"
               type="date"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
             >
           </div>
 
@@ -162,7 +159,7 @@
                 v-model="registerForm.street"
                 type="text"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
                 placeholder="Hauptstraße"
               >
             </div>
@@ -174,7 +171,7 @@
                 v-model="registerForm.street_nr"
                 type="text"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
                 placeholder="42"
               >
             </div>
@@ -186,7 +183,7 @@
                 v-model="registerForm.zip"
                 type="text"
                 required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
                 placeholder="8000"
               >
             </div>
@@ -200,7 +197,7 @@
               v-model="registerForm.city"
               type="text"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               placeholder="Zürich"
             >
           </div>
@@ -226,7 +223,10 @@
               <button
                 type="button"
                 @click="$refs.documentFileInput?.click()"
-                class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg transition-colors"
+                :style="{ '--hover-border': primaryColor }"
+                @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = primaryColor"
+                @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = ''"
               >
                 <div class="flex flex-col items-center gap-2">
                   <svg v-if="!uploadedDocument" class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,9 +239,9 @@
             </div>
             
             <!-- Upload Status -->
-            <div v-if="isUploadingDocument" class="mt-2 flex items-center gap-2 text-sm text-blue-600">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span>Wird hochgeladen...</span>
+            <div v-if="isUploadingDocument" class="mt-2 flex items-center gap-2 text-sm">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2" :style="{ borderColor: primaryColor }"></div>
+              <span :style="{ color: primaryColor }">Wird hochgeladen...</span>
             </div>
             <div v-else-if="documentUploadError" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
               {{ documentUploadError }}
@@ -257,7 +257,7 @@
               type="password"
               required
               minlength="12"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               placeholder="Mindestens 12 Zeichen"
             >
             <p class="text-xs text-gray-600 mt-2">
@@ -278,7 +278,7 @@
               type="password"
               required
               minlength="12"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               :class="{ 'border-red-500': registerForm.password_confirm && registerForm.password !== registerForm.password_confirm }"
               placeholder="Passwort wiederholen"
             >
@@ -294,7 +294,8 @@
           <button
             type="submit"
             :disabled="isLoading || !uploadedDocument || (registerForm.password && registerForm.password_confirm && registerForm.password !== registerForm.password_confirm)"
-            class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-3 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ backgroundColor: primaryColor }"
           >
             {{ isLoading ? 'Wird registriert...' : 'Registrieren' }}
           </button>
@@ -316,13 +317,17 @@ interface Props {
   initialTab?: 'login' | 'register'
   selectedStaffId?: string
   selectedCategory?: string
+  primaryColor?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialTab: 'login',
   selectedStaffId: undefined,
-  selectedCategory: undefined
+  selectedCategory: undefined,
+  primaryColor: '#2563EB'
 })
+
+const primaryColor = computed(() => props.primaryColor || '#2563EB')
 
 const route = useRoute()
 const router = useRouter()
@@ -576,4 +581,3 @@ const handleDocumentUpload = async (event: Event) => {
   }
 }
 </script>
-
