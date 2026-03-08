@@ -782,6 +782,7 @@
     :initial-tab="loginModalTab"
     :selected-staff-id="selectedInstructor?.id"
     :selected-category="selectedCategory?.code"
+    :primary-color="getBrandPrimary()"
     @close="showLoginModal = false"
     @success="handleAuthSuccess"
   />
