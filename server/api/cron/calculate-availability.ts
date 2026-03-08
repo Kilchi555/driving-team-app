@@ -52,12 +52,13 @@ export default defineEventHandler(async (event) => {
     }
 
     const authHeader = getHeader(event, 'authorization')
+    const vercelCronHeader = getHeader(event, 'x-vercel-cron')
     
-    // Verify the secret using constant-time comparison to prevent timing attacks
-    const expectedAuth = `Bearer ${cronSecret}`
-    const isValid = authHeader === expectedAuth
+    // Accept either: our own CRON_SECRET OR a Vercel-internal cron call (x-vercel-cron: 1)
+    const isValidSecret = authHeader === `Bearer ${cronSecret}`
+    const isVercelCron = vercelCronHeader === '1'
     
-    if (!isValid) {
+    if (!isValidSecret && !isVercelCron) {
       logger.warn('❌ Unauthorized cron job access attempt - invalid or missing credentials')
       throw createError({
         statusCode: 401,
