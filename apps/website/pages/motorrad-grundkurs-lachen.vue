@@ -55,33 +55,9 @@
     </section>
 
     <!-- Kategorien -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Motorrad Kategorien</h2>
-        <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <h3 class="font-bold text-gray-900 mb-2">Kategorie A1 (bis 50cm³, max. 4kW, 45km/h)</h3>
-            <ul class="text-gray-600 text-sm space-y-1"><li>✓ Ab 15 Jahren erlaubt</li><li>✓ Innerhalb 4 Monaten 12h Grundkurs*</li><li>✓ Anschliessend praktische Fahrprüfung**</li></ul>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <h3 class="font-bold text-gray-900 mb-2">Kategorie A1 (bis 125cm³, max. 11kW)</h3>
-            <ul class="text-gray-600 text-sm space-y-1"><li>✓ Ab 16 Jahren erlaubt</li><li>✓ Innerhalb 4 Monaten 12h Grundkurs*</li><li>✓ Anschliessend praktische Fahrprüfung**</li></ul>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <h3 class="font-bold text-gray-900 mb-2">Kategorie A 35kW (bis 35kW)</h3>
-            <ul class="text-gray-600 text-sm space-y-1"><li>✓ Ab 18 Jahren erlaubt</li><li>✓ Innerhalb 4 Monaten 12h Grundkurs*</li><li>✓ Anschliessend praktische Fahrprüfung</li></ul>
-          </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm">
-            <h3 class="font-bold text-gray-900 mb-2">Kategorie A (über 35kW)</h3>
-            <ul class="text-gray-600 text-sm space-y-1"><li>✓ Ab 20 Jahren (min. 2 Jahre 35kW)</li><li>✓ Innerhalb 4 Monaten 12h Grundkurs*</li><li>✓ Anschliessend praktische Fahrprüfung</li></ul>
-          </div>
-        </div>
-        <div class="max-w-4xl mx-auto mt-6 bg-gray-50 rounded p-4 text-xs text-gray-500">
-          <p>* Wenn der obligatorische Grundkurs von 3 x 4 Stunden seit dem 01.01.2021 schon mal absolviert wurde, ist dieser immer noch gültig.</p>
-          <p class="mt-1">** Bei Kategorie A1 muss die praktische Fahrprüfung nur absolviert werden, wenn man den Führerausweis fürs Auto noch nicht besitzt.</p>
-        </div>
-      </div>
-    </section>
+    <ClientOnly>
+      <MotorradKategorienSection />
+    </ClientOnly>
 
     <!-- Kurs Themen -->
     <section class="section-container">
