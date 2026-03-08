@@ -30,6 +30,9 @@
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 
+    <!-- 2.5. Instructors (weiß mit gradient) — Unser Team -->
+    <InstructorProfileSection :instructors="instructors" />
+
     <!-- 3. Standort Map (grau-50) — Wo genau -->
     <div class="bg-gray-50">
       <StandortMapSection location-key="zuerich" />
@@ -133,7 +136,12 @@
 </template>
 
 <script setup lang="ts">
+import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
+import { getInstructorsByLocation } from '~/instructor-data'
+
 definePageMeta({
   layout: 'default'
 })
+
+const instructors = getInstructorsByLocation('zuerich')
 </script>

@@ -1,20 +1,20 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Dietikon | In 6 Schritten zur Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Dietikon - Auto, Motorrad, Lastwagen Fahrstunden im Limmattal. Deutsch & Albanisch, 95% Erfolgsquote, ab CHF 100/Lektion. Jetzt Termin buchen!" />
-      <Link rel="canonical" href="https://drivingteam.ch/fahrschule-dietikon/" />
+      <Title>Fahrschule Pfäffikon/SZ | Auto, Motorrad | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Pfäffikon/SZ - Auto, Motorrad, Lastwagen & Kurse im Kanton Schwyz. Erfahrene Fahrlehrer, flexible Zeiten, ab CHF 100/Lektion. Jetzt anmelden!" />
+      <Link rel="canonical" href="https://drivingteam.ch/fahrschule-pfaeffikon/" />
     </Head>
 
     <!-- 1. Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/dietikon-hero.jpg" alt="Fahrschule Dietikon" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/locations/pfaeffikon-hero.jpg" alt="Fahrschule Pfäffikon/SZ" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule Dietikon</h1>
-          <p class="hidden xs:block text-xl text-primary-100 mb-8">Melde Dich in unserer Fahrschule Dietikon an – individuelle Ausbildung, flexible Treffpunkte und professionelle Fahrlehrer.</p>
+          <h1 class="heading-lg text-white mb-6">Fahrschule Pfäffikon/SZ</h1>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Deine moderne Fahrschule in Pfäffikon/SZ. Melde Dich an und starte deine Fahrausbildung mit erfahrenen Fahrlehrern.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -24,9 +24,9 @@
 
     <!-- 2. Features (weiß) -->
     <FeatureSection
-      title="Warum Driving Team Dietikon?"
-      subtitle="Melde Dich in unserer Fahrschule Dietikon an und Du kannst folgende Punkte von uns erwarten…"
-      :extras="['Unterricht auch in <strong>Albanisch</strong> möglich!']"
+      title="Warum Driving Team Pfäffikon/SZ?"
+      subtitle="Melde Dich in unserer Fahrschule Pfäffikon/SZ an und Du kannst folgende Punkte von uns erwarten…"
+      :extras="['Unterricht auch in <strong>Englisch</strong> möglich!']"
     />
 
     <!-- 2.5. Instructors (weiß mit gradient) -->
@@ -34,17 +34,17 @@
 
     <!-- 3. Standort Map (grau-50) -->
     <div class="bg-gray-50">
-      <StandortMapSection location-key="dietikon" />
+      <StandortMapSection location-key="pfaeffikon" />
     </div>
 
     <!-- 4. Themen (weiß) -->
-    <AusbildungsthemenSection location="Dietikon" />
+    <AusbildungsthemenSection location="Pfäffikon/SZ" />
 
     <!-- 5. Reviews (grau-50) -->
-    <ReviewsSection category="dietikon" />
+    <ReviewsSection category="pfaeffikon" />
 
     <!-- 6. CTA (primary) -->
-    <CtaSection title="Jetzt in Dietikon starten!" />
+    <CtaSection title="Jetzt in Pfäffikon/SZ starten!" />
 
     <PriceSection />
 
@@ -55,24 +55,24 @@
         <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen & Antworten</h2>
         <div class="faq-masonry">
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
-            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wieviele Fahrstunden benötige ich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Auto fahren lernen kannst Du mit dem Erlernen einer neuen Sportart, eines neuen Instruments oder einer Fremdsprache vergleichen. Wenn Du das Projekt Fahrprüfung jedoch seriös angehst, dann wirst Du Dein Ziel in nützlicher Zeit erreichen.</p>
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie viele Fahrstunden benötige ich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Auto fahren lernen kannst Du mit dem Erlernen einer neuen Sportart, eines neuen Instruments oder einer Fremdsprache vergleichen. Wenn Du das Projekt Fahrprüfung jedoch seriös angehst, sprich die Tipps und Tricks des Fahrlehrers ernst nimmst und probierst umzusetzen, dann wirst Du Dein Ziel in nützlicher Zeit erreichen.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie kann ich meine Fahrausbildung beschleunigen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Wichtigste ist sicher….Üben, Üben und nochmals Üben. Optimal wären 2-4 Fahrten pro Woche. Ganz wichtig beim privat Üben ist, dass Du genau so fährst, wie es Dir Dein Fahrlehrer gezeigt hat. Wir empfehlen zu Beginn ca. 5-10 Fahrlektionen und anschliessend regelmässige private Lernfahrten.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Wichtigste ist sicher….Üben, Üben und nochmals Üben. Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrstunden, sondern zum Beispiel 1 Fahrlektion und 1 Mal privat repetieren. Ganz wichtig beim privat Üben ist, dass Du genau so fährst, wie es Dir Dein Fahrlehrer gezeigt hat.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wieso dauert die Fahrstunde des Driving Teams 45 Minuten?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt. Je nach Übungsgebiet und Ausbildungsstand macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet und Ausbildungsstand macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie rechtfertigen sich eure Preise?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke umsetzen. Unsere Fahrzeuge befinden sich stets in einem top gewarteten Zustand und auf dem neuesten Stand der Technik. Dank diesen optimalen Voraussetzungen erreichen wir das Wichtigste: zufriedene Kunden.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke umsetzen. Dies beginnt bei den Fahrlehrer:innen, die nur langfristig seriös arbeiten können, wenn sie eine anständige Entlöhnung erhalten. Unsere Fahrzeuge befinden sich stets in einem top gewarteten Zustand.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Dietikon erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/Bonstetten im Knonaueramt. Bei der Anhänger- und Motorradausbildung beschränkt sich der Treffpunkt auf Zürich-Altstetten.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Pfäffikon/SZ erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind flexibel, das heisst wir holen euch, wenn möglich, zu Hause oder bei der Arbeit ab.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -98,14 +98,14 @@
             <p class="text-gray-600 mt-4 text-sm leading-relaxed">Alle unsere Fahrlehrer:innen haben eine vollumfängliche Ausbildung mit eidgenössischem Fachausweis absolviert und absolvieren jedes Jahr mindestens einen Weiterbildungstag.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
-            <summary class="font-semibold text-gray-900 flex justify-between items-center">Welches sind die häufigsten Prüfungsrouten ab Regensdorf?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Welches sind die häufigsten Prüfungsrouten ab Pfäffikon/SZ?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
             <div class="text-gray-600 mt-4 text-sm leading-relaxed">
               <ul class="list-disc pl-5 space-y-1">
-                <li>Otelfingen</li>
-                <li>Rümlang</li>
-                <li>Affoltern-Zürich</li>
-                <li>Regensberg / Buchs</li>
-                <li>Hüttikon / Oetwil an der Limmat</li>
+                <li>Altendorf / Lachen</li>
+                <li>Feusisberg / Schindellegi</li>
+                <li>Wollerau / Samstagern</li>
+                <li>Freienbach / Richterswil</li>
+                <li>Rapperswil / Jona</li>
               </ul>
             </div>
           </details>
@@ -121,7 +121,7 @@
       </div>
     </section>
 
-    <!-- 8. Preise (grau-50) -->
+    <!-- 8. Gutschein-->
     <div class="bg-gray-50">
       <GutscheinSection />
     </div>
@@ -130,9 +130,9 @@
     <CtaSection title="Bereit? Jetzt Termin buchen!" />
 
     <!-- 10. Andere Standorte (weiß) -->
-    <StandorteSection exclude="dietikon" />
+    <StandorteSection exclude="pfaeffikon" />
 
-    <WarumSection category="dietikon" />
+    <WarumSection category="pfaeffikon" />
 
   </div>
 </template>
@@ -141,5 +141,5 @@
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
 
-const instructors = getInstructorsByLocation('dietikon')
+const instructors = getInstructorsByLocation('pfaeffikon')
 </script>

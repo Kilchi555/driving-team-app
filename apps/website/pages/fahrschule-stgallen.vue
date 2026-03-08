@@ -28,6 +28,9 @@
       subtitle="Melde Dich in unserer Fahrschule St.Gallen an und Du kannst folgende Punkte von uns erwarten…"
     />
 
+    <!-- 2.5. Instructors (weiß mit gradient) -->
+    <InstructorProfileSection :instructors="instructors" />
+
     <!-- 3. Standort Map (grau-50) -->
     <div class="bg-gray-50">
       <StandortMapSection location-key="stgallen" />
@@ -141,4 +144,8 @@
 </template>
 
 <script setup lang="ts">
+import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
+import { getInstructorsByLocation } from '~/instructor-data'
+
+const instructors = getInstructorsByLocation('stgallen')
 </script>

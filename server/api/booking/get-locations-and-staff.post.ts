@@ -6,6 +6,7 @@
 // STRICT MODE: Only returns locations/staff combinations that are explicitly marked as online bookable in staff_locations table
 
 import { logger } from '~/utils/logger'
+import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -20,8 +21,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create anon client to respect RLS policies
-    const { createClient } = await import('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const anonKey = process.env.SUPABASE_ANON_KEY
 
@@ -35,47 +34,56 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, anonKey)
 
-    logger.debug('📍 Fetching locations and staff:', {
-      tenant_id,
-      category_code
+    logger.debug('📍 Fetching locations and staff:', { tenant_id, category_code })
+
+    // ✅ PARALLEL: Run all 3 independent queries at once instead of sequentially
+    const [staffLocResult, allStandardLocResult, allStaffResult] = await Promise.all([
+      // 1. staff_locations with is_online_bookable: true
+      supabase
+        .from('staff_locations')
+        .select('staff_id, location_id, is_online_bookable')
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .eq('is_online_bookable', true),
+
+      // 2. All standard locations for tenant
+      supabase
+        .from('locations')
+        .select('id, name, staff_ids, available_categories')
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .eq('location_type', 'standard'),
+
+      // 3. All active staff for tenant
+      supabase
+        .from('users')
+        .select('id, first_name, last_name, email, role, category, is_active')
+        .eq('tenant_id', tenant_id)
+        .eq('role', 'staff')
+        .eq('is_active', true)
+    ])
+
+    if (staffLocResult.error) {
+      logger.error('❌ Error loading staff_locations:', staffLocResult.error)
+      throw createError({ statusCode: 500, statusMessage: 'Failed to load staff locations' })
+    }
+    if (allStandardLocResult.error) {
+      logger.error('❌ Error loading all standard locations:', allStandardLocResult.error)
+      throw createError({ statusCode: 500, statusMessage: 'Failed to load locations' })
+    }
+    if (allStaffResult.error) {
+      logger.warn('⚠️ Error loading staff data:', allStaffResult.error)
+    }
+
+    const staffLocations = staffLocResult.data
+    const allStandardLocations = allStandardLocResult.data
+    const allStaff = allStaffResult.data
+
+    logger.debug('📍 Loaded in parallel:', {
+      staff_locations: staffLocations?.length || 0,
+      standard_locations: allStandardLocations?.length || 0,
+      staff: allStaff?.length || 0
     })
-
-    // 🔒 STRICT MODE: Load ONLY staff_locations with is_online_bookable: true
-    // This is the single source of truth for online bookable staff/location combinations
-    const { data: staffLocations, error: staffLocError } = await supabase
-      .from('staff_locations')
-      .select('staff_id, location_id, is_online_bookable')
-      .eq('tenant_id', tenant_id)
-      .eq('is_active', true)
-      .eq('is_online_bookable', true) // Only online bookable
-
-    if (staffLocError) {
-      logger.error('❌ Error loading staff_locations:', staffLocError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load staff locations'
-      })
-    }
-
-    logger.debug('📍 Loaded staff_locations:', staffLocations?.length || 0)
-
-    // ✅ NEW: Also load ALL standard locations for the category (not just those with staff_locations entries)
-    const { data: allStandardLocations, error: allLocError } = await supabase
-      .from('locations')
-      .select('id, name, staff_ids, available_categories')
-      .eq('tenant_id', tenant_id)
-      .eq('is_active', true)
-      .eq('location_type', 'standard')
-
-    if (allLocError) {
-      logger.error('❌ Error loading all standard locations:', allLocError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load locations'
-      })
-    }
-
-    logger.debug('📍 Loaded all standard locations:', allStandardLocations?.length || 0)
 
     // Filter locations to category
     const categoryLocations = (allStandardLocations || []).filter((loc: any) => {
@@ -98,7 +106,7 @@ export default defineEventHandler(async (event) => {
       staffCount: staffIds.length
     })
 
-    // 2. Load location details
+    // Load location details (full data) — staff already loaded in parallel above
     const { data: locations, error: locationsError } = await supabase
       .from('locations')
       .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type, staff_ids')
@@ -116,22 +124,9 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('📍 Loaded locations:', locations?.length || 0)
+    logger.debug('👤 Staff already loaded in parallel:', allStaff?.length || 0)
 
-    // 3. Load ALL staff for the tenant
-    const { data: allStaff, error: staffError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, role, category, is_active')
-      .eq('tenant_id', tenant_id)
-      .eq('role', 'staff')
-      .eq('is_active', true)
-
-    if (staffError) {
-      logger.warn('⚠️ Error loading staff data:', staffError)
-    }
-
-    logger.debug('👤 Loaded staff details:', allStaff?.length || 0)
-
-    // 4. Build staff category map
+    // Build staff category map
     const staffCategoryMap = new Map<string, string[]>()
     
     if (allStaff) {

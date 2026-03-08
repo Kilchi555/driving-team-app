@@ -11,7 +11,7 @@
           <p class="text-gray-300 text-lg">Fahrlehrer:innen</p>
         </div>
         <div class="text-center group">
-          <div class="mb-4 text-4xl md:text-6xl font-black text-yellow-400 group-hover:scale-125 transition-transform duration-500">11'000+</div>
+          <div class="mb-4 text-4xl md:text-6xl font-black text-yellow-400 group-hover:scale-125 transition-transform duration-500">11'500+</div>
           <p class="text-gray-300 text-lg">Lektionen pro Jahr</p>
         </div>
         <div class="text-center group">
