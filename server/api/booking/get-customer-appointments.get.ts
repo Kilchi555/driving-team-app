@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
       .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status')
-      .eq('customer_id', customerId)
+      .eq('user_id', customerId)
       .eq('tenant_id', tenantId)
       .not('status', 'eq', 'deleted')
       .is('deleted_at', null)
