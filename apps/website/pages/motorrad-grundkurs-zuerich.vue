@@ -63,23 +63,7 @@
     </ClientOnly>
 
     <!-- Kurs Themen -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Kursinhalte – 3 Kursteile</h2>
-      <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <h3 class="font-bold text-gray-900 mb-3">🔵 Teil 1</h3>
-          <p class="text-gray-600 text-sm">Fahrzeugbeherrschung im Langsamfahrbereich, Parcours, Betriebssicherheit, Motorradbekleidung, gesetzliche Aspekte, Fahren im Verkehr (Abbiegen, Sicherheitsabstand, Spurwechsel)</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <h3 class="font-bold text-gray-900 mb-3">🟡 Teil 2</h3>
-          <p class="text-gray-600 text-sm">Schnelle und sichere Bremsmanöver, Fahren in Kreisverkehrsplätzen, Rechtsvortritt, Berganfahren, Vortrittsregeln, Parkieren</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <h3 class="font-bold text-gray-900 mb-3">🟢 Teil 3</h3>
-          <p class="text-gray-600 text-sm">Sicheres Kurvenfahren, Mitnahme eines Sozius, Geschwindigkeitsgestaltung, Gruppenfahren. Dieser Teil ist auch für Inhaber der Kategorie A1 ohne Geschwindigkeitsbeschränkung Pflicht.</p>
-        </div>
-      </div>
-    </section>
+    <KursteileSection />
 
     <!-- Reviews -->
     <ReviewsSection category="motorrad-grundkurs" />
@@ -181,7 +165,6 @@
         <h2 class="heading-md mb-6 text-white">Jetzt Motorrad Grundkurs Zürich buchen!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://www.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
     </section>

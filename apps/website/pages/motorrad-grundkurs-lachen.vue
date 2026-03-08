@@ -60,23 +60,7 @@
     </ClientOnly>
 
     <!-- Kurs Themen -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Kursinhalte – 3 Kursteile</h2>
-      <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <h3 class="font-bold text-gray-900 mb-3">🔵 Teil 1</h3>
-          <p class="text-gray-600 text-sm">Fahrzeugbeherrschung im Langsamfahrbereich, Parcours, Betriebssicherheit, Motorradbekleidung, gesetzliche Aspekte, Fahren im Verkehr</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <h3 class="font-bold text-gray-900 mb-3">🟡 Teil 2</h3>
-          <p class="text-gray-600 text-sm">Schnelle und sichere Bremsmanöver, Kreisverkehrsplätze, Rechtsvortritt, Berganfahren, Vortrittsregeln, Parkieren</p>
-        </div>
-        <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-          <h3 class="font-bold text-gray-900 mb-3">🟢 Teil 3</h3>
-          <p class="text-gray-600 text-sm">Sicheres Kurvenfahren, Mitnahme eines Sozius, Geschwindigkeitsgestaltung, Gruppenfahren</p>
-        </div>
-      </div>
-    </section>
+    <KursteileSection />
 
     <!-- Reviews -->
     <ReviewsSection category="motorrad-grundkurs" />
