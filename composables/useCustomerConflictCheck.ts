@@ -68,11 +68,14 @@ export const useCustomerConflictCheck = () => {
       error.value = null
 
       // Check if user is authenticated
-      const { data: session } = await useAsyncData('session', () => 
-        $fetch('/api/auth/session')
-      )
+      let session: any = null
+      try {
+        session = await $fetch('/api/auth/session')
+      } catch {
+        // Not authenticated
+      }
 
-      if (!session?.value?.user) {
+      if (!session?.user) {
         logger.debug('ℹ️ User not authenticated - skipping conflict check')
         customerAppointments.value = []
         return

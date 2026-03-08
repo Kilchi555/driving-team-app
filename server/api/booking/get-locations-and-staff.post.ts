@@ -46,10 +46,10 @@ export default defineEventHandler(async (event) => {
         .eq('is_active', true)
         .eq('is_online_bookable', true),
 
-      // 2. All standard locations for tenant
+      // 2. All standard locations for tenant (full fields – avoids a 2nd query later)
       supabase
         .from('locations')
-        .select('id, name, staff_ids, available_categories')
+        .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type, staff_ids')
         .eq('tenant_id', tenant_id)
         .eq('is_active', true)
         .eq('location_type', 'standard'),
@@ -106,24 +106,9 @@ export default defineEventHandler(async (event) => {
       staffCount: staffIds.length
     })
 
-    // Load location details (full data) — staff already loaded in parallel above
-    const { data: locations, error: locationsError } = await supabase
-      .from('locations')
-      .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, location_type, staff_ids')
-      .eq('tenant_id', tenant_id)
-      .eq('is_active', true)
-      .eq('location_type', 'standard')
-      .in('id', allLocationIds)
-
-    if (locationsError) {
-      logger.error('❌ Error loading locations:', locationsError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load locations'
-      })
-    }
-
-    logger.debug('📍 Loaded locations:', locations?.length || 0)
+    // Use already-loaded location data from the parallel query above (avoids a 4th DB round-trip)
+    const locations = allStandardLocations?.filter((loc: any) => allLocationIds.includes(loc.id)) || []
+    logger.debug('📍 Loaded locations:', locations.length)
     logger.debug('👤 Staff already loaded in parallel:', allStaff?.length || 0)
 
     // Build staff category map
@@ -147,7 +132,7 @@ export default defineEventHandler(async (event) => {
     // 5. Build locations map with staff
     const locationsMap = new Map<string, any>()
     
-    locations?.forEach((location: any) => {
+    locations.forEach((location: any) => {
       if (!locationsMap.has(location.id)) {
         // Parse time_windows if it's a string
         let timeWindows = location.time_windows || []
