@@ -514,7 +514,23 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     })
 
-    // ============ LAYER 9: RETURN RESPONSE ============
+    // ============ LAYER 9: TRIGGER AVAILABILITY RECALCULATION ============
+    // Fire-and-forget: recalculate slots for this staff so other customers
+    // immediately see updated availability (don't await - non-blocking)
+    const cronSecret = process.env.CRON_SECRET
+    $fetch('/api/availability/queue-recalc', {
+      method: 'POST',
+      body: {
+        staff_id: slot.staff_id,
+        tenant_id: tenantId,
+        trigger: 'appointment'
+      },
+      headers: cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}
+    }).catch((err: any) => {
+      logger.warn('⚠️ Could not queue availability recalc after booking (non-critical):', err.message)
+    })
+
+    // ============ LAYER 10: RETURN RESPONSE ============
     return {
       success: true,
       appointment_id: newAppointment.id,
