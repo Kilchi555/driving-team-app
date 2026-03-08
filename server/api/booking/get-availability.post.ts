@@ -280,31 +280,33 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 400, message: 'Missing category_code or tenant_id' })
       }
 
-      const { data: category, error: catErr } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('tenant_id', tenant_id)
-        .eq('code', category_code)
-        .eq('is_active', true)
-        .single()
+      const [
+        { data: category, error: catErr },
+        { data: staff, error: staffErr },
+        { data: locations, error: locErr }
+      ] = await Promise.all([
+        supabase
+          .from('categories')
+          .select('id')
+          .eq('tenant_id', tenant_id)
+          .eq('code', category_code)
+          .eq('is_active', true)
+          .single(),
+        supabase
+          .from('staff')
+          .select('id, first_name, last_name, email, image_url')
+          .eq('tenant_id', tenant_id)
+          .eq('is_active', true),
+        supabase
+          .from('locations')
+          .select('id, name, staff_ids, available_categories')
+          .eq('tenant_id', tenant_id)
+          .eq('is_active', true)
+          .eq('location_type', 'standard')
+      ])
 
       if (catErr) throw catErr
-
-      const { data: staff, error: staffErr } = await supabase
-        .from('staff')
-        .select('id, first_name, last_name, email, image_url')
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-
       if (staffErr) throw staffErr
-
-      const { data: locations, error: locErr } = await supabase
-        .from('locations')
-        .select('id, name, staff_ids, available_categories')
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-        .eq('location_type', 'standard')
-
       if (locErr) throw locErr
 
       return {
@@ -366,31 +368,32 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 400, message: 'Missing staff_id' })
       }
 
-      // Load working hours
-      const { data: workingHours, error: whErr } = await supabase
-        .from('staff_working_hours')
-        .select('day_of_week, start_time, end_time, is_active')
-        .eq('staff_id', queryStaffId)
-        .eq('is_active', true)
+      const [
+        { data: workingHours, error: whErr },
+        { data: appointments, error: apptErr },
+        { data: busyTimes, error: busyErr }
+      ] = await Promise.all([
+        supabase
+          .from('staff_working_hours')
+          .select('day_of_week, start_time, end_time, is_active')
+          .eq('staff_id', queryStaffId)
+          .eq('is_active', true),
+        supabase
+          .from('appointments')
+          .select('id, start_time, end_time, title, status')
+          .eq('staff_id', queryStaffId)
+          .not('status', 'eq', 'deleted')
+          .is('deleted_at', null)
+          .gte('end_time', new Date().toISOString()),
+        supabase
+          .from('external_busy_times')
+          .select('start_time, end_time')
+          .eq('staff_id', queryStaffId)
+          .gte('end_time', new Date().toISOString())
+      ])
 
       if (whErr) throw whErr
-
-      // Load appointments
-      const { data: appointments, error: apptErr } = await supabase
-        .from('appointments')
-        .select('id, start_time, end_time, title, status')
-        .eq('staff_id', queryStaffId)
-        .not('status', 'eq', 'deleted')
-        .is('deleted_at', null)
-
       if (apptErr) throw apptErr
-
-      // Load external busy times
-      const { data: busyTimes, error: busyErr } = await supabase
-        .from('external_busy_times')
-        .select('start_time, end_time')
-        .eq('staff_id', queryStaffId)
-
       if (busyErr) throw busyErr
 
       return {
