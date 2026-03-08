@@ -126,7 +126,7 @@ const allReviews: Record<string, { text: string; author?: string; link: string }
     { text: '„Junges, dynamisches, sympathisches und sehr geduldiges Team. Es lohnt sich, beim Driving Team das Fahren zu lernen!"', author: 'Valentina R.', link: 'https://maps.app.goo.gl/THUZ4DUz235JwtKH9' },
     { text: '„Sehr empfehlenswert. Ich habe meinen Grundkurs und einige Prüfungsvorbereitungen bei Pascal gemacht. Er war geduldig, konstruktiv und sachkundig – ein grossartiger Unterrichtsstil."', author: 'Jenny', link: 'https://maps.app.goo.gl/b1rGtT11bwXp1gCp6' },
   ],
-}
+  motorboot: [
     { text: '„Top Bootsfahrschule am Zürichsee! Kann ich nur weiterempfehlen! Marc ist sehr geduldig und kann die Inhalte sehr verständlich vermitteln. Flexibel in den Fahrstundenzeiten (auch abends und Samstag)."', author: 'Fipos L.', link: 'https://maps.app.goo.gl/GZRZ9bTeb5CBuXYeA' },
     { text: '„Diesen Sommer habe ich dank Marc die Bootsprüfung beim ersten Mal bestanden. Super Ausbildung, Fahrstunden waren auch an Randzeiten möglich. Top modernes Motorboot."', author: 'Gustav G.', link: 'https://maps.app.goo.gl/twt4ArVToBoSuD8Z8' },
     { text: '„Sehr angenehme und professionelle Bootsfahrschule. Dankeschön."', author: 'Fabian K.', link: 'https://maps.app.goo.gl/29QBxJaRnLKF2jdd9' },
