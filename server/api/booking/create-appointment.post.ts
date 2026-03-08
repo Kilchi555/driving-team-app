@@ -352,6 +352,15 @@ export default defineEventHandler(async (event: H3Event) => {
       }
 
       totalAmountRappen = Math.round(price)
+
+      // Round to nearest franc (same logic as get-pricing.post.ts)
+      const remainder = totalAmountRappen % 100
+      if (remainder !== 0) {
+        totalAmountRappen = remainder < 50
+          ? totalAmountRappen - remainder        // Round down if < 50 Rappen
+          : totalAmountRappen + (100 - remainder) // Round up if >= 50 Rappen
+      }
+
       logger.debug('💰 Price calculated:', { totalAmountRappen, pricingRule })
     } else {
       logger.warn('⚠️ No pricing rule found for category, defaulting to 0', { category_code: body.category_code, tenant_id: tenantId })
