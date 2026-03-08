@@ -936,6 +936,9 @@ const { autoSyncCalendars } = useExternalCalendarSync()
 
 const { isEnabled, load: loadFeatures } = useFeatures()
 
+// Initialize once at top-level so repeated instructor selections reuse the same instance
+const { checkConflicts: checkCustomerConflicts, customerAppointments } = useCustomerConflictCheck()
+
 // Prüfe ob Online-Buchung aktiviert ist
 const isOnlineBookingEnabled = computed(() => {
   return isEnabled('allow_online_booking', true) // Default: true für Rückwärtskompatibilität
@@ -2503,8 +2506,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
       ? filters.value.duration_minutes[0] || 45 
       : filters.value.duration_minutes || 45
     
-    // ✅ NEW: Pre-load customer's existing appointments for conflict checking
-    const { checkConflicts: checkCustomerConflicts, customerAppointments } = useCustomerConflictCheck()
+    // ✅ Pre-load customer's existing appointments for conflict checking (composable is initialized at top-level)
     await checkCustomerConflicts(startDate, endDate)
     logger.debug('✅ Customer appointment conflict check initialized', {
       existingAppointments: customerAppointments.value.length
@@ -3326,52 +3328,14 @@ const proceedToRegistration = () => {
 
 const setTenantFromSlug = async (slugOrId: string) => {
   try {
-    // Replaces direct Supabase queries at lines 2382 & 2392
-    
-    // For now, load tenant by trying basic logic on client
-    // But this should ideally be an API call
-    // Fetch tenant from API if available, otherwise use direct fetch
-    
-    // Option 1: Use API endpoint when available
-    // For now doing direct calculation on client since tenants are public
-    const response = await fetch('/api/booking/get-availability', {
+    // Single call to the dedicated public endpoint – avoids a failing UUID-test call first
+    const tenantResponse = await $fetch('/api/booking/get-tenant-by-slug', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenant_id: slugOrId,
-        staff_id: 'placeholder',
-        action: 'get-tenant-data'
-      })
-    }).catch(() => null)
-    
-    let tenantData = null
-    
-    if (response?.ok) {
-      try {
-        const data = await response.json()
-        if (data?.success) {
-          tenantData = data.data?.tenant
-        }
-      } catch (e) {
-        // Fall back if API response is not JSON
-      }
-    }
-    
-    // If API failed or returned nothing, we need a public endpoint for tenant lookup
-    // This is still necessary since tenants page is public
-    if (!tenantData) {
-      // Make a fetch call to a new public endpoint
-      // For now, create one
-      const tenantResponse = await $fetch('/api/booking/get-tenant-by-slug', {
-        method: 'POST',
-        body: { slug: slugOrId, id: slugOrId }
-      }).catch(() => null) as any
-      
-      if (tenantResponse?.success) {
-        tenantData = tenantResponse.data
-      }
-    }
-    
+      body: { slug: slugOrId, id: slugOrId }
+    }).catch(() => null) as any
+
+    const tenantData = tenantResponse?.success ? tenantResponse.data : null
+
     if (!tenantData) {
       console.error('❌ Tenant not found:', slugOrId)
       return

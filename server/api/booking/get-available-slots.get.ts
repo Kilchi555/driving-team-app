@@ -152,66 +152,46 @@ export default defineEventHandler(async (event: H3Event) => {
     })
 
     // ============ LAYER 4: ENRICH WITH MINIMAL DATA ============
-    // Load staff names and location names (public info)
+    // Load staff names, location names and online-bookable status in one parallel round-trip
     const staffIds = [...new Set(slots?.map(s => s.staff_id) || [])]
     const locationIds = [...new Set(slots?.map(s => s.location_id) || [])]
 
-    const [staffData, locationData] = await Promise.all([
+    const [staffData, locationData, staffLocationsData] = await Promise.all([
       staffIds.length > 0 ? supabase
         .from('users')
         .select('id, first_name, last_name')
         .in('id', staffIds)
-        .then(res => res.data || []) : [],
+        .then(res => res.data || []) : Promise.resolve([]),
       locationIds.length > 0 ? supabase
         .from('locations')
         .select('id, name')
         .in('id', locationIds)
-        .then(res => res.data || []) : []
+        .then(res => res.data || []) : Promise.resolve([]),
+      staffIds.length > 0 && locationIds.length > 0 ? supabase
+        .from('staff_locations')
+        .select('staff_id, location_id, is_online_bookable')
+        .in('staff_id', staffIds)
+        .in('location_id', locationIds)
+        .then(res => res.data || []) : Promise.resolve([])
     ])
 
-    const staffMap = new Map(staffData.map(s => [s.id, `${s.first_name} ${s.last_name}`]))
-    const locationMap = new Map(locationData.map(l => [l.id, l.name]))
+    const staffMap = new Map(staffData.map((s: any) => [s.id, `${s.first_name} ${s.last_name}`]))
+    const locationMap = new Map(locationData.map((l: any) => [l.id, l.name]))
 
-    // ✅ NEW: Load staff_locations to check is_online_bookable status
+    // Build nested map for quick is_online_bookable lookup: staff_id -> location_id -> boolean
     let staffLocationsMap = new Map<string, Map<string, boolean>>()
-    if (staffIds.length > 0 && locationIds.length > 0) {
-      try {
-        logger.debug('🔍 Querying staff_locations for filtering', {
-          staffIds,
-          locationIds
-        })
-        
-        const { data: staffLocations, error: slError } = await supabase
-          .from('staff_locations')
-          .select('staff_id, location_id, is_online_bookable')
-          .in('staff_id', staffIds)
-          .in('location_id', locationIds)
-
-        logger.debug('📋 staff_locations query result:', {
-          error: slError?.message || null,
-          count: staffLocations?.length || 0,
-          data: staffLocations || []
-        })
-
-        if (!slError && staffLocations) {
-          // Create a nested map for quick lookup: staff_id -> location_id -> is_online_bookable
-          for (const sl of staffLocations) {
-            if (!staffLocationsMap.has(sl.staff_id)) {
-              staffLocationsMap.set(sl.staff_id, new Map())
-            }
-            staffLocationsMap.get(sl.staff_id)!.set(sl.location_id, sl.is_online_bookable)
-          }
-          logger.debug('✅ Loaded staff_locations online bookable settings', {
-            staff_count: staffIds.length,
-            location_count: locationIds.length,
-            entries: staffLocations.length
-          })
-        }
-      } catch (slError: any) {
-        logger.warn('⚠️ Failed to load staff_locations online bookable settings:', slError.message)
-        // Non-critical: we'll assume true as default (backward compatible)
+    for (const sl of staffLocationsData as any[]) {
+      if (!staffLocationsMap.has(sl.staff_id)) {
+        staffLocationsMap.set(sl.staff_id, new Map())
       }
+      staffLocationsMap.get(sl.staff_id)!.set(sl.location_id, sl.is_online_bookable)
     }
+
+    logger.debug('📊 Enrichment data loaded in parallel:', {
+      staff: staffData.length,
+      locations: locationData.length,
+      staff_locations: (staffLocationsData as any[]).length
+    })
 
     // Enrich slots with names
     // Filter out slots where is_online_bookable = false
