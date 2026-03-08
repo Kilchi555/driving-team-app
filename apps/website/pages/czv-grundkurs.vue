@@ -47,6 +47,9 @@
       </div>
     </section>
 
+    <!-- Warum Section -->
+    <WarumSection category="czv" />
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
