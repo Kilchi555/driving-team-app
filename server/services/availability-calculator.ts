@@ -1013,6 +1013,7 @@ export class AvailabilityCalculator {
       logger.debug(`✅ Deleted ${deletedCount || 0} existing slots - recalculating from scratch`)
 
       // Insert new slots in batches (Supabase limit: 1000 rows per insert)
+      // ✅ upsert instead of insert: prevents duplicates if two calculator processes run simultaneously
       const batchSize = 1000
       let insertedCount = 0
 
@@ -1021,7 +1022,10 @@ export class AvailabilityCalculator {
 
         const { error: insertError } = await this.supabase
           .from('availability_slots')
-          .insert(batch)
+          .upsert(batch, {
+            onConflict: 'staff_id,location_id,start_time,end_time,category_code',
+            ignoreDuplicates: false
+          })
 
         if (insertError) {
           logger.error('❌ Error inserting batch:', insertError)
