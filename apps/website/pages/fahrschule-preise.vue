@@ -21,12 +21,18 @@
 
     <!-- Preise -->
     <section class="section-container py-16">
-      <div class="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto space-y-12 md:space-y-0">
+      <div class="space-y-4 max-w-6xl mx-auto">
         
         <!-- Motorrad Kategorie A -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🏍️ Motorrad Kategorie A</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🏍️</div>
+              <div class="text-base md:text-lg text-gray-600">Motorrad Kategorie A</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorrad Einzellektion 45min</p>
@@ -56,12 +62,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 115.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Auto Kategorie B -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🚗 Auto Kategorie B</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🚗</div>
+              <div class="text-base md:text-lg text-gray-600">Auto Kategorie B</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Auto Einzellektion 45min</p>
@@ -98,12 +110,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 285.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Anhänger Kategorie BE -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🚗 Anhänger Kategorie BE</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🚗</div>
+              <div class="text-base md:text-lg text-gray-600">Anhänger Kategorie BE</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Anhänger Doppellektion 90min</p>
@@ -140,12 +158,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 360.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Motorwagen Kategorie C1 -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🚛 Motorwagen Kategorie C1</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🚛</div>
+              <div class="text-base md:text-lg text-gray-600">Motorwagen Kategorie C1</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorwagen Einzellektion 45min</p>
@@ -182,12 +206,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 649.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Lastwagen Kategorie C -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🚚 Lastwagen Kategorie C</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🚚</div>
+              <div class="text-base md:text-lg text-gray-600">Lastwagen Kategorie C</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Lastwagen Einzellektion 45min</p>
@@ -224,12 +254,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 737.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Gesellschaftswagen Kategorie D1 -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🚌 Gesellschaftswagen Kategorie D1</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🚌</div>
+              <div class="text-base md:text-lg text-gray-600">Gesellschaftswagen Kategorie D1</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Gesellschaftswagen 45min</p>
@@ -266,12 +302,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 649.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Bus Kategorie D -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🚌 Bus Kategorie D</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🚌</div>
+              <div class="text-base md:text-lg text-gray-600">Bus Kategorie D</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Bus Einzellektion 45min</p>
@@ -308,12 +350,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 1066.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Motorboot -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">⛵ Motorboot</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">⛵</div>
+              <div class="text-base md:text-lg text-gray-600">Motorboot</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Motorboot Einzellektion 45min</p>
@@ -350,12 +398,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 317.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Kurse -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🎓 Kurse</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🎓</div>
+              <div class="text-base md:text-lg text-gray-600">Kurse</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Nothelferkurs inkl. Kursbestätigung</p>
@@ -420,12 +474,18 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 800.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Weiterbildung -->
-        <div class="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">🔄 Weiterbildung</h3>
-          <div class="space-y-3">
+        <details class="group bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer">
+          <summary class="flex items-center justify-between p-4 md:p-6 font-bold text-gray-900 hover:bg-gray-50">
+            <div>
+              <div class="text-2xl md:text-3xl mb-1">🔄</div>
+              <div class="text-base md:text-lg text-gray-600">Weiterbildung</div>
+            </div>
+            <span class="transition group-open:rotate-180">▼</span>
+          </summary>
+          <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">CZV Weiterbildung pro Person</p>
@@ -469,7 +529,7 @@
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 190.–</p>
             </div>
           </div>
-        </div>
+        </details>
 
       </div>
     </section>

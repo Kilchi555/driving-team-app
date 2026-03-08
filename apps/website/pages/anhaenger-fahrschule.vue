@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Fahrschule Kategorie BE | Driving Team Zürich</Title>
-      <Meta name="description" content="Anhänger Fahrschule in Zürich und Lachen für Kategorie BE. Praxisnahe Ausbildung, Prüfungsgebiete Albisgütli/Regensdorf/Wettingen. Erfahrene Fahrlehrer." />
+      <Title>Anhänger Fahrstunden BE - Sichere Ausbildung | Driving Team</Title>
+      <Meta name="description" content="Anhänger Fahrstunden Zürich für Kategorie BE. Praxisnahe Ausbildung, erfahrene Fahrlehrer, flexible Zeiten. Jetzt buchen!" />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />

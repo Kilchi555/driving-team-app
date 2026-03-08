@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule | Zürich | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Zürich - 95% Pass Rate, ab CHF 100/Lektion. Flexible Zeiten, erfahrene Fahrlehrer. Jetzt buchen!" />
+      <Title>Auto Fahrstunden Zürich - ab CHF 95/Lektion | Driving Team</Title>
+      <Meta name="description" content="Auto Fahrstunden Zürich mit Driving Team. 95% Erfolgsquote, flexible Zeiten, erfahrene Fahrlehrer für Kategorie B. Jetzt buchen!" />
       <Meta property="og:title" content="Auto Fahrschule Kategorie B | Driving Team" />
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />

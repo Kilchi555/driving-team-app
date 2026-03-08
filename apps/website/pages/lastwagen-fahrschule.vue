@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>LKW Fahrschule | C1, C, CE | Driving Team</Title>
-      <Meta name="description" content="LKW Fahrschule Zürich - Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge. CZV Grundkurs. Jetzt anmelden!" />
+      <Title>Lastwagen Fahrstunden C1/C/CE - Professionelle Ausbildung | Driving Team</Title>
+      <Meta name="description" content="Lastwagen Fahrstunden Zürich für C1, C & CE. Professionelle LKW-Ausbildung, moderne Fahrzeuge, CZV Grundkurs. Jetzt anmelden!" />
       <Meta property="og:title" content="LKW Fahrschule Kategorie C1 | C | CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />

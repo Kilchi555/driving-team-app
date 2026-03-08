@@ -20,34 +20,144 @@
     </section>
 
     <!-- Über die Weiterbildung -->
-    <section class="section-container">
-      <h2 class="heading-md mb-10 text-center">Fahrlehrer-Weiterbildung</h2>
-      <div class="max-w-3xl mx-auto space-y-6 text-gray-700">
-        <p>Fahrlehrer mit eidgenössischem Fachausweis sind gesetzlich verpflichtet, regelmässig an Weiterbildungen teilzunehmen. Das Driving Team bietet entsprechende Weiterbildungsangebote an, die auf die aktuellen Anforderungen zugeschnitten sind.</p>
-        <p>Die Weiterbildung dient dazu, die fachlichen und pädagogischen Kompetenzen der Fahrlehrer auf dem neuesten Stand zu halten und die Qualität der Fahrausbildung in der Schweiz zu gewährleisten.</p>
+    <section class="section-container py-16">
+      <h2 class="heading-md mb-10 text-center">Unsere Fahrlehrerweiterbildungen</h2>
+      <div class="max-w-3xl mx-auto space-y-6 text-gray-700 mb-12">
+        <p>Auch hier ist es unser Bestreben, die Fahrlehrer:innen, welche unsere Kurse besuchen, von A bis Z zu begeistern. Unsere Fahrlehrerweiterbildungskurse sollen stets Spass machen und unterhaltsam sein.</p>
+        <p>Der Mehrwert soll ebenfalls klar ersichtlich sein und die neuen Erkenntnisse müssen im Berufsalltag umgesetzt werden können. Mit einer ansprechenden Infrastruktur und anständiger Verpflegung runden wir unsere Kurse ab.</p>
+        <p>Sei dabei und lasse dich vom Drive des Driving Teams in einer asa-anerkannten Fahrlehrerweiterbildung anstecken. Wir freuen uns dich schon bald in unseren Fahrlehrerweiterbildung begrüssen zu dürfen.</p>
       </div>
-    </section>
 
-    <!-- Kontakt -->
-    <section class="bg-gray-50 py-16">
-      <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Kontakt & Anmeldung</h2>
-        <div class="max-w-3xl mx-auto bg-white rounded-lg p-8 shadow-sm space-y-4">
-          <p class="text-gray-700">Für aktuelle Kursangebote, Termine und Kosten der Fahrlehrer-Weiterbildung kontaktiere uns bitte direkt.</p>
-          <div class="flex items-start gap-3"><span class="text-primary-600 text-xl">📧</span><div><p class="font-semibold text-gray-900">E-Mail</p><a href="mailto:info@drivingteam.ch" class="text-primary-600 hover:underline">info@drivingteam.ch</a></div></div>
-          <div class="flex items-start gap-3"><span class="text-primary-600 text-xl">📞</span><div><p class="font-semibold text-gray-900">Telefon</p><a href="tel:+41444310033" class="text-primary-600 hover:underline">044 431 00 33</a></div></div>
-          <div class="flex items-start gap-3"><span class="text-primary-600 text-xl">🕐</span><div><p class="font-semibold text-gray-900">Erreichbar</p><p class="text-gray-600">Montag bis Freitag: 08:00 – 12:00 / 13:00 – 17:00</p></div></div>
+      <!-- Kurse Grid -->
+      <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-12">
+        <!-- Anhänger Kurs -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
+          <div class="bg-gradient-to-r from-blue-50 to-primary-50 p-6 border-b border-gray-200">
+            <p class="text-4xl mb-3">🚗</p>
+            <h3 class="font-bold text-gray-900 text-lg">Anhänger Kategorie BE</h3>
+            <p class="text-sm text-gray-600 mt-2">Für Fahrlehrer:innen der Kategorie B</p>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <p class="text-xs font-semibold text-primary-600 mb-2">PREIS</p>
+              <p class="text-2xl font-bold text-gray-900">CHF 420.–</p>
+              <p class="text-xs text-gray-600 mt-1">inkl. Kaffee & Gipfeli, Mittagessen, Kursbestätigung</p>
+            </div>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Fahrzeug: Eigener Anhängerzug BE</span></li>
+              <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Ort: Verkehrszentrum Tuggen/SZ</span></li>
+              <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Max. 12 Teilnehmende</span></li>
+              <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Garantierte Durchführung</span></li>
+            </ul>
+            <p class="text-xs text-gray-600 mt-4 pt-4 border-t">In diesem Kurs wirst du als Fahrlehrer:in vollumfänglich auf die Kategorie BE vorbereitet, um selbstständig Anhängerfahrstunden anbieten zu können.</p>
+          </div>
+        </div>
+
+        <!-- Motorboot Kurs -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
+          <div class="bg-gradient-to-r from-cyan-50 to-blue-50 p-6 border-b border-gray-200">
+            <p class="text-4xl mb-3">🚤</p>
+            <h3 class="font-bold text-gray-900 text-lg">Motorboot Fahrlehrerweiterbildung</h3>
+            <p class="text-sm text-gray-600 mt-2">Für Fahrlehrer:innen der Kategorie B</p>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <p class="text-xs font-semibold text-cyan-600 mb-2">PREIS</p>
+              <p class="text-2xl font-bold text-gray-900">CHF 499.–</p>
+              <p class="text-xs text-gray-600 mt-1">statt 540.– | inkl. Kaffee & Gipfeli, Mittagessen, Kursbestätigung</p>
+            </div>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start gap-2"><span class="text-cyan-600 mt-1">✓</span><span>Ort: Hotel Marina Lachen/SZ</span></li>
+              <li class="flex items-start gap-2"><span class="text-cyan-600 mt-1">✓</span><span>Max. 12 Teilnehmende</span></li>
+              <li class="flex items-start gap-2"><span class="text-cyan-600 mt-1">✓</span><span>Garantierte Durchführung</span></li>
+              <li class="flex items-start gap-2"><span class="text-cyan-600 mt-1">✓</span><span>Keine Vorkenntnisse nötig</span></li>
+            </ul>
+            <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Rolle eines Motorbootfahrschülers, reflektiere dein Lernverhalten und gewinne neue Erkenntnisse für deinen Fahrschulalltag.</p>
+          </div>
+        </div>
+
+        <!-- Lastwagen Kurs -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
+          <div class="bg-gradient-to-r from-amber-50 to-orange-50 p-6 border-b border-gray-200">
+            <p class="text-4xl mb-3">🚛</p>
+            <h3 class="font-bold text-gray-900 text-lg">Lastwagen Fahrlehrerweiterbildung</h3>
+            <p class="text-sm text-gray-600 mt-2">Für Fahrlehrer:innen der Kategorie B</p>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <p class="text-xs font-semibold text-amber-600 mb-2">PREIS</p>
+              <p class="text-2xl font-bold text-gray-900">CHF 490.–</p>
+              <p class="text-xs text-gray-600 mt-1">inkl. Kaffee & Gipfeli, Mittagessen, Kursbestätigung</p>
+            </div>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Ort: Verkehrszentrum Tuggen/SZ</span></li>
+              <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Max. 12 Teilnehmende</span></li>
+              <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Garantierte Durchführung</span></li>
+              <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Praktisches Fahren auf Gelände</span></li>
+            </ul>
+            <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Faszination des Lastwagenfahrens, stelle dich in die Rolle der Schüler:innen und transferiere die Erkenntnisse in deinen Schulalltag.</p>
+          </div>
         </div>
       </div>
+
+      <!-- Gruppen-Angebot -->
+      <div class="max-w-3xl mx-auto bg-gradient-to-r from-primary-50 to-blue-50 rounded-2xl p-8 border border-primary-200 mb-12">
+        <h3 class="font-bold text-gray-900 text-lg mb-4">👥 Gruppen-Angebot</h3>
+        <p class="text-gray-700 mb-4">Seit ihr eine Gruppe von mindestens 10 Fahrlehrer:innen, dann können wir euch ein super Angebot zur Fahrlehrerweiterbildung eurer Wahl machen.</p>
+        <p class="text-sm text-gray-600 mb-4">Teilt uns ganz einfach per Mail mit, wer ihr seit und wer alles dabei ist, am Besten gleich mit Führerausweis-Nr. und Geburtsdatum. Dann melden wir uns schnellstmöglich bei euch und wir erstellen speziell für euch einen Fahrlehrerweiterbildungstag.</p>
+        <a href="mailto:info@drivingteam.ch?subject=Gruppen-Angebot%20Fahrlehrerweiterbildung" class="inline-block bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors">
+          📧 Jetzt kontaktieren
+        </a>
+      </div>
     </section>
 
-    <!-- Weitere Weiterbildungen -->
-    <section class="section-container">
-      <h2 class="heading-md mb-8 text-center">Unsere weiteren Weiterbildungen</h2>
-      <div class="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-        <a href="/czv-weiterbildung" class="bg-primary-50 rounded-lg p-6 text-center hover:bg-primary-100 transition"><p class="text-2xl mb-2">🚛</p><p class="font-semibold text-gray-900">CZV Weiterbildung</p></a>
-        <a href="/motorrad-weiterbildung" class="bg-primary-50 rounded-lg p-6 text-center hover:bg-primary-100 transition"><p class="text-2xl mb-2">🏍️</p><p class="font-semibold text-gray-900">Motorrad Weiterbildung</p></a>
-        <a href="/wab-kurse-zuerich" class="bg-primary-50 rounded-lg p-6 text-center hover:bg-primary-100 transition"><p class="text-2xl mb-2">🚗</p><p class="font-semibold text-gray-900">WAB Kurse</p></a>
+    <!-- FAQ Section -->
+    <section class="bg-gray-50 py-16">
+      <div class="section-container">
+        <h2 class="heading-md mb-10 text-center">Häufige Fragen zu unseren Fahrlehrerweiterbildungen</h2>
+        <div class="max-w-3xl mx-auto space-y-4">
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Warum gibt es Fahrlehrer Weiterbildungen?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Mit der Weiterbildung von Fahrlehrern und Fahrlehrerinnen soll erreicht werden, dass Erfahrungen aus der praktischen Tätigkeit zusammen mit Fachpersonen diskutiert, Defizite in der praktischen Berufsausübung behoben, Fachwissen vertieft, neue Erkenntnisse und Vorgaben vermittelt und insbesondere die verkehrsgerechte und umweltschonende Fahrausbildung von Fahrschülerinnen und Fahrschülern regelmässig reflektiert werden.</p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Was ist das SARI?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">SARI (<strong>S</strong>ystem für <strong>A</strong>dministration, <strong>R</strong>egistrierung und <strong>I</strong>nformation) dient dazu, in der ganzen Schweiz via Internet einfach und sicher Teilnahmebestätigungen für Fahrlehrerweiterbildung bei der asa zu beziehen und den Kursteilnehmern nach absolviertem Kurs auszustellen.</p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kann das SARI?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <div class="text-gray-600 mt-4 text-sm space-y-2">
+              <p>Mit SARI können Fahrlehrer für Weiterbildungskurse eingeschrieben werden. Mit Hilfe der Nummer des Führerausweises und des Geburtsdatums können die persönlichen Daten der Fahrlehrer automatisch eingelesen und aktuell gehalten werden.</p>
+              <p>Kursveranstalter können im Voraus die für sie nötige Anzahl Teilnahmebestätigungen beziehen. Am Tag des Fahrlehrerweiterbildungskurses werden die Teilnahmebestätigungen freigeschaltet und für die Kursteilnehmenden ausgedruckt. Die entsprechenden Daten bleiben im System gespeichert.</p>
+            </div>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Was machen die Fahrlehrerweiterbildungen des Driving Teams aus?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Die Fahrlehrerweiterbildungen des Driving Teams sollen praxisorientiert und lehrreich sein. Unser Ziel ist es, dass du immer etwas für deinen Fahrschulalltag mitnehmen und profitieren kannst. Gleichzeitig bieten wir stets ein ansprechendes Rahmenprogramm mit einer tollen Infrastruktur und anständiger Verpflegung.</p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie werden Absagen geregelt?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <div class="text-gray-600 mt-4 text-sm space-y-2">
+              <p>Das Driving Team behält sich das Recht vor, Kurse bei denen die Mindestteilnehmerzahl nicht erreicht werden, die Lehrperson verhindert ist oder aus Sicherheitsgründen kurzfristig abzusagen oder zu verschieben.</p>
+              <p><strong>Seitens des Teilnehmers:</strong> Frühzeitige Umbuchungen oder Absagen sind kostenlos. Umbuchungen oder Absagen weniger als 14 Tage vor Kursbeginn werden pauschal mit CHF 80.– Umtriebsentschädigung verrechnet.</p>
+              <p>Bei unentschuldigtem Fernbleiben oder Absagen weniger als 24h vor Kursbeginn werden die vollen Kurskosten verrechnet. Bei Absenzen aus gesundheitlichen Gründen werden die Umbuchungsgebühren erlassen, wenn innerhalb einer Woche ein Arztzeugnis eingereicht wird.</p>
+            </div>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Zahlungsmethoden werden akzeptiert?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Nach deiner Anmeldung zur Fahrlehrerweiterbildung beim Driving Team erhältst du ca. 30 Tage vor Kursbeginn eine Rechnung, die innerhalb von 14 Tagen beglichen werden muss. Bitte beachte, dass die Zahlung fristgerecht erfolgen sollte, um deinen Platz im Kurs zu sichern. Manchmal passiert es, dass unsere E-Mails in den Spam-Ordner fallen, schaue bitte auch dort nach und kontaktiere uns, falls das E-Mail nicht angekommen ist.</p>
+          </details>
+
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Hast du Ideen für neue Fahrlehrerweiterbildungskurse?<span class="text-gray-400 transition-transform group-open:rotate-180 duration-200">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Wir sind immer auf der Suche nach neuen Ideen für unsere Kurse. Hast du eine Vorstellung von einer Fahrlehrerweiterbildung, welche es so noch nicht gibt und eine grosse Bereicherung für die Fahrlehrerschaft wäre? Dann schreibe uns eine E-Mail an <a href="mailto:info@drivingteam.ch" class="text-primary-600 hover:underline">info@drivingteam.ch</a>. Wir freuen uns von dir zu hören!</p>
+          </details>
+        </div>
       </div>
     </section>
 
