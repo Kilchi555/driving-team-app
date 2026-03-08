@@ -82,7 +82,7 @@
     </section>
 
     <!-- Reviews -->
-    <ReviewsSection category="motorrad" />
+    <ReviewsSection category="motorrad-grundkurs" />
 
     <!-- FAQ -->
     <section class="section-container">
