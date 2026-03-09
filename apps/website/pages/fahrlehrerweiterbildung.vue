@@ -32,10 +32,14 @@
       <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-12">
         <!-- Anhänger Kurs -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
-          <div class="bg-gradient-to-r from-blue-50 to-primary-50 p-6 border-b border-gray-200">
-            <p class="text-4xl mb-3">🚗</p>
-            <h3 class="font-bold text-gray-900 text-lg">Anhänger Kategorie BE</h3>
-            <p class="text-sm text-gray-600 mt-2">Für Fahrlehrer:innen der Kategorie B</p>
+          <div class="relative h-48 overflow-hidden">
+            <img src="/images/categories/anhaenger-fahrschule.webp" alt="Anhänger Kategorie BE" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-black/30 flex items-end p-5">
+              <div>
+                <h3 class="font-bold text-white text-lg">Anhänger Kategorie BE</h3>
+                <p class="text-sm text-white/80 mt-1">Für Fahrlehrer:innen der Kategorie B</p>
+              </div>
+            </div>
           </div>
           <div class="p-6 space-y-4">
             <div>
@@ -58,10 +62,14 @@
 
         <!-- Motorboot Kurs -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
-          <div class="bg-gradient-to-r from-cyan-50 to-blue-50 p-6 border-b border-gray-200">
-            <p class="text-4xl mb-3">🚤</p>
-            <h3 class="font-bold text-gray-900 text-lg">Motorboot Fahrlehrerweiterbildung</h3>
-            <p class="text-sm text-gray-600 mt-2">Für Fahrlehrer:innen der Kategorie B</p>
+          <div class="relative h-48 overflow-hidden">
+            <img src="/images/categories/motorboot.webp" alt="Motorboot Fahrlehrerweiterbildung" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-black/30 flex items-end p-5">
+              <div>
+                <h3 class="font-bold text-white text-lg">Motorboot Fahrlehrerweiterbildung</h3>
+                <p class="text-sm text-white/80 mt-1">Für Fahrlehrer:innen der Kategorie B</p>
+              </div>
+            </div>
           </div>
           <div class="p-6 space-y-4">
             <div>
@@ -84,10 +92,14 @@
 
         <!-- Lastwagen Kurs -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
-          <div class="bg-gradient-to-r from-amber-50 to-orange-50 p-6 border-b border-gray-200">
-            <p class="text-4xl mb-3">🚛</p>
-            <h3 class="font-bold text-gray-900 text-lg">Lastwagen Fahrlehrerweiterbildung</h3>
-            <p class="text-sm text-gray-600 mt-2">Für Fahrlehrer:innen der Kategorie B</p>
+          <div class="relative h-48 overflow-hidden">
+            <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrlehrerweiterbildung" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-black/30 flex items-end p-5">
+              <div>
+                <h3 class="font-bold text-white text-lg">Lastwagen Fahrlehrerweiterbildung</h3>
+                <p class="text-sm text-white/80 mt-1">Für Fahrlehrer:innen der Kategorie B</p>
+              </div>
+            </div>
           </div>
           <div class="p-6 space-y-4">
             <div>
