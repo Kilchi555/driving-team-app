@@ -429,10 +429,11 @@
               ✕
             </button>
             <div class="p-6">
-              <GeneralInquiryForm
+              <CourseRegistrationForm
                 :tenant_id="tenantId"
-                mode="general"
+                :course_type="courseType"
                 :custom_title="modalTitle"
+                :custom_description="'Melden Sie sich für den CZV Grundkurs an.'"
                 @submitted="onFormSubmitted"
               />
             </div>
@@ -449,6 +450,7 @@ import { ref } from 'vue'
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
 const modalTitle = ref('CZV Grundkurs anfragen')
+const courseType = ref('czv_grundkurs')
 
 function openModal(title = 'CZV Grundkurs anfragen') {
   modalTitle.value = title
