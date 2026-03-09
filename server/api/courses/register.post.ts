@@ -47,10 +47,13 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid phone format' })
     }
 
-    // Build notes with company if provided
+    // Build notes with company and selected course dates
     let finalNotes = body.notes || ''
     if (body.company?.trim()) {
       finalNotes = `Firma: ${body.company}\n${finalNotes}`.trim()
+    }
+    if (body.course_dates && body.course_dates.length > 0) {
+      finalNotes = `${finalNotes}\nGewünschte Kursdaten: ${body.course_dates.join(', ')}`.trim()
     }
 
     const supabase = getSupabaseAdmin()
@@ -70,7 +73,6 @@ export default defineEventHandler(async (event) => {
         zip: body.zip?.trim() || null,
         city: body.city?.trim() || null,
         course_type: body.course_type.trim(),
-        course_dates: body.course_dates || null,
         notes: finalNotes || null,
       })
       .select()
