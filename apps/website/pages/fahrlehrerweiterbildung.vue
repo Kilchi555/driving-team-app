@@ -12,9 +12,9 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrlehrer-Weiterbildung</h1>
           <p class="text-xl text-primary-100 mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für aktuelle Kursangebote und Termine.</p>
-          <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✉️ Anfrage senden
-          </a>
+          <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            ✉️ Anmelden
+          </button>
         </div>
       </div>
     </section>
@@ -50,6 +50,9 @@
               <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Garantierte Durchführung</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">In diesem Kurs wirst du als Fahrlehrer:in vollumfänglich auf die Kategorie BE vorbereitet, um selbstständig Anhängerfahrstunden anbieten zu können.</p>
+            <button @click="openModal('Anhänger Kategorie BE')" class="w-full mt-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+              Anmelden
+            </button>
           </div>
         </div>
 
@@ -73,6 +76,9 @@
               <li class="flex items-start gap-2"><span class="text-cyan-600 mt-1">✓</span><span>Keine Vorkenntnisse nötig</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Rolle eines Motorbootfahrschülers, reflektiere dein Lernverhalten und gewinne neue Erkenntnisse für deinen Fahrschulalltag.</p>
+            <button @click="openModal('Motorboot Fahrlehrerweiterbildung')" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+              Anmelden
+            </button>
           </div>
         </div>
 
@@ -96,6 +102,9 @@
               <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Praktisches Fahren auf Gelände</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Faszination des Lastwagenfahrens, stelle dich in die Rolle der Schüler:innen und transferiere die Erkenntnisse in deinen Schulalltag.</p>
+            <button @click="openModal('Lastwagen Fahrlehrerweiterbildung')" class="w-full mt-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+              Anmelden
+            </button>
           </div>
         </div>
       </div>
@@ -171,8 +180,73 @@
         </div>
       </div>
     </section>
+
+    <!-- Registration Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showModal"
+          class="fixed inset-x-0 bottom-0 top-16 z-50 flex items-start justify-center p-4 pt-6 overflow-y-auto"
+          @click.self="closeModal"
+        >
+          <div class="fixed inset-0 bg-black/50 backdrop-blur-sm -z-10" @click="closeModal" />
+          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg my-auto animate-scale-in">
+            <!-- Close Button -->
+            <button
+              @click="closeModal"
+              class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/80 hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 transition shadow"
+            >
+              ✕
+            </button>
+            <div class="p-6">
+              <CourseRegistrationForm
+                :tenant_id="tenantId"
+                :course_type="courseType"
+                :custom_title="`Anmeldung: ${modalTitle}`"
+                :custom_description="`Melden Sie sich für ${modalTitle} an.`"
+                @submitted="onFormSubmitted"
+              />
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
+const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
+const showModal = ref(false)
+const modalTitle = ref('')
+const courseType = ref('fahrlehrer_weiterbildung')
+
+function openModal(title: string) {
+  modalTitle.value = title
+  showModal.value = true
+  document.body.style.overflow = 'hidden'
+}
+
+function closeModal() {
+  showModal.value = false
+  document.body.style.overflow = ''
+}
+
+function onFormSubmitted() {
+  setTimeout(() => {
+    closeModal()
+  }, 3500)
+}
 </script>
+
+<style scoped>
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-scale-in { animation: scale-in 0.2s ease-out; }
+
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+</style>
