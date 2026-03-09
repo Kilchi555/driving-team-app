@@ -36,19 +36,11 @@ export default defineNuxtConfig({
         },
       },
     },
-    proxies: {
-      '/api/': {
-        target: process.env.API_PROXY_TARGET || 'http://localhost:3001',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/': '/api/'
-        }
-      }
-    }
   },
 
   routeRules: {
     '/': { prerender: true },
     '/uber-uns': { redirect: { to: '/team', statusCode: 301 } },
+    '/api/**': { proxy: process.env.API_PROXY_TARGET ? `${process.env.API_PROXY_TARGET}/api/**` : 'http://localhost:3001/api/**' },
   },
 })
