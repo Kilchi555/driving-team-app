@@ -1,12 +1,10 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-white shadow rounded-lg p-4 sm:p-6">
-      <div class="text-center">
-        <p class="text-xs uppercase tracking-wide text-gray-400">{{ isSpecificRequest ? 'Interessentanfrage' : 'Allgemeine Anfrage' }}</p>
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ formTitle }}</h2>
-        <p class="text-sm text-gray-600 mt-2">{{ formDescription }}</p>
-      </div>
+    <div class="bg-primary-600 rounded-xl p-6 sm:p-8 text-center">
+      <p class="text-xs uppercase tracking-widest text-primary-200 font-semibold mb-1">{{ isSpecificRequest ? 'Interessentanfrage' : 'Allgemeine Anfrage' }}</p>
+      <h2 class="text-2xl sm:text-3xl font-bold text-white">{{ formTitle }}</h2>
+      <p class="text-primary-100 text-sm mt-2">{{ formDescription }}</p>
     </div>
 
     <!-- Form Card -->
@@ -81,6 +79,8 @@
               <input
                 v-model="firstName"
                 type="text"
+                name="given-name"
+                autocomplete="given-name"
                 placeholder="Max"
                 @blur="touched.firstName = true"
                 :class="[
@@ -101,6 +101,8 @@
               <input
                 v-model="lastName"
                 type="text"
+                name="family-name"
+                autocomplete="family-name"
                 placeholder="Müller"
                 @blur="touched.lastName = true"
                 :class="[
@@ -115,6 +117,20 @@
           </div>
         </div>
 
+        <!-- Company (optional) -->
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">Firma <span class="text-gray-400">(optional)</span></label>
+          <input
+            v-model="company"
+            type="text"
+            name="organization"
+            autocomplete="organization"
+            placeholder="Muster AG"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
+            :style="{ '--tw-ring-color': getBrandPrimary() }"
+          />
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <!-- Email -->
           <div>
@@ -123,6 +139,8 @@
               <input
                 v-model="email"
                 type="email"
+                name="email"
+                autocomplete="email"
                 placeholder="max@example.com"
                 @blur="touched.email = true"
                 :class="[
@@ -143,6 +161,8 @@
               <input
                 v-model="phone"
                 type="tel"
+                name="tel"
+                autocomplete="tel"
                 placeholder="+41 79 123 45 67"
                 @input="onPhoneInput"
                 @blur="touched.phone = true"
@@ -285,6 +305,11 @@ const props = defineProps({
     type: String,
     default: 'general',
     validator: (value: string) => ['general', 'booking'].includes(value)
+  },
+  // Optional custom title override
+  custom_title: {
+    type: String,
+    default: null
   }
 })
 
@@ -293,6 +318,7 @@ const emit = defineEmits(['submitted'])
 // Form states
 const firstName = ref('')
 const lastName = ref('')
+const company = ref('')
 const email = ref('')
 const phone = ref('')
 const message = ref('')
@@ -353,6 +379,7 @@ const fieldValid = computed(() => ({
 const isSpecificRequest = computed(() => props.mode === 'booking')
 
 const formTitle = computed(() => {
+  if (props.custom_title) return props.custom_title
   return isSpecificRequest.value
     ? 'Fahrstunde anfragen'
     : 'Schreib uns eine Nachricht'
@@ -429,8 +456,8 @@ const onPhoneInput = (event: Event) => {
 const loadData = async () => {
   try {
     const [categoriesRes, locationsRes] = await Promise.all([
-      $fetch('/api/booking/get-categories', { query: { tenant_id: props.tenant_id } }),
-      $fetch('/api/booking/get-locations', { query: { tenant_id: props.tenant_id } })
+      $fetch<{ categories: Category[] }>('/api/booking/get-categories', { query: { tenant_id: props.tenant_id } }),
+      $fetch<{ locations: Location[] }>('/api/booking/get-locations', { query: { tenant_id: props.tenant_id } })
     ])
 
     if (categoriesRes?.categories) {
@@ -468,7 +495,9 @@ const submitInquiry = async () => {
       last_name: lastName.value.trim(),
       email: email.value.trim(),
       phone: phone.value.trim(),
-      notes: message.value.trim()
+      notes: company.value.trim()
+        ? `Firma: ${company.value.trim()}\n\n${message.value.trim()}`
+        : message.value.trim()
     }
 
     if (isSpecificRequest.value) {
@@ -486,7 +515,7 @@ const submitInquiry = async () => {
       payload.preferred_time_slots = []
     }
 
-    const response = await $fetch('/api/booking/submit-general-inquiry', {
+    const response = await $fetch<{ success: boolean; proposal_id: string }>('/api/booking/submit-general-inquiry', {
       method: 'POST',
       body: payload
     })
@@ -514,6 +543,7 @@ const closeModal = () => {
   showSuccessModal.value = false
   firstName.value = ''
   lastName.value = ''
+  company.value = ''
   email.value = ''
   phone.value = ''
   message.value = ''
