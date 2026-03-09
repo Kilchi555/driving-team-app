@@ -148,12 +148,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { logger } from '~/utils/logger'
 
 // Driving Team tenant ID
 const tenantId = ref('64259d68-195a-4c68-8875-f1b44d962830')
 
 const onInquirySubmitted = (proposalId: string) => {
-  logger.debug('✅ Inquiry submitted successfully:', proposalId)
+  console.log('✅ Inquiry submitted successfully:', proposalId)
 }
 </script>
