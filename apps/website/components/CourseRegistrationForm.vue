@@ -99,7 +99,7 @@
         </div>
 
         <!-- Birthdate -->
-        <div class="space-y-3">
+        <div v-if="props.show_faber_birthdate !== false" class="space-y-3">
           <label class="block text-sm font-semibold text-gray-900">
             Geburtsdatum <span class="text-red-500">*</span>
           </label>
@@ -115,7 +115,7 @@
         </div>
 
         <!-- FaBer ID (Führerausweis Nummer) -->
-        <div class="space-y-3">
+        <div v-if="props.show_faber_birthdate !== false" class="space-y-3">
           <label class="block text-sm font-semibold text-gray-900">
             Führerausweis-Nummer (FaBer) <span class="text-red-500">*</span>
           </label>
@@ -208,19 +208,36 @@
             <label
               v-for="date in props.available_dates"
               :key="date"
-              class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition"
-              :class="{ 'border-primary-400 bg-primary-50': form.selected_dates.includes(date) }"
+              class="flex items-center gap-3 p-3 border rounded-lg transition"
+              :class="isSoldOut(date)
+                ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                : form.selected_dates.includes(date)
+                  ? 'border-primary-400 bg-primary-50 cursor-pointer'
+                  : 'border-gray-200 cursor-pointer hover:bg-gray-50'"
             >
               <input
                 type="checkbox"
                 :value="date"
                 v-model="form.selected_dates"
+                :disabled="isSoldOut(date)"
                 class="w-4 h-4 rounded accent-primary-600"
               />
-              <span class="text-sm text-gray-800">{{ date }}</span>
+              <span class="text-sm flex-1" :class="isSoldOut(date) ? 'text-gray-400 line-through' : 'text-gray-800'">{{ date }}</span>
+              <span v-if="isSoldOut(date)" class="text-xs font-semibold text-red-500 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">Ausgebucht</span>
+              <span v-else-if="remainingSpots(date) !== null" class="text-xs text-gray-500">noch {{ remainingSpots(date) }} Plätze</span>
             </label>
           </div>
           <p v-if="errors.selected_dates" class="text-red-500 text-xs">{{ errors.selected_dates }}</p>
+        </div>
+
+        <!-- Hinweis wenn keine Kursdaten vorhanden -->
+        <div v-else class="rounded-lg bg-blue-50 border border-blue-200 p-4 flex gap-3">
+          <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-sm text-blue-800">
+            <strong>Interessenanmeldung:</strong> Mit dem Absenden dieses Formulars meldest du dein Interesse an. Sobald die Kursdaten feststehen, werden wir dich umgehend kontaktieren.
+          </p>
         </div>
 
         <!-- Notes -->
@@ -249,22 +266,26 @@
       </form>
     </div>
 
-    <!-- Success Modal (fullscreen overlay) -->
-    <Transition name="fade">
-      <div
-        v-if="showSuccess"
-        class="absolute inset-0 bg-white rounded-xl flex flex-col items-center justify-center text-center p-8 z-10"
-      >
-        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-          </svg>
+    <!-- Success Modal via Teleport -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showSuccess"
+          class="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+        >
+          <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-10 text-center animate-scale-in">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-3">Anmeldung erfolgreich!</h3>
+            <p class="text-gray-600 mb-2">Vielen Dank für deine Anmeldung.</p>
+            <p class="text-gray-500 text-sm">Wir melden uns in Kürze bei dir.</p>
+          </div>
         </div>
-        <h3 class="text-2xl font-bold text-gray-900 mb-3">Anmeldung erfolgreich!</h3>
-        <p class="text-gray-600 mb-2">Vielen Dank für deine Anmeldung.</p>
-        <p class="text-gray-500 text-sm">Wir melden uns in Kürze bei dir.</p>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -296,11 +317,16 @@ const props = defineProps<{
   custom_title?: string
   custom_description?: string
   course_type: string
-  available_dates?: string[] // e.g. ['15. März 2026', '22. März 2026']
+  available_dates?: string[]
+  sold_out_dates?: string[]
+  spots_per_date?: Record<string, number>
+  location?: string
+  start_time?: string
+  show_faber_birthdate?: boolean
 }>()
 
 const emit = defineEmits<{
-  submitted: []
+  submitted: [selectedDates?: string[]]
 }>()
 
 const form = ref<FormData>({
@@ -324,6 +350,16 @@ const isSubmitting = ref(false)
 const showSuccess = ref(false)
 
 const formTitle = computed(() => props.custom_title || 'Kursanmeldung')
+
+function isSoldOut(date: string): boolean {
+  return (props.sold_out_dates || []).includes(date)
+}
+
+function remainingSpots(date: string): number | null {
+  if (!props.spots_per_date) return null
+  if (!(date in props.spots_per_date)) return null
+  return props.spots_per_date[date]
+}
 const formDescription = computed(
   () => props.custom_description || 'Füllen Sie das Formular aus, um sich anzumelden.'
 )
@@ -349,11 +385,13 @@ function validateForm(): boolean {
   if (!form.value.phone?.trim()) {
     errors.value.phone = 'Telefon ist erforderlich'
   }
-  if (!form.value.birthdate?.trim()) {
-    errors.value.birthdate = 'Geburtsdatum ist erforderlich'
-  }
-  if (!form.value.faberid?.trim()) {
-    errors.value.faberid = 'Führerausweis-Nummer ist erforderlich'
+  if (props.show_faber_birthdate !== false) {
+    if (!form.value.birthdate?.trim()) {
+      errors.value.birthdate = 'Geburtsdatum ist erforderlich'
+    }
+    if (!form.value.faberid?.trim()) {
+      errors.value.faberid = 'Führerausweis-Nummer ist erforderlich'
+    }
   }
   if (!form.value.street?.trim()) {
     errors.value.street = 'Strasse ist erforderlich'
@@ -395,9 +433,12 @@ async function handleSubmit() {
       zip: form.value.zip,
       city: form.value.city,
       course_type: props.course_type,
+      course_title: props.custom_title?.replace(/^Anmeldung:\s*/i, '').replace(/^Anfrage:\s*/i, '').trim(),
       company: form.value.company,
       notes: form.value.notes,
       course_dates: form.value.selected_dates.length > 0 ? form.value.selected_dates : undefined,
+      location: props.location,
+      start_time: props.start_time,
     }
 
     const response = await fetch('/api/courses/register', {
@@ -416,7 +457,7 @@ async function handleSubmit() {
 
     if (data.success) {
       showSuccess.value = true
-      emit('submitted')
+      emit('submitted', form.value.selected_dates.length > 0 ? [...form.value.selected_dates] : undefined)
     }
   } catch (err) {
     console.error('Error submitting form:', err)
@@ -436,5 +477,15 @@ async function handleSubmit() {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+</style>
+
+<style>
+@keyframes scale-in {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
 }
 </style>

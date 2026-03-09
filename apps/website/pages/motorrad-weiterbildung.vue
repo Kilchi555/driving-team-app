@@ -13,8 +13,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Motorrad Weiterbildung</h1>
-          <p class="hidden xs:block text-xl text-orange-100 mb-8">In unseren Motorrad Weiterbildungen geht es darum, dich zu einer sichereren Motorradfahrerin oder einem sichereren Motorradfahrer zu machen. In unseren Motorradkursen sind erfahrene Motorrad-Fahrlehrer dabei.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
+          <p class="hidden xs:block text-xl text-orange-100 mb-8">In unseren Motorrad Weiterbildungen geht es darum, dich zu einer sichereren Motorradfahrerin oder einem sichereren Motorradfahrer zu machen. Unsere Motorradkurse werden von erfahrenen Motorrad-Fahrlehrern durchgeführt.</p>
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg inline-block">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -39,10 +39,10 @@
             <li>Übungen mit dem eigenen Motorrad</li>
           </ul>
           <div class="bg-gray-50 rounded p-4 text-sm space-y-2">
-            <p><strong>Kosten:</strong> CHF 190.- inkl. Instruktor:in & Leuchtweste</p>
-            <p><strong>Dauer:</strong> 3 Stunden, am Abend</p>
+            <p><strong>Kosten:</strong> CHF 190.- inkl. Instruktor:in</p>
+            <p><strong>Dauer:</strong> 1.5 Stunden</p>
             <p><strong>Fahrzeug:</strong> Eigenes Motorrad mit Sicherheitsbekleidung</p>
-            <p><strong>Max. Teilnehmer:</strong> 5 – first come, first serve</p>
+            <p><strong>Max. Teilnehmer:</strong> 2</p>
           </div>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary mt-4 inline-block">Jetzt anmelden</a>
         </div>
@@ -59,10 +59,10 @@
             <li>Kurvenfahren und Soziusfahren</li>
           </ul>
           <div class="bg-gray-50 rounded p-4 text-sm space-y-2">
-            <p><strong>Kosten:</strong> CHF 190.- inkl. Leuchtweste und Instruktor:in</p>
-            <p><strong>Dauer:</strong> 3 Stunden, am Abend</p>
+            <p><strong>Kosten:</strong> CHF 190.- inkl. Instruktor:in</p>
+            <p><strong>Dauer:</strong> 1.5 Stunden</p>
             <p><strong>Fahrzeug:</strong> Eigenes Motorrad mit Sicherheitsbekleidung</p>
-            <p><strong>Max. Teilnehmer:</strong> 5 – first come, first serve</p>
+            <p><strong>Max. Teilnehmer:</strong> 2</p>
           </div>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary mt-4 inline-block">Jetzt anmelden</a>
         </div>
@@ -146,7 +146,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt sicherer Motorrad fahren!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg inline-block">
             📅 Jetzt anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-orange-600 text-lg">
@@ -155,8 +155,8 @@
         </div>
       </div>
     </section>
+
+    <WarumSection/>
   </div>
 </template>
 
-<script setup lang="ts">
-</script>

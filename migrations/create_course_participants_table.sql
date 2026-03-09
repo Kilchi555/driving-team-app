@@ -1,6 +1,9 @@
+-- Drop existing table if it exists (to start fresh)
+DROP TABLE IF EXISTS public.course_participants CASCADE;
+
 -- Create course_participants table for course registrations
 -- Used for: CZV Grundkurs, Fahrlehrerweiterbildung, etc.
-CREATE TABLE IF NOT EXISTS public.course_participants (
+CREATE TABLE public.course_participants (
   id uuid not null default gen_random_uuid(),
   tenant_id uuid not null,
   
@@ -48,10 +51,10 @@ CREATE TABLE IF NOT EXISTS public.course_participants (
 );
 
 -- Create indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_course_participants_tenant on public.course_participants using btree (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_course_participants_course_type on public.course_participants using btree (course_type);
-CREATE INDEX IF NOT EXISTS idx_course_participants_email on public.course_participants using btree (email);
-CREATE INDEX IF NOT EXISTS idx_course_participants_faberid on public.course_participants using btree (faberid);
+CREATE INDEX idx_course_participants_tenant on public.course_participants using btree (tenant_id);
+CREATE INDEX idx_course_participants_course_type on public.course_participants using btree (course_type);
+CREATE INDEX idx_course_participants_email on public.course_participants using btree (email);
+CREATE INDEX idx_course_participants_faberid on public.course_participants using btree (faberid);
 
 -- Enable RLS
 ALTER TABLE course_participants ENABLE ROW LEVEL SECURITY;

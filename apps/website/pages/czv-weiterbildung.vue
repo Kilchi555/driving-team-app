@@ -19,7 +19,7 @@
             <li>Aufwertung des Chauffeurberufs</li>
             <li>Umweltverträgliche und energieeffiziente Verwendung des Fahrzeugs</li>
           </ul>
-          <button @click="openModal()" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
+          <button @click="showPicker = true" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
             ✉️ Kurs anfragen
           </button>
         </div>
@@ -287,21 +287,66 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Course Picker Modal (from hero button) -->
+    <CoursePickerModal
+      v-model="showPicker"
+      :tenant-id="tenantId"
+      :courses="pickerCourses"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { instructorData } from '../instructor-data'
+import type { CourseOption } from '~/components/CoursePickerModal.vue'
 
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
+const showPicker = ref(false)
 const modalTitle = ref('CZV Weiterbildung anfragen')
 
 // Get Peter from all locations as CZV instructor
 const instructors = [
   instructorData.lachen.find(i => i.id === 'peter-lachen')
 ].filter(Boolean) as any[]
+
+// Courses shown in picker when clicking hero button
+const pickerCourses: CourseOption[] = [
+  {
+    id: 'praevention',
+    label: 'Prävention und Verhalten bei Unfällen',
+    description: 'CZV-Ziel: Sicheres Verhalten bei Verkehrsunfällen',
+    icon: '🦺',
+    courseType: 'czv_weiterbildung',
+    formType: 'inquiry',
+  },
+  {
+    id: 'traffic-health',
+    label: 'Traffic Health – Gesund im Strassenverkehr',
+    description: 'CZV-Ziel: Gesundheitsbewusstsein für Berufschauffeure',
+    icon: '❤️',
+    courseType: 'czv_weiterbildung',
+    formType: 'inquiry',
+  },
+  {
+    id: 'arv1',
+    label: 'ARV1 und Rundumkontrolle',
+    description: 'CZV-Ziel: Fahrzeugkontrolle und Arbeitszeitgesetz',
+    icon: '🔧',
+    courseType: 'czv_weiterbildung',
+    formType: 'inquiry',
+  },
+  {
+    id: 'brand',
+    label: 'Radwechsel & Brandbekämpfung',
+    description: 'CZV-Ziel: Notfallmassnahmen und Pannenhilfe',
+    icon: '🔥',
+    courseType: 'czv_weiterbildung',
+    formType: 'inquiry',
+  },
+]
 
 function openModal(title = 'CZV Weiterbildung anfragen') {
   modalTitle.value = title
