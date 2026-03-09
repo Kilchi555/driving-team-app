@@ -1,10 +1,5 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-)
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 interface CourseRegistrationPayload {
   tenant_id: string
@@ -58,7 +53,8 @@ export default defineEventHandler(async (event) => {
       finalNotes = `Firma: ${body.company}\n${finalNotes}`.trim()
     }
 
-    // Insert into database
+    const supabase = getSupabaseAdmin()
+
     const { data, error } = await supabase
       .from('course_participants')
       .insert({
@@ -87,20 +83,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // TODO: Send confirmation email
-    // const emailService = useEmailService()
-    // await emailService.sendCourseRegistrationConfirmation(body.email, ...)
-
     return {
       success: true,
       data,
       message: 'Course registration created successfully',
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('Error:', err)
-    if (err instanceof Error && err.message.includes('statusCode')) {
-      throw err
-    }
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal server error',
