@@ -204,6 +204,7 @@
                 :course_type="courseType"
                 :custom_title="`Anmeldung: ${modalTitle}`"
                 :custom_description="`Melden Sie sich für ${modalTitle} an.`"
+                :available_dates="currentDates"
                 @submitted="onFormSubmitted"
               />
             </div>
@@ -221,9 +222,22 @@ const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
 const modalTitle = ref('')
 const courseType = ref('fahrlehrer_weiterbildung')
+const currentDates = ref<string[]>([])
+
+// Predefined course dates per course type
+const courseDates: Record<string, string[]> = {
+  'Motorboot Fahrlehrerweiterbildung': [
+    'Mittwoch, 22. April 2026',
+    'Mittwoch, 20. Mai 2026',
+    'Mittwoch, 17. Juni 2026',
+    'Mittwoch, 15. Juli 2026',
+  ],
+  // Anhänger BE und Lastwagen: noch keine Daten bekannt → leeres Array = kein Datumsfeld
+}
 
 function openModal(title: string) {
   modalTitle.value = title
+  currentDates.value = courseDates[title] || []
   showModal.value = true
   document.body.style.overflow = 'hidden'
 }
