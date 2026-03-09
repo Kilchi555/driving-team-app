@@ -77,25 +77,41 @@
           <!-- First Name -->
           <div>
             <label class="block text-xs text-gray-600 mb-1">Vorname</label>
-            <input
-              v-model="firstName"
-              type="text"
-              placeholder="Max"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
-              :style="{ '--tw-ring-color': getBrandPrimary() }"
-            />
+            <div class="relative">
+              <input
+                v-model="firstName"
+                type="text"
+                placeholder="Max"
+                @blur="touched.firstName = true"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm',
+                  fieldErrors.firstName ? 'border-red-400 focus:ring-red-300' : fieldValid.firstName ? 'border-green-400 focus:ring-green-300' : 'border-gray-300'
+                ]"
+                :style="!fieldErrors.firstName && !fieldValid.firstName ? { '--tw-ring-color': getBrandPrimary() } : {}"
+              />
+              <span v-if="fieldValid.firstName" class="absolute right-2.5 top-2.5 text-green-500 text-sm">✓</span>
+            </div>
+            <p v-if="fieldErrors.firstName" class="text-xs text-red-500 mt-1">{{ fieldErrors.firstName }}</p>
           </div>
 
           <!-- Last Name -->
           <div>
             <label class="block text-xs text-gray-600 mb-1">Nachname</label>
-            <input
-              v-model="lastName"
-              type="text"
-              placeholder="Müller"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
-              :style="{ '--tw-ring-color': getBrandPrimary() }"
-            />
+            <div class="relative">
+              <input
+                v-model="lastName"
+                type="text"
+                placeholder="Müller"
+                @blur="touched.lastName = true"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm',
+                  fieldErrors.lastName ? 'border-red-400 focus:ring-red-300' : fieldValid.lastName ? 'border-green-400 focus:ring-green-300' : 'border-gray-300'
+                ]"
+                :style="!fieldErrors.lastName && !fieldValid.lastName ? { '--tw-ring-color': getBrandPrimary() } : {}"
+              />
+              <span v-if="fieldValid.lastName" class="absolute right-2.5 top-2.5 text-green-500 text-sm">✓</span>
+            </div>
+            <p v-if="fieldErrors.lastName" class="text-xs text-red-500 mt-1">{{ fieldErrors.lastName }}</p>
           </div>
         </div>
 
@@ -103,26 +119,42 @@
           <!-- Email -->
           <div>
             <label class="block text-xs text-gray-600 mb-1">Email</label>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="max@example.com"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
-              :style="{ '--tw-ring-color': getBrandPrimary() }"
-            />
+            <div class="relative">
+              <input
+                v-model="email"
+                type="email"
+                placeholder="max@example.com"
+                @blur="touched.email = true"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm',
+                  fieldErrors.email ? 'border-red-400 focus:ring-red-300' : fieldValid.email ? 'border-green-400 focus:ring-green-300' : 'border-gray-300'
+                ]"
+                :style="!fieldErrors.email && !fieldValid.email ? { '--tw-ring-color': getBrandPrimary() } : {}"
+              />
+              <span v-if="fieldValid.email" class="absolute right-2.5 top-2.5 text-green-500 text-sm">✓</span>
+            </div>
+            <p v-if="fieldErrors.email" class="text-xs text-red-500 mt-1">{{ fieldErrors.email }}</p>
           </div>
 
           <!-- Phone -->
           <div>
             <label class="block text-xs text-gray-600 mb-1">Telefon</label>
-            <input
-              v-model="phone"
-              type="tel"
-              placeholder="+41791234567"
-              @input="onPhoneInput"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm font-mono"
-              :style="{ '--tw-ring-color': getBrandPrimary() }"
-            />
+            <div class="relative">
+              <input
+                v-model="phone"
+                type="tel"
+                placeholder="+41 79 123 45 67"
+                @input="onPhoneInput"
+                @blur="touched.phone = true"
+                :class="[
+                  'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm font-mono',
+                  fieldErrors.phone ? 'border-red-400 focus:ring-red-300' : fieldValid.phone ? 'border-green-400 focus:ring-green-300' : 'border-gray-300'
+                ]"
+                :style="!fieldErrors.phone && !fieldValid.phone ? { '--tw-ring-color': getBrandPrimary() } : {}"
+              />
+              <span v-if="fieldValid.phone" class="absolute right-2.5 top-2.5 text-green-500 text-sm">✓</span>
+            </div>
+            <p v-if="fieldErrors.phone" class="text-xs text-red-500 mt-1">{{ fieldErrors.phone }}</p>
           </div>
         </div>
       </div>
@@ -136,11 +168,19 @@
           v-model="message"
           :placeholder="messagePlaceholder"
           :maxlength="1000"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm resize-none"
-          :style="{ '--tw-ring-color': getBrandPrimary() }"
+          @blur="touched.message = true"
+          :class="[
+            'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm resize-none',
+            fieldErrors.message ? 'border-red-400 focus:ring-red-300' : fieldValid.message ? 'border-green-400 focus:ring-green-300' : 'border-gray-300'
+          ]"
+          :style="!fieldErrors.message && !fieldValid.message ? { '--tw-ring-color': getBrandPrimary() } : {}"
           rows="4"
         />
-        <p class="text-xs" :class="characterCount > 950 ? 'text-orange-500' : 'text-gray-500'">{{ characterCount }}/1000 Zeichen</p>
+        <div class="flex justify-between items-center">
+          <p v-if="fieldErrors.message" class="text-xs text-red-500">{{ fieldErrors.message }}</p>
+          <p v-else class="text-xs text-gray-400"></p>
+          <p class="text-xs" :class="characterCount > 950 ? 'text-orange-500' : 'text-gray-400'">{{ characterCount }}/1000</p>
+        </div>
       </div>
 
       <!-- Error Messages -->
@@ -268,6 +308,47 @@ const categories = ref<Category[]>([])
 const locations = ref<Location[]>([])
 const characterCount = ref(0)
 
+// Field-level touched state (show validation only after user interacted)
+const touched = ref({
+  firstName: false,
+  lastName: false,
+  email: false,
+  phone: false,
+  message: false
+})
+
+// Field-level validation
+const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
+const phoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/
+
+const fieldErrors = computed(() => ({
+  firstName: touched.value.firstName && !firstName.value?.trim() ? 'Vorname ist erforderlich' : '',
+  lastName: touched.value.lastName && !lastName.value?.trim() ? 'Nachname ist erforderlich' : '',
+  email: touched.value.email
+    ? !email.value?.trim()
+      ? 'Email ist erforderlich'
+      : !emailRegex.test(email.value)
+        ? 'Bitte eine gültige Email-Adresse eingeben'
+        : ''
+    : '',
+  phone: touched.value.phone
+    ? !phone.value?.trim()
+      ? 'Telefonnummer ist erforderlich'
+      : !phoneRegex.test(phone.value.replace(/\s/g, ''))
+        ? 'Bitte eine gültige Schweizer Nummer eingeben (z.B. +41 79 123 45 67)'
+        : ''
+    : '',
+  message: touched.value.message && !message.value?.trim() ? 'Nachricht ist erforderlich' : ''
+}))
+
+const fieldValid = computed(() => ({
+  firstName: touched.value.firstName && !!firstName.value?.trim(),
+  lastName: touched.value.lastName && !!lastName.value?.trim(),
+  email: touched.value.email && !!email.value?.trim() && emailRegex.test(email.value),
+  phone: touched.value.phone && !!phone.value?.trim() && phoneRegex.test(phone.value.replace(/\s/g, '')),
+  message: touched.value.message && !!message.value?.trim()
+}))
+
 // Computed properties
 const isSpecificRequest = computed(() => props.mode === 'booking')
 
@@ -364,64 +445,20 @@ const loadData = async () => {
 }
 
 const submitInquiry = async () => {
+  // Mark all fields as touched to show validation errors
+  touched.value = { firstName: true, lastName: true, email: true, phone: true, message: true }
+
+  // Check for field errors
+  if (Object.values(fieldErrors.value).some(e => e)) return
+
+  if (isSpecificRequest.value) {
+    if (!selectedCategory.value) { error.value = 'Bitte wählen Sie eine Fahrkategorie'; return }
+    if (!selectedLocation.value) { error.value = 'Bitte wählen Sie einen Ort'; return }
+    if (!selectedDuration.value) { error.value = 'Bitte wählen Sie eine Fahrstundendauer'; return }
+  }
+
   try {
     error.value = ''
-
-    // Validate required fields
-    if (!firstName.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihren Vornamen an'
-      return
-    }
-
-    if (!lastName.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihren Nachnamen an'
-      return
-    }
-
-    if (!email.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihre Email-Adresse an'
-      return
-    }
-
-    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
-    if (!emailRegex.test(email.value)) {
-      error.value = 'Bitte geben Sie eine gültige Email-Adresse ein'
-      return
-    }
-
-    if (!phone.value?.trim()) {
-      error.value = 'Bitte geben Sie Ihre Telefonnummer an'
-      return
-    }
-
-    const phoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/
-    if (!phoneRegex.test(phone.value.replace(/\s/g, ''))) {
-      error.value = 'Bitte geben Sie eine gültige Schweizer Telefonnummer ein (z.B. +41 79 123 45 67)'
-      return
-    }
-
-    if (!message.value?.trim()) {
-      error.value = isSpecificRequest.value ? 'Bitte geben Sie Bemerkungen ein' : 'Bitte schreiben Sie eine Nachricht'
-      return
-    }
-
-    if (isSpecificRequest.value) {
-      if (!selectedCategory.value) {
-        error.value = 'Bitte wählen Sie eine Fahrkategorie'
-        return
-      }
-
-      if (!selectedLocation.value) {
-        error.value = 'Bitte wählen Sie einen Ort'
-        return
-      }
-
-      if (!selectedDuration.value) {
-        error.value = 'Bitte wählen Sie eine Fahrstundendauer'
-        return
-      }
-    }
-
     isSubmitting.value = true
 
     // Submit as booking proposal with NULL time slots for general inquiries
@@ -475,7 +512,6 @@ const submitInquiry = async () => {
 
 const closeModal = () => {
   showSuccessModal.value = false
-  // Reset form after modal closes
   firstName.value = ''
   lastName.value = ''
   email.value = ''
@@ -484,6 +520,7 @@ const closeModal = () => {
   selectedCategory.value = props.initial_category || ''
   selectedLocation.value = props.initial_location || ''
   selectedDuration.value = props.initial_duration || null
+  touched.value = { firstName: false, lastName: false, email: false, phone: false, message: false }
 }
 
 // Watch message length
