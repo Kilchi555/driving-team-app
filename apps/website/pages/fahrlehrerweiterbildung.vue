@@ -227,12 +227,9 @@ const currentDates = ref<string[]>([])
 // Predefined course dates per course type
 const courseDates: Record<string, string[]> = {
   'Motorboot Fahrlehrerweiterbildung': [
-    'Mittwoch, 22. April 2026',
-    'Mittwoch, 20. Mai 2026',
-    'Mittwoch, 17. Juni 2026',
-    'Mittwoch, 15. Juli 2026',
+    'Donnerstag, 28. Mai 2026',
+    'Donnerstag, 2. Juli 2026',
   ],
-  // Anhänger BE und Lastwagen: noch keine Daten bekannt → leeres Array = kein Datumsfeld
 }
 
 function openModal(title: string) {
