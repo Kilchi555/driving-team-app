@@ -205,8 +205,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { logger } from '~/utils/logger'
-import { getBrandPrimary } from '~/utils/colors'
+
+// Driving Team primary color (used directly in website app)
+const getBrandPrimary = () => '#1C64F2'
 
 interface Category {
   id: number
@@ -357,7 +358,7 @@ const loadData = async () => {
       locations.value = locationsRes.locations
     }
   } catch (err: any) {
-    logger.warn('⚠️ Error loading form data:', err.message)
+    console.warn('⚠️ Error loading form data:', err.message)
   }
 }
 
@@ -453,7 +454,7 @@ const submitInquiry = async () => {
     })
 
     if (response?.success) {
-      logger.debug('✅ Inquiry submitted:', response.proposal_id)
+      console.log('✅ Inquiry submitted:', response.proposal_id)
       showSuccessModal.value = true
 
       // Auto-close after 3 seconds
@@ -464,7 +465,7 @@ const submitInquiry = async () => {
       emit('submitted', response.proposal_id)
     }
   } catch (err: any) {
-    logger.error('❌ Error submitting inquiry:', err)
+    console.error('❌ Error submitting inquiry:', err)
     error.value = err.data?.message || err.message || 'Fehler beim Absenden der Anfrage'
   } finally {
     isSubmitting.value = false
