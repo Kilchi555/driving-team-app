@@ -34,7 +34,7 @@
     </section>
 
     <!-- Kurse -->
-    <section class="bg-gray-50 py-16">
+    <section class="bg-gray-50 py-8">
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">Unsere CZV Weiterbildungskurse</h2>
         <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -97,6 +97,8 @@
         </div>
       </div>
     </section>
+
+    <InstructorProfileSection :instructors="instructors" />
 
     <!-- FAQ -->
     <section class="bg-gray-50 py-16">
@@ -290,10 +292,16 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { instructorData } from '../instructor-data'
 
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
 const modalTitle = ref('CZV Weiterbildung anfragen')
+
+// Get Peter from all locations as CZV instructor
+const instructors = [
+  instructorData.lachen.find(i => i.id === 'peter-lachen')
+].filter(Boolean) as any[]
 
 function openModal(title = 'CZV Weiterbildung anfragen') {
   modalTitle.value = title
