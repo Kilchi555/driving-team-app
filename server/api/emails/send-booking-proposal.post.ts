@@ -72,39 +72,24 @@ export default defineEventHandler(async (event) => {
     const staff = proposal.staff as any
     const tenant = proposal.tenant as any
 
-    // Format preferred time slots
-    const formattedTimeSlots = formatTimeSlots(proposal.preferred_time_slots)
-    const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+    // Detect if this is a general inquiry (no category/location/staff)
+    const isGeneralInquiry = !proposal.category_code && !proposal.location_id
 
-    // 1. Send confirmation email to CUSTOMER
-    const customerEmail = buildCustomerEmail(
-      proposal,
-      location,
-      staff,
-      tenant,
-      formattedTimeSlots,
-      dayNames
-    )
+    let customerEmail, staffEmail, tenantEmail
 
-    // 2. Send notification email to STAFF
-    const staffEmail = buildStaffEmail(
-      proposal,
-      location,
-      staff,
-      tenant,
-      formattedTimeSlots,
-      dayNames
-    )
-
-    // 3. Send notification email to TENANT
-    const tenantEmail = buildTenantEmail(
-      proposal,
-      location,
-      staff,
-      tenant,
-      formattedTimeSlots,
-      dayNames
-    )
+    if (isGeneralInquiry) {
+      // General inquiry templates (no booking details)
+      customerEmail = buildGeneralInquiryCustomerEmail(proposal, tenant)
+      staffEmail = null // No specific staff for general inquiries
+      tenantEmail = buildGeneralInquiryTenantEmail(proposal, tenant)
+    } else {
+      // Booking proposal templates (with category/location/staff)
+      const formattedTimeSlots = formatTimeSlots(proposal.preferred_time_slots)
+      const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+      customerEmail = buildCustomerEmail(proposal, location, staff, tenant, formattedTimeSlots, dayNames)
+      staffEmail = buildStaffEmail(proposal, location, staff, tenant, formattedTimeSlots, dayNames)
+      tenantEmail = buildTenantEmail(proposal, location, staff, tenant, formattedTimeSlots, dayNames)
+    }
 
     // Send emails with delays to respect Resend's rate limit (2 requests/second)
     try {
@@ -121,27 +106,27 @@ export default defineEventHandler(async (event) => {
           from: fromEmail,
           ...customerEmail
         })
-        logger.info('✅ Booking proposal confirmation email sent to customer:', proposal.email)
+        logger.info('✅ Email sent to customer:', proposal.email)
       } catch (err: any) {
         logger.error('❌ Failed to send customer email:', err.message)
       }
 
-      // Wait 600ms to respect rate limit (2 requests/second = 1 request every 500ms)
+      // Wait 600ms to respect rate limit
       await delay(600)
 
-      // Send to staff
-      try {
-        await resend.emails.send({
-          from: fromEmail,
-          ...staffEmail
-        })
-        logger.info('✅ Booking proposal notification email sent to staff:', staff.email)
-      } catch (err: any) {
-        logger.error('❌ Failed to send staff email:', err.message)
+      // Send to staff (only for booking proposals, not general inquiries)
+      if (staffEmail) {
+        try {
+          await resend.emails.send({
+            from: fromEmail,
+            ...staffEmail
+          })
+          logger.info('✅ Email sent to staff:', staff?.email)
+        } catch (err: any) {
+          logger.error('❌ Failed to send staff email:', err.message)
+        }
+        await delay(600)
       }
-
-      // Wait 600ms before next request
-      await delay(600)
 
       // Send to tenant (only if contact_email exists)
       if (tenant?.contact_email) {
@@ -461,6 +446,126 @@ function buildTenantEmail(proposal: any, location: any, staff: any, tenant: any,
               </table>
             </td>
           </tr>
+        </table>
+      </body>
+      </html>
+    `
+  }
+}
+
+// ============================================================
+// General Inquiry Templates (no booking details)
+// ============================================================
+
+function buildGeneralInquiryCustomerEmail(proposal: any, tenant: any) {
+  const createdDate = new Date(proposal.created_at).toLocaleDateString('de-CH')
+  const primaryColor = tenant?.primary_color || '#1C64F2'
+
+  return {
+    to: proposal.email,
+    subject: `Deine Anfrage bei ${tenant?.name || 'uns'} – Wir melden uns bald!`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="de">
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6;">
+          <tr><td align="center" style="padding: 20px 10px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}cc 100%); color: white; padding: 25px 20px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 22px; font-weight: 600;">Anfrage erhalten ✓</h1>
+                  <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">${tenant?.name || ''}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 25px 20px;">
+                  <p style="margin: 0 0 15px 0; font-size: 16px; color: #111827;">Hallo ${proposal.first_name},</p>
+                  <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">vielen Dank für deine Nachricht! Wir haben deine Anfrage erhalten und werden uns so schnell wie möglich bei dir melden.</p>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+                    <tr><td style="padding: 20px;">
+                      <h3 style="margin: 0 0 12px 0; color: ${primaryColor}; font-size: 15px; font-weight: 600;">Deine Nachricht</h3>
+                      <p style="margin: 0; padding: 12px; background: white; border-radius: 4px; font-size: 13px; color: #374151; border-left: 3px solid ${primaryColor};">${proposal.notes}</p>
+                    </td></tr>
+                  </table>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #dcfce7; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #22c55e;">
+                    <tr><td style="padding: 12px;">
+                      <h3 style="margin: 0 0 8px 0; color: #166534; font-size: 14px; font-weight: 600;">✅ Anfrage erhalten</h3>
+                      <p style="margin: 0; color: #166534; font-size: 13px;">Deine Anfrage wurde am ${createdDate} erhalten. Wir melden uns in Kürze unter <strong>${proposal.phone}</strong> oder <strong>${proposal.email}</strong>.</p>
+                    </td></tr>
+                  </table>
+                  <p style="margin: 15px 0 5px 0; font-size: 15px; color: #374151;">Freundliche Grüsse</p>
+                  <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151;">${tenant?.name || ''}</p>
+                  <p style="margin: 4px 0 0 0; font-size: 12px;"><a href="mailto:${tenant?.contact_email}" style="color: ${primaryColor};">${tenant?.contact_email}</a></p>
+                </td>
+              </tr>
+              <tr>
+                <td style="background: #f3f4f6; padding: 15px 20px; text-align: center;">
+                  <p style="margin: 0; font-size: 11px; color: #9ca3af;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `
+  }
+}
+
+function buildGeneralInquiryTenantEmail(proposal: any, tenant: any) {
+  const createdDate = new Date(proposal.created_at).toLocaleDateString('de-CH')
+  const primaryColor = tenant?.primary_color || '#1C64F2'
+
+  return {
+    to: tenant?.contact_email,
+    subject: `📬 Neue Anfrage von ${proposal.first_name} ${proposal.last_name}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="de">
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6;">
+          <tr><td align="center" style="padding: 20px 10px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}cc 100%); color: white; padding: 25px 20px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 22px; font-weight: 600;">📬 Neue Anfrage eingegangen</h1>
+                  <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">${createdDate}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 25px 20px;">
+                  <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">Es ist eine neue Anfrage über das Kontaktformular eingegangen:</p>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+                    <tr><td style="padding: 20px;">
+                      <h3 style="margin: 0 0 15px 0; color: ${primaryColor}; font-size: 15px; font-weight: 600;">Kontaktangaben</h3>
+                      <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Name:</strong> ${proposal.first_name} ${proposal.last_name}</p>
+                      <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>E-Mail:</strong> <a href="mailto:${proposal.email}" style="color: ${primaryColor};">${proposal.email}</a></p>
+                      <p style="margin: 0 0 20px 0; font-size: 13px;"><strong>Telefon:</strong> <a href="tel:${proposal.phone}" style="color: ${primaryColor};">${proposal.phone}</a></p>
+                      <h3 style="margin: 0 0 10px 0; color: ${primaryColor}; font-size: 15px; font-weight: 600;">Nachricht</h3>
+                      <p style="margin: 0; padding: 12px; background: white; border-radius: 4px; font-size: 13px; color: #374151; border-left: 3px solid ${primaryColor};">${proposal.notes}</p>
+                    </td></tr>
+                  </table>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                    <tr>
+                      <td style="padding: 4px;">
+                        <a href="mailto:${proposal.email}?subject=Re: Ihre Anfrage bei ${tenant?.name || ''}" style="display: inline-block; padding: 10px 20px; background-color: ${primaryColor}; color: white; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">✉️ Per E-Mail antworten</a>
+                      </td>
+                      <td style="padding: 4px;">
+                        <a href="tel:${proposal.phone}" style="display: inline-block; padding: 10px 20px; background-color: #f3f4f6; color: #374151; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid #e5e7eb;">📞 Anrufen</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="background: #f3f4f6; padding: 15px 20px; text-align: center;">
+                  <p style="margin: 0; font-size: 11px; color: #9ca3af;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
         </table>
       </body>
       </html>
