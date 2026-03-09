@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 relative">
     <!-- Header -->
     <div class="bg-primary-600 rounded-xl p-6 sm:p-8 text-center">
       <p class="text-xs uppercase tracking-widest text-primary-200 font-semibold mb-1">Kursanmeldung</p>
@@ -249,11 +249,20 @@
       </form>
     </div>
 
-    <!-- Success Message (shown briefly before modal closes) -->
+    <!-- Success Modal (fullscreen overlay) -->
     <Transition name="fade">
-      <div v-if="showSuccess" class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-        <p class="text-green-700 font-semibold">✓ Anmeldung erfolgreich eingereicht!</p>
-        <p class="text-green-600 text-sm mt-1">Wir werden dich in Kürze kontaktieren.</p>
+      <div
+        v-if="showSuccess"
+        class="absolute inset-0 bg-white rounded-xl flex flex-col items-center justify-center text-center p-8 z-10"
+      >
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 mb-3">Anmeldung erfolgreich!</h3>
+        <p class="text-gray-600 mb-2">Vielen Dank für deine Anmeldung.</p>
+        <p class="text-gray-500 text-sm">Wir melden uns in Kürze bei dir.</p>
       </div>
     </Transition>
   </div>
