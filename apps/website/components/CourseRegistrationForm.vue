@@ -236,6 +236,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useNuxtApp } from '#app'
 
 interface FormData {
   first_name: string
@@ -359,7 +360,8 @@ async function handleSubmit() {
       notes: form.value.notes,
     }
 
-    const response = await $fetch<{ success: boolean }>('/api/courses/register', {
+    const { $fetch: fetchClient } = useNuxtApp()
+    const response = await fetchClient<{ success: boolean }>('/api/courses/register', {
       method: 'POST',
       body: payload,
     })
