@@ -12,8 +12,8 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">CZV Grundkurs – 140 Stunden Berufliche Qualifikation</h1>
-          <p class="hidden xs:block text-xl text-primary-100 mb-8">Der obligatorische Grundkurs für Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus). Erhalte den Qualifikationsnachweis (95) – schweizweit und EU-weit anerkannt.</p>
+          <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
+          <p class="hidden xs:block text-xl text-primary-100 mb-8">Der obligatorische Grundkurs für Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus). Erhalte den Fähigkeitsausweis.</p>
           <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Kurs anfragen
           </button>
@@ -434,6 +434,7 @@
                 :course_type="courseType"
                 :custom_title="modalTitle"
                 :custom_description="'Melden Sie sich für den CZV Grundkurs an.'"
+                :show_faber_birthdate="false"
                 @submitted="onFormSubmitted"
               />
             </div>
@@ -441,6 +442,7 @@
         </div>
       </Transition>
     </Teleport>
+
   </div>
 </template>
 

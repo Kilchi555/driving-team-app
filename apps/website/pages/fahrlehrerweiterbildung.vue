@@ -12,7 +12,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrlehrer-Weiterbildung</h1>
           <p class="text-xl text-primary-100 mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für aktuelle Kursangebote und Termine.</p>
-          <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <button @click="showPicker = true" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Anmelden
           </button>
         </div>
@@ -193,7 +193,7 @@
       </div>
     </section>
 
-    <!-- Registration Modal -->
+    <!-- Registration Modal (per course card) -->
     <Teleport to="body">
       <Transition name="modal">
         <div
@@ -203,7 +203,6 @@
         >
           <div class="fixed inset-0 bg-black/50 backdrop-blur-sm -z-10" @click="closeModal" />
           <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg my-auto animate-scale-in">
-            <!-- Close Button -->
             <button
               @click="closeModal"
               class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/80 hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 transition shadow"
@@ -217,6 +216,10 @@
                 :custom_title="`Anmeldung: ${modalTitle}`"
                 :custom_description="`Melden Sie sich für ${modalTitle} an.`"
                 :available_dates="currentDates"
+                :sold_out_dates="currentDates.filter(d => isSoldOut(d))"
+                :spots_per_date="remainingSpots"
+                :location="currentLocation"
+                :start_time="currentStartTime"
                 @submitted="onFormSubmitted"
               />
             </div>
@@ -224,29 +227,109 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Course Picker Modal (from hero button) -->
+    <CoursePickerModal
+      v-model="showPicker"
+      :tenant-id="tenantId"
+      :courses="pickerCourses"
+      @submitted="onFormSubmitted"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import type { CourseOption } from '~/components/CoursePickerModal.vue'
 
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
+const showPicker = ref(false)
 const modalTitle = ref('')
 const courseType = ref('fahrlehrer_weiterbildung')
 const currentDates = ref<string[]>([])
+const currentLocation = ref('')
+const currentStartTime = ref('08:00')
 
-// Predefined course dates per course type
-const courseDates: Record<string, string[]> = {
-  'Motorboot Fahrlehrerweiterbildung': [
-    'Donnerstag, 28. Mai 2026',
-    'Donnerstag, 2. Juli 2026',
-  ],
+// Remaining spots per date label – decremented on each successful registration
+const remainingSpots = ref<Record<string, number>>({
+  'Donnerstag, 28. Mai 2026': 9,
+  'Donnerstag, 2. Juli 2026': 3,
+})
+
+function isSoldOut(date: string) {
+  return date in remainingSpots.value && remainingSpots.value[date] <= 0
 }
+
+function decrementSpots(dates: string[]) {
+  for (const date of dates) {
+    if (date in remainingSpots.value && remainingSpots.value[date] > 0) {
+      remainingSpots.value[date]--
+    }
+  }
+}
+
+// Predefined course info per course title
+const courseInfo: Record<string, { dates: string[], location: string, start_time: string }> = {
+  'Motorboot Fahrlehrerweiterbildung': {
+    dates: ['Donnerstag, 28. Mai 2026', 'Donnerstag, 2. Juli 2026'],
+    location: 'Hotel Marina Lachen/SZ',
+    start_time: '08:00',
+  },
+  'Anhänger Kategorie BE': {
+    dates: [],
+    location: 'Verkehrszentrum Tuggen/SZ',
+    start_time: '08:00',
+  },
+  'Lastwagen Fahrlehrerweiterbildung': {
+    dates: [],
+    location: 'Verkehrszentrum Tuggen/SZ',
+    start_time: '08:00',
+  },
+}
+
+// Picker courses – dates filtered to non-sold-out only
+const pickerCourses = computed<CourseOption[]>(() => [
+  {
+    id: 'anhaenger',
+    label: 'Anhänger Kategorie BE',
+    description: 'Für Fahrlehrer:innen der Kategorie B · CHF 420.–',
+    icon: '🚗',
+    courseType: 'fahrlehrer_weiterbildung',
+    dates: [],
+    location: 'Verkehrszentrum Tuggen/SZ',
+    start_time: '08:00',
+  },
+  {
+    id: 'motorboot',
+    label: 'Motorboot Fahrlehrerweiterbildung',
+    description: 'Hotel Marina Lachen/SZ · CHF 499.–',
+    icon: '⛵',
+    courseType: 'fahrlehrer_weiterbildung',
+    dates: courseInfo['Motorboot Fahrlehrerweiterbildung'].dates,
+    soldOutDates: courseInfo['Motorboot Fahrlehrerweiterbildung'].dates.filter(d => isSoldOut(d)),
+    spotsPerDate: remainingSpots.value,
+    location: 'Hotel Marina Lachen/SZ',
+    start_time: '08:00',
+  },
+  {
+    id: 'lastwagen',
+    label: 'Lastwagen Fahrlehrerweiterbildung',
+    description: 'Verkehrszentrum Tuggen/SZ · CHF 490.–',
+    icon: '🚛',
+    courseType: 'fahrlehrer_weiterbildung',
+    dates: [],
+    location: 'Verkehrszentrum Tuggen/SZ',
+    start_time: '08:00',
+  },
+])
 
 function openModal(title: string) {
   modalTitle.value = title
-  currentDates.value = courseDates[title] || []
+  const info = courseInfo[title]
+  currentDates.value = info?.dates || []
+  currentLocation.value = info?.location || ''
+  currentStartTime.value = info?.start_time || '08:00'
   showModal.value = true
   document.body.style.overflow = 'hidden'
 }
@@ -256,7 +339,10 @@ function closeModal() {
   document.body.style.overflow = ''
 }
 
-function onFormSubmitted() {
+function onFormSubmitted(selectedDates?: string[]) {
+  if (selectedDates?.length) {
+    decrementSpots(selectedDates)
+  }
   setTimeout(() => {
     closeModal()
   }, 3500)
