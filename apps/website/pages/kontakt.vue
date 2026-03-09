@@ -52,19 +52,12 @@
     <section class="section-container py-20">
       <h2 class="heading-md text-center mb-12">Sende uns eine Nachricht</h2>
       
-      <div class="max-w-2xl mx-auto bg-white border border-gray-200 rounded-lg p-8">
-        <form class="space-y-6">
-          <div class="grid md:grid-cols-2 gap-4">
-            <input type="text" placeholder="Vorname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-            <input type="text" placeholder="Nachname*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-          </div>
-          <input type="email" placeholder="Email*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-          <input type="tel" placeholder="Telefon*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600" required />
-          <textarea placeholder="Nachricht" rows="5" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
-          <button type="submit" class="btn-primary w-full text-lg">
-            ✉️ Senden
-          </button>
-        </form>
+      <div class="max-w-2xl mx-auto">
+        <GeneralInquiryForm 
+          :tenant_id="tenantId"
+          mode="general"
+          @submitted="onInquirySubmitted"
+        />
       </div>
     </section>
 
@@ -154,5 +147,13 @@
 </template>
 
 <script setup lang="ts">
-// Kontakt page
+import { ref } from 'vue'
+import { logger } from '~/utils/logger'
+
+// Driving Team tenant ID
+const tenantId = ref('64259d68-195a-4c68-8875-f1b44d962830')
+
+const onInquirySubmitted = (proposalId: string) => {
+  logger.debug('✅ Inquiry submitted successfully:', proposalId)
+}
 </script>
