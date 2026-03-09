@@ -135,11 +135,12 @@
         <textarea
           v-model="message"
           :placeholder="messagePlaceholder"
+          :maxlength="1000"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm resize-none"
           :style="{ '--tw-ring-color': getBrandPrimary() }"
           rows="4"
         />
-        <p class="text-xs text-gray-500">{{ characterCount }}/500 Zeichen</p>
+        <p class="text-xs" :class="characterCount > 950 ? 'text-orange-500' : 'text-gray-500'">{{ characterCount }}/1000 Zeichen</p>
       </div>
 
       <!-- Error Messages -->
@@ -204,7 +205,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 // Driving Team primary color (used directly in website app)
 const getBrandPrimary = () => '#1C64F2'
@@ -486,9 +487,9 @@ const closeModal = () => {
 }
 
 // Watch message length
-const updateCharacterCount = () => {
-  characterCount.value = message.value.length
-}
+watch(message, (val) => {
+  characterCount.value = val.length
+})
 
 // Load data on mount
 onMounted(() => {
