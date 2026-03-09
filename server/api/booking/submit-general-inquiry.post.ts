@@ -3,11 +3,44 @@
 // - General inquiry: only contact info + message (category_code, location_id, duration_minutes are NULL)
 // - Specific request: contact info + message + category + location + duration (but NO time slots)
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getRequestHeader, getRequestIP } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+
+// Simple in-memory rate limiter: max 3 submissions per IP per 10 minutes
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
+
+function checkRateLimit(ip: string): void {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= RATE_LIMIT_MAX) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many requests. Please try again in a few minutes.'
+      })
+    }
+    entry.count++
+  } else {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+  }
+
+  // Clean up old entries periodically
+  if (rateLimitMap.size > 10000) {
+    for (const [key, val] of rateLimitMap.entries()) {
+      if (now >= val.resetAt) rateLimitMap.delete(key)
+    }
+  }
+}
 
 export default defineEventHandler(async (event) => {
   try {
+    // Rate limiting by IP
+    const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
+    checkRateLimit(ip)
+
     const body = await readBody(event)
     const {
       tenant_id,
@@ -39,6 +72,13 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
       })
     }
+
+    // String length limits to prevent abuse
+    if (first_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'First name too long (max 100 chars)' })
+    if (last_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'Last name too long (max 100 chars)' })
+    if (email.trim().length > 254) throw createError({ statusCode: 400, statusMessage: 'Email too long (max 254 chars)' })
+    if (phone.trim().length > 30) throw createError({ statusCode: 400, statusMessage: 'Phone too long (max 30 chars)' })
+    if (notes && notes.trim().length > 1000) throw createError({ statusCode: 400, statusMessage: 'Message too long (max 1000 chars)' })
 
     // Validate email format
     const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
