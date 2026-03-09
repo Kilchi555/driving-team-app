@@ -19,6 +19,13 @@
       </div>
     </section>
 
+    <!-- Price Calculator -->
+    <section class="section-container py-16 bg-white">
+      <div class="max-w-5xl mx-auto mb-16">
+        <PriceCalculator />
+      </div>
+    </section>
+
     <!-- Preise -->
     <section class="section-container py-16">
       <div class="space-y-4 max-w-6xl mx-auto">
