@@ -198,6 +198,31 @@
           </div>
         </div>
 
+        <!-- Kursdaten (nur wenn vorhanden) -->
+        <div v-if="props.available_dates && props.available_dates.length > 0" class="space-y-3">
+          <label class="block text-sm font-semibold text-gray-900">
+            Kursdaten <span class="text-red-500">*</span>
+          </label>
+          <p class="text-gray-500 text-xs">Wähle einen oder mehrere Termine aus:</p>
+          <div class="space-y-2">
+            <label
+              v-for="date in props.available_dates"
+              :key="date"
+              class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition"
+              :class="{ 'border-primary-400 bg-primary-50': form.selected_dates.includes(date) }"
+            >
+              <input
+                type="checkbox"
+                :value="date"
+                v-model="form.selected_dates"
+                class="w-4 h-4 rounded accent-primary-600"
+              />
+              <span class="text-sm text-gray-800">{{ date }}</span>
+            </label>
+          </div>
+          <p v-if="errors.selected_dates" class="text-red-500 text-xs">{{ errors.selected_dates }}</p>
+        </div>
+
         <!-- Notes -->
         <div class="space-y-3">
           <label class="block text-sm font-semibold text-gray-900">
@@ -250,6 +275,7 @@ interface FormData {
   city: string
   company?: string
   notes?: string
+  selected_dates: string[]
 }
 
 interface FormErrors {
@@ -261,6 +287,7 @@ const props = defineProps<{
   custom_title?: string
   custom_description?: string
   course_type: string
+  available_dates?: string[] // e.g. ['15. März 2026', '22. März 2026']
 }>()
 
 const emit = defineEmits<{
@@ -280,6 +307,7 @@ const form = ref<FormData>({
   city: '',
   company: '',
   notes: '',
+  selected_dates: [],
 })
 
 const errors = ref<FormErrors>({})
@@ -330,6 +358,9 @@ function validateForm(): boolean {
   if (!form.value.city?.trim()) {
     errors.value.city = 'Ort ist erforderlich'
   }
+  if (props.available_dates && props.available_dates.length > 0 && form.value.selected_dates.length === 0) {
+    errors.value.selected_dates = 'Bitte wähle mindestens einen Kurstermin aus'
+  }
 
   return Object.keys(errors.value).length === 0
 }
@@ -357,6 +388,7 @@ async function handleSubmit() {
       course_type: props.course_type,
       company: form.value.company,
       notes: form.value.notes,
+      course_dates: form.value.selected_dates.length > 0 ? form.value.selected_dates : undefined,
     }
 
     const response = await fetch('/api/courses/register', {
