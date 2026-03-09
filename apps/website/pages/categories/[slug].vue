@@ -130,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { categoryDetails } from '~/category-data'
 
 const route = useRoute()
