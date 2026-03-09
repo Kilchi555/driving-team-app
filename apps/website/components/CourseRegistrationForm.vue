@@ -236,7 +236,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useNuxtApp } from '#app'
 
 interface FormData {
   first_name: string
@@ -360,13 +359,21 @@ async function handleSubmit() {
       notes: form.value.notes,
     }
 
-    const { $fetch: fetchClient } = useNuxtApp()
-    const response = await fetchClient<{ success: boolean }>('/api/courses/register', {
+    const response = await fetch('/api/courses/register', {
       method: 'POST',
-      body: payload,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     })
 
-    if (response.success) {
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.success) {
       showSuccess.value = true
       emit('submitted')
     }
