@@ -36,6 +36,15 @@ export default defineNuxtConfig({
         },
       },
     },
+    proxies: {
+      '/api/': {
+        target: process.env.API_PROXY_TARGET || 'http://localhost:3001',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api/': '/api/'
+        }
+      }
+    }
   },
 
   routeRules: {
