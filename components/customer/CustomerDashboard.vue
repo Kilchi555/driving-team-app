@@ -351,8 +351,6 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         
         <!-- Mein Profil Card -->
-        <div 
-          @click="handleClickWithDelay('profile', () => { showProfileModal = true })"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'profile' }"
           :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
@@ -436,14 +434,119 @@
             </div>
           </div>
         </div>
+
+        <!-- Affiliate / Empfehlen Card -->
+        <div
+          @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
+          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+        >
+          <div class="p-6 h-full flex flex-col">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">Freunde empfehlen</h3>
+            </div>
+            <div class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <p class="text-gray-600 text-sm">Teile deinen Link und erhalte Guthaben</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div v-else class="min-h-screen flex items-center justify-center">
       <LoadingLogo size="lg" />
     </div>
 
+    <!-- Affiliate Modal -->
+    <div v-if="showAffiliateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                <svg class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h2 class="text-xl font-bold text-gray-900">Freunde empfehlen</h2>
+            </div>
+            <button @click="showAffiliateModal = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div v-if="affiliateLoading" class="text-center py-8 text-gray-400">Wird geladen…</div>
+          <div v-else class="space-y-5">
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="bg-gray-50 rounded-xl p-3">
+                <div class="text-xl font-bold text-gray-900">{{ affiliateStats?.summary?.total_referrals ?? 0 }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">Empfehlungen</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3">
+                <div class="text-xl font-bold text-gray-900">CHF {{ ((affiliateStats?.summary?.total_credited_rappen ?? 0) / 100).toFixed(0) }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">Verdient</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3">
+                <div class="text-xl font-bold text-green-600">CHF {{ ((affiliateStats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">Guthaben</div>
+              </div>
+            </div>
+
+            <!-- Share link -->
+            <div>
+              <p class="text-sm font-medium text-gray-700 mb-2">Dein Empfehlungslink</p>
+              <div v-if="!affiliateCode" class="text-center py-3">
+                <button
+                  @click="generateAffiliateCode"
+                  :disabled="affiliateGenerating"
+                  class="bg-gray-900 text-white rounded-lg px-5 py-2 text-sm font-semibold hover:bg-gray-700 transition disabled:opacity-50"
+                >
+                  {{ affiliateGenerating ? 'Wird erstellt…' : 'Link aktivieren' }}
+                </button>
+              </div>
+              <div v-else class="flex items-center gap-2 bg-gray-50 rounded-lg border border-gray-200 p-3">
+                <span class="text-xs text-gray-600 flex-1 truncate font-mono">{{ affiliateShareLink }}</span>
+                <button @click="copyAffiliateLink" class="shrink-0 text-xs font-semibold bg-white border border-gray-200 rounded px-3 py-1.5 text-gray-600 hover:text-gray-900">
+                  {{ affiliateCopied ? '✓ Kopiert' : 'Kopieren' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Recent referrals -->
+            <div v-if="affiliateStats?.referrals?.length">
+              <p class="text-sm font-medium text-gray-700 mb-2">Letzte Empfehlungen</p>
+              <div class="space-y-2">
+                <div v-for="ref in affiliateStats.referrals.slice(0, 5)" :key="ref.id" class="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
+                  <span class="text-gray-500 text-xs">{{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-semibold" :class="ref.status === 'credited' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+                    {{ ref.status === 'credited' ? '✓ Gutgeschrieben' : 'Ausstehend' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-gray-100 text-center">
+              <NuxtLink to="/affiliate-dashboard" class="text-sm text-gray-600 underline hover:text-gray-900">
+                Vollständiges Dashboard öffnen →
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Reglemente Modal -->
-    <div v-if="showReglementeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div v-if="showReglementeModal"
       <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         <!-- Header -->
         <div class="p-6 border-b border-gray-200 flex-shrink-0">
@@ -1071,6 +1174,15 @@ const showConfirmationModal = ref(false)
 const showReglementeModal = ref(false)
 const showReglementDetailModal = ref(false)
 const showReglementContent = ref('')
+
+// Affiliate
+const showAffiliateModal = ref(false)
+const affiliateCode = ref<string | null>(null)
+const affiliateShareLink = ref('')
+const affiliateStats = ref<any>(null)
+const affiliateCopied = ref(false)
+const affiliateGenerating = ref(false)
+const affiliateLoading = ref(false)
 const showReglementTitle = ref('')
 
 // XSS Protection: Sanitize HTML content before rendering
@@ -1571,6 +1683,53 @@ const navigateToMyCourses = async () => {
   // Navigiere zu den eigenen Kursen (falls vorhanden) oder zur Kurs-Übersicht
   await navigateTo('/courses')
 }
+
+// ── Affiliate helpers ─────────────────────────────────────────────────
+async function loadAffiliateStats() {
+  affiliateLoading.value = true
+  try {
+    const token = authStore.accessToken
+    const result = await $fetch<any>('/api/affiliate/stats', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    affiliateStats.value = result.data
+    affiliateCode.value = result.data.affiliate_code?.code ?? null
+    affiliateShareLink.value = result.data.share_link ?? ''
+  } catch (err) {
+    console.error('Failed to load affiliate stats', err)
+  } finally {
+    affiliateLoading.value = false
+  }
+}
+
+async function generateAffiliateCode() {
+  affiliateGenerating.value = true
+  try {
+    const token = authStore.accessToken
+    const result = await $fetch<any>('/api/affiliate/generate-code', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    affiliateCode.value = result.data.code
+    affiliateShareLink.value = result.data.link
+  } catch (err: any) {
+    console.error('Failed to generate affiliate code', err)
+  } finally {
+    affiliateGenerating.value = false
+  }
+}
+
+async function copyAffiliateLink() {
+  try {
+    await navigator.clipboard.writeText(affiliateShareLink.value)
+    affiliateCopied.value = true
+    setTimeout(() => { affiliateCopied.value = false }, 2000)
+  } catch { /* ignore */ }
+}
+
+watch(showAffiliateModal, (open) => {
+  if (open && !affiliateStats.value) loadAffiliateStats()
+})
 
 const retryLoad = async () => {
   error.value = null

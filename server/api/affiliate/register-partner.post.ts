@@ -1,0 +1,170 @@
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+
+/**
+ * POST /api/affiliate/register-partner
+ *
+ * Public endpoint for external people who want to become affiliates.
+ * Creates (or looks up) a user with role='affiliate' and sends a Magic Link
+ * (password-reset-style token) via email so they can access their dashboard.
+ *
+ * Body: { firstName: string, lastName: string, email: string }
+ *
+ * Does NOT require authentication – this is the entry point for externals.
+ * Rate limited by IP.
+ */
+
+const DRIVING_TEAM_TENANT_SLUG = 'driving-team'
+
+export default defineEventHandler(async (event) => {
+  const supabase = getSupabaseAdmin()
+  const ipAddress = getClientIP(event)
+
+  const rateLimit = await checkRateLimit(ipAddress, 'register', undefined, undefined)
+  if (!rateLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warte kurz.' })
+  }
+
+  const body = await readBody(event)
+  const { firstName, lastName, email } = body
+
+  if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
+    throw createError({ statusCode: 400, message: 'Vorname, Nachname und E-Mail sind erforderlich.' })
+  }
+
+  const emailLower = email.trim().toLowerCase()
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(emailLower)) {
+    throw createError({ statusCode: 400, message: 'Bitte gib eine gültige E-Mail-Adresse ein.' })
+  }
+
+  // Lookup tenant
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id, domain')
+    .eq('slug', DRIVING_TEAM_TENANT_SLUG)
+    .maybeSingle()
+
+  if (!tenant) {
+    throw createError({ statusCode: 500, message: 'Tenant nicht gefunden.' })
+  }
+
+  // Check if user already exists
+  let userId: string | null = null
+
+  const { data: existingUser } = await supabase
+    .from('users')
+    .select('id, role')
+    .eq('email', emailLower)
+    .eq('tenant_id', tenant.id)
+    .maybeSingle()
+
+  if (existingUser) {
+    userId = existingUser.id
+    // If they already have a higher-permission role, don't downgrade
+  } else {
+    // Create Supabase auth user
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: emailLower,
+      email_confirm: true,
+    })
+
+    if (authError) {
+      if (authError.message?.includes('already registered')) {
+        // Auth user exists but no users row – look up by auth
+        const { data: byAuth } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', emailLower)
+          .maybeSingle()
+        userId = byAuth?.id ?? null
+      } else {
+        throw createError({ statusCode: 500, message: 'Registrierung fehlgeschlagen.' })
+      }
+    } else if (authData?.user) {
+      const { data: newUser } = await supabase
+        .from('users')
+        .insert({
+          auth_user_id: authData.user.id,
+          tenant_id: tenant.id,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: emailLower,
+          role: 'affiliate',
+          is_active: true,
+        })
+        .select('id')
+        .single()
+      userId = newUser?.id ?? null
+
+      // Create empty student_credits row (for potential payouts)
+      if (userId) {
+        await supabase.from('student_credits').insert({
+          user_id: userId,
+          tenant_id: tenant.id,
+          balance_rappen: 0,
+          notes: 'Automatisch erstellt bei Affiliate-Registrierung',
+        })
+      }
+    }
+  }
+
+  if (!userId) {
+    throw createError({ statusCode: 500, message: 'Benutzer konnte nicht erstellt werden.' })
+  }
+
+  // Generate magic link token (password-reset style)
+  const tokenBytes = new Uint8Array(32)
+  crypto.getRandomValues(tokenBytes)
+  const token = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('')
+
+  await supabase.from('password_reset_tokens').insert({
+    user_id: userId,
+    email: emailLower,
+    token,
+    reset_method: 'email',
+    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
+    ip_address: ipAddress,
+  })
+
+  // Build dashboard link
+  const baseUrl = tenant.domain ? `https://${tenant.domain}` : 'https://app.drivingteam.ch'
+  const dashboardLink = `${baseUrl}/affiliate-dashboard?token=${token}`
+
+  // Send email via Resend
+  const resendKey = process.env.RESEND_API_KEY
+  if (resendKey) {
+    await $fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Driving Team <noreply@drivingteam.ch>',
+        to: [emailLower],
+        subject: 'Dein Affiliate-Zugang – Driving Team',
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
+            <h2 style="color:#111;font-size:22px;margin-bottom:8px">Willkommen, ${firstName.trim()}!</h2>
+            <p style="color:#555;font-size:15px;line-height:1.6;margin-bottom:24px">
+              Klicke auf den Button unten um dein Affiliate-Dashboard zu öffnen und deinen persönlichen Empfehlungslink zu aktivieren.
+            </p>
+            <a href="${dashboardLink}"
+               style="display:inline-block;background:#111;color:#fff;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;text-decoration:none;margin-bottom:24px">
+              Affiliate-Dashboard öffnen →
+            </a>
+            <p style="color:#999;font-size:12px;margin-top:24px">
+              Dieser Link ist 1 Stunde gültig und kann nur einmal verwendet werden.<br>
+              Falls du keine Anfrage gestellt hast, kannst du diese E-Mail ignorieren.
+            </p>
+          </div>
+        `,
+      }),
+    })
+  }
+
+  return { success: true, message: 'Zugangslink wurde gesendet.' }
+})

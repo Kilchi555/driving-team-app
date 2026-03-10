@@ -40,7 +40,8 @@ export default defineEventHandler(async (event) => {
       lernfahrausweisNr,
       tenantId,
       isAdmin = false,
-      captchaToken
+      captchaToken,
+      referredByCode = null
     } = body
 
     // Check rate limit (after body is read so we have email and tenantId)
@@ -252,7 +253,8 @@ export default defineEventHandler(async (event) => {
           category: categoryArray,
           lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
-          is_active: true
+          is_active: true,
+          ...(referredByCode ? { referred_by_code: String(referredByCode).trim().toUpperCase() } : {})
         })
         .eq('id', existingUser.id)
         .select()
@@ -287,10 +289,11 @@ export default defineEventHandler(async (event) => {
           street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
           city: sanitizedCity,
-          category: categoryArray, // Store as array
+          category: categoryArray,
           lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
-          is_active: true
+          is_active: true,
+          ...(referredByCode ? { referred_by_code: String(referredByCode).trim().toUpperCase() } : {})
         })
         .select()
         .single()
@@ -315,6 +318,28 @@ export default defineEventHandler(async (event) => {
 
       userProfile = newUser
       logger.debug('Register', '✅ User profile created:', userProfile.id)
+
+      // 🔗 AFFILIATE: register referral if a valid code was provided
+      if (referredByCode) {
+        const cleanCode = String(referredByCode).trim().toUpperCase()
+        const { data: affiliateCode } = await serviceSupabase
+          .from('affiliate_codes')
+          .select('id, user_id')
+          .eq('tenant_id', tenantId)
+          .eq('code', cleanCode)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (affiliateCode && affiliateCode.user_id !== userProfile.id) {
+          await serviceSupabase.from('affiliate_referrals').insert({
+            tenant_id: tenantId,
+            affiliate_code_id: affiliateCode.id,
+            affiliate_user_id: affiliateCode.user_id,
+            referred_user_id: userProfile.id,
+            status: 'pending',
+          })
+        }
+      }
     }
 
     // 3. Create student_credits record for new client

@@ -3,6 +3,36 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import logger from '~/utils/logger'
 
+async function triggerAffiliateRewards(
+  appointmentIds: string[],
+  tenantId: string
+): Promise<void> {
+  const supabase = getSupabaseAdmin()
+
+  // Load student_id for each completed appointment
+  const { data: appts } = await supabase
+    .from('appointments')
+    .select('id, student_id')
+    .in('id', appointmentIds)
+
+  if (!appts?.length) return
+
+  // Fire-and-forget per appointment (errors logged, never thrown)
+  await Promise.allSettled(
+    appts.map(async (appt) => {
+      if (!appt.student_id) return
+      try {
+        await $fetch('/api/affiliate/process-reward', {
+          method: 'POST',
+          body: { appointment_id: appt.id, user_id: appt.student_id, tenant_id: tenantId },
+        })
+      } catch (err: any) {
+        logger.error('❌ Affiliate reward trigger failed:', { appointmentId: appt.id, error: err.message })
+      }
+    })
+  )
+}
+
 /**
  * ✅ POST /api/staff/batch-update-appointment-status
  * 
@@ -123,6 +153,16 @@ export default defineEventHandler(async (event) => {
       count: updated?.length || 0,
       newStatus: status
     })
+
+    // ✅ 6. AFFILIATE REWARD HOOK – fire-and-forget, never blocks the response
+    if (status === 'completed' && updated?.length) {
+      triggerAffiliateRewards(
+        updated.map((a: any) => a.id),
+        tenantId
+      ).catch((err: any) =>
+        logger.error('❌ Affiliate reward hook error:', err?.message)
+      )
+    }
 
     return {
       success: true,

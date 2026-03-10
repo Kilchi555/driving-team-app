@@ -1,0 +1,101 @@
+import { defineEventHandler, getHeader, createError } from 'h3'
+import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+
+/**
+ * GET /api/affiliate/stats
+ *
+ * Returns affiliate stats for the authenticated user:
+ * - code + share link
+ * - total referrals (pending + credited)
+ * - total credited (CHF)
+ * - current credit balance
+ * - list of payout requests
+ */
+export default defineEventHandler(async (event) => {
+  const supabase = getSupabase()
+  const supabaseAdmin = getSupabaseAdmin()
+
+  const authHeader = getHeader(event, 'authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !authUser) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
+  const { data: userProfile, error: profileError } = await supabaseAdmin
+    .from('users')
+    .select('id, tenant_id, role')
+    .eq('auth_user_id', authUser.id)
+    .single()
+
+  if (profileError || !userProfile) {
+    throw createError({ statusCode: 403, message: 'User not found' })
+  }
+
+  // Load affiliate code
+  const { data: affiliateCode } = await supabaseAdmin
+    .from('affiliate_codes')
+    .select('id, code, total_referrals, total_credited_rappen, is_active')
+    .eq('user_id', userProfile.id)
+    .eq('tenant_id', userProfile.tenant_id)
+    .maybeSingle()
+
+  // Load referrals
+  const { data: referrals } = affiliateCode
+    ? await supabaseAdmin
+        .from('affiliate_referrals')
+        .select('id, status, reward_rappen, credited_at, created_at, referred_user_id')
+        .eq('affiliate_code_id', affiliateCode.id)
+        .order('created_at', { ascending: false })
+    : { data: [] }
+
+  // Load current credit balance
+  const { data: credits } = await supabaseAdmin
+    .from('student_credits')
+    .select('balance_rappen')
+    .eq('user_id', userProfile.id)
+    .eq('tenant_id', userProfile.tenant_id)
+    .maybeSingle()
+
+  // Load payout requests
+  const { data: payoutRequests } = await supabaseAdmin
+    .from('affiliate_payout_requests')
+    .select('id, amount_rappen, status, iban, created_at, processed_at')
+    .eq('user_id', userProfile.id)
+    .eq('tenant_id', userProfile.tenant_id)
+    .order('created_at', { ascending: false })
+
+  // Build share link
+  let shareLink: string | null = null
+  if (affiliateCode) {
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('domain')
+      .eq('id', userProfile.tenant_id)
+      .maybeSingle()
+    const baseUrl = tenant?.domain ? `https://${tenant.domain}` : 'https://driving-team.ch'
+    shareLink = `${baseUrl}/?ref=${affiliateCode.code}`
+  }
+
+  return {
+    success: true,
+    data: {
+      affiliate_code: affiliateCode
+        ? { id: affiliateCode.id, code: affiliateCode.code, is_active: affiliateCode.is_active }
+        : null,
+      share_link: shareLink,
+      summary: {
+        total_referrals: affiliateCode?.total_referrals ?? 0,
+        total_credited_rappen: affiliateCode?.total_credited_rappen ?? 0,
+        current_balance_rappen: credits?.balance_rappen ?? 0,
+      },
+      referrals: referrals ?? [],
+      payout_requests: payoutRequests ?? [],
+    }
+  }
+})
