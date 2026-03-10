@@ -15,9 +15,9 @@
           <h1 class="heading-lg text-white mb-4">Auto Theorieprüfung</h1>
           <p class="hidden xs:block text-xl text-primary-100 mb-4">In unseren praxisorientierten Theorie Lektionen erhältst Du wichtiges Hintergrundwissen zur Verkehrsregeltheorie, welches Dir das Bestehen der Auto Theorieprüfung entscheidend vereinfacht und eine speditive Fahrausbildung ermöglicht.</p>
           <p class="hidden xs:block text-primary-100 mb-8">Melde dich jetzt zu unseren Online Theoriestunden an, wo ein erfahrener Fahrlehrer alle deine Fragen beantwortet und dir wichtiges Hintergrundwissen mitgibt – damit du die Auto Theorieprüfung beim ersten Mal bestehst.</p>
-          <BookingTypeModal
-            tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
-          />
+          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            ✨ Jetzt Termin buchen
+          </a>
         </div>
       </div>
     </section>
