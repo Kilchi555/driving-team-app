@@ -18,10 +18,10 @@
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
       >
-        <div v-if="showModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div v-if="showModal" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-2">
           <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <!-- Header -->
-            <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-800 text-white p-6 flex justify-between items-center">
+            <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-800 text-white p-4 flex justify-between items-center">
               <div>
                 <h2 class="text-2xl font-bold">💰 Kostenrechner</h2>
                 <p class="text-primary-100 text-sm mt-1">Schritt {{ currentStep }} von {{ totalSteps }}</p>
@@ -34,20 +34,11 @@
               </button>
             </div>
 
-            <!-- Progress Bar -->
-            <div class="h-2 bg-gray-200">
-              <div
-                class="h-full bg-primary-600 transition-all duration-300"
-                :style="{ width: `${(currentStep / totalSteps) * 100}%` }"
-              ></div>
-            </div>
-
             <!-- Content -->
-            <div class="p-8 space-y-6">
+            <div class="p-4 space-y-2">
               <!-- Step 1: Category Selection -->
               <div v-show="currentStep === 1" class="space-y-6 animate-fadeIn">
                 <div>
-                  <h3 class="text-xl font-bold text-gray-900 mb-4">Welche Kategorie interessiert dich?</h3>
                   <div class="grid grid-cols-2 gap-3">
                     <button
                       v-for="cat in categories"
@@ -61,7 +52,8 @@
                       ]"
                     >
                       <div class="text-3xl mb-2">{{ cat.icon }}</div>
-                      <div class="text-sm">{{ cat.label.split(' ')[0] }}</div>
+                      <div class="text-sm font-semibold mb-2">{{ cat.label.split(' ')[0] }}</div>
+                      <div class="text-xs text-gray-500">{{ cat.description }}</div>
                     </button>
                   </div>
                 </div>
@@ -72,8 +64,8 @@
                 <div>
                   <h3 class="text-xl font-bold text-gray-900 mb-4">Wie viele Fahrstunden brauchst du?</h3>
                   <p class="text-gray-600 mb-6">
-                    <span class="font-semibold">Tipp:</span>
-                    {{ currentCategory?.id === 'auto' ? 'Auto: 15-30 Lektionen' : currentCategory?.id === 'motorrad' ? 'Motorrad: 10-20 Lektionen' : 'Siehe Beschreibung unten' }}
+                    <span class="font-semibold">Durchschnitt:</span>
+                    {{ lessonsTip }}
                   </p>
                   <div class="flex items-center justify-center gap-6 mb-8">
                     <button
@@ -101,7 +93,7 @@
               </div>
 
               <!-- Step 3: Email -->
-              <div v-show="currentStep === 3" class="space-y-6 animate-fadeIn">
+              <div v-show="currentStep === 3" class="space-y-2 animate-fadeIn">
                 <div>
                   <h3 class="text-xl font-bold text-gray-900 mb-1">Deine Kostenschätzung</h3>
                   <p class="text-gray-500 text-sm mb-6">Kategorie: <span class="font-semibold text-gray-700">{{ currentCategory?.label }}</span></p>
@@ -111,7 +103,7 @@
                     <!-- Fahrstunden -->
                     <div class="flex justify-between items-center px-4 py-3 bg-white border-b border-gray-100">
                       <div>
-                        <p class="font-medium text-gray-900">{{ lessonsCount }} Fahrstunden</p>
+                        <p class="font-medium text-sm text-gray-900">{{ lessonsCount }} Fahrstunden</p>
                         <p class="text-xs text-gray-500">CHF {{ currentLessonPrice }}.– pro Lektion</p>
                       </div>
                       <span class="font-bold text-gray-900 whitespace-nowrap">CHF {{ (lessonsCount * currentLessonPrice).toFixed(0) }}.–</span>
@@ -120,7 +112,7 @@
                     <!-- Admin/Versicherungspauschale -->
                     <div v-if="currentCategory?.insuranceOrAdminFee" class="flex justify-between items-center px-4 py-3 bg-white border-b border-gray-100">
                       <div>
-                        <p class="font-medium text-gray-900">{{ currentCategory.insuranceOrAdminLabel }}</p>
+                        <p class="font-medium text-sm text-gray-900">{{ currentCategory.insuranceOrAdminLabel }}</p>
                         <p class="text-xs text-gray-500">Einmalig für die ganze Ausbildung</p>
                       </div>
                       <span class="font-bold text-gray-900 whitespace-nowrap">CHF {{ currentCategory.insuranceOrAdminFee }}.–</span>
@@ -129,19 +121,25 @@
                     <!-- WarmUp -->
                     <div v-if="showWarmup && currentCategory?.warmupFee" class="flex justify-between items-center px-4 py-3 bg-white border-b border-gray-100">
                       <div>
-                        <p class="font-medium text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
-                        <p class="text-xs text-gray-500">Am Prüfungstag (ab 15 Fahrstunden)</p>
+                        <p class="font-medium text-sm text-gray-900">WarmUp inkl. Prüfungsfahrt</p>
+                        <p class="text-xs text-gray-500">Kosten der Fahrschule</p>
                       </div>
                       <span class="font-bold text-gray-900 whitespace-nowrap">CHF {{ currentCategory.warmupFee }}.–</span>
                     </div>
 
-                    <!-- Externe Kosten -->
-                    <div v-if="currentCategory?.externalCosts" class="flex justify-between items-center px-4 py-3 bg-blue-50 border-b border-gray-100">
-                      <div>
-                        <p class="font-medium text-gray-900">Strassenverkehrsamt</p>
-                        <p class="text-xs text-gray-500">Lernfahrgesuch, Prüfungsgebühr, Sehtest etc.</p>
+                    <!-- Externe Kosten immer sichtbar -->
+                    <div v-if="currentCategory?.externalCosts" class="bg-blue-50 border-b border-gray-100">
+                      <div class="flex justify-between items-center px-4 py-3 border-b border-blue-100">
+                        <p class="font-semibold text-sm text-gray-900">Strassenverkehrsamt & weitere Kosten</p>
+                        <span class="font-bold text-gray-900 whitespace-nowrap">CHF {{ externalCostsTotal }}.–</span>
                       </div>
-                      <span class="font-bold text-gray-900 whitespace-nowrap">ca. CHF {{ currentCategory.externalCosts }}.–</span>
+                      <div class="px-4 py-2 space-y-1.5">
+                        <div v-for="fee in svaFees" :key="fee.label" class="flex justify-between items-center text-xs py-1">
+                          <span class="text-gray-600">{{ fee.label }}</span>
+                          <span class="font-semibold text-gray-800 whitespace-nowrap">CHF {{ fee.amount }}.–</span>
+                        </div>
+                      </div>
+                      <p class="text-xs text-gray-500 py-2 px-4">* nicht für Inhaber:innen von anderen Kategorien</p>
                     </div>
 
                     <!-- Total -->
@@ -213,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 interface Category {
   id: string
@@ -233,7 +231,7 @@ const categories: Category[] = [
     id: 'auto',
     icon: '🚗',
     label: 'Auto Kategorie B',
-    description: 'Fahrstunden für Führerausweis Auto Kategorie B',
+    description: 'bis 3.5t',
     basePricePerLesson: 95,
     doublePricePerLesson: 190,
     insuranceOrAdminFee: 120,
@@ -244,8 +242,8 @@ const categories: Category[] = [
   {
     id: 'motorrad',
     icon: '🏍️',
-    label: 'Motorrad Kategorie A',
-    description: 'Fahrstunden für Führerausweis Motorrad Kategorie A',
+    label: 'Motorrad/Roller Kategorie A',
+    description: 'A1/A35kW/A',
     basePricePerLesson: 95,
     doublePricePerLesson: 190,
     insuranceOrAdminFee: null,
@@ -255,7 +253,7 @@ const categories: Category[] = [
     id: 'anhänger',
     icon: '🚗',
     label: 'Anhänger Kategorie BE',
-    description: 'Fahrstunden für Anhänger Ausbildung',
+    description: 'Gesamtzugsgewicht mehr als 3.5t',
     basePricePerLesson: 240,
     doublePricePerLesson: 240,
     insuranceOrAdminFee: 120,
@@ -266,8 +264,8 @@ const categories: Category[] = [
   {
     id: 'motorwagen',
     icon: '🚛',
-    label: 'Motorwagen Kategorie C1',
-    description: 'Fahrstunden für Motorwagen mit Gesamtgewicht bis 7.5t',
+    label: 'Transporter Kategorie C1',
+    description: 'bis 7.5t',
     basePricePerLesson: 150,
     doublePricePerLesson: 300,
     insuranceOrAdminFee: 160,
@@ -279,7 +277,7 @@ const categories: Category[] = [
     id: 'lastwagen',
     icon: '🚚',
     label: 'Lastwagen Kategorie C',
-    description: 'Fahrstunden für schwere Lastwagen über 12t',
+    description: 'über 7.5t',
     basePricePerLesson: 170,
     doublePricePerLesson: 340,
     insuranceOrAdminFee: 200,
@@ -290,8 +288,8 @@ const categories: Category[] = [
   {
     id: 'gesellschaftswagen',
     icon: '🚌',
-    label: 'Gesellschaftswagen Kategorie D1',
-    description: 'Fahrstunden für Kleinbusse bis 9 Personen',
+    label: 'Kleinbus Kategorie D1',
+    description: 'bis 16 Personen',
     basePricePerLesson: 150,
     doublePricePerLesson: 300,
     insuranceOrAdminFee: 160,
@@ -303,7 +301,7 @@ const categories: Category[] = [
     id: 'bus',
     icon: '🚌',
     label: 'Bus Kategorie D',
-    description: 'Fahrstunden für grosse Busse über 9 Personen',
+    description: 'über 16 Personen',
     basePricePerLesson: 200,
     doublePricePerLesson: 400,
     insuranceOrAdminFee: 300,
@@ -313,14 +311,14 @@ const categories: Category[] = [
   },
   {
     id: 'motorboot',
-    icon: '⛵',
+    icon: '🛥️',
     label: 'Motorboot',
-    description: 'Fahrstunden für Motorboot-Führerschein',
+    description: 'bis 12 Personen',
     basePricePerLesson: 95,
     doublePricePerLesson: 190,
     insuranceOrAdminFee: 120,
     insuranceOrAdminLabel: 'Versicherungspauschale',
-    warmupFee: 317,
+    warmupFee: 285,
     externalCosts: 300,
   },
 ]
@@ -332,11 +330,122 @@ const totalSteps = ref(3)
 
 // Form State
 const selectedCategory = ref('auto')
-const lessonsCount = ref(20)
+const lessonsCount = ref(22)
 const emailInput = ref('')
 const emailSendSuccess = ref(false)
 const emailSendError = ref('')
 const isSending = ref(false)
+
+interface SvaFee {
+  label: string
+  amount: number
+}
+
+const svaFees = computed((): SvaFee[] => {
+  const id = selectedCategory.value
+  if (id === 'auto') {
+    return [
+      { label: 'Sehtest', amount: 25 },
+      { label: 'Nothelferkurs *', amount: 99 },
+      { label: 'Lernfahrgesuch', amount: 20 },
+      { label: 'Lernfahrausweis', amount: 40 },
+      { label: 'Identitätsprüfung *', amount: 20 },
+      { label: 'Theorieprüfung *', amount: 36 },
+      { label: 'VKU Verkehrskundeunterricht *', amount: 190 },
+      { label: 'Praktische Fahrprüfung', amount: 134 },
+      { label: 'Führerausweis (Probezeit)', amount: 40 },
+      { label: 'WAB-Kurs (2-Phasen-Ausbildung)', amount: 300 },
+      { label: 'Führerausweis (unbefristet)', amount: 40 },
+
+    ]
+  } else if (id === 'motorrad') {
+    return [
+      { label: 'Sehtest', amount: 25 },
+      { label: 'Nothelferkurs *', amount: 99 },
+      { label: 'Lernfahrgesuch', amount: 20 },
+      { label: 'Lernfahrausweis', amount: 40 },
+      { label: 'Identitätsprüfung *', amount: 20 },
+      { label: 'Motorrad Grundkurs', amount: 500 },
+      { label: 'Theorieprüfung *', amount: 36 },
+      { label: 'Praktische Fahrprüfung', amount: 134 },
+      { label: 'Führerausweis', amount: 40 },
+    ]
+  } else if (id === 'anhänger') {
+    return [
+      { label: 'Lernfahrgesuch', amount: 20 },
+      { label: 'Lernfahrausweis', amount: 40 },
+      { label: 'Praktische Fahrprüfung', amount: 134 },
+      { label: 'Führerausweis', amount: 40 },
+    ]
+  } else if (['motorwagen', 'lastwagen', 'gesellschaftswagen'].includes(id)) {
+    return [
+      { label: 'Ärztlicher Gesundheits-Check', amount: 150 },
+      { label: 'Lernfahrgesuch', amount: 20 },
+      { label: 'Lernfahrausweis', amount: 40 },
+      { label: 'Theorieprüfung', amount: 45 },
+      { label: 'LKW Theoriekurs', amount: 800 },
+      { label: 'Praktische Fahrprüfung', amount: 201 },
+      { label: 'Führerausweis', amount: 40 },
+    ]
+  } else if (['bus'].includes(id)) {
+    return [
+      { label: 'Ärztlicher Gesundheits-Check', amount: 150 },
+      { label: 'Lernfahrgesuch', amount: 20 },
+      { label: 'Lernfahrausweis', amount: 40 },
+      { label: 'Theorieprüfung', amount: 45 },
+      { label: 'Bus Theoriekurs', amount: 800 },
+      { label: 'Praktische Fahrprüfung', amount: 268 },
+      { label: 'Führerausweis', amount: 40 },
+    ]
+  } else if (id === 'motorboot') {
+    return [
+      { label: 'Lernfahrgesuch', amount: 20 },
+      { label: 'Lernfahrausweis', amount: 50 },
+      { label: 'Theorieprüfung', amount: 45 },
+      { label: 'Praktische Fahrprüfung', amount: 140 },
+      { label: 'Bootsführerausweis', amount: 40 },
+    ]
+  }
+  return []
+})
+
+const externalCostsTotal = computed(() =>
+  svaFees.value.reduce((sum, fee) => sum + fee.amount, 0)
+)
+
+const lessonsTip = computed(() => {
+  const tips: Record<string, string> = {
+    auto: 'Auto: 15-30 Lektionen',
+    motorrad: 'Motorrad: 6-12 Lektionen',
+    anhänger: 'Anhänger: 6-12 Lektionen',
+    motorwagen: 'Motorwagen: 20-40 Lektionen',
+    lastwagen: 'Lastwagen: 20-40 Lektionen',
+    gesellschaftswagen: 'Gesellschaftswagen: 20-40 Lektionen',
+    bus: 'Bus: 30-60 Lektionen',
+    motorboot: 'Motorboot: 20-30 Lektionen',
+  }
+  return tips[selectedCategory.value] || 'Siehe Beschreibung unten'
+})
+
+const lessonsTipRange = computed(() => {
+  const ranges: Record<string, [number, number]> = {
+    auto: [15, 30],
+    motorrad: [6, 12],
+    anhänger: [6, 12],
+    motorwagen: [15, 30],
+    lastwagen: [20, 30],
+    gesellschaftswagen: [15, 30],
+    bus: [20, 60],
+    motorboot: [20, 30],
+  }
+  const range = ranges[selectedCategory.value] || [20, 30]
+  return Math.round((range[0] + range[1]) / 2)
+})
+
+// Wenn Kategorie wechselt, Fahrstunden auf Mittelpunkt setzen
+watch(selectedCategory, () => {
+  lessonsCount.value = lessonsTipRange.value
+})
 
 const currentCategory = computed(() =>
   categories.find(cat => cat.id === selectedCategory.value)
@@ -358,15 +467,12 @@ const totalCost = computed(() => {
     if (currentCategory.value.insuranceOrAdminFee) {
       total += currentCategory.value.insuranceOrAdminFee
     }
-
     if (showWarmup.value && currentCategory.value.warmupFee) {
       total += currentCategory.value.warmupFee
     }
-
-    if (currentCategory.value.externalCosts) {
-      total += currentCategory.value.externalCosts
-    }
   }
+
+  total += externalCostsTotal.value
 
   return Math.round(total)
 })

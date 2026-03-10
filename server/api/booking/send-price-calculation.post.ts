@@ -7,13 +7,12 @@ interface PriceCalculationRequest {
   email: string
   category: string
   lessonsCount: number
-  lessonType: string
   totalCost: number
   calculationDetails: string
 }
 
 export default defineEventHandler(async (event) => {
-  const body = readBody<PriceCalculationRequest>(await event)
+  const body = await readBody<PriceCalculationRequest>(event)
 
   if (!body.email || !body.category) {
     throw createError({
