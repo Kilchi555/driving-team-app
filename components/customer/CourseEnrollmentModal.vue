@@ -244,6 +244,7 @@
                   :style="{ '--tw-ring-color': getTenantPrimaryColor(), borderColor: isFaberIdFocused ? getTenantPrimaryColor() : 'rgb(203, 213, 225)' }"
                   @focus="isFaberIdFocused = true"
                   @blur="isFaberIdFocused = false"
+                  @input="formData.faberid = formData.faberid.replace(/[^0-9]/g, '')"
                 />
                 <p class="text-xs text-slate-500 mt-1">Für ZH & AG die Nummer im Adressfeld, andere Kantone Faber oder Reg-Nr</p>
               </div>
@@ -921,7 +922,7 @@ const lookupSARI = async () => {
       formData.value.phone = response.customer.phone || ''
       step.value = 'contact'
     } else {
-      lookupError.value = getGermanErrorMessage(response)
+      lookupError.value = response.message || getGermanErrorMessage(response)
     }
   } catch (error: any) {
     logger.error('SARI lookup error:', error)

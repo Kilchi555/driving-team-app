@@ -98,34 +98,46 @@ export default defineEventHandler(async (event) => {
       statusCode: error.statusCode,
       stack: error.stack
     })
-    
-    // Log the specific error
-    if (error.message?.includes('SARI error:')) {
-      console.error('📛 SARI API returned error:', error.message)
-    }
-    if (error.message?.includes('failed:')) {
-      console.error('📛 SARI HTTP error:', error.message)
-    }
-    
-    // Better error messages for specific SARI errors
-    if (error.message?.includes('MISMATCH_BIRTHDATE_FABERID')) {
-      return {
-        success: false,
-        message: 'Ausweisnummer und/oder Geburtsdatum sind falsch. Bitte überprüfen Sie Ihre Eingaben.'
-      }
-    }
-    
-    // Check if it's a "not found" error
-    if (error.message?.includes('not found') || error.message?.includes('404')) {
-      return {
-        success: false,
-        message: 'Ausweisnummer und/oder Geburtsdatum sind falsch. Bitte überprüfen Sie Ihre Eingaben.'
-      }
+
+    // If it's already a createError (e.g. tenant not found), re-throw as-is
+    if (error.statusCode) throw error
+
+    // Extract the SARI status code from the error message (e.g. "SARI error: PERSON_NOT_FOUND")
+    const sariStatus = error.message?.replace('SARI error: ', '').trim()
+
+    const SARI_USER_MESSAGES: Record<string, string> = {
+      PERSON_NOT_FOUND:
+        'Person nicht gefunden. Bitte überprüfe deine Fahrausweisnummer und dein Geburtsdatum.',
+      MISMATCH_BIRTHDATE_FABERID:
+        'Fahrausweisnummer und Geburtsdatum stimmen nicht überein. Bitte überprüfe deine Eingaben.',
+      INVALID_FABERID:
+        'Die eingegebene Fahrausweisnummer ist ungültig. Bitte prüfe das Format.',
+      FABERID_NOT_FOUND:
+        'Diese Fahrausweisnummer wurde nicht gefunden. Bitte prüfe deine Eingabe.',
+      PERSON_ALREADY_REGISTERED:
+        'Diese Person ist bereits für diesen Kurs angemeldet.',
+      COURSE_NOT_FOUND:
+        'Der Kurs wurde nicht gefunden. Bitte kontaktiere uns direkt.',
+      COURSE_FULL:
+        'Dieser Kurs ist bereits ausgebucht.',
+      COURSE_CLOSED:
+        'Die Anmeldefrist für diesen Kurs ist abgelaufen.',
+      INVALID_BIRTHDATE:
+        'Das eingegebene Geburtsdatum ist ungültig. Bitte verwende das Format TT.MM.JJJJ.',
     }
 
-    throw createError({
-      statusCode: 500,
-      message: `SARI Fehler: ${error.message}`
-    })
+    const userMessage = SARI_USER_MESSAGES[sariStatus]
+    if (userMessage) {
+      return { success: false, sariStatus, message: userMessage }
+    }
+
+    // Fallback for unexpected SARI errors – include raw status so it's visible
+    return {
+      success: false,
+      sariStatus,
+      message: sariStatus
+        ? `SARI-Fehler: ${sariStatus}. Bitte kontaktiere uns falls das Problem weiterhin besteht.`
+        : 'Ein unbekannter Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere uns.',
+    }
   }
 })

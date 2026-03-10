@@ -1218,6 +1218,8 @@ const submitRegistration = async () => {
     
     // Call backend API to register client (creates auth user + profile via service role)
     logger.debug('📡 Calling backend registration API...')
+    const { getStoredRefCode, clearRefCode } = useAffiliateRef()
+    const refCode = getStoredRefCode()
     const response = await fetch('/api/auth/register-client', {
       method: 'POST',
       headers: {
@@ -1238,9 +1240,11 @@ const submitRegistration = async () => {
         lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
         tenantId: activeTenantId,
         isAdmin: isAdminRegistration.value,
-        captchaToken: captchaToken
+        captchaToken: captchaToken,
+        referredByCode: refCode || null,
       })
     })
+    if (refCode) clearRefCode()
     
     const data = await response.json()
     
