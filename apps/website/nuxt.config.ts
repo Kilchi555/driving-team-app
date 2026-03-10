@@ -41,6 +41,5 @@ export default defineNuxtConfig({
   routeRules: {
     '/': { prerender: true },
     '/uber-uns': { redirect: { to: '/team', statusCode: 301 } },
-    '/api/**': { proxy: process.env.API_PROXY_TARGET ? `${process.env.API_PROXY_TARGET}/api/**` : 'http://localhost:3001/api/**' },
   },
 })
