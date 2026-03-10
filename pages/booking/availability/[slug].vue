@@ -100,51 +100,38 @@
 
         <!-- Step 0: Service Type Selection -->
         <div v-if="currentStep === 0" class="space-y-4">
-          <div class="bg-white shadow rounded-lg p-6 sm:p-8">
-            <div class="text-center mb-8">
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Was möchtest du buchen?</h2>
-              <p class="text-gray-500 text-sm mt-2">Wähle den passenden Service für deine Anfrage</p>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
-              <!-- Fahrstunde -->
-              <button
-                @click="currentStep = 1"
-                class="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
-                :style="{ '--hover-border': getBrandPrimary() }"
+            <div :class="`grid ${getGridClasses(3)} gap-3`">
+              <div
+                v-for="serviceType in serviceTypes"
+                :key="serviceType.id"
+                @click="selectServiceType(serviceType.id)"
+                class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
+                :style="getInteractiveCardStyle(
+                  hoveredServiceId === serviceType.id,
+                  hoveredServiceId === serviceType.id
+                )"
+                @mouseenter="hoveredServiceId = serviceType.id"
+                @mouseleave="hoveredServiceId = null"
               >
-                <div class="text-4xl">🚗</div>
-                <div>
-                  <p class="font-bold text-gray-900 text-base">Fahrstunde</p>
-                  <p class="text-xs text-gray-500 mt-1">Direkt online buchen</p>
+                <div class="text-center pt-2 sm:pt-3 md:pt-4">
+                  <div
+                    class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5 transition-colors border"
+                    :style="getInteractiveBadgeStyle(hoveredServiceId === serviceType.id)"
+                  >
+                    <span class="text-2xl sm:text-3xl">{{ serviceType.icon }}</span>
+                  </div>
+                  <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ serviceType.label }}</h3>
+                  <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">{{ serviceType.description }}</p>
+                  <span
+                    class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                    :class="serviceType.badgeColor"
+                  >{{ serviceType.badge }}</span>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700">Sofort buchbar</span>
-              </button>
-
-              <!-- Theorielektion -->
-              <button
-                @click="selectedServiceType = 'theorie'; currentStep = 1"
-                class="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
-              >
-                <div class="text-4xl">📚</div>
-                <div>
-                  <p class="font-bold text-gray-900 text-base">Theorie</p>
-                  <p class="text-xs text-gray-500 mt-1">Vorbereitung Theorieprüfung</p>
-                </div>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-600">45 min</span>
-              </button>
-
-              <!-- Beratung -->
-              <button
-                @click="selectedServiceType = 'beratung'; currentStep = 1"
-                class="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
-              >
-                <div class="text-4xl">🤝</div>
-                <div>
-                  <p class="font-bold text-gray-900 text-base">Beratung</p>
-                  <p class="text-xs text-gray-500 mt-1">Unverbindlich & kostenlos</p>
-                </div>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">Kostenlos</span>
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -244,9 +231,11 @@
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
-                Wähle deine Dauer
+                {{ selectedServiceType === 'theorie' || selectedServiceType === 'beratung' ? 'Dauer' : 'Wähle deine Dauer' }}
               </h2>
-             
+              <p v-if="selectedServiceType === 'theorie' || selectedServiceType === 'beratung'" class="text-sm text-gray-500 mt-1">
+                Die Dauer ist für diesen Service fix
+              </p>
             </div>
           
           <div
@@ -1286,6 +1275,38 @@ const tenantSettings = ref<any>({})
 const currentStep = ref(0)
 const showProposalFormManually = ref(false) // Manually trigger proposal form even if slots exist
 const selectedServiceType = ref<'fahrstunde' | 'theorie' | 'beratung'>('fahrstunde') // Step 0 selection
+
+const serviceTypes = [
+  {
+    id: 'fahrstunde' as const,
+    icon: '🚗',
+    label: 'Fahrstunde',
+    description: 'Direkt online buchen',
+    badge: 'Sofort buchbar',
+    badgeColor: 'bg-green-100 text-green-700',
+  },
+  {
+    id: 'theorie' as const,
+    icon: '📚',
+    label: 'Theorie',
+    description: 'Vorbereitung auf die Theorieprüfung',
+    badge: '45 min',
+    badgeColor: 'bg-gray-100 text-gray-600',
+  },
+  {
+    id: 'beratung' as const,
+    icon: '🤝',
+    label: 'Beratung',
+    description: 'Unverbindlich & kostenlos',
+    badge: 'Kostenlos',
+    badgeColor: 'bg-blue-100 text-blue-700',
+  },
+]
+
+const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
+  selectedServiceType.value = id
+  currentStep.value = 1
+}
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
@@ -1301,6 +1322,7 @@ const maxWeek = ref(4)
 
 // Hover states for interactive cards
 const hoveredCategoryId = ref<string | null>(null)
+const hoveredServiceId = ref<string | null>(null)
 const hoveredDuration = ref<number | null>(null)
 const hoveredLocationId = ref<string | null>(null)
 const hoveredInstructorId = ref<string | null>(null)
@@ -1985,6 +2007,25 @@ const selectDurationOption = async (duration: number) => {
   }
   
   await waitForPressEffect()
+
+  // For Beratung: skip location step, collect all instructors across all locations
+  if (selectedServiceType.value === 'beratung') {
+    selectedLocation.value = null
+    const allInstructors: any[] = []
+    const seenIds = new Set<string>()
+    for (const loc of availableLocations.value) {
+      for (const staff of loc.available_staff || []) {
+        if (!seenIds.has(staff.id)) {
+          seenIds.add(staff.id)
+          allInstructors.push(staff)
+        }
+      }
+    }
+    availableInstructors.value = allInstructors
+    currentStep.value = 5
+    return
+  }
+
   currentStep.value = 4
 }
 
@@ -2001,7 +2042,10 @@ const loadPricingForDuration = async (duration: number) => {
       body: {
         tenant_id: currentTenant.value?.id,
         category_code: selectedCategory.value?.code,
-        duration_minutes: duration
+        duration_minutes: duration,
+        rule_type: selectedServiceType.value === 'theorie' ? 'theory'
+          : selectedServiceType.value === 'beratung' ? 'consultation'
+          : 'base_price'
       }
     })
 
@@ -2042,8 +2086,23 @@ const selectMainCategory = async (category: any) => {
     selectedCategory.value = category
     filters.value.category_code = category.code
     
-    // Parse duration from category
-    durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
+    // For theory/consultation: use fixed duration from pricing_rules
+    // For base_price (Fahrstunde): parse from category
+    if (selectedServiceType.value === 'theorie' || selectedServiceType.value === 'beratung') {
+      const ruleType = selectedServiceType.value === 'theorie' ? 'theory' : 'consultation'
+      try {
+        const pricingRes = await $fetch('/api/booking/get-pricing', {
+          method: 'POST',
+          body: { tenant_id: currentTenant.value?.id, category_code: category.code, rule_type: ruleType }
+        }) as any
+        const fixedDuration = pricingRes?.base_duration_minutes || (selectedServiceType.value === 'theorie' ? 45 : 30)
+        durationOptions.value = [fixedDuration]
+      } catch {
+        durationOptions.value = [selectedServiceType.value === 'theorie' ? 45 : 30]
+      }
+    } else {
+      durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
+    }
     
     logger.debug('⏱️ Duration options:', durationOptions.value)
     selectedDuration.value = null
@@ -2199,13 +2258,26 @@ const selectSubcategory = async (category: any) => {
   selectedCategory.value = category
   filters.value.category_code = category.code
   
-  // Parse duration from subcategory, fallback to parent category if empty
-  durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
-  
-  // Fallback: use parent category durations if subcategory doesn't have them
-  if (!durationOptions.value.length && selectedMainCategory.value) {
-    logger.debug('📌 No durations in subcategory, using parent category durations')
-    durationOptions.value = parseDurationValues(selectedMainCategory.value.lesson_duration_minutes)
+  // For theory/consultation: use fixed duration from pricing_rules
+  if (selectedServiceType.value === 'theorie' || selectedServiceType.value === 'beratung') {
+    const ruleType = selectedServiceType.value === 'theorie' ? 'theory' : 'consultation'
+    try {
+      const pricingRes = await $fetch('/api/booking/get-pricing', {
+        method: 'POST',
+        body: { tenant_id: currentTenant.value?.id, category_code: category.code, rule_type: ruleType }
+      }) as any
+      const fixedDuration = pricingRes?.base_duration_minutes || (selectedServiceType.value === 'theorie' ? 45 : 30)
+      durationOptions.value = [fixedDuration]
+    } catch {
+      durationOptions.value = [selectedServiceType.value === 'theorie' ? 45 : 30]
+    }
+  } else {
+    // Parse duration from subcategory, fallback to parent category if empty
+    durationOptions.value = parseDurationValues(category.lesson_duration_minutes)
+    if (!durationOptions.value.length && selectedMainCategory.value) {
+      logger.debug('📌 No durations in subcategory, using parent category durations')
+      durationOptions.value = parseDurationValues(selectedMainCategory.value.lesson_duration_minutes)
+    }
   }
   
   logger.debug('⏱️ Duration options:', durationOptions.value)
@@ -2461,8 +2533,16 @@ const selectLocation = async (location: any) => {
 
 const selectInstructor = async (instructor: any) => {
   selectedInstructor.value = instructor
-  showProposalFormManually.value = false // Reset proposal form flag
+  showProposalFormManually.value = false
   await waitForPressEffect()
+
+  // For theory/consultation: skip time slot loading, go directly to proposal form
+  if (selectedServiceType.value === 'theorie' || selectedServiceType.value === 'beratung') {
+    showProposalFormManually.value = true
+    currentStep.value = 6
+    return
+  }
+
   currentStep.value = 6 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
   
   // Generate time slots for this specific instructor-location combination
@@ -3112,13 +3192,15 @@ const getPreviousStep = (fromStep: number): number => {
     // From step 3 (duration), check if main category has subcategories
     const hasSubcategories = (selectedMainCategory.value.children || []).length > 0
     if (!hasSubcategories) {
-      // No subcategories - skip step 2 and go to step 1
-      logger.debug('📌 No subcategories found - skipping step 2 when going back')
       return 1
     }
   }
-  
-  // Default: go back one step
+
+  // For Beratung: step 5 (Fahrlehrer) goes back to step 3 (Dauer), skip step 4 (Standort)
+  if (fromStep === 5 && selectedServiceType.value === 'beratung') {
+    return 3
+  }
+
   return fromStep - 1
 }
 

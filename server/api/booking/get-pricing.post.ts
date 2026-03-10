@@ -23,12 +23,13 @@ interface GetPricingRequest {
   tenant_id: string
   category_code: string
   duration_minutes?: number
+  rule_type?: 'base_price' | 'theory' | 'consultation'
 }
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) as GetPricingRequest
-    const { tenant_id, category_code, duration_minutes } = body
+    const { tenant_id, category_code, duration_minutes, rule_type } = body
 
     // Validate required parameters
     if (!tenant_id || !category_code) {
@@ -43,17 +44,28 @@ export default defineEventHandler(async (event) => {
     logger.debug('💰 Fetching pricing for booking:', {
       tenant_id,
       category_code,
-      duration_minutes
+      duration_minutes,
+      rule_type
     })
 
-    // 1. Get active pricing rules for this category (using same logic as pricing/calculate.post.ts)
-    const { data: rawRules, error: pricingError } = await supabase
+    // 1. Get active pricing rules for this category
+    // For theory/consultation: only fetch that specific rule_type
+    // For base_price (default): fetch base_price + admin_fee rules
+    let query = supabase
       .from('pricing_rules')
       .select('*')
       .eq('tenant_id', tenant_id)
       .eq('category_code', category_code)
       .eq('is_active', true)
       .order('valid_from', { ascending: false })
+
+    if (rule_type === 'theory' || rule_type === 'consultation') {
+      query = query.eq('rule_type', rule_type)
+    } else {
+      query = query.in('rule_type', ['base_price', 'base', 'pricing', 'admin_fee'])
+    }
+
+    const { data: rawRules, error: pricingError } = await query
 
     if (pricingError) {
       logger.error('❌ Error fetching pricing rules:', pricingError)
@@ -90,31 +102,26 @@ export default defineEventHandler(async (event) => {
     rawRules.forEach((rule: any) => {
       // Base pricing rules
       if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
-        if (rule.price_per_minute_rappen) {
-          combined.price_per_minute_rappen = rule.price_per_minute_rappen
-        }
-        if (rule.base_duration_minutes) {
-          combined.base_duration_minutes = rule.base_duration_minutes
-        }
-        if (rule.rule_name && !combined.rule_name.includes('Admin-Fee')) {
-          combined.rule_name = rule.rule_name
-        }
-        if (rule.valid_from) {
-          combined.valid_from = rule.valid_from
-        }
-        if (rule.valid_until) {
-          combined.valid_until = rule.valid_until
-        }
+        if (rule.price_per_minute_rappen) combined.price_per_minute_rappen = rule.price_per_minute_rappen
+        if (rule.base_duration_minutes) combined.base_duration_minutes = rule.base_duration_minutes
+        if (rule.rule_name && !combined.rule_name.includes('Admin-Fee')) combined.rule_name = rule.rule_name
+        if (rule.valid_from) combined.valid_from = rule.valid_from
+        if (rule.valid_until) combined.valid_until = rule.valid_until
+      }
+
+      // Theory / consultation rules – treated like base_price for price calculation
+      if (rule.rule_type === 'theory' || rule.rule_type === 'consultation') {
+        if (rule.price_per_minute_rappen !== undefined) combined.price_per_minute_rappen = rule.price_per_minute_rappen
+        if (rule.base_duration_minutes) combined.base_duration_minutes = rule.base_duration_minutes
+        if (rule.rule_name) combined.rule_name = rule.rule_name
+        if (rule.valid_from) combined.valid_from = rule.valid_from
+        if (rule.valid_until) combined.valid_until = rule.valid_until
       }
 
       // Admin fee rules
       if (rule.rule_type === 'admin_fee') {
-        if (rule.admin_fee_rappen !== undefined) {
-          combined.admin_fee_rappen = rule.admin_fee_rappen
-        }
-        if (rule.admin_fee_applies_from !== undefined) {
-          combined.admin_fee_applies_from = rule.admin_fee_applies_from
-        }
+        if (rule.admin_fee_rappen !== undefined) combined.admin_fee_rappen = rule.admin_fee_rappen
+        if (rule.admin_fee_applies_from !== undefined) combined.admin_fee_applies_from = rule.admin_fee_applies_from
       }
     })
 
@@ -152,7 +159,8 @@ export default defineEventHandler(async (event) => {
       pricing: combined,
       price_rappen: roundedPriceRappen,
       price_chf: priceCHF,
-      duration_minutes: durationMinutes
+      duration_minutes: durationMinutes,
+      base_duration_minutes: combined.base_duration_minutes
     }
 
   } catch (err: any) {
