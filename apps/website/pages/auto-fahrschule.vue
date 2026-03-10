@@ -64,10 +64,9 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Auto Fahrschule Kategorie B</h1>
           <p class="hidden xs:block text-xl text-primary-100 mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
-          <BookingTypeModal
-            tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
-            category-code="auto-b"
-          />
+          <a href="https://simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            ✨ Jetzt Termin buchen
+          </a>
         </div>
       </div>
     </section>
@@ -246,10 +245,9 @@
         </div>
 
         <div class="text-center mt-12">
-          <BookingTypeModal
-            tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
-            category-code="auto-b"
-          />
+          <a href="https://simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            ✨ Jetzt Termin buchen
+          </a>
         </div>
       </div>
     </section>

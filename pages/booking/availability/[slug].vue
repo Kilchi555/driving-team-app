@@ -49,6 +49,7 @@
         
         <!-- Progress Steps -->
         <div 
+          v-if="currentStep >= 1"
           ref="stepsContainerRef"
           class="bg-white shadow rounded-lg p-4 max-w-full" 
           :class="{ 'overflow-x-auto overflow-y-hidden': isScreenSmall, 'overflow-hidden': !isScreenSmall }"
@@ -94,6 +95,57 @@
             <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
             <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
             <span v-if="selectedSlot" class="font-semibold"> • {{ formatDate(selectedSlot?.start_time) }} {{ formatTime(selectedSlot?.start_time) }}</span>
+          </div>
+        </div>
+
+        <!-- Step 0: Service Type Selection -->
+        <div v-if="currentStep === 0" class="space-y-4">
+          <div class="bg-white shadow rounded-lg p-6 sm:p-8">
+            <div class="text-center mb-8">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Was möchtest du buchen?</h2>
+              <p class="text-gray-500 text-sm mt-2">Wähle den passenden Service für deine Anfrage</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+              <!-- Fahrstunde -->
+              <button
+                @click="currentStep = 1"
+                class="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
+                :style="{ '--hover-border': getBrandPrimary() }"
+              >
+                <div class="text-4xl">🚗</div>
+                <div>
+                  <p class="font-bold text-gray-900 text-base">Fahrstunde</p>
+                  <p class="text-xs text-gray-500 mt-1">Direkt online buchen</p>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700">Sofort buchbar</span>
+              </button>
+
+              <!-- Theorielektion -->
+              <button
+                @click="selectedServiceType = 'theorie'; currentStep = 1"
+                class="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
+              >
+                <div class="text-4xl">📚</div>
+                <div>
+                  <p class="font-bold text-gray-900 text-base">Theorie</p>
+                  <p class="text-xs text-gray-500 mt-1">Vorbereitung Theorieprüfung</p>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-600">45 min</span>
+              </button>
+
+              <!-- Beratung -->
+              <button
+                @click="selectedServiceType = 'beratung'; currentStep = 1"
+                class="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-center"
+              >
+                <div class="text-4xl">🤝</div>
+                <div>
+                  <p class="font-bold text-gray-900 text-base">Beratung</p>
+                  <p class="text-xs text-gray-500 mt-1">Unverbindlich & kostenlos</p>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">Kostenlos</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1231,8 +1283,9 @@ const isLoadingTimeSlots = ref(false)
 const tenantSettings = ref<any>({})
 
 // New flow state
-const currentStep = ref(1)
+const currentStep = ref(0)
 const showProposalFormManually = ref(false) // Manually trigger proposal form even if slots exist
+const selectedServiceType = ref<'fahrstunde' | 'theorie' | 'beratung'>('fahrstunde') // Step 0 selection
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
@@ -3246,8 +3299,11 @@ const handleBackButton = async () => {
     }
   }
 
-  // On step 1, go back to referrer
+  // On step 1, go back to step 0 (service selection)
   if (currentStep.value === 1) {
+    selectedServiceType.value = 'fahrstunde'
+    currentStep.value = 0
+  } else if (currentStep.value === 0) {
     goBackToReferrer()
   } else {
     // On other steps, go back one step (considering subcategory skip)
