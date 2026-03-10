@@ -15,9 +15,9 @@
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule Dietikon</h1>
           <p class="hidden xs:block text-xl text-primary-100 mb-8">Melde Dich in unserer Fahrschule Dietikon an – individuelle Ausbildung, flexible Treffpunkte und professionelle Fahrlehrer.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Jetzt Termin buchen
-          </a>
+          <BookingTypeModal
+            tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
+          />
         </div>
       </div>
     </section>
