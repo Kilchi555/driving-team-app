@@ -2,6 +2,7 @@
 // Handles loading categories and evaluation criteria with fallback to parent category
 
 import { logger } from '~/utils/logger'
+import { useAuthStore } from '~/stores/auth'
 
 export interface CategoryWithParent {
   id: string
@@ -149,7 +150,10 @@ export const useCategoryWithFallback = () => {
    */
   const getCategoryWithParent = async (categoryCode: string): Promise<CategoryWithParent | null> => {
     try {
-      const { data, error } = await supabase
+      const authStore = useAuthStore()
+      const tenantId = authStore.userProfile?.tenant_id
+
+      let query = supabase
         .from('categories')
         .select(`
           id,
@@ -165,7 +169,12 @@ export const useCategoryWithFallback = () => {
           created_at
         `)
         .eq('code', categoryCode)
-        .single()
+
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId)
+      }
+
+      const { data, error } = await query.single()
 
       if (error) throw error
 
