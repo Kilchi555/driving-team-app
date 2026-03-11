@@ -1105,10 +1105,9 @@ const getDiscountReason = () => {
 
 // ✅ NEU: Products aus bestehender Payment oder Props
 const getProducts = () => {
-  // ✅ FIXED: Im Edit-Modus, verwende existingPayment.products; sonst props.products
-  if (props.isEditMode && existingPayment.value?.products) {
-    return existingPayment.value.products || []
-  }
+  // Always use props.products (live state managed by EventModal) –
+  // existingPayment.value.products is the snapshot at load time and won't reflect
+  // products added/removed by the user during this edit session.
   return props.products || []
 }
 
