@@ -107,6 +107,28 @@
       </div>
     </div>
 
+    <!-- BANNER: Lernfahrausweis fehlt -->
+    <div 
+      v-if="showContent && documentsLoaded && userDocumentCategories.length > 0 && userDocumentCategories[0]?.documents?.length === 0"
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3"
+    >
+      <div 
+        @click="handleClickWithDelay('documents', () => { showProfileModal = true })"
+        class="bg-amber-50 border border-amber-300 rounded-xl p-4 cursor-pointer hover:bg-amber-100 transition-all flex items-center justify-between"
+      >
+        <div class="flex items-center space-x-3">
+          <span class="text-2xl">📄</span>
+          <div>
+            <p class="font-semibold text-amber-900 text-sm">Lernfahrausweis hochladen</p>
+            <p class="text-amber-700 text-xs mt-0.5">Für die Buchung von Fahrstunden wird dein Lernfahrausweis benötigt.</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </div>
+
     <!-- Main Content -->
     <div v-if="showContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-6 py-6">
       
@@ -351,6 +373,8 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         
         <!-- Mein Profil Card -->
+        <div
+          @click="handleClickWithDelay('profile', () => { showProfileModal = true })"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'profile' }"
           :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
@@ -459,8 +483,7 @@
           </div>
         </div>
       </div>
-    </div>
-    <div v-else class="min-h-screen flex items-center justify-center">
+    </div><div v-else class="min-h-screen flex items-center justify-center">
       <LoadingLogo size="lg" />
     </div>
 
@@ -546,7 +569,7 @@
     </div>
 
     <!-- Reglemente Modal -->
-    <div v-if="showReglementeModal"
+    <div v-if="showReglementeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         <!-- Header -->
         <div class="p-6 border-b border-gray-200 flex-shrink-0">
@@ -1210,6 +1233,7 @@ const currentPayment = ref<any>(null)
 // Profile Modal State
 const showProfileModal = ref(false)
 const userDocumentCategories = ref<any[]>([])
+const documentsLoaded = ref(false)
 const userData = ref<any>(null) // Store full user data from users table
 const activeClickDiv = ref<string | null>(null) // Track which div is being clicked for visual feedback
 
@@ -1255,6 +1279,8 @@ const loadUserDocuments = async () => {
     logger.debug('✅ Documents ready for display')
   } catch (err: any) {
     console.error('❌ Error loading documents:', err)
+  } finally {
+    documentsLoaded.value = true
   }
 }
 
@@ -1688,10 +1714,7 @@ const navigateToMyCourses = async () => {
 async function loadAffiliateStats() {
   affiliateLoading.value = true
   try {
-    const token = authStore.accessToken
-    const result = await $fetch<any>('/api/affiliate/stats', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const result = await $fetch<any>('/api/affiliate/stats')
     affiliateStats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     affiliateShareLink.value = result.data.share_link ?? ''
@@ -1705,11 +1728,7 @@ async function loadAffiliateStats() {
 async function generateAffiliateCode() {
   affiliateGenerating.value = true
   try {
-    const token = authStore.accessToken
-    const result = await $fetch<any>('/api/affiliate/generate-code', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const result = await $fetch<any>('/api/affiliate/generate-code', { method: 'POST' })
     affiliateCode.value = result.data.code
     affiliateShareLink.value = result.data.link
   } catch (err: any) {
@@ -1773,6 +1792,9 @@ const loadAllData = async () => {
     if (appointments.value.length > 0) {
       loadInstructors()
     }
+
+    // Load documents in background for Lernfahrausweis banner
+    loadUserDocuments()
 
     logger.debug('✅ Pending confirmations loaded, background tasks started')
   } catch (err: any) {

@@ -1,31 +1,15 @@
 import { defineEventHandler, getHeader, createError } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 /**
  * GET /api/affiliate/stats
- *
- * Returns affiliate stats for the authenticated user:
- * - code + share link
- * - total referrals (pending + credited)
- * - total credited (CHF)
- * - current credit balance
- * - list of payout requests
  */
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
   const supabaseAdmin = getSupabaseAdmin()
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
   const { data: userProfile, error: profileError } = await supabaseAdmin
     .from('users')
@@ -33,9 +17,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (profileError || !userProfile) {
-    throw createError({ statusCode: 403, message: 'User not found' })
-  }
+  if (profileError || !userProfile) throw createError({ statusCode: 403, message: 'User not found' })
 
   // Load affiliate code
   const { data: affiliateCode } = await supabaseAdmin
@@ -75,11 +57,11 @@ export default defineEventHandler(async (event) => {
   if (affiliateCode) {
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
-      .select('domain')
+      .select('slug')
       .eq('id', userProfile.tenant_id)
-      .maybeSingle()
-    const baseUrl = tenant?.domain ? `https://${tenant.domain}` : 'https://driving-team.ch'
-    shareLink = `${baseUrl}/?ref=${affiliateCode.code}`
+      .single()
+    const tenantSlug = tenant?.slug ?? 'driving-team'
+    shareLink = `https://simy.ch/register/${tenantSlug}?ref=${affiliateCode.code}`
   }
 
   return {

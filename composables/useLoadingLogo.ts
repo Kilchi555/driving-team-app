@@ -60,8 +60,8 @@ export const useLoadingLogo = () => {
       
       const data = response.data
       
-      // Prefer square logo, then wide, then standard
-      const logoUrl = data.logo_square_url || data.logo_wide_url || data.logo_url || null
+      // Prefer wide logo (base64 stored directly in DB), then square, then standard
+      const logoUrl = data.logo_wide_url || data.logo_square_url || data.logo_url || null
       
       // Cache the result
       logoCache.value.set(tenantId, {
@@ -113,8 +113,8 @@ export const useLoadingLogo = () => {
       
       const data = response.data
       
-      // Prefer square logo, then wide, then standard
-      const logoUrl = data.logo_square_url || data.logo_wide_url || data.logo_url || null
+      // Prefer wide logo (base64 stored directly in DB), then square, then standard
+      const logoUrl = data.logo_wide_url || data.logo_square_url || data.logo_url || null
       
       // Cache the result using the tenant ID
       if (data.id) {
@@ -168,7 +168,11 @@ export const useLoadingLogo = () => {
   // Preload logo for faster loading
   const preloadLogo = (logoUrl: string) => {
     if (!process.client) return
-    
+    // Base64 data URIs are already in memory, no need to preload
+    if (logoUrl.startsWith('data:')) {
+      logger.debug('✅ Logo is base64, no preload needed')
+      return
+    }
     const img = new Image()
     img.onload = () => {
       logger.debug('✅ Logo preloaded:', logoUrl)

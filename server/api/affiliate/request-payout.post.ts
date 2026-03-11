@@ -1,31 +1,15 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 /**
  * POST /api/affiliate/request-payout
- *
- * Authenticated user requests a payout of their affiliate credit.
- * Two modes:
- * - type: 'credit' → keeps money as Fahrstunden-Guthaben (no-op, already in student_credits)
- * - type: 'bank'   → creates an affiliate_payout_requests row for admin to process via IBAN
- *
- * Body: { type: 'credit' | 'bank', amount_rappen: number, iban?: string, account_holder?: string }
  */
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
   const supabaseAdmin = getSupabaseAdmin()
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
   const { data: userProfile } = await supabaseAdmin
     .from('users')
@@ -33,9 +17,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!userProfile) {
-    throw createError({ statusCode: 403, message: 'User not found' })
-  }
+  if (!userProfile) throw createError({ statusCode: 403, message: 'User not found' })
 
   const body = await readBody(event)
   const { type, amount_rappen, iban, account_holder } = body

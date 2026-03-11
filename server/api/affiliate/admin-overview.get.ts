@@ -1,20 +1,16 @@
 import { defineEventHandler, getHeader, createError } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 async function getAdminUser(event: any) {
-  const supabase = getSupabase()
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) throw createError({ statusCode: 401, message: 'Unauthorized' })
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) throw createError({ statusCode: 401, message: 'Unauthorized' })
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
   const supabaseAdmin = getSupabaseAdmin()
   const { data: profile } = await supabaseAdmin
     .from('users')
     .select('id, tenant_id, role')
-    .eq('auth_user_id', user.id)
+    .eq('auth_user_id', authUser.id)
     .single()
 
   if (!profile || !['admin', 'super_admin'].includes(profile.role)) {

@@ -127,16 +127,7 @@ export default defineEventHandler(async (event) => {
     })
     .eq('id', referral.id)
 
-  // Update affiliate_codes counters
-  await supabaseAdmin
-    .from('affiliate_codes')
-    .update({
-      total_credited_rappen: (currentCredit?.balance_rappen ?? 0) + rewardRappen,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', referral.affiliate_code_id)
-
-  // Increment total_referrals counter using rpc or manual fetch
+  // Update affiliate_codes counters (single update with correct values)
   const { data: codeRow } = await supabaseAdmin
     .from('affiliate_codes')
     .select('total_referrals, total_credited_rappen')
