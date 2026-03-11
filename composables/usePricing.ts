@@ -206,6 +206,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   const pricingRules = ref<PricingRule[]>([])
   const isLoadingPrices = ref(false)
   const pricingError = ref<string>('')
+  // In-flight deduplication: if a load is already in progress, reuse that promise
+  let _loadingPromise: Promise<void> | null = null
   const lastLoaded = ref<Date | null>(null)
 
   // ===== DYNAMIC PRICING STATE =====
@@ -286,9 +288,15 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       return
     }
 
+    // Deduplicate concurrent requests – return the same promise if already loading
+    if (_loadingPromise) {
+      return _loadingPromise
+    }
+
     isLoadingPrices.value = true
     pricingError.value = ''
 
+    _loadingPromise = (async () => {
     try {
       logger.debug('🔄 Loading pricing rules from API...')
       
@@ -344,7 +352,11 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       await createFallbackPricingRules()
     } finally {
       isLoadingPrices.value = false
+      _loadingPromise = null
     }
+    })()
+
+    return _loadingPromise
   }
 
   // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen

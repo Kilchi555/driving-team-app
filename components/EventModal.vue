@@ -4685,12 +4685,14 @@ const initializeFormData = async () => {
   }
 
   // ✅ WICHTIG: Grundlegende Werte setzen falls nicht vorhanden
-  if (!formData.value.type) {
+  // In edit/view mode: skip defaults – populateFormFromAppointment will set the real values
+  const isEditOrView = props.mode === 'edit' || props.mode === 'view'
+  if (!formData.value.type && !isEditOrView) {
     formData.value.type = 'B'
     logger.debug('✅ Default category set to B')
   }
   
-  if (!formData.value.eventType) {
+  if (!formData.value.eventType && !isEditOrView) {
     formData.value.eventType = 'lesson'
     logger.debug('✅ Default event type set to lesson')
   }
@@ -4709,7 +4711,7 @@ const initializeFormData = async () => {
 
   // ✅ WICHTIG: availableDurations setzen falls nicht vorhanden
   if (!availableDurations.value || availableDurations.value.length === 0) {
-    const fallbackDuration = getFallbackDuration(formData.value.type)
+    const fallbackDuration = getFallbackDuration(formData.value.type ?? undefined)
     availableDurations.value = [fallbackDuration]
     logger.debug(`✅ Default availableDurations set to [${fallbackDuration}]`)
   }
@@ -5527,23 +5529,9 @@ watch(() => props.isVisible, async (newVisible) => {
       if (props.eventData && props.eventData.id) {
         logger.debug('📝 Editing existing appointment')
         await initializeFormData()
-        
-        // ✅ SCHRITT 1: Form populieren (nach initializeFormData)
-        await populateFormFromAppointment(props.eventData)
+        // populateFormFromAppointment is already called inside initializeFormData for edit mode
         logger.debug('🔍 AFTER populate - eventType:', formData.value.eventType)
         isInitializing.value = false
-        
-        // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
-        if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
-          availableDurations.value.unshift(formData.value.duration_minutes)
-          availableDurations.value.sort((a, b) => a - b)
-          logger.debug('✅ Added original duration to available durations:', availableDurations.value)
-        }
-        
-        // ✅ SCHRITT 1.6: Duration-Logik nach populateFormFromAppointment
-        if (formData.value.duration_minutes) {
-          logger.debug('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
-        }
         
         // ✅ SCHRITT 2: Payment-Daten laden
         if (props.eventData.id) {
