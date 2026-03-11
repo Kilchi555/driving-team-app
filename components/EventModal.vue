@@ -1528,8 +1528,14 @@ const {
 
 // In edit mode: only update available options, never overwrite the current duration
 const handleDurationsChanged = (durations: number[]) => {
-  if (props.mode === 'edit') {
+  if (props.mode === 'edit' || props.mode === 'view') {
     const currentDuration = formData.value.duration_minutes
+    // If the incoming list doesn't include our DB duration, it's an incomplete intermediate
+    // emit (e.g. staff-only [45] before category durations [45,60,90] arrive). Skip it.
+    const flatDurations = durations.flat().filter((d: any) => typeof d === 'number')
+    if (!flatDurations.includes(currentDuration)) {
+      return
+    }
     originalHandleDurationsChanged(durations)
     // Restore the original duration from the DB – CategorySelector must not override it
     if (formData.value.duration_minutes !== currentDuration) {
