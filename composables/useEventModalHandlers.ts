@@ -220,8 +220,8 @@ const handleCategorySelected = async (category: any) => {
           }
           logger.debug('🎯 Exam detected - using exam duration:', examDuration)
         }
-        // ✅ Auto-select first duration if current duration is not in the list (only for non-exams)
-        else if (!durations.includes(formData.value.duration_minutes)) {
+        // ✅ Auto-select first duration if current duration is not in the list (only for non-exams, only in create mode)
+        else if (!durations.includes(formData.value.duration_minutes) && formData.value._mode !== 'edit' && formData.value._mode !== 'view') {
           formData.value.duration_minutes = durations[0] || 45
           logger.debug('🔄 Auto-selected duration:', formData.value.duration_minutes)
         }
@@ -232,7 +232,10 @@ const handleCategorySelected = async (category: any) => {
       availableDurations.value = [45]
     }
     
-    calculateEndTime()
+    // Only recalculate end time if duration is a valid number (never an array)
+    if (typeof formData.value.duration_minutes === 'number' && !isNaN(formData.value.duration_minutes)) {
+      calculateEndTime()
+    }
   }
 }
 
@@ -556,7 +559,11 @@ const handleDurationsChanged = (durations: number[]) => {
         return [45]
       }
 
-      const durations = [response.data.lesson_duration]
+      const rawDurations = response.data.lesson_duration
+      // lesson_duration can be a number, an array, or a nested array – always flatten to number[]
+      const durations: number[] = Array.isArray(rawDurations)
+        ? rawDurations.flat().filter((d: any) => typeof d === 'number' && !isNaN(d))
+        : (typeof rawDurations === 'number' ? [rawDurations] : [45])
       
       logger.debug('✅ Durations loaded for category:', categoryCode, 'durations:', durations)
       return durations

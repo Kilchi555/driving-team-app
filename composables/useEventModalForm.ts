@@ -35,6 +35,7 @@ interface AppointmentData {
   custom_location_address?: any
   custom_location_name?: string
   google_place_id?: string
+  _mode?: string
 }
 
 interface Student {
@@ -93,6 +94,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
   
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  // Flag: true while populateFormFromAppointment runs → all watchers skip their logic
+  const isPopulating = ref(false)
 
   // ✅ NEUE COMPOSABLES
   const categoryData = useCategoryData()
@@ -181,6 +184,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   }
 
   const populateFormFromAppointment = async (appointment: any) => {
+    isPopulating.value = true
     logger.debug('📝 Populating form from appointment:', appointment?.id)
     logger.debug('🔍 Full appointment data:', appointment)
     logger.debug('🔍 Appointment event_type_code check:', {
@@ -327,6 +331,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       // ✅ Admin fee will be loaded automatically by usePricing in edit mode
     }
+    isPopulating.value = false
   }
 
   // ✅ Helper function to check if event type is a lesson type
@@ -1640,6 +1645,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     appointmentNumber,
     isLoading,
     error,
+    isPopulating,
     
     // Computed
     isFormValid,

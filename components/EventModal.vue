@@ -36,7 +36,17 @@
 
       <!-- ✅ SCROLLABLE CONTENT AREA -->
       <div class="flex-1 overflow-y-auto">
-        <div class="px-4 py-4 space-y-4">
+
+        <!-- Initializing overlay (edit/view mode while appointment data loads) -->
+        <div v-if="isInitializing" class="flex flex-col items-center justify-center h-full py-20 space-y-4">
+          <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="text-sm text-gray-500">Termindaten werden geladen...</p>
+        </div>
+
+        <div v-else class="px-4 py-4 space-y-4">
           
           <!-- Student Selector -->
           <div v-if="showStudentSelector" class="py-0">
@@ -754,6 +764,7 @@ const studentSelectorRef = ref()
 const categorySelectorRef = ref()
 const error = ref('')
 const isLoading = ref(false)
+const isInitializing = ref(false)
 const showEventTypeSelection = ref(false)
 const selectedLessonType = ref('lesson') 
 const staffSelectorRef = ref() 
@@ -835,6 +846,7 @@ watch(priceDisplayRef, (newRef) => {
 }, { immediate: true })
 
 watch(() => formData.value.type, async (newType) => {
+  if (isPopulating.value) return
   if (newType) {
     logger.debug('🔄 Category type changed, loading evaluation criteria:', newType)
     // Find the full category object (with parent_category_id)
@@ -1493,7 +1505,8 @@ const {
   populateFormFromAppointment,
   calculateEndTime,
   saveAppointment,
-  loadExistingPayment
+  loadExistingPayment,
+  isPopulating,
 } = modalForm
 
 
@@ -1509,9 +1522,23 @@ const handlers = useEventModalHandlers(
 
 const {
   handleCategorySelected: originalHandleCategorySelected,
-  handleDurationsChanged,
+  handleDurationsChanged: originalHandleDurationsChanged,
   setDurationForLessonType,
 } = handlers
+
+// In edit mode: only update available options, never overwrite the current duration
+const handleDurationsChanged = (durations: number[]) => {
+  if (props.mode === 'edit') {
+    const currentDuration = formData.value.duration_minutes
+    originalHandleDurationsChanged(durations)
+    // Restore the original duration from the DB – CategorySelector must not override it
+    if (formData.value.duration_minutes !== currentDuration) {
+      formData.value.duration_minutes = currentDuration
+    }
+    return
+  }
+  originalHandleDurationsChanged(durations)
+}
 
 // ✅ Enhanced handleCategorySelected with DB duration loading
 const handleCategorySelected = async (category: any) => {
@@ -5470,6 +5497,9 @@ const initializePastedAppointment = async () => {
 // Direkt nach initializeFormData in der watch-Funktion:
 watch(() => props.isVisible, async (newVisible) => {
   if (newVisible) {
+    isInitializing.value = props.mode === 'edit' || props.mode === 'view'
+    // Store mode in formData so composables can read it without needing props
+    formData.value._mode = props.mode
     logger.debug('✅ Modal opened:', { 
       mode: props.mode, 
       hasEventData: !!props.eventData,
@@ -5501,6 +5531,7 @@ watch(() => props.isVisible, async (newVisible) => {
         // ✅ SCHRITT 1: Form populieren (nach initializeFormData)
         await populateFormFromAppointment(props.eventData)
         logger.debug('🔍 AFTER populate - eventType:', formData.value.eventType)
+        isInitializing.value = false
         
         // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
         if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
@@ -5678,6 +5709,7 @@ watch(() => props.isVisible, async (newVisible) => {
       })
     } catch (error) {
       console.error('❌ Error initializing modal:', error)
+      isInitializing.value = false
       // ✅ FALLBACK: Minimale Initialisierung
       formData.value = {
         ...formData.value,
@@ -5694,10 +5726,19 @@ watch(() => props.isVisible, async (newVisible) => {
         location_id: formData.value.location_id || ''
       }
     }
+  } else {
+    isInitializing.value = false
   }
 })
 
 watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
+  if (isPopulating.value) return
+  // Guard against arrays being set as duration (can happen during async category loading)
+  if (Array.isArray(newDuration)) {
+    logger.warn('⚠️ duration_minutes war ein Array, verwende ersten Wert:', (newDuration as any[])[0])
+    formData.value.duration_minutes = (newDuration as any[])[0] || 45
+    return
+  }
   try {
     logger.debug('🔍 DEBUG: Duration watcher triggered:', {
       oldDuration,
@@ -5706,7 +5747,6 @@ watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
       endTime: formData.value.endTime
     })
     calculateEndTime()
-    // ✅ Trigger pricing calculation when duration changes
     calculatePriceForCurrentData()
   } catch (error) {
     console.error('❌ Error updating duration:', error)
@@ -5714,6 +5754,7 @@ watch(() => formData.value.duration_minutes, (newDuration, oldDuration) => {
 })
 
 watch(() => selectedStudent.value, async (newStudent, oldStudent) => {
+  if (isPopulating.value) return
   try {
     if (newStudent && !oldStudent) {
       logger.debug('🔍 Student selection detected:', newStudent.first_name, newStudent.last_name)
@@ -5742,6 +5783,7 @@ watch(() => selectedStudent.value, async (newStudent, oldStudent) => {
 
 // ✅ Admin-Fee und Preis neu berechnen wenn Kategorie sich ändert
 watch(() => formData.value.type, async (newType) => {
+  if (isPopulating.value) return
   if (selectedStudent.value && newType && formData.value.eventType === 'lesson') {
     await calculatePriceForCurrentData()
   }
@@ -5751,26 +5793,26 @@ watch(() => formData.value.type, async (newType) => {
 
 // ✅ Im EventModal.vue - bei den anderen Watchers hinzufügen:
 watch(() => formData.value.eventType, (newVal, oldVal) => {
+  if (isPopulating.value) return
   logger.debug('🚨 formData.eventType CHANGED:', {
     from: oldVal,
     to: newVal,
     stack: new Error().stack
   })
   
-  // ✅ Trigger pricing calculation when event type changes
   if (newVal === 'lesson') {
     calculatePriceForCurrentData()
   }
-}, { immediate: false }) // ✅ WICHTIG: immediate: false verhindert automatische Ausführung
+}, { immediate: false })
 
 // ✅ Add watcher for category/type changes
 watch(() => formData.value.type, (newType, oldType) => {
+  if (isPopulating.value) return
   logger.debug('🚨 formData.type CHANGED:', {
     from: oldType,
     to: newType
   })
   
-  // ✅ Trigger pricing calculation when category changes
   if (newType && formData.value.eventType === 'lesson') {
     calculatePriceForCurrentData()
   }
