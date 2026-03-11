@@ -32,6 +32,7 @@
     "@sparticuz/chromium": "^141.0.0",
     "@stripe/stripe-js": "^7.9.0",
     "@supabase/supabase-js": "^2.76.1",
+    "@types/zxcvbn": "^4.4.5",
     "isomorphic-dompurify": "^2.35.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.1",
@@ -41,7 +42,8 @@
     "resend": "^6.4.2",
     "stripe": "^18.5.0",
     "twilio": "^5.10.4",
-    "wallee": "^4.7.0"
+    "wallee": "^4.7.0",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "@nuxt/eslint": "^0.5.7",

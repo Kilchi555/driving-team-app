@@ -1,6 +1,9 @@
 /**
  * Password Security Validator
- * Enforces strong password requirements
+ *
+ * NIST SP 800-63B compliant: length + breach check beats complexity rules.
+ * Complexity rules (uppercase, special chars etc.) are NOT enforced –
+ * they encourage predictable substitutions (P@ssw0rd!) without adding entropy.
  */
 
 export interface PasswordValidationResult {
@@ -12,80 +15,28 @@ export interface PasswordValidationResult {
 
 export const PASSWORD_REQUIREMENTS = {
   minLength: 12,
-  requireUppercase: true,
-  requireLowercase: true,
-  requireNumbers: true,
-  requireSpecialChars: true,
-  forbiddenPatterns: [
-    /^[0-9]+$/, // Only numbers
-    /^[a-z]+$/i, // Only letters
-    /(.)\\1{2,}/, // Same character repeated 3+ times
-    /password|123456|qwerty|admin|letmein/i // Common passwords
-  ]
+  maxLength: 500,
 }
 
 export function validatePassword(password: string): PasswordValidationResult {
   const errors: string[] = []
   let score = 0
 
-  // Check minimum length
   if (password.length < PASSWORD_REQUIREMENTS.minLength) {
     errors.push(`Passwort muss mindestens ${PASSWORD_REQUIREMENTS.minLength} Zeichen lang sein`)
   } else {
-    score += 20
+    // Score based on length only – longer = stronger
+    score = Math.min(100, Math.floor((password.length / 20) * 100))
   }
 
-  // Check uppercase
-  if (PASSWORD_REQUIREMENTS.requireUppercase && !/[A-Z]/.test(password)) {
-    errors.push('Passwort muss mindestens einen Großbuchstaben enthalten')
-  } else if (/[A-Z]/.test(password)) {
-    score += 20
+  if (password.length > PASSWORD_REQUIREMENTS.maxLength) {
+    errors.push(`Passwort darf maximal ${PASSWORD_REQUIREMENTS.maxLength} Zeichen lang sein`)
   }
 
-  // Check lowercase
-  if (PASSWORD_REQUIREMENTS.requireLowercase && !/[a-z]/.test(password)) {
-    errors.push('Passwort muss mindestens einen Kleinbuchstaben enthalten')
-  } else if (/[a-z]/.test(password)) {
-    score += 20
-  }
+  const strength: 'weak' | 'medium' | 'strong' =
+    score >= 80 ? 'strong' : score >= 50 ? 'medium' : 'weak'
 
-  // Check numbers
-  if (PASSWORD_REQUIREMENTS.requireNumbers && !/[0-9]/.test(password)) {
-    errors.push('Passwort muss mindestens eine Ziffer enthalten')
-  } else if (/[0-9]/.test(password)) {
-    score += 20
-  }
-
-  // Check special characters
-  if (PASSWORD_REQUIREMENTS.requireSpecialChars && !/[!@#$%^&*()_+\-=\[\]{};:'",.<>?/\\|`~]/.test(password)) {
-    errors.push('Passwort muss mindestens ein Sonderzeichen enthalten (!@#$%^&* etc.)')
-  } else if (/[!@#$%^&*()_+\-=\[\]{};:'",.<>?/\\|`~]/.test(password)) {
-    score += 20
-  }
-
-  // Check forbidden patterns
-  for (const pattern of PASSWORD_REQUIREMENTS.forbiddenPatterns) {
-    if (pattern.test(password)) {
-      errors.push('Passwort enthält ein nicht erlaubtes Muster oder ist zu häufig verwendet')
-      score = Math.max(0, score - 20)
-      break
-    }
-  }
-
-  // Determine strength
-  let strength: 'weak' | 'medium' | 'strong' = 'weak'
-  if (score >= 80) {
-    strength = 'strong'
-  } else if (score >= 50) {
-    strength = 'medium'
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    strength,
-    score
-  }
+  return { isValid: errors.length === 0, errors, strength, score }
 }
 
 /**

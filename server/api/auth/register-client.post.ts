@@ -4,6 +4,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
+import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import {
   validateRequiredString,
   validatePassword,
@@ -79,6 +80,17 @@ export default defineEventHandler(async (event) => {
     
     if (Object.keys(errors).length > 0) {
       throwValidationError(errors)
+    }
+
+    // HIBP check – runs after basic validation to avoid unnecessary API calls
+    const hibp = await checkPasswordPwned(password)
+    if (hibp.isPwned) {
+      throwValidationError({
+        password: `Dieses Passwort wurde in ${hibp.count.toLocaleString('de-CH')} bekannten Datenlecks gefunden und ist unsicher. Bitte wähle ein anderes Passwort.`
+      })
+    }
+    if (hibp.error) {
+      logger.warn('Register', '⚠️ HIBP check failed (non-fatal):', hibp.error)
     }
     
     // Debug: Log categories to verify they're being sent correctly

@@ -713,6 +713,24 @@ export default defineEventHandler(async (event) => {
       }
     }
     
+    // ============ LAYER 8: AFFILIATE REWARD HOOK ============
+    if (paymentStatus === 'completed') {
+      for (const payment of paymentsToUpdate) {
+        if (payment.user_id && payment.appointment_id) {
+          $fetch('/api/affiliate/process-reward', {
+            method: 'POST',
+            body: {
+              appointment_id: payment.appointment_id,
+              user_id: payment.user_id,
+              tenant_id: payment.tenant_id,
+            }
+          }).catch((err: any) =>
+            logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+          )
+        }
+      }
+    }
+
     // ============ LAYER 9: HANDLE CREDIT REFUND FOR FAILED/CANCELLED ============
     if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
       await handleCreditRefund(paymentsToUpdate)

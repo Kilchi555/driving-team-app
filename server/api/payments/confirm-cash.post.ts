@@ -217,6 +217,20 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Appointment marked as paid')
         auditDetails.appointment_id = payment.appointment_id
       }
+
+      // ✅ AFFILIATE REWARD HOOK – trigger after first completed payment
+      if (payment.user_id) {
+        $fetch('/api/affiliate/process-reward', {
+          method: 'POST',
+          body: {
+            appointment_id: payment.appointment_id,
+            user_id: payment.user_id,
+            tenant_id: tenantId
+          }
+        }).catch((err: any) =>
+          logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+        )
+      }
     }
 
     // ============ LAYER 8: AUDIT LOGGING ============

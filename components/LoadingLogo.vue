@@ -1,27 +1,18 @@
 <template>
-  <div class="flex justify-center items-center">
+  <div class="flex justify-center items-center leading-none">
     <!-- Show actual tenant logo when available -->
     <img v-if="effectiveLogoUrl && !showGenericLoader"
       :src="effectiveLogoUrl" 
       :alt="alt || 'Tenant Logo'"
-      :class="[
-        'object-contain transition-opacity duration-300',
-        sizeClasses[size] || sizeClasses.md,
-        { 
-          'opacity-0': isLoadingLogo,
-          'opacity-100': !isLoadingLogo
-        }
-      ]"
+      :style="{ maxWidth: sizePx, height: 'auto', display: 'block', transition: 'opacity 0.3s', opacity: isLoadingLogo ? 0 : 1 }"
       @error="handleImageError"
       @load="handleImageLoad"
     />
     
     <!-- Show generic loading spinner as fallback -->
     <div v-else 
-         :class="[
-           'flex items-center justify-center border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin',
-           sizeClasses[size] || sizeClasses.md
-         ]"
+         :style="{ width: sizePx, height: sizePx }"
+         class="flex items-center justify-center border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"
          :title="isLoadingLogo ? 'Logo wird geladen...' : 'Kein Logo verfügbar'">
     </div>
   </div>
@@ -30,13 +21,14 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed, watch } from 'vue'
+import { logger } from '~/utils/logger'
 import { useLoadingLogo } from '~/composables/useLoadingLogo'
 
 // Loading logo system
 const { loadCurrentTenantLogo, isLoadingLogo, getTenantLogo, getTenantLogoBySlug, logoCache } = useLoadingLogo()
 
 interface Props {
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
   alt?: string
   tenantId?: string
   tenantSlug?: string
@@ -66,8 +58,21 @@ const sizeClasses = {
   md: 'h-8 w-8',
   lg: 'h-12 w-12',
   xl: 'h-16 w-16',
-  '2xl': 'h-32 w-32'
+  '2xl': 'h-32 w-32',
+  '3xl': 'h-48 w-48'
 }
+
+const sizePxMap = {
+  xs: '12px',
+  sm: '16px',
+  md: '32px',
+  lg: '48px',
+  xl: '64px',
+  '2xl': '128px',
+  '3xl': '192px'
+}
+
+const sizePx = computed(() => sizePxMap[props.size] || sizePxMap.md)
 
 // Methods
 const handleImageError = () => {
@@ -82,6 +87,7 @@ const handleImageLoad = () => {
 // Function to load logo for a specific tenant
 const loadLogoForTenant = async (tenantId: string | null, tenantSlug?: string) => {
   try {
+    imageError.value = false  // Reset error state before loading
     if (tenantId) {
       logger.debug('🎯 LoadingLogo: Using explicit tenantId:', tenantId)
       
@@ -116,7 +122,7 @@ const loadLogoForTenant = async (tenantId: string | null, tenantSlug?: string) =
 
 // Load tenant logo on mount with immediate cache check
 onMounted(async () => {
-  await loadLogoForTenant(props.tenantId, props.tenantSlug)
+  await loadLogoForTenant(props.tenantId ?? null, props.tenantSlug)
 })
 
 // Watch for changes in tenantId or tenantSlug props
@@ -126,7 +132,7 @@ watch([() => props.tenantId, () => props.tenantSlug], async ([newTenantId, newTe
       tenantId: { from: oldTenantId, to: newTenantId },
       tenantSlug: { from: oldTenantSlug, to: newTenantSlug }
     })
-    await loadLogoForTenant(newTenantId, newTenantSlug)
+    await loadLogoForTenant(newTenantId ?? null, newTenantSlug)
   }
 })
 </script>

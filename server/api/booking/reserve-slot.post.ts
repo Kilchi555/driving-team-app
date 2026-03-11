@@ -19,6 +19,7 @@
 
 import { defineEventHandler, readBody, createError, H3Event } from 'h3'
 import { getSupabase } from '~/server/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'

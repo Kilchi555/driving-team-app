@@ -21,7 +21,14 @@
           >
             <span>Kasse</span>
           </button>
-          
+
+          <!-- Affiliate Button -->
+          <button
+            @click="openAffiliateModal"
+            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+          >
+            <span>Empfehlen</span>
+          </button>
           
         </div>
         <button
@@ -422,6 +429,67 @@
       </div>
     </div>
 
+    <!-- Affiliate Modal -->
+    <div v-if="showAffiliateModal" class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-gray-900">🎁 Freunde empfehlen</h3>
+          <button @click="showAffiliateModal = false" class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold">×</button>
+        </div>
+        <div class="p-6 space-y-5">
+          <!-- Stats -->
+          <div v-if="affiliateStats" class="grid grid-cols-2 gap-3">
+            <div class="bg-purple-50 rounded-lg p-3 text-center">
+              <div class="text-2xl font-bold text-purple-700">{{ affiliateStats.total_referrals ?? 0 }}</div>
+              <div class="text-xs text-gray-500 mt-1">Empfehlungen</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3 text-center">
+              <div class="text-2xl font-bold text-green-700">CHF {{ ((affiliateStats.current_balance_rappen || 0) / 100).toFixed(2) }}</div>
+              <div class="text-xs text-gray-500 mt-1">Guthaben</div>
+            </div>
+          </div>
+          <div v-else-if="affiliateLoading" class="flex justify-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+          </div>
+
+          <!-- Link generieren -->
+          <div v-if="!affiliateCode">
+            <p class="text-sm text-gray-600 mb-3">Generiere deinen persönlichen Empfehlungslink und teile ihn mit Bekannten. Du erhältst eine Gutschrift, wenn jemand seine erste Lektion absolviert.</p>
+            <button
+              @click="generateAffiliateCode"
+              :disabled="affiliateGenerating"
+              class="w-full bg-purple-600 text-white rounded-lg px-4 py-2.5 font-semibold text-sm hover:bg-purple-700 transition disabled:opacity-50"
+            >
+              <span v-if="affiliateGenerating">Wird erstellt…</span>
+              <span v-else>Link aktivieren →</span>
+            </button>
+          </div>
+
+          <!-- Link anzeigen -->
+          <div v-else class="space-y-3">
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center space-x-2">
+              <span class="text-xs text-gray-700 truncate flex-1 font-mono">{{ affiliateShareLink }}</span>
+              <button @click="copyAffiliateLink" class="shrink-0 text-purple-600 hover:text-purple-800">
+                <span v-if="affiliateCopied" class="text-green-600 text-xs font-semibold">✓ Kopiert</span>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              </button>
+            </div>
+            <div class="flex space-x-2">
+              <a
+                :href="`https://wa.me/?text=${encodeURIComponent('Ich empfehle dir die Fahrschule Driving Team! Melde dich hier an: ' + affiliateShareLink)}`"
+                target="_blank"
+                class="flex-1 bg-green-500 text-white text-center rounded-lg px-3 py-2 text-sm font-semibold hover:bg-green-600 transition"
+              >WhatsApp</a>
+              <a
+                :href="`mailto:?subject=Fahrschule%20Empfehlung&body=${encodeURIComponent('Ich empfehle dir die Fahrschule Driving Team!\n\nMelde dich hier an: ' + affiliateShareLink)}`"
+                class="flex-1 bg-gray-600 text-white text-center rounded-lg px-3 py-2 text-sm font-semibold hover:bg-gray-700 transition"
+              >E-Mail</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Calendar Integration Modal -->
     <div v-if="showCalendarIntegration" class="fixed inset-0 z-100 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -738,6 +806,15 @@ const showExamStatistics = ref(false)
 
 // Cash Control Modal State
 const showCashControl = ref(false)
+
+// Affiliate Modal State
+const showAffiliateModal = ref(false)
+const affiliateCode = ref<string | null>(null)
+const affiliateShareLink = ref('')
+const affiliateStats = ref<any>(null)
+const affiliateCopied = ref(false)
+const affiliateGenerating = ref(false)
+const affiliateLoading = ref(false)
 
 // Calendar Integration Modal State
 const showCalendarIntegration = ref(false)
@@ -1222,7 +1299,6 @@ const toggleExamLocation = async (location: any) => {
 
     // Wir identifizieren einen Standort nicht nur über die ID, sondern auch über Name & Adresse
     const existingPreference = await query({
-     action: 'select',
       action: 'select',
       table: 'locations',
       select: 'id',
@@ -1238,7 +1314,6 @@ const toggleExamLocation = async (location: any) => {
     if (existingPreference) {
       // Wenn die Präferenz-Zeile existiert, löschen wir sie
       await query({
-       action: 'select',
         action: 'delete',
         table: 'locations',
         filters: [{ column: 'id', operator: 'eq', value: existingPreference.id }]
@@ -1248,7 +1323,6 @@ const toggleExamLocation = async (location: any) => {
     } else {
       // Wenn keine Präferenz-Zeile existiert, erstellen wir eine neue
       await query({
-       action: 'select',
         action: 'insert',
         table: 'locations',
         data: {
@@ -1332,7 +1406,6 @@ const removeExamLocation = async (location: any) => {
 
     // Remove from database
     await query({
-     action: 'select',
       action: 'delete',
       table: 'locations',
       filters: [
@@ -1432,7 +1505,6 @@ const addExamLocation = async () => {
     
     // Insert via secure API
     const data = await query({
-     action: 'select',
       action: 'insert',
       table: 'locations',
       data: {
@@ -1478,7 +1550,6 @@ const createNewLocation = async () => {
     
     // Insert via secure API
     const data = await query({
-     action: 'select',
       action: 'insert',
       table: 'locations',
       data: {
@@ -1574,7 +1645,7 @@ const toggleLocationBookable = async (locationId: string, isOnlineBookable: bool
     }
 
     // Call the API to update staff_locations.is_online_bookable
-    const response = await $fetch('/api/staff/update-location-booking', {
+    const response = await $fetch<{ success: boolean }>('/api/staff/update-location-booking', {
       method: 'POST',
       body: {
         location_id: locationId,
@@ -1655,7 +1726,6 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
       // Step 2b: Location existiert nicht → Neuen Eintrag erstellen via secure API
       logger.debug(`📍 Location doesn't exist, creating new one`)
       await query({
-       action: 'select',
         action: 'insert',
         table: 'locations',
         data: {
@@ -1795,7 +1865,7 @@ const loadData = async () => {
 
     // Load all staff_locations for this staff to get is_online_bookable status
     try {
-      const staffLocResponse = await $fetch('/api/staff/get-location-bookable-status')
+      const staffLocResponse = await $fetch<{ staff_locations?: Array<{ location_id: string; is_online_bookable: boolean }> }>('/api/staff/get-location-bookable-status')
       const staffLocationRecords = staffLocResponse?.staff_locations || []
 
       if (staffLocationRecords && staffLocationRecords.length > 0) {
@@ -1875,7 +1945,7 @@ const loadWorkingHoursData = async () => {
     }
     
     // Filter nicht-gelöschte Termine
-    const validAppointments = appointments.filter(apt => 
+    const validAppointments = appointments.filter((apt: any) => 
       !apt.deleted_at // Nur nicht gelöschte Termine
     )
     
@@ -1883,12 +1953,12 @@ const loadWorkingHoursData = async () => {
     const now = new Date()
     
     // Filter Termine nach Zeitpunkt (in der Vergangenheit = gearbeitet, in der Zukunft = geplant)
-    const workedAppointments = validAppointments.filter(apt => {
+    const workedAppointments = validAppointments.filter((apt: any) => {
       const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
       return appointmentDate < now // Start-Zeit in der Vergangenheit = gearbeitet
     })
     
-    const plannedAppointments = validAppointments.filter(apt => {
+    const plannedAppointments = validAppointments.filter((apt: any) => {
       const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
       return appointmentDate >= now // Start-Zeit in der Zukunft = geplant
     })
@@ -2045,6 +2115,47 @@ const openExamStatistics = () => {
 // Cash Control Funktion
 const openCashControl = () => {
   showCashControl.value = true
+}
+
+// Affiliate Funktionen
+const openAffiliateModal = async () => {
+  showAffiliateModal.value = true
+  affiliateLoading.value = true
+  try {
+    const result = await $fetch<any>('/api/affiliate/stats')
+    affiliateStats.value = result.data?.summary ?? null
+    if (result.data?.affiliate_code?.code) {
+      affiliateCode.value = result.data.affiliate_code.code
+      affiliateShareLink.value = result.data.share_link ?? ''
+    }
+  } catch (err) {
+    console.error('Failed to load affiliate stats', err)
+  } finally {
+    affiliateLoading.value = false
+  }
+}
+
+const generateAffiliateCode = async () => {
+  affiliateGenerating.value = true
+  try {
+    const result = await $fetch<any>('/api/affiliate/generate-code', { method: 'POST' })
+    affiliateCode.value = result.data.code
+    affiliateShareLink.value = result.data.link
+  } catch (err) {
+    console.error('Failed to generate affiliate code', err)
+  } finally {
+    affiliateGenerating.value = false
+  }
+}
+
+const copyAffiliateLink = async () => {
+  try {
+    await navigator.clipboard.writeText(affiliateShareLink.value)
+    affiliateCopied.value = true
+    setTimeout(() => { affiliateCopied.value = false }, 2000)
+  } catch (err) {
+    console.error('Failed to copy', err)
+  }
 }
 
 // Calendar Integration Funktion
@@ -2371,7 +2482,6 @@ const clearWorkingHours = async () => {
     
     // Delete all working hours for this staff
     await query({
-     action: 'select',
       action: 'delete',
       table: 'staff_working_hours',
       filters: [{ column: 'staff_id', operator: 'eq', value: props.currentUser.id }]

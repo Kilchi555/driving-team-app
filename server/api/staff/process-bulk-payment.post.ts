@@ -90,6 +90,7 @@ export default defineEventHandler(async (event) => {
           .select(`
             id,
             tenant_id,
+            user_id,
             appointment_id,
             total_amount_rappen,
             admin_fee_rappen,
@@ -166,6 +167,20 @@ export default defineEventHandler(async (event) => {
             logger.warn(`⚠️ Could not confirm appointment ${paymentData.appointment_id}:`, appointmentError)
           } else {
             logger.debug(`✅ Appointment ${paymentData.appointment_id} confirmed`)
+          }
+
+          // ✅ AFFILIATE REWARD HOOK – trigger after cash payment completed
+          if (paymentData.user_id) {
+            $fetch('/api/affiliate/process-reward', {
+              method: 'POST',
+              body: {
+                appointment_id: paymentData.appointment_id,
+                user_id: paymentData.user_id,
+                tenant_id: tenantId
+              }
+            }).catch((err: any) =>
+              logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+            )
           }
         }
 

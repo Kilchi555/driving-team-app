@@ -193,6 +193,20 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       } else {
         logger.debug('✅ Appointment marked as paid')
       }
+
+      // ✅ AFFILIATE REWARD HOOK – trigger after first completed payment
+      if (payment.user_id) {
+        $fetch('/api/affiliate/process-reward', {
+          method: 'POST',
+          body: {
+            appointment_id: payment.appointment_id,
+            user_id: payment.user_id,
+            tenant_id: payment.tenant_id
+          }
+        }).catch((err: any) =>
+          logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+        )
+      }
     }
 
     // 4. Status History erstellen (optional)

@@ -1,38 +1,23 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 /**
  * POST /api/affiliate/generate-code
- *
- * Creates (or returns existing) affiliate code for the authenticated user.
- * Works for roles: client, staff, admin, affiliate.
- *
- * Body: { tenant_id: string }
- * Returns: { code, link, affiliate_code_id }
  */
 
 function generateCode(length = 8): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no confusable chars (0/O, 1/I)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   const bytes = new Uint8Array(length)
   crypto.getRandomValues(bytes)
   return Array.from(bytes).map(b => chars[b % chars.length]).join('')
 }
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
   const supabaseAdmin = getSupabaseAdmin()
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
   const { data: userProfile, error: profileError } = await supabaseAdmin
     .from('users')
@@ -40,9 +25,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (profileError || !userProfile) {
-    throw createError({ statusCode: 403, message: 'User not found' })
-  }
+  if (profileError || !userProfile) throw createError({ statusCode: 403, message: 'User not found' })
 
   const allowedRoles = ['client', 'staff', 'admin', 'super_admin', 'affiliate']
   if (!allowedRoles.includes(userProfile.role)) {
@@ -71,20 +54,23 @@ export default defineEventHandler(async (event) => {
     .eq('is_active', true)
     .maybeSingle()
 
-  if (existing) {
-    const { data: tenant } = await supabaseAdmin
-      .from('tenants')
-      .select('domain')
-      .eq('id', userProfile.tenant_id)
-      .maybeSingle()
+  const { data: tenant } = await supabaseAdmin
+    .from('tenants')
+    .select('slug')
+    .eq('id', userProfile.tenant_id)
+    .single()
 
-    const baseUrl = tenant?.domain ? `https://${tenant.domain}` : 'https://driving-team.ch'
+  const tenantSlug = tenant?.slug ?? 'driving-team'
+
+  if (existing) {
+    const shareLink = `https://simy.ch/register/${tenantSlug}?ref=${existing.code}`
     return {
       success: true,
       data: {
         affiliate_code_id: existing.id,
         code: existing.code,
-        link: `${baseUrl}/?ref=${existing.code}`,
+        link: shareLink,
+        register_link: shareLink,
       }
     }
   }
@@ -123,20 +109,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Failed to create affiliate code' })
   }
 
-  const { data: tenant } = await supabaseAdmin
-    .from('tenants')
-    .select('domain')
-    .eq('id', userProfile.tenant_id)
-    .maybeSingle()
-
-  const baseUrl = tenant?.domain ? `https://${tenant.domain}` : 'https://driving-team.ch'
+  const shareLink = `https://simy.ch/register/${tenantSlug}?ref=${newCode.code}`
 
   return {
     success: true,
     data: {
       affiliate_code_id: newCode.id,
       code: newCode.code,
-      link: `${baseUrl}/?ref=${newCode.code}`,
+      link: shareLink,
+      register_link: shareLink,
     }
   }
 })

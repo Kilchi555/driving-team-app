@@ -3,14 +3,14 @@
   <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div v-if="!registrationComplete" class="bg-gray-100 text-white p-1 rounded-t-xl">
-        <div class="text-center">
-          <LoadingLogo size="2xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
-          <h1 class="text-xl font-bold text-gray-700 p-4">
+      <div v-if="!registrationComplete" class="bg-gray-100 text-white rounded-t-xl overflow-hidden">
+        <div class="text-center pt-8">
+          <LoadingLogo size="3xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
+          <h1 class="text-xl font-bold text-gray-700 py-8">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
                serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
                serviceType === 'theorie' ? 'Registrierung für Theorielektion' : 
-               serviceType === 'beratung' ? 'Registrierung für Beratung' : 'Registrierung' }}
+               serviceType === 'beratung' ? 'Registrierung für Beratung' : 'Unverbindlich registrieren' }}
           </h1>
         </div>
       </div>
@@ -281,11 +281,10 @@
               <label v-for="category in availableCategories" :key="category.code" :for="`cat-${category.code}`" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-300 transition-colors">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center space-x-3">
-                    <span class="text-lg font-bold text-gray-800">{{ category.code }}</span>
-                    <span class="text-sm text-gray-600">{{ category.name }}</span>
+                    <span class="text-sm font-medium text-gray-800">{{ category.name }}</span>
                   </div>
                   <div class="text-xs text-gray-500 mt-1">
-                    <div>CHF {{ category.price }}/45min</div>
+                    <div>CHF {{ category.price }}/{{ category.duration || 45 }}min</div>
                     <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px] whitespace-nowrap">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
                   </div>
                 </div>
@@ -406,6 +405,7 @@
             <p class="text-gray-600">E-Mail und Passwort für Ihren Zugang</p>
           </div>
 
+
           <!-- WICHTIG: Form Element um die Passwort-Felder -->
           <form @submit.prevent="submitRegistration" class="space-y-4">
             <!-- E-Mail -->
@@ -474,27 +474,37 @@
                     {{ passwordChecks.length ? '✓' : '○' }} Mindestens 12 Zeichen
                   </span>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <span :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                    {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
-                  </span>
+                <!-- zxcvbn strength bar (shown once 12+ chars) -->
+                <div v-if="zxcvbnScore !== null" class="mt-2">
+                  <div class="flex gap-1 h-1.5">
+                    <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
+                      :class="i <= zxcvbnScore ? [
+                        zxcvbnScore <= 1 ? 'bg-red-500' :
+                        zxcvbnScore === 2 ? 'bg-yellow-400' :
+                        zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                      ] : 'bg-gray-200'"
+                    />
+                  </div>
+                  <p class="text-xs mt-1" :class="
+                    zxcvbnScore <= 1 ? 'text-red-500' :
+                    zxcvbnScore === 2 ? 'text-yellow-600' :
+                    zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+                  ">
+                    {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
+                    <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                  </p>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <span :class="passwordChecks.lowercase ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                    {{ passwordChecks.lowercase ? '✓' : '○' }} Kleinbuchstabe
+                <div v-if="hibpStatus !== 'idle'" class="flex items-center space-x-2 text-sm">
+                  <span v-if="hibpStatus === 'checking'" class="text-gray-400">⏳ Sicherheitsprüfung läuft...</span>
+                  <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
+                    ✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden – bitte ein anderes wählen
                   </span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span :class="passwordChecks.number ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                    {{ passwordChecks.number ? '✓' : '○' }} Zahl
-                  </span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span :class="passwordChecks.special ? 'text-green-600' : 'text-gray-400'" class="text-sm">
-                    {{ passwordChecks.special ? '✓' : '○' }} Sonderzeichen (!@#$%^&*)
+                  <span v-else-if="hibpStatus === 'safe'" class="text-green-600">
+                    ✓ Passwort nicht in bekannten Datenlecks gefunden
                   </span>
                 </div>
               </div>
+              <p v-if="fieldErrors.password" class="mt-2 text-sm text-red-600 font-medium">{{ fieldErrors.password }}</p>
             </div>
 
             <!-- Passwort bestätigen -->
@@ -512,7 +522,11 @@
               />
               <p v-if="formData.confirmPassword && formData.password !== formData.confirmPassword" 
                 class="text-red-600 text-sm mt-1">
-                Passwörter stimmen nicht überein
+                ✗ Passwörter stimmen nicht überein
+              </p>
+              <p v-else-if="formData.confirmPassword && formData.password === formData.confirmPassword"
+                class="text-green-600 text-sm mt-1">
+                ✓ Passwörter stimmen überein
               </p>
             </div>
 
@@ -651,6 +665,9 @@ import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
+import { useAffiliateRef } from '~/composables/useAffiliateRef'
 
 // Load hCaptcha script - ensure it loads immediately
 if (typeof window !== 'undefined') {
@@ -671,6 +688,7 @@ const { showError, showSuccess } = useUIStore()
 const { public: publicConfig } = useRuntimeConfig()
 const hcaptchaSiteKey = computed(() => publicConfig.hcaptchaSiteKey)
 const hcaptchaWidgetId = ref<number | null>(null)
+const supabase = getSupabase()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
@@ -678,8 +696,8 @@ const tenantSlug = computed(() => route.params.tenant as string)
 // Tenant Management
 const { loadTenant, tenantId, currentTenant } = useTenant()
 
-// Get service type from URL parameter
-const serviceType = ref(route.query.service as string || 'fahrlektion')
+// Get service type from URL parameter (empty = generic/interest registration, no Lernfahrausweis required)
+const serviceType = ref(route.query.service as string || '')
 
 // Get role from URL parameter (for admin registration)
 const roleParam = ref(route.query.role as string || 'client')
@@ -709,6 +727,36 @@ interface DocumentInfo {
 }
 const uploadedDocuments = ref<Record<string, DocumentInfo>>({})
 const showPassword = ref(false)
+const hibpStatus = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
+const hibpCount = ref(0)
+const zxcvbnScore = ref<0 | 1 | 2 | 3 | 4 | null>(null)
+let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const checkHibp = async (password: string) => {
+  // zxcvbn runs synchronously in the browser
+  const { default: zxcvbn } = await import('zxcvbn')
+  const result = zxcvbn(password)
+  zxcvbnScore.value = result.score as 0 | 1 | 2 | 3 | 4
+
+  // Only call HIBP if zxcvbn score is acceptable (≥ 2)
+  if (result.score < 2) {
+    hibpStatus.value = 'idle'
+    return
+  }
+
+  hibpStatus.value = 'checking'
+  try {
+    const hibp = await $fetch<{ isPwned: boolean; count: number }>('/api/auth/check-password-pwned', {
+      method: 'POST',
+      body: { password }
+    })
+    hibpCount.value = hibp.count
+    hibpStatus.value = hibp.isPwned ? 'pwned' : 'safe'
+  } catch {
+    hibpStatus.value = 'idle'
+  }
+}
+
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
 const registrationComplete = ref(false)
@@ -749,6 +797,7 @@ interface Category {
   name: string
   price: number
   adminFee?: number
+  duration?: number
 }
 
 // Available categories
@@ -815,23 +864,19 @@ const canSubmit = computed(() => {
 
 const passwordChecks = computed(() => ({
   length: formData.value.password.length >= 12,
-  uppercase: /[A-Z]/.test(formData.value.password),
-  lowercase: /[a-z]/.test(formData.value.password),
-  number: /[0-9]/.test(formData.value.password),
-  special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.value.password)
 }))
 
 const passwordIsValid = computed(() => {
-  return passwordChecks.value.length && 
-         passwordChecks.value.uppercase && 
-         passwordChecks.value.lowercase &&
-         passwordChecks.value.number &&
-         passwordChecks.value.special
+  return passwordChecks.value.length &&
+         (zxcvbnScore.value === null || zxcvbnScore.value >= 2) &&
+         hibpStatus.value !== 'pwned' &&
+         hibpStatus.value !== 'checking'
 })
 
 // Field-specific errors
 const fieldErrors = ref<Record<string, string>>({
   email: '',
+  password: '',
   phone: '',
   birthDate: '',
   firstName: '',
@@ -1324,8 +1369,13 @@ const submitRegistration = async () => {
       errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.'
     } else if (errorMessage.includes('Invalid email')) {
       errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
-    } else if (errorMessage.includes('Password') || errorMessage.includes('weak password')) {
-      errorMessage = 'Passwort zu schwach. Mindestens 12 Zeichen, 1 Großbuchstabe, 1 Kleinbuchstabe und 1 Zahl erforderlich.'
+    } else if (errorMessage.includes('Password') || errorMessage.includes('weak password') || errorMessage.includes('Passwort') || errorMessage.includes('nicht erlaubtes Muster')) {
+      // Show password error directly at the field, not as a modal
+      fieldErrors.value.password = errorMessage.includes('nicht erlaubtes Muster')
+        ? 'Passwort enthält ein nicht erlaubtes Muster (z.B. 3× gleiche Zeichen oder ein bekanntes Standard-Passwort).'
+        : 'Passwort erfüllt die Sicherheitsanforderungen nicht. Bitte alle Kriterien beachten.'
+      isSubmitting.value = false
+      return
     } else if (errorMessage.includes('Captcha') || errorMessage.includes('captcha') || errorMessage.includes('hCaptcha')) {
       errorTitle = 'Captcha-Verifizierung fehlgeschlagen'
       errorMessage = 'Die Captcha-Verifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut und stellen Sie sicher, dass Sie das Captcha korrekt ausgefüllt haben.'
@@ -1354,128 +1404,35 @@ const submitRegistration = async () => {
   }
 }
 
-// Load categories from database WITH PRICING RULES
+// Load categories from database WITH PRICING RULES (main/sub logic via API)
 const loadCategories = async () => {
   try {
-    const activeTenantId = tenantId.value || currentTenant.value?.id
-    
-    logger.debug('🏢 Loading categories for tenant:', activeTenantId || 'fallback')
-    
-    let categories, categoriesError
-    
-    if (activeTenantId) {
-      // Load tenant-specific categories first
-      const { data: tenantCategories, error: tenantError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('tenant_id', activeTenantId)
-        .eq('is_active', true)
-        .order('code')
-      
-      categories = tenantCategories
-      categoriesError = tenantError
-      
-      logger.debug('🏢 Loaded tenant-specific categories:', categories?.length || 0)
-    } else {
-      // Fallback: Load global categories (tenant_id = null)
-      const { data: globalCategories, error: globalError } = await supabase
-        .from('categories')
-        .select('*')
-        .is('tenant_id', null)
-        .eq('is_active', true)
-        .order('code')
-      
-      categories = globalCategories
-      categoriesError = globalError
-      
-      logger.debug('🌐 Loaded global categories:', categories?.length || 0)
+    const tid = tenantId.value || currentTenant.value?.id
+    if (!tid) {
+      logger.debug('⚠️ loadCategories: no tenant ID yet, skipping')
+      return
     }
-    
-    // Use fallback only if DB loading failed
-    let finalCategories
-    if (categoriesError || !categories || categories.length === 0) {
-      console.warn('⚠️ Could not load categories from DB, using fallback:', categoriesError?.message || 'No categories found')
-      finalCategories = availableCategories.value
+
+    logger.debug('🏢 Loading categories for tenant:', tid)
+
+    const result = await $fetch<{ success: boolean; categories: any[] }>(
+      `/api/booking/get-categories-with-pricing?tenant_id=${tid}`
+    )
+
+    if (result?.success && result.categories.length > 0) {
+      availableCategories.value = result.categories.map(cat => ({
+        code: cat.code,
+        name: cat.name,
+        price: cat.price_chf ? parseFloat(cat.price_chf) : 0,
+        adminFee: cat.admin_fee_chf ? parseFloat(cat.admin_fee_chf) : 0,
+        duration: cat.lesson_duration_minutes || 45,
+      }))
+      logger.debug('✅ Categories loaded from API:', availableCategories.value.length)
     } else {
-      logger.debug('✅ Loaded categories from DB:', categories.length)
-      
-      // Load base_price and admin_fee pricing rules for categories
-      let pricingRules = null
-      let adminFeeRules = null
-      logger.debug('🔍 Loading pricing rules for tenant:', activeTenantId)
-      
-      // Load base_price rules
-      const { data: rules, error: rulesError } = await supabase
-        .from('pricing_rules')
-        .select('*')
-        .eq('rule_type', 'base_price')
-        .eq('tenant_id', activeTenantId)
-        .eq('is_active', true)
-      
-      if (rulesError) {
-        console.error('❌ Error loading pricing rules:', rulesError)
-      }
-      
-      if (!rulesError && rules && rules.length > 0) {
-        pricingRules = rules
-        logger.debug('✅ Loaded base_price rules:', rules.length, 'rules')
-      } else {
-        logger.debug('ℹ️ No base_price rules found for tenant', activeTenantId)
-      }
-      
-      // Load admin_fee rules
-      const { data: adminFees, error: adminFeeError } = await supabase
-        .from('pricing_rules')
-        .select('*')
-        .eq('rule_type', 'admin_fee')
-        .eq('tenant_id', activeTenantId)
-        .eq('is_active', true)
-      
-      if (!adminFeeError && adminFees && adminFees.length > 0) {
-        adminFeeRules = adminFees
-        logger.debug('✅ Loaded admin_fee rules:', adminFees.length, 'rules')
-      }
-      
-      // Map categories with their prices
-      finalCategories = categories.map(cat => {
-        let price = cat.price_per_lesson || 95 // Default fallback
-        let adminFee = 0
-        
-        // Override with pricing rule if available
-        if (pricingRules) {
-          const rule = pricingRules.find(r => r.category_code === cat.code)
-          if (rule && rule.price_per_minute_rappen) {
-            // Calculate price: (Rappen/minute / 100) * minutes = CHF
-            // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
-            const pricePerMinuteChf = rule.price_per_minute_rappen / 100
-            const baseDurationMinutes = 45 // ALWAYS 45 minutes for base price
-            price = Math.round(pricePerMinuteChf * baseDurationMinutes)
-            logger.debug(`💰 Category ${cat.code}: ${price} CHF (from base_price rule)`)
-          }
-        }
-        
-        // Load admin fee for this category
-        if (adminFeeRules) {
-          const adminFeeRule = adminFeeRules.find(r => r.category_code === cat.code)
-          if (adminFeeRule && adminFeeRule.admin_fee_rappen) {
-            adminFee = Math.round(adminFeeRule.admin_fee_rappen / 100)
-            logger.debug(`💳 Category ${cat.code}: Admin Fee ${adminFee} CHF (one-time)`)
-          }
-        }
-        
-        return {
-          code: cat.code || cat.name,
-          name: cat.description || cat.name,
-          price: price,
-          adminFee: adminFee
-        }
-      })
+      logger.debug('ℹ️ No categories returned from API, keeping fallback list')
     }
-    
-    availableCategories.value = finalCategories
-    logger.debug('✅ Final available categories:', availableCategories.value)
   } catch (error) {
-    console.error('Error loading categories:', error)
+    console.error('❌ Error loading categories:', error)
   }
 }
 
@@ -1522,7 +1479,7 @@ onMounted(async () => {
     if (authStore.isAdmin) {
       await navigateTo('/admin/dashboard')
     } else if (authStore.isStaff) {
-      await navigateTo('/staff/dashboard')
+      await navigateTo('/dashboard')
     } else {
       await navigateTo('/customer-dashboard')
     }
@@ -1584,6 +1541,18 @@ onMounted(async () => {
   await Promise.allSettled(asyncTasks)
 })
 
+// Clear password field error when user types a new password
+watch(() => formData.value.password, (newPw) => {
+  if (fieldErrors.value.password) fieldErrors.value.password = ''
+  zxcvbnScore.value = null
+  hibpStatus.value = 'idle'
+  // Debounced check (wait 800ms after user stops typing)
+  if (hibpDebounceTimer) clearTimeout(hibpDebounceTimer)
+  if (newPw.length >= 12) {
+    hibpDebounceTimer = setTimeout(() => checkHibp(newPw), 800)
+  }
+})
+
 // Watch for service type changes and reload categories
 watch(serviceType, (newValue, oldValue) => {
   if (oldValue !== undefined && newValue !== oldValue) {
@@ -1591,6 +1560,17 @@ watch(serviceType, (newValue, oldValue) => {
     loadCategories()
   }
 })
+
+// Reload categories once tenantId is known (async tenant loading)
+watch(
+  () => tenantId.value || currentTenant.value?.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      logger.debug('🔄 Tenant ID resolved:', newId, '- loading categories')
+      loadCategories()
+    }
+  }
+)
 
 // Watch for step changes and render hCaptcha when on last step AND captcha is required
 watch(currentStep, async (newStep) => {
