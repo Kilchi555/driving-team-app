@@ -446,6 +446,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
+import { getSupabase } from '~/utils/supabase'
 
 logger.debug('📄 [slug].vue imports completed')
 
@@ -533,7 +534,63 @@ const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
 const { currentTenant, loadTenant: loadTenantComposable } = useTenant()
 const mfaFlow = useMFAFlow()
+const supabase = getSupabase()
 
+// State für Session-Check
+const isCheckingSession = ref(true)
+
+// Computed
+const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
+
+// State
+const isLoading = ref(false)
+const loginError = ref<string | null>(null)
+const showPassword = ref(false)
+const rateLimitCountdown = ref<number>(0)
+const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
+
+// Password Reset State
+const showForgotPasswordModal = ref(false)
+const showPasswordStrengthModal = ref(false)
+const resetContactMethod = ref<'email' | 'phone'>('email')
+const resetIsLoading = ref(false)
+const resetError = ref<string | null>(null)
+const resetSuccess = ref<string | null>(null)
+const resetForm = ref({
+  email: '',
+  phone: ''
+})
+
+const loginForm = ref({
+  email: '',
+  password: '',
+  rememberMe: false
+})
+
+// Inline validation errors
+const emailError = ref<string | null>(null)
+const passwordError = ref<string | null>(null)
+
+// Validate email in real-time
+watch(() => loginForm.value.email, (newEmail) => {
+  if (!newEmail) {
+    emailError.value = null
+    return
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newEmail.trim())) {
+    emailError.value = 'Ungültige E-Mail-Adresse'
+  } else {
+    emailError.value = null
+  }
+})
+
+// Validate password (accept any length on login)
+watch(() => loginForm.value.password, (_newPassword) => {
+  // No validation on login - accept any password length
+  passwordError.value = null
+})
 
 // Methods
 const handleLogin = async () => {
@@ -967,63 +1024,6 @@ const getDeviceName = (userAgent: string): string => {
     return 'Unknown Browser'
   }
 }
-
-// State für Session-Check
-const isCheckingSession = ref(true) // Start mit true, wird nach Prüfung auf false gesetzt
-
-// Computed
-const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
-
-// State
-const isLoading = ref(false)
-const loginError = ref<string | null>(null)
-const showPassword = ref(false)
-const rateLimitCountdown = ref<number>(0)
-const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
-
-// Password Reset State
-const showForgotPasswordModal = ref(false)
-const showPasswordStrengthModal = ref(false)
-const resetContactMethod = ref<'email' | 'phone'>('email')
-const resetIsLoading = ref(false)
-const resetError = ref<string | null>(null)
-const resetSuccess = ref<string | null>(null)
-const resetForm = ref({
-  email: '',
-  phone: ''
-})
-
-const loginForm = ref({
-  email: '',
-  password: '',
-  rememberMe: false
-})
-
-// Inline validation errors
-const emailError = ref<string | null>(null)
-const passwordError = ref<string | null>(null)
-
-// Validate email in real-time
-watch(() => loginForm.value.email, (newEmail) => {
-  if (!newEmail) {
-    emailError.value = null
-    return
-  }
-  
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(newEmail.trim())) {
-    emailError.value = 'Ungültige E-Mail-Adresse'
-  } else {
-    emailError.value = null
-  }
-})
-
-// Validate password (accept any length on login)
-watch(() => loginForm.value.password, (newPassword) => {
-  // No validation on login - accept any password length
-  // (users have different password requirements from different registration times)
-  passwordError.value = null
-})
 
 // Computed
 const tenantSlug = computed(() => route.params.slug as string)
