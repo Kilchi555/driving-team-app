@@ -410,19 +410,17 @@ const loadCategories = async () => {
         
         let targetCode: string | null = null
         
-        // Falls User gesetzt: User-Kategorie bevorzugen
-        if (props.selectedUser?.category) {
+        // In edit mode: always respect the current modelValue (appointment's category)
+        // Only use the student's default category as a hint for create mode
+        if (props.modelValue) {
+          targetCode = props.modelValue
+          logger.debug('🔄 Post-init: using existing modelValue as target:', targetCode)
+        } else if (props.selectedUser?.category) {
           const rawCategory = Array.isArray(props.selectedUser.category)
             ? props.selectedUser.category[0]
             : props.selectedUser.category?.split(',')[0]
           targetCode = rawCategory?.trim() || null
           logger.debug('🔄 Post-init: using user category:', targetCode)
-        }
-        
-        // Fallback: aktuell gesetztes modelValue (z.B. 'B' vom EventModal)
-        if (!targetCode && props.modelValue) {
-          targetCode = props.modelValue
-          logger.debug('🔄 Post-init: using existing modelValue as target:', targetCode)
         }
         
         if (targetCode) {
