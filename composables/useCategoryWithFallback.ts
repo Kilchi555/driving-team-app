@@ -144,10 +144,10 @@ export const useCategoryWithFallback = () => {
 
   /**
    * Get category with fallback chain resolution
-   * @param categoryId - Category to load
+   * @param categoryCode - Category code (string) to load
    * @returns Category with parent info, or null
    */
-  const getCategoryWithParent = async (categoryId: string): Promise<CategoryWithParent | null> => {
+  const getCategoryWithParent = async (categoryCode: string): Promise<CategoryWithParent | null> => {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -164,7 +164,7 @@ export const useCategoryWithFallback = () => {
           parent_category_id,
           created_at
         `)
-        .eq('id', categoryId)
+        .eq('code', categoryCode)
         .single()
 
       if (error) throw error
@@ -189,8 +189,22 @@ export const useCategoryWithFallback = () => {
       return category
     }
 
-    // Load parent category
-    return getCategoryWithParent(category.parent_category_id)
+    // Load parent category by numeric id
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          id, name, code, description, lesson_duration_minutes, theory_durations,
+          color, is_active, exam_duration_minutes, parent_category_id, created_at
+        `)
+        .eq('id', category.parent_category_id)
+        .single()
+      if (error) throw error
+      return (data || null) as CategoryWithParent | null
+    } catch (err: any) {
+      logger.error('❌ Error loading parent category:', err)
+      return null
+    }
   }
 
   return {
