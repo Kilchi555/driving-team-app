@@ -6,7 +6,7 @@
       <Meta property="og:title" content="LKW Fahrschule Kategorie C3 – CZV Grundkurs | Driving Team" />
       <Meta property="og:description" content="LKW Fahrschule Kategorie C3 inkl. CZV Grundkurs. Berufliche Weiterbildung in Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule-3/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "LKW Fahrschule Kategorie C3", "description": "LKW Fahrausbildung Kategorie C3 mit CZV Grundkurs.", "url": "https://drivingteam.ch/lastwagen-fahrschule-3/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
+      
     </Head>
 
     <!-- Hero -->
@@ -68,4 +68,9 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "LKW Fahrschule Kategorie C3", "description": "LKW Fahrausbildung Kategorie C3 mit CZV Grundkurs.", "url": "https://drivingteam.ch/lastwagen-fahrschule-3/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

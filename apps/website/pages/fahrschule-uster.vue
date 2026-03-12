@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Fahrschule Uster – Auto & Motorrad im Zürcher Oberland | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Uster ZH. 95% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-uster/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Uster", "description": "Professionelle Fahrausbildung in Uster im Zürcher Oberland.", "url": "https://drivingteam.ch/fahrschule-uster/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Uster", "postalCode": "8610", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/uster-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Uster", "item": "https://drivingteam.ch/fahrschule-uster/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- 1. Hero -->
@@ -141,6 +141,12 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Uster", "description": "Professionelle Fahrausbildung in Uster im Zürcher Oberland.", "url": "https://drivingteam.ch/fahrschule-uster/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Uster", "postalCode": "8610", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/uster-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Uster", "item": "https://drivingteam.ch/fahrschule-uster/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
 

@@ -6,54 +6,7 @@
       <Meta property="og:title" content="Motorrad Fahrschule | Driving Team | Zürich & Lachen/SZ" />
       <Meta property="og:description" content="Motorrad Fahrschule für alle Kategorien in Zürich und Umgebung" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-fahrschule/" />
-      
-      <!-- JSON-LD Schema Markup -->
-      <!-- Course Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Course",
-        "name": "Motorrad Fahrschule - Kategorie A1, A35kW, A",
-        "description": "Professionelle Motorrad Fahrausbildung für Kategorie A1, A35kW und A. Expert Training, moderne Bikes, flexible Fahrstunden in Zürich und Lachen",
-        "provider": {
-          "@type": "Organization",
-          "name": "Driving Team",
-          "url": "https://drivingteam.ch"
-        },
-        "offers": {
-          "@type": "Offer",
-          "price": "100-120",
-          "priceCurrency": "CHF",
-          "url": "https://simy.ch/booking/availability/driving-team",
-          "availability": "InStock"
-        },
-        "educationLevel": "Intermediate",
-        "learningResourceType": "Driving Course",
-        "keywords": "Motorrad Fahrschule, Kategorie A Fahrstunden, Motorrad Führerschein, Fahrausbildung Zürich"
-      }
-      </Script>
-      
-      <!-- Breadcrumb Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "https://drivingteam.ch/"
-          },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Motorrad Fahrschule",
-            "item": "https://drivingteam.ch/motorrad-fahrschule/"
-          }
-        ]
-      }
-      </Script>
+
     </Head>
 
     <!-- Hero Section -->
@@ -402,40 +355,6 @@
         </a>
       </div>
       
-      <!-- FAQPage Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Welche Kategorien gibt es für Motorräder?",
-            "acceptedAnswer": {"@type": "Answer", "text": "A1 (bis 50ccm ab 15 J. / bis 125ccm ab 16 J.), A35kW beschränkt (ab 18 J.) und A unbeschränkt (nach 2 Jahren A35kW-Praxis). Wir bieten Ausbildung für alle Kategorien an."}
-          },
-          {
-            "@type": "Question",
-            "name": "Ist der Grundkurs obligatorisch?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Der Grundkurs ist für alle drei Kategorien obligatorisch. Seit 01.01.2021 gilt: Wer die Kategorie A1 nach diesem Datum erworben hat und jetzt A35kW machen möchte, muss den Grundkurs nicht mehr besuchen. Wir empfehlen ihn dennoch für mehr Sicherheit."}
-          },
-          {
-            "@type": "Question",
-            "name": "Kann ich ein Fahrschul-Motorrad mieten?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Ja! In Zürich-Altstetten können Anfänger:innen unser Fahrschul-Motorrad (Kat. 35kW) für 20.- pro Lektion mieten. Helm und Sicherheitsausrüstung müssen selber organisiert werden."}
-          },
-          {
-            "@type": "Question",
-            "name": "Was kostet die Motorrad Fahrausbildung insgesamt?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten für einen Motorrad-Führerschein betragen in der Schweiz durchschnittlich CHF 1'500–2'500, abhängig von der Anzahl benötigter Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 20), Lernfahrausweis (CHF 40), Theorieprüfung (CHF 40), Grundkurs (CHF ca.500), Fahrstunden (durchschnittlich 10–15 à CHF 95), praktische Prüfung (CHF 100) und den Fahrausweis (CHF 60)."}
-          },
-          {
-            "@type": "Question",
-            "name": "Was sind die Voraussetzungen für die Motorrad Führerausweis?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Um einen Motorrad Führerschein zu erhalten, benötigst du das erforderliche Mindestalter (A1: ab 15/16 J., A35kW: ab 18 J., A: ab 20 J. mit 2 Jahren A35kW), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule."}
-          }
-        ]
-      }
-      </Script>
     </section>
 
     <!-- Why Choose Us -->
@@ -508,6 +427,13 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Motorrad Fahrschule - Kategorie A1, A35kW, A","description":"Professionelle Motorrad Fahrausbildung für Kategorie A1, A35kW und A. Expert Training, moderne Bikes, flexible Fahrstunden in Zürich und Lachen","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","price":"100-120","priceCurrency":"CHF","url":"https://simy.ch/booking/availability/driving-team","availability":"InStock"},"educationLevel":"Intermediate","learningResourceType":"Driving Course","keywords":"Motorrad Fahrschule, Kategorie A Fahrstunden, Motorrad Führerschein, Fahrausbildung Zürich"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Motorrad Fahrschule","item":"https://drivingteam.ch/motorrad-fahrschule/"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Welche Kategorien gibt es für Motorräder?","acceptedAnswer":{"@type":"Answer","text":"A1 (bis 50ccm ab 15 J. / bis 125ccm ab 16 J.), A35kW beschränkt (ab 18 J.) und A unbeschränkt (nach 2 Jahren A35kW-Praxis). Wir bieten Ausbildung für alle Kategorien an."}},{"@type":"Question","name":"Ist der Grundkurs obligatorisch?","acceptedAnswer":{"@type":"Answer","text":"Der Grundkurs ist für alle drei Kategorien obligatorisch. Seit 01.01.2021 gilt: Wer die Kategorie A1 nach diesem Datum erworben hat und jetzt A35kW machen möchte, muss den Grundkurs nicht mehr besuchen. Wir empfehlen ihn dennoch für mehr Sicherheit."}},{"@type":"Question","name":"Kann ich ein Fahrschul-Motorrad mieten?","acceptedAnswer":{"@type":"Answer","text":"Ja! In Zürich-Altstetten können Anfänger:innen unser Fahrschul-Motorrad (Kat. 35kW) für 20.- pro Lektion mieten. Helm und Sicherheitsausrüstung müssen selber organisiert werden."}},{"@type":"Question","name":"Was kostet die Motorrad Fahrausbildung insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten für einen Motorrad-Führerschein betragen in der Schweiz durchschnittlich CHF 1\'500–2\'500, abhängig von der Anzahl benötigter Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 20), Lernfahrausweis (CHF 40), Theorieprüfung (CHF 40), Grundkurs (CHF ca.500), Fahrstunden (durchschnittlich 10–15 à CHF 95), praktische Prüfung (CHF 100) und den Fahrausweis (CHF 60)."}},{"@type":"Question","name":"Was sind die Voraussetzungen für die Motorrad Führerausweis?","acceptedAnswer":{"@type":"Answer","text":"Um einen Motorrad Führerschein zu erhalten, benötigst du das erforderliche Mindestalter (A1: ab 15/16 J., A35kW: ab 18 J., A: ab 20 J. mit 2 Jahren A35kW), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule."}}]}' },
+]
+useHead({ script: jsonLdScripts })
+
 const motorradBenefits = [
   {
     title: 'Blutiger Anfänger?',
@@ -530,4 +456,4 @@ const motorradBenefits = [
     description: 'Auch wenn du bereits im Besitz des Motorrad Führerausweises bist und deine Fahrfähigkeiten auffrischen möchtest, bist du in unseren Motorrad Fahrstunden bestens aufgehoben.'
   }
 ]
-</Script>
+</script>

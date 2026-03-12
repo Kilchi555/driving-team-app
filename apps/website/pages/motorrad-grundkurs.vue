@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Motorrad Grundkurs – Zürich, Lachen, Zug & Einsiedeln | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs an 4 Standorten. 3x4h, max. 5 Teilnehmer, ab CHF 499.-. Alle Kategorien A1, A2, A." />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs", "description": "Praxisorientierter Motorrad Grundkurs für alle Kategorien. 3x4h, max. 5 Teilnehmer.", "url": "https://drivingteam.ch/motorrad-grundkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "499", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zug" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Einsiedeln" } }] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero with Standorte Selection -->
@@ -75,4 +75,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs", "description": "Praxisorientierter Motorrad Grundkurs für alle Kategorien. 3x4h, max. 5 Teilnehmer.", "url": "https://drivingteam.ch/motorrad-grundkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "499", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zug" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Einsiedeln" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

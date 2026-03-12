@@ -7,25 +7,7 @@
       <Meta property="og:description" content="Professionelle Busfahrer-Ausbildung für D1 & D in Zürich. Erfahrene Fahrlehrer, faire Preise." />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
       
-      <!-- JSON-LD Schema Markup -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Course",
-        "name": "Bus Fahrschule - Kategorie D1 & D",
-        "description": "Professionelle Bus Fahrausbildung für Kategorie D1 & D. 52-24 Fahrstunden, erfahrene Fahrlehrer, flexible Zeiten",
-        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
-        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
-        "educationLevel": "Advanced",
-        "keywords": "Bus Fahrschule, Kategorie D, Bus Führerschein, professionelle Fahrausbildung"
-      }
-      </Script>
-      <Script type="application/ld+json">
-      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
-        {"@type": "ListItem", "position": 2, "name": "Bus Fahrschule", "item": "https://drivingteam.ch/bus-fahrschule/"}
-      ]}
-      </Script>
+      
     </Head>
 
     <!-- Hero Section -->
@@ -353,40 +335,6 @@
         <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen!</a>
       </div>
       
-      <!-- FAQPage Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Was ist der Unterschied zwischen D1 und D Kategorie?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Kategorie D1: Busse bis 16 Plätze (ab 18 J.). Kategorie D: Busse mit über 16 Plätzen (ab 24 J.). Für D brauchst du oft auch mehrjährige Erfahrung mit anderen Kategorien."}
-          },
-          {
-            "@type": "Question",
-            "name": "Wie viele Fahrstunden benötige ich für Bus?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Für die Bus Ausbildung benötigst du durchschnittlich 24-52 Fahrstunden, abhängig von deiner bisherigen Fahrerfahrung und Lerngeschwindigkeit. Professionelle Fahrer haben oft Vorkenntnisse."}
-          },
-          {
-            "@type": "Question",
-            "name": "Was kostet die Bus Fahrschule?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 3'000–6'000, abhängig von Fahrstundenzahl, Theorie und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 120–150."}
-          },
-          {
-            "@type": "Question",
-            "name": "Brauche ich Vorfahrererfahrung für Bus?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Ja, für die Kategorie D brauchst du einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung. Für D1 ist weniger Erfahrung erforderlich."}
-          },
-          {
-            "@type": "Question",
-            "name": "Wie lange dauert die Bus Ausbildung?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von der Intensität deiner Fahrstunden und deinem persönlichen Lernfortschritt. Mit intensivem Training geht es schneller."}
-          }
-        ]
-      }
-      </Script>
     </section>
 
     <!-- CTA -->
@@ -437,6 +385,13 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Bus Fahrschule - Kategorie D1 & D","description":"Professionelle Bus Fahrausbildung für Kategorie D1 & D. 52-24 Fahrstunden, erfahrene Fahrlehrer, flexible Zeiten","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://simy.ch/booking/availability/driving-team"},"educationLevel":"Advanced","keywords":"Bus Fahrschule, Kategorie D, Bus Führerschein, professionelle Fahrausbildung"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Bus Fahrschule","item":"https://drivingteam.ch/bus-fahrschule/"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Was ist der Unterschied zwischen D1 und D Kategorie?","acceptedAnswer":{"@type":"Answer","text":"Kategorie D1: Busse bis 16 Plätze (ab 18 J.). Kategorie D: Busse mit über 16 Plätzen (ab 24 J.). Für D brauchst du oft auch mehrjährige Erfahrung mit anderen Kategorien."}},{"@type":"Question","name":"Wie viele Fahrstunden benötige ich für Bus?","acceptedAnswer":{"@type":"Answer","text":"Für die Bus Ausbildung benötigst du durchschnittlich 24-52 Fahrstunden, abhängig von deiner bisherigen Fahrerfahrung und Lerngeschwindigkeit. Professionelle Fahrer haben oft Vorkenntnisse."}},{"@type":"Question","name":"Was kostet die Bus Fahrschule?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten liegen zwischen CHF 3\'000–6\'000, abhängig von Fahrstundenzahl, Theorie und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 120–150."}},{"@type":"Question","name":"Brauche ich Vorfahrererfahrung für Bus?","acceptedAnswer":{"@type":"Answer","text":"Ja, für die Kategorie D brauchst du einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung. Für D1 ist weniger Erfahrung erforderlich."}},{"@type":"Question","name":"Wie lange dauert die Bus Ausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von der Intensität deiner Fahrstunden und deinem persönlichen Lernfortschritt. Mit intensivem Training geht es schneller."}}]}' },
+]
+useHead({ script: jsonLdScripts })
+
 const busBenefits = [
   {
     title: 'Dein Traumberuf Busfahrer?',
@@ -459,4 +414,4 @@ const busBenefits = [
     description: 'Starte deine Karriere als professioneller Busfahrer mit fundierter Ausbildung.'
   }
 ]
-</Script>
+</script>

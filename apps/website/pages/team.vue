@@ -6,7 +6,7 @@
       <Meta property="og:title" content="Unser Team – Erfahrene Fahrlehrer:innen | Driving Team" />
       <Meta property="og:description" content="Lerne unsere Fahrlehrer:innen in Zürich und Lachen kennen. Professionell, engagiert, erfolgreich." />
       <Link rel="canonical" href="https://drivingteam.ch/team/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "AboutPage", "name": "Team Driving Team Fahrschule", "url": "https://drivingteam.ch/team/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "employee": [{ "@type": "Person", "name": "Marc" }, { "@type": "Person", "name": "Nicole" }, { "@type": "Person", "name": "Pascal" }] } }) }}</Script>
+      
     </Head>
 
     <!-- Hero -->
@@ -241,6 +241,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "AboutPage", "name": "Team Driving Team Fahrschule", "url": "https://drivingteam.ch/team/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "employee": [{ "@type": "Person", "name": "Marc" }, { "@type": "Person", "name": "Nicole" }, { "@type": "Person", "name": "Pascal" }] } }) },
+]
+useHead({ script: jsonLdScripts })
+
 const team = [
   {
     name: 'Marc',

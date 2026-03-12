@@ -7,8 +7,8 @@
       <Meta property="og:title" content="Kontrollfahrt Zürich – Professionelle Vorbereitung | Driving Team" />
       <Meta property="og:description" content="Kontrollfahrt-Vorbereitung in Zürich. Individuelle Ausbildung, entspanntes Lernen. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/kontrollfahrt/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Kontrollfahrt Vorbereitung Zürich", "description": "Professionelle Vorbereitung auf die Kontrollfahrt in Zürich.", "url": "https://drivingteam.ch/kontrollfahrt/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Kontrollfahrt", "item": "https://drivingteam.ch/kontrollfahrt/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero -->
@@ -248,5 +248,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Kontrollfahrt Vorbereitung Zürich", "description": "Professionelle Vorbereitung auf die Kontrollfahrt in Zürich.", "url": "https://drivingteam.ch/kontrollfahrt/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Kontrollfahrt", "item": "https://drivingteam.ch/kontrollfahrt/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 // Kontrollfahrt
 </script>

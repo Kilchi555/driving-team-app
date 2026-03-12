@@ -24,72 +24,7 @@
       <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
       
-      <!-- JSON-LD Schema Markup -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Driving Team",
-        "url": "https://drivingteam.ch",
-        "logo": "https://drivingteam.ch/logo.png",
-        "description": "Professionelle Fahrschule in der Schweiz - Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger, Motorboot Fahrstunden mit erfahrenen Fahrlehrern",
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "Customer Service",
-          "telephone": "+41-44-431-0033",
-          "email": "info@drivingteam.ch"
-        },
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "Gewerbestrasse 10",
-          "addressLocality": "Zürich",
-          "postalCode": "8000",
-          "addressCountry": "CH"
-        },
-        "sameAs": [
-          "https://www.instagram.com/fahrschule_driving_team_zurich/",
-          "https://www.instagram.com/fahrschule_drivingteam_lachen",
-          "https://www.facebook.com/drivingteam",
-          "https://www.facebook.com/drivingteamlachen/",
-          "https://www.youtube.com/channel/UC5nqMUHvHym4xW-ro1aX90Q",
-          "https://www.tiktok.com/@drivingteam.ch"
-        ]
-      }
-      </Script>
       
-      <!-- LocalBusiness Schema for Zürich -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "Driving Team Zürich",
-        "image": "https://drivingteam.ch/images/categories/auto-fahrschule.webp",
-        "description": "Professionelle Fahrschule Zürich - Fahrstunden für Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger & Motorboot",
-        "url": "https://drivingteam.ch/",
-        "telephone": "+41-44-431-0033",
-        "priceRange": "CHF 100-150",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "Gewerbestrasse 10",
-          "addressLocality": "Zürich",
-          "postalCode": "8000",
-          "addressCountry": "CH"
-        },
-        "areaServed": ["Zürich", "Lachen", "Uster", "St. Gallen", "Dietikon", "Aargau", "Reichenburg"],
-        "serviceType": ["Auto Fahrschule", "Motorrad Fahrschule", "Lastwagen Fahrschule", "Bus Fahrschule", "Taxi Fahrschule", "Anhänger Fahrschule", "Motorboot Fahrschule"],
-        "openingHoursSpecification": {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-          "opens": "08:00",
-          "closes": "18:00"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "150"
-        }
-      }
-      </Script>
     </Head>
 
     <h1 class="sr-only">Willkommen bei der Fahrschule Driving Team</h1>
@@ -420,7 +355,6 @@
             </p>
             <ul class="space-y-2 mb-6 text-sm text-gray-600">
               <li>✓ Alle Standorte im Überblick</li>
-              <li>✓ Öffnungszeiten & Kontakt</li>
               <li>✓ Verfügbare Kategorien pro Ort</li>
             </ul>
             <a href="/fahrschule-standorte/" class="inline-block bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition" aria-label="Zu Fahrschule Standorte">
@@ -567,5 +501,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch","logo":"https://drivingteam.ch/logo.png","description":"Professionelle Fahrschule in der Schweiz - Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger, Motorboot Fahrstunden mit erfahrenen Fahrlehrern","contactPoint":{"@type":"ContactPoint","contactType":"Customer Service","telephone":"+41-44-431-0033","email":"info@drivingteam.ch"},"address":{"@type":"PostalAddress","streetAddress":"Gewerbestrasse 10","addressLocality":"Zürich","postalCode":"8000","addressCountry":"CH"},"sameAs":["https://www.instagram.com/fahrschule_driving_team_zurich/","https://www.instagram.com/fahrschule_drivingteam_lachen","https://www.facebook.com/drivingteam","https://www.facebook.com/drivingteamlachen/","https://www.youtube.com/channel/UC5nqMUHvHym4xW-ro1aX90Q","https://www.tiktok.com/@drivingteam.ch"]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"LocalBusiness","name":"Driving Team Zürich","image":"https://drivingteam.ch/images/categories/auto-fahrschule.webp","description":"Professionelle Fahrschule Zürich - Fahrstunden für Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger & Motorboot","url":"https://drivingteam.ch/","telephone":"+41-44-431-0033","priceRange":"CHF 100-150","address":{"@type":"PostalAddress","streetAddress":"Gewerbestrasse 10","addressLocality":"Zürich","postalCode":"8000","addressCountry":"CH"},"areaServed":["Zürich","Lachen","Uster","St. Gallen","Dietikon","Aargau","Reichenburg"],"serviceType":["Auto Fahrschule","Motorrad Fahrschule","Lastwagen Fahrschule","Bus Fahrschule","Taxi Fahrschule","Anhänger Fahrschule","Motorboot Fahrschule"],"openingHoursSpecification":{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"opens":"08:00","closes":"18:00"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"150"}}' },
+]
+useHead({ script: jsonLdScripts })
+
 // Homepage - exactly matching old drivingteam.ch structure
-</Script>
+</script>

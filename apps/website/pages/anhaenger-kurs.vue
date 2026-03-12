@@ -6,7 +6,7 @@
       <Meta property="og:title" content="Anhänger Kurs – Gruppentraining Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Sicher Anhänger fahren lernen. Gruppentraining Kategorie BE, CHF 190.- pro Person, 3h." />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-kurs/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Kurs Kategorie BE", "description": "Spezial-Gruppentraining für Kategorie BE. Sicher Anhänger fahren lernen.", "url": "https://drivingteam.ch/anhaenger-kurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) }}</Script>
+      
     </Head>
 
     <!-- Hero -->
@@ -98,4 +98,9 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Kurs Kategorie BE", "description": "Spezial-Gruppentraining für Kategorie BE. Sicher Anhänger fahren lernen.", "url": "https://drivingteam.ch/anhaenger-kurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

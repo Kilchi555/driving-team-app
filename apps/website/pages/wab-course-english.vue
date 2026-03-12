@@ -7,8 +7,8 @@
       <Meta property="og:title" content="WAB Course in English – Zürich & Schwyz | Driving Team" />
       <Meta property="og:description" content="Mandatory WAB refresher courses in English. Pfäffikon ZH and Tuggen SZ. Register now!" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-course-english/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "WAB Course in English", "description": "Mandatory WAB refresher courses in English for new drivers in Switzerland.", "url": "https://drivingteam.ch/wab-course-english/", "inLanguage": "en", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "WAB Kurse", "item": "https://drivingteam.ch/wab-kurse/" }, { "@type": "ListItem", "position": 3, "name": "English", "item": "https://drivingteam.ch/wab-course-english/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero -->
@@ -95,5 +95,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "WAB Course in English", "description": "Mandatory WAB refresher courses in English for new drivers in Switzerland.", "url": "https://drivingteam.ch/wab-course-english/", "inLanguage": "en", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "WAB Kurse", "item": "https://drivingteam.ch/wab-kurse/" }, { "@type": "ListItem", "position": 3, "name": "English", "item": "https://drivingteam.ch/wab-course-english/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 // WAB Course English
 </script>

@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Taxi Theorie ARV 2 – Vorbereitung & Wegleitung | Driving Team" />
       <Meta property="og:description" content="Taxi Theorie (ARV 2) Vorbereitung. CHF 90.- pro 45 Minuten. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-theorie/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Taxi Theorie ARV 2", "description": "Vorbereitung auf die Taxi Theorieprüfung ARV 2.", "url": "https://drivingteam.ch/taxi-theorie/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "90", "priceCurrency": "CHF" } }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Taxi Theorie", "item": "https://drivingteam.ch/taxi-theorie/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero -->
@@ -116,4 +116,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Taxi Theorie ARV 2", "description": "Vorbereitung auf die Taxi Theorieprüfung ARV 2.", "url": "https://drivingteam.ch/taxi-theorie/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "90", "priceCurrency": "CHF" } }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Taxi Theorie", "item": "https://drivingteam.ch/taxi-theorie/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

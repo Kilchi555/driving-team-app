@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Motorrad Grundkurs Einsiedeln – CHF 600.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Einsiedeln. 3x4h, CHF 600.-, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig." />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Einsiedeln", "description": "Motorrad Grundkurs in Einsiedeln. 3x4h, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig.", "url": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "600", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Einsiedeln" } }] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Einsiedeln", "item": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero Section -->
@@ -170,4 +170,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Einsiedeln", "description": "Motorrad Grundkurs in Einsiedeln. 3x4h, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig.", "url": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "600", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Einsiedeln" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Einsiedeln", "item": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

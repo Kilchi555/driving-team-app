@@ -6,8 +6,8 @@
       <Meta property="og:title" content="CZV Grundkurs – 140h Berufliche Qualifikation | Driving Team" />
       <Meta property="og:description" content="Obligatorischer CZV Grundkurs (140h) für Berufschauffeure. Kategorien C/CE und D. Qualifikationsnachweis (95) inklusive." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-grundkurs/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Grundkurs – 140h Berufliche Qualifikation", "description": "Obligatorischer CZV Grundkurs (140 Stunden) für Berufschauffeure vor Berufsausübung.", "url": "https://drivingteam.ch/czv-grundkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "educationalCredentialAwarded": "Qualifikationsnachweis (95)" }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Grundkurs", "item": "https://drivingteam.ch/czv-grundkurs/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero Section -->
@@ -451,6 +451,12 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Grundkurs – 140h Berufliche Qualifikation", "description": "Obligatorischer CZV Grundkurs (140 Stunden) für Berufschauffeure vor Berufsausübung.", "url": "https://drivingteam.ch/czv-grundkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "educationalCredentialAwarded": "Qualifikationsnachweis (95)" }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Grundkurs", "item": "https://drivingteam.ch/czv-grundkurs/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 import { ref } from 'vue'
 
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'

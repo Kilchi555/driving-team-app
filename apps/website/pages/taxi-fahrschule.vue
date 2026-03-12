@@ -7,41 +7,7 @@
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
       
-      <!-- JSON-LD Schema Markup -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Course",
-        "name": "Taxi Fahrschule - BPT (121 | 122)",
-        "description": "Professionelle Taxi Fahrausbildung mit BPT Zertifizierung. Complete Training, Theorie & Praxis, flexible Fahrstunden in Zürich",
-        "provider": {
-          "@type": "Organization",
-          "name": "Driving Team",
-          "url": "https://drivingteam.ch"
-        },
-        "offers": {
-          "@type": "Offer",
-          "priceCurrency": "CHF",
-          "url": "https://simy.ch/booking/availability/driving-team",
-          "availability": "InStock"
-        },
-        "educationLevel": "Advanced",
-        "learningResourceType": "Professional Driving Course",
-        "keywords": "Taxi Fahrschule, BPT Zertifizierung, Taxi Führerschein, professionelle Taxiausbildung"
-      }
-      </Script>
       
-      <!-- Breadcrumb Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
-          {"@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/"}
-        ]
-      }
-      </Script>
     </Head>
 
     <!-- Hero Section -->
@@ -377,40 +343,6 @@
         </a>
       </div>
       
-      <!-- FAQPage Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Was ist eine Taxi Fahrschule?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Eine Taxi Fahrschule bietet professionelle Ausbildung für den Beruf als Taxifahrer. Sie vermittelt nicht nur Fahrtechniken, sondern auch Kundenservice, Verkehrsregeln und die spezifischen Anforderungen im Taxibetrieb."}
-          },
-          {
-            "@type": "Question",
-            "name": "Welche BPT Zertifikate gibt es?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die wichtigsten sind BPT 121 (Basis-Zertifikat) und BPT 122 (erweitertes Zertifikat mit zusätzlichen Qualifikationen). Beide sind in der Schweiz anerkannt und erforderlich für professionelle Taxifahrer."}
-          },
-          {
-            "@type": "Question",
-            "name": "Wie lange dauert die Taxi Ausbildung?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von deinem Lernfortschritt, der Häufigkeit der Fahrstunden und deiner Erfahrung. Intensive Programme können kürzer sein."}
-          },
-          {
-            "@type": "Question",
-            "name": "Was kostet die Taxi Fahrschule insgesamt?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen durchschnittlich zwischen CHF 2'000–4'000, abhängig von der Anzahl der Fahrstunden und Theorieinhalte. Dies beinhaltet Fahrstunden, Theorie, Prüfungsvorbereitung und BPT Zertifizierung."}
-          },
-          {
-            "@type": "Question",
-            "name": "Kann ich als Anfänger Taxi fahren lernen?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Ja, du benötigst einen gültigen Auto-Führerschein (Kategorie B) mit mindestens 2-3 Jahren Fahrerfahrung. Vollständige Anfänger sollten zuerst Auto Fahrstunden nehmen, bevor sie eine Taxi Ausbildung beginnen."}
-          }
-        ]
-      }
-      </Script>
     </section>
 
     <!-- Why Choose Us -->
@@ -498,6 +430,13 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Taxi Fahrschule - BPT (121 | 122)","description":"Professionelle Taxi Fahrausbildung mit BPT Zertifizierung. Complete Training, Theorie & Praxis, flexible Fahrstunden in Zürich","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://simy.ch/booking/availability/driving-team","availability":"InStock"},"educationLevel":"Advanced","learningResourceType":"Professional Driving Course","keywords":"Taxi Fahrschule, BPT Zertifizierung, Taxi Führerschein, professionelle Taxiausbildung"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Taxi Fahrschule","item":"https://drivingteam.ch/taxi-fahrschule/"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Was ist eine Taxi Fahrschule?","acceptedAnswer":{"@type":"Answer","text":"Eine Taxi Fahrschule bietet professionelle Ausbildung für den Beruf als Taxifahrer. Sie vermittelt nicht nur Fahrtechniken, sondern auch Kundenservice, Verkehrsregeln und die spezifischen Anforderungen im Taxibetrieb."}},{"@type":"Question","name":"Welche BPT Zertifikate gibt es?","acceptedAnswer":{"@type":"Answer","text":"Die wichtigsten sind BPT 121 (Basis-Zertifikat) und BPT 122 (erweitertes Zertifikat mit zusätzlichen Qualifikationen). Beide sind in der Schweiz anerkannt und erforderlich für professionelle Taxifahrer."}},{"@type":"Question","name":"Wie lange dauert die Taxi Ausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von deinem Lernfortschritt, der Häufigkeit der Fahrstunden und deiner Erfahrung. Intensive Programme können kürzer sein."}},{"@type":"Question","name":"Was kostet die Taxi Fahrschule insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten liegen durchschnittlich zwischen CHF 2\'000–4\'000, abhängig von der Anzahl der Fahrstunden und Theorieinhalte. Dies beinhaltet Fahrstunden, Theorie, Prüfungsvorbereitung und BPT Zertifizierung."}},{"@type":"Question","name":"Kann ich als Anfänger Taxi fahren lernen?","acceptedAnswer":{"@type":"Answer","text":"Ja, du benötigst einen gültigen Auto-Führerschein (Kategorie B) mit mindestens 2-3 Jahren Fahrerfahrung. Vollständige Anfänger sollten zuerst Auto Fahrstunden nehmen, bevor sie eine Taxi Ausbildung beginnen."}}]}' },
+]
+useHead({ script: jsonLdScripts })
+
 const taxiBenefits = [
   {
     title: 'Dein Traumberuf Taxifahrer?',
@@ -520,4 +459,4 @@ const taxiBenefits = [
     description: 'Von der Theorie über ARV bis zur praktischen Fahrausbildung – alles aus einer Hand.'
   }
 ]
-</Script>
+</script>

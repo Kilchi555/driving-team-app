@@ -6,8 +6,6 @@
       <Meta property="og:title" content="Motorrad Weiterbildung – Schräglagen & Prüfungsvorbereitung | Driving Team" />
       <Meta property="og:description" content="Motorrad Weiterbildung beim Driving Team. Schräglagen-Training & Prüfungsvorbereitung. CHF 190.- pro Kurs, max. 5 Teilnehmer." />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-weiterbildung/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Weiterbildung", "description": "Motorrad Weiterbildung: Schräglagen-Training und Prüfungsvorbereitungskurs.", "url": "https://drivingteam.ch/motorrad-weiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Weiterbildung", "item": "https://drivingteam.ch/motorrad-weiterbildung/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->
@@ -164,3 +162,32 @@
   </div>
 </template>
 
+<script setup lang="ts">
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Motorrad Weiterbildung",
+        "description": "Motorrad Weiterbildung: Schräglagen-Training und Prüfungsvorbereitungskurs.",
+        "url": "https://drivingteam.ch/motorrad-weiterbildung/",
+        "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
+        "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" }
+      })
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
+          { "@type": "ListItem", "position": 2, "name": "Motorrad Weiterbildung", "item": "https://drivingteam.ch/motorrad-weiterbildung/" }
+        ]
+      })
+    }
+  ]
+})
+</script>

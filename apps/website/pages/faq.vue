@@ -6,7 +6,7 @@
       <Meta property="og:title" content="FAQ – Häufige Fragen zur Fahrschule | Driving Team" />
       <Meta property="og:description" content="Antworten auf die häufigsten Fragen zu Fahrstunden, Preisen, Kategorien und Lernfahrten." />
       <Link rel="canonical" href="https://drivingteam.ch/faq/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "name": "FAQ Driving Team Fahrschule", "url": "https://drivingteam.ch/faq/", "mainEntity": [{ "@type": "Question", "name": "Was kostet eine Fahrstunde?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Fahrstunde kostet ab CHF 100.- pro 45 Minuten." } }, { "@type": "Question", "name": "Wie lange dauert die Fahrausbildung?", "acceptedAnswer": { "@type": "Answer", "text": "Die Dauer variiert je nach Kategorie und individuellem Lernfortschritt." } }] }) }}</Script>
+      
     </Head>
 
     <!-- Hero -->
@@ -141,5 +141,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "name": "FAQ Driving Team Fahrschule", "url": "https://drivingteam.ch/faq/", "mainEntity": [{ "@type": "Question", "name": "Was kostet eine Fahrstunde?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Fahrstunde kostet ab CHF 100.- pro 45 Minuten." } }, { "@type": "Question", "name": "Wie lange dauert die Fahrausbildung?", "acceptedAnswer": { "@type": "Answer", "text": "Die Dauer variiert je nach Kategorie und individuellem Lernfortschritt." } }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 // FAQ
 </script>
