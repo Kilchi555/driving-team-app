@@ -528,16 +528,19 @@ const loadAllCriteria = async () => {
     
     const processedCriteria = criteria.map(criterion => {
       const category = categories?.find(cat => cat.id === criterion.category_id)
+      // Fallback: use the category name embedded in evaluation_categories (always present, even for global criteria)
+      const embeddedCategoryName = (criterion.evaluation_categories as any)?.[0]?.name || ''
+      const resolvedCategoryName = category?.name || embeddedCategoryName
       
       return {
         id: criterion.id || '',
         name: criterion.name || '',
         description: criterion.description || '',
-        short_code: '', // Nicht mehr in der neuen Struktur vorhanden
-        category_name: category?.name || '',
+        short_code: '',
+        category_name: resolvedCategoryName,
         category_color: category?.color || '#gray',
-        evaluation_categories: criterion.evaluation_categories || { name: category?.name || 'Unbekannte Kategorie' },
-        category_order: category?.display_order ?? 999,
+        evaluation_categories: criterion.evaluation_categories || { name: resolvedCategoryName || 'Unbekannte Kategorie' },
+        category_order: category?.display_order ?? (criterion.evaluation_categories as any)?.[0]?.display_order ?? 999,
         criteria_order: criterion.display_order || 0,
         is_required: false,
         min_rating: 1,
