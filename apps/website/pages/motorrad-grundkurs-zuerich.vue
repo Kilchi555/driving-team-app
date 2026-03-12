@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Motorrad Grundkurs Zürich – 3x4h, max. 5 Teilnehmer | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Zürich. 3x4h für alle Kategorien, max. 5 Teilnehmer. Jetzt buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Zürich", "description": "Motorrad Grundkurs in Zürich. 3x4h für alle Kategorien, max. 5 Teilnehmer.", "url": "https://drivingteam.ch/motorrad-grundkurs-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/motorrad-grundkurs-zuerich/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero Section -->
@@ -170,4 +170,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Zürich", "description": "Motorrad Grundkurs in Zürich. 3x4h für alle Kategorien, max. 5 Teilnehmer.", "url": "https://drivingteam.ch/motorrad-grundkurs-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/motorrad-grundkurs-zuerich/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

@@ -6,7 +6,7 @@
       <Meta property="og:title" content="Fahrschule Preise – Transparente Übersicht | Driving Team" />
       <Meta property="og:description" content="Alle Preise auf einen Blick. Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-preise/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", "name": "Fahrschule Preise Driving Team", "description": "Transparente Preisübersicht für alle Fahrschule-Leistungen.", "url": "https://drivingteam.ch/fahrschule-preise/" }) }}</Script>
+      
     </Head>
 
     <!-- Hero Section -->
@@ -669,4 +669,9 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", "name": "Fahrschule Preise Driving Team", "description": "Transparente Preisübersicht für alle Fahrschule-Leistungen.", "url": "https://drivingteam.ch/fahrschule-preise/" }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

@@ -7,25 +7,7 @@
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
       
-      <!-- JSON-LD Schema Markup -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Course",
-        "name": "Lastwagen Fahrschule - Kategorie C1, C, CE",
-        "description": "Professionelle Lastwagen Fahrausbildung für Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge, CZV Grundkurs in Zürich",
-        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
-        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
-        "educationLevel": "Advanced",
-        "keywords": "Lastwagen Fahrschule, LKW Führerschein, Kategorie C, CZV Grundkurs"
-      }
-      </Script>
-      <Script type="application/ld+json">
-      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
-        {"@type": "ListItem", "position": 2, "name": "Lastwagen Fahrschule", "item": "https://drivingteam.ch/lastwagen-fahrschule/"}
-      ]}
-      </Script>
+      
     </Head>
 
     <!-- Hero Section -->
@@ -382,40 +364,6 @@
         </a>
       </div>
       
-      <!-- FAQPage Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Was ist der Unterschied zwischen C1, C und CE?",
-            "acceptedAnswer": {"@type": "Answer", "text": "C1: Lastwagen bis 7'500kg (ab 18 J.). C: Lastwagen über 7'500kg (ab 21 J.). CE: Lastzug mit Anhänger (ab 18 J. mit C). Jede Kategorie hat unterschiedliche Anforderungen und Fahrzeugbeschränkungen."}
-          },
-          {
-            "@type": "Question",
-            "name": "Brauche ich den CZV Grundkurs?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Ja, für die Kategorien C1, C und CE ist der CZV Grundkurs (Grundkurs für Berufskraftfahrer) obligatorisch. Er dauert mehrere Tage und vermittelt wichtiges Wissen über Verkehrssicherheit und professionelles Fahren."}
-          },
-          {
-            "@type": "Question",
-            "name": "Wie viele Fahrstunden brauche ich für LKW?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Für die Lastwagen Ausbildung benötigst du durchschnittlich 20-40 Fahrstunden, abhängig von deiner Vorfahrererfahrung und Lerngeschwindigkeit. Mit guter Vorausbildung geht es schneller."}
-          },
-          {
-            "@type": "Question",
-            "name": "Was kostet die Lastwagen Fahrschule?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 4'000–8'000, abhängig von Fahrstunden, CZV Kursen und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 150–180."}
-          },
-          {
-            "@type": "Question",
-            "name": "Welche Voraussetzungen brauche ich?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Du benötigst einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung für C1, und für C/CE mindestens 21 Jahre alt sein. Ein medizinisches Attest ist oft erforderlich."}
-          }
-        ]
-      }
-      </Script>
     </section>
 
     <!-- Why Choose Us -->
@@ -500,6 +448,13 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Lastwagen Fahrschule - Kategorie C1, C, CE","description":"Professionelle Lastwagen Fahrausbildung für Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge, CZV Grundkurs in Zürich","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://simy.ch/booking/availability/driving-team"},"educationLevel":"Advanced","keywords":"Lastwagen Fahrschule, LKW Führerschein, Kategorie C, CZV Grundkurs"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Lastwagen Fahrschule","item":"https://drivingteam.ch/lastwagen-fahrschule/"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Was ist der Unterschied zwischen C1, C und CE?","acceptedAnswer":{"@type":"Answer","text":"C1: Lastwagen bis 7\'500kg (ab 18 J.). C: Lastwagen über 7\'500kg (ab 21 J.). CE: Lastzug mit Anhänger (ab 18 J. mit C). Jede Kategorie hat unterschiedliche Anforderungen und Fahrzeugbeschränkungen."}},{"@type":"Question","name":"Brauche ich den CZV Grundkurs?","acceptedAnswer":{"@type":"Answer","text":"Ja, für die Kategorien C1, C und CE ist der CZV Grundkurs (Grundkurs für Berufskraftfahrer) obligatorisch. Er dauert mehrere Tage und vermittelt wichtiges Wissen über Verkehrssicherheit und professionelles Fahren."}},{"@type":"Question","name":"Wie viele Fahrstunden brauche ich für LKW?","acceptedAnswer":{"@type":"Answer","text":"Für die Lastwagen Ausbildung benötigst du durchschnittlich 20-40 Fahrstunden, abhängig von deiner Vorfahrererfahrung und Lerngeschwindigkeit. Mit guter Vorausbildung geht es schneller."}},{"@type":"Question","name":"Was kostet die Lastwagen Fahrschule?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten liegen zwischen CHF 4\'000–8\'000, abhängig von Fahrstunden, CZV Kursen und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 150–180."}},{"@type":"Question","name":"Welche Voraussetzungen brauche ich?","acceptedAnswer":{"@type":"Answer","text":"Du benötigst einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung für C1, und für C/CE mindestens 21 Jahre alt sein. Ein medizinisches Attest ist oft erforderlich."}}]}' },
+]
+useHead({ script: jsonLdScripts })
+
 const lastwageBenefits = [
   {
     title: 'Dein Traumberuf Lastwagenfahrer?',
@@ -522,4 +477,4 @@ const lastwageBenefits = [
     description: 'Starte deine Karriere als professioneller Lastwagenfahrer mit fundierter Ausbildung.'
   }
 ]
-</Script>
+</script>

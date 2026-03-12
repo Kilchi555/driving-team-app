@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Motorrad Grundkurs Lachen – CHF 570.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Lachen SZ. 3x4h für alle Kategorien, CHF 570.-, max. 5 Teilnehmer." />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-lachen/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Lachen", "description": "Motorrad Grundkurs in Lachen SZ. 3x4h für alle Kategorien, max. 5 Teilnehmer.", "url": "https://drivingteam.ch/motorrad-grundkurs-lachen/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "570", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen SZ" } }] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Lachen", "item": "https://drivingteam.ch/motorrad-grundkurs-lachen/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero Section -->
@@ -165,4 +165,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Lachen", "description": "Motorrad Grundkurs in Lachen SZ. 3x4h für alle Kategorien, max. 5 Teilnehmer.", "url": "https://drivingteam.ch/motorrad-grundkurs-lachen/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "570", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen SZ" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Lachen", "item": "https://drivingteam.ch/motorrad-grundkurs-lachen/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

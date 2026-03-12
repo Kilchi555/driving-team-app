@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Bootsfahrschule Lachen – Motorboot am Zürichsee | Driving Team" />
       <Meta property="og:description" content="Motorboot-Fahrstunden am oberen Zürichsee. 90min CHF 190.-, flexible Treffpunkte. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/bootsfahrschule/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Bootsfahrschule Lachen", "description": "Professionelle Motorboot-Fahrstunden am oberen Zürichsee in Lachen SZ.", "url": "https://drivingteam.ch/bootsfahrschule/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen, Zürichsee" } }] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Bootsfahrschule", "item": "https://drivingteam.ch/bootsfahrschule/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero -->
@@ -150,5 +150,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Bootsfahrschule Lachen", "description": "Professionelle Motorboot-Fahrstunden am oberen Zürichsee in Lachen SZ.", "url": "https://drivingteam.ch/bootsfahrschule/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen, Zürichsee" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Bootsfahrschule", "item": "https://drivingteam.ch/bootsfahrschule/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 // Bootsfahrschule
 </script>

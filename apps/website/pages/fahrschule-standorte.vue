@@ -7,38 +7,7 @@
       <Meta property="og:description" content="Besuche einen unserer 8 Fahrschule Standorte in Zürich, Lachen, Pfäffikon, Uster und mehr." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-standorte/" />
       
-      <!-- JSON-LD Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        "name": "Fahrschule Standorte",
-        "description": "Alle Fahrschule Standorte von Driving Team in der Schweiz",
-        "url": "https://drivingteam.ch/fahrschule-standorte/",
-        "hasPart": [
-          {"@type": "LocalBusiness", "name": "Driving Team Zürich"},
-          {"@type": "LocalBusiness", "name": "Driving Team Lachen"},
-          {"@type": "LocalBusiness", "name": "Driving Team Pfäffikon"},
-          {"@type": "LocalBusiness", "name": "Driving Team Uster"},
-          {"@type": "LocalBusiness", "name": "Driving Team St.Gallen"},
-          {"@type": "LocalBusiness", "name": "Driving Team Dietikon"},
-          {"@type": "LocalBusiness", "name": "Driving Team Aargau"},
-          {"@type": "LocalBusiness", "name": "Driving Team Reichenburg"}
-        ]
-      }
-      </Script>
       
-      <!-- BreadcrumbList Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
-          {"@type": "ListItem", "position": 2, "name": "Standorte", "item": "https://drivingteam.ch/fahrschule-standorte/"}
-        ]
-      }
-      </Script>
     </Head>
 
     <h1 class="sr-only">Fahrschule Standorte in der Schweiz</h1>
@@ -70,9 +39,9 @@
             <h3 class="text-2xl font-bold text-primary-600 mb-2">Zürich-Altstetten</h3>
             <p class="text-gray-600 mb-4">Unsere Hauptlocation mit allen Kategorien</p>
             <div class="space-y-2 mb-6 text-sm text-gray-600">
-              <p><span class="font-semibold">Adresse:</span> Gewerbestrasse 10, 8000 Zürich</p>
+              <p><span class="font-semibold">Region:</span> Stadt Zürich</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Alle (Auto bis Motorboot)</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Taxi</p>
             </div>
             <a href="/fahrschule-zuerich/" class="block w-full text-center bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition" aria-label="Mehr zu Fahrschule Zürich">
               Mehr erfahren
@@ -89,9 +58,9 @@
             <h3 class="text-2xl font-bold text-red-600 mb-2">Lachen</h3>
             <p class="text-gray-600 mb-4">Standort im Kanton Schwyz</p>
             <div class="space-y-2 mb-6 text-sm text-gray-600">
-              <p><span class="font-semibold">Region:</span> Kanton Schwyz</p>
+              <p><span class="font-semibold">Region:</span> March, Höfe</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Lastwagen</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
             <a href="/fahrschule-lachen/" class="block w-full text-center bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition" aria-label="Mehr zu Fahrschule Lachen">
               Mehr erfahren
@@ -110,7 +79,7 @@
             <div class="space-y-2 mb-6 text-sm text-gray-600">
               <p><span class="font-semibold">Region:</span> Kanton Schwyz</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
             <a href="/fahrschule-pfaeffikon/" class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition" aria-label="Mehr zu Fahrschule Pfäffikon/SZ">
               Mehr erfahren
@@ -146,9 +115,9 @@
             <h3 class="text-2xl font-bold text-green-600 mb-2">St. Gallen</h3>
             <p class="text-gray-600 mb-4">Osten der Schweiz</p>
             <div class="space-y-2 mb-6 text-sm text-gray-600">
-              <p><span class="font-semibold">Region:</span> Kanton St. Gallen</p>
+              <p><span class="font-semibold">Region:</span> Rapperswil bis Ziegelbrücke</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
             <a href="/fahrschule-stgallen/" class="block w-full text-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition" aria-label="Mehr zu Fahrschule St. Gallen">
               Mehr erfahren
@@ -167,7 +136,7 @@
             <div class="space-y-2 mb-6 text-sm text-gray-600">
               <p><span class="font-semibold">Region:</span> Limmattal</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Anhänger, Taxi</p>
             </div>
             <a href="/fahrschule-dietikon/" class="block w-full text-center bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition" aria-label="Mehr zu Fahrschule Dietikon">
               Mehr erfahren
@@ -184,9 +153,9 @@
             <h3 class="text-2xl font-bold text-orange-600 mb-2">Aargau</h3>
             <p class="text-gray-600 mb-4">Kanton Aargau</p>
             <div class="space-y-2 mb-6 text-sm text-gray-600">
-              <p><span class="font-semibold">Region:</span> Kanton Aargau</p>
+              <p><span class="font-semibold">Region:</span> Baden und Wettingen</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Anhänger, Taxi</p>
             </div>
             <a href="/fahrschule-aargau/" class="block w-full text-center bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zu Fahrschule Aargau">
               Mehr erfahren
@@ -205,7 +174,7 @@
             <div class="space-y-2 mb-6 text-sm text-gray-600">
               <p><span class="font-semibold">Region:</span> Kanton Schwyz</p>
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
+              <p><span class="font-semibold">Kategorien:</span> Auto, Taxi</p>
             </div>
             <a href="/fahrschule-reichenburg/" class="block w-full text-center bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zu Fahrschule Reichenburg">
               Mehr erfahren
@@ -234,5 +203,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"CollectionPage","name":"Fahrschule Standorte","description":"Alle Fahrschule Standorte von Driving Team in der Schweiz","url":"https://drivingteam.ch/fahrschule-standorte/","hasPart":[{"@type":"LocalBusiness","name":"Driving Team Zürich"},{"@type":"LocalBusiness","name":"Driving Team Lachen"},{"@type":"LocalBusiness","name":"Driving Team Pfäffikon"},{"@type":"LocalBusiness","name":"Driving Team Uster"},{"@type":"LocalBusiness","name":"Driving Team St.Gallen"},{"@type":"LocalBusiness","name":"Driving Team Dietikon"},{"@type":"LocalBusiness","name":"Driving Team Aargau"},{"@type":"LocalBusiness","name":"Driving Team Reichenburg"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Standorte","item":"https://drivingteam.ch/fahrschule-standorte/"}]}' },
+]
+useHead({ script: jsonLdScripts })
+
 // Fahrschule Standorte Hub Page
 </script>

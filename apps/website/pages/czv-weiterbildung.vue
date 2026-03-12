@@ -6,8 +6,8 @@
       <Meta property="og:title" content="CZV Weiterbildungskurse – 5 Kurse in 5 Jahren | Driving Team" />
       <Meta property="og:description" content="Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren, CHF 190.- pro Kurs inkl. SARI-Bestätigung." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-weiterbildung/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Weiterbildungskurse", "description": "Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren.", "url": "https://drivingteam.ch/czv-weiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Weiterbildung", "item": "https://drivingteam.ch/czv-weiterbildung/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero Section -->
@@ -302,6 +302,12 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Weiterbildungskurse", "description": "Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren.", "url": "https://drivingteam.ch/czv-weiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Weiterbildung", "item": "https://drivingteam.ch/czv-weiterbildung/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 import { ref } from 'vue'
 import { instructorData } from '../instructor-data'
 import type { CourseOption } from '~/components/CoursePickerModal.vue'

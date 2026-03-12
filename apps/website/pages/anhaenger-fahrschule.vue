@@ -7,25 +7,7 @@
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
       
-      <!-- JSON-LD Schema Markup -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Course",
-        "name": "Anhänger Fahrschule - Kategorie BE",
-        "description": "Praxisnahe Anhänger Fahrausbildung für Kategorie BE. Erfahrene Fahrlehrer, flexible Zeiten in Zürich und Lachen",
-        "provider": {"@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch"},
-        "offers": {"@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team"},
-        "educationLevel": "Intermediate",
-        "keywords": "Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung"
-      }
-      </Script>
-      <Script type="application/ld+json">
-      {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/"},
-        {"@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/"}
-      ]}
-      </Script>
+      
     </Head>
 
     <!-- Hero Section -->
@@ -334,40 +316,6 @@
         </a>
       </div>
       
-      <!-- FAQPage Schema -->
-      <Script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Brauche ich bereits einen Auto-Führerschein?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Ja, für die Anhänger Ausbildung (Kategorie BE) brauchst du bereits einen gültigen Führerausweis der Kategorie B."}
-          },
-          {
-            "@type": "Question",
-            "name": "Gibt es eine Theorieprüfung für den BE?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Nein! Um den Anhängerführerausweis der Kategorie BE zu erlangen, brauchst du lediglich den Lernfahrausweis der Kategorie BE und musst dann erfolgreich die praktische Fahrprüfung bestehen."}
-          },
-          {
-            "@type": "Question",
-            "name": "Darf ich mit dem Lernfahrausweis alleine Anhänger fahren?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Ja, das darfst du sogar alleine. Wir empfehlen allerdings immer eine Begleitperson dabei zu haben, besonders für das Rückwärtsfahren. Wenn du unter 18 Jahre alt bist, ist eine Begleitperson Pflicht."}
-          },
-          {
-            "@type": "Question",
-            "name": "Wie viele Fahrstunden brauche ich für Anhänger?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Für die Anhänger Ausbildung benötigst du durchschnittlich 10-15 Fahrstunden, abhängig von deiner Auto-Fahrerfahrung. Mit guter Vorausbildung geht es schneller."}
-          },
-          {
-            "@type": "Question",
-            "name": "Was kostet die Anhänger Fahrschule?",
-            "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 1'500–2'500, abhängig von Fahrstunden und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 110–120."}
-          }
-        ]
-      }
-      </Script>
     </section>
 
     <!-- CTA Section -->
@@ -416,6 +364,13 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Anhänger Fahrschule - Kategorie BE","description":"Praxisnahe Anhänger Fahrausbildung für Kategorie BE. Erfahrene Fahrlehrer, flexible Zeiten in Zürich und Lachen","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://simy.ch/booking/availability/driving-team"},"educationLevel":"Intermediate","keywords":"Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Anhänger Fahrschule","item":"https://drivingteam.ch/anhaenger-fahrschule/"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Brauche ich bereits einen Auto-Führerschein?","acceptedAnswer":{"@type":"Answer","text":"Ja, für die Anhänger Ausbildung (Kategorie BE) brauchst du bereits einen gültigen Führerausweis der Kategorie B."}},{"@type":"Question","name":"Gibt es eine Theorieprüfung für den BE?","acceptedAnswer":{"@type":"Answer","text":"Nein! Um den Anhängerführerausweis der Kategorie BE zu erlangen, brauchst du lediglich den Lernfahrausweis der Kategorie BE und musst dann erfolgreich die praktische Fahrprüfung bestehen."}},{"@type":"Question","name":"Darf ich mit dem Lernfahrausweis alleine Anhänger fahren?","acceptedAnswer":{"@type":"Answer","text":"Ja, das darfst du sogar alleine. Wir empfehlen allerdings immer eine Begleitperson dabei zu haben, besonders für das Rückwärtsfahren. Wenn du unter 18 Jahre alt bist, ist eine Begleitperson Pflicht."}},{"@type":"Question","name":"Wie viele Fahrstunden brauche ich für Anhänger?","acceptedAnswer":{"@type":"Answer","text":"Für die Anhänger Ausbildung benötigst du durchschnittlich 10-15 Fahrstunden, abhängig von deiner Auto-Fahrerfahrung. Mit guter Vorausbildung geht es schneller."}},{"@type":"Question","name":"Was kostet die Anhänger Fahrschule?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten liegen zwischen CHF 1\'500–2\'500, abhängig von Fahrstunden und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 110–120."}}]}' },
+]
+useHead({ script: jsonLdScripts })
+
 const anhaengerBenefits = [
   {
     title: 'Neuling im Anhängerfahren?',
@@ -438,4 +393,4 @@ const anhaengerBenefits = [
     description: 'Auch wenn du bereits den BE-Führerausweis besitzt und dich in speziellen Situationen (z.B. Rangieren auf engem Raum) verbessern möchtest, bist du bei uns richtig.'
   }
 ]
-</Script>
+</script>

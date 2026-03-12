@@ -6,7 +6,7 @@
       <Meta property="og:title" content="Weiterbildungen – CZV, WAB, Motorrad & mehr | Driving Team" />
       <Meta property="og:description" content="Professionelle Weiterbildungen: CZV, WAB, Motorrad & Fahrlehrer. Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/weiterbildungen/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "CollectionPage", "name": "Weiterbildungen Driving Team", "description": "Übersicht aller Weiterbildungsangebote der Fahrschule Driving Team.", "url": "https://drivingteam.ch/weiterbildungen/" }) }}</Script>
+      
     </Head>
 
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
@@ -58,4 +58,9 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "CollectionPage", "name": "Weiterbildungen Driving Team", "description": "Übersicht aller Weiterbildungsangebote der Fahrschule Driving Team.", "url": "https://drivingteam.ch/weiterbildungen/" }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

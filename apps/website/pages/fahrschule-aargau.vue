@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Fahrschule Aargau – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 95% Erfolgsquote, ab CHF 100/Lektion." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-aargau/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Aargau", "description": "Professionelle Fahrausbildung im Kanton Aargau.", "url": "https://drivingteam.ch/fahrschule-aargau/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressRegion": "Aargau", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/aargau-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Aargau", "item": "https://drivingteam.ch/fahrschule-aargau/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- 1. Hero -->
@@ -141,6 +141,12 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Aargau", "description": "Professionelle Fahrausbildung im Kanton Aargau.", "url": "https://drivingteam.ch/fahrschule-aargau/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressRegion": "Aargau", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/aargau-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Aargau", "item": "https://drivingteam.ch/fahrschule-aargau/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
 

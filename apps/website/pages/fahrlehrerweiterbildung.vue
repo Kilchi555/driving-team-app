@@ -6,7 +6,7 @@
       <Meta property="og:title" content="Fahrlehrer Weiterbildung – Obligatorische Schulung | Driving Team" />
       <Meta property="og:description" content="Obligatorische Fahrlehrer-Weiterbildung für eidg. Fachausweis. Jetzt informieren!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-weiterbildung/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Fahrlehrer Weiterbildung", "description": "Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis.", "url": "https://drivingteam.ch/fahrlehrerweiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
+      
     </Head>
 
     <!-- Hero Section -->
@@ -242,6 +242,11 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Fahrlehrer Weiterbildung", "description": "Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis.", "url": "https://drivingteam.ch/fahrlehrerweiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+]
+useHead({ script: jsonLdScripts })
+
 import { ref, computed, onMounted } from 'vue'
 import type { CourseOption } from '~/components/CoursePickerModal.vue'
 

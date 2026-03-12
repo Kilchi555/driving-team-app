@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Taxi Fahrschule Zürich – BPT Ausbildung | Driving Team" />
       <Meta property="og:description" content="BPT Ausbildung (Code 121/122) in Zürich-Altstetten. Professionelle Fahrlehrer, faire Preise." />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule-zuerich/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Taxi Fahrschule Zürich", "description": "BPT Ausbildung (Code 121/122) in Zürich-Altstetten.", "url": "https://drivingteam.ch/taxi-fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" } }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/taxi-fahrschule-zuerich/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero -->
@@ -136,4 +136,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Taxi Fahrschule Zürich", "description": "BPT Ausbildung (Code 121/122) in Zürich-Altstetten.", "url": "https://drivingteam.ch/taxi-fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" } }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/taxi-fahrschule-zuerich/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>

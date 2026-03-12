@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Fahrschule Pfäffikon/SZ – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Pfäffikon SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 100/Lektion." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-pfaeffikon/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Pfäffikon/SZ", "description": "Professionelle Fahrausbildung in Pfäffikon SZ.", "url": "https://drivingteam.ch/fahrschule-pfaeffikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Pfäffikon", "postalCode": "8808", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/pfaeffikon-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Pfäffikon/SZ", "item": "https://drivingteam.ch/fahrschule-pfaeffikon/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- 1. Hero -->
@@ -142,6 +142,12 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Pfäffikon/SZ", "description": "Professionelle Fahrausbildung in Pfäffikon SZ.", "url": "https://drivingteam.ch/fahrschule-pfaeffikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Pfäffikon", "postalCode": "8808", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/pfaeffikon-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Pfäffikon/SZ", "item": "https://drivingteam.ch/fahrschule-pfaeffikon/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
 

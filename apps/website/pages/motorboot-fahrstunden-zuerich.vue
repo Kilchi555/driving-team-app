@@ -6,8 +6,8 @@
       <Meta property="og:title" content="Bootsfahrschule Zürich – Motorboot am Zürichsee | Driving Team" />
       <Meta property="og:description" content="Motorboot-Fahrstunden am unteren Zürichsee. Flexibel auch abends & samstags. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorboot Fahrstunden Zürich", "description": "Professionelle Motorboot-Fahrstunden am unteren Zürichsee.", "url": "https://drivingteam.ch/motorboot-fahrstunden-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich, Zürichsee" } }] }) }}</Script>
-      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorboot Fahrstunden Zürich", "item": "https://drivingteam.ch/motorboot-fahrstunden-zuerich/" }] }) }}</Script>
+      
+      
     </Head>
 
     <!-- Hero Section -->
@@ -136,4 +136,10 @@
 </template>
 
 <script setup lang="ts">
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorboot Fahrstunden Zürich", "description": "Professionelle Motorboot-Fahrstunden am unteren Zürichsee.", "url": "https://drivingteam.ch/motorboot-fahrstunden-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich, Zürichsee" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorboot Fahrstunden Zürich", "item": "https://drivingteam.ch/motorboot-fahrstunden-zuerich/" }] }) },
+]
+useHead({ script: jsonLdScripts })
+
 </script>
