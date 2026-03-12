@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     let criteria: any[] = []
     
     if (isTheoryLesson) {
-      // Load only tenant-specific theory criteria
+      // Load tenant-specific theory criteria AND global criteria (tenant_id = null)
       const { data: tenantTheory, error: tenantError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
           evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
-        .eq('evaluation_categories.tenant_id', user.tenant_id)
+        .or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`, { referencedTable: 'evaluation_categories' })
         .eq('evaluation_categories.is_theory', true)
         .order('evaluation_categories(display_order), display_order', { ascending: true })
       
@@ -50,9 +50,9 @@ export default defineEventHandler(async (event) => {
       }
       
       criteria = tenantTheory || []
-      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded theory criteria - tenant only: ${criteria.length}`)
+      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded theory criteria - tenant + global: ${criteria.length}`)
     } else {
-      // Load only tenant-specific practical criteria
+      // Load tenant-specific practical criteria AND global criteria (tenant_id = null)
       const { data: tenantPractical, error: tenantError } = await supabase
         .from('evaluation_criteria')
         .select(`
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
           evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
-        .eq('evaluation_categories.tenant_id', user.tenant_id)
+        .or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`, { referencedTable: 'evaluation_categories' })
         .eq('evaluation_categories.is_theory', false)
         .order('evaluation_categories(display_order), display_order', { ascending: true })
       
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
       }
       
       criteria = tenantPractical || []
-      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded practical criteria - tenant only: ${criteria.length}`)
+      console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded practical criteria - tenant + global: ${criteria.length}`)
     }
     
     // Sort by category display_order, then by criteria display_order
