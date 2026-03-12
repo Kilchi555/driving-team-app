@@ -37,7 +37,7 @@
           <div class="p-6">
             <h3 class="heading-sm mb-3">Verkehrskunde VKU Kurs: Ein Kurs für die Sicherheit</h3>
             <p class="text-gray-600 mb-4 text-sm">Was ist der VKU Kurs, warum ist er obligatorisch und wie bereite ich mich am besten vor?</p>
-            <a href="https://drivingteam.ch/vku-kurs/" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-semibold hover:underline text-sm">Artikel lesen →</a>
+            <a href="https://drivingteam.ch/vku-kurse/" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-semibold hover:underline text-sm">Artikel lesen →</a>
           </div>
         </article>
 

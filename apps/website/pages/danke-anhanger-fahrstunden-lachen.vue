@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Danke - Anhänger Fahrstunden Lachen | Driving Team</Title>
-      <Link rel="canonical" href="https://drivingteam.ch/danke-anhanger-fahrstunden-lachen/" />
+      <Meta name="robots" content="noindex, nofollow" />
     </Head>
     <section class="section-container py-20 text-center">
       <h1 class="heading-lg mb-8">Danke!</h1>

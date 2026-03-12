@@ -161,7 +161,7 @@
               Ist der VKU (Verkehrskunde) obligatorisch?
               <span class="text-primary-500 group-open:rotate-180 transition text-sm ml-4 shrink-0">▼</span>
             </summary>
-            <p class="text-gray-600 mt-3 text-sm">Ja, der VKU ist <strong>gesetzlich vorgeschrieben</strong> und muss vor der praktischen Fahrprüfung absolviert werden. Er dauert 2 Tage und behandelt Risikokompetenz, Alkohol am Steuer und Verhalten bei Unfällen. Wir bieten VKU-Kurse an mehreren Standorten an – <a href="/vku-kurs/" class="text-primary-600 hover:underline">Termine ansehen</a>.</p>
+            <p class="text-gray-600 mt-3 text-sm">Ja, der VKU ist <strong>gesetzlich vorgeschrieben</strong> und muss vor der praktischen Fahrprüfung absolviert werden. Er dauert 2 Tage und behandelt Risikokompetenz, Alkohol am Steuer und Verhalten bei Unfällen. Wir bieten VKU-Kurse an mehreren Standorten an – <a href="/vku-kurse/" class="text-primary-600 hover:underline">Termine ansehen</a>.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
