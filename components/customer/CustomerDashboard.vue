@@ -1207,7 +1207,7 @@ const affiliateStats = ref<any>(null)
 const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
-const affiliateEnabled = ref(true)
+const affiliateEnabled = ref(false)
 const showReglementTitle = ref('')
 
 // XSS Protection: Sanitize HTML content before rendering

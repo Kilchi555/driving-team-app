@@ -869,6 +869,12 @@
         <!-- Booking Summary -->
         <div class="space-y-4 bg-gray-50 rounded-lg p-6 mb-6">
           <div class="border-b border-gray-200 pb-4">
+            <p class="text-xs text-gray-500 mb-1">Art</p>
+            <p class="text-md font-medium text-gray-900">
+              {{ selectedServiceType === 'theorie' ? 'Theorielektion' : selectedServiceType === 'beratung' ? 'Beratung' : 'Fahrlektion' }}
+            </p>
+          </div>
+          <div class="border-b border-gray-200 pb-4">
             <p class="text-xs   text-gray-500 mb-1">Kategorie</p>
             <p class="text-md font-medium text-gray-900">{{ selectedCategory?.name }}</p>
           </div>
@@ -890,7 +896,7 @@
         <!-- Action Buttons -->
         <div class="space-y-3 sm:flex sm:gap-3 sm:space-y-0">
           <button
-            @click="currentStep = 1"
+            @click="currentStep = 0"
             class="flex-1 px-4 py-3 bg-gray-100 text-gray-900 font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             ← Neue Anfrage
@@ -2007,24 +2013,6 @@ const selectDurationOption = async (duration: number) => {
   }
   
   await waitForPressEffect()
-
-  // For Beratung: skip location step, collect all instructors across all locations
-  if (selectedServiceType.value === 'beratung') {
-    selectedLocation.value = null
-    const allInstructors: any[] = []
-    const seenIds = new Set<string>()
-    for (const loc of availableLocations.value) {
-      for (const staff of loc.available_staff || []) {
-        if (!seenIds.has(staff.id)) {
-          seenIds.add(staff.id)
-          allInstructors.push(staff)
-        }
-      }
-    }
-    availableInstructors.value = allInstructors
-    currentStep.value = 5
-    return
-  }
 
   currentStep.value = 4
 }
@@ -3196,11 +3184,7 @@ const getPreviousStep = (fromStep: number): number => {
     }
   }
 
-  // For Beratung: step 5 (Fahrlehrer) goes back to step 3 (Dauer), skip step 4 (Standort)
-  if (fromStep === 5 && selectedServiceType.value === 'beratung') {
-    return 3
-  }
-
+  // For Beratung: step 5 (Fahrlehrer) goes back to step 4 (Standort) like normal
   return fromStep - 1
 }
 

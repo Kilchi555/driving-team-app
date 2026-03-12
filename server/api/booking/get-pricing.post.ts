@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
       query = query.in('rule_type', ['base_price', 'base', 'pricing', 'admin_fee'])
     }
 
-    const { data: rawRules, error: pricingError } = await query
+    const { data: rawRulesData, error: pricingError } = await query
 
     if (pricingError) {
       logger.error('❌ Error fetching pricing rules:', pricingError)
@@ -75,14 +75,44 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!rawRules || rawRules.length === 0) {
-      logger.warn('⚠️ No pricing rules found for category:', category_code)
-      // Return null pricing - frontend will handle gracefully
-      return {
-        success: true,
-        pricing: null,
-        price_rappen: null,
-        price_chf: null
+    let rawRules: any[] = rawRulesData || []
+
+    if (rawRules.length === 0) {
+      // Try fallback: extract parent category code (e.g. "B Automatik" → "B", "A1 Automatik" → "A1")
+      const parentCode = category_code.includes(' ') ? category_code.split(' ')[0] : null
+
+      if (parentCode && parentCode !== category_code) {
+        logger.warn(`⚠️ No pricing rules for "${category_code}", falling back to parent "${parentCode}"`)
+
+        let fallbackQuery = supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('tenant_id', tenant_id)
+          .eq('category_code', parentCode)
+          .eq('is_active', true)
+          .order('valid_from', { ascending: false })
+
+        if (rule_type === 'theory' || rule_type === 'consultation') {
+          fallbackQuery = fallbackQuery.eq('rule_type', rule_type)
+        } else {
+          fallbackQuery = fallbackQuery.in('rule_type', ['base_price', 'base', 'pricing', 'admin_fee'])
+        }
+
+        const { data: fallbackRules, error: fallbackError } = await fallbackQuery
+
+        if (!fallbackError && fallbackRules && fallbackRules.length > 0) {
+          rawRules = fallbackRules
+        }
+      }
+
+      if (rawRules.length === 0) {
+        logger.warn('⚠️ No pricing rules found for category (including fallback):', category_code)
+        return {
+          success: true,
+          pricing: null,
+          price_rappen: null,
+          price_chf: null
+        }
       }
     }
 
