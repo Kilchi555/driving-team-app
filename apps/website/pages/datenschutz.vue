@@ -3,6 +3,8 @@
     <Head>
       <Title>Datenschutz | Driving Team Fahrschule</Title>
       <Meta name="description" content="Datenschutzerklärung der Fahrschule Driving Team – Informationen zur Verarbeitung von Personendaten, Cookies, Google Maps und mehr." />
+      <Meta property="og:title" content="Datenschutz | Driving Team Fahrschule" />
+      <Meta property="og:description" content="Datenschutzerklärung der Fahrschule Driving Team." />
       <Link rel="canonical" href="https://drivingteam.ch/datenschutz/" />
     </Head>
 

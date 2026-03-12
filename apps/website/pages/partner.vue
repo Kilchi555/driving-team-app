@@ -3,6 +3,8 @@
     <Head>
       <Title>Partner werden | Driving Team</Title>
       <Meta name="description" content="Empfehle Driving Team und erhalte CHF-Guthaben für jede erfolgreiche Empfehlung. Kostenlos, einfach, für alle." />
+      <Meta property="og:title" content="Partner werden – Geld verdienen mit Empfehlungen | Driving Team" />
+      <Meta property="og:description" content="Empfehle Driving Team und verdiene CHF-Guthaben für jede erfolgreiche Empfehlung. Kostenlos & einfach." />
       <Link rel="canonical" href="https://drivingteam.ch/partner/" />
     </Head>
 

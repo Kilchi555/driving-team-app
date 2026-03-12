@@ -49,7 +49,7 @@ export default defineEventHandler(() => {
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://drivingteam.ch/motorboot/</loc>
+    <loc>https://drivingteam.ch/weg-zur-motorbootpruefung/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -166,12 +166,6 @@ export default defineEventHandler(() => {
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-lachen/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://drivingteam.ch/motorrad-grundkurs-zug/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -365,6 +359,12 @@ export default defineEventHandler(() => {
     <lastmod>${today}</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/partner/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
   </url>
 
 </urlset>`

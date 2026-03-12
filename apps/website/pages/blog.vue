@@ -3,7 +3,10 @@
     <Head>
       <Title>Blog | Fahrschule Driving Team</Title>
       <Meta name="description" content="Blog der Fahrschule Driving Team. Tipps zur Theorieprüfung, VKU Kurs, Fahrprüfungsangst, Führerschein umschreiben und mehr." />
+      <Meta property="og:title" content="Blog – Tipps & Wissen rund ums Autofahren | Driving Team" />
+      <Meta property="og:description" content="Tipps zur Theorieprüfung, VKU Kurs, Fahrprüfungsangst und mehr. Blog der Fahrschule Driving Team." />
       <Link rel="canonical" href="https://drivingteam.ch/blog/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Blog", "name": "Driving Team Fahrschule Blog", "url": "https://drivingteam.ch/blog/", "publisher": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
     </Head>
 
     <!-- Hero -->

@@ -3,7 +3,11 @@
     <Head>
       <Title>Nothelferkurs | First Aid Course | Driving Team</Title>
       <Meta name="description" content="Nothelferkurs (First Aid) - Obligatorisch für Führerschein. CHF 99.-. Flexible Kurse in Zürich, Lachen. Jetzt buchen!" />
+      <Meta property="og:title" content="Nothelferkurs – Obligatorisch für den Führerschein | Driving Team" />
+      <Meta property="og:description" content="Nothelferkurs in Zürich & Lachen. CHF 99.-, 10 Stunden, obligatorisch für den Führerschein. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Nothelferkurs – First Aid", "description": "Obligatorischer Nothelferkurs für den Führerschein. 10 Stunden, Nothelferausweis inklusive.", "url": "https://drivingteam.ch/nothelferkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "99", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Nothelferkurs", "item": "https://drivingteam.ch/nothelferkurs/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

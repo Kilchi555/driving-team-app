@@ -4,7 +4,11 @@
       <Title>Kontrollfahrt Zürich | In 3 Schritten zur Kontrollfahrt | Driving Team</Title>
       <Meta name="description" content="Kontrollfahrt in Zürich – professionelle Vorbereitung mit Driving Team. Individuelle Ausbildung, entspanntes Lernen, beste Vorbereitung für die Kontrollfahrt." />
       <Meta name="keywords" content="Kontrollfahrt Zürich, Kontrollfahrt Vorbereitung, Fahrtüchtigkeit, Führerausweis umschreiben, Driving Team" />
+      <Meta property="og:title" content="Kontrollfahrt Zürich – Professionelle Vorbereitung | Driving Team" />
+      <Meta property="og:description" content="Kontrollfahrt-Vorbereitung in Zürich. Individuelle Ausbildung, entspanntes Lernen. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/kontrollfahrt/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Kontrollfahrt Vorbereitung Zürich", "description": "Professionelle Vorbereitung auf die Kontrollfahrt in Zürich.", "url": "https://drivingteam.ch/kontrollfahrt/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Kontrollfahrt", "item": "https://drivingteam.ch/kontrollfahrt/" }] }) }}</Script>
     </Head>
 
     <!-- Hero -->

@@ -3,7 +3,11 @@
     <Head>
       <Title>VKU Kurs Lachen | Mit 2 x 4h VKU Kurs sparst du Fahrstunden | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Lachen beim Driving Team. 8 Stunden Verkehrskundeunterricht in 2 Teilen à 4 Stunden. CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
+      <Meta property="og:title" content="VKU Kurs Lachen – 8h Verkehrskundeunterricht | Driving Team" />
+      <Meta property="og:description" content="VKU Kurs in Lachen SZ. 2x4h, CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-lachen/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "VKU Kurs Lachen", "description": "Verkehrskundeunterricht in Lachen SZ. 2x4h, obligatorisch vor der Fahrprüfung.", "url": "https://drivingteam.ch/vku-kurs-lachen/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "250", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen SZ" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "VKU Kurse", "item": "https://drivingteam.ch/vku-kurse/" }, { "@type": "ListItem", "position": 3, "name": "Lachen", "item": "https://drivingteam.ch/vku-kurs-lachen/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

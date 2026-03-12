@@ -3,7 +3,10 @@
     <Head>
       <Title>Fahrstunden Preise mit 1 Klick | Fahrschule Driving Team</Title>
       <Meta name="description" content="Alle Preise unserer Fahrschule auf einen Blick. Transparente Fahrstunden-Preise für Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich und Lachen." />
+      <Meta property="og:title" content="Fahrschule Preise – Transparente Übersicht | Driving Team" />
+      <Meta property="og:description" content="Alle Preise auf einen Blick. Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-preise/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", "name": "Fahrschule Preise Driving Team", "description": "Transparente Preisübersicht für alle Fahrschule-Leistungen.", "url": "https://drivingteam.ch/fahrschule-preise/" }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

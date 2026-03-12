@@ -3,7 +3,11 @@
     <Head>
       <Title>VKU Kurs Zürich | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Zürich - 8 Stunden Verkehrskundeunterricht (2x4h). CHF 190.-. Flexible Termine. Jetzt anmelden!" />
+      <Meta property="og:title" content="VKU Kurs Zürich – 8h Verkehrskundeunterricht | Driving Team" />
+      <Meta property="og:description" content="VKU Kurs in Zürich. 2x4h, CHF 190.- inkl. Dokumentation. Flexible Termine, jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-zuerich/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "VKU Kurs Zürich", "description": "Verkehrskundeunterricht in Zürich. 2x4h, obligatorisch vor der Fahrprüfung.", "url": "https://drivingteam.ch/vku-kurs-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "VKU Kurse", "item": "https://drivingteam.ch/vku-kurse/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/vku-kurs-zuerich/" }] }) }}</Script>
     </Head>
 
     <!-- 1. Hero Section -->

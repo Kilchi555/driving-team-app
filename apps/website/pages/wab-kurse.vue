@@ -3,7 +3,11 @@
     <Head>
       <Title>WAB Kurse | Weiterbildung nach Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="WAB Kurse (Weiterausbildung) beim Driving Team. In Zürich und Schwyz. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker innert 12 Monaten nach Fahrprüfung." />
+      <Meta property="og:title" content="WAB Kurse – Weiterbildung nach Fahrprüfung | Driving Team" />
+      <Meta property="og:description" content="Obligatorische WAB Kurse für Neulenker. Innert 12 Monaten nach Fahrprüfung. Ab CHF 290.-. Standorte Pfäffikon ZH, Tuggen SZ & English." />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "WAB Kurs – Weiterbildung nach Fahrprüfung", "description": "Obligatorische Weiterbildung für Neulenker innerhalb 12 Monaten nach bestandener Fahrprüfung.", "url": "https://drivingteam.ch/wab-kurse/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "290", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Pfäffikon ZH" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Tuggen SZ" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "WAB Kurse", "item": "https://drivingteam.ch/wab-kurse/" }] }) }}</Script>
     </Head>
 
     <!-- Hero with Standorte Selection -->

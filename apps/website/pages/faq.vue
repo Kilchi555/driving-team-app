@@ -3,7 +3,10 @@
     <Head>
       <Title>FAQ | Häufig gestellte Fragen | Driving Team Fahrschule</Title>
       <Meta name="description" content="Häufig gestellte Fragen zur Fahrschule Driving Team – Fahrstunden, Preise, Kategorien, Lernfahrten und mehr." />
+      <Meta property="og:title" content="FAQ – Häufige Fragen zur Fahrschule | Driving Team" />
+      <Meta property="og:description" content="Antworten auf die häufigsten Fragen zu Fahrstunden, Preisen, Kategorien und Lernfahrten." />
       <Link rel="canonical" href="https://drivingteam.ch/faq/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "name": "FAQ Driving Team Fahrschule", "url": "https://drivingteam.ch/faq/", "mainEntity": [{ "@type": "Question", "name": "Was kostet eine Fahrstunde?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Fahrstunde kostet ab CHF 100.- pro 45 Minuten." } }, { "@type": "Question", "name": "Wie lange dauert die Fahrausbildung?", "acceptedAnswer": { "@type": "Answer", "text": "Die Dauer variiert je nach Kategorie und individuellem Lernfortschritt." } }] }) }}</Script>
     </Head>
 
     <!-- Hero -->

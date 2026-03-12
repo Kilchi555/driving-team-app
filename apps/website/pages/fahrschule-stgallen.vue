@@ -3,7 +3,11 @@
     <Head>
       <Title>Fahrschule St.Gallen | Auto Fahrstunden | Driving Team</Title>
       <Meta name="description" content="Fahrschule St.Gallen - Auto, Motorrad, Lastwagen & Kurse. 95% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten. Professionelle Fahrausbildung. Jetzt buchen!" />
+      <Meta property="og:title" content="Fahrschule St. Gallen – Auto & Motorrad | Driving Team" />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in St. Gallen. Auto, Motorrad, Lastwagen & Kurse. 95% Erfolgsquote, ab CHF 100/Lektion." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-stgallen/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule St. Gallen", "description": "Professionelle Fahrausbildung in St. Gallen für alle Fahrzeugkategorien.", "url": "https://drivingteam.ch/fahrschule-stgallen/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "St. Gallen", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/stgallen-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule St.Gallen", "item": "https://drivingteam.ch/fahrschule-stgallen/" }] }) }}</Script>
     </Head>
 
     <!-- 1. Hero -->

@@ -3,7 +3,11 @@
     <Head>
       <Title>VKU Kurs | Verkehrskundeunterricht | Driving Team</Title>
       <Meta name="description" content="VKU Kurs beim Driving Team. Verkehrskundeunterricht in Zürich und Lachen. 8 Stunden in 2 Teilen à 4 Stunden. CHF 190.- inkl. Dokumentation. Jetzt anmelden!" />
+      <Meta property="og:title" content="VKU Kurs – Verkehrskundeunterricht | Driving Team" />
+      <Meta property="og:description" content="Obligatorischer VKU Kurs vor der Fahrprüfung. 8 Stunden, CHF 190.- inkl. Dokumentation. Standorte Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurse/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "VKU Kurs – Verkehrskundeunterricht", "description": "Obligatorischer Verkehrskundeunterricht vor der praktischen Führerprüfung. 8 Stunden in 2 Teilen.", "url": "https://drivingteam.ch/vku-kurse/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "VKU Kurse", "item": "https://drivingteam.ch/vku-kurse/" }] }) }}</Script>
     </Head>
 
     <!-- Hero with Standorte Selection -->

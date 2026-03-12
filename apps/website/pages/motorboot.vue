@@ -3,6 +3,8 @@
     <Head>
       <Title>Motorboot Fahrschule Kategorie A | Driving Team Zürich</Title>
       <Meta name="description" content="Motorboot Fahrschule am Zürichsee. In 4 Schritten zur Motorbootprüfung. Erfahrener Bootsfahrlehrer Marc, flexible Fahrstundenzeiten. Jetzt anmelden!" />
+      <Meta property="og:title" content="Motorboot Fahrschule – Bootführerschein am Zürichsee | Driving Team" />
+      <Meta property="og:description" content="In 4 Schritten zur Motorbootprüfung am Zürichsee. Flexibel, professionell, erfahren." />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
       
       <!-- JSON-LD Schema Markup -->

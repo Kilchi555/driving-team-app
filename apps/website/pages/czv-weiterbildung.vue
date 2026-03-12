@@ -3,7 +3,11 @@
     <Head>
       <Title>CZV Weiterbildungskurse | 5 Kurse in 5 Jahren | Driving Team</Title>
       <Meta name="description" content="CZV Weiterbildungskurse beim Driving Team. Prävention, Traffic Health, ARV1, Radwechsel & Brandbekämpfung. CHF 190.- pro Kurs inkl. SARI-Bestätigung." />
+      <Meta property="og:title" content="CZV Weiterbildungskurse – 5 Kurse in 5 Jahren | Driving Team" />
+      <Meta property="og:description" content="Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren, CHF 190.- pro Kurs inkl. SARI-Bestätigung." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-weiterbildung/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Weiterbildungskurse", "description": "Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren.", "url": "https://drivingteam.ch/czv-weiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Weiterbildung", "item": "https://drivingteam.ch/czv-weiterbildung/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

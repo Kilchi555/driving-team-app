@@ -3,7 +3,11 @@
     <Head>
       <Title>Auto Theorieprüfung | Jetzt für Theoriestunden anmelden | Driving Team</Title>
       <Meta name="description" content="Auto Theorieprüfung vorbereitung beim Driving Team. Praxisorientierte Lektionen. CHF 85.- pro 45 Minuten. Zürich-Altstetten und Lachen/SZ. Jetzt anmelden!" />
+      <Meta property="og:title" content="Auto Theorie – Vorbereitung auf die Theorieprüfung | Driving Team" />
+      <Meta property="og:description" content="Auto Theorieprüfung optimal vorbereiten. CHF 85.- pro 45 Minuten. Standorte Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/auto-theorie/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Auto Theorieprüfung Vorbereitung", "description": "Praxisorientierte Vorbereitung auf die Theorieprüfung für Kategorie B.", "url": "https://drivingteam.ch/auto-theorie/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "85", "priceCurrency": "CHF" } }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Auto Theorie", "item": "https://drivingteam.ch/auto-theorie/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->
