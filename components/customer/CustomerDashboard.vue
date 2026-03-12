@@ -461,6 +461,7 @@
 
         <!-- Affiliate / Empfehlen Card -->
         <div
+          v-if="affiliateEnabled"
           @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
@@ -1206,6 +1207,7 @@ const affiliateStats = ref<any>(null)
 const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
+const affiliateEnabled = ref(true)
 const showReglementTitle = ref('')
 
 // XSS Protection: Sanitize HTML content before rendering
@@ -1715,6 +1717,7 @@ async function loadAffiliateStats() {
   affiliateLoading.value = true
   try {
     const result = await $fetch<any>('/api/affiliate/stats')
+    affiliateEnabled.value = result.data.enabled !== false
     affiliateStats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     affiliateShareLink.value = result.data.share_link ?? ''
@@ -2711,6 +2714,9 @@ onMounted(async () => {
     if (paymentSuccess) {
       await loadPendingConfirmations()
     }
+    
+    // Load affiliate enabled state early so card is hidden if disabled
+    loadAffiliateStats()
     
     // Show payment status toast
     if (paymentSuccess) {

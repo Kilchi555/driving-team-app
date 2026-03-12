@@ -64,9 +64,21 @@ export default defineEventHandler(async (event) => {
     shareLink = `https://simy.ch/register/${tenantSlug}?ref=${affiliateCode.code}`
   }
 
+  // Load tenant affiliate enabled setting
+  const { data: enabledSetting } = await supabaseAdmin
+    .from('tenant_settings')
+    .select('setting_value')
+    .eq('tenant_id', userProfile.tenant_id)
+    .eq('category', 'affiliate')
+    .eq('setting_key', 'enabled')
+    .maybeSingle()
+
+  const affiliateSystemEnabled = enabledSetting?.setting_value !== 'false'
+
   return {
     success: true,
     data: {
+      enabled: affiliateSystemEnabled,
       affiliate_code: affiliateCode
         ? { id: affiliateCode.id, code: affiliateCode.code, is_active: affiliateCode.is_active }
         : null,

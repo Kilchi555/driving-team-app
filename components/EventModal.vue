@@ -3888,7 +3888,7 @@ const handleNoPolicyChoice = async (chargePercent: number) => {
     },
     chargeAmountRappen: Math.round(price * chargePercent / 100),
     shouldCreateInvoice: chargePercent > 0,
-    shouldCreditHours: chargePercent === 0,
+    shouldCreditHours: chargePercent === 100,
     invoiceDescription: chargePercent === 0 
       ? (paymentStatus === 'completed' || paymentStatus === 'authorized'
           ? 'Kostenlose Stornierung - Credits rückvergütet'
@@ -3988,7 +3988,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             cancellationReasonId: cancellationReasonId,
             deletionReason,
             chargePercentage,
-            shouldCreditHours: chargePercentage === 0 || wasFreeCancellationOfPaid
+            shouldCreditHours: chargePercentage === 100
           }
         }) as any
         
@@ -4350,7 +4350,7 @@ const goToPolicySelection = async () => {
       },
       chargeAmountRappen: Math.round((appointmentPrice.value || 0) * chargePercentageToUse / 100),
       shouldCreateInvoice: chargePercentageToUse > 0,
-      shouldCreditHours: chargePercentageToUse === 0,
+      shouldCreditHours: chargePercentageToUse === 100,
       invoiceDescription: chargePercentageToUse === 0 
         ? 'Kostenlose Stornierung durch Fahrlehrer'
         : `Stornogebühr für Termin (${chargePercentageToUse}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
@@ -4462,7 +4462,7 @@ const goToPolicySelection = async () => {
       },
       chargeAmountRappen: Math.round((appointmentPrice.value || 0) * chargePercentage / 100),
       shouldCreateInvoice: chargePercentage > 0 && appointmentPrice.value > 0,
-      shouldCreditHours: chargePercentage === 0,
+      shouldCreditHours: chargePercentage === 100,
       invoiceDescription: chargePercentage > 0 
         ? `Stornogebühr für Termin (${chargePercentage}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
         : ''

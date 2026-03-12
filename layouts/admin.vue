@@ -397,6 +397,13 @@
             >
               Prüfungen
             </NuxtLink>
+            <NuxtLink 
+              to="/admin/affiliate" 
+              @click.prevent="onNav('/admin/affiliate')"
+              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
+            >
+              Affiliate
+            </NuxtLink>
             <NuxtLink to="/admin/profile" @click.prevent="onNav('/admin/profile')" class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm">
               Profil
             </NuxtLink>
@@ -509,6 +516,13 @@
                     class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
                   >
                     Prüfungen
+                  </NuxtLink>
+                  <NuxtLink 
+                    to="/admin/affiliate" 
+                    @click.prevent="onFooterNav('/admin/affiliate')"
+                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
+                  >
+                    Affiliate
                   </NuxtLink>
                   <NuxtLink 
                     to="/admin/profile" 

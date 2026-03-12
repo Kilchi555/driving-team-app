@@ -717,16 +717,32 @@ export default defineEventHandler(async (event) => {
     if (paymentStatus === 'completed') {
       for (const payment of paymentsToUpdate) {
         if (payment.user_id && payment.appointment_id) {
+          // Fetch driving category from the appointment so the reward can be category-specific
+          let drivingCategory: string | null = payment.metadata?.category ?? null
+          if (!drivingCategory && payment.appointment_id) {
+            try {
+              const { data: appt } = await supabase
+                .from('appointments')
+                .select('type')
+                .eq('id', payment.appointment_id)
+                .maybeSingle()
+              drivingCategory = appt?.type ?? null
+            } catch {
+              // non-fatal – proceed without category
+            }
+          }
+
           $fetch('/api/affiliate/process-reward', {
             method: 'POST',
             body: {
               appointment_id: payment.appointment_id,
               user_id: payment.user_id,
               tenant_id: payment.tenant_id,
+              driving_category: drivingCategory,
             }
-          }).catch((err: any) =>
-            logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
-          )
+          }).catch((err: any) => {
+            logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message, err?.data || err?.cause || '')
+          })
         }
       }
     }

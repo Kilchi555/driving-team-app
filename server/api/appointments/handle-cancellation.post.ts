@@ -238,15 +238,48 @@ export default defineEventHandler(async (event) => {
 
     // 3. Check if payment was completed/authorized
     if (payment.payment_status === 'completed' || payment.payment_status === 'authorized') {
-      logger.debug('✅ Payment was completed - processing refund')
+      logger.debug('✅ Payment was completed - evaluating refund based on chargePercentage:', chargePercentage)
 
-      if (refundableAmount > 0) {
+      // chargePercentage = 100 → we keep the money, no refund
+      if (chargePercentage === 100) {
+        logger.debug('💰 100% charge - retaining payment, no refund')
+        const { error: updatePaymentError } = await supabase
+          .from('payments')
+          .update({
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Storniert mit 100% Verrechnung: ${deletionReason}`
+          })
+          .eq('id', payment.id)
+
+        if (updatePaymentError) {
+          console.warn('⚠️ Could not update payment notes:', updatePaymentError)
+        }
+
+        return {
+          success: true,
+          message: 'Appointment cancelled - payment retained (100% charge)',
+          action: 'cancelled_payment_retained'
+        }
+      }
+
+      // chargePercentage = 0 → full refund
+      // chargePercentage between 0–100 → partial refund (customer gets back the non-charged portion)
+      const actualRefundAmount = chargePercentage === 0
+        ? refundableAmount
+        : Math.round(refundableAmount * (1 - chargePercentage / 100))
+
+      logger.debug('💸 Refund amount calculated:', {
+        refundableAmount: (refundableAmount / 100).toFixed(2),
+        chargePercentage,
+        actualRefundAmount: (actualRefundAmount / 100).toFixed(2)
+      })
+
+      if (actualRefundAmount > 0) {
         const refundResult = await processRefund(
           supabase,
           appointmentId,
           appointment.user_id,
           payment,
-          refundableAmount,
+          actualRefundAmount,
           deletionReason
         )
         
