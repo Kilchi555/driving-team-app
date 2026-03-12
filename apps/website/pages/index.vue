@@ -47,8 +47,12 @@
           "addressCountry": "CH"
         },
         "sameAs": [
-          "https://www.facebook.com/drivingtea",
-          "https://www.instagram.com/drivingtea"
+          "https://www.instagram.com/fahrschule_driving_team_zurich/",
+          "https://www.instagram.com/fahrschule_drivingteam_lachen",
+          "https://www.facebook.com/drivingteam",
+          "https://www.facebook.com/drivingteamlachen/",
+          "https://www.youtube.com/channel/UC5nqMUHvHym4xW-ro1aX90Q",
+          "https://www.tiktok.com/@drivingteam.ch"
         ]
       }
       </Script>
