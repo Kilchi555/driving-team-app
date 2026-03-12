@@ -4,7 +4,11 @@
       <Title>WAB Course English | Register for your mandatory course! | Driving Team</Title>
       <Meta name="description" content="WAB Courses in English in the canton of Zurich (Pfäffikon ZH) and Schwyz (Tuggen). Register now for your mandatory WAB refresher course." />
       <Meta name="keywords" content="WAB Course English, WAB Kurs Englisch, professional driver training, Driving Team" />
+      <Meta property="og:title" content="WAB Course in English – Zürich & Schwyz | Driving Team" />
+      <Meta property="og:description" content="Mandatory WAB refresher courses in English. Pfäffikon ZH and Tuggen SZ. Register now!" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-course-english/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "WAB Course in English", "description": "Mandatory WAB refresher courses in English for new drivers in Switzerland.", "url": "https://drivingteam.ch/wab-course-english/", "inLanguage": "en", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "WAB Kurse", "item": "https://drivingteam.ch/wab-kurse/" }, { "@type": "ListItem", "position": 3, "name": "English", "item": "https://drivingteam.ch/wab-course-english/" }] }) }}</Script>
     </Head>
 
     <!-- Hero -->

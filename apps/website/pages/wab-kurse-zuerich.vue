@@ -3,7 +3,11 @@
     <Head>
       <Title>WAB Kurse Zürich Oberland | Driving Team</Title>
       <Meta name="description" content="WAB Kurse im Kanton Zürich bei unserer Partnerfahrschule Transportschule AG in Pfäffikon ZH. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
+      <Meta property="og:title" content="WAB Kurse Zürich Oberland – Pfäffikon ZH | Driving Team" />
+      <Meta property="og:description" content="WAB Kurse in Pfäffikon ZH. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker." />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse-zuerich/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "WAB Kurse Pfäffikon ZH", "description": "WAB Weiterbildungskurse für Neulenker in Pfäffikon ZH.", "url": "https://drivingteam.ch/wab-kurse-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "290", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Pfäffikon ZH" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "WAB Kurse", "item": "https://drivingteam.ch/wab-kurse/" }, { "@type": "ListItem", "position": 3, "name": "Zürich Oberland", "item": "https://drivingteam.ch/wab-kurse-zuerich/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

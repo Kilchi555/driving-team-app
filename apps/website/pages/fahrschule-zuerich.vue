@@ -4,7 +4,11 @@
       <Title>Fahrschule Zürich | Auto, Motorrad, Kurse | Driving Team</Title>
       <Meta name="description" content="Fahrschule Zürich - Auto, Motorrad, Lastwagen, Bus, Taxi & mehr. 95% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten. Professionelle Fahrausbildung in Zürich-Altstetten. Jetzt Termin buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Prüfungsvorbereitung Zürich" />
+      <Meta property="og:title" content="Fahrschule Zürich – Auto, Motorrad & Kurse | Driving Team" />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in Zürich-Altstetten. Auto, Motorrad, Lastwagen, Taxi & mehr. 95% Erfolgsquote, ab CHF 100/Lektion." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Zürich", "description": "Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien.", "url": "https://drivingteam.ch/fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Altstetten", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" }, "geo": { "@type": "GeoCoordinates", "latitude": 47.3905, "longitude": 8.4877 }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/zuerich-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Zürich", "item": "https://drivingteam.ch/fahrschule-zuerich/" }] }) }}</Script>
     </Head>
 
     <!-- 1. Hero -->

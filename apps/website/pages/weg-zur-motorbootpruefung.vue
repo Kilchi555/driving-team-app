@@ -3,7 +3,11 @@
     <Head>
       <Title>Weg zur Motorbootprüfung | In 4 Schritten | Driving Team</Title>
       <Meta name="description" content="In 4 Schritten zur Motorbootprüfung mit der Motorboot Fahrschule Driving Team. Fahrstunden, Anmeldung, Theorie und praktische Prüfung." />
+      <Meta property="og:title" content="Weg zur Motorbootprüfung – In 4 Schritten zum Bootführerschein | Driving Team" />
+      <Meta property="og:description" content="In 4 Schritten zum Bootführerschein. Fahrstunden, Anmeldung, Theorie und Prüfung am Zürichsee." />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "HowTo", "name": "Weg zur Motorbootprüfung", "description": "In 4 Schritten zum Bootführerschein mit Driving Team.", "url": "https://drivingteam.ch/weg-zur-motorbootpruefung/", "step": [{ "@type": "HowToStep", "position": 1, "name": "Fahrstunden buchen" }, { "@type": "HowToStep", "position": 2, "name": "Anmeldung beim Strassenverkehrsamt" }, { "@type": "HowToStep", "position": 3, "name": "Theorieprüfung bestehen" }, { "@type": "HowToStep", "position": 4, "name": "Praktische Prüfung bestehen" }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Weg zur Motorbootprüfung", "item": "https://drivingteam.ch/weg-zur-motorbootpruefung/" }] }) }}</Script>
     </Head>
 
     <!-- Hero -->

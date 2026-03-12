@@ -3,7 +3,11 @@
     <Head>
       <Title>CZV Kurse | Berufliche Weiterbildung Lastwagen & Bus | Driving Team</Title>
       <Meta name="description" content="CZV Kurse beim Driving Team. Grundkurs (140h) und Weiterbildung für Berufschauffeure. CZV Weiterbildung ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren. Jetzt informieren!" />
+      <Meta property="og:title" content="CZV Kurse – Berufliche Weiterbildung für Berufschauffeure | Driving Team" />
+      <Meta property="og:description" content="CZV Grundkurs (140h) und Weiterbildungskurse für Berufschauffeure. Ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-kurse/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Kurse – Berufliche Qualifikation", "description": "CZV Grundkurs und Weiterbildungskurse für Berufschauffeure der Kategorien C/CE und D.", "url": "https://drivingteam.ch/czv-kurse/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }] }) }}</Script>
     </Head>
 
     <!-- Hero -->

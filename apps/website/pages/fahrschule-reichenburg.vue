@@ -3,7 +3,11 @@
     <Head>
       <Title>Fahrschule Reichenburg | In 6 Schritten zur Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="Fahrschule Reichenburg - Auto, Motorrad, Lastwagen Fahrstunden im Kanton Schwyz. English & Deutsch, 95% Erfolgsquote, flexible Zeiten. Jetzt Termin buchen!" />
+      <Meta property="og:title" content="Fahrschule Reichenburg – Auto & Motorrad | Driving Team" />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in Reichenburg SZ. Englisch & Deutsch, 95% Erfolgsquote, flexible Zeiten." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-reichenburg/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Reichenburg", "description": "Professionelle Fahrausbildung in Reichenburg SZ.", "url": "https://drivingteam.ch/fahrschule-reichenburg/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Reichenburg", "postalCode": "8704", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/reichenburg-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Reichenburg", "item": "https://drivingteam.ch/fahrschule-reichenburg/" }] }) }}</Script>
     </Head>
 
     <!-- 1. Hero -->

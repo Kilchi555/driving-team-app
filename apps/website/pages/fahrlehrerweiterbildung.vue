@@ -3,7 +3,10 @@
     <Head>
       <Title>Fahrlehrer Weiterbildung | Driving Team</Title>
       <Meta name="description" content="Fahrlehrer Weiterbildung beim Driving Team. Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für mehr Informationen." />
+      <Meta property="og:title" content="Fahrlehrer Weiterbildung – Obligatorische Schulung | Driving Team" />
+      <Meta property="og:description" content="Obligatorische Fahrlehrer-Weiterbildung für eidg. Fachausweis. Jetzt informieren!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-weiterbildung/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Fahrlehrer Weiterbildung", "description": "Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis.", "url": "https://drivingteam.ch/fahrlehrerweiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

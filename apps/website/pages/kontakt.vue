@@ -3,7 +3,10 @@
     <Head>
       <Title>Kontakt | Driving Team - Fahrschule Zürich</Title>
       <Meta name="description" content="Kontaktiere Driving Team per Formular – wir melden uns innerhalb von 24h. Fahrschule Zürich, Lachen, Pfäffikon." />
+      <Meta property="og:title" content="Kontakt | Driving Team Fahrschule" />
+      <Meta property="og:description" content="Kontaktiere uns – Antwort innerhalb 24h. Fahrschule Zürich, Lachen & weitere Standorte." />
       <Link rel="canonical" href="https://drivingteam.ch/kontakt/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "ContactPage", "name": "Kontakt Driving Team Fahrschule", "url": "https://drivingteam.ch/kontakt/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "telephone": "+41444310033", "email": "info@drivingteam.ch", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "addressCountry": "CH" } } }) }}</Script>
     </Head>
 
     <!-- Hero -->

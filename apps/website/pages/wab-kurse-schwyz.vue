@@ -3,7 +3,11 @@
     <Head>
       <Title>WAB Kurse Schwyz | 1 Tag zu deinem definitiven Führerausweis | Driving Team</Title>
       <Meta name="description" content="WAB Kurse im Kanton Schwyz bei Verkehrszentrum Tuggen AG in Tuggen SZ. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
+      <Meta property="og:title" content="WAB Kurse Schwyz – Tuggen SZ | Driving Team" />
+      <Meta property="og:description" content="WAB Kurse in Tuggen SZ. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker innert 12 Monaten." />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse-schwyz/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "WAB Kurse Schwyz", "description": "WAB Weiterbildungskurse für Neulenker in Tuggen SZ.", "url": "https://drivingteam.ch/wab-kurse-schwyz/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "290", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Tuggen SZ" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "WAB Kurse", "item": "https://drivingteam.ch/wab-kurse/" }, { "@type": "ListItem", "position": 3, "name": "Schwyz", "item": "https://drivingteam.ch/wab-kurse-schwyz/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

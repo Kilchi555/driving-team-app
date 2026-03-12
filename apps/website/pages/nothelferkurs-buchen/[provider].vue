@@ -67,6 +67,19 @@ useHead({
       content: provider.value === 'nothelfer'
         ? 'Buchen Sie Ihren Nothelferkurs bei Nothelfer am Bahnhof'
         : 'Buchen Sie Ihren Nothelferkurs bei Flying-Instructor'
+    },
+    { name: 'robots', content: 'noindex, nofollow' },
+    {
+      property: 'og:title',
+      content: provider.value === 'nothelfer'
+        ? 'Nothelferkurs buchen – Nothelfer am Bahnhof | Driving Team'
+        : 'Nothelferkurs buchen – Flying-Instructor | Driving Team'
+    }
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: `https://drivingteam.ch/nothelferkurs-buchen/${provider.value}/`
     }
   ]
 })

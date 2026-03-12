@@ -3,7 +3,11 @@
     <Head>
       <Title>Motorboot Theorie | Bootführerschein Theoriestunden | Driving Team</Title>
       <Meta name="description" content="Motorboot Theoriestunden beim Driving Team. Optimale Vorbereitung auf die Theorieprüfung mit Tipps und Tricks. CHF 90.- pro 45 Minuten in Lachen SZ." />
+      <Meta property="og:title" content="Motorboot Theorie – Bootführerschein Vorbereitung | Driving Team" />
+      <Meta property="og:description" content="Motorboot Theoriestunden in Lachen SZ. CHF 90.- pro 45 Minuten. Optimale Prüfungsvorbereitung." />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-theorie/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorboot Theorie", "description": "Vorbereitung auf die Motorboot Theorieprüfung für den Bootführerschein.", "url": "https://drivingteam.ch/motorboot-theorie/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "90", "priceCurrency": "CHF" } }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorboot Theorie", "item": "https://drivingteam.ch/motorboot-theorie/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->

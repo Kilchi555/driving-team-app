@@ -3,7 +3,11 @@
     <Head>
       <Title>Lkw Theorie | 8 Kursteile für die Lastwagen Theorieprüfung | Driving Team</Title>
       <Meta name="description" content="Lkw Theorie Kurs für die Kategorien C1, C, D1, D bei Driving Team Zürich und Lachen. Gruppenkurs CHF 800.–, Einzelkurs CHF 1360.–." />
+      <Meta property="og:title" content="Lastwagen Theorie – Vorbereitung auf die LKW Theorieprüfung | Driving Team" />
+      <Meta property="og:description" content="Lkw Theorie Kurs für Kategorien C1, C, D1, D. Gruppenkurs CHF 800.-, Einzelkurs CHF 1360.-. Zürich & Lachen." />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-theorie/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Lastwagen Theorie Kurs", "description": "Theorievorbereitung für Kategorien C1, C, D1, D.", "url": "https://drivingteam.ch/lastwagen-theorie/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": [{ "@type": "Offer", "name": "Gruppenkurs", "price": "800", "priceCurrency": "CHF" }, { "@type": "Offer", "name": "Einzelkurs", "price": "1360", "priceCurrency": "CHF" }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Lastwagen Theorie", "item": "https://drivingteam.ch/lastwagen-theorie/" }] }) }}</Script>
     </Head>
 
     <!-- Hero -->

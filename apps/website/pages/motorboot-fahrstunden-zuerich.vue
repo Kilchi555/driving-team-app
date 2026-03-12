@@ -3,7 +3,11 @@
     <Head>
       <Title>Bootsfahrschule Zürich | Motorboot Fahrstunden am Zürichsee | Driving Team</Title>
       <Meta name="description" content="Bootsfahrschule am unteren Zürichsee mit flexiblen Treffpunkten. Erfahrener Fahrlehrer Marc, Fahrstunden auch abends und samstags. Jetzt anmelden!" />
+      <Meta property="og:title" content="Bootsfahrschule Zürich – Motorboot am Zürichsee | Driving Team" />
+      <Meta property="og:description" content="Motorboot-Fahrstunden am unteren Zürichsee. Flexibel auch abends & samstags. Jetzt anmelden!" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorboot Fahrstunden Zürich", "description": "Professionelle Motorboot-Fahrstunden am unteren Zürichsee.", "url": "https://drivingteam.ch/motorboot-fahrstunden-zuerich/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich, Zürichsee" } }] }) }}</Script>
+      <Script type="application/ld+json">{{ JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorboot Fahrstunden Zürich", "item": "https://drivingteam.ch/motorboot-fahrstunden-zuerich/" }] }) }}</Script>
     </Head>
 
     <!-- Hero Section -->
@@ -109,7 +113,7 @@
       </div>
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center">
         <p class="text-lg text-gray-900 mb-4">Weitere Fragen? Wir helfen gerne weiter!</p>
-        <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen: +41 44 431 00 33</a>
+        <a href="tel:+41444310033" class="btn-primary">📞 Jetzt anrufen!</a>
       </div>
     </section>
 
