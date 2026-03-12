@@ -309,11 +309,13 @@ const props = defineProps({
   },
   location: {
     type: Object,
-    required: true
+    required: false,
+    default: null
   },
   staff: {
     type: Object,
-    required: true
+    required: false,
+    default: null
   }
 })
 
@@ -544,8 +546,8 @@ const submitProposal = async () => {
         tenant_id: props.tenant_id,
         category_code: props.category.code,
         duration_minutes: props.duration_minutes,
-        location_id: props.location.id,
-        staff_id: props.staff.id,
+        location_id: props.location?.id || null,
+        staff_id: props.staff?.id || null,
         preferred_time_slots,
         first_name: firstName.value?.trim() || null,
         last_name: lastName.value?.trim() || null,
