@@ -49,8 +49,113 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true },
+
+    // ===== REDIRECTS VON ALTER WORDPRESS-SEITE (301) =====
+    // Allgemein
     '/uber-uns': { redirect: { to: '/team', statusCode: 301 } },
-    '/vku-kurs': { redirect: { to: '/vku-kurse', statusCode: 301 } },
+    '/ueber-uns': { redirect: { to: '/team/', statusCode: 301 } },
+    '/ueber-uns/': { redirect: { to: '/team/', statusCode: 301 } },
+    '/gtc': { redirect: { to: '/agb/', statusCode: 301 } },
+    '/gtc/': { redirect: { to: '/agb/', statusCode: 301 } },
+    '/dienstleistungen': { redirect: { to: '/', statusCode: 301 } },
+    '/dienstleistungen/': { redirect: { to: '/', statusCode: 301 } },
+    '/lernpool': { redirect: { to: '/faq/', statusCode: 301 } },
+    '/lernpool/': { redirect: { to: '/faq/', statusCode: 301 } },
+    '/kategorien': { redirect: { to: '/fahrschule-kategorien/', statusCode: 301 } },
+    '/kategorien/': { redirect: { to: '/fahrschule-kategorien/', statusCode: 301 } },
+
+    // Auto
+    '/fahrstunden-aktion': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/fahrstunden-aktion/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/fahrstunden-preise': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/fahrstunden-preise/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/auto-theoriepruefung-2-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/auto-theoriepruefung-2-2/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/auto-theoriepruefung-2-2-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/auto-theoriepruefung-2-2-2/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+
+    // Standorte
+    '/fahrlehrer-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/fahrlehrer-zuerich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+
+    // VKU (alte Namen)
+    '/vku-kurs': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
     '/vku-kurs/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/verkehrskunde-kurs-zuerich': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/verkehrskunde-kurs-zuerich/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/verkehrskunde-kurs-lachen': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
+    '/verkehrskunde-kurs-lachen/': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
+    '/verkehrskunde-kurs-dietikon': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/verkehrskunde-kurs-dietikon/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+
+    // Motorrad
+    '/motorrad-fahrstunden': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/motorrad-fahrstunden/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+
+    // Nothelferkurs
+    '/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+    '/erste-hilfe-kurs/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+
+    // BPT / Taxi
+    '/bpt': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/bpt/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+
+    // Alte Kategorie-Seiten
+    '/kategorie-a': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/kategorie-a/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/kategorie-b': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/kategorie-b/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/kategorie-be': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/kategorie-be/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/kategorie-c': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/kategorie-c/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/kategorie-d': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/kategorie-d/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+
+    // Danke-Seiten → Homepage
+    '/danke-gratis-probelektion': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-gratis-probelektion/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-auto-fs-lachen': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-auto-fs-lachen/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-auto-fs-zh': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-auto-fs-zh/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-grundkurs-einsiedeln': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-grundkurs-einsiedeln/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-grundkurs-zurich': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-grundkurs-zurich/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-grundkurs-lachen': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-grundkurs-lachen/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-auto-theorie': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-auto-theorie/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-anhaenger-kurs': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-anhaenger-kurs/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-anhaenger-fahrstunden': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-anhaenger-fahrstunden/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-anhanger-fahrstunden-lachen': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-anhanger-fahrstunden-lachen/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-vku-dietikon': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-vku-dietikon/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-vku-lachen': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-vku-lachen/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-vku-zurich': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-vku-zurich/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-motorboot-fahrstunden': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-motorboot-fahrstunden/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-lastwagen-theorie': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-lastwagen-theorie/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-lastwagen-fahrstunden': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-lastwagen-fahrstunden/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-taxi-theorie-lektionen': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-taxi-theorie-lektionen/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-taxi-fahrstunden': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-taxi-fahrstunden/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-weiterbildung': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-weiterbildung/': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-kontakt': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-kontakt/': { redirect: { to: '/', statusCode: 301 } },
+    '/thank-you-driving-lessons': { redirect: { to: '/', statusCode: 301 } },
+    '/thank-you-driving-lessons/': { redirect: { to: '/', statusCode: 301 } },
+    '/thank-you-theory': { redirect: { to: '/', statusCode: 301 } },
+    '/thank-you-theory/': { redirect: { to: '/', statusCode: 301 } },
   },
 })

@@ -177,6 +177,12 @@ export default defineEventHandler(() => {
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/motorrad-grundkurs-zug/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-einsiedeln/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
