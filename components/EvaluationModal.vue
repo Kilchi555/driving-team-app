@@ -542,7 +542,8 @@ const loadAllCriteria = async () => {
         is_required: false,
         min_rating: 1,
         max_rating: 6,
-        driving_categories: criterion.driving_categories || []
+        driving_categories: criterion.driving_categories || [],
+        tenant_id: (criterion.evaluation_categories as any)?.[0]?.tenant_id ?? null
       }
     })
     
@@ -559,12 +560,27 @@ const loadAllCriteria = async () => {
     logger.debug('🔍 POST-FILTER: After name filter', filtered.length, 'criteria')
     logger.debug('🔍 DROPPED:', processedCriteria.length - filtered.length, 'criteria')
     
-    allCriteria.value = filtered.sort((a, b) => {
-      // Sortiere primär nach Kategorie-Reihenfolge (display_order)
+    // Deduplicate by name+category_name: prefer tenant-specific over global (tenant_id = null)
+    const deduped = Object.values(
+      filtered.reduce((acc: Record<string, any>, c: any) => {
+        const key = `${c.name}__${c.category_name}`
+        const existing = acc[key]
+        if (!existing) {
+          acc[key] = c
+        } else {
+          // Prefer the tenant-specific one (has tenant_id) over global (no tenant_id)
+          if (!existing.tenant_id && c.tenant_id) {
+            acc[key] = c
+          }
+        }
+        return acc
+      }, {})
+    )
+    
+    allCriteria.value = (deduped as any[]).sort((a, b) => {
       if (a.category_order !== b.category_order) {
         return a.category_order - b.category_order
       }
-      // Sekundär nach Kriterien-Reihenfolge innerhalb der Kategorie
       return a.criteria_order - b.criteria_order
     })
 
