@@ -266,7 +266,6 @@ export default defineEventHandler(async (event) => {
           lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
           is_active: true,
-          ...(referredByCode ? { referred_by_code: String(referredByCode).trim().toUpperCase() } : {})
         })
         .eq('id', existingUser.id)
         .select()

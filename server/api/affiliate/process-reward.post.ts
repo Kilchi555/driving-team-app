@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
 
   const body = await readBody(event)
-  const { appointment_id, user_id, tenant_id } = body
+  const { appointment_id, user_id, tenant_id, driving_category } = body
 
   if (!appointment_id || !user_id || !tenant_id) {
     throw createError({ statusCode: 400, message: 'appointment_id, user_id, and tenant_id are required' })
@@ -61,16 +61,22 @@ export default defineEventHandler(async (event) => {
     return { success: true, credited: false, reason: 'already_credited' }
   }
 
-  // Fetch reward amount from tenant_settings
-  const { data: rewardSetting } = await supabaseAdmin
-    .from('tenant_settings')
-    .select('setting_value')
-    .eq('tenant_id', tenant_id)
-    .eq('category', 'affiliate')
-    .eq('setting_key', 'reward_rappen')
-    .maybeSingle()
+  // Fetch reward amount: category-specific rule takes priority, fallback to 0
+  let rewardRappen = 0
 
-  const rewardRappen = parseInt(rewardSetting?.setting_value ?? '0', 10)
+  if (driving_category) {
+    const { data: categoryReward } = await supabaseAdmin
+      .from('affiliate_category_rewards')
+      .select('reward_rappen')
+      .eq('tenant_id', tenant_id)
+      .eq('driving_category', driving_category)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (categoryReward) {
+      rewardRappen = categoryReward.reward_rappen
+    }
+  }
 
   if (rewardRappen <= 0) {
     return { success: true, credited: false, reason: 'reward_is_zero' }

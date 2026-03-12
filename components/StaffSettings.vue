@@ -24,6 +24,7 @@
 
           <!-- Affiliate Button -->
           <button
+            v-if="affiliateEnabled"
             @click="openAffiliateModal"
             class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
           >
@@ -815,6 +816,7 @@ const affiliateStats = ref<any>(null)
 const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
+const affiliateEnabled = ref(true)
 
 // Calendar Integration Modal State
 const showCalendarIntegration = ref(false)
@@ -2123,6 +2125,7 @@ const openAffiliateModal = async () => {
   affiliateLoading.value = true
   try {
     const result = await $fetch<any>('/api/affiliate/stats')
+    affiliateEnabled.value = result.data?.enabled !== false
     affiliateStats.value = result.data?.summary ?? null
     if (result.data?.affiliate_code?.code) {
       affiliateCode.value = result.data.affiliate_code.code
@@ -2521,6 +2524,12 @@ onMounted(async () => {
   
   // Initialize Google Places for address autocomplete
   await initGooglePlaces()
+
+  // Load affiliate enabled state so button is hidden if system is disabled
+  try {
+    const result = await $fetch<any>('/api/affiliate/stats')
+    affiliateEnabled.value = result.data?.enabled !== false
+  } catch { /* non-fatal */ }
 })
 
 // Watch for modal open to clear suggestions when closing
