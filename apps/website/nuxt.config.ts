@@ -26,6 +26,8 @@ export default defineNuxtConfig({
         { rel: 'alternate', hreflang: 'de', href: 'https://drivingteam.ch' },
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
         { rel: 'apple-touch-icon', href: '/favicon.png' },
+        { rel: 'preload', as: 'image', href: '/images/logo.webp' },
+        { rel: 'preload', as: 'image', href: '/images/categories/auto-fahrschule.webp' },
       ],
     },
   },
@@ -43,6 +45,16 @@ export default defineNuxtConfig({
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'SAMEORIGIN',
           'X-XSS-Protection': '1; mode=block',
+        },
+      },
+      '/images/**': {
+        headers: {
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      },
+      '/_nuxt/**': {
+        headers: {
+          'Cache-Control': 'public, max-age=31536000, immutable',
         },
       },
     },
