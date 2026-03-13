@@ -12,7 +12,7 @@
 
     <!-- 1. Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/dietikon-hero.jpg" alt="Fahrschule Dietikon" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/locations/dietikon-hero.webp" alt="Fahrschule Dietikon" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -143,7 +143,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Dietikon", "description": "Professionelle Fahrausbildung in Dietikon im Limmattal.", "url": "https://drivingteam.ch/fahrschule-dietikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Dietikon", "postalCode": "8953", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/dietikon-hero.jpg", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Dietikon", "description": "Professionelle Fahrausbildung in Dietikon im Limmattal.", "url": "https://drivingteam.ch/fahrschule-dietikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Dietikon", "postalCode": "8953", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/dietikon-hero.webp", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Dietikon", "item": "https://drivingteam.ch/fahrschule-dietikon/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

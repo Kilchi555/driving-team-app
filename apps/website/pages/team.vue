@@ -255,7 +255,7 @@ const team = [
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Anhänger, Taxi, Motorboot',
     area: 'Lachen/SZ und Umgebung',
-    photo: '/images/team/marc.png'
+    photo: '/images/team/marc.webp'
   },
   {
     name: 'Pascal',
@@ -264,7 +264,7 @@ const team = [
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Motorrad, Motorboot, Anhänger',
     area: 'Zürich und Zürcher Oberland',
-    photo: '/images/team/pascal.png'
+    photo: '/images/team/pascal.webp'
   },
   {
     name: 'Skender',
@@ -273,7 +273,7 @@ const team = [
     languages: 'Deutsch, Albanisch',
     categories: 'Auto Automat, Taxi, Anhänger',
     area: 'Zürich bis Wettingen',
-    photo: '/images/team/skender.png'
+    photo: '/images/team/skender.webp'
   },
   {
     name: 'Peter',
@@ -282,7 +282,7 @@ const team = [
     languages: 'Deutsch',
     categories: 'Lastwagen, Car/Bus, Anhänger, Auto Automatik',
     area: 'Lachen, Kaltbrunn, Rapperswil, Hinwil, Wädenswil, Zürich, Glarus',
-    photo: '/images/team/peter.png'
+    photo: '/images/team/peter.webp'
   },
   {
     name: 'Samir',
