@@ -9,11 +9,11 @@
         </NuxtLink>
 
         <!-- Hamburger / Close Button -->
-        <button @click="showDesktopMenu = !showDesktopMenu" class="1200:hidden text-gray-700 hover:text-primary-600 ml-auto">
-          <svg v-if="!showDesktopMenu" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button @click="showDesktopMenu = !showDesktopMenu" class="1200:hidden text-gray-700 hover:text-primary-600 ml-auto" :aria-label="showDesktopMenu ? 'Navigation schliessen' : 'Navigation öffnen'" :aria-expanded="showDesktopMenu" aria-controls="main-nav-menu">
+          <svg v-if="!showDesktopMenu" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
-          <svg v-else class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
@@ -195,7 +195,7 @@
 
     <!-- Mobile Menu Panel -->
     <Transition name="slide-down">
-      <div v-if="showDesktopMenu" class="1200:hidden fixed top-[72px] left-0 right-0 bg-white z-40 shadow-xl rounded-b-2xl max-h-[calc(100vh-72px)] overflow-y-auto">
+      <div id="main-nav-menu" v-if="showDesktopMenu" class="1200:hidden fixed top-[72px] left-0 right-0 bg-white z-40 shadow-xl rounded-b-2xl max-h-[calc(100vh-72px)] overflow-y-auto">
         <div class="px-6 py-4">
         <!-- Mobile Menu Content -->
         <nav class="pb-4">
