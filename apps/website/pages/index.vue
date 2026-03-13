@@ -40,7 +40,7 @@
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
               <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
-              <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
