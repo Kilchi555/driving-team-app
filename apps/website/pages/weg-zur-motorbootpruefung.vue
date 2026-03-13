@@ -5,6 +5,7 @@
       <Meta name="description" content="In 4 Schritten zur Motorbootprüfung mit der Motorboot Fahrschule Driving Team. Fahrstunden, Anmeldung, Theorie und praktische Prüfung." />
       <Meta property="og:title" content="Weg zur Motorbootprüfung – In 4 Schritten zum Bootführerschein | Driving Team" />
       <Meta property="og:description" content="In 4 Schritten zum Bootführerschein. Fahrstunden, Anmeldung, Theorie und Prüfung am Zürichsee." />
+      <Meta property="og:url" content="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
       <Link rel="canonical" href="https://drivingteam.ch/weg-zur-motorbootpruefung/" />
       
       

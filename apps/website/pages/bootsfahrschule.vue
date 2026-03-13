@@ -5,6 +5,7 @@
       <Meta name="description" content="Bootsfahrschule am oberen Zürichsee in Lachen – flexible Treffpunkte, professionelle Motorboot-Fahrstunden für den Führerschein. Lektion 90min CHF 190.-" />
       <Meta property="og:title" content="Bootsfahrschule Lachen – Motorboot am Zürichsee | Driving Team" />
       <Meta property="og:description" content="Motorboot-Fahrstunden am oberen Zürichsee. 90min CHF 190.-, flexible Treffpunkte. Jetzt anmelden!" />
+      <Meta property="og:url" content="https://drivingteam.ch/bootsfahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/bootsfahrschule/" />
       
       
@@ -152,6 +153,7 @@
 <script setup lang="ts">
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Bootsfahrschule Lachen", "description": "Professionelle Motorboot-Fahrstunden am oberen Zürichsee in Lachen SZ.", "url": "https://drivingteam.ch/bootsfahrschule/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen, Zürichsee" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Wieviele Fahrstunden benötige ich?", "acceptedAnswer": { "@type": "Answer", "text": "Auch bei der Bootfahrausbildung ist das eine Frage die man nur schwierig beantworten kann. Es ist auch hier sehr davon abhängig wie schnell du dich mit dem Motorboot vertraut machen kannst." } }, { "@type": "Question", "name": "Was ist das Mindestalter?", "acceptedAnswer": { "@type": "Answer", "text": "In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden. Bereits ab einem Alter von 18 Jahren darf man den Lernfahrausweis für die Motorbootkategorie bestellen und die Bootsprüfung absolvieren." } }] }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Bootsfahrschule", "item": "https://drivingteam.ch/bootsfahrschule/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

@@ -5,6 +5,7 @@
       <Meta name="description" content="Anhänger Fahrstunden Zürich für Kategorie BE. Praxisnahe Ausbildung, erfahrene Fahrlehrer, flexible Zeiten. Jetzt buchen!" />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
+      <Meta property="og:url" content="https://drivingteam.ch/anhaenger-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
       
       
@@ -316,6 +317,14 @@
         </a>
       </div>
       
+    </section>
+
+    <!-- Link zu Anhänger Kurs -->
+    <section class="section-container py-8">
+      <div class="bg-cyan-50 border border-cyan-200 rounded-xl p-6 text-center max-w-2xl mx-auto">
+        <p class="text-gray-700 mb-3">Lieber in der Gruppe üben? Unser <strong>Anhänger Gruppentraining</strong> eignet sich perfekt als Vorbereitung auf die Fahrstunden.</p>
+        <a href="/anhaenger-kurs/" class="btn-primary bg-cyan-600 hover:bg-cyan-700">Zum Anhänger Gruppentraining →</a>
+      </div>
     </section>
 
     <!-- CTA Section -->

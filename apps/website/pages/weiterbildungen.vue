@@ -5,6 +5,7 @@
       <Meta name="description" content="Weiterbildungen für Fahrer beim Driving Team. CZV Kurse, WAB Kurse, Motorrad Weiterbildung und Fahrlehrer Weiterbildung. Professionelle Schulung in Zürich und Lachen." />
       <Meta property="og:title" content="Weiterbildungen – CZV, WAB, Motorrad & mehr | Driving Team" />
       <Meta property="og:description" content="Professionelle Weiterbildungen: CZV, WAB, Motorrad & Fahrlehrer. Zürich & Lachen." />
+      <Meta property="og:url" content="https://drivingteam.ch/weiterbildungen/" />
       <Link rel="canonical" href="https://drivingteam.ch/weiterbildungen/" />
       
     </Head>

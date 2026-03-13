@@ -5,6 +5,7 @@
       <Meta name="description" content="Fahrschule Kategorien Vergleich - Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger, Motorboot. Kosten, Dauer, Anforderungen. Welche passt zu dir?" />
       <Meta property="og:title" content="Fahrschule Kategorien - Vergleich aller Kategorien" />
       <Meta property="og:description" content="Vergleich aller Fahrschule Kategorien: Kosten, Dauer, Anforderungen. Finde die richtige Ausbildung für dich." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-kategorien/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-kategorien/" />
       
       
@@ -16,7 +17,7 @@
     <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-4xl">
-          <h2 class="text-3xl md:text-5xl font-bold mb-6">Welche Fahrschule passt zu dir?</h2>
+          <h1 class="text-3xl md:text-5xl font-bold mb-6">Welche Fahrschule passt zu dir?</h1>
           <p class="text-lg md:text-xl text-white mb-8">
             Vergleiche alle Fahrschule Kategorien: Kosten, Dauer, Anforderungen und Unterschiede. 
             Finde die richtige Ausbildung für deine Fahrkarriere.

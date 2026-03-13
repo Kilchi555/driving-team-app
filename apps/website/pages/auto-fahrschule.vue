@@ -5,6 +5,7 @@
       <Meta name="description" content="Auto Fahrstunden Zürich mit Driving Team. 95% Erfolgsquote, flexible Zeiten, erfahrene Fahrlehrer für Kategorie B. Jetzt buchen!" />
       <Meta property="og:title" content="Auto Fahrschule Kategorie B | Driving Team" />
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
+      <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
 
     </Head>

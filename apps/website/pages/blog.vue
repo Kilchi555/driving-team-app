@@ -1,10 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Blog | Fahrschule Driving Team</Title>
+      <Title>Fahrschule Blog | Tipps & News zur Fahrausbildung | Driving Team</Title>
       <Meta name="description" content="Blog der Fahrschule Driving Team. Tipps zur Theorieprüfung, VKU Kurs, Fahrprüfungsangst, Führerschein umschreiben und mehr." />
       <Meta property="og:title" content="Blog – Tipps & Wissen rund ums Autofahren | Driving Team" />
       <Meta property="og:description" content="Tipps zur Theorieprüfung, VKU Kurs, Fahrprüfungsangst und mehr. Blog der Fahrschule Driving Team." />
+      <Meta property="og:url" content="https://drivingteam.ch/blog/" />
       <Link rel="canonical" href="https://drivingteam.ch/blog/" />
       
     </Head>

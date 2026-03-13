@@ -5,6 +5,7 @@
       <Meta name="description" content="Fahrschule Standorte in der Schweiz - Zürich, Lachen, Pfäffikon, Uster, St.Gallen, Dietikon, Aargau, Reichenburg. Alle Kategorien, flexible Zeiten. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Fahrschule Standorte - 8 Locations in der Schweiz" />
       <Meta property="og:description" content="Besuche einen unserer 8 Fahrschule Standorte in Zürich, Lachen, Pfäffikon, Uster und mehr." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-standorte/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-standorte/" />
       
       
@@ -16,7 +17,7 @@
     <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-4xl">
-          <h2 class="text-3xl md:text-5xl font-bold mb-6">Fahrschule in deiner Nähe</h2>
+          <h1 class="text-3xl md:text-5xl font-bold mb-6">Fahrschule in deiner Nähe</h1>
           <p class="text-lg md:text-xl text-white mb-8">
             Wir sind an 8 Standorten in der Schweiz für dich da. Finde den Ort, der dir am besten passt, 
             und buche deine Fahrstunden oder Kurse.

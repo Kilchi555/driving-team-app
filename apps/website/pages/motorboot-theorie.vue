@@ -5,6 +5,7 @@
       <Meta name="description" content="Motorboot Theoriestunden beim Driving Team. Optimale Vorbereitung auf die Theorieprüfung mit Tipps und Tricks. CHF 90.- pro 45 Minuten in Lachen SZ." />
       <Meta property="og:title" content="Motorboot Theorie – Bootführerschein Vorbereitung | Driving Team" />
       <Meta property="og:description" content="Motorboot Theoriestunden in Lachen SZ. CHF 90.- pro 45 Minuten. Optimale Prüfungsvorbereitung." />
+      <Meta property="og:url" content="https://drivingteam.ch/motorboot-theorie/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-theorie/" />
       
       

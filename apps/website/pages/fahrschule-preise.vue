@@ -5,6 +5,7 @@
       <Meta name="description" content="Alle Preise unserer Fahrschule auf einen Blick. Transparente Fahrstunden-Preise für Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich und Lachen." />
       <Meta property="og:title" content="Fahrschule Preise – Transparente Übersicht | Driving Team" />
       <Meta property="og:description" content="Alle Preise auf einen Blick. Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich & Lachen." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-preise/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-preise/" />
       
     </Head>

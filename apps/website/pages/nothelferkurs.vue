@@ -5,6 +5,7 @@
       <Meta name="description" content="Nothelferkurs (First Aid) - Obligatorisch für Führerschein. CHF 99.-. Flexible Kurse in Zürich, Lachen. Jetzt buchen!" />
       <Meta property="og:title" content="Nothelferkurs – Obligatorisch für den Führerschein | Driving Team" />
       <Meta property="og:description" content="Nothelferkurs in Zürich & Lachen. CHF 99.-, 10 Stunden, obligatorisch für den Führerschein. Jetzt anmelden!" />
+      <Meta property="og:url" content="https://drivingteam.ch/nothelferkurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs/" />
       
       

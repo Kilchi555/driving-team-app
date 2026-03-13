@@ -6,6 +6,7 @@
       <Meta name="keywords" content="WAB Course English, WAB Kurs Englisch, professional driver training, Driving Team" />
       <Meta property="og:title" content="WAB Course in English – Zürich & Schwyz | Driving Team" />
       <Meta property="og:description" content="Mandatory WAB refresher courses in English. Pfäffikon ZH and Tuggen SZ. Register now!" />
+      <Meta property="og:url" content="https://drivingteam.ch/wab-course-english/" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-course-english/" />
       
       

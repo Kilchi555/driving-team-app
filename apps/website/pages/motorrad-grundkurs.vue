@@ -5,6 +5,7 @@
       <Meta name="description" content="Motorrad Grundkurs beim Driving Team. In Zürich, Lachen, Zug und Einsiedeln. 3 x 4h praxisorientierter Kurs. Max. 5 Teilnehmer. CHF 499.-. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Grundkurs – Zürich, Lachen, Zug & Einsiedeln | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs an 4 Standorten. 3x4h, max. 5 Teilnehmer, ab CHF 499.-. Alle Kategorien A1, A2, A." />
+      <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs/" />
       
       

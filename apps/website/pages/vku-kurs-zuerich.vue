@@ -5,6 +5,7 @@
       <Meta name="description" content="VKU Kurs Zürich - 8 Stunden Verkehrskundeunterricht (2x4h). CHF 190.-. Flexible Termine. Jetzt anmelden!" />
       <Meta property="og:title" content="VKU Kurs Zürich – 8h Verkehrskundeunterricht | Driving Team" />
       <Meta property="og:description" content="VKU Kurs in Zürich. 2x4h, CHF 190.- inkl. Dokumentation. Flexible Termine, jetzt anmelden!" />
+      <Meta property="og:url" content="https://drivingteam.ch/vku-kurs-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-zuerich/" />
       
       

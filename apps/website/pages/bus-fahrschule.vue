@@ -5,6 +5,7 @@
       <Meta name="description" content="Bus Fahrstunden Zürich für D1 & D Kategorien. Professionelle Busfahrer-Ausbildung mit erfahrenen Fahrlehrern. Jetzt anmelden!" />
       <Meta property="og:title" content="Bus Fahrschule D1/D – Berufliche Busfahrer-Ausbildung | Driving Team" />
       <Meta property="og:description" content="Professionelle Busfahrer-Ausbildung für D1 & D in Zürich. Erfahrene Fahrlehrer, faire Preise." />
+      <Meta property="og:url" content="https://drivingteam.ch/bus-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
       
       

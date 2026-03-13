@@ -5,6 +5,7 @@
       <Meta name="description" content="Bootsfahrschule am unteren Zürichsee mit flexiblen Treffpunkten. Erfahrener Fahrlehrer Marc, Fahrstunden auch abends und samstags. Jetzt anmelden!" />
       <Meta property="og:title" content="Bootsfahrschule Zürich – Motorboot am Zürichsee | Driving Team" />
       <Meta property="og:description" content="Motorboot-Fahrstunden am unteren Zürichsee. Flexibel auch abends & samstags. Jetzt anmelden!" />
+      <Meta property="og:url" content="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
       
       

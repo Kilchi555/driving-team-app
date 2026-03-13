@@ -1,10 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Team | Die Teammitglieder des Driving Team</Title>
+      <Title>Fahrlehrer & Team Zürich | Driving Team Fahrschule</Title>
       <Meta name="description" content="Lerne das Team der Fahrschule Driving Team kennen – erfahrene Fahrlehrer:innen in Zürich und Lachen. Marc, Nicole, Pascal, Skender, André, Peter, Samir und Rahel." />
       <Meta property="og:title" content="Unser Team – Erfahrene Fahrlehrer:innen | Driving Team" />
       <Meta property="og:description" content="Lerne unsere Fahrlehrer:innen in Zürich und Lachen kennen. Professionell, engagiert, erfolgreich." />
+      <Meta property="og:url" content="https://drivingteam.ch/team/" />
       <Link rel="canonical" href="https://drivingteam.ch/team/" />
       
     </Head>

@@ -5,6 +5,7 @@
       <Meta name="description" content="Allgemeine Geschäftsbedingungen der Fahrschule Driving Team – Fahrausweis, Versicherung, Zahlungskonditionen und mehr." />
       <Meta property="og:title" content="AGB | Driving Team Fahrschule" />
       <Meta property="og:description" content="Allgemeine Geschäftsbedingungen der Fahrschule Driving Team." />
+      <Meta property="og:url" content="https://drivingteam.ch/agb/" />
       <Link rel="canonical" href="https://drivingteam.ch/agb/" />
     </Head>
 
