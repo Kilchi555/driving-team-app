@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Course English | Register for your mandatory course! | Driving Team</Title>
+      <Title>WAB Course English Zürich & Schwyz | Driving Team</Title>
       <Meta name="description" content="WAB Courses in English in the canton of Zurich (Pfäffikon ZH) and Schwyz (Tuggen). Register now for your mandatory WAB refresher course." />
       <Meta name="keywords" content="WAB Course English, WAB Kurs Englisch, professional driver training, Driving Team" />
       <Meta property="og:title" content="WAB Course in English – Zürich & Schwyz | Driving Team" />

@@ -1,10 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Grundkurs Zug | 3 x 4h für Motorrad & Roller | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Zug – 3 x 4h praxisorientierter Grundkurs in Steinhausen. In Kooperation mit Fahrschule Schoch. Kompletter Kurs CHF 600.-. Max. 5 Teilnehmer." />
+      <Title>Motorrad Grundkurs Zug | DE/EN/IT | CHF 600.- | Driving Team</Title>
+      <Meta name="description" content="Motorrad Grundkurs Zug – 3x4h in Steinhausen. In Kooperation mit Fahrschule Schoch. CHF 600.-. Max. 5 Teilnehmer. DE/EN/IT." />
       <Meta property="og:title" content="Motorrad Grundkurs Zug – CHF 600.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Steinhausen/Zug. 3x4h, CHF 600.-, max. 5 Teilnehmer. In Kooperation mit Fahrschule Schoch." />
+      <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-zug/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zug/" />
       
       
@@ -169,6 +170,16 @@
     <!-- Standort & Map -->
     <StandortMapSection location-key="zug" />
 
+    <!-- Andere Standorte -->
+    <section class="section-container py-8">
+      <h3 class="text-lg font-bold mb-5 text-center text-gray-900">Motorrad Grundkurs an weiteren Standorten</h3>
+      <div class="flex flex-wrap justify-center gap-3">
+        <a href="/motorrad-grundkurs-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Zürich</a>
+        <a href="/motorrad-grundkurs-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Lachen</a>
+        <a href="/motorrad-grundkurs-einsiedeln/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Einsiedeln</a>
+      </div>
+    </section>
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
@@ -185,6 +196,7 @@
 <script setup lang="ts">
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Zug", "description": "Motorrad Grundkurs in Steinhausen/Zug. 3x4h, max. 5 Teilnehmer. In Kooperation mit Fahrschule Schoch.", "url": "https://drivingteam.ch/motorrad-grundkurs-zug/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "600", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Steinhausen, Zug" } }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein Motorrad-Grundkurs?", "acceptedAnswer": {"@type": "Answer", "text": "Der Motorrad-Grundkurs vermittelt essenzielle Fahrkenntnisse und ist für die Kategorien A1 und A (beschränkt) gesetzlich vorgeschrieben."}}, {"@type": "Question", "name": "Wo findet der Motorrad-Grundkurs Zug statt?", "acceptedAnswer": {"@type": "Answer", "text": "In Kooperation mit Fahrschule Schoch in Steinhausen (Sennweidstrasse 30, 6312 Steinhausen, Kanton Zug)."}}, {"@type": "Question", "name": "Wie viel kostet der Motorrad-Grundkurs in Zug?", "acceptedAnswer": {"@type": "Answer", "text": "Der komplette Kurs kostet CHF 600.- (3 Teile)."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der Kurs?", "acceptedAnswer": {"@type": "Answer", "text": "Insgesamt 12 Stunden, aufgeteilt in 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer."}}, {"@type": "Question", "name": "Welche Sprachen werden angeboten?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs wird auf Deutsch, Englisch oder Italienisch angeboten."}}, {"@type": "Question", "name": "Was passiert bei schlechtem Wetter?", "acceptedAnswer": {"@type": "Answer", "text": "Bei schlechten Wetterbedingungen kann der Kurs angepasst oder verschoben werden."}}, {"@type": "Question", "name": "Welche Themen werden behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Fahrzeugbeherrschung. Teil 2: Bremsmanöver. Teil 3: Kurvenfahren und Gruppenfahren."}}, {"@type": "Question", "name": "Muss ich ein eigenes Motorrad mitbringen?", "acceptedAnswer": {"@type": "Answer", "text": "In der Regel ja. Ein Mietfahrzeug ist auf Anfrage verfügbar."}}, {"@type": "Question", "name": "Wie erhalte ich die unlimitierte Kategorie A?", "acceptedAnswer": {"@type": "Answer", "text": "Nach 2 Jahren Fahrpraxis mit beschränkter A (35 kW) folgt eine weitere Prüfung für die unlimitierte Kategorie A."}}]}) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Zug", "item": "https://drivingteam.ch/motorrad-grundkurs-zug/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
