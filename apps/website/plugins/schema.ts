@@ -87,7 +87,7 @@ export default defineNuxtPlugin(() => {
             '@type': 'Organization',
             name: 'Driving Team',
             url: 'https://drivingteam.ch',
-            logo: 'https://drivingteam.ch/logo.png',
+            logo: 'https://drivingteam.ch/logo.webp',
             contact: {
               '@type': 'ContactPoint',
               contactType: 'Customer Service',

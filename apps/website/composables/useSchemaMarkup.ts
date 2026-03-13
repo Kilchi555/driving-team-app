@@ -4,7 +4,7 @@ export const useSchemaMarkup = () => {
     '@type': 'Organization',
     name: 'Driving Team',
     url: 'https://drivingteam.ch',
-    logo: 'https://drivingteam.ch/logo.png',
+    logo: 'https://drivingteam.ch/logo.webp',
     description: 'Professionelle Fahrschule in der Schweiz - Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger, Motorboot Fahrstunden',
     contactPoint: {
       '@type': 'ContactPoint',
@@ -29,7 +29,7 @@ export const useSchemaMarkup = () => {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: `Driving Team ${city}`,
-    image: 'https://drivingteam.ch/logo.png',
+    image: 'https://drivingteam.ch/logo.webp',
     description: `Professionelle Fahrschule ${city} - Fahrstunden für alle Kategorien`,
     url: `https://drivingteam.ch/fahrschule-${location}/`,
     telephone: '+41-44-431-0033',
