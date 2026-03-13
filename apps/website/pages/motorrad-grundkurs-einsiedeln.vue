@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Grundkurs Einsiedeln | 3 x 4h für Motorrad & Roller | Driving Team</Title>
+      <Title>Motorrad Grundkurs Einsiedeln | CHF 600.- | Driving Team</Title>
       <Meta name="description" content="Motorrad Grundkurs Einsiedeln – 3 x 4h praxisorientierter Grundkurs. In Kooperation mit Fahrschule Bisig. Kompletter Kurs CHF 600.-. Max. 5 Teilnehmer." />
       <Meta property="og:title" content="Motorrad Grundkurs Einsiedeln – CHF 600.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Einsiedeln. 3x4h, CHF 600.-, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig." />
@@ -161,6 +161,16 @@
     <!-- Standort & Map -->
     <StandortMapSection location-key="einsiedeln" />
 
+    <!-- Andere Standorte -->
+    <section class="section-container py-8">
+      <h3 class="text-lg font-bold mb-5 text-center text-gray-900">Motorrad Grundkurs an weiteren Standorten</h3>
+      <div class="flex flex-wrap justify-center gap-3">
+        <a href="/motorrad-grundkurs-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Zürich</a>
+        <a href="/motorrad-grundkurs-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Lachen</a>
+        <a href="/motorrad-grundkurs-zug/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Zug</a>
+      </div>
+    </section>
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
@@ -177,6 +187,7 @@
 <script setup lang="ts">
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Einsiedeln", "description": "Motorrad Grundkurs in Einsiedeln. 3x4h, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig.", "url": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "600", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Einsiedeln" } }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein Motorrad-Grundkurs?", "acceptedAnswer": {"@type": "Answer", "text": "Der Motorrad-Grundkurs vermittelt essenzielle Fahrkenntnisse und ist für die Kategorien A1 und A (beschränkt) gesetzlich vorgeschrieben."}}, {"@type": "Question", "name": "Wo findet der Motorrad-Grundkurs Einsiedeln statt?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs findet in Kooperation mit Fahrschule Bisig in Bennau (Bennauerstrasse 48, 8836 Bennau/SZ) statt."}}, {"@type": "Question", "name": "Wie viel kostet der Motorrad-Grundkurs in Einsiedeln?", "acceptedAnswer": {"@type": "Answer", "text": "Der komplette Kurs kostet CHF 600.- (3 Teile)."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der Kurs?", "acceptedAnswer": {"@type": "Answer", "text": "Insgesamt 12 Stunden, aufgeteilt in 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer."}}, {"@type": "Question", "name": "Was passiert bei schlechtem Wetter?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Temperaturen unter 5 Grad oder starkem Regen kann der Kurs angepasst oder verschoben werden."}}, {"@type": "Question", "name": "Welche Themen werden behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Fahrzeugbeherrschung. Teil 2: Bremsmanöver. Teil 3: Kurvenfahren und Gruppenfahren."}}, {"@type": "Question", "name": "Muss ich ein eigenes Motorrad mitbringen?", "acceptedAnswer": {"@type": "Answer", "text": "In der Regel ja. Ein Mietfahrzeug ist auf Anfrage verfügbar."}}, {"@type": "Question", "name": "Welche Sprachen werden angeboten?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs wird auf Deutsch durchgeführt."}}, {"@type": "Question", "name": "Wie erhalte ich die unlimitierte Kategorie A?", "acceptedAnswer": {"@type": "Answer", "text": "Nach 2 Jahren Fahrpraxis mit beschränkter A (35 kW) folgt eine weitere Prüfung für die unlimitierte Kategorie A."}}]}) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Einsiedeln", "item": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Lachen | Mit 2 x 4h VKU Kurs sparst du Fahrstunden | Driving Team</Title>
+      <Title>VKU Kurs Lachen SZ | CHF 250.- | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Lachen beim Driving Team. 8 Stunden Verkehrskundeunterricht in 2 Teilen à 4 Stunden. CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
       <Meta property="og:title" content="VKU Kurs Lachen – 8h Verkehrskundeunterricht | Driving Team" />
       <Meta property="og:description" content="VKU Kurs in Lachen SZ. 2x4h, CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
@@ -230,7 +230,7 @@
     <!-- 10. Unsere Gebiete -->
     <section class="section-container py-12">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
-      <div class="flex flex-wrap justify-center gap-3 mb-12">
+      <div class="flex flex-wrap justify-center gap-3 mb-8">
         <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
         <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
         <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
@@ -238,6 +238,10 @@
         <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
         <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
         <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
+      </div>
+      <div class="max-w-2xl mx-auto bg-cyan-50 border border-cyan-200 rounded-xl p-5 text-center">
+        <p class="text-gray-700 mb-3 text-sm">VKU Kurs auch in <strong>Zürich</strong> verfügbar:</p>
+        <a href="/vku-kurs-zuerich/" class="inline-block bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-5 py-2 rounded-lg transition text-sm">VKU Kurs Zürich →</a>
       </div>
     </section>
 
@@ -261,6 +265,7 @@
 <script setup lang="ts">
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "VKU Kurs Lachen", "description": "Verkehrskundeunterricht in Lachen SZ. 2x4h, obligatorisch vor der Fahrprüfung.", "url": "https://drivingteam.ch/vku-kurs-lachen/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "250", "priceCurrency": "CHF" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen SZ" } }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein VKU Kurs und warum ist er notwendig?", "acceptedAnswer": {"@type": "Answer", "text": "Ein VKU Kurs bei Driving Team Lachen vermittelt essenzielle Fähigkeiten für sicheres Autofahren. Er ist gesetzlich vorgeschrieben."}}, {"@type": "Question", "name": "Wer muss einen VKU Kurs in der Schweiz absolvieren?", "acceptedAnswer": {"@type": "Answer", "text": "In der Schweiz ist der VKU Kurs Pflicht für alle, die einen Führerausweis der Kategorie A oder B zum ersten Mal anstreben."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der VKU Kurs?", "acceptedAnswer": {"@type": "Answer", "text": "Der VKU Kurs bei Driving Team in Lachen umfasst insgesamt 8 Stunden, aufgeteilt in 2 Kursteile à 4 Stunden."}}, {"@type": "Question", "name": "Welche Themen werden im VKU Kurs behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Verkehrssehen und Partner- und Strassenkunde. Teil 2: Betriebssicherheit, der Anhalteweg, die Fahrfähigkeit und das umweltbewusste Fahren."}}, {"@type": "Question", "name": "Wie lange ist der VKU Kurs gültig?", "acceptedAnswer": {"@type": "Answer", "text": "Der VKU Kurs ist nach Absolvierung für immer gültig."}}, {"@type": "Question", "name": "Wie viel kostet der VKU Kurs in Lachen?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Driving Team in Lachen beträgt die Gebühr für den VKU Kurs CHF 250.- inklusive Dokumentation und Lehrmittel."}}, {"@type": "Question", "name": "Wo findet der VKU Kurs in Lachen statt?", "acceptedAnswer": {"@type": "Answer", "text": "Der VKU Kurs wird in unserem Fahrschullokal in Lachen/SZ (Herrengasse 17, in der Nähe des Bahnhofs Lachen) durchgeführt."}}, {"@type": "Question", "name": "Gibt es eine Rückerstattungspolitik?", "acceptedAnswer": {"@type": "Answer", "text": "Ja, frühzeitige Umbuchungen oder Absagen sind kostenlos möglich. Bei Absagen weniger als 14 Tage vor Kursbeginn wird eine Gebühr erhoben."}}, {"@type": "Question", "name": "In welcher Sprache wird der VKU Kurs durchgeführt?", "acceptedAnswer": {"@type": "Answer", "text": "Der VKU Kurs bei Driving Team in Lachen wird grundsätzlich in Deutsch durchgeführt."}}, {"@type": "Question", "name": "Gibt es medizinische Anforderungen?", "acceptedAnswer": {"@type": "Answer", "text": "Es gibt keine spezifischen medizinischen Anforderungen für den VKU Kurs. Du solltest jedoch in der Lage sein, dem Unterricht während 4 Stunden zu folgen."}}, {"@type": "Question", "name": "Wie geht es nach dem VKU Kurs weiter?", "acceptedAnswer": {"@type": "Answer", "text": "Nach dem VKU Kurs kannst du dich für die praktische Fahrprüfung anmelden, sofern du alle weiteren Voraussetzungen erfüllst."}}, {"@type": "Question", "name": "Gibt es spezielle Vorbereitungen vor dem Kurs?", "acceptedAnswer": {"@type": "Answer", "text": "Du musst im Besitz eines gültigen Lernfahrausweises sein, um dich anmelden zu können."}}]}) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "VKU Kurse", "item": "https://drivingteam.ch/vku-kurse/" }, { "@type": "ListItem", "position": 3, "name": "Lachen", "item": "https://drivingteam.ch/vku-kurs-lachen/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
