@@ -240,6 +240,34 @@ export default defineNuxtConfig({
     '/weg-zur-lastwagenpruefung/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
     '/en/weg-zur-buspruefung': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
     '/en/weg-zur-buspruefung/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/weg-zur-taxipruefung': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/weg-zur-taxipruefung/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/en/weg-zur-taxipruefung': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/en/weg-zur-taxipruefung/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/weg-zur-motorradpruefung': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/weg-zur-motorradpruefung/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+
+    // WordPress Blog-Post-URLs mit Datum
+    '/2023/09/25/drivers-license-converting': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/25/drivers-license-converting/': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/27/verkehrskunde-vku-kurs/feed': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/2023/09/27/verkehrskunde-vku-kurs/feed/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/2023/09/20/blog-minderung-pruefungsangst': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/20/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/', statusCode: 301 } },
+
+    // Italienische Seiten
+    '/scuola-guida-italiano': { redirect: { to: '/', statusCode: 301 } },
+    '/scuola-guida-italiano/': { redirect: { to: '/', statusCode: 301 } },
+    '/en/scuola-guida-italiano': { redirect: { to: '/', statusCode: 301 } },
+    '/en/scuola-guida-italiano/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Standortspezifische Anhänger-Seiten
+    '/anhaenger-fahrstunden-lachen': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/anhaenger-fahrstunden-lachen/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+
+    // Alte Anmeldeseiten
+    '/anmeldung-fahrlehrerweiterbildung': { redirect: { to: '/fahrlehrerweiterbildung/', statusCode: 301 } },
+    '/anmeldung-fahrlehrerweiterbildung/': { redirect: { to: '/fahrlehrerweiterbildung/', statusCode: 301 } },
 
     // Mehrsprachige Root-Seiten
     '/sq': { redirect: { to: '/', statusCode: 301 } },
