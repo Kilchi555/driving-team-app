@@ -11,7 +11,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/auto-fahrschule.webp" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/categories/auto-fahrschule-hero.webp" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
