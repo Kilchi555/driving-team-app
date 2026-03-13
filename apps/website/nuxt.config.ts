@@ -204,6 +204,30 @@ export default defineNuxtConfig({
     '/sq/anhaenger-fahrschule-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/en/anhaenger-fahrschule-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/en/anhaenger-fahrschule-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/en/vku-zurich': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/en/vku-zurich/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/sq/vku-zurich': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/sq/vku-zurich/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/en/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
+    '/en/fahrlehrer-reichenburg/': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
+    '/sq/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
+    '/sq/fahrlehrer-reichenburg/': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
+    '/en/motorboot-wegweiser': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/en/motorboot-wegweiser/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/it/motorboot-wegweiser': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/it/motorboot-wegweiser/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/sq/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/sq/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/it/fahrschule-wil': { redirect: { to: '/', statusCode: 301 } },
+    '/it/fahrschule-wil/': { redirect: { to: '/', statusCode: 301 } },
+
+    // WordPress Author-Seiten
+    '/author/drivingteam': { redirect: { to: '/team/', statusCode: 301 } },
+    '/author/drivingteam/': { redirect: { to: '/team/', statusCode: 301 } },
+
+    // Weitere standortspezifische Auto-Fahrschule URLs
+    '/auto-fahrschule-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/auto-fahrschule-zuerich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
 
     // Englische Driving School Seiten
     '/driving-school': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
