@@ -8,6 +8,10 @@
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-preise/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-preise/" />
       
+          <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
+      <Meta property="og:image:width" content="1200" />
+      <Meta property="og:image:height" content="630" />
+          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- Hero Section -->

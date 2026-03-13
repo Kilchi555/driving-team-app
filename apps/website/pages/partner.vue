@@ -7,6 +7,10 @@
       <Meta property="og:description" content="Empfehle Driving Team und verdiene CHF-Guthaben für jede erfolgreiche Empfehlung. Kostenlos & einfach." />
       <Meta property="og:url" content="https://drivingteam.ch/partner/" />
       <Link rel="canonical" href="https://drivingteam.ch/partner/" />
+          <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
+      <Meta property="og:image:width" content="1200" />
+      <Meta property="og:image:height" content="630" />
+          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- Hero -->
