@@ -196,7 +196,7 @@
             <!-- Auto Theorie -->
             <a href="/auto-theorie/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48">
               <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
-              <img src="/images/courses/theorie.png" alt="Auto Theorie" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/courses/theorie.webp" alt="Auto Theorie" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -211,7 +211,7 @@
             <!-- Nothelferkurse -->
             <a href="/nothelferkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
-              <img src="/images/courses/nothelfer.png" alt="Nothelferkurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/courses/nothelfer.webp" alt="Nothelferkurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -226,7 +226,7 @@
             <!-- Motorrad Grundkurs -->
             <a href="/motorrad-grundkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
-              <img src="/images/courses/motorrad-grundkurs.png" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/courses/motorrad-grundkurs.webp" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -241,7 +241,7 @@
             <!-- VKU Kurse -->
             <a href="/vku-kurse/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-green-700 group-hover:from-green-600 group-hover:to-green-800 transition-all duration-500"></div>
-              <img src="/images/courses/vku.png" alt="VKU Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/courses/vku.webp" alt="VKU Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -264,7 +264,7 @@
             <!-- CZV Grundkurs -->
             <a href="/czv-grundkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48">
               <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
-              <img src="/images/czv-grundkurs.png" alt="CZV Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/czv-grundkurs.webp" alt="CZV Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -279,7 +279,7 @@
             <!-- CZV Weiterbildung -->
             <a href="/czv-weiterbildung/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-pink-500 to-pink-700 group-hover:from-pink-600 group-hover:to-pink-800 transition-all duration-500"></div>
-              <img src="/images/courses/czv-weiterbildung.png" alt="CZV Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/courses/czv-weiterbildung.webp" alt="CZV Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -294,7 +294,7 @@
             <!-- WAB Kurse -->
             <a href="/wab-kurse/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-teal-500 to-teal-700 group-hover:from-teal-600 group-hover:to-teal-800 transition-all duration-500"></div>
-              <img src="/images/wab-kurs.png" alt="WAB Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/wab-kurs.webp" alt="WAB Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -309,7 +309,7 @@
             <!-- Motorrad-Weiterbildung -->
             <a href="/motorrad-weiterbildung/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 group-hover:from-purple-600 group-hover:to-purple-800 transition-all duration-500"></div>
-              <img src="/images/motorrad-weiterbildung.png" alt="Motorrad-Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/motorrad-weiterbildung.webp" alt="Motorrad-Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">

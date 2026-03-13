@@ -12,7 +12,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/courses/motorrad-grundkurs.png" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/courses/motorrad-grundkurs.webp" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
