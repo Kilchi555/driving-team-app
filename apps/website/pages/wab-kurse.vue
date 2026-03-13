@@ -5,6 +5,7 @@
       <Meta name="description" content="WAB Kurse (Weiterausbildung) beim Driving Team. In Zürich und Schwyz. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker innert 12 Monaten nach Fahrprüfung." />
       <Meta property="og:title" content="WAB Kurse – Weiterbildung nach Fahrprüfung | Driving Team" />
       <Meta property="og:description" content="Obligatorische WAB Kurse für Neulenker. Innert 12 Monaten nach Fahrprüfung. Ab CHF 290.-. Standorte Pfäffikon ZH, Tuggen SZ & English." />
+      <Meta property="og:url" content="https://drivingteam.ch/wab-kurse/" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse/" />
       
       

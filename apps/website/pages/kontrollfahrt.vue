@@ -6,6 +6,7 @@
       <Meta name="keywords" content="Kontrollfahrt Zürich, Kontrollfahrt Vorbereitung, Fahrtüchtigkeit, Führerausweis umschreiben, Driving Team" />
       <Meta property="og:title" content="Kontrollfahrt Zürich – Professionelle Vorbereitung | Driving Team" />
       <Meta property="og:description" content="Kontrollfahrt-Vorbereitung in Zürich. Individuelle Ausbildung, entspanntes Lernen. Jetzt anmelden!" />
+      <Meta property="og:url" content="https://drivingteam.ch/kontrollfahrt/" />
       <Link rel="canonical" href="https://drivingteam.ch/kontrollfahrt/" />
       
       

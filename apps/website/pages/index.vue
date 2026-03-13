@@ -13,6 +13,7 @@
       <Meta property="og:image" content="https://drivingteam.ch/og-image.jpg" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
+      <Meta property="og:url" content="https://drivingteam.ch/" />
       
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
@@ -27,14 +28,15 @@
       
     </Head>
 
-    <h1 class="sr-only">Willkommen bei der Fahrschule Driving Team</h1>
-
     <!-- Immersive Hero Intro Section WITH Categories -->
     <section class="hero-intro-section relative flex flex-col items-center justify-center overflow-hidden bg-white">
       <div class="absolute inset-0 bg-white"></div>
 
-      <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6 py-6">
-        <!-- Categories Grid - Integrated into Hero -->
+      <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
+        <!-- Hero Headline (sichtbar für SEO, dezent gestylt) -->
+        <div class="mb-2 md:mb-5">
+          <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase">Fahrschule Driving Team</h1>
+        </div>
         <div class="w-full max-w-7xl">
           <h2 class="sr-only">Unsere Fahrkategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">

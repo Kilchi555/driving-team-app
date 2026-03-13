@@ -5,6 +5,7 @@
       <Meta name="description" content="Taxi Fahrstunden Zürich - BPT zertifizierte Ausbildung (121/122). Theory & Practice, professionelle Trainerführerschein-Vorbereitung. Jetzt anmelden!" />
       <Meta property="og:title" content="Taxi Fahrschule Kategorie BPT | Driving Team" />
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
+      <Meta property="og:url" content="https://drivingteam.ch/taxi-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
       
       

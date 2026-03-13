@@ -5,6 +5,7 @@
       <Meta name="description" content="Empfehle Driving Team und erhalte CHF-Guthaben für jede erfolgreiche Empfehlung. Kostenlos, einfach, für alle." />
       <Meta property="og:title" content="Partner werden – Geld verdienen mit Empfehlungen | Driving Team" />
       <Meta property="og:description" content="Empfehle Driving Team und verdiene CHF-Guthaben für jede erfolgreiche Empfehlung. Kostenlos & einfach." />
+      <Meta property="og:url" content="https://drivingteam.ch/partner/" />
       <Link rel="canonical" href="https://drivingteam.ch/partner/" />
     </Head>
 
@@ -201,6 +202,52 @@ const faqs = [
     a: 'Nein, es gibt keine Begrenzung. Jede erfolgreiche Empfehlung wird belohnt.'
   },
 ]
+
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Partner werden – Affiliate Programm | Driving Team",
+        "description": "Empfehle Driving Team und erhalte CHF-Guthaben für jede erfolgreiche Empfehlung. Kostenlos, einfach, für alle.",
+        "url": "https://drivingteam.ch/partner/",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Driving Team Fahrschule",
+          "url": "https://drivingteam.ch"
+        }
+      })
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": faqs.map(faq => ({
+          "@type": "Question",
+          "name": faq.q,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.a
+          }
+        }))
+      })
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
+          { "@type": "ListItem", "position": 2, "name": "Partner werden", "item": "https://drivingteam.ch/partner/" }
+        ]
+      })
+    }
+  ]
+})
 
 async function handleSubmit() {
   errorMessage.value = ''

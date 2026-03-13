@@ -5,6 +5,7 @@
       <Meta name="description" content="Anhänger Kurs beim Driving Team. Spezial-Gruppentraining für Kategorie BE. CHF 190.- pro Person, 3 Stunden, mind. 3 Personen. Sicher Anhänger fahren lernen!" />
       <Meta property="og:title" content="Anhänger Kurs – Gruppentraining Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Sicher Anhänger fahren lernen. Gruppentraining Kategorie BE, CHF 190.- pro Person, 3h." />
+      <Meta property="og:url" content="https://drivingteam.ch/anhaenger-kurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-kurs/" />
       
     </Head>

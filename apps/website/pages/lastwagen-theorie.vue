@@ -5,6 +5,7 @@
       <Meta name="description" content="Lkw Theorie Kurs für die Kategorien C1, C, D1, D bei Driving Team Zürich und Lachen. Gruppenkurs CHF 800.–, Einzelkurs CHF 1360.–." />
       <Meta property="og:title" content="Lastwagen Theorie – Vorbereitung auf die LKW Theorieprüfung | Driving Team" />
       <Meta property="og:description" content="Lkw Theorie Kurs für Kategorien C1, C, D1, D. Gruppenkurs CHF 800.-, Einzelkurs CHF 1360.-. Zürich & Lachen." />
+      <Meta property="og:url" content="https://drivingteam.ch/lastwagen-theorie/" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-theorie/" />
       
       

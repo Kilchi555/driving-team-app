@@ -5,6 +5,7 @@
       <Meta name="description" content="Motorrad Weiterbildung beim Driving Team. Schräglagen-Training und Prüfungsvorbereitungskurs. CHF 190.- pro Kurs, max. 5 Teilnehmer. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Weiterbildung – Schräglagen & Prüfungsvorbereitung | Driving Team" />
       <Meta property="og:description" content="Motorrad Weiterbildung beim Driving Team. Schräglagen-Training & Prüfungsvorbereitung. CHF 190.- pro Kurs, max. 5 Teilnehmer." />
+      <Meta property="og:url" content="https://drivingteam.ch/motorrad-weiterbildung/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-weiterbildung/" />
     </Head>
 

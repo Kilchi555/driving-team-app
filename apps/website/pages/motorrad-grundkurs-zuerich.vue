@@ -5,6 +5,7 @@
       <Meta name="description" content="Motorrad Grundkurs Zürich - 3x4h für alle Kategorien. Praktische Ausbildung, max. 5 Teilnehmer. Jetzt buchen!" />
       <Meta property="og:title" content="Motorrad Grundkurs Zürich – 3x4h, max. 5 Teilnehmer | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Zürich. 3x4h für alle Kategorien, max. 5 Teilnehmer. Jetzt buchen!" />
+      <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
       
       

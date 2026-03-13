@@ -5,6 +5,7 @@
       <Meta name="description" content="LKW Fahrschule Kategorie C3 beim Driving Team. CZV Grundkurs und berufliche Weiterbildung für Berufschauffeure. Zürich und Lachen. Kontaktiere uns!" />
       <Meta property="og:title" content="LKW Fahrschule Kategorie C3 – CZV Grundkurs | Driving Team" />
       <Meta property="og:description" content="LKW Fahrschule Kategorie C3 inkl. CZV Grundkurs. Berufliche Weiterbildung in Zürich & Lachen." />
+      <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule-3/" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule-3/" />
       
     </Head>
