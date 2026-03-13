@@ -5,7 +5,7 @@
       <p class="text-center text-gray-600 text-lg mb-12">Fahrschule Driving Team - Fahrstunden in deiner Region</p>
 
       <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <a v-if="exclude !== 'zuerich'" href="/fahrschule-zuerich/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'zuerich'" href="/fahrschule-zuerich/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-primary-50 to-primary-100 overflow-hidden">
             <img src="/images/locations/zuerich-hero.jpg" alt="Fahrschule Zürich" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -17,7 +17,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'lachen'" href="/fahrschule-lachen/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'lachen'" href="/fahrschule-lachen/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-green-50 to-green-100 overflow-hidden">
             <img src="/images/locations/lachen-hero.jpg" alt="Fahrschule Lachen" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -29,7 +29,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'pfaeffikon'" href="/fahrschule-pfaeffikon/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'pfaeffikon'" href="/fahrschule-pfaeffikon/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-blue-50 to-blue-100 overflow-hidden">
             <img src="/images/locations/pfaeffikon-hero.jpg" alt="Fahrschule Pfäffikon/SZ" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -41,7 +41,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'uster'" href="/fahrschule-uster/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'uster'" href="/fahrschule-uster/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
             <img src="/images/locations/uster-hero.jpg" alt="Fahrschule Uster" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -53,7 +53,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'stgallen'" href="/fahrschule-stgallen/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'stgallen'" href="/fahrschule-stgallen/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-red-50 to-red-100 overflow-hidden">
             <img src="/images/locations/stgallen-hero.jpg" alt="Fahrschule St.Gallen" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -65,7 +65,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'dietikon'" href="/fahrschule-dietikon/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'dietikon'" href="/fahrschule-dietikon/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-yellow-50 to-yellow-100 overflow-hidden">
             <img src="/images/locations/dietikon-hero.jpg" alt="Fahrschule Dietikon" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -77,7 +77,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'aargau'" href="/fahrschule-aargau/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'aargau'" href="/fahrschule-aargau/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-orange-50 to-orange-100 overflow-hidden">
             <img src="/images/locations/aargau-hero.jpg" alt="Fahrschule Aargau" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -89,7 +89,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'reichenburg'" href="/fahrschule-reichenburg/" class="standort-card rounded-lg shadow-md hover:shadow-lg transition cursor-pointer block overflow-hidden">
+        <a v-if="exclude !== 'reichenburg'" href="/fahrschule-reichenburg/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-primary-50 to-primary-100 overflow-hidden">
             <img src="/images/locations/reichenburg-hero.jpg" alt="Fahrschule Reichenburg" loading="lazy" class="w-full h-full object-cover" />
           </div>
@@ -114,14 +114,4 @@ defineProps({
 })
 </script>
 
-<style scoped>
-.standort-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  display: flex;
-  flex-direction: column;
-}
 
-.standort-card:hover {
-  transform: scale(1.05);
-}
-</style>
