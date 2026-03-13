@@ -11,7 +11,7 @@
           @scroll.passive="onScroll"
         >
           <!-- Kategorie B - Auto -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-6 shadow-lg transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
             <div class="text-3xl mb-3">🚗</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Auto</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie B · 45 Min</p>
@@ -31,7 +31,7 @@
           </div>
 
           <!-- Kategorie A - Motorrad -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🏍️</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Motorrad</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie A · 45 Min</p>
@@ -51,7 +51,7 @@
           </div>
 
           <!-- Kategorie BE - Anhänger -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚛</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Anhänger</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie BE · 45 Min</p>
@@ -71,7 +71,7 @@
           </div>
 
           <!-- Kategorie C1/D1 - Gesellschaftswagen -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚐</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Gesellschaftswagen</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie C1/D1 · 45 Min</p>
@@ -91,7 +91,7 @@
           </div>
 
           <!-- Kategorie C - Lastwagen -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚚</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Lastwagen</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie C · 45 Min</p>
@@ -111,7 +111,7 @@
           </div>
 
           <!-- Motorboot -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🛥️</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Motorboot</h3>
             <p class="text-sm text-gray-600 mb-5">Bootsführerschein · 45 Min</p>
@@ -131,7 +131,7 @@
           </div>
 
           <!-- Taxi -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚕</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Taxi (BPT)</h3>
             <p class="text-sm text-gray-600 mb-5">Berufspraktische Taxiprüfung · 45 Min</p>
@@ -151,7 +151,7 @@
           </div>
 
           <!-- Bus -->
-          <div class="price-card snap-center shrink-0 w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 shadow-lg">
+          <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚌</div>
             <h3 class="text-xl font-bold text-gray-900 mb-1">Bus</h3>
             <p class="text-sm text-gray-600 mb-5">Kategorie D · 45 Min</p>
@@ -235,14 +235,3 @@ onMounted(() => {
 
 const title = computed(() => 'Unsere Preise')
 </script>
-
-<style scoped>
-.price-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.price-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-}
-</style>
