@@ -37,11 +37,11 @@ html {
 @layer components {
   .btn-primary {
     @apply px-6 py-3 text-white rounded-lg font-semibold transition-all;
-    background-color: #019ee5;
+    background-color: #0072a8;
   }
   
   .btn-primary:hover {
-    background-color: #017cb3;
+    background-color: #005a87;
   }
 
   .btn-secondary {

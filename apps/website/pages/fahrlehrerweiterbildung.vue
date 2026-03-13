@@ -14,7 +14,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrlehrer-Weiterbildung</h1>
-          <p class="text-xl text-primary-100 mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für aktuelle Kursangebote und Termine.</p>
+          <p class="text-xl text-white/90 mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für aktuelle Kursangebote und Termine.</p>
           <button @click="showPicker = true" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Anmelden
           </button>

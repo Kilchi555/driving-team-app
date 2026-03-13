@@ -24,7 +24,7 @@
             <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-800 text-white p-4 flex justify-between items-center">
               <div>
                 <h2 class="text-2xl font-bold">💰 Kostenrechner</h2>
-                <p class="text-primary-100 text-sm mt-1">Schritt {{ currentStep }} von {{ totalSteps }}</p>
+                <p class="text-white/90 text-sm mt-1">Schritt {{ currentStep }} von {{ totalSteps }}</p>
               </div>
               <button
                 @click="closeModal"

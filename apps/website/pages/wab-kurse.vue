@@ -14,7 +14,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 md:py-12">
       <div class="section-container">
         <h1 class="heading-lg text-white mb-6 text-center">WAB Kurse</h1>
-        <p class="text-xl text-primary-100 mb-8 text-center">Wähle deine Option:</p>
+        <p class="text-xl text-white/90 mb-8 text-center">Wähle deine Option:</p>
         
         <div class="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
           <a href="/wab-kurse-zuerich/" class="bg-white text-gray-900 border-2 border-white rounded-lg p-6 hover:shadow-lg hover:bg-primary-50 transition transform hover:scale-105 flex items-center justify-between">

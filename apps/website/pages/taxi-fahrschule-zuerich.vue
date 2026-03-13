@@ -15,7 +15,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Taxi Fahrschule Zürich</h1>
-          <p class="text-xl text-primary-100 mb-8">BPT Taxi Ausbildung (Code 121 | 122) in Zürich-Altstetten. Mit professionellen Fahrlehrern schnell und sicher zur Taxiprüfung.</p>
+          <p class="text-xl text-white/90 mb-8">BPT Taxi Ausbildung (Code 121 | 122) in Zürich-Altstetten. Mit professionellen Fahrlehrern schnell und sicher zur Taxiprüfung.</p>
           <div class="flex flex-wrap gap-4">
             <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Taxi Fahrstunden anmelden

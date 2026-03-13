@@ -17,7 +17,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule Kategorie BE</h1>
-          <p class="hidden xs:block text-xl text-primary-100 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
+          <p class="hidden xs:block text-xl text-white/90 mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
           <a href="https://simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -322,7 +322,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher fahren mit Anhänger!</h2>
-        <p class="hidden xs:block text-xl text-primary-100 mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
+        <p class="hidden xs:block text-xl text-white/90 mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden

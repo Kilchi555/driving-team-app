@@ -12,7 +12,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Weiterbildungen</h1>
-        <p class="text-xl text-primary-100 mb-8">Professionelle Schulung für erfahrene Fahrer in Zürich und Lachen</p>
+        <p class="text-xl text-white/90 mb-8">Professionelle Schulung für erfahrene Fahrer in Zürich und Lachen</p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Termin buchen
         </a>

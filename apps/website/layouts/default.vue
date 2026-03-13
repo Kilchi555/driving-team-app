@@ -488,9 +488,9 @@
             </a>
           </div>
 
-          <p class="text-gray-500 text-xs">
+          <p class="text-gray-400 text-xs">
             Designed by 
-            <a href="https://www.simy.ch" target="_blank" rel="noopener noreferrer" class="hover:text-gray-300 transition">Simy IT Systems Kilchenmann</a>
+            <a href="https://www.simy.ch" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Simy IT Systems Kilchenmann</a>
           </p>
         </div>
       </div>

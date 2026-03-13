@@ -14,7 +14,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Kurs</h1>
-          <p class="text-xl text-primary-100 mb-8">Sicher Anhänger fahren lernen – unser Spezial-Kurs für Gruppen bringt dich schnell und effizient ans Ziel. Du lernst nicht nur aktiv mit, sondern profitierst auch vom Zuhören und Zuschauen.</p>
+          <p class="text-xl text-white/90 mb-8">Sicher Anhänger fahren lernen – unser Spezial-Kurs für Gruppen bringt dich schnell und effizient ans Ziel. Du lernst nicht nur aktiv mit, sondern profitierst auch vom Zuhören und Zuschauen.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>

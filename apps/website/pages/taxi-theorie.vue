@@ -15,7 +15,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Taxi Theorie</h1>
-          <p class="text-xl text-primary-100 mb-8">ARV 2 Prüfung mit unserer Hilfe bestehen. Theoriestunden und Lehrmittel für Taxifahrer.</p>
+          <p class="text-xl text-white/90 mb-8">ARV 2 Prüfung mit unserer Hilfe bestehen. Theoriestunden und Lehrmittel für Taxifahrer.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Theoriestunden anfragen
           </a>

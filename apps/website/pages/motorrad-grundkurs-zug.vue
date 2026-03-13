@@ -18,8 +18,8 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-4">Motorrad Grundkurs Zug</h1>
           <p class="hidden xs:block text-primary-200 mb-2">In Kooperation mit Fahrschule Schoch</p>
-          <p class="hidden xs:block text-xl text-primary-100 mb-2">Kompletter Kurs in Zug für nur <strong>CHF 600.–</strong> anstatt 630.-</p>
-          <p class="hidden xs:block text-primary-100 mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
+          <p class="hidden xs:block text-xl text-white/90 mb-2">Kompletter Kurs in Zug für nur <strong>CHF 600.–</strong> anstatt 630.-</p>
+          <p class="hidden xs:block text-white/90 mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
           <a href="https://www.simy.ch/customer/courses/driving-team/?category=PGS&location=Zug" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>

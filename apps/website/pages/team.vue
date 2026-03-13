@@ -13,7 +13,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Die Teammitglieder des Drivingteams</h1>
-        <p class="text-xl text-primary-100 max-w-3xl mx-auto">Erfahrene, motivierte und leidenschaftliche Fahrlehrer:innen für deine Fahrausbildung.</p>
+        <p class="text-xl text-white/90 max-w-3xl mx-auto">Erfahrene, motivierte und leidenschaftliche Fahrlehrer:innen für deine Fahrausbildung.</p>
       </div>
     </section>
 
@@ -210,19 +210,19 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div>
             <p class="text-5xl font-bold mb-2">10+</p>
-            <p class="text-primary-100">Jahre Erfahrung</p>
+            <p class="text-white/90">Jahre Erfahrung</p>
           </div>
           <div>
             <p class="text-5xl font-bold mb-2">8</p>
-            <p class="text-primary-100">Fahrlehrer & Instruktoren</p>
+            <p class="text-white/90">Fahrlehrer & Instruktoren</p>
           </div>
           <div>
             <p class="text-5xl font-bold mb-2">1000+</p>
-            <p class="text-primary-100">Schüler pro Jahr</p>
+            <p class="text-white/90">Schüler pro Jahr</p>
           </div>
           <div>
             <p class="text-5xl font-bold mb-2">4.8 ⭐</p>
-            <p class="text-primary-100">Google Bewertung</p>
+            <p class="text-white/90">Google Bewertung</p>
           </div>
         </div>
       </div>
