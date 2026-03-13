@@ -12,7 +12,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/bus-fahrschule.webp" alt="Bus Fahrschule Zürich - Kategorie D1 & D mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/categories/bus-fahrschule-hero.webp" alt="Bus Fahrschule Zürich - Kategorie D1 & D mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Bus Fahrschule Kategorie D1 & D</h1>

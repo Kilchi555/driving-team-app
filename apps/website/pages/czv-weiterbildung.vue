@@ -12,7 +12,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-orange-600 to-orange-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/courses/czv-weiterbildung.webp" alt="CZV Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/courses/czv-weiterbildung-hero.webp" alt="CZV Weiterbildung" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">

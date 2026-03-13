@@ -36,7 +36,7 @@
         <!-- Anhänger Kurs -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
           <div class="relative h-48 overflow-hidden">
-            <img src="/images/categories/anhaenger-fahrschule-new.webp" alt="Anhänger Kategorie BE" class="w-full h-full object-cover" />
+            <img src="/images/categories/anhaenger-fahrschule-hero.webp" alt="Anhänger Kategorie BE" class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
                 <h3 class="font-bold text-white text-lg">Anhänger Kategorie BE</h3>
@@ -66,7 +66,7 @@
         <!-- Motorboot Kurs -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
           <div class="relative h-48 overflow-hidden">
-            <img src="/images/categories/motorboot.webp" alt="Motorboot Fahrlehrerweiterbildung" class="w-full h-full object-cover" />
+            <img src="/images/categories/motorboot-hero.webp" alt="Motorboot Fahrlehrerweiterbildung" class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
                 <h3 class="font-bold text-white text-lg">Motorboot Fahrlehrerweiterbildung</h3>
@@ -96,7 +96,7 @@
         <!-- Lastwagen Kurs -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow">
           <div class="relative h-48 overflow-hidden">
-            <img src="/images/categories/lastwagen-fahrschule.webp" alt="Lastwagen Fahrlehrerweiterbildung" class="w-full h-full object-cover" />
+            <img src="/images/categories/lastwagen-fahrschule-hero.webp" alt="Lastwagen Fahrlehrerweiterbildung" class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
                 <h3 class="font-bold text-white text-lg">Lastwagen Fahrlehrerweiterbildung</h3>
