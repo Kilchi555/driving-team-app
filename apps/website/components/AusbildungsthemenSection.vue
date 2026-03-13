@@ -10,11 +10,13 @@
           v-for="(topic, i) in topics"
           :key="i"
           ref="cardRefs"
-          class="theme-card rounded-xl p-6 border border-gray-100"
-          :class="activeIndex === i ? 'active' : ''"
+          class="rounded-xl p-6 border border-gray-100 transition-all duration-400"
+          :class="activeIndex === i
+            ? 'bg-[#017cb3] border-transparent shadow-[0_8px_24px_rgba(1,124,179,0.35)] [&_h3]:text-white [&_p]:text-white'
+            : 'bg-gray-50 hover:bg-[#017cb3] hover:border-transparent hover:shadow-[0_8px_24px_rgba(1,124,179,0.35)] hover:-translate-y-0.5 hover:[&_h3]:text-white hover:[&_p]:text-white lg:hover:bg-[#017cb3]'"
         >
-          <h3 class="font-bold mb-2">{{ topic.icon }} {{ topic.title }}</h3>
-          <p class="text-sm">{{ topic.text }}</p>
+          <h3 class="font-bold mb-2 text-gray-900 transition-colors duration-400">{{ topic.icon }} {{ topic.title }}</h3>
+          <p class="text-sm text-gray-500 transition-colors duration-400">{{ topic.text }}</p>
         </div>
       </div>
     </div>
@@ -129,49 +131,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-.theme-card {
-  background-color: rgb(249 250 251);
-  color: #374151;
-  transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
-}
 
-.theme-card h3 {
-  color: #111827;
-  transition: color 0.4s ease;
-}
-
-.theme-card p {
-  color: #6b7280;
-  transition: color 0.4s ease;
-}
-
-/* Desktop: hover highlight */
-@media (min-width: 1024px) {
-  .theme-card:hover {
-    background-color: #017cb3;
-    border-color: transparent;
-    box-shadow: 0 8px 24px rgba(1, 124, 179, 0.35);
-    transform: translateY(-2px);
-  }
-
-  .theme-card:hover h3,
-  .theme-card:hover p {
-    color: white;
-  }
-}
-
-/* Mobile/tablet: active (centered) card highlight */
-@media (max-width: 767px) {
-  .theme-card.active {
-    background-color: #017cb3;
-    border-color: transparent;
-    box-shadow: 0 8px 24px rgba(1, 124, 179, 0.35);
-  }
-
-  .theme-card.active h3,
-  .theme-card.active p {
-    color: white;
-  }
-}
-</style>
