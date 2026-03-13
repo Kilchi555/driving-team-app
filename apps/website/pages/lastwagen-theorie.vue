@@ -14,7 +14,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Lkw Theorie</h1>
-        <p class="text-xl text-white/90 max-w-3xl mx-auto mb-8">8 Kursteile für die Lkw Theorieprüfung – Jetzt anmelden.</p>
+        <p class="text-xl text-white max-w-3xl mx-auto mb-8">8 Kursteile für die Lkw Theorieprüfung – Jetzt anmelden.</p>
         <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt anmelden
         </a>
@@ -194,7 +194,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Warum die Lkw Fahrschule Driving Team?</h2>
-        <p class="text-white/90 max-w-2xl mx-auto mb-8">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Lernen am besten mit Begeisterung!</p>
+        <p class="text-white max-w-2xl mx-auto mb-8">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Lernen am besten mit Begeisterung!</p>
         <a href="/lastwagen-fahrschule" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Mehr zur Lastwagen Fahrschule
         </a>

@@ -15,7 +15,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">VKU Kurs Zürich</h1>
-          <p class="text-xl text-white/90 mb-8">Im total achtstündigen VKU Kurs wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss dieses VKU Kurs ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
+          <p class="text-xl text-white mb-8">Im total achtstündigen VKU Kurs wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss dieses VKU Kurs ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
           <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>

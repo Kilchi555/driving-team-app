@@ -13,7 +13,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">FAQ</h1>
-        <p class="text-xl text-white/90 max-w-3xl mx-auto">Häufig gestellte Fragen</p>
+        <p class="text-xl text-white max-w-3xl mx-auto">Häufig gestellte Fragen</p>
       </div>
     </section>
 

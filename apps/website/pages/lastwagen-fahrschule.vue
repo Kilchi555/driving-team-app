@@ -17,7 +17,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">LKW Fahrschule Kategorie C1 | C | CE</h1>
-          <p class="hidden xs:block text-xl text-white/90 mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
@@ -224,7 +224,7 @@
           <h3 class="font-bold text-xl text-center mb-2">Kategorie C</h3>
           <p class="text-center text-3xl font-bold mb-1">CHF 170.-</p>
           <p class="text-center text-sm text-primary-200 mb-4">à 45 Minuten</p>
-          <ul class="space-y-3 text-sm text-white/90">
+          <ul class="space-y-3 text-sm text-white">
             <li class="flex gap-2"><span>✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span>✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span>✓</span> Rechnung per E-Mail</li>
@@ -405,7 +405,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Starte deine Lastwagen-Karriere!</h2>
-        <p class="hidden xs:block text-xl text-white/90 mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
+        <p class="hidden xs:block text-xl text-white mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden

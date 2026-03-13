@@ -14,7 +14,7 @@
             <span class="text-4xl md:text-6xl">🎁</span>
           </div>
           <h2 class="text-2xl md:text-5xl font-black text-white mb-2 md:mb-4">Jetzt Gutschein bestellen</h2>
-          <p class="text-base md:text-2xl text-white/90 font-semibold">Schenke Sicherheit und bestelle jetzt einen Gutschein!</p>
+          <p class="text-base md:text-2xl text-white font-semibold">Schenke Sicherheit und bestelle jetzt einen Gutschein!</p>
         </div>
 
         <!-- Main Card -->

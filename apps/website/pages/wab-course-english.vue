@@ -15,7 +15,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">WAB Course in English</h1>
-        <p class="text-xl text-white/90 max-w-3xl mx-auto mb-8">Register for your mandatory WAB refresher course in English</p>
+        <p class="text-xl text-white max-w-3xl mx-auto mb-8">Register for your mandatory WAB refresher course in English</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="mailto:info@wabenglish.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Apply here

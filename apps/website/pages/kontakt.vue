@@ -13,7 +13,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-14 md:py-20">
       <div class="section-container text-center max-w-2xl mx-auto">
         <h1 class="heading-lg text-white mb-4">Schreib uns</h1>
-        <p class="text-lg text-white/90">Füll das Formular aus – wir melden uns innerhalb von 24 Stunden per Email oder Telefon.</p>
+        <p class="text-lg text-white">Füll das Formular aus – wir melden uns innerhalb von 24 Stunden per Email oder Telefon.</p>
       </div>
     </section>
 
@@ -252,7 +252,7 @@
     <section class="bg-primary-600 text-white py-14">
       <div class="section-container text-center">
         <h2 class="heading-md mb-4 text-white">Bereit loszulegen?</h2>
-        <p class="text-white/90 mb-6">Buch direkt online oder schreib uns – wir begleiten dich auf dem Weg zum Führerausweis.</p>
+        <p class="text-white mb-6">Buch direkt online oder schreib uns – wir begleiten dich auf dem Weg zum Führerausweis.</p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Jetzt Termin buchen
         </a>

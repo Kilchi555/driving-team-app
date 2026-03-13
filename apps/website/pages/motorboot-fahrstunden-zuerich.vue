@@ -15,7 +15,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Bootsfahrschule Zürich</h1>
-          <p class="text-xl text-white/90 mb-8">Bootsfahrschule am unteren Zürichsee – flexible Treffpunkte. Professionelle Motorboot Fahrstunden mit erfahrenem Fahrlehrer Marc. Fahrstunden auch abends und samstags!</p>
+          <p class="text-xl text-white mb-8">Bootsfahrschule am unteren Zürichsee – flexible Treffpunkte. Professionelle Motorboot Fahrstunden mit erfahrenem Fahrlehrer Marc. Fahrstunden auch abends und samstags!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Termin anfragen
           </a>
@@ -121,7 +121,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Sicher auf dem Zürichsee!</h2>
-        <p class="text-xl text-white/90 mb-8">Professionelle Bootsfahrstunden mit flexiblen Zeiten und Treffpunkten</p>
+        <p class="text-xl text-white mb-8">Professionelle Bootsfahrstunden mit flexiblen Zeiten und Treffpunkten</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Termin anfragen

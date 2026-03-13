@@ -17,8 +17,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">WAB Kurse Zürich</h1>
-          <p class="hidden xs:block text-xl text-white/90 mb-4">Die WAB Kurse im Kanton Zürich werden in Pfäffikon ZH bei unserer Partnerfahrschule der Transportschule AG durchgeführt. Die WAB Kurs Instruktor:innen zeigen euch mit viel Elan und Freude die wichtigsten Aspekte des sicheren Autofahrens.</p>
-          <p class="hidden xs:block text-white/90 mb-8">Den WAB Kurs müsst ihr innerhalb der ersten 12 Monate nach bestandener Autofahrprüfung absolvieren, ansonsten verliert euer Führerausweis seine Gültigkeit.</p>
+          <p class="hidden xs:block text-xl text-white mb-4">Die WAB Kurse im Kanton Zürich werden in Pfäffikon ZH bei unserer Partnerfahrschule der Transportschule AG durchgeführt. Die WAB Kurs Instruktor:innen zeigen euch mit viel Elan und Freude die wichtigsten Aspekte des sicheren Autofahrens.</p>
+          <p class="hidden xs:block text-white mb-8">Den WAB Kurs müsst ihr innerhalb der ersten 12 Monate nach bestandener Autofahrprüfung absolvieren, ansonsten verliert euer Führerausweis seine Gültigkeit.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>

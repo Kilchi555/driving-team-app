@@ -17,7 +17,7 @@
       <div class="section-container">
         <div class="max-w-4xl">
           <h2 class="text-3xl md:text-5xl font-bold mb-6">Fahrschule in deiner Nähe</h2>
-          <p class="text-lg md:text-xl text-white/90 mb-8">
+          <p class="text-lg md:text-xl text-white mb-8">
             Wir sind an 8 Standorten in der Schweiz für dich da. Finde den Ort, der dir am besten passt, 
             und buche deine Fahrstunden oder Kurse.
           </p>
