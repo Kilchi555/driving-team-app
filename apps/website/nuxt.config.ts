@@ -2,6 +2,10 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   ssr: true,
 
+  features: {
+    inlineStyles: true,
+  },
+
   app: {
     head: {
       charset: 'utf-8',
