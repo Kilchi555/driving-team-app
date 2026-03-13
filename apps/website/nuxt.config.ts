@@ -161,10 +161,30 @@ export default defineNuxtConfig({
     '/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/', statusCode: 301 } },
     '/fahrschueler-respekt-geduld': { redirect: { to: '/blog/', statusCode: 301 } },
     '/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/26/fahrschueler-respekt-geduld': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/26/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/', statusCode: 301 } },
 
     // Englische Seiten
     '/drivers-license-converting': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
     '/drivers-license-converting/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/road-awareness-courses': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/road-awareness-courses/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/en': { redirect: { to: '/', statusCode: 301 } },
+    '/en/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Alte Weg-zur-Prüfung Seiten
+    '/weg-zur-autopruefung': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/weg-zur-autopruefung/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/der-weg-zur-autopruefung': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/der-weg-zur-autopruefung/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/weg-zur-buspruefung': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/weg-zur-buspruefung/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/wegweiser-lastwagen': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/wegweiser-lastwagen/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+
+    // Standortspezifische Auto-Fahrschule
+    '/auto-fahrschule-aargau': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
+    '/auto-fahrschule-aargau/': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
 
     // Alte Theorie-Seiten
     '/theoriepruefung-vorbereitung': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
