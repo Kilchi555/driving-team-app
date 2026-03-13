@@ -43,7 +43,7 @@
                 <span class="mt-0.5 text-base">📍</span>
                 <div>
                   <p class="font-semibold">Zürich</p>
-                  <p class="text-gray-500">Gewerbestrasse 10, 8004 Zürich</p>
+                  <p class="text-gray-500">Baslerstrasse 145, 8048 Zürich</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">

@@ -11,10 +11,10 @@ export default defineEventHandler(() => {
     email: 'info@drivingteam.ch',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Hauptstrasse 123',
+      streetAddress: 'Baslerstrasse 145',
       addressLocality: 'Zürich',
       addressRegion: 'ZH',
-      postalCode: '8000',
+      postalCode: '8048',
       addressCountry: 'CH',
     },
     geo: {
