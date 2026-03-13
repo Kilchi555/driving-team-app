@@ -119,10 +119,20 @@ export default defineNuxtConfig({
     '/fahrstunden-aktion/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
     '/fahrstunden-preise': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
     '/fahrstunden-preise/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/auto-theoriepruefung': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/auto-theoriepruefung/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung-2-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung-2-2/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung-2-2-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung-2-2-2/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+
+    // Albanische Seite (alte SEO-Seite)
+    '/autoshkolle-shqipe': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/autoshkolle-shqipe/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+
+    // Standortspezifische Anhänger-Seite
+    '/anhaenger-fahrschule-zuerich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/anhaenger-fahrschule-zuerich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
 
     // Standorte
     '/fahrlehrer-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
