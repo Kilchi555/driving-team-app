@@ -16,7 +16,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-4">Unsere Preise</h1>
-          <p class="text-xl text-primary-100 mb-2">Fahrschule Driving Team</p>
+          <p class="text-xl text-white/90 mb-2">Fahrschule Driving Team</p>
           <p class="text-primary-200 text-sm">Preisänderungen und Irrtümer vorbehalten. Eine Lektion dauert 45 Minuten. Preise in CHF, ohne externe Kosten wie Sehtest, Lernfahrgesuch, Prüfungsgebühr etc.</p>
         </div>
       </div>

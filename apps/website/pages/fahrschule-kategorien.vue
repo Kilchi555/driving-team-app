@@ -17,7 +17,7 @@
       <div class="section-container">
         <div class="max-w-4xl">
           <h2 class="text-3xl md:text-5xl font-bold mb-6">Welche Fahrschule passt zu dir?</h2>
-          <p class="text-lg md:text-xl text-primary-100 mb-8">
+          <p class="text-lg md:text-xl text-white/90 mb-8">
             Vergleiche alle Fahrschule Kategorien: Kosten, Dauer, Anforderungen und Unterschiede. 
             Finde die richtige Ausbildung für deine Fahrkarriere.
           </p>

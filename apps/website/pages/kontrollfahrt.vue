@@ -16,7 +16,7 @@
       <img src="/images/categories/kontrollfahrt-hero.webp" alt="Kontrollfahrt" class="absolute inset-0 w-full h-full object-cover opacity-20" />
       <div class="section-container text-center relative z-10">
         <h1 class="heading-lg text-white mb-6">Kontrollfahrt</h1>
-        <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
+        <p class="text-xl text-white/90 max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden

@@ -18,7 +18,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule St.Gallen</h1>
-          <p class="hidden xs:block text-xl text-primary-100 mb-8">Deine Fahrschule in St.Gallen. Melde Dich an und starte deine Fahrausbildung mit dem Driving Team.</p>
+          <p class="hidden xs:block text-xl text-white/90 mb-8">Deine Fahrschule in St.Gallen. Melde Dich an und starte deine Fahrausbildung mit dem Driving Team.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

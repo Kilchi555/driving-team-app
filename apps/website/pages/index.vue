@@ -45,7 +45,7 @@
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                   <h3 class="font-black text-2xl text-white mb-2">Auto</h3>
-                  <p class="text-primary-100 font-semibold">Kategorie B</p>
+                  <p class="text-white font-semibold">Kategorie B</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <p class="text-white text-sm font-semibold leading-snug">Auto Führerschein Klasse B. Professionelle Fahrerausbildung für alle Altersgruppen in Zürich.</p>
@@ -157,7 +157,7 @@
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                   <h3 class="font-black text-2xl text-white mb-2">Kontrollfahrt</h3>
-                  <p class="text-primary-100 font-semibold">Alle Kategorien</p>
+                  <p class="text-white font-semibold">Alle Kategorien</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <p class="text-white text-sm font-semibold leading-snug">Kontrollfahrten für alle Führerschein-Kategorien. Professionelle Vorbereitung auf die Prüfung.</p>
@@ -357,7 +357,7 @@
               <li>✓ Alle Standorte im Überblick</li>
               <li>✓ Verfügbare Kategorien pro Ort</li>
             </ul>
-            <a href="/fahrschule-standorte/" class="inline-block bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition" aria-label="Zu Fahrschule Standorte">
+            <a href="/fahrschule-standorte/" class="inline-block bg-green-700 text-white px-6 py-2 rounded hover:bg-green-800 transition" aria-label="Zu Fahrschule Standorte">
               Standorte ansehen →
             </a>
           </div>

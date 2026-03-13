@@ -38,10 +38,10 @@
       <div class="bg-primary-600 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto text-center text-white">
         <p class="text-2xl font-bold mb-4" v-if="categoryWord">Starte deine {{ categoryWord }}-Ausbildung jetzt!</p>
         <p class="text-2xl font-bold mb-4" v-else>Starte deine Fahrausbildung jetzt!</p>
-        <p class="text-primary-100 mb-8" v-if="categoryWord && locationLabel">Du möchtest {{ categoryWord }} fahren lernen {{ locationLabel }}? Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan, der dich sicher zur bestandenen Prüfung führt.</p>
-        <p class="text-primary-100 mb-8" v-else-if="categoryWord">Du möchtest {{ categoryWord }} fahren lernen? Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan, der dich sicher zur bestandenen Prüfung führt.</p>
-        <p class="text-primary-100 mb-8" v-else-if="locationLabel">Bei Driving Team {{ locationLabel }} findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan für deine Fahrausbildung.</p>
-        <p class="text-primary-100 mb-8" v-else>Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan für deine Fahrausbildung.</p>
+        <p class="text-white/90 mb-8" v-if="categoryWord && locationLabel">Du möchtest {{ categoryWord }} fahren lernen {{ locationLabel }}? Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan, der dich sicher zur bestandenen Prüfung führt.</p>
+        <p class="text-white/90 mb-8" v-else-if="categoryWord">Du möchtest {{ categoryWord }} fahren lernen? Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan, der dich sicher zur bestandenen Prüfung führt.</p>
+        <p class="text-white/90 mb-8" v-else-if="locationLabel">Bei Driving Team {{ locationLabel }} findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan für deine Fahrausbildung.</p>
+        <p class="text-white/90 mb-8" v-else>Bei Driving Team findest du kompetente Instruktoren, modernes Unterrichtsmaterial und einen strukturierten Lernplan für deine Fahrausbildung.</p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 font-bold px-8 py-4 rounded-lg hover:bg-gray-100 transition text-lg">
           📅 Jetzt Termin buchen
         </a>

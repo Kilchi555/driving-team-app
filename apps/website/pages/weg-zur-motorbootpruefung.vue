@@ -14,7 +14,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule Kategorie A</h1>
-        <p class="text-xl text-primary-100 max-w-3xl mx-auto mb-8">In 4 Schritten zu Deiner Motorbootprüfung. Jetzt anmelden.</p>
+        <p class="text-xl text-white/90 max-w-3xl mx-auto mb-8">In 4 Schritten zu Deiner Motorbootprüfung. Jetzt anmelden.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt anmelden
@@ -251,7 +251,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Warum die Motorboot Fahrschule Driving Team?</h2>
-        <p class="text-primary-100 max-w-2xl mx-auto mb-8">Unsere Motorboot Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
+        <p class="text-white/90 max-w-2xl mx-auto mb-8">Unsere Motorboot Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Wir wissen, dass Lernen am besten funktioniert, wenn es mit Begeisterung geschieht.</p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>

@@ -13,7 +13,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">{{ categoryData.title }}</h1>
-          <p class="text-xl text-primary-100 mb-8">{{ categoryData.description }}</p>
+          <p class="text-xl text-white/90 mb-8">{{ categoryData.description }}</p>
           <button @click="goToBooking" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </button>
@@ -120,7 +120,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit zu starten?</h2>
-        <p class="text-xl text-primary-100 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
+        <p class="text-xl text-white/90 mb-8">Reserviere jetzt deinen Termin – kein Risiko, unverbindliches Angebot!</p>
         <button @click="goToBooking" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Termin buchen
         </button>
