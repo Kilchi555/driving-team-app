@@ -228,6 +228,32 @@ export default defineNuxtConfig({
     // Weitere standortspezifische Auto-Fahrschule URLs
     '/auto-fahrschule-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
     '/auto-fahrschule-zuerich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/auto-fahrschule-stgallen/„': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/auto-fahrstunden-lachen': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/auto-fahrstunden-lachen/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+
+    // Fehlerhafte URLs mit Anführungszeichen
+    '/fahrschule-lachen/„': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+
+    // Weitere Weg-zur-Prüfung
+    '/weg-zur-lastwagenpruefung': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/weg-zur-lastwagenpruefung/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/en/weg-zur-buspruefung': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/en/weg-zur-buspruefung/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+
+    // Mehrsprachige Root-Seiten
+    '/sq': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/': { redirect: { to: '/', statusCode: 301 } },
+    '/it/scuola-guida-italiano': { redirect: { to: '/', statusCode: 301 } },
+    '/it/scuola-guida-italiano/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Englische Kurs-Seiten
+    '/theory-lessons': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/theory-lessons/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+
+    // WordPress Upload-Dateien (PDFs) → Kontakt
+    '/wp-content/uploads/2022/12/Gesuch-um-Erteilung-eines-Lernfahr-bzw.-Fuhrerausweises-1.pdf': { redirect: { to: '/kontakt/', statusCode: 301 } },
+    '/wp-content/uploads/2022/12/Gesuch-Lernfahrausweis-bzw-Umtausch-Auslandischer-Fuhrerausweis-1.pdf': { redirect: { to: '/kontakt/', statusCode: 301 } },
 
     // Englische Driving School Seiten
     '/driving-school': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
