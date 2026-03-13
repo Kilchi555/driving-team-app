@@ -193,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{ category?: string }>()
 
@@ -213,24 +213,42 @@ const categoryIndexMap: Record<string, number> = {
 const sliderRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(props.category ? (categoryIndexMap[props.category] ?? 0) : 0)
 
-function onScroll() {
+// Cache card width to avoid forced reflow on every scroll event
+let cachedCardWidth = 0
+let resizeObserver: ResizeObserver | null = null
+
+function updateCachedCardWidth() {
   const el = sliderRef.value
   if (!el) return
-  const cardWidth = el.scrollWidth / cardCount
-  activeIndex.value = Math.round(el.scrollLeft / cardWidth)
+  cachedCardWidth = el.scrollWidth / cardCount
+}
+
+function onScroll() {
+  const el = sliderRef.value
+  if (!el || !cachedCardWidth) return
+  activeIndex.value = Math.round(el.scrollLeft / cachedCardWidth)
 }
 
 function scrollTo(i: number) {
   const el = sliderRef.value
-  if (!el) return
-  const cardWidth = el.scrollWidth / cardCount
-  el.scrollTo({ left: i * cardWidth, behavior: 'smooth' })
+  if (!el || !cachedCardWidth) return
+  el.scrollTo({ left: i * cachedCardWidth, behavior: 'smooth' })
 }
 
 onMounted(() => {
+  const el = sliderRef.value
+  if (el) {
+    updateCachedCardWidth()
+    resizeObserver = new ResizeObserver(updateCachedCardWidth)
+    resizeObserver.observe(el)
+  }
   if (props.category && categoryIndexMap[props.category] !== undefined) {
     scrollTo(categoryIndexMap[props.category])
   }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
 })
 
 const title = computed(() => 'Unsere Preise')

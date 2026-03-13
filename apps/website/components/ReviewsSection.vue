@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#app'
 
 const props = defineProps({
@@ -135,6 +135,29 @@ const reviews = computed(() => allReviews[props.category] ?? allReviews.default)
 const sliderRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
 
+// Cache card width to avoid forced reflow on every scroll event
+let cachedCardWidth = 0
+let resizeObserver: ResizeObserver | null = null
+
+function updateCachedCardWidth() {
+  const el = sliderRef.value
+  if (!el) return
+  cachedCardWidth = el.scrollWidth / reviews.value.length
+}
+
+onMounted(() => {
+  const el = sliderRef.value
+  if (el) {
+    updateCachedCardWidth()
+    resizeObserver = new ResizeObserver(updateCachedCardWidth)
+    resizeObserver.observe(el)
+  }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
+
 // Generate AggregateRating Schema
 const aggregateRatingSchema = computed(() => {
   const reviewCount = reviews.value.length
@@ -163,15 +186,13 @@ useHead({
 
 function onScroll() {
   const el = sliderRef.value
-  if (!el) return
-  const cardWidth = el.scrollWidth / reviews.value.length
-  activeIndex.value = Math.round(el.scrollLeft / cardWidth)
+  if (!el || !cachedCardWidth) return
+  activeIndex.value = Math.round(el.scrollLeft / cachedCardWidth)
 }
 
 function scrollTo(i: number) {
   const el = sliderRef.value
-  if (!el) return
-  const cardWidth = el.scrollWidth / reviews.value.length
-  el.scrollTo({ left: i * cardWidth, behavior: 'smooth' })
+  if (!el || !cachedCardWidth) return
+  el.scrollTo({ left: i * cachedCardWidth, behavior: 'smooth' })
 }
 </script>

@@ -58,33 +58,18 @@ function setupObserver() {
     return
   }
 
+  // Use IntersectionObserver to find the most visible card — no getBoundingClientRect needed
   observer = new IntersectionObserver(
     (entries) => {
-      let best: { index: number; ratio: number } | null = null
       entries.forEach((entry) => {
         const index = cardRefs.value.indexOf(entry.target as HTMLElement)
         if (index === -1) return
-        if (!best || entry.intersectionRatio > best.ratio) {
-          best = { index, ratio: entry.intersectionRatio }
+        if (entry.intersectionRatio > 0.5) {
+          activeIndex.value = index
         }
       })
-
-      // find the most centered card
-      const viewportCenter = window.innerHeight / 2
-      let closestIndex = 0
-      let closestDist = Infinity
-      cardRefs.value.forEach((el, i) => {
-        const rect = el.getBoundingClientRect()
-        const cardCenter = rect.top + rect.height / 2
-        const dist = Math.abs(cardCenter - viewportCenter)
-        if (dist < closestDist) {
-          closestDist = dist
-          closestIndex = i
-        }
-      })
-      activeIndex.value = closestIndex
     },
-    { threshold: Array.from({ length: 11 }, (_, i) => i / 10) }
+    { threshold: [0.5] }
   )
 
   cardRefs.value.forEach((el) => observer!.observe(el))
@@ -93,28 +78,15 @@ function setupObserver() {
 function onScroll() {
   if (getColumns() >= 2) {
     activeIndex.value = null
-    return
   }
-  const viewportCenter = window.innerHeight / 2
-  let closestIndex = 0
-  let closestDist = Infinity
-  cardRefs.value.forEach((el, i) => {
-    const rect = el.getBoundingClientRect()
-    const cardCenter = rect.top + rect.height / 2
-    const dist = Math.abs(cardCenter - viewportCenter)
-    if (dist < closestDist) {
-      closestDist = dist
-      closestIndex = i
-    }
-  })
-  activeIndex.value = closestIndex
 }
 
 function onResize() {
   if (getColumns() >= 2) {
     activeIndex.value = null
+    observer?.disconnect()
   } else {
-    onScroll()
+    setupObserver()
   }
 }
 
