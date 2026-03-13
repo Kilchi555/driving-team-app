@@ -58,39 +58,40 @@ const props = withDefaults(defineProps<{
 const cardRefs = ref<HTMLElement[]>([])
 const activeIndex = ref<number | null>(null)
 
+let observer: IntersectionObserver | null = null
+
 function isMobile(): boolean {
   return window.innerWidth < 768
 }
 
-function updateActive() {
+function setupObserver() {
+  observer?.disconnect()
   if (!isMobile()) {
     activeIndex.value = null
     return
   }
-  const viewportCenter = window.innerHeight / 2
-  let closestIndex = 0
-  let closestDist = Infinity
-  cardRefs.value.forEach((el, i) => {
-    const rect = el.getBoundingClientRect()
-    const cardCenter = rect.top + rect.height / 2
-    const dist = Math.abs(cardCenter - viewportCenter)
-    if (dist < closestDist) {
-      closestDist = dist
-      closestIndex = i
-    }
-  })
-  activeIndex.value = closestIndex
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const index = cardRefs.value.indexOf(entry.target as HTMLElement)
+        if (index !== -1 && entry.intersectionRatio > 0.5) {
+          activeIndex.value = index
+        }
+      })
+    },
+    { threshold: [0.5] }
+  )
+  cardRefs.value.forEach((el) => observer!.observe(el))
 }
 
 onMounted(() => {
-  window.addEventListener('scroll', updateActive, { passive: true })
-  window.addEventListener('resize', updateActive, { passive: true })
-  updateActive()
+  setupObserver()
+  window.addEventListener('resize', setupObserver, { passive: true })
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', updateActive)
-  window.removeEventListener('resize', updateActive)
+  observer?.disconnect()
+  window.removeEventListener('resize', setupObserver)
 })
 </script>
 
