@@ -2,6 +2,14 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   ssr: true,
 
+  tailwindcss: {
+    cssPath: '~/assets/css/main.css',
+    configPath: 'tailwind.config.ts',
+    exposeConfig: false,
+    viewer: false,
+    injectPosition: 'first',
+  },
+
   features: {
     inlineStyles: true,
   },
@@ -10,6 +18,7 @@ export default defineNuxtConfig({
     treeshakeClientOnly: true,
     payloadExtraction: false,
     renderJsonPayloads: false,
+    headNext: true,
   },
 
   vite: {
