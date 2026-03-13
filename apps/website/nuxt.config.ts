@@ -6,6 +6,29 @@ export default defineNuxtConfig({
     inlineStyles: true,
   },
 
+  experimental: {
+    treeshakeClientOnly: true,
+    payloadExtraction: false,
+    renderJsonPayloads: false,
+  },
+
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/vue/') || id.includes('node_modules/@vue/')) {
+              return 'vue-core'
+            }
+            if (id.includes('node_modules/vue-router/')) {
+              return 'vue-router'
+            }
+          }
+        }
+      }
+    }
+  },
+
   app: {
     head: {
       charset: 'utf-8',
