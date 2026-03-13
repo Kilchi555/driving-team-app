@@ -16,7 +16,7 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Bus Fahrschule Kategorie D1 & D</h1>
-          <p class="hidden xs:block text-xl text-white/90 mb-8">Möchtest du deinen Bus Führerschein machen? Bei unserer Bus Fahrschule wirst du von einem erfahrenen Fahrlehrer unterrichtet, der seine Begeisterung für grosse Fahrzeuge mit dir teilt. Freu dich auf lehrreiche und spannende Fahrstunden!</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Möchtest du deinen Bus Führerschein machen? Bei unserer Bus Fahrschule wirst du von einem erfahrenen Fahrlehrer unterrichtet, der seine Begeisterung für grosse Fahrzeuge mit dir teilt. Freu dich auf lehrreiche und spannende Fahrstunden!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
@@ -226,7 +226,7 @@
           <h3 class="font-bold text-xl text-center mb-2">Kategorie D</h3>
           <p class="text-center text-3xl font-bold mb-1">CHF 200.-</p>
           <p class="text-center text-sm text-primary-200 mb-4">à 45 Minuten</p>
-          <ul class="space-y-3 text-sm text-white/90 mb-6">
+          <ul class="space-y-3 text-sm text-white mb-6">
             <li class="flex gap-2"><span>✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span>✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span>✓</span> Rechnung per E-Mail</li>
@@ -341,7 +341,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Starte deine Bus-Fahrer-Karriere!</h2>
-        <p class="hidden xs:block text-xl text-white/90 mb-8">Mit professioneller Ausbildung von Driving Team in Zürich</p>
+        <p class="hidden xs:block text-xl text-white mb-8">Mit professioneller Ausbildung von Driving Team in Zürich</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden

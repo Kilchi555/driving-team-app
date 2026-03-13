@@ -12,7 +12,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-4">Datenschutz</h1>
-        <p class="text-white/90">Stand: 1. Januar 2025</p>
+        <p class="text-white">Stand: 1. Januar 2025</p>
       </div>
     </section>
 

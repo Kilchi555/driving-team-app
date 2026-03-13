@@ -4,7 +4,7 @@
     <div class="bg-primary-600 rounded-xl p-6 sm:p-8 text-center">
       <p class="text-xs uppercase tracking-widest text-primary-200 font-semibold mb-1">{{ isSpecificRequest ? 'Interessentanfrage' : 'Allgemeine Anfrage' }}</p>
       <h2 class="text-2xl sm:text-3xl font-bold text-white">{{ formTitle }}</h2>
-      <p class="text-white/90 text-sm mt-2">{{ formDescription }}</p>
+      <p class="text-white text-sm mt-2">{{ formDescription }}</p>
     </div>
 
     <!-- Form Card -->

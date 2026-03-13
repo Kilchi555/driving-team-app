@@ -14,7 +14,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">CZV Kurse</h1>
-        <p class="text-xl text-white/90 mb-4">Obligatorische Berufliche Weiterbildung für Lastwagen- und Busfahrer</p>
+        <p class="text-xl text-white mb-4">Obligatorische Berufliche Weiterbildung für Lastwagen- und Busfahrer</p>
         <p class="text-primary-200 mb-8">CZV Grundkurs (140h) und Weiterbildung (5 x 7h in 5 Jahren)</p>
         <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           ✉️ Anfrage stellen
@@ -425,7 +425,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">CZV Kurs anfragen</h2>
-        <p class="text-xl text-white/90 mb-8">Melde dich bei uns für mehr Informationen zu den CZV Kursen.</p>
+        <p class="text-xl text-white mb-8">Melde dich bei uns für mehr Informationen zu den CZV Kursen.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">✉️ info@drivingteam.ch</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>

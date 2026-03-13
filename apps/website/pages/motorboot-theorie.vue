@@ -15,7 +15,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Motorboot Theorie</h1>
-          <p class="text-xl text-white/90 mb-8">Wir bieten Dir die Möglichkeit, bei uns Motorboot Theoriestunden zu buchen und dich beim Lernen mit Tipps und Tricks zu unterstützen. Wer die Motorboot Theorie wirklich verstanden hat, braucht weniger Fahrstunden auf dem Wasser!</p>
+          <p class="text-xl text-white mb-8">Wir bieten Dir die Möglichkeit, bei uns Motorboot Theoriestunden zu buchen und dich beim Lernen mit Tipps und Tricks zu unterstützen. Wer die Motorboot Theorie wirklich verstanden hat, braucht weniger Fahrstunden auf dem Wasser!</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Theorie anmelden
           </a>

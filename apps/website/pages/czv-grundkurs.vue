@@ -17,7 +17,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
-          <p class="hidden xs:block text-xl text-white/90 mb-8">Der obligatorische Grundkurs für Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus). Erhalte den Fähigkeitsausweis.</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Der obligatorische Grundkurs für Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus). Erhalte den Fähigkeitsausweis.</p>
           <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Kurs anfragen
           </button>
@@ -407,7 +407,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Starten Sie jetzt mit dem CZV Grundkurs</h2>
-        <p class="text-white/90 mb-8 max-w-2xl mx-auto">Werden Sie qualifizierter Berufschauffeur/in. Wir begleiten Sie durch den gesamten Kurs und bereiten Sie optimal auf die Prüfungen vor.</p>
+        <p class="text-white mb-8 max-w-2xl mx-auto">Werden Sie qualifizierter Berufschauffeur/in. Wir begleiten Sie durch den gesamten Kurs und bereiten Sie optimal auf die Prüfungen vor.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">✉️ Kurs anfragen</button>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
