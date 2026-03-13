@@ -156,6 +156,26 @@ export default defineNuxtConfig({
     '/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
     '/erste-hilfe-kurs/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
 
+    // Blog-Posts (alte WordPress-Artikel)
+    '/blog-minderung-pruefungsangst': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/fahrschueler-respekt-geduld': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/', statusCode: 301 } },
+
+    // Englische Seiten
+    '/drivers-license-converting': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/drivers-license-converting/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+
+    // Alte Theorie-Seiten
+    '/theoriepruefung-vorbereitung': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/theoriepruefung-vorbereitung/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/verkehrskunde-vku-kurs': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/verkehrskunde-vku-kurs/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+
+    // Elementor-Seiten (WordPress-Überrest)
+    '/elementor-7': { redirect: { to: '/', statusCode: 301 } },
+    '/elementor-7/': { redirect: { to: '/', statusCode: 301 } },
+
     // BPT / Taxi
     '/bpt': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
     '/bpt/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
