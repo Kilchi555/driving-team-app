@@ -414,12 +414,7 @@ export default defineNuxtConfig({
     '/en/thank-you-driving-lessons': { redirect: { to: '/', statusCode: 301 } },
     '/en/thank-you-driving-lessons/': { redirect: { to: '/', statusCode: 301 } },
 
-    // Kurzform-URLs (auto, taxi, motorboot)
-    '/auto': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/auto/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/taxi': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
-    '/taxi/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
-    '/motorboot': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    // Kurzform-URLs (auto, taxi)
 
     // Alte Theorie-Varianten
     '/auto-theoriepruefung-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
