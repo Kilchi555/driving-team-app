@@ -15,11 +15,12 @@
             :href="review.link"
             target="_blank"
             rel="noopener noreferrer"
-            class="review-card snap-start shrink-0 w-[80vw] sm:w-[55vw] md:w-[38vw] lg:w-[28vw] max-w-sm"
+            class="snap-start shrink-0 w-[80vw] sm:w-[55vw] md:w-[38vw] lg:w-[28vw] max-w-sm block rounded-2xl p-6 no-underline shadow-[0_4px_16px_rgba(1,158,229,0.2)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(1,158,229,0.4)]"
+            style="background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%)"
           >
             <p class="text-yellow-500 text-sm mb-2">⭐⭐⭐⭐⭐</p>
             <p class="font-bold text-gray-900 text-base mb-1">{{ review.author }}</p>
-            <p class="review-text text-gray-800 text-sm italic leading-relaxed">{{ review.text }}</p>
+            <p class="text-gray-800 text-sm italic leading-relaxed [-webkit-line-clamp:4] [line-clamp:4] [-webkit-box-orient:vertical] [display:-webkit-box] overflow-hidden [max-height:6em] transition-[max-height] duration-400">{{ review.text }}</p>
             <p class="text-xs text-gray-700 mt-3 font-semibold">→ Auf Google lesen</p>
           </a>
         </div>
@@ -174,36 +175,3 @@ function scrollTo(i: number) {
   el.scrollTo({ left: i * cardWidth, behavior: 'smooth' })
 }
 </script>
-
-<style scoped>
-.review-card {
-  display: block;
-  background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%);
-  border-radius: 16px;
-  padding: 1.5rem;
-  text-decoration: none;
-  box-shadow: 0 4px 16px rgba(1, 158, 229, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.review-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 32px rgba(1, 158, 229, 0.4);
-}
-
-.review-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 6em;
-  transition: max-height 0.4s ease;
-}
-
-.review-card:hover .review-text {
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  max-height: 20em;
-}
-</style>
