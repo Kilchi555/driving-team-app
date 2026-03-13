@@ -269,6 +269,95 @@ export default defineNuxtConfig({
     '/anmeldung-fahrlehrerweiterbildung': { redirect: { to: '/fahrlehrerweiterbildung/', statusCode: 301 } },
     '/anmeldung-fahrlehrerweiterbildung/': { redirect: { to: '/fahrlehrerweiterbildung/', statusCode: 301 } },
 
+    // WordPress page_id URLs
+    '/?page_id=15356': { redirect: { to: '/', statusCode: 301 } },
+    '/?page_id=15375': { redirect: { to: '/', statusCode: 301 } },
+    '/?page_id=27': { redirect: { to: '/', statusCode: 301 } },
+
+    // Mehrsprachige Seiten (sq/it weitere)
+    '/sq/scuola-guida-italiano': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/scuola-guida-italiano/': { redirect: { to: '/', statusCode: 301 } },
+    '/en/weg-zur-motorradpruefung': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/en/weg-zur-motorradpruefung/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/it/der-weg-zur-autopruefung': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/it/der-weg-zur-autopruefung/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/it/anhaenger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/it/anhaenger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/it/anhänger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/it/anhänger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/it/vku-lachen': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
+    '/it/vku-lachen/': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
+    '/it/auto-fahrschule-stgallen/„': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/italiano': { redirect: { to: '/', statusCode: 301 } },
+    '/italiano/': { redirect: { to: '/', statusCode: 301 } },
+
+    // WordPress-Systempfade → Homepage
+    '/wp-content/plugins/happy-elementor-addons/assets/vendor/pdfjs/lib': { redirect: { to: '/', statusCode: 301 } },
+    '/datatables': { redirect: { to: '/', statusCode: 301 } },
+    '/datatables/': { redirect: { to: '/', statusCode: 301 } },
+    '/marker-listing': { redirect: { to: '/', statusCode: 301 } },
+    '/marker-listing/': { redirect: { to: '/', statusCode: 301 } },
+    '/maps': { redirect: { to: '/', statusCode: 301 } },
+    '/maps/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Driving Team Zürich Varianten
+    '/driving-team-zürich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/driving-team-zürich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/fahrschule-zuerich-2': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/fahrschule-zuerich-2/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+
+    // Weitere Motorboot-Seiten
+    '/motorbootpruefung': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/motorbootpruefung/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+
+    // Standortspezifische Seiten
+    '/auto-fahrschule-uster': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },
+    '/auto-fahrschule-uster/': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },
+    '/auto-fahrschule-lachen': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/auto-fahrschule-lachen/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/anhaenger-fahrstunden-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/anhaenger-fahrstunden-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+
+    // Lastwagen-Varianten
+    '/lastwagen-fahrstunden': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/lastwagen-fahrstunden/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/wegzurlastwagenprufung': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/wegzurlastwagenprufung/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+
+    // Taxi-Varianten
+    '/taxi-fahrstunden': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/taxi-fahrstunden/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+
+    // Motorrad Grundkurs Varianten
+    '/grundkurs-zuerich': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
+    '/grundkurs-zuerich/': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
+
+    // Englische Seiten (weitere)
+    '/driving-lessons': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/driving-lessons/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/road-awareness-courses': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/road-awareness-courses/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+
+    // Weitere Anhänger-Varianten
+    '/weg-zur-anhangerprufung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/weg-zur-anhangerprufung/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+
+    // CZV / Chauffeurweiterbildung
+    '/chauffeurweiterbildung': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
+    '/chauffeurweiterbildung/': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
+
+    // Danke-Seiten (weitere)
+    '/danke-motorboot-theorie': { redirect: { to: '/', statusCode: 301 } },
+    '/danke-motorboot-theorie/': { redirect: { to: '/', statusCode: 301 } },
+
+    // WordPress Blog-Post-URLs mit Datum (weitere)
+    '/2023/09/27/verkehrskunde-vku-kurs': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/2023/09/27/verkehrskunde-vku-kurs/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+
+    // Lern-Pool Varianten
+    '/lern-pool': { redirect: { to: '/faq/', statusCode: 301 } },
+    '/lern-pool/': { redirect: { to: '/faq/', statusCode: 301 } },
+
     // Mehrsprachige Root-Seiten
     '/sq': { redirect: { to: '/', statusCode: 301 } },
     '/sq/': { redirect: { to: '/', statusCode: 301 } },
