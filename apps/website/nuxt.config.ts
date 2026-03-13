@@ -185,6 +185,32 @@ export default defineNuxtConfig({
     // Standortspezifische Auto-Fahrschule
     '/auto-fahrschule-aargau': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
     '/auto-fahrschule-aargau/': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
+    '/auto-fahrschule-zürich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/auto-fahrschule-zürich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/en/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/en/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+
+    // Weitere Weg-zur-Prüfung Seiten
+    '/weg-zur-anhaengerpruefung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/weg-zur-anhaengerpruefung/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/weg-zur-buspruefung': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+
+    // Mehrsprachige Seiten (WordPress Multilingual Plugin)
+    '/it': { redirect: { to: '/', statusCode: 301 } },
+    '/it/': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/motorboot-wegweiser': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/sq/motorboot-wegweiser/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/sq/anhaenger-fahrschule-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/sq/anhaenger-fahrschule-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/en/anhaenger-fahrschule-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/en/anhaenger-fahrschule-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+
+    // Englische Driving School Seiten
+    '/driving-school': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/driving-school/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+
+    // Fehlerhafte URL mit Anführungszeichen (Copy-Paste Fehler im alten CMS)
+    '/fahrschule-reichenburg/„': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
 
     // Alte Theorie-Seiten
     '/theoriepruefung-vorbereitung': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
