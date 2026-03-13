@@ -227,7 +227,7 @@
             <!-- Motorrad Grundkurs -->
             <a href="/motorrad-grundkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
-              <img src="/images/courses/motorrad-grundkurs.webp" width="360" height="212" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/courses/motorrad-grundkurs.webp" width="320" height="188" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">

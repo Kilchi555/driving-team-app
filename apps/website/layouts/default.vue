@@ -5,7 +5,7 @@
       <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="handleLogoClick">
-          <img src="/images/logo.webp" alt="Driving Team Logo" width="400" height="68" class="h-8 xl:h-12 w-auto object-contain" loading="eager" />
+          <img src="/images/logo.webp" alt="Driving Team Logo" width="340" height="57" class="h-8 xl:h-12 w-auto object-contain" loading="eager" />
         </NuxtLink>
 
         <!-- Hamburger / Close Button -->
