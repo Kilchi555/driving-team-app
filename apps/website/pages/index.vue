@@ -10,7 +10,7 @@
       <!-- Open Graph -->
       <Meta property="og:title" content="Fahrschule Zürich | Driving Team - Auto & Motorrad Fahrschule" />
       <Meta property="og:description" content="Moderne Fahrschule in Zürich für Auto, Motorrad, Taxi & Lastwagen. Professionelle Fahrerausbildung mit erfahrenen Fahrlehrern. Flexible Fahrstunden, hohe Prüfungserfolgsquote." />
-      <Meta property="og:image" content="https://drivingteam.ch/images/og-image.jpg" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta property="og:image:alt" content="Driving Team Fahrschule Zürich" />

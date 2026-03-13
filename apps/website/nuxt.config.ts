@@ -49,7 +49,7 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#1e40af' },
         { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
         { name: 'google-site-verification', content: 'r7qHQJaWARXloFYAxKyfU6tdVkGgmSRSVWeL-JwHBK8' },
-        { property: 'og:image', content: 'https://drivingteam.ch/images/og-image.jpg' },
+        { property: 'og:image', content: 'https://drivingteam.ch/images/og-image.webp' },
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
         { property: 'og:image:alt', content: 'Fahrschule Driving Team – Auto, Motorrad, Kurse' },
@@ -57,7 +57,7 @@ export default defineNuxtConfig({
         { property: 'og:site_name', content: 'Driving Team Fahrschule' },
         { property: 'og:locale', content: 'de_CH' },
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:image', content: 'https://drivingteam.ch/images/og-image.jpg' },
+        { name: 'twitter:image', content: 'https://drivingteam.ch/images/og-image.webp' },
       ],
       link: [
         { rel: 'alternate', hreflang: 'de', href: 'https://drivingteam.ch' },
