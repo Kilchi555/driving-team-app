@@ -226,10 +226,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   // ===== CACHE SYSTEM =====
   const PRICING_RULES_CACHE_DURATION = 10 * 60 * 1000  // 10 Minuten
   const PRICE_CALCULATION_CACHE_DURATION = 2 * 60 * 1000  // 2 Minuten
-  const APPOINTMENT_COUNT_CACHE_DURATION = 30 * 1000     // 30 Sekunden
 
   const priceCalculationCache = ref<Map<string, { data: CalculatedPrice; timestamp: number }>>(new Map())
-  const appointmentCountCache = ref<Map<string, { count: number; timestamp: number }>>(new Map())
 
   // ===== CACHE HELPERS =====
   const generatePriceKey = (categoryCode: string, durationMinutes: number, userId?: string): string => {
@@ -246,12 +244,6 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     for (const [key, cached] of priceCalculationCache.value.entries()) {
       if (!isCacheValid(cached.timestamp, PRICE_CALCULATION_CACHE_DURATION)) {
         priceCalculationCache.value.delete(key)
-      }
-    }
-    
-    for (const [userId, cached] of appointmentCountCache.value.entries()) {
-      if (!isCacheValid(cached.timestamp, APPOINTMENT_COUNT_CACHE_DURATION)) {
-        appointmentCountCache.value.delete(userId)
       }
     }
   }
@@ -342,7 +334,6 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       // Cache invalidierung
       priceCalculationCache.value.clear()
-      appointmentCountCache.value.clear()
 
       logger.debug('✅ Pricing rules loaded:', pricingRulesData.length, 'categories')
 
@@ -404,15 +395,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   }
 
   const getAppointmentCount = async (userId: string, categoryCode: string): Promise<number> => {
-    // Prüfe Cache
-    const cacheKey = `${userId}-${categoryCode}`
-    const cached = appointmentCountCache.value.get(cacheKey)
-    if (cached && isCacheValid(cached.timestamp, APPOINTMENT_COUNT_CACHE_DURATION)) {
-      return cached.count
-    }
-
     try {
-      // ✅ KORRIGIERT: Verwende Backend-API für Termin-Zählung (RLS-konform)
       const response = await $fetch('/api/staff/get-appointment-count', {
         query: {
           userId,
@@ -422,15 +405,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       if (response?.success && response?.data) {
         const appointmentNumber = response.data.count
-        
-        // Cache speichern
-        appointmentCountCache.value.set(cacheKey, {
-          count: appointmentNumber,
-          timestamp: Date.now()
-        })
-        
         logger.debug(`📊 Appointment count for ${categoryCode}: ${appointmentNumber} (${response.data.active_count} active + 1 new)`)
-        
         return appointmentNumber
       }
 
@@ -841,7 +816,7 @@ const roundToNearestFranken = (rappen: number): number => {
   }
 
   // ===== CACHE MANAGEMENT =====
-  const invalidateCache = (type?: 'pricing' | 'calculations' | 'appointments' | 'all') => {
+  const invalidateCache = (type?: 'pricing' | 'calculations' | 'all') => {
     switch (type) {
       case 'pricing':
         lastLoaded.value = null
@@ -849,14 +824,10 @@ const roundToNearestFranken = (rappen: number): number => {
       case 'calculations':
         priceCalculationCache.value.clear()
         break
-      case 'appointments':
-        appointmentCountCache.value.clear()
-        break
       case 'all':
       default:
         lastLoaded.value = null
         priceCalculationCache.value.clear()
-        appointmentCountCache.value.clear()
         break
     }
   }

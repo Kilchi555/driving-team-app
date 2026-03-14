@@ -2555,11 +2555,9 @@ defineExpose({
 <template>
   <div class="relative calendar-root" ref="rootEl">
     <!-- Loading Overlay -->
-    <div v-if="isLoadingEvents" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
-        <p class="text-gray-600">Termine werden geladen...</p>
-      </div>
+    <div v-if="isLoadingEvents" class="absolute inset-0 bg-white bg-opacity-80 flex flex-col items-center justify-center z-50 gap-4">
+      <LoadingLogo size="xl" />
+      <p class="text-sm text-gray-500 font-medium">Termine werden geladen...</p>
     </div>
     
     <!-- Date Picker Backdrop -->
