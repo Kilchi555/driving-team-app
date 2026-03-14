@@ -149,8 +149,10 @@ export default defineNuxtConfig({
     '/verkehrskunde-kurs-dietikon/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
 
     // Motorrad
-    '/weg-zur-motorbootpruefung': { redirect: { to: '/motorboot/', statusCode: 301 } },
-    '/weg-zur-motorbootpruefung/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/motorboot': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/motorboot/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/weg-zur-motorbootpruefung': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/weg-zur-motorbootpruefung/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
 
     // Nothelferkurs
     '/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
@@ -198,8 +200,8 @@ export default defineNuxtConfig({
     // Mehrsprachige Seiten (WordPress Multilingual Plugin)
     '/it': { redirect: { to: '/', statusCode: 301 } },
     '/it/': { redirect: { to: '/', statusCode: 301 } },
-    '/sq/motorboot-wegweiser': { redirect: { to: '/motorboot/', statusCode: 301 } },
-    '/sq/motorboot-wegweiser/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/sq/motorboot-wegweiser': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/sq/motorboot-wegweiser/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/sq/anhaenger-fahrschule-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/sq/anhaenger-fahrschule-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/en/anhaenger-fahrschule-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
@@ -212,10 +214,10 @@ export default defineNuxtConfig({
     '/en/fahrlehrer-reichenburg/': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
     '/sq/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
     '/sq/fahrlehrer-reichenburg/': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
-    '/en/motorboot-wegweiser': { redirect: { to: '/motorboot/', statusCode: 301 } },
-    '/en/motorboot-wegweiser/': { redirect: { to: '/motorboot/', statusCode: 301 } },
-    '/it/motorboot-wegweiser': { redirect: { to: '/motorboot/', statusCode: 301 } },
-    '/it/motorboot-wegweiser/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/en/motorboot-wegweiser': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/en/motorboot-wegweiser/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/it/motorboot-wegweiser': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/it/motorboot-wegweiser/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/sq/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/sq/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/it/fahrschule-wil': { redirect: { to: '/', statusCode: 301 } },
@@ -307,8 +309,8 @@ export default defineNuxtConfig({
     '/fahrschule-zuerich-2/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
 
     // Weitere Motorboot-Seiten
-    '/motorbootpruefung': { redirect: { to: '/motorboot/', statusCode: 301 } },
-    '/motorbootpruefung/': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/motorbootpruefung': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/motorbootpruefung/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
 
     // Standortspezifische Seiten
     '/auto-fahrschule-uster': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },

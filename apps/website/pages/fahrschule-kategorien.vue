@@ -137,7 +137,7 @@
             <li class="flex gap-2"><span class="text-cyan-600">✓</span> <span>CHF 2'000–3'000 Gesamtkosten</span></li>
             <li class="flex gap-2"><span class="text-cyan-600">✓</span> <span>2-6 Monate Ausbildungsdauer</span></li>
           </ul>
-          <a href="/motorboot/" class="inline-block bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zur Motorboot Fahrschule erfahren">
+          <a href="/motorboot-fahrschule/" class="inline-block bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zur Motorboot Fahrschule erfahren">
             Mehr erfahren →
           </a>
         </div>
