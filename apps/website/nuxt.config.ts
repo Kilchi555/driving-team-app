@@ -149,8 +149,8 @@ export default defineNuxtConfig({
     '/verkehrskunde-kurs-dietikon/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
 
     // Motorrad
-    '/motorrad-fahrstunden': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
-    '/motorrad-fahrstunden/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/weg-zur-motorbootpruefung': { redirect: { to: '/motorboot/', statusCode: 301 } },
+    '/weg-zur-motorbootpruefung/': { redirect: { to: '/motorboot/', statusCode: 301 } },
 
     // Nothelferkurs
     '/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },

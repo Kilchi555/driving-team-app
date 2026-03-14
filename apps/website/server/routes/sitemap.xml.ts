@@ -55,12 +55,6 @@ export default defineEventHandler((event) => {
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://drivingteam.ch/weg-zur-motorbootpruefung/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://drivingteam.ch/fahrschule-kategorien/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
