@@ -39,10 +39,7 @@
 
         <!-- Initializing overlay (edit/view mode while appointment data loads) -->
         <div v-if="isInitializing" class="flex flex-col items-center justify-center h-full py-20 space-y-4">
-          <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+          <LoadingLogo size="xl" />
           <p class="text-sm text-gray-500">Termindaten werden geladen...</p>
         </div>
 
@@ -346,11 +343,8 @@
       <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
         
         <!-- Loading Overlay -->
-        <div v-if="isLoading" class="absolute inset-0 bg-white bg-opacity-80 rounded-lg flex flex-col items-center justify-center z-10">
-          <svg class="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+        <div v-if="isLoading" class="absolute inset-0 bg-white bg-opacity-80 rounded-lg flex flex-col items-center justify-center z-10 gap-3">
+          <LoadingLogo size="lg" />
           <p class="text-sm font-medium text-gray-700">Termin wird abgesagt...</p>
         </div>
 
@@ -3513,6 +3507,7 @@ const handleClose = () => {
   const { invalidate } = useCalendarCache()
   invalidate('/api/staff/get-working-hours')
   invalidate('/api/booking/get-available-slots')
+  invalidate('/api/calendar/get-appointments')
   logger.debug('✅ Cache invalidated on modal close')
   
   resetForm()
@@ -3662,6 +3657,7 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
     const { invalidate } = useCalendarCache()
     invalidate('/api/staff/get-working-hours')
     invalidate('/api/booking/get-available-slots')
+    invalidate('/api/calendar/get-appointments')
     logger.debug('✅ Cache invalidated after soft delete')
     
     // ✅ Schließe das Modal
@@ -5505,7 +5501,7 @@ const initializePastedAppointment = async () => {
 // Direkt nach initializeFormData in der watch-Funktion:
 watch(() => props.isVisible, async (newVisible) => {
   if (newVisible) {
-    isInitializing.value = props.mode === 'edit' || props.mode === 'view'
+    isInitializing.value = true
     // Store mode in formData so composables can read it without needing props
     formData.value._mode = props.mode
     logger.debug('✅ Modal opened:', { 
@@ -5550,6 +5546,7 @@ watch(() => props.isVisible, async (newVisible) => {
         // ✅ PASTE OPERATION: Spezielle Behandlung für kopierte Termine
         logger.debug('📋 Initializing pasted appointment')
         await initializePastedAppointment()
+        isInitializing.value = false
       } else {
         // ✅ FALLBACK: Einfache Initialisierung für neue Termine
         logger.debug('🆕 Creating new appointment - using calendar data:', props.eventData)
@@ -5673,6 +5670,7 @@ watch(() => props.isVisible, async (newVisible) => {
         
         // ✅ Create-Mode handling
         await handleCreateMode()
+        isInitializing.value = false
         
         logger.debug('🔄 AFTER calling initializeFormData:', {
           appointment_type: formData.value.appointment_type,
