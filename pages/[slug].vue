@@ -15,21 +15,14 @@
            'linear-gradient(to bottom right, #1E40AF15, #64748B15)' 
        }">
     
-    <!-- Loading State -->
-    <div v-if="isLoadingBranding" class="text-center">
+    <!-- Loading State: nur kurzer Spinner wenn noch kein Branding UND kein gecachtes Logo -->
+    <div v-if="isLoadingBranding && !headerLogo && !brandName" class="text-center">
       <!-- Show tenant logo while loading branding -->
       <div class="mb-6">
-        <img 
-          v-if="headerLogo" 
-          :src="headerLogo" 
-          class="h-8 w-auto mx-auto drop-shadow-lg animate-pulse" 
-          :alt="`${brandName} Logo`"
-        >
         <div 
-          v-else 
           class="w-8 h-8 mx-auto bg-gray-200 rounded-lg flex items-center justify-center animate-pulse"
         >
-          <span class="text-sm font-bold text-gray-400">{{ brandName.charAt(0).toUpperCase() }}</span>
+          <span class="text-sm font-bold text-gray-400">...</span>
         </div>
       </div>
       <p class="text-gray-600">Lade...</p>
@@ -53,7 +46,7 @@
     </div>
 
     <!-- Login Form -->
-    <div v-else class="w-full max-w-md">
+    <div v-else-if="!brandingError" class="w-full max-w-md">
       <!-- Logo außerhalb - oberhalb des farbigen Bereichs -->
       <div class="text-center mb-6">
         <img 
@@ -88,11 +81,8 @@
 
       <!-- Login Form -->
       <div class="p-6">
-        <!-- Session Check Loading - hide form while checking -->
-        <!-- No spinner shown - silently check session -->
-
-        <!-- Login Form -->
-        <form v-show="!isCheckingSession" @submit.prevent="handleLogin" class="space-y-4" novalidate>
+        <!-- Login Form (session check runs silently in background) -->
+        <form @submit.prevent="handleLogin" class="space-y-4" novalidate>
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -536,8 +526,8 @@ const { currentTenant, loadTenant: loadTenantComposable } = useTenant()
 const mfaFlow = useMFAFlow()
 const supabase = getSupabase()
 
-// State für Session-Check
-const isCheckingSession = ref(true)
+// State für Session-Check (form always visible, session check runs silently in background)
+const isCheckingSession = ref(false)
 
 // Computed
 const isAuthenticated = computed<boolean>(() => Boolean((isLoggedIn as any).value ?? isLoggedIn))
@@ -1053,9 +1043,11 @@ onMounted(async () => {
     return
   }
   
-  // Lade Tenant-Branding
+  // Lade Tenant-Branding – nur wenn noch nicht vom Plugin geladen
   try {
-    await loadTenantBranding(tenantSlug.value)
+    if (!currentTenantBranding.value) {
+      await loadTenantBranding(tenantSlug.value)
+    }
     if (!currentTenantBranding.value && brandingError.value) {
       // Unbekannter Slug -> zurück zur Auswahl
       router.push('/')
@@ -1074,27 +1066,16 @@ onMounted(async () => {
     // Continue anyway - login will fail with proper error message
   }
   
-  // ✅ PRÜFUNG: Session-Check mit Timeout - verhindert hängen bleiben
+  // Session-Check läuft still im Hintergrund - Formular ist bereits sichtbar
   try {
-    // Setze Timeout für Session-Check (max 2 Sekunden)
-    const sessionCheckTimeout = setTimeout(() => {
-      logger.debug('⏱️ Session check timeout - showing login form')
-      isCheckingSession.value = false
-    }, 2000)
-    
-    // Use /api/auth/current-user which reads httpOnly cookies automatically
     const currentUserResponse = await $fetch('/api/auth/current-user').catch(() => null)
     const sessionUser = currentUserResponse?.user
-    const session = sessionUser ? { user: sessionUser } : null
-    clearTimeout(sessionCheckTimeout)
     
-    if (!session) {
-      logger.debug('✅ No session found - user is logged out, showing login form')
-      isCheckingSession.value = false
+    if (!sessionUser) {
+      logger.debug('✅ No session found - user is logged out')
       return
     }
     
-    // Session existiert - prüfe ob User authentifiziert ist
     logger.debug('✅ Session found, checking authentication status')
     
     // Warte kurz auf Auth-Store Initialisierung
@@ -1104,21 +1085,18 @@ onMounted(async () => {
       attempts++
     }
     
-    isCheckingSession.value = false
-    
     // Warte kurz damit Auth-State nach Logout vollständig gelöscht ist
     await new Promise(resolve => setTimeout(resolve, 100))
     
-    // Prüfe ob bereits angemeldet
+    // Prüfe ob bereits angemeldet -> direkt weiterleiten
     if (isAuthenticated.value && !isLoading.value) {
       logger.debug('🔄 User already authenticated, checking profile...')
       const authStore = useAuthStore()
       
-      // Warte kurz auf User-Profil
-      let attempts = 0
-      while (!authStore.userProfile && attempts < 10) {
+      let profileAttempts = 0
+      while (!authStore.userProfile && profileAttempts < 10) {
         await new Promise(resolve => setTimeout(resolve, 100))
-        attempts++
+        profileAttempts++
       }
       
       const user = authStore.userProfile
@@ -1126,7 +1104,6 @@ onMounted(async () => {
       if (!user) {
         console.error('❌ Session exists but no user profile! Clearing broken session...')
         await logout()
-        isCheckingSession.value = false
         return
       }
       
@@ -1141,8 +1118,6 @@ onMounted(async () => {
     }
   } catch (sessionError) {
     logger.debug('✅ Session check failed (user logged out):', sessionError)
-    isCheckingSession.value = false
-    // Session-Check ist abgeschlossen - Login-Formular anzeigen
   }
 })
 
