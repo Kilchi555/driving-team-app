@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
             appointment_id,
             total_amount_rappen,
             admin_fee_rappen,
-            appointments(id, status, cancellation_charge_percentage)
+            appointments(id, status, cancellation_charge_percentage, type)
           `)
           .eq('id', paymentId)
           .eq('tenant_id', tenantId)
@@ -176,7 +176,8 @@ export default defineEventHandler(async (event) => {
               body: {
                 appointment_id: paymentData.appointment_id,
                 user_id: paymentData.user_id,
-                tenant_id: tenantId
+                tenant_id: tenantId,
+                driving_category: (paymentData.appointments as any)?.type ?? null
               }
             }).catch((err: any) =>
               logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)

@@ -259,14 +259,14 @@
             <div class="flex items-center gap-2 flex-wrap">
               <!-- Zahlungsart Badge -->
               <span :class="[
-                'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
                 existingPayment?.payment_method === 'wallee' ? 'bg-blue-100 text-blue-800' :
                 existingPayment?.payment_method === 'cash' ? 'bg-green-100 text-green-800' :
                 existingPayment?.payment_method === 'invoice' ? 'bg-purple-100 text-purple-800' :
                 existingPayment?.payment_method === 'credit' ? 'bg-yellow-100 text-yellow-800' :
                 'bg-gray-100 text-gray-800'
               ]">
-                {{ existingPayment?.payment_method === 'wallee' ? 'Online-Zahlung' :
+                {{ existingPayment?.payment_method === 'wallee' ? 'Online' :
                    existingPayment?.payment_method === 'cash' ? 'Bar' :
                    existingPayment?.payment_method === 'invoice' ? 'Rechnung' :
                    existingPayment?.payment_method === 'credit' ? 'Guthaben' : 
@@ -275,16 +275,36 @@
               
               <!-- Status Badge -->
               <span :class="[
-                'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
                 paymentStatusBadge.class
               ]">
                 {{ paymentStatusBadge.label }}
               </span>
               
               <!-- Bezahldatum falls vorhanden -->
-              <span v-if="existingPayment?.paid_at" class="text-sm text-gray-600">
-                bezahlt am {{ new Date(existingPayment.paid_at).toLocaleDateString('de-CH') }}
+              <span v-if="existingPayment?.paid_at" class="text-xs text-gray-500">
+                {{ new Date(existingPayment.paid_at).toLocaleDateString('de-CH') }}
               </span>
+
+              <!-- Toggle: Als Bar bezahlt markieren (nur wenn pending + Staff) -->
+              <div
+                v-if="existingPayment?.payment_status === 'pending' && isStaffUser"
+                class="flex items-center gap-1.5 ml-1"
+                :title="isMarkingAsPaid ? 'Wird verarbeitet…' : 'Als bar bezahlt markieren'"
+              >
+                <span class="text-xs text-gray-500">Bar bezahlt</span>
+                <button
+                  type="button"
+                  @click="markAsCashPaid"
+                  :disabled="isMarkingAsPaid"
+                  :class="[
+                    'relative w-9 h-5 rounded-full transition-colors focus:outline-none',
+                    isMarkingAsPaid ? 'opacity-50 cursor-not-allowed bg-gray-300' : 'bg-gray-300 hover:bg-gray-400 cursor-pointer'
+                  ]"
+                >
+                  <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+                </button>
+              </div>
             </div>
             
             <!-- Rechnungsadresse für Invoice -->
@@ -325,17 +345,44 @@
             </button>
             
             <!-- Cash Payment Button -->
-            <button
-              @click="selectPaymentMethod('cash')"
-              :class="[
-                'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
-                selectedPaymentMethod === 'cash'
-                  ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'
-              ]"
-            >
-              <span class="font-medium">Bar</span>
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                @click="selectPaymentMethod('cash')"
+                :class="[
+                  'flex-1 p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
+                  selectedPaymentMethod === 'cash'
+                    ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'
+                ]"
+              >
+                <span class="font-medium">Bar</span>
+              </button>
+
+              <!-- Toggle: Bereits bezahlt (nur wenn Bar gewählt) -->
+              <Transition name="fade">
+                <div
+                  v-if="selectedPaymentMethod === 'cash'"
+                  class="flex items-center gap-1.5 shrink-0"
+                  title="Bereits bar bezahlt markieren"
+                >
+                  <span class="text-xs text-gray-500 whitespace-nowrap">Bereits bezahlt</span>
+                  <button
+                    type="button"
+                    @click.stop="cashAlreadyPaid = !cashAlreadyPaid"
+                    :class="[
+                      'relative w-9 h-5 rounded-full transition-colors focus:outline-none',
+                      cashAlreadyPaid ? 'bg-green-500' : 'bg-gray-300'
+                    ]"
+                  >
+                    <span :class="[
+                      'absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
+                      cashAlreadyPaid ? 'translate-x-[18px]' : 'translate-x-[2px]'
+                    ]"></span>
+                  </button>
+                </div>
+              </Transition>
+            </div>
             
             <!-- Invoice Button -->
             <button
@@ -549,7 +596,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useEventModalForm } from '~/composables/useEventModalForm'
@@ -617,6 +664,8 @@ const emit = defineEmits<{
   'billing-address-id-saved': [addressId: string] // ✅ NEU: Emit der gespeicherten Adress-ID
 
   'update:selectedPaymentMethod': [value: string] // ✅ NEU: v-model emit für payment method
+  'payment-status-changed': [] // Emit wenn Bar-Zahlung bestätigt
+  'cash-already-paid-changed': [value: boolean] // Emit wenn "bereits bezahlt" Toggle geändert
 }>()
 
 // Composables
@@ -640,6 +689,8 @@ const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 // ✅ NEU: Payment State für Edit-Modus
 const existingPayment = ref<any>(null)
 const isLoadingPayment = ref(false)
+const isMarkingAsPaid = ref(false)
+const cashAlreadyPaid = ref(false)
 
 // ✅ NEU: State für Student Billing Address Management (MUST BE EARLY)
 const studentBillingAddress = ref<any>(null)
@@ -836,6 +887,14 @@ onMounted(async () => {
     console.error('❌ Error during PriceDisplay mount:', mountError.message)
     // Don't break the entire component if initialization fails
   }
+})
+
+// Emit wenn cashAlreadyPaid sich ändert; zurücksetzen wenn Methode wechselt
+watch(cashAlreadyPaid, (val) => {
+  emit('cash-already-paid-changed', val)
+})
+watch(selectedPaymentMethod, (method) => {
+  if (method !== 'cash') cashAlreadyPaid.value = false
 })
 
 // ✅ NEU: Watcher für Student-Änderung - lädt automatisch Billing Address
@@ -1508,13 +1567,47 @@ const shouldShowSavedBillingAddress = computed(() => {
   return result
 })
 
+// Als Bar bezahlt markieren
+const markAsCashPaid = async () => {
+  if (!existingPayment.value?.id || isMarkingAsPaid.value) return
+  isMarkingAsPaid.value = true
+  try {
+    const response = await $fetch('/api/staff/process-bulk-payment', {
+      method: 'POST',
+      body: {
+        payment_ids: [existingPayment.value.id],
+        method: 'cash'
+      }
+    }) as any
+    if (!response?.success) {
+      throw new Error(response?.error || 'Fehler beim Verarbeiten')
+    }
+    // Lokal sofort aktualisieren damit Toggle + Badge wechseln
+    if (existingPayment.value) {
+      const updated = {
+        ...existingPayment.value,
+        payment_status: 'completed',
+        paid_at: new Date().toISOString()
+      }
+      existingPayment.value = null
+      await nextTick()
+      existingPayment.value = updated
+    }
+    emit('payment-status-changed')
+  } catch (e) {
+    console.error('Fehler beim Markieren als bar bezahlt', e)
+  } finally {
+    isMarkingAsPaid.value = false
+  }
+}
+
 // ✅ NEU: Einheitliche Labels + Farben für Payment-Status
 const paymentStatusBadge = computed(() => {
   const status = (existingPayment.value?.payment_status || '').toLowerCase()
 
   const statusMap: Record<string, { label: string; class: string }> = {
     completed: { label: 'Bezahlt', class: 'bg-green-100 text-green-800' },
-    pending: { label: 'Ausstehend', class: 'bg-yellow-100 text-yellow-800' },
+    pending: { label: 'Offen', class: 'bg-yellow-100 text-yellow-800' },
     failed: { label: 'Fehlgeschlagen', class: 'bg-red-100 text-red-800' },
     authorized: { label: 'Autorisiert', class: 'bg-blue-100 text-blue-800' },
     refunded: { label: 'Rückerstattet', class: 'bg-green-100 text-green-800' },
@@ -1686,3 +1779,15 @@ defineExpose({
 })
 
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+</style>

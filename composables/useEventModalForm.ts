@@ -64,6 +64,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   selectedProducts?: any, // ✅ Selected products from useProductSale
   dynamicPricing?: any, // ✅ Dynamic pricing for admin fee
   savedCompanyBillingAddressId?: any, // ✅ Company Billing Address ID from EventModal
+  cashAlreadyPaid?: any, // ✅ Bar bereits bezahlt Toggle
 }) => {
   
   // ============ STATE ============
@@ -954,7 +955,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
             // ✅ Send credit used (if any)
             creditUsedRappen: creditUsedRappenForPayment,
             // ✅ Send company billing address ID for invoice payments
-            companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null
+            companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null,
+            // ✅ Send cash already paid flag
+            cashAlreadyPaid: refs?.cashAlreadyPaid?.value === true
           }
         })
       } catch (fetchError: any) {
@@ -1317,8 +1320,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         total_amount_rappen: Math.max(0, totalAmountRappen),
         // ✅ If credit covers the entire payment, set payment_method to 'credit'
         payment_method: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'credit' : paymentMethod,
-        // ✅ If credit covers the entire payment, mark as completed
-        payment_status: creditUsedRappen >= Math.max(0, totalAmountRappen) ? 'completed' : 'pending',
+        // ✅ If credit covers the entire payment, or cash already paid toggle, mark as completed
+        payment_status: (creditUsedRappen >= Math.max(0, totalAmountRappen) || (paymentMethod === 'cash' && refs?.cashAlreadyPaid?.value === true)) ? 'completed' : 'pending',
         currency: 'CHF',
         description: `Payment for appointment: ${formData.value.title}`,
         created_by: formData.value.staff_id || null,
