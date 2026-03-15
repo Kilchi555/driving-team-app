@@ -212,7 +212,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         if (timeUntilExpiry > 0) {
           refreshCheckInterval = setTimeout(() => {
             startTokenRefreshCheck()
-          }, REFRESH_INTERVAL)
+          }, CHECK_INTERVAL)
         } else {
           logger.warn('⚠️ Session already expired')
         }

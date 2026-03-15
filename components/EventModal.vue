@@ -1075,7 +1075,13 @@ const handleSaveAppointment = async () => {
       originalAppointmentData = {
         id: props.eventData.id,
         duration_minutes: originalDuration,
-        user_id: props.eventData.user_id || props.eventData.extendedProps?.user_id
+        user_id: props.eventData.user_id || props.eventData.extendedProps?.user_id,
+        startDate: props.eventData.startDate || props.eventData.extendedProps?.startDate,
+        startTime: props.eventData.startTime || props.eventData.extendedProps?.startTime,
+        start: props.eventData.start,
+        studentEmail: props.eventData.email || props.eventData.extendedProps?.email,
+        studentName: props.eventData.student || props.eventData.extendedProps?.student || props.eventData.title,
+        instructorName: props.eventData.instructor || props.eventData.extendedProps?.instructor
       }
       
       // ✅ WICHTIG: Lade den ORIGINAL Payment-Preis BEVOR dem Save via secure API!
@@ -1311,6 +1317,55 @@ const handleSaveAppointment = async () => {
     const { clearCache } = useCalendarCache()
     clearCache()
     logger.debug('✅ Full calendar cache cleared')
+    
+    // ✅ Edit-Mode: Email versenden wenn Datum/Zeit geändert wurde
+    if (props.mode === 'edit' && originalAppointmentData) {
+      const originalDateStr = originalAppointmentData.startDate || 
+        (originalAppointmentData.start ? originalAppointmentData.start.toString().substring(0, 10) : null)
+      const originalTimeStr = originalAppointmentData.startTime ||
+        (originalAppointmentData.start ? originalAppointmentData.start.toString().substring(11, 16) : null)
+      
+      const newDateStr = formData.value.startDate
+      const newTimeStr = formData.value.startTime
+
+      const timeOrDateChanged = originalDateStr && newDateStr && (originalDateStr !== newDateStr || originalTimeStr !== newTimeStr)
+
+      if (timeOrDateChanged) {
+        const studentEmail = originalAppointmentData.studentEmail || selectedStudent.value?.email
+        const studentName = originalAppointmentData.studentName || selectedStudent.value?.full_name || 'Fahrschüler'
+        const firstName = studentName?.split(' ')[0] || studentName
+        const instructorName = originalAppointmentData.instructorName || formData.value.staffName || tenantName.value
+
+        const oldTime = `${originalDateStr} ${originalTimeStr || ''}`
+        const newTime = `${newDateStr} ${newTimeStr || ''}`
+
+        logger.debug('📧 Time/date changed in edit mode – sending reschedule email', { oldTime, newTime, studentEmail })
+
+        if (studentEmail) {
+          Promise.resolve().then(async () => {
+            try {
+              await $fetch('/api/email/send-appointment-notification', {
+                method: 'POST',
+                body: {
+                  email: studentEmail,
+                  studentName: firstName,
+                  oldTime,
+                  newTime,
+                  staffName: instructorName,
+                  type: 'rescheduled',
+                  tenantId: props.currentUser?.tenant_id
+                }
+              })
+              logger.debug('✅ Reschedule email sent successfully (edit mode)')
+            } catch (emailError: any) {
+              console.error('❌ Failed to send reschedule email (edit mode):', emailError)
+            }
+          })
+        } else {
+          logger.warn('⚠️ No student email available for reschedule notification')
+        }
+      }
+    }
     
     // Emit events to trigger calendar refresh
     if (props.mode === 'create') {

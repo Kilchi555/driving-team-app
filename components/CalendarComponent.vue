@@ -417,12 +417,34 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
     logger.debug('🔒 Loading non-working hours blocks via Backend API...')
     
     // Working hours via Backend API laden – mit Client-Cache (2 min TTL)
-    const response = await getCachedOrFetch(
-      '/api/staff/get-working-hours',
-      () => $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours'),
-      undefined,
-      2 * 60 * 1000
-    )
+    // Bei leerem Ergebnis (z.B. abgelaufener Auth-Token) nicht cachen sondern retry
+    let response: { success: boolean, workingHours: any[], staffId: string }
+    try {
+      response = await getCachedOrFetch(
+        '/api/staff/get-working-hours',
+        () => $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours'),
+        undefined,
+        2 * 60 * 1000
+      )
+    } catch (fetchError: any) {
+      if (fetchError?.statusCode === 401 || fetchError?.status === 401) {
+        // Auth-Token abgelaufen → Cache invalidieren und einmal retry
+        logger.warn('⚠️ Working hours: 401 received, invalidating cache and retrying...')
+        const { invalidate } = useCalendarCache()
+        invalidate('/api/staff/get-working-hours')
+        await new Promise(resolve => setTimeout(resolve, 800))
+        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+      } else {
+        throw fetchError
+      }
+    }
+    
+    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → Cache invalidieren (kein leeres Ergebnis cachen)
+    if (response.success && (!response.workingHours || response.workingHours.length === 0)) {
+      logger.warn('⚠️ Working hours returned empty – invalidating cache to avoid stale empty result')
+      const { invalidate } = useCalendarCache()
+      invalidate('/api/staff/get-working-hours')
+    }
     
     if (!response.success) {
       logger.debug('⚠️ No working hours found')
@@ -1063,8 +1085,13 @@ const loadAppointments = async (forceReload = false) => {
   }
   
   if (isUpdating.value) {
-    logger.debug('⚠️ Calendar update already in progress, skipping load')
-    return
+    // Statt sofort abbrechen: kurz warten und nochmals prüfen (Race mit datesSet/onMounted)
+    logger.debug('⚠️ Calendar update in progress, waiting briefly before retry...')
+    await new Promise(resolve => setTimeout(resolve, 300))
+    if (isUpdating.value) {
+      logger.debug('⚠️ Calendar update still in progress after wait, skipping load')
+      return
+    }
   }
   
   const staffId = getCurrentUserId()
@@ -1371,8 +1398,11 @@ const handleEventDrop = async (dropInfo: any) => {
       // ✅ NEW: Invalidate calendar cache to force refresh
       logger.debug('🔄 Reloading appointments after move...')
       isUpdating.value = true
-      await loadAppointments(true)
-      isUpdating.value = false
+      try {
+        await loadAppointments(true)
+      } finally {
+        isUpdating.value = false
+      }
       refreshCalendar()
       
       // ✅ NEU: Immer SMS UND EMAIL versenden (kein Checkbox mehr)
