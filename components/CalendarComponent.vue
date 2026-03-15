@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // @ts-ignore - logger.debug/info/warn accept flexible parameters from old console.log calls
 import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured, computed } from 'vue'
+import { logger } from '~/utils/logger'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -135,7 +136,7 @@ const openMoveModal = (appointment: CalendarAppointment) => {
   showMoveModal.value = true
 }
 
-const { updateOverdueAppointments } = useAppointmentStatus()
+const { isUpdating: isStatusUpdating, updateError, markAppointmentCompleted, markAppointmentEvaluated, getStatusStatistics, batchUpdateStatus } = useAppointmentStatus()
 
 // View switcher method
 // Update year in custom title button
@@ -904,7 +905,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
     // Das Backend sendet bereits das "location" Objekt für jeden Termin
     logger.debug('📍 Location data already provided by backend')
     
-    const convertedEvents = filteredAppointments.map((apt) => {
+    const convertedEvents = filteredAppointments.map((apt: any) => {
       const isTeamInvite = apt.type === 'team_invite'
       
       // ✅ Handle both array and object formats for user data
@@ -1031,8 +1032,6 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
         // ✅ Merge classNames from API (e.g., reserved-slot-event) with local ones
         classNames: [...(apt.classNames || []), `category-${category}`, unpaidClass].filter(Boolean),
         extendedProps: {
-          // ✅ Location für 'other' Events - use location data from backend
-          location: ((apt as any).location?.address || (apt as any).location?.name) || '',
           // ✅ Produktdaten für Wiederherstellung
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
@@ -1505,7 +1504,7 @@ showConfirmDialog({
     
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
       <div class="text-sm text-blue-800">
-        📱 Der Fahrschüler wird per SMS und E-Mail über die Terminverschiebung informiert.
+        📱 Der Fahrschüler wird per E-Mail über die Terminverschiebung informiert.
       </div>
     </div>
   `,

@@ -1332,12 +1332,18 @@ const handleSaveAppointment = async () => {
 
       if (timeOrDateChanged) {
         const studentEmail = originalAppointmentData.studentEmail || selectedStudent.value?.email
-        const studentName = originalAppointmentData.studentName || selectedStudent.value?.full_name || 'Fahrschüler'
+        const studentName = originalAppointmentData.studentName || (selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`.trim() : 'Fahrschüler')
         const firstName = studentName?.split(' ')[0] || studentName
-        const instructorName = originalAppointmentData.instructorName || formData.value.staffName || tenantName.value
+        const instructorName = originalAppointmentData.instructorName || (formData.value as any).staffName || tenantName.value
 
-        const oldTime = `${originalDateStr} ${originalTimeStr || ''}`
-        const newTime = `${newDateStr} ${newTimeStr || ''}`
+        const formatDate = (dateStr: string) => {
+          const [y, m, d] = dateStr.split('-')
+          const weekdays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+          const weekday = weekdays[new Date(Number(y), Number(m) - 1, Number(d)).getDay()]
+          return `${weekday}, ${d}.${m}.${y}`
+        }
+        const oldTime = `${formatDate(originalDateStr)} ${originalTimeStr || ''}`.trim()
+        const newTime = `${formatDate(newDateStr)} ${newTimeStr || ''}`.trim()
 
         logger.debug('📧 Time/date changed in edit mode – sending reschedule email', { oldTime, newTime, studentEmail })
 
@@ -1357,8 +1363,10 @@ const handleSaveAppointment = async () => {
                 }
               })
               logger.debug('✅ Reschedule email sent successfully (edit mode)')
+              showSuccess(`${firstName} wurde per E-Mail über die Terminänderung informiert.`)
             } catch (emailError: any) {
               console.error('❌ Failed to send reschedule email (edit mode):', emailError)
+              showError('E-Mail fehlgeschlagen', `${firstName} konnte nicht per E-Mail informiert werden.`)
             }
           })
         } else {
