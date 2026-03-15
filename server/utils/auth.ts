@@ -83,6 +83,70 @@ export async function getAuthenticatedUser(event: H3Event) {
     })
 
     if (!response.ok) {
+      // Access token expired → try refresh token as fallback
+      if (response.status === 401) {
+        logger.debug('⚠️ Access token expired, trying refresh token fallback...')
+        const cookies = event.node.req.headers.cookie || ''
+        const cookieArray = cookies.split(';').map((c: string) => c.trim())
+        let refreshToken: string | null = null
+
+        for (const cookie of cookieArray) {
+          if (!cookie.includes('=')) continue
+          const [name, ...valueParts] = cookie.split('=')
+          const cookieName = name.trim()
+          const value = valueParts.join('=')
+
+          if (cookieName === 'sb-refresh-token' || (cookieName.startsWith('sb-') && cookieName.includes('refresh'))) {
+            try {
+              const decoded = decodeURIComponent(value)
+              if (decoded && decoded.length > 20) {
+                refreshToken = decoded
+                break
+              }
+            } catch { /* ignore */ }
+          }
+        }
+
+        if (refreshToken) {
+          try {
+            const { createClient } = await import('@supabase/supabase-js')
+            const supabase = createClient(supabaseUrl, supabaseKey)
+            const { data, error: refreshError } = await supabase.auth.refreshSession({ refresh_token: refreshToken })
+
+            if (!refreshError && data.session) {
+              logger.debug('✅ Server-side token refreshed via refresh token fallback')
+              // Set new cookies with refreshed tokens
+              const { setAuthCookies } = await import('~/server/utils/cookies')
+              setAuthCookies(event, data.session.access_token, data.session.refresh_token)
+              // Re-use the new access token for this request
+              token = data.session.access_token
+              const retryResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'apikey': supabaseKey }
+              })
+              if (!retryResponse.ok) {
+                logger.debug('⚠️ Token verification failed after refresh:', retryResponse.statusText)
+                return null
+              }
+              const authUser = await retryResponse.json()
+              logger.debug(`✅ Token verified after refresh for auth user: ${authUser?.id}`)
+              if (authUser?.id) {
+                const supabaseAdmin = getSupabaseAdmin()
+                const { data: dbUser } = await supabaseAdmin
+                  .from('users')
+                  .select('id, tenant_id, auth_user_id, role, email, first_name, last_name')
+                  .eq('auth_user_id', authUser.id)
+                  .single()
+                if (dbUser) {
+                  return { ...authUser, tenant_id: dbUser.tenant_id, db_user_id: dbUser.id, role: dbUser.role, profile: { id: dbUser.id, tenant_id: dbUser.tenant_id, role: dbUser.role, email: dbUser.email || authUser.email, first_name: dbUser.first_name, last_name: dbUser.last_name } }
+                }
+              }
+              return authUser
+            }
+          } catch (refreshErr: any) {
+            logger.debug('⚠️ Server-side refresh token fallback failed:', refreshErr.message)
+          }
+        }
+      }
       logger.debug('⚠️ Token verification failed:', response.statusText)
       return null
     }

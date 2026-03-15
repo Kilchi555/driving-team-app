@@ -6,33 +6,33 @@ let supabaseInstance: SupabaseClient | null = null
 let supabaseAdminInstance: SupabaseClient | null = null
 let storageAdapter: any | null = null
 
-// SECURITY: SessionStorage adapter - tokens are stored in HTTP-Only cookies AND sessionStorage
-// sessionStorage is cleared when the browser tab is closed, making it more secure than localStorage
-// This allows Supabase client-side queries to work while keeping tokens from localStorage XSS exposure
-// HTTP-Only cookies provide the real auth layer, sessionStorage is just for client-side convenience
+// SECURITY: localStorage adapter for session persistence across tab closes and browser restarts
+// HTTP-Only cookies provide the real auth layer for server-side requests (XSS-safe)
+// localStorage allows the Supabase client to restore sessions after page reload/tab reopen
+// so staff users stay logged in for the full session duration (up to 7 days with Remember Me)
 function getSecureSessionStorage() {
   if (storageAdapter) {
     return storageAdapter
   }
 
-  // Check if sessionStorage is available (browser environment)
-  const isSessionStorageAvailable = typeof sessionStorage !== 'undefined'
+  // Check if localStorage is available (browser environment)
+  const isLocalStorageAvailable = typeof localStorage !== 'undefined'
 
   storageAdapter = {
     getItem: (key: string): string | null => {
-      if (isSessionStorageAvailable) {
-        return sessionStorage.getItem(key)
+      if (isLocalStorageAvailable) {
+        return localStorage.getItem(key)
       }
       return null
     },
     setItem: (key: string, value: string): void => {
-      if (isSessionStorageAvailable) {
-        sessionStorage.setItem(key, value)
+      if (isLocalStorageAvailable) {
+        localStorage.setItem(key, value)
       }
     },
     removeItem: (key: string): void => {
-      if (isSessionStorageAvailable) {
-        sessionStorage.removeItem(key)
+      if (isLocalStorageAvailable) {
+        localStorage.removeItem(key)
       }
     }
   }

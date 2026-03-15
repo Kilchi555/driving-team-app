@@ -309,7 +309,14 @@ const isAdmin = computed(() => {
       // Clear session cache from localStorage
       if (process.client) {
         try {
-          localStorage.removeItem('app-session-cache')
+          localStorage.removeItem('supabase-session-cache')
+          localStorage.removeItem('last_token_refresh_time')
+          // Clear Supabase's own localStorage keys
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.startsWith('supabase-')) {
+              localStorage.removeItem(key)
+            }
+          })
           logger.debug('🗑️ Session cache cleared from localStorage')
         } catch (err) {
           logger.debug('⚠️ Could not clear session cache:', err)

@@ -12,13 +12,8 @@ export default defineEventHandler(async (event) => {
     const user = await getAuthenticatedUserWithDbId(event)
     
     if (!user || !user.id) {
-      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ get-working-hours: No authenticated user found - returning empty`)
-      // Return empty result instead of error - better UX when not logged in
-      return {
-        success: true,
-        workingHours: [],
-        staffId: null
-      }
+      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ get-working-hours: No authenticated user found - returning 401`)
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
     
     const supabase = getSupabaseAdmin()

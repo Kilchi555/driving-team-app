@@ -66,7 +66,23 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    logger.debug('🚫 Auth middleware: User not logged in, blocking protected route:', to.path)
+    logger.debug('🚫 Auth middleware: User not logged in, trying token refresh first...')
+    
+    // Versuche zuerst einen Token-Refresh bevor wir redirecten
+    try {
+      const refreshResponse = await $fetch('/api/auth/refresh', { method: 'POST' }) as any
+      if (refreshResponse?.session?.access_token) {
+        logger.debug('✅ Auth middleware: Token refreshed, re-initializing auth store...')
+        await authStore.initializeAuthStore()
+      }
+    } catch (refreshErr: any) {
+      logger.debug('⚠️ Auth middleware: Token refresh failed:', refreshErr?.statusCode || refreshErr?.message)
+    }
+  }
+
+  // Nochmals prüfen nach eventuell erfolgreichem Refresh
+  if (!authStore.isLoggedIn) {
+    logger.debug('🚫 Auth middleware: User not logged in after refresh attempt, blocking protected route:', to.path)
     logger.debug('Auth middleware: AuthStore state:', {
       isLoggedIn: authStore.isLoggedIn,
       isInitialized: authStore.isInitialized,
