@@ -256,6 +256,7 @@
               @invoice-address-saved="handleInvoiceAddressSaved"
               @products-changed="handleProductsChanged"
               @price-changed="handlePriceChanged"
+              @cash-already-paid-changed="handleCashAlreadyPaidChanged"
             />
           </div>
 
@@ -1518,6 +1519,11 @@ const handleSaveAppointment = async () => {
 const selectedPaymentMethod = ref<string>('wallee') // ✅ Standard: wallee
 const selectedPaymentData = ref<any>(null)
 const selectedInvoiceAddress = ref<any>(null)
+const cashAlreadyPaid = ref<boolean>(false)
+
+const handleCashAlreadyPaidChanged = (value: boolean) => {
+  cashAlreadyPaid.value = value
+}
 
 // ✅ Admin-Fee State
 const calculatedAdminFee = ref<number>(0)
@@ -1552,6 +1558,7 @@ const modalForm = useEventModalForm(props.currentUser, {
   selectedProducts,      // ✅ Selected Products übergeben
   dynamicPricing,        // ✅ Dynamic Pricing für Admin-Fee übergeben
   savedCompanyBillingAddressId, // ✅ Company Billing Address ID übergeben
+  cashAlreadyPaid,       // ✅ Bar bereits bezahlt Toggle
 })
 
 const {
@@ -3240,9 +3247,13 @@ const handleDiscountChanged = (discount: number, discountType: "fixed" | "percen
   })
 }
 
-const handlePaymentStatusChanged = (isPaid: boolean, paymentMethod?: string) => {
-  // ✅ Payment status wird in payments Tabelle gespeichert, nicht in appointments
-  logger.debug('💳 Payment status changed:', { isPaid, paymentMethod })
+const handlePaymentStatusChanged = async () => {
+  logger.debug('💳 Payment status changed: Bar bezahlt')
+  showSuccess('Bar bezahlt', 'Der Termin wurde als bar bezahlt markiert.')
+  // Reload appointment data so PriceDisplay picks up the updated payment
+  if (props.eventData?.id) {
+    emit('appointment-updated', { id: props.eventData.id })
+  }
 }
 
 // ✅ Simple Toast Functions for user feedback
@@ -3515,6 +3526,7 @@ const resetForm = () => {
   
   // ✅ NEU: Standard-Zahlungsmethode beim Reset setzen
   selectedPaymentMethod.value = 'wallee'
+  cashAlreadyPaid.value = false
 }
 
 // Staff Selection Handler

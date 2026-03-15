@@ -9,10 +9,10 @@ async function triggerAffiliateRewards(
 ): Promise<void> {
   const supabase = getSupabaseAdmin()
 
-  // Load student_id for each completed appointment
+  // Load student_id and driving category for each completed appointment
   const { data: appts } = await supabase
     .from('appointments')
-    .select('id, student_id')
+    .select('id, student_id, type')
     .in('id', appointmentIds)
 
   if (!appts?.length) return
@@ -24,7 +24,7 @@ async function triggerAffiliateRewards(
       try {
         await $fetch('/api/affiliate/process-reward', {
           method: 'POST',
-          body: { appointment_id: appt.id, user_id: appt.student_id, tenant_id: tenantId },
+          body: { appointment_id: appt.id, user_id: appt.student_id, tenant_id: tenantId, driving_category: appt.type ?? null },
         })
       } catch (err: any) {
         logger.error('❌ Affiliate reward trigger failed:', { appointmentId: appt.id, error: err.message })

@@ -26,7 +26,9 @@ export default defineEventHandler(async (event) => {
       productsPriceRappen = 0,
       discountAmountRappen = 0,
       // ✅ NEW: Company billing address ID for invoice payments
-      companyBillingAddressId = null
+      companyBillingAddressId = null,
+      // ✅ NEW: Cash already paid flag (staff marks as paid on create)
+      cashAlreadyPaid = false
     } = body
 
     // ✅ DEBUG: Log company billing address ID
@@ -368,8 +370,8 @@ export default defineEventHandler(async (event) => {
           voucher_discount_rappen: 0,
           total_amount_rappen: remainingAmountRappen,
           payment_method: paymentMethodForPayment || 'wallee',
-          payment_status: remainingAmountRappen === 0 ? 'completed' : 'pending',
-          ...(remainingAmountRappen === 0 ? { paid_at: new Date().toISOString() } : {}),
+          payment_status: (remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash')) ? 'completed' : 'pending',
+          ...(remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash') ? { paid_at: new Date().toISOString() } : {}),
           credit_used_rappen: creditUsedRappen || 0,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
           description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,

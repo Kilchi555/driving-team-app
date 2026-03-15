@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 5: TENANT ISOLATION & OWNERSHIP CHECK ============
     const { data: payment, error: paymentError } = await supabaseAdmin
       .from('payments')
-      .select('id, payment_method, payment_status, user_id, appointment_id, tenant_id, metadata, paid_at')
+      .select('id, payment_method, payment_status, user_id, appointment_id, tenant_id, metadata, paid_at, appointments(type)')
       .eq('id', body.paymentId)
       .eq('tenant_id', tenantId)
       .eq('payment_method', 'cash')
@@ -225,7 +225,8 @@ export default defineEventHandler(async (event) => {
           body: {
             appointment_id: payment.appointment_id,
             user_id: payment.user_id,
-            tenant_id: tenantId
+            tenant_id: tenantId,
+            driving_category: (payment as any).appointments?.type ?? null
           }
         }).catch((err: any) =>
           logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
