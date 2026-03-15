@@ -174,7 +174,7 @@
         </div>
         <!-- Kommende Termine - Uses Secondary Color -->
         <div 
-          @click="handleClickWithDelay('upcoming', () => { showUpcomingLessonsModal = true })"
+          @click="handleClickWithDelay('upcoming', () => { showUpcomingLessonsModal = true; loadAppointments(true) })"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'upcoming' }"
           :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
@@ -209,7 +209,7 @@
 
         <!-- Absolvierte Lektionen - Uses Accent Color -->
         <div 
-          @click="handleClickWithDelay('evaluations', () => { showEvaluationsModal = true })"
+          @click="handleClickWithDelay('evaluations', () => { showEvaluationsModal = true; loadAppointments(true) })"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'evaluations' }"
           :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
@@ -1768,10 +1768,10 @@ const loadAllData = async () => {
       return
     }
 
-    // 🔄 Load all data (appointments must load immediately for upcoming lessons count)
+    // 🔄 Load all data (appointments must finish first so course registrations can merge correctly)
     logger.debug('⏳ Loading all customer data...')
+    await loadAppointments()
     const results = await Promise.allSettled([
-      loadAppointments(),
       loadCourseRegistrations(),
       loadLocations(),
       loadStaff(),
@@ -2115,15 +2115,19 @@ const confirmAppointment = async (appointment: any) => {
   }
 }
 
-const loadAppointments = async () => {
+const loadAppointments = async (skipCache = false) => {
   if (!currentUser.value?.id) return
 
-  // Check cache first
-  const cached = getCached<any[]>('appointments')
-  if (cached) {
-    logger.debug('⚡ Appointments loaded from cache')
-    appointments.value = cached
-    return
+  // Check cache first (unless explicitly skipped)
+  if (!skipCache) {
+    const cached = getCached<any[]>('appointments')
+    if (cached) {
+      logger.debug('⚡ Appointments loaded from cache')
+      appointments.value = cached
+      return
+    }
+  } else {
+    logger.debug('🔄 Refreshing appointments (cache skipped)')
   }
 
   try {
