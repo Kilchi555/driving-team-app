@@ -72,9 +72,13 @@ export default defineEventHandler(async (event) => {
     const transactionService = new Wallee.api.TransactionService(config)
     const paymentService = new Wallee.api.TransactionPaymentPageService(config)
 
+    // Derive base URL from request headers (works on any deployment)
+    const forwardedHost = getHeader(event, 'x-forwarded-host')
+    const host = forwardedHost || getHeader(event, 'host') || 'app.drivingteam.ch'
+    const proto = getHeader(event, 'x-forwarded-proto') || 'https'
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL
       ? `https://${process.env.NUXT_PUBLIC_APP_URL}`
-      : 'http://localhost:3000'
+      : `${proto}://${host}`
 
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems: [
