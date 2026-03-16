@@ -108,7 +108,8 @@ export default defineNuxtConfig({
       walleeUserId: process.env.WALLEE_USER_ID,
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-      hcaptchaSiteKey: process.env.VITE_HCAPTCHA_SITE_KEY
+      hcaptchaSiteKey: process.env.VITE_HCAPTCHA_SITE_KEY,
+      appEnv: process.env.APP_ENV || 'production'
     }
   },
   
