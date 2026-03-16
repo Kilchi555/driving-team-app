@@ -61,7 +61,6 @@ export default defineEventHandler(async (event) => {
       hasStreet: !!withdrawalPrefs?.street,
       hasZip: !!withdrawalPrefs?.zip,
       hasCity: !!withdrawalPrefs?.city,
-      unlockAt: withdrawalPrefs?.withdrawal_unlocked_at
     })
 
     if (!withdrawalPrefs) {
@@ -72,18 +71,6 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         message: 'Bitte Adresse in den Auszahlungseinstellungen hinterlegen'
-      })
-    }
-
-    // ── Check 24h lockout after IBAN change ───────────────
-    const now = new Date()
-    const unlockAt = new Date(withdrawalPrefs.withdrawal_unlocked_at)
-    logger.info('🔍 lockout check:', { now: now.toISOString(), unlockAt: unlockAt.toISOString(), isLocked: now < unlockAt })
-    if (now < unlockAt) {
-      const hoursLeft = Math.ceil((unlockAt.getTime() - now.getTime()) / (1000 * 60 * 60))
-      throw createError({
-        statusCode: 400,
-        message: `IBAN wurde kürzlich geändert. Auszahlung möglich in ${hoursLeft} Stunden.`
       })
     }
 
