@@ -807,8 +807,13 @@ function getCreditTransactionLabel(tx: any): string {
     payment: 'Zahlung',
     refund: 'Rückerstattung',
     cancellation: 'Stornierung',
+    cancellation_credit_refund: 'Guthaben-Rückerstattung',
     manual: 'Manuelle Buchung',
     cash_deposit: 'Bar-Einzahlung',
+    appointment: 'Fahrstunde bezahlt',
+    appointment_payment: 'Fahrstunde bezahlt',
+    duration_reduction_credit: 'Rückerstattung (Dauer)',
+    voucher: 'Gutschein eingelöst',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }

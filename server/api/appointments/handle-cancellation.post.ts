@@ -280,7 +280,8 @@ export default defineEventHandler(async (event) => {
           appointment.user_id,
           payment,
           actualRefundAmount,
-          deletionReason
+          deletionReason,
+          appointment.tenant_id
         )
         
         return refundResult
@@ -519,7 +520,8 @@ async function processRefund(
   userId: string,
   payment: any,
   refundAmountRappen: number,
-  deletionReason: string
+  deletionReason: string,
+  tenantId?: string
 ) {
   try {
     // Get current user for created_by
@@ -582,6 +584,7 @@ async function processRefund(
       .from('credit_transactions')
       .insert([{
         user_id: userId,
+        tenant_id: tenantId || payment.tenant_id || null,
         transaction_type: 'cancellation',
         amount_rappen: refundAmountRappen,
         balance_before_rappen: oldBalance,
