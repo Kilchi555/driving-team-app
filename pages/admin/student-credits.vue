@@ -271,6 +271,29 @@
         </div>
 
         <div v-else class="overflow-x-auto">
+          <!-- Actions Header -->
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <span class="text-sm text-gray-600">{{ pendingWithdrawals.length }} ausstehende Auszahlungen</span>
+            <div class="flex gap-2">
+              <button
+                @click="exportPain001"
+                :disabled="isExportingPain001"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                {{ isExportingPain001 ? 'Exportiere…' : 'Pain.001 exportieren' }}
+              </button>
+              <button
+                @click="completeAllWithdrawals"
+                :disabled="isCompletingAll"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {{ isCompletingAll ? 'Verarbeite…' : 'Alle als überwiesen markieren' }}
+              </button>
+            </div>
+          </div>
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -285,6 +308,9 @@
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Angefordert am
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  IBAN
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aktionen
@@ -327,13 +353,18 @@
                   {{ formatDate(withdrawal.last_withdrawal_at) }}
                 </td>
 
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <span v-if="withdrawal.iban_last4" class="font-mono">****{{ withdrawal.iban_last4 }}</span>
+                  <span v-else class="text-gray-400 italic">Keine IBAN</span>
+                </td>
+
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
-                    @click="processWithdrawal(withdrawal)"
+                    @click="completeWithdrawal(withdrawal)"
                     :disabled="processingWithdrawalId === withdrawal.id"
                     class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
-                    <span v-if="processingWithdrawalId !== withdrawal.id">Verarbeiten</span>
+                    <span v-if="processingWithdrawalId !== withdrawal.id">Als überwiesen markieren</span>
                     <span v-else class="flex items-center gap-1">
                       <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -532,6 +563,8 @@ const activeTab = ref<'students' | 'withdrawals'>('students')
 const pendingWithdrawals = ref<any[]>([])
 const isLoadingWithdrawals = ref(false)
 const processingWithdrawalId = ref<string | null>(null)
+const isExportingPain001 = ref(false)
+const isCompletingAll = ref(false)
 
 const showCreditManagerModal = ref(false)
 const showTransactionsModal = ref(false)
@@ -691,6 +724,10 @@ const loadPendingWithdrawals = async () => {
           first_name,
           last_name,
           email
+        ),
+        student_withdrawal_preferences (
+          iban_last4,
+          account_holder
         )
       `)
       .gt('pending_withdrawal_rappen', 0)
@@ -704,7 +741,9 @@ const loadPendingWithdrawals = async () => {
       balance_rappen: credit.balance_rappen,
       pending_withdrawal_rappen: credit.pending_withdrawal_rappen,
       last_withdrawal_at: credit.last_withdrawal_at,
-      user: credit.users
+      user: credit.users,
+      iban_last4: (credit as any).student_withdrawal_preferences?.iban_last4 || null,
+      account_holder: (credit as any).student_withdrawal_preferences?.account_holder || null
     })) || []
 
     logger.debug('✅ Loaded pending withdrawals:', pendingWithdrawals.value.length)
@@ -745,6 +784,70 @@ const processWithdrawal = async (withdrawal: any) => {
     alert(`❌ Fehler beim Verarbeiten der Auszahlung: ${err.message}`)
   } finally {
     processingWithdrawalId.value = null
+  }
+}
+
+// Mark single withdrawal as completed (after bank transfer)
+const completeWithdrawal = async (withdrawal: any) => {
+  if (!confirm(`Auszahlung von CHF ${(withdrawal.pending_withdrawal_rappen / 100).toFixed(2)} an ${withdrawal.user?.first_name} ${withdrawal.user?.last_name} als überwiesen markieren?`)) return
+  try {
+    processingWithdrawalId.value = withdrawal.id
+    const res = await $fetch('/api/admin/complete-withdrawal', {
+      method: 'POST',
+      body: { userId: withdrawal.user_id }
+    }) as any
+    if (res?.success) {
+      await loadPendingWithdrawals()
+    } else {
+      alert(`❌ Fehler: ${res?.error}`)
+    }
+  } catch (err: any) {
+    alert(`❌ Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    processingWithdrawalId.value = null
+  }
+}
+
+// Mark all pending withdrawals as completed
+const completeAllWithdrawals = async () => {
+  if (!confirm(`Alle ${pendingWithdrawals.value.length} ausstehenden Auszahlungen als überwiesen markieren?`)) return
+  isCompletingAll.value = true
+  try {
+    const res = await $fetch('/api/admin/complete-withdrawal', {
+      method: 'POST',
+      body: { all: true }
+    }) as any
+    if (res?.success) {
+      await loadPendingWithdrawals()
+    } else {
+      alert(`❌ Fehler: ${res?.error}`)
+    }
+  } catch (err: any) {
+    alert(`❌ Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    isCompletingAll.value = false
+  }
+}
+
+// Export Pain.001 XML for e-banking upload
+const exportPain001 = async () => {
+  isExportingPain001.value = true
+  try {
+    const res = await $fetch('/api/admin/export-withdrawal-payments', {
+      method: 'GET',
+      responseType: 'text'
+    }) as string
+    const blob = new Blob([res], { type: 'application/xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `auszahlungen-${new Date().toISOString().slice(0, 10)}.xml`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err: any) {
+    alert(`❌ Fehler beim Export: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    isExportingPain001.value = false
   }
 }
 

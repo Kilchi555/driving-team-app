@@ -248,6 +248,15 @@ export default defineEventHandler(async (event) => {
             paymentId = paymentMatch[1]
             logger.debug('✅ Found payment ID from merchantRef (payment-uuid format):', paymentId)
           }
+
+          // Pattern 1b: topup-{uuid} - credit top-up sessions
+          if (!paymentId) {
+            const topupMatch = merchantRef.match(/^topup-([a-f0-9-]{36})/)
+            if (topupMatch) {
+              paymentId = topupMatch[1]
+              logger.debug('✅ Found payment ID from merchantRef (topup-uuid format):', paymentId)
+            }
+          }
           
           // Pattern 2: Just a UUID (36 chars)
           if (!paymentId && /^[a-f0-9-]{36}$/i.test(merchantRef)) {
@@ -756,6 +765,7 @@ export default defineEventHandler(async (event) => {
     if (paymentStatus === 'completed') {
       await confirmCreditDeduction(paymentsToUpdate)
       await processVouchersAndCredits(payments)
+      await processTopupCredits(paymentsToUpdate)
     }
     
     // ============ LAYER 11: SEND COURSE ENROLLMENT CONFIRMATION EMAILS ============
@@ -1081,6 +1091,66 @@ async function confirmCreditDeduction(payments: any[]) {
           }
         })
         .eq('id', payment.id)
+    }
+  }
+}
+
+async function processTopupCredits(payments: any[]) {
+  const supabase = getSupabaseAdmin()
+
+  for (const payment of payments) {
+    try {
+      let metadata: any = {}
+      if (payment.metadata) {
+        metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata
+      }
+      if (!metadata?.is_topup) continue
+
+      const amountRappen = metadata.topup_amount_rappen || payment.total_amount_rappen
+      if (!amountRappen || amountRappen <= 0) continue
+
+      const { data: currentCredit } = await supabase
+        .from('student_credits')
+        .select('id, balance_rappen')
+        .eq('user_id', payment.user_id)
+        .eq('tenant_id', payment.tenant_id)
+        .maybeSingle()
+
+      const currentBalance = currentCredit?.balance_rappen || 0
+      const newBalance = currentBalance + amountRappen
+
+      const { error: upsertError } = await supabase
+        .from('student_credits')
+        .upsert({
+          user_id: payment.user_id,
+          tenant_id: payment.tenant_id,
+          balance_rappen: newBalance,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,tenant_id' })
+
+      if (upsertError) {
+        logger.error('❌ Topup credit upsert failed:', upsertError)
+        continue
+      }
+
+      await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: payment.user_id,
+          tenant_id: payment.tenant_id,
+          transaction_type: 'deposit',
+          amount_rappen: amountRappen,
+          balance_before_rappen: currentBalance,
+          balance_after_rappen: newBalance,
+          payment_method: 'wallee',
+          reference_id: payment.id,
+          reference_type: 'payment',
+          notes: `Online-Einzahlung via Wallee (CHF ${(amountRappen / 100).toFixed(2)})`
+        })
+
+      logger.debug('✅ Topup credit applied:', { userId: payment.user_id, amountRappen, newBalance })
+    } catch (err: any) {
+      logger.warn('⚠️ processTopupCredits failed for payment:', payment.id, err.message)
     }
   }
 }
