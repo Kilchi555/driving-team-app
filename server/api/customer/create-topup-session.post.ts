@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
-      merchantReference: `topup-${paymentRecord.id}`,
+      merchantReference: `topup-${paymentRecord.id} | ${userProfile.first_name} ${userProfile.last_name}`,
       successUrl: `${baseUrl}/customer/payments?topup_success=1`,
       failedUrl: `${baseUrl}/customer/payments?topup_failed=1`
     }
