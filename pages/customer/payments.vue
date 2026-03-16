@@ -58,26 +58,309 @@
       
       <!-- Student Credit Balance Card -->
       <div class="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md border border-green-200 p-4 sm:p-6">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-4">
           <div class="flex-1">
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
-            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ formatAmount(studentBalance) }}</p>
-            <!-- ✅ DISABLED FOR PRODUCTION: Redeem Voucher Button (enable on preview branch) -->
-            <!-- <button
-              @click="showRedeemVoucherModal = true"
-              class="mt-3 inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-            >
-              <span class="mr-2">🎫</span>
-              Gutschein einlösen
-            </button> -->
+            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ formatAmount(availableBalance) }}</p>
+            <!-- Pending withdrawal hint -->
+            <p v-if="pendingWithdrawalRappen > 0" class="text-xs text-yellow-700 mt-1">
+              CHF {{ formatAmount(pendingWithdrawalRappen) }} in Bearbeitung
+            </p>
           </div>
-          <div class="flex-shrink-0">
-            <svg class="w-10 h-10 sm:w-12 sm:h-12 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
-            </svg>
+          <div class="flex items-center gap-3 relative">
+            <!-- Aktionen Dropdown -->
+            <div class="relative">
+              <button
+                @click="showActionsDropdown = !showActionsDropdown"
+                class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+              >
+                Aktionen
+                <svg class="w-4 h-4 transition-transform" :class="showActionsDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <!-- Invisible overlay to close on outside click -->
+              <div v-if="showActionsDropdown" class="fixed inset-0 z-10" @click="showActionsDropdown = false"></div>
+
+              <!-- Dropdown Menu -->
+              <Transition name="fade">
+                <div
+                  v-if="showActionsDropdown"
+                  class="absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-20"
+                >
+                  <button
+                    @click="showActionsDropdown = false; showTopupModal = true"
+                    class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  >
+                    Guthaben aufladen
+                  </button>
+                  <button
+                    @click="showActionsDropdown = false; showWithdrawalModal = true"
+                    :disabled="availableBalance <= 0"
+                    class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Guthaben auszahlen
+                  </button>
+                </div>
+              </Transition>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Withdrawal Modal -->
+      <Teleport to="body">
+        <div v-if="showWithdrawalModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/50" @click="closeWithdrawalModal"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-1">Guthaben auszahlen</h2>
+            <p class="text-sm text-gray-500 mb-5">Der Betrag wird auf dein Bankkonto überwiesen.</p>
+
+            <!-- Step 1: IBAN eingeben (wenn noch keine vorhanden) -->
+            <div v-if="withdrawalStep === 'iban'" class="space-y-4">
+              <div v-if="savedIbanLast4" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                Gespeicherte IBAN: <strong>****{{ savedIbanLast4 }}</strong>
+                <button @click="withdrawalStep = 'edit-iban'" class="ml-2 text-green-600 underline text-xs">Ändern</button>
+              </div>
+
+              <div v-else>
+                <p class="text-sm text-gray-600 mb-3">Bitte hinterlege zuerst deine Bankverbindung:</p>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">IBAN</label>
+                    <input
+                      v-model="ibanInput"
+                      type="text"
+                      placeholder="CH93 0076 2011 6238 5295 7"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      @input="ibanInput = ibanInput.replace(/\s/g, '').toUpperCase()"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kontoinhaber</label>
+                    <input
+                      v-model="accountHolderInput"
+                      type="text"
+                      placeholder="Max Mustermann"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div class="flex gap-2">
+                    <div class="flex-1">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Strasse</label>
+                      <input v-model="streetInput" type="text" placeholder="Musterstrasse"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    </div>
+                    <div class="w-20">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
+                      <input v-model="streetNrInput" type="text" placeholder="12"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <div class="w-24">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+                      <input v-model="zipInput" type="text" placeholder="8001"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    </div>
+                    <div class="flex-1">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Ort</label>
+                      <input v-model="cityInput" type="text" placeholder="Zürich"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    </div>
+                  </div>
+                  <p v-if="ibanError" class="text-red-600 text-xs">{{ ibanError }}</p>
+                  <button
+                    @click="saveIban"
+                    :disabled="isSavingIban"
+                    class="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {{ isSavingIban ? 'Wird gespeichert…' : 'IBAN speichern' }}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                v-if="savedIbanLast4"
+                @click="withdrawalStep = 'amount'"
+                class="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                Weiter
+              </button>
+            </div>
+
+            <!-- Step 1b: IBAN ändern -->
+            <div v-else-if="withdrawalStep === 'edit-iban'" class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Neue IBAN</label>
+                <input v-model="ibanInput" type="text" placeholder="CH93 0076 2011 6238 5295 7"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  @input="ibanInput = ibanInput.replace(/\s/g, '').toUpperCase()" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kontoinhaber</label>
+                <input v-model="accountHolderInput" type="text" placeholder="Max Mustermann"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+              </div>
+              <div class="flex gap-2">
+                <div class="flex-1">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Strasse</label>
+                  <input v-model="streetInput" type="text" placeholder="Musterstrasse"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div class="w-20">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
+                  <input v-model="streetNrInput" type="text" placeholder="12"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <div class="w-24">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+                  <input v-model="zipInput" type="text" placeholder="8001"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div class="flex-1">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Ort</label>
+                  <input v-model="cityInput" type="text" placeholder="Zürich"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+              </div>
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
+                ⚠️ Nach einer IBAN-Änderung sind Auszahlungen erst nach 24 Stunden möglich.
+              </div>
+              <p v-if="ibanError" class="text-red-600 text-xs">{{ ibanError }}</p>
+              <div class="flex gap-2">
+                <button @click="withdrawalStep = 'iban'" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Abbrechen</button>
+                <button @click="saveIban" :disabled="isSavingIban" class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                  {{ isSavingIban ? 'Speichern…' : 'Speichern' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2: Betrag wählen -->
+            <div v-else-if="withdrawalStep === 'amount'" class="space-y-4">
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                Auszahlung auf: <strong>****{{ savedIbanLast4 }}</strong>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Betrag (CHF)</label>
+                <input
+                  v-model="withdrawalAmountInput"
+                  type="number"
+                  step="0.01"
+                  :min="1"
+                  :max="availableBalance"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+                <p class="text-xs text-gray-500 mt-1">Verfügbar: CHF {{ formatAmount(availableBalance * 100) }}</p>
+              </div>
+              <p v-if="withdrawalError" class="text-red-600 text-xs">{{ withdrawalError }}</p>
+              <div class="flex gap-2">
+                <button @click="withdrawalStep = 'iban'" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Zurück</button>
+                <button @click="withdrawalStep = 'confirm'" :disabled="!withdrawalAmountInput || Number(withdrawalAmountInput) <= 0"
+                  class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                  Weiter
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 3: Bestätigen -->
+            <div v-else-if="withdrawalStep === 'confirm'" class="space-y-4">
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Betrag</span>
+                  <span class="font-semibold text-gray-900">CHF {{ Number(withdrawalAmountInput).toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Konto</span>
+                  <span class="font-medium text-gray-900">****{{ savedIbanLast4 }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Verarbeitung</span>
+                  <span class="text-gray-700">1–3 Werktage</span>
+                </div>
+              </div>
+              <p v-if="withdrawalError" class="text-red-600 text-xs">{{ withdrawalError }}</p>
+              <div class="flex gap-2">
+                <button @click="withdrawalStep = 'amount'" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Zurück</button>
+                <button @click="submitWithdrawal" :disabled="isSubmittingWithdrawal"
+                  class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                  {{ isSubmittingWithdrawal ? 'Wird eingereicht…' : 'Jetzt beantragen' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 4: Erfolg -->
+            <div v-else-if="withdrawalStep === 'success'" class="text-center py-4 space-y-3">
+              <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p class="font-semibold text-gray-900">Antrag eingereicht!</p>
+              <p class="text-sm text-gray-500">CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden in 1–3 Werktagen überwiesen.</p>
+              <button @click="closeWithdrawalModal" class="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700">
+                Schliessen
+              </button>
+            </div>
+
+            <!-- Close button -->
+            <button v-if="withdrawalStep !== 'success'" @click="closeWithdrawalModal"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- Top-up Modal -->
+      <Teleport to="body">
+        <div v-if="showTopupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/50" @click="closeTopupModal"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <!-- Close button -->
+            <button @click="closeTopupModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+
+            <h2 class="text-lg font-bold text-gray-900 mb-1">Guthaben aufladen</h2>
+            <p class="text-sm text-gray-500 mb-5">Betrag eingeben und sicher mit Wallee bezahlen.</p>
+
+            <div v-if="topupStep === 'amount'" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
+                <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-green-500 focus-within:border-transparent">
+                  <span class="px-3 py-2.5 bg-gray-50 border-r border-gray-300 text-gray-500 text-sm font-medium">CHF</span>
+                  <input
+                    v-model="topupAmountInput"
+                    type="number"
+                    min="5"
+                    max="1000"
+                    step="0.05"
+                    placeholder="0.00"
+                    class="flex-1 px-3 py-2.5 text-sm bg-white outline-none"
+                  />
+                </div>
+              </div>
+              <p v-if="topupError" class="text-red-600 text-xs">{{ topupError }}</p>
+              <button
+                @click="startTopup"
+                :disabled="isStartingTopup || !topupAmountInput || topupAmountInput < 5"
+                class="w-full bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {{ isStartingTopup ? 'Wird vorbereitet…' : `CHF ${Number(topupAmountInput || 0).toFixed(2)} bezahlen` }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- Payment List -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
@@ -378,6 +661,152 @@ const expandedPaymentId = ref<string | null>(null)
 const showCancellationModal = ref(false)
 const selectedAppointment = ref<any>(null)
 const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
+const pendingWithdrawalRappen = ref(0)
+const savedIbanLast4 = ref<string | null>(null)
+const withdrawalUnlockedAt = ref<string | null>(null)
+
+// Withdrawal modal state
+const showWithdrawalModal = ref(false)
+const showActionsDropdown = ref(false)
+const showTopupModal = ref(false)
+const withdrawalStep = ref<'iban' | 'edit-iban' | 'amount' | 'confirm' | 'success'>('iban')
+const ibanInput = ref('')
+const accountHolderInput = ref('')
+const streetInput = ref('')
+const streetNrInput = ref('')
+const zipInput = ref('')
+const cityInput = ref('')
+const ibanError = ref('')
+const isSavingIban = ref(false)
+const withdrawalAmountInput = ref<number | ''>('')
+const withdrawalError = ref('')
+const isSubmittingWithdrawal = ref(false)
+
+const availableBalance = computed(() =>
+  Math.max(0, (studentBalance.value - pendingWithdrawalRappen.value) / 100)
+)
+
+function closeWithdrawalModal() {
+  showWithdrawalModal.value = false
+  withdrawalStep.value = savedIbanLast4.value ? 'iban' : 'iban'
+  ibanError.value = ''
+  withdrawalError.value = ''
+  withdrawalAmountInput.value = ''
+}
+
+// ── Top-up ────────────────────────────────────────────────
+const topupStep = ref<'amount'>('amount')
+const uiStore = useUIStore()
+const showSuccess = (title: string, message = '') => uiStore.addNotification({ type: 'success', title, message })
+const showError = (title: string, message = '') => uiStore.addNotification({ type: 'error', title, message })
+const topupAmountInput = ref<number | ''>('')
+const topupError = ref('')
+const isStartingTopup = ref(false)
+
+function closeTopupModal() {
+  showTopupModal.value = false
+  topupAmountInput.value = ''
+  topupError.value = ''
+  topupStep.value = 'amount'
+}
+
+async function startTopup() {
+  topupError.value = ''
+  const amount = Number(topupAmountInput.value)
+  if (!amount || amount < 5) {
+    topupError.value = 'Mindestbetrag CHF 5.00'
+    return
+  }
+  if (amount > 1000) {
+    topupError.value = 'Maximalbetrag CHF 1000.00'
+    return
+  }
+  isStartingTopup.value = true
+  try {
+    const res = await $fetch('/api/customer/create-topup-session', {
+      method: 'POST',
+      body: { amountRappen: Math.round(amount * 100) }
+    }) as any
+    if (res?.paymentUrl) {
+      window.location.href = res.paymentUrl
+    } else {
+      topupError.value = 'Keine Zahlungs-URL erhalten. Bitte erneut versuchen.'
+    }
+  } catch (e: any) {
+    topupError.value = e?.data?.statusMessage || e?.message || 'Fehler beim Starten der Zahlung'
+  } finally {
+    isStartingTopup.value = false
+  }
+}
+
+async function saveIban() {
+  ibanError.value = ''
+  if (!ibanInput.value || !accountHolderInput.value) {
+    ibanError.value = 'Bitte IBAN und Kontoinhaber ausfüllen'
+    return
+  }
+  if (!streetInput.value || !zipInput.value || !cityInput.value) {
+    ibanError.value = 'Bitte Adresse vollständig ausfüllen (Strasse, PLZ, Ort)'
+    return
+  }
+  isSavingIban.value = true
+  try {
+    const res = await $fetch('/api/customer/update-withdrawal-iban', {
+      method: 'POST',
+      body: {
+        iban: ibanInput.value,
+        accountHolder: accountHolderInput.value,
+        street: streetInput.value,
+        streetNr: streetNrInput.value,
+        zip: zipInput.value,
+        city: cityInput.value
+      }
+    }) as any
+    if (res?.success) {
+      savedIbanLast4.value = res.ibanLast4
+      withdrawalUnlockedAt.value = res.withdrawalUnlockedAt
+      ibanInput.value = ''
+      accountHolderInput.value = ''
+      streetInput.value = ''
+      streetNrInput.value = ''
+      zipInput.value = ''
+      cityInput.value = ''
+      withdrawalStep.value = 'iban'
+    }
+  } catch (e: any) {
+    ibanError.value = e?.data?.statusMessage || e?.message || 'Fehler beim Speichern'
+  } finally {
+    isSavingIban.value = false
+  }
+}
+
+async function submitWithdrawal() {
+  withdrawalError.value = ''
+  const amountChf = Number(withdrawalAmountInput.value)
+  if (!amountChf || amountChf <= 0) {
+    withdrawalError.value = 'Bitte einen gültigen Betrag eingeben'
+    return
+  }
+  if (amountChf > availableBalance.value) {
+    withdrawalError.value = `Betrag überschreitet verfügbares Guthaben (CHF ${availableBalance.value.toFixed(2)})`
+    return
+  }
+  isSubmittingWithdrawal.value = true
+  try {
+    const res = await $fetch('/api/customer/request-credit-withdrawal', {
+      method: 'POST',
+      body: { amountRappen: Math.round(amountChf * 100) }
+    }) as any
+    if (res?.success) {
+      pendingWithdrawalRappen.value += Math.round(amountChf * 100)
+      withdrawalStep.value = 'success'
+    }
+  } catch (e: any) {
+    withdrawalError.value = e?.data?.statusMessage || e?.message || 'Fehler beim Einreichen'
+  } finally {
+    isSubmittingWithdrawal.value = false
+  }
+}
 const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
 const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
 const showRedeemVoucherModal = ref(false) // ✅ NEW: Voucher Modal
@@ -503,6 +932,18 @@ const loadAllData = async () => {
       studentBalance.value = data.student_balance_rappen
     }
     logger.debug('💰 Student balance loaded:', (studentBalance.value / 100).toFixed(2), 'CHF')
+
+    // Load withdrawal preferences (IBAN last4 + pending amount)
+    try {
+      const creditData = await $fetch('/api/customer/get-withdrawal-status') as any
+      if (creditData?.success) {
+        pendingWithdrawalRappen.value = creditData.pendingWithdrawalRappen || 0
+        savedIbanLast4.value = creditData.ibanLast4 || null
+        withdrawalUnlockedAt.value = creditData.withdrawalUnlockedAt || null
+      }
+    } catch {
+      // Non-critical — ignore
+    }
 
     // Load payments directly from API response instead of separate call
     customerPayments.value = data.payments || []
@@ -1192,6 +1633,18 @@ onMounted(async () => {
     console.warn('⚠️ User is not a client, redirecting to login...')
     await navigateTo('/login')
     return
+  }
+
+  // Handle Wallee top-up redirect
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('topup_success') === '1') {
+      showSuccess('Guthaben aufgeladen', 'Zahlung erfolgreich – dein Guthaben wird in Kürze gutgeschrieben.')
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (params.get('topup_failed') === '1') {
+      showError('Zahlung fehlgeschlagen', 'Die Zahlung wurde abgebrochen oder ist fehlgeschlagen.')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }
 
   // Only load if userProfile is already available

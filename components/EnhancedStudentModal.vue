@@ -466,9 +466,17 @@
                   Wird bei nächster Zahlung verrechnet
                 </p>
               </div>
-              <svg class="w-8 h-8" :class="studentBalance < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
-              </svg>
+              <div class="flex flex-col items-end gap-2">
+                <svg class="w-7 h-7" :class="studentBalance < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                </svg>
+                <button
+                  @click="showCashDepositModal = true"
+                  class="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors shadow-sm font-medium whitespace-nowrap"
+                >
+                  + Bar einzahlen
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1056,6 +1064,58 @@
       @close="handleCancelPayment"
     />
   </div>
+
+  <!-- Cash Deposit Modal -->
+  <Teleport to="body">
+    <div v-if="showCashDepositModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="showCashDepositModal = false"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <button @click="showCashDepositModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <h2 class="text-lg font-bold text-gray-900 mb-1">Bar einzahlen</h2>
+        <p class="text-sm text-gray-500 mb-4">Guthaben für <strong>{{ props.student?.full_name || 'Schüler' }}</strong> manuell einzahlen.</p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Betrag (CHF)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">CHF</span>
+              <input
+                v-model="cashDepositAmount"
+                type="number"
+                min="1"
+                step="0.05"
+                placeholder="0.00"
+                class="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Notiz (optional)</label>
+            <input
+              v-model="cashDepositNote"
+              type="text"
+              placeholder="z.B. Bar erhalten von ..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+          <p v-if="cashDepositError" class="text-red-600 text-xs">{{ cashDepositError }}</p>
+          <div class="flex gap-2 pt-1">
+            <button @click="showCashDepositModal = false" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Abbrechen</button>
+            <button
+              @click="submitCashDeposit"
+              :disabled="isSubmittingDeposit"
+              class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              {{ isSubmittingDeposit ? 'Wird gespeichert…' : 'Einzahlen' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -1312,6 +1372,13 @@ const userBillingAddresses = ref<any[]>([]) // ✅ NEU: Firmen-Rechnungsadressen
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
 const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
+
+// ── Cash Deposit ──────────────────────────────────────────
+const showCashDepositModal = ref(false)
+const cashDepositAmount = ref<number | ''>('')
+const cashDepositNote = ref('')
+const cashDepositError = ref('')
+const isSubmittingDeposit = ref(false)
 const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
 const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt
 const isLoadingPayments = ref(false)
@@ -2559,6 +2626,50 @@ watch(() => props.selectedStudent, async () => {
     }
   }
 }, { immediate: true })
+
+async function submitCashDeposit() {
+  cashDepositError.value = ''
+  const amount = Number(cashDepositAmount.value)
+  if (!amount || amount <= 0) {
+    cashDepositError.value = 'Bitte gültigen Betrag eingeben'
+    return
+  }
+
+  const userId = props.student?.id
+  if (!userId) {
+    cashDepositError.value = 'Schüler-ID fehlt'
+    return
+  }
+
+  isSubmittingDeposit.value = true
+  try {
+    const authStore = useAuthStore()
+    const token = authStore.session?.access_token
+    await $fetch('/api/student-credits/deposit', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: {
+        user_id: userId,
+        amount_rappen: Math.round(amount * 100),
+        payment_method: 'cash',
+        notes: cashDepositNote.value.trim() || 'Bar einbezahlt durch Staff'
+      }
+    })
+
+    // Refresh balance in modal
+    const newBalance = (studentBalance.value || 0) + Math.round(amount * 100)
+    studentBalance.value = newBalance
+
+    showCashDepositModal.value = false
+    cashDepositAmount.value = ''
+    cashDepositNote.value = ''
+    emit('studentUpdated', { id: userId })
+  } catch (e: any) {
+    cashDepositError.value = e?.data?.message || e?.message || 'Fehler beim Einzahlen'
+  } finally {
+    isSubmittingDeposit.value = false
+  }
+}
 
 </script>
 
