@@ -104,6 +104,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ── Create credit_transaction (withdrawal_pending) ────
+    const now = new Date()
     const { data: transaction, error: txError } = await supabase
       .from('credit_transactions')
       .insert({
