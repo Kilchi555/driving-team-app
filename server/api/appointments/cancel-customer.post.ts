@@ -418,6 +418,7 @@ export default defineEventHandler(async (event) => {
               .from('credit_transactions')
               .insert([{
                 user_id: appointment.user_id,
+                tenant_id: userProfile.tenant_id,
                 transaction_type: 'cancellation_credit_refund',
                 amount_rappen: creditRefundAmount,
                 balance_before_rappen: oldCreditBalance,
@@ -503,6 +504,7 @@ export default defineEventHandler(async (event) => {
                 .from('credit_transactions')
                 .insert([{
                   user_id: appointment.user_id,
+                  tenant_id: userProfile.tenant_id,
                   transaction_type: 'cancellation',
                   amount_rappen: walleePortionToRefund,
                   balance_before_rappen: oldBalance,

@@ -188,7 +188,7 @@ export default defineEventHandler(async (event) => {
       .insert([{
         user_id: studentUserId,
         transaction_type: 'appointment',
-        amount_rappen: creditToUse,
+        amount_rappen: -creditToUse,
         balance_before_rappen: oldBalance,
         balance_after_rappen: newBalance,
         payment_method: 'credit',

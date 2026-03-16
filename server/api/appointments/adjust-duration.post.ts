@@ -239,6 +239,7 @@ async function handlePriceDecrease(
         .from('credit_transactions')
         .insert([{
           user_id: payment.user_id,
+          tenant_id: payment.tenant_id || appointment.tenant_id || null,
           transaction_type: 'refund',
           amount_rappen: refundRappen,
           balance_before_rappen: oldBalance,
@@ -294,6 +295,7 @@ async function handlePriceDecrease(
       .from('credit_transactions')
       .insert([{
         user_id: payment.user_id,
+        tenant_id: payment.tenant_id || appointment.tenant_id || null,
         transaction_type: 'refund',
         amount_rappen: refundRappen,
         balance_before_rappen: oldBalance,
