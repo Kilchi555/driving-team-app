@@ -373,24 +373,21 @@ export const usePayments = () => {
         }
       }
 
-      // Create payment record via API instead of direct Supabase
-      const paymentResponse = await $fetch('/api/staff/create-payment', {
+      // Create payment record via public shop endpoint (no auth required)
+      const paymentResponse = await $fetch('/api/shop/create-payment', {
         method: 'POST',
         body: {
           user_id: actualUserId || null,
           staff_id: staffId || null,
-          appointment_id: null,
-          lesson_price_rappen: 0,
+          tenant_id: tenantId,
           products_price_rappen: roundedSubtotalRappen,
           discount_amount_rappen: roundedTotalDiscountRappen,
           total_amount_rappen: roundedTotalRappen,
           admin_fee_rappen: 0,
           payment_method: 'wallee',
-          payment_status: 'pending',
           currency: 'CHF',
           description: 'Produktkauf',
-          metadata: paymentData.metadata,
-          tenant_id: tenantId
+          metadata: paymentData.metadata
         }
       }) as any
 
