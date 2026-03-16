@@ -79,12 +79,34 @@ export default defineEventHandler(async (event) => {
         })
         .eq('id', credit.id)
 
-      // Update credit_transaction to completed
-      await supabase
+      // Update credit_transaction to completed (or insert if none exists)
+      const { data: existingTx } = await supabase
         .from('credit_transactions')
-        .update({ status: 'withdrawal_completed', updated_at: now })
+        .select('id')
         .eq('user_id', credit.user_id)
         .eq('status', 'withdrawal_pending')
+        .maybeSingle()
+
+      if (existingTx) {
+        await supabase
+          .from('credit_transactions')
+          .update({ status: 'withdrawal_completed', updated_at: now })
+          .eq('id', existingTx.id)
+      } else {
+        await supabase.from('credit_transactions').insert({
+          user_id: credit.user_id,
+          tenant_id: (credit as any).users?.tenant_id || adminUser.tenant_id,
+          transaction_type: 'withdrawal',
+          amount_rappen: -amount,
+          balance_before_rappen: credit.balance_rappen,
+          balance_after_rappen: newBalance,
+          payment_method: 'bank_transfer',
+          reference_type: 'manual',
+          created_by: adminUser.id,
+          status: 'withdrawal_completed',
+          notes: `Auszahlung per Banküberweisung (CHF ${(amount / 100).toFixed(2)})`
+        })
+      }
 
       // Notify customer
       const u = (credit as any).users

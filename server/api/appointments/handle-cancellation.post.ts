@@ -328,6 +328,19 @@ export default defineEventHandler(async (event) => {
                 refund: (payment.credit_used_rappen / 100).toFixed(2),
                 newBalance: (newBalance / 100).toFixed(2)
               })
+
+              await supabase.from('credit_transactions').insert([{
+                user_id: appointment.user_id,
+                tenant_id: appointment.tenant_id,
+                transaction_type: 'cancellation_credit_refund',
+                amount_rappen: payment.credit_used_rappen,
+                balance_before_rappen: oldBalance,
+                balance_after_rappen: newBalance,
+                payment_method: 'credit_refund',
+                reference_id: payment.id,
+                reference_type: 'payment',
+                notes: `Guthaben-Rückerstattung bei kostenloser Stornierung (CHF ${(payment.credit_used_rappen / 100).toFixed(2)})`
+              }])
             }
           }
         }
@@ -404,6 +417,19 @@ export default defineEventHandler(async (event) => {
                 refund: (payment.credit_used_rappen / 100).toFixed(2),
                 newBalance: (newBalance / 100).toFixed(2)
               })
+
+              await supabase.from('credit_transactions').insert([{
+                user_id: appointment.user_id,
+                tenant_id: appointment.tenant_id,
+                transaction_type: 'cancellation_credit_refund',
+                amount_rappen: payment.credit_used_rappen,
+                balance_before_rappen: oldBalance,
+                balance_after_rappen: newBalance,
+                payment_method: 'credit_refund',
+                reference_id: payment.id,
+                reference_type: 'payment',
+                notes: `Guthaben-Rückerstattung bei kostenloser Stornierung (CHF ${(payment.credit_used_rappen / 100).toFixed(2)})`
+              }])
             }
           }
         }
