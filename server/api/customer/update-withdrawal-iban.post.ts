@@ -17,14 +17,14 @@ export default defineEventHandler(async (event) => {
   try {
     // ── Auth ──────────────────────────────────────────────
     const authUser = await getAuthenticatedUser(event)
-    if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+    if (!authUser) throw createError({ statusCode: 401, message: 'Authentication required' })
 
     const userId = authUser.db_user_id || authUser.id
 
     // ── Rate limiting: max 3 IBAN changes per day ─────────
     const rateLimitResult = await checkRateLimit(userId, 'update_withdrawal_iban', 3, 86400000)
     if (!rateLimitResult.allowed) {
-      throw createError({ statusCode: 429, statusMessage: 'Zu viele IBAN-Änderungen. Bitte morgen erneut versuchen.' })
+      throw createError({ statusCode: 429, message: 'Zu viele IBAN-Änderungen. Bitte morgen erneut versuchen.' })
     }
 
     // ── Get user profile ──────────────────────────────────
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
       .select('id, tenant_id, first_name, last_name, email')
       .eq('id', userId)
       .single()
-    if (!userProfile) throw createError({ statusCode: 404, statusMessage: 'Benutzerprofil nicht gefunden' })
+    if (!userProfile) throw createError({ statusCode: 404, message: 'Benutzerprofil nicht gefunden' })
 
     // ── Body ──────────────────────────────────────────────
     const body = await readBody(event)
@@ -49,10 +49,10 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!iban || !accountHolder) {
-      throw createError({ statusCode: 400, statusMessage: 'IBAN und Kontoinhaber sind erforderlich' })
+      throw createError({ statusCode: 400, message: 'IBAN und Kontoinhaber sind erforderlich' })
     }
     if (!street || !zip || !city) {
-      throw createError({ statusCode: 400, statusMessage: 'Adresse (Strasse, PLZ, Ort) ist erforderlich' })
+      throw createError({ statusCode: 400, message: 'Adresse (Strasse, PLZ, Ort) ist erforderlich' })
     }
 
     // ── Validate IBAN ─────────────────────────────────────
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     const ibanValidation = validateIBAN(cleanedIban)
     logger.info('🔍 IBAN validation result:', ibanValidation)
     if (!ibanValidation.valid) {
-      throw createError({ statusCode: 400, statusMessage: ibanValidation.error || 'Ungültige IBAN' })
+      throw createError({ statusCode: 400, message: ibanValidation.error || 'Ungültige IBAN' })
     }
 
     // ── Encrypt IBAN ──────────────────────────────────────
@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
 
     if (upsertError) {
       logger.error('❌ Error saving IBAN:', upsertError)
-      throw createError({ statusCode: 500, statusMessage: 'Fehler beim Speichern der IBAN' })
+      throw createError({ statusCode: 500, message: 'Fehler beim Speichern der IBAN' })
     }
 
     logger.debug('✅ IBAN saved for user:', { userId: userProfile.id, ibanLast4 })
@@ -123,6 +123,6 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     if (error.statusCode) throw error
     logger.error('❌ update-withdrawal-iban error:', error)
-    throw createError({ statusCode: 500, statusMessage: 'Interner Fehler' })
+    throw createError({ statusCode: 500, message: 'Interner Fehler' })
   }
 })
