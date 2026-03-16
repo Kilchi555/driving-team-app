@@ -10,7 +10,9 @@
     "generate": "nuxt generate"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "nuxt": "^3.12.0",
+    "resend": "^6.9.3",
     "vue": "^3.4.21",
     "vue-router": "^4.3.3"
   },
