@@ -12,7 +12,7 @@
           </div>
 
           <!-- Navigation Back -->
-          <div v-if="currentStep > 0" class="px-3 md:px-6 py-2 md:py-3 bg-gray-50 border-b">
+          <div v-if="currentStep > 1" class="px-3 md:px-6 py-2 md:py-3 bg-gray-50 border-b">
             <button
               @click="previousStep"
               class="text-gray-600 hover:text-gray-800 flex items-center text-sm w-full md:w-auto justify-center md:justify-start"
@@ -735,6 +735,79 @@
     :vouchers="createdVouchers"
     @close="showVoucherDownloadModal = false"
   />
+
+  <!-- CHECKOUT-MODAL: Login / Registrieren / Gast (erscheint zwischen Schritt 1 und 2) -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="showCheckoutAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+          <div class="text-center">
+            <div class="text-4xl mb-2">🛒</div>
+            <h2 class="text-xl font-bold text-gray-900">Wie möchtest du fortfahren?</h2>
+            <p class="text-sm text-gray-500 mt-1">Melde dich an oder bestelle als Gast</p>
+          </div>
+
+          <!-- Option: Einloggen / Registrieren / Gast -->
+          <div v-if="checkoutAuthStep === 'choose'" class="space-y-3">
+            <button @click="checkoutAuthStep = 'login'" class="w-full flex items-center gap-3 border-2 border-blue-200 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all text-left">
+              <span class="text-2xl">👤</span>
+              <div>
+                <div class="font-semibold text-gray-900">Bestehender Kunde</div>
+                <div class="text-sm text-gray-500">Anmelden mit E-Mail & Passwort</div>
+              </div>
+            </button>
+            <button @click="checkoutAuthStep = 'register'" class="w-full flex items-center gap-3 border-2 border-green-200 rounded-xl p-4 hover:border-green-400 hover:bg-green-50 transition-all text-left">
+              <span class="text-2xl">🆕</span>
+              <div>
+                <div class="font-semibold text-gray-900">Neuer Kunde</div>
+                <div class="text-sm text-gray-500">Konto erstellen</div>
+              </div>
+            </button>
+            <button @click="continueAsGuest" class="w-full flex items-center gap-3 border-2 border-orange-200 rounded-xl p-4 hover:border-orange-400 hover:bg-orange-50 transition-all text-left">
+              <span class="text-2xl">🛒</span>
+              <div>
+                <div class="font-semibold text-gray-900">Als Gast bestellen</div>
+                <div class="text-sm text-gray-500">Ohne Konto, Daten einmalig eingeben</div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Login-Formular -->
+          <div v-else-if="checkoutAuthStep === 'login'" class="space-y-4">
+            <button @click="checkoutAuthStep = 'choose'" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">← Zurück</button>
+            <form @submit.prevent="handleCheckoutLogin" class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
+                <input v-model="loginForm.email" type="email" placeholder="ihre.email@beispiel.ch"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+                <input v-model="loginForm.password" type="password" placeholder="Ihr Passwort"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <p v-if="loginError" class="text-red-600 text-sm">{{ loginError }}</p>
+              <button type="submit" :disabled="isLoggingIn"
+                class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">
+                {{ isLoggingIn ? 'Wird angemeldet…' : 'Anmelden & weiter' }}
+              </button>
+            </form>
+          </div>
+
+          <!-- Registrierungshinweis -->
+          <div v-else-if="checkoutAuthStep === 'register'" class="space-y-3">
+            <button @click="checkoutAuthStep = 'choose'" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">← Zurück</button>
+            <p class="text-sm text-gray-600">Im nächsten Schritt gibst du deine Kontaktdaten ein. Ein Konto wird automatisch erstellt.</p>
+            <button @click="continueAsGuest" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700">
+              Weiter zur Bestellung
+            </button>
+          </div>
+
+          <button @click="showCheckoutAuthModal = false" class="w-full text-center text-sm text-gray-400 hover:text-gray-600">Abbrechen</button>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -758,6 +831,10 @@ const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 // Get tenant from URL parameter
 const tenantParam = ref(route.query.tenant as string || '')
+
+// ── Checkout Auth Modal ────────────────────────────────
+const showCheckoutAuthModal = ref(false)
+const checkoutAuthStep = ref<'choose' | 'login' | 'register'>('choose')
 
 // Watch for route changes to update tenant
 watch(() => route.query.tenant, (newTenant) => {
@@ -991,6 +1068,13 @@ const nextStep = () => {
     alert('❌ Bitte wählen Sie mindestens ein Produkt aus.')
     return
   }
+
+  // ── Wenn von Step 1 zu Step 2: Auth-Modal zeigen wenn nicht eingeloggt ──
+  if (currentStep.value === 1 && !isLoggedIn.value) {
+    checkoutAuthStep.value = 'choose'
+    showCheckoutAuthModal.value = true
+    return
+  }
   
   if (currentStep.value === 2 && !canSubmitStep1.value) {
     alert('❌ Bitte füllen Sie alle Pflichtfelder aus.')
@@ -1001,7 +1085,7 @@ const nextStep = () => {
     // Speichere sofort beim Wechseln der Steps
     saveImmediately()
     
-    // ✅ NEW: Skip step 2 (contact data) for logged-in users
+    // ✅ Skip step 2 (contact data) for logged-in users
     if (currentStep.value === 1 && isLoggedIn.value && customerData.value) {
       logger.debug('⏭️ Skipping step 2 (contact data) - user is logged in')
       currentStep.value = 3 // Jump directly to payment
@@ -1017,13 +1101,11 @@ const nextStep = () => {
 }
 
 const previousStep = () => {
-  if (currentStep.value > 0) {
-    // Speichere sofort beim Wechseln der Steps
+  if (currentStep.value > 1) {
     saveImmediately()
     currentStep.value--
     logger.debug('🔙 Shop - Previous step to:', currentStep.value)
-  } else if (currentStep.value === 0 && isLoggedIn.value) {
-    // ✅ Wenn User eingeloggt ist und auf "Zurück" drückt bei Step 0, zurück zum Dashboard
+  } else if (currentStep.value === 1 && isLoggedIn.value) {
     logger.debug('🔙 Shop - User is logged in, going back to dashboard')
     navigateTo('/customer')
   }
@@ -1125,14 +1207,72 @@ const selectCustomerType = (type: 'existing' | 'new' | 'guest') => {
   customerType.value = type
   
   if (type === 'guest') {
-    // Gast: Direkt zu Schritt 1 (Produktauswahl)
     currentStep.value = 1
   }
   
-  // Speichere sofort bei Kundentyp-Änderungen
   saveImmediately()
-  
-  // Für existing/new werden die Formulare angezeigt
+}
+
+// ── Checkout Auth Modal Handler ────────────────────────────────────────────
+const loginError = ref('')
+const isLoggingIn = ref(false)
+
+const continueAsGuest = () => {
+  customerType.value = 'guest'
+  showCheckoutAuthModal.value = false
+  saveImmediately()
+  // Weiter zu Kundendaten (Step 2)
+  currentStep.value = 2
+}
+
+const handleCheckoutLogin = async () => {
+  if (!loginForm.value.email || !loginForm.value.password) {
+    loginError.value = 'Bitte füllen Sie alle Felder aus.'
+    return
+  }
+  isLoggingIn.value = true
+  loginError.value = ''
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.value.email,
+      password: loginForm.value.password
+    })
+    if (error) throw error
+
+    isLoggedIn.value = true
+    customerType.value = 'existing'
+    showCheckoutAuthModal.value = false
+
+    // Kundendaten laden
+    const { data: userData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_user_id', data.user.id)
+      .single()
+    
+    if (userData) {
+      customerData.value = {
+        email: userData.email || loginForm.value.email,
+        firstName: userData.first_name || '',
+        lastName: userData.last_name || ''
+      }
+      formData.value.firstName = customerData.value.firstName
+      formData.value.lastName = customerData.value.lastName
+      formData.value.email = customerData.value.email
+    }
+
+    saveImmediately()
+    // Eingeloggte User direkt zu Payment (Step 3)
+    currentStep.value = 3
+  } catch (err: any) {
+    loginError.value = err?.message?.includes('Invalid login credentials')
+      ? 'E-Mail oder Passwort falsch.'
+      : (err?.message || 'Anmeldung fehlgeschlagen.')
+  } finally {
+    isLoggingIn.value = false
+  }
 }
 
 const handleLogin = async () => {
@@ -1734,7 +1874,8 @@ const autoSave = useAutoSave(
         logger.debug('✅ Applied discounts restored:', appliedDiscounts.value)
       }
       if (data.currentStep) {
-        currentStep.value = data.currentStep
+        // Never restore to step 0 - shop always starts at step 1
+        currentStep.value = Math.max(1, data.currentStep)
       }
       
       // Produkte laden falls noch nicht da
@@ -1934,16 +2075,18 @@ onMounted(async () => {
     logger.debug('🛍️ Shop mounted - Step-by-step process started')
     await loadProducts()
     
-    // ✅ NEW: Check auth status and skip step 0 if user is already logged in
+    // Immer direkt auf Step 1 (Produktauswahl) starten
+    currentStep.value = 1
+
+    // Auth-Status prüfen (Kundendaten vorab laden wenn eingeloggt)
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
-    const user = authStore.user // ✅ MIGRATED
+    const user = authStore.user
     
     if (user) {
-      logger.debug('👤 User is already logged in, skipping customer type selection')
+      logger.debug('👤 User is already logged in')
       isLoggedIn.value = true
       customerType.value = 'existing'
-      currentStep.value = 1 // Jump directly to product selection
       
       // Load customer data
       const { data: userData } = await supabase
