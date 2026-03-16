@@ -16,14 +16,14 @@ export default defineEventHandler(async (event) => {
   try {
     // ── Auth ──────────────────────────────────────────────
     const authUser = await getAuthenticatedUser(event)
-    if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+    if (!authUser) throw createError({ statusCode: 401, message: 'Authentication required' })
 
     const userId = authUser.db_user_id || authUser.id
 
     // ── Rate limiting: max 5 requests per day ─────────────
     const rateLimitResult = await checkRateLimit(userId, 'request_credit_withdrawal', 5, 86400000)
     if (!rateLimitResult.allowed) {
-      throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte morgen erneut versuchen.' })
+      throw createError({ statusCode: 429, message: 'Zu viele Anfragen. Bitte morgen erneut versuchen.' })
     }
 
     // ── Get user profile ──────────────────────────────────
@@ -32,14 +32,14 @@ export default defineEventHandler(async (event) => {
       .select('id, tenant_id, first_name, last_name, email')
       .eq('id', userId)
       .single()
-    if (!userProfile) throw createError({ statusCode: 404, statusMessage: 'Benutzerprofil nicht gefunden' })
+    if (!userProfile) throw createError({ statusCode: 404, message: 'Benutzerprofil nicht gefunden' })
 
     // ── Body ──────────────────────────────────────────────
     const body = await readBody(event)
     const { amountRappen } = body
 
     if (!amountRappen || typeof amountRappen !== 'number' || amountRappen < 100) {
-      throw createError({ statusCode: 400, statusMessage: 'Mindestbetrag CHF 1.00 erforderlich' })
+      throw createError({ statusCode: 400, message: 'Mindestbetrag CHF 1.00 erforderlich' })
     }
 
     // ── Check withdrawal preferences (IBAN + address must exist) ──
@@ -50,13 +50,13 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     if (!withdrawalPrefs) {
-      throw createError({ statusCode: 400, statusMessage: 'Bitte zuerst eine Auszahlungs-IBAN hinterlegen' })
+      throw createError({ statusCode: 400, message: 'Bitte zuerst eine Auszahlungs-IBAN hinterlegen' })
     }
 
     if (!withdrawalPrefs.street || !withdrawalPrefs.zip || !withdrawalPrefs.city) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Bitte Adresse in den Auszahlungseinstellungen hinterlegen'
+        message: 'Bitte Adresse in den Auszahlungseinstellungen hinterlegen'
       })
     }
 
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
       const hoursLeft = Math.ceil((unlockAt.getTime() - now.getTime()) / (1000 * 60 * 60))
       throw createError({
         statusCode: 400,
-        statusMessage: `IBAN wurde kürzlich geändert. Auszahlung möglich in ${hoursLeft} Stunden.`
+        message: `IBAN wurde kürzlich geändert. Auszahlung möglich in ${hoursLeft} Stunden.`
       })
     }
 
@@ -79,14 +79,14 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     if (!creditData || creditData.balance_rappen <= 0) {
-      throw createError({ statusCode: 400, statusMessage: 'Kein verfügbares Guthaben' })
+      throw createError({ statusCode: 400, message: 'Kein verfügbares Guthaben' })
     }
 
     const availableBalance = creditData.balance_rappen - (creditData.pending_withdrawal_rappen || 0)
     if (amountRappen > availableBalance) {
       throw createError({
         statusCode: 400,
-        statusMessage: `Betrag überschreitet verfügbares Guthaben (CHF ${(availableBalance / 100).toFixed(2)})`
+        message: `Betrag überschreitet verfügbares Guthaben (CHF ${(availableBalance / 100).toFixed(2)})`
       })
     }
 
@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
     if ((creditData.pending_withdrawal_rappen || 0) > 0) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Es gibt bereits einen ausstehenden Auszahlungsantrag'
+        message: 'Es gibt bereits einen ausstehenden Auszahlungsantrag'
       })
     }
 
@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
 
     if (txError) {
       logger.error('❌ Error creating withdrawal transaction:', txError)
-      throw createError({ statusCode: 500, statusMessage: 'Fehler beim Erstellen der Transaktion' })
+      throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Transaktion' })
     }
 
     // ── Freeze the amount in student_credits ──────────────
@@ -134,7 +134,7 @@ export default defineEventHandler(async (event) => {
       logger.error('❌ Error freezing withdrawal amount:', updateError)
       // Rollback transaction
       await supabase.from('credit_transactions').delete().eq('id', transaction.id)
-      throw createError({ statusCode: 500, statusMessage: 'Fehler beim Einfrieren des Betrags' })
+      throw createError({ statusCode: 500, message: 'Fehler beim Einfrieren des Betrags' })
     }
 
     logger.debug('✅ Withdrawal request created:', {
@@ -187,6 +187,6 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     if (error.statusCode) throw error
     logger.error('❌ request-credit-withdrawal error:', error)
-    throw createError({ statusCode: 500, statusMessage: 'Interner Fehler' })
+    throw createError({ statusCode: 500, message: 'Interner Fehler' })
   }
 })

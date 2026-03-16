@@ -128,7 +128,7 @@
           <div class="absolute inset-0 bg-black/50" @click="closeWithdrawalModal"></div>
           <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
             <h2 class="text-lg font-bold text-gray-900 mb-1">Guthaben auszahlen</h2>
-            <p class="text-sm text-gray-500 mb-5">Der Betrag wird auf dein Bankkonto überwiesen.</p>
+            <p class="text-sm text-gray-500 mb-5">Der Betrag wird demnächstauf dein Bankkonto überwiesen.</p>
 
             <!-- Step 1: IBAN eingeben (wenn noch keine vorhanden) -->
             <div v-if="withdrawalStep === 'iban'" class="space-y-4">
@@ -1010,7 +1010,7 @@ async function submitWithdrawal() {
       withdrawalStep.value = 'success'
     }
   } catch (e: any) {
-    withdrawalError.value = e?.data?.statusMessage || e?.message || 'Fehler beim Einreichen'
+    withdrawalError.value = e?.data?.message || e?.data?.statusMessage || e?.message || 'Fehler beim Einreichen'
   } finally {
     isSubmittingWithdrawal.value = false
   }
