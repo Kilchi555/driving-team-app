@@ -1824,10 +1824,14 @@ const submitOrderWithStatus = async (status: string) => {
           product_name: item.product.name,
           quantity: item.quantity,
           unit_price_rappen: item.product.price_rappen,
-          total_price_rappen: Math.round(item.total * 100)
+          total_price_rappen: Math.round(item.total * 100),
+          is_voucher: (item.product as any).is_voucher || false,
+          description: item.product.description || ''
         })),
         payment_method: status === 'payment_pending' ? 'online' : 'invoice',
-        order_completed_at: new Date().toISOString()
+        order_completed_at: new Date().toISOString(),
+        customer_email: formData.value.email.trim(),
+        customer_name: `${formData.value.firstName.trim()} ${formData.value.lastName.trim()}`.trim()
       }
     }
 
@@ -1991,81 +1995,19 @@ const handlePaymentCreated = async (payment: any) => {
   // Check if this is a Wallee payment with redirect URL
   if (payment.payment_url && payment.payment_method === 'wallee') {
     logger.debug('🔄 Redirecting to Wallee payment page:', payment.payment_url)
+    // Voucher creation + email sending happens server-side in the Wallee webhook
     window.location.href = payment.payment_url
     return
   }
   
-  // Bestellung als abgeschlossen markieren
+  // Non-Wallee payment (invoice etc.)
   submitOrderWithStatus('completed')
     
   const productList = selectedProducts.value.map(item => 
     `• ${item.product.name} (${item.quantity}x à CHF ${(item.product.price_rappen / 100).toFixed(2)})`
   ).join('\n')
 
-  // Check for vouchers in the order
-  const voucherProducts = selectedProducts.value.filter(item => (item.product as any).is_voucher)
-  
-  let voucherMessage = ''
-  
-  if (voucherProducts.length > 0) {
-    try {
-      // 🎁 NEUE AUTOMATISCHE GUTSCHEIN-ERSTELLUNG
-      const voucherResult = await createVouchersAfterPurchase(payment.id)
-      
-      if (voucherResult.success && voucherResult.vouchers) {
-        createdVouchers.value = voucherResult.vouchers || []
-        voucherMessage = `\n\n🎁 ${voucherResult.vouchersCreated} Gutschein(e) erfolgreich erstellt!`
-        
-        // Zeige Download-Modal
-        showVoucherDownloadModal.value = true
-        
-        // Automatisch alle PDFs herunterladen
-        setTimeout(async () => {
-          try {
-            for (const voucher of (createdVouchers.value || [])) {
-              await downloadVoucherPDF(voucher.id)
-              // Kurze Pause zwischen Downloads
-              await new Promise(resolve => setTimeout(resolve, 1000))
-            }
-          } catch (error) {
-            console.error('❌ Error auto-downloading voucher PDFs:', error)
-          }
-        }, 2000) // 2 Sekunden Verzögerung für bessere UX
-
-        // Automatisch E-Mails senden
-        setTimeout(async () => {
-          try {
-            for (const voucher of (createdVouchers.value || [])) {
-              await sendVoucherEmail(voucher.id)
-              // Kurze Pause zwischen E-Mails
-              await new Promise(resolve => setTimeout(resolve, 1000))
-            }
-          } catch (error) {
-            console.error('❌ Error auto-sending voucher emails:', error)
-          }
-        }, 3000) // 3 Sekunden Verzögerung nach PDF-Download
-        
-      } else {
-        voucherMessage = '\n\n⚠️ Fehler beim automatischen Erstellen der Gutscheine.'
-      }
-      
-    } catch (error) {
-      console.error('❌ Error creating vouchers:', error)
-      voucherMessage = '\n\n⚠️ Fehler beim Erstellen der Gutscheine. Bitte kontaktieren Sie den Support.'
-    }
-  }
-  
-  alert(`✅ Zahlung erfolgreich!
-
-Hallo ${formData.value.firstName},
-
-Ihre Bestellung wurde erfolgreich bezahlt:
-
-${productList}
-
-Gesamtpreis: CHF ${totalPrice.value.toFixed(2)}${voucherMessage}
-
-Sie erhalten in Kürze eine Bestätigung per E-Mail.`)
+  alert(`✅ Zahlung erfolgreich!\n\nHallo ${formData.value.firstName},\n\nIhre Bestellung wurde erfolgreich abgeschlossen:\n\n${productList}\n\nGesamtpreis: CHF ${totalPrice.value.toFixed(2)}\n\nSie erhalten in Kürze eine Bestätigung per E-Mail.`)
   
   goBack()
 }

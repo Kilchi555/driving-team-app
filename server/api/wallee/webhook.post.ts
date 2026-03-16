@@ -1202,22 +1202,77 @@ async function processVouchersAndCredits(payments: any[]) {
         const { generateVoucherCode } = await import('~/utils/voucherGenerator')
         const voucherCode = generateVoucherCode()
         
-        await supabase
+        const customerEmail = payment.metadata.customer_email || product.recipient_email
+        const customerName = payment.metadata.customer_name || product.recipient_name
+
+        // Idempotency: skip if voucher already created for this payment+product
+        const { data: existingVoucher } = await supabase
+          .from('vouchers')
+          .select('id, code')
+          .eq('payment_id', payment.id)
+          .eq('name', product.product_name || product.name)
+          .maybeSingle()
+
+        if (existingVoucher) {
+          logger.info('⏭️ Voucher already created for payment+product, skipping:', existingVoucher.code)
+          continue
+        }
+
+        const validUntil = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString()
+        
+        const { data: newVoucher, error: voucherInsertError } = await supabase
           .from('vouchers')
           .insert({
             code: voucherCode,
-            name: product.name,
+            name: product.product_name || product.name,
             description: product.description || '',
-            amount_rappen: product.price_rappen,
-            recipient_email: payment.metadata.customer_email,
-            buyer_email: payment.metadata.customer_email,
+            amount_rappen: product.unit_price_rappen || product.price_rappen,
+            recipient_name: customerName || null,
+            recipient_email: customerEmail || null,
+            buyer_name: customerName || null,
+            buyer_email: customerEmail || null,
             payment_id: payment.id,
-            valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            valid_until: validUntil,
             is_active: true,
             tenant_id: payment.tenant_id
           })
+          .select('id, code')
+          .single()
         
-        logger.debug('✅ Voucher created:', voucherCode)
+        if (voucherInsertError || !newVoucher) {
+          logger.error('❌ Voucher insert failed:', voucherInsertError?.message)
+          continue
+        }
+
+        logger.info('✅ Voucher created in webhook:', newVoucher.code)
+
+        // ── Send voucher email automatically ──────────────────
+        if (customerEmail) {
+          try {
+            const { generateVoucherEmailContent } = await import('~/utils/voucherGenerator')
+            const { sendEmail } = await import('~/server/utils/email')
+            
+            const amountChf = (product.unit_price_rappen || product.price_rappen || 0) / 100
+            const emailContent = generateVoucherEmailContent({
+              code: newVoucher.code,
+              name: product.product_name || product.name || 'Gutschein',
+              amount_chf: amountChf,
+              recipient_name: customerName || undefined,
+              recipient_email: customerEmail,
+              valid_until: validUntil
+            })
+
+            await sendEmail({
+              to: customerEmail,
+              subject: emailContent.subject,
+              html: emailContent.html
+            })
+
+            logger.info('✅ Voucher email sent to:', customerEmail, 'code:', newVoucher.code)
+          } catch (emailErr: any) {
+            logger.warn('⚠️ Voucher email send failed (non-critical):', emailErr.message)
+          }
+        }
       } catch (err: any) {
         logger.warn('⚠️ Voucher creation failed:', err.message)
       }
@@ -1259,7 +1314,7 @@ async function processVouchersAndCredits(payments: any[]) {
               balance_after_rappen: newBalance,
               reference_id: payment.id,
               reference_type: 'payment',
-              notes: `Credit from ${product.name}`
+              notes: `Credit from ${product.product_name || product.name}`
             })
           
           logger.debug('✅ Credit added:', (productData.credit_amount_rappen / 100).toFixed(2), 'CHF')
