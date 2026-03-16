@@ -94,22 +94,6 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ IBAN saved for user:', { userId: userProfile.id, ibanLast4 })
 
-    // ── Send confirmation email to customer ───────────────
-    try {
-      await $fetch('/api/email/send-withdrawal-notification', {
-        method: 'POST',
-        body: {
-          type: 'iban_changed',
-          email: userProfile.email,
-          studentName: `${userProfile.first_name} ${userProfile.last_name}`.trim(),
-          ibanLast4,
-          accountHolder: accountHolder.trim()
-        }
-      })
-    } catch (emailError) {
-      logger.warn('⚠️ Could not send IBAN change email:', emailError)
-    }
-
     return {
       success: true,
       message: 'IBAN erfolgreich gespeichert.',
