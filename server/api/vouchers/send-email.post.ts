@@ -1,8 +1,11 @@
 // server/api/vouchers/send-email.post.ts
-// Gutschein-E-Mail Versendung API
+// Gutschein per E-Mail versenden — nur für eingeloggte Staff/Admin oder Webhook (internal secret)
 
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { generateVoucherEmailContent } from '~/utils/voucherGenerator'
+import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 
 interface SendEmailRequest {
@@ -17,82 +20,94 @@ interface SendEmailResponse {
 }
 
 export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
+  // ── Auth: eingeloggte User (Staff/Admin) ODER interner Webhook-Aufruf ──
+  const serverSecret = process.env.INTERNAL_API_SECRET
+  const internalHeader = getHeader(event, 'x-internal-secret')
+  const isInternal = serverSecret && internalHeader === serverSecret
+
+  if (!isInternal) {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+    const userId = authUser.db_user_id || authUser.id
+    const supabaseCheck = getSupabaseAdmin()
+    const { data: profile } = await supabaseCheck.from('users').select('role').eq('id', userId).single()
+    if (!profile || !['admin', 'tenant_admin', 'staff'].includes(profile.role)) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+  }
+
   try {
     const { voucherId, recipientEmail }: SendEmailRequest = await readBody(event)
-    
+
     if (!voucherId) {
-      throw new Error('Voucher ID is required')
+      throw createError({ statusCode: 400, statusMessage: 'Voucher ID is required' })
     }
 
     logger.debug('📧 Sending email for voucher:', voucherId)
 
-    // Gutschein-Daten aus der Datenbank abrufen
     const supabase = getSupabaseAdmin()
-    const { data: voucher, error: voucherError } = await supabase
-      .from('discounts')
-      .select(`
-        id,
-        code,
-        name,
-        description,
-        discount_value,
-        voucher_recipient_name,
-        voucher_recipient_email,
-        voucher_buyer_name,
-        voucher_buyer_email,
-        valid_until,
-        created_at
-      `)
+
+    // Versuche zuerst in `vouchers`-Tabelle, dann in `discounts` (legacy)
+    let voucher: any = null
+    const { data: v1 } = await supabase
+      .from('vouchers')
+      .select('id, code, name, description, amount_rappen, recipient_name, recipient_email, buyer_email, valid_until')
       .eq('id', voucherId)
-      .eq('is_voucher', true)
       .single()
 
-    if (voucherError || !voucher) {
-      throw new Error('Voucher not found')
+    if (v1) {
+      voucher = {
+        ...v1,
+        discount_value: v1.amount_rappen / 100,
+        voucher_recipient_name: v1.recipient_name,
+        voucher_recipient_email: v1.recipient_email,
+        voucher_buyer_email: v1.buyer_email,
+      }
+    } else {
+      const { data: v2 } = await supabase
+        .from('discounts')
+        .select('id, code, name, description, discount_value, voucher_recipient_name, voucher_recipient_email, voucher_buyer_email, valid_until')
+        .eq('id', voucherId)
+        .eq('is_voucher', true)
+        .single()
+      voucher = v2
     }
 
-    // Bestimme Empfänger-E-Mail
+    if (!voucher) {
+      throw createError({ statusCode: 404, statusMessage: 'Voucher not found' })
+    }
+
     const emailTo = recipientEmail || voucher.voucher_recipient_email || voucher.voucher_buyer_email
-    
     if (!emailTo) {
-      throw new Error('No recipient email found for voucher')
+      throw createError({ statusCode: 400, statusMessage: 'Keine Empfänger-E-Mail gefunden' })
     }
 
-    // E-Mail-Inhalt generieren
+    const amountChf = typeof voucher.discount_value === 'number' ? voucher.discount_value : (voucher.amount_rappen || 0) / 100
+
     const emailContent = generateVoucherEmailContent({
       code: voucher.code,
-      name: voucher.name,
-      amount_chf: voucher.discount_value,
-      recipient_name: voucher.voucher_recipient_name,
+      name: voucher.name || 'Gutschein',
+      amount_chf: amountChf,
+      recipient_name: voucher.voucher_recipient_name || undefined,
       recipient_email: emailTo,
-      valid_until: voucher.valid_until
+      valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
     })
 
-    // TODO: Hier würde die echte E-Mail-Versendung implementiert werden
-    // Für jetzt loggen wir nur die E-Mail-Daten
-    logger.debug('📧 Would send email:', {
+    await sendEmail({
       to: emailTo,
       subject: emailContent.subject,
-      voucherCode: voucher.code,
-      amount: voucher.discount_value
+      html: emailContent.html
     })
 
-    // In einer echten Implementierung würde hier z.B. nodemailer, sendgrid, etc. verwendet werden
-    // const emailResult = await sendEmail({
-    //   to: emailTo,
-    //   subject: emailContent.subject,
-    //   html: emailContent.html,
-    //   text: emailContent.text
-    // })
-
-    logger.debug('✅ Voucher email prepared successfully for:', voucher.code)
+    logger.debug('✅ Voucher email sent to:', emailTo, 'code:', voucher.code)
 
     return {
       success: true,
-      message: `E-Mail wurde an ${emailTo} gesendet`
+      message: `Gutschein wurde an ${emailTo} gesendet`
     }
 
   } catch (error: any) {
+    if (error.statusCode) throw error
     console.error('❌ Error sending voucher email:', error)
     return {
       success: false,

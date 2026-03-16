@@ -1,7 +1,9 @@
 // server/api/vouchers/download-pdf.post.ts
-// Gutschein-PDF Download API
+// Gutschein-PDF Download API — nur für eingeloggte User (eigener Gutschein)
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { generateVoucherPDFContent, type VoucherBranding } from '~/utils/voucherGenerator'
 import { setHeader, send } from 'h3'
 import chromium from '@sparticuz/chromium'
@@ -21,16 +23,21 @@ interface DownloadRequest {
 }
 
 export default defineEventHandler(async (event) => {
+  // ── Auth ──────────────────────────────────────────────
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+
+  const userId = authUser.db_user_id || authUser.id
+
   try {
     const { voucherId }: DownloadRequest = await readBody(event)
     
     if (!voucherId) {
-      throw new Error('Voucher ID is required')
+      throw createError({ statusCode: 400, statusMessage: 'Voucher ID is required' })
     }
 
     logger.debug('🎁 Generating PDF for voucher:', voucherId)
 
-    // Gutschein-Daten aus der Datenbank abrufen (server-side admin client to bypass RLS)
     const supabase = getSupabaseAdmin()
     const { data: voucher, error: voucherError } = await supabase
       .from('vouchers')
@@ -39,7 +46,21 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (voucherError || !voucher) {
-      throw new Error('Voucher not found')
+      throw createError({ statusCode: 404, statusMessage: 'Voucher not found' })
+    }
+
+    // ── Ownership check: only buyer or admin can download ─
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('id, role, tenant_id')
+      .eq('id', userId)
+      .single()
+
+    const isAdmin = userProfile && ['admin', 'tenant_admin', 'staff'].includes(userProfile.role)
+    const isOwner = voucher.redeemed_by === userId || voucher.tenant_id === userProfile?.tenant_id
+
+    if (!isAdmin && !isOwner) {
+      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
     // Branding laden (optional)
@@ -118,6 +139,7 @@ export default defineEventHandler(async (event) => {
     return send(event, pdfBuffer)
 
   } catch (error: any) {
+    if (error.statusCode) throw error
     console.error('❌ Error generating voucher PDF:', error)
     setHeader(event, 'Content-Type', 'application/json')
     return { success: false, error: error.message || 'Error generating voucher PDF' }
