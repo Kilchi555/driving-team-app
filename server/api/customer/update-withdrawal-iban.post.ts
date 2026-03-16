@@ -1,6 +1,5 @@
 // server/api/customer/update-withdrawal-iban.post.ts
 // Allows customers to save/update their payout IBAN (encrypted)
-// 24h lockout enforced after change before withdrawals are allowed
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
@@ -68,7 +67,6 @@ export default defineEventHandler(async (event) => {
     const ibanEncrypted = encryptIBAN(cleanedIban)
     const ibanLast4 = cleanedIban.slice(-4)
     const now = new Date()
-    const unlockAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // +24h
 
     // ── Upsert withdrawal preferences ────────────────────
     const { error: upsertError } = await supabase
@@ -85,7 +83,7 @@ export default defineEventHandler(async (event) => {
         city: city.trim(),
         iban_changed_at: now.toISOString(),
         iban_verified_at: now.toISOString(),
-        withdrawal_unlocked_at: unlockAt.toISOString(),
+        withdrawal_unlocked_at: now.toISOString(), // immediately unlocked
         updated_at: now.toISOString()
       }, { onConflict: 'user_id' })
 
@@ -105,8 +103,7 @@ export default defineEventHandler(async (event) => {
           email: userProfile.email,
           studentName: `${userProfile.first_name} ${userProfile.last_name}`.trim(),
           ibanLast4,
-          accountHolder: accountHolder.trim(),
-          unlockAt: unlockAt.toISOString()
+          accountHolder: accountHolder.trim()
         }
       })
     } catch (emailError) {
@@ -115,9 +112,8 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: 'IBAN erfolgreich gespeichert. Auszahlungen sind ab morgen möglich.',
-      ibanLast4,
-      withdrawalUnlockedAt: unlockAt.toISOString()
+      message: 'IBAN erfolgreich gespeichert.',
+      ibanLast4
     }
 
   } catch (error: any) {
