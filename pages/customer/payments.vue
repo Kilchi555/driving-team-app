@@ -69,7 +69,7 @@
           </div>
           <div class="flex items-center gap-3 relative">
             <!-- Aktionen Dropdown (nur auf Preview sichtbar) -->
-            <div v-if="$config.public.appEnv === 'preview'" class="relative">
+            <div v-if="$config.public.appEnv !== 'production'" class="relative">
               <button
                 @click="showActionsDropdown = !showActionsDropdown"
                 class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
