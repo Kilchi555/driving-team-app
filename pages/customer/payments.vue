@@ -146,9 +146,16 @@
                       v-model="ibanInput"
                       type="text"
                       placeholder="CH93 0076 2011 6238 5295 7"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      @input="ibanInput = ibanInput.replace(/\s/g, '').toUpperCase()"
+                      :class="['w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent', ibanValidationError ? 'border-red-400 bg-red-50' : 'border-gray-300']"
+                      @input="onIbanInput"
+                      maxlength="26"
                     />
+                    <div class="flex items-center justify-between mt-1">
+                      <p v-if="ibanValidationError" class="text-red-500 text-xs">{{ ibanValidationError }}</p>
+                      <p v-else-if="ibanInput.length > 0 && ibanInput.replace(/\s/g,'').length === 21" class="text-green-600 text-xs">✓ Gültige CH-IBAN</p>
+                      <p v-else-if="ibanInput.length > 0" class="text-gray-400 text-xs">{{ ibanInput.replace(/\s/g,'').length }}/21 Zeichen</p>
+                      <span v-else></span>
+                    </div>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Kontoinhaber</label>
@@ -208,8 +215,15 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Neue IBAN</label>
                 <input v-model="ibanInput" type="text" placeholder="CH93 0076 2011 6238 5295 7"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  @input="ibanInput = ibanInput.replace(/\s/g, '').toUpperCase()" />
+                  :class="['w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent', ibanValidationError ? 'border-red-400 bg-red-50' : 'border-gray-300']"
+                  @input="onIbanInput"
+                  maxlength="26" />
+                <div class="flex items-center justify-between mt-1">
+                  <p v-if="ibanValidationError" class="text-red-500 text-xs">{{ ibanValidationError }}</p>
+                  <p v-else-if="ibanInput.length > 0 && ibanInput.replace(/\s/g,'').length === 21" class="text-green-600 text-xs">✓ Gültige CH-IBAN</p>
+                  <p v-else-if="ibanInput.length > 0" class="text-gray-400 text-xs">{{ ibanInput.replace(/\s/g,'').length }}/21 Zeichen</p>
+                  <span v-else></span>
+                </div>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Kontoinhaber</label>
@@ -753,6 +767,7 @@ const streetNrInput = ref('')
 const zipInput = ref('')
 const cityInput = ref('')
 const ibanError = ref('')
+const ibanValidationError = ref('')
 const isSavingIban = ref(false)
 const withdrawalAmountInput = ref<number | ''>('')
 const withdrawalError = ref('')
@@ -766,6 +781,7 @@ function closeWithdrawalModal() {
   showWithdrawalModal.value = false
   withdrawalStep.value = savedIbanLast4.value ? 'iban' : 'iban'
   ibanError.value = ''
+  ibanValidationError.value = ''
   withdrawalError.value = ''
   withdrawalAmountInput.value = ''
 }
@@ -859,22 +875,66 @@ async function startTopup() {
   }
 }
 
+function onIbanInput() {
+  // Strip spaces, uppercase
+  ibanInput.value = ibanInput.value.replace(/\s/g, '').toUpperCase()
+  ibanValidationError.value = ''
+
+  const iban = ibanInput.value
+  if (!iban) return
+
+  // Must start with CH
+  if (iban.length >= 2 && !iban.startsWith('CH')) {
+    ibanValidationError.value = 'Nur Schweizer IBANs (CH) werden akzeptiert'
+    return
+  }
+  // Length check — CH IBAN is always 21 chars
+  if (iban.length > 2 && iban.length < 21) {
+    // Only show error once they've typed enough to be clearly wrong
+    if (iban.length >= 5) {
+      ibanValidationError.value = `Schweizer IBAN muss 21 Zeichen haben (aktuell: ${iban.length})`
+    }
+    return
+  }
+  if (iban.length > 21) {
+    ibanValidationError.value = `Schweizer IBAN muss genau 21 Zeichen haben (aktuell: ${iban.length})`
+    return
+  }
+  // Full format check
+  if (iban.length === 21 && !/^CH[0-9]{2}[A-Z0-9]{17}$/.test(iban)) {
+    ibanValidationError.value = 'IBAN-Format ungültig'
+  }
+}
+
 async function saveIban() {
   ibanError.value = ''
-  if (!ibanInput.value || !accountHolderInput.value) {
+  ibanValidationError.value = ''
+
+  // Frontend validation
+  const cleanedIban = ibanInput.value.replace(/\s/g, '').toUpperCase()
+  if (!cleanedIban || !accountHolderInput.value) {
     ibanError.value = 'Bitte IBAN und Kontoinhaber ausfüllen'
+    return
+  }
+  if (!cleanedIban.startsWith('CH')) {
+    ibanValidationError.value = 'Nur Schweizer IBANs (CH) werden akzeptiert'
+    return
+  }
+  if (cleanedIban.length !== 21) {
+    ibanValidationError.value = `Schweizer IBAN muss 21 Zeichen haben (aktuell: ${cleanedIban.length})`
     return
   }
   if (!streetInput.value || !zipInput.value || !cityInput.value) {
     ibanError.value = 'Bitte Adresse vollständig ausfüllen (Strasse, PLZ, Ort)'
     return
   }
+
   isSavingIban.value = true
   try {
     const res = await $fetch('/api/customer/update-withdrawal-iban', {
       method: 'POST',
       body: {
-        iban: ibanInput.value,
+        iban: cleanedIban,
         accountHolder: accountHolderInput.value,
         street: streetInput.value,
         streetNr: streetNrInput.value,
@@ -894,7 +954,8 @@ async function saveIban() {
       withdrawalStep.value = 'iban'
     }
   } catch (e: any) {
-    ibanError.value = e?.data?.statusMessage || e?.message || 'Fehler beim Speichern'
+    const msg = e?.data?.statusMessage || e?.data?.message || e?.statusMessage || e?.message
+    ibanError.value = msg || 'Fehler beim Speichern der IBAN'
   } finally {
     isSavingIban.value = false
   }
