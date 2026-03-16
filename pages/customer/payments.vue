@@ -876,21 +876,17 @@ async function startTopup() {
 }
 
 function onIbanInput() {
-  // Strip spaces, uppercase
   ibanInput.value = ibanInput.value.replace(/\s/g, '').toUpperCase()
   ibanValidationError.value = ''
 
   const iban = ibanInput.value
   if (!iban) return
 
-  // Must start with CH
   if (iban.length >= 2 && !iban.startsWith('CH')) {
     ibanValidationError.value = 'Nur Schweizer IBANs (CH) werden akzeptiert'
     return
   }
-  // Length check — CH IBAN is always 21 chars
   if (iban.length > 2 && iban.length < 21) {
-    // Only show error once they've typed enough to be clearly wrong
     if (iban.length >= 5) {
       ibanValidationError.value = `Schweizer IBAN muss 21 Zeichen haben (aktuell: ${iban.length})`
     }
@@ -900,9 +896,26 @@ function onIbanInput() {
     ibanValidationError.value = `Schweizer IBAN muss genau 21 Zeichen haben (aktuell: ${iban.length})`
     return
   }
-  // Full format check
-  if (iban.length === 21 && !/^CH[0-9]{2}[A-Z0-9]{17}$/.test(iban)) {
-    ibanValidationError.value = 'IBAN-Format ungültig'
+  if (iban.length === 21) {
+    if (!/^CH[0-9]{2}[A-Z0-9]{17}$/.test(iban)) {
+      ibanValidationError.value = 'IBAN-Format ungültig'
+      return
+    }
+    // MOD-97 Prüfziffer-Validierung
+    const rearranged = iban.slice(4) + iban.slice(0, 4)
+    const numeric = rearranged.split('').map((c: string) => {
+      const code = c.charCodeAt(0)
+      return code >= 65 && code <= 90 ? (code - 55).toString() : c
+    }).join('')
+    let remainder = BigInt(0)
+    for (const char of numeric) {
+      remainder = (remainder * BigInt(10) + BigInt(parseInt(char))) % BigInt(97)
+    }
+    if (remainder !== BigInt(1)) {
+      ibanValidationError.value = 'IBAN-Prüfziffer ungültig – bitte IBAN nochmals überprüfen'
+      return
+    }
+    ibanValidationError.value = ''
   }
 }
 
@@ -922,6 +935,20 @@ async function saveIban() {
   }
   if (cleanedIban.length !== 21) {
     ibanValidationError.value = `Schweizer IBAN muss 21 Zeichen haben (aktuell: ${cleanedIban.length})`
+    return
+  }
+  // MOD-97 Prüfziffer check
+  const rearranged = cleanedIban.slice(4) + cleanedIban.slice(0, 4)
+  const numeric = rearranged.split('').map((c: string) => {
+    const code = c.charCodeAt(0)
+    return code >= 65 && code <= 90 ? (code - 55).toString() : c
+  }).join('')
+  let remainder = BigInt(0)
+  for (const char of numeric) {
+    remainder = (remainder * BigInt(10) + BigInt(parseInt(char))) % BigInt(97)
+  }
+  if (remainder !== BigInt(1)) {
+    ibanValidationError.value = 'IBAN-Prüfziffer ungültig – bitte IBAN nochmals überprüfen'
     return
   }
   if (!streetInput.value || !zipInput.value || !cityInput.value) {
