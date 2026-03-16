@@ -1,23 +1,37 @@
 -- Allow anonymous/public read access to active products
 -- Required for the public shop page (/shop) which loads products without auth
--- The query must always filter by tenant_id, limiting exposure to one tenant
 
 -- Enable RLS if not already enabled
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
--- Drop any conflicting policies
+-- Drop all existing policies to start clean
 DROP POLICY IF EXISTS "products_public_read" ON products;
 DROP POLICY IF EXISTS "products_anon_read" ON products;
 DROP POLICY IF EXISTS "products_select_anon" ON products;
+DROP POLICY IF EXISTS "products_select_policy" ON products;
+DROP POLICY IF EXISTS "products_insert_policy" ON products;
+DROP POLICY IF EXISTS "products_admin_manage" ON products;
+DROP POLICY IF EXISTS "products_update_policy" ON products;
+DROP POLICY IF EXISTS "products_staff_read_all" ON products;
 
 -- Policy 1: Anyone (anon + authenticated) can read active products
--- Safe because products are public shop information
 CREATE POLICY "products_public_read" ON products
   FOR SELECT
   USING (is_active = true);
 
--- Policy 2: Admins can manage products for their own tenant
-DROP POLICY IF EXISTS "products_admin_manage" ON products;
+-- Policy 2: Authenticated staff can also see inactive products of their own tenant
+CREATE POLICY "products_staff_read_all" ON products
+  FOR SELECT
+  TO authenticated
+  USING (
+    tenant_id IN (
+      SELECT u.tenant_id FROM users u
+      WHERE u.auth_user_id = auth.uid()
+        AND u.is_active = true
+    )
+  );
+
+-- Policy 3: Only admins can INSERT/UPDATE/DELETE products for their own tenant
 CREATE POLICY "products_admin_manage" ON products
   FOR ALL
   TO authenticated
