@@ -512,7 +512,7 @@
                   </div>
                 </div>
                 
-                <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between">
+                <div v-if="payment.lesson_price_rappen > 0 && !(payment.metadata?.is_topup || (typeof payment.metadata === 'string' && payment.metadata.includes('is_topup')))" class="flex justify-between">
                   <span class="text-gray-600">Fahrlektion</span>
                   <span class="font-medium text-gray-600 ml-4">CHF {{ formatAmount(payment.lesson_price_rappen) }}</span>
                 </div>
@@ -1546,17 +1546,27 @@ const onAppointmentCancelled = async (appointmentId: string) => {
 }
 
 const getAppointmentTitle = (payment: any): string => {
-  // Check if this is a course payment (has metadata with course_name)
-  if (!payment.appointments && payment.metadata?.course_name) {
-    return payment.metadata.course_name
+  // Parse metadata (can be string or object)
+  const metadata = payment.metadata
+    ? (typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata)
+    : {}
+
+  // Top-up payment
+  if (metadata?.is_topup) {
+    return 'Guthaben aufladen'
   }
-  
+
+  // Course payment
+  if (!payment.appointments && metadata?.course_name) {
+    return metadata.course_name
+  }
+
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
   if (!appointment) return 'Fahrlektion'
-  
+
   const staff = Array.isArray(appointment.staff) ? appointment.staff[0] : appointment.staff
   const staffFirstName = staff?.first_name || ''
-  
+
   if (staffFirstName) {
     return `Fahrlektion mit ${staffFirstName}`
   }
