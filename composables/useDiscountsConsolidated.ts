@@ -1,5 +1,4 @@
 import { ref, computed, readonly } from 'vue'
-import { getSupabase } from '~/utils/supabase'
 import type { Discount } from '~/types/payment'
 
 export interface ConsolidatedDiscount {

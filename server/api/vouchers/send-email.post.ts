@@ -1,7 +1,7 @@
 // server/api/vouchers/send-email.post.ts
 // Gutschein-E-Mail Versendung API
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateVoucherEmailContent } from '~/utils/voucherGenerator'
 import { logger } from '~/utils/logger'
 
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
     logger.debug('📧 Sending email for voucher:', voucherId)
 
     // Gutschein-Daten aus der Datenbank abrufen
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { data: voucher, error: voucherError } = await supabase
       .from('discounts')
       .select(`

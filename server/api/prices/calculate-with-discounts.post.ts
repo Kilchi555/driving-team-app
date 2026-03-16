@@ -1,5 +1,5 @@
 import { defineEventHandler, createError } from 'h3'
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
