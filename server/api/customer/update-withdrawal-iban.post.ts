@@ -39,6 +39,15 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { iban, accountHolder, street, streetNr, zip, city } = body
 
+    logger.info('📥 update-withdrawal-iban body received:', {
+      hasIban: !!iban,
+      ibanLength: iban?.replace(/\s/g, '').length,
+      hasAccountHolder: !!accountHolder,
+      hasStreet: !!street,
+      hasZip: !!zip,
+      hasCity: !!city
+    })
+
     if (!iban || !accountHolder) {
       throw createError({ statusCode: 400, statusMessage: 'IBAN und Kontoinhaber sind erforderlich' })
     }
@@ -48,7 +57,9 @@ export default defineEventHandler(async (event) => {
 
     // ── Validate IBAN ─────────────────────────────────────
     const cleanedIban = iban.replace(/\s/g, '').toUpperCase()
+    logger.info('🔍 IBAN validation:', { cleanedLength: cleanedIban.length, startsWithCH: cleanedIban.startsWith('CH') })
     const ibanValidation = validateIBAN(cleanedIban)
+    logger.info('🔍 IBAN validation result:', ibanValidation)
     if (!ibanValidation.valid) {
       throw createError({ statusCode: 400, statusMessage: ibanValidation.error || 'Ungültige IBAN' })
     }
