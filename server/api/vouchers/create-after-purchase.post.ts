@@ -1,6 +1,8 @@
 // server/api/vouchers/create-after-purchase.post.ts
 // Automatische Gutschein-Erstellung nach erfolgreichem Kauf
+// Nur für interne Server-zu-Server Aufrufe (Wallee-Webhook)
 
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateVoucherCode } from '~/utils/voucherGenerator'
 import { logger } from '~/utils/logger'
@@ -32,6 +34,13 @@ interface CreateVouchersResponse {
 }
 
 export default defineEventHandler(async (event): Promise<CreateVouchersResponse> => {
+  // ── Internal-only: require server secret header ─────────
+  const serverSecret = process.env.INTERNAL_API_SECRET
+  const authHeader = getHeader(event, 'x-internal-secret')
+  if (!serverSecret || authHeader !== serverSecret) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
   try {
     const { paymentId, products, customerName, customerEmail }: CreateVouchersRequest = await readBody(event)
     
