@@ -259,6 +259,7 @@ interface Props {
   appointmentId?: string
   userId?: string
   staffId?: string
+  tenantId?: string
   categoryCode?: string
   initialProducts?: Product[]
   initialDiscounts?: Discount[]
@@ -498,7 +499,8 @@ const processPayment = async () => {
           Array.from(selectedProducts.value.values()),
           Array.from(appliedDiscounts.value.values()),
           customerEmail,
-          customerName
+          customerName,
+          props.tenantId
         )
       } else {
         payment = await createStandalonePayment(
