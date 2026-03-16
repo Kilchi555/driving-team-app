@@ -530,6 +530,18 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Could not queue availability recalc after booking (non-critical):', err.message)
     })
 
+    // Fire-and-forget: send appointment confirmation email (non-blocking)
+    $fetch('/api/reminders/send-appointment-confirmation', {
+      method: 'POST',
+      body: {
+        appointmentId: newAppointment.id,
+        userId: userData.id,
+        tenantId: tenantId
+      }
+    }).catch((err: any) => {
+      logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err.message)
+    })
+
     // ============ LAYER 10: RETURN RESPONSE ============
     return {
       success: true,
