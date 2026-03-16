@@ -18,7 +18,7 @@
           <div class="relative z-10 px-6 py-4 flex items-center justify-between">
             <!-- Logo -->
             <div class="flex items-center">
-              <LoadingLogo size="lg" :tenant-id="tenantId" class="brightness-0 invert opacity-90"/>
+              <LoadingLogo size="2xl" :tenant-id="tenantId" class="brightness-0 invert opacity-90"/>
             </div>
             <!-- Step label -->
             <div v-if="currentStep >= 1"
@@ -90,18 +90,6 @@
               <div v-if="isLoadingProducts" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div v-for="i in 4" :key="i"
                      class="h-28 rounded-xl bg-gray-100 animate-pulse"></div>
-              </div>
-
-              <!-- No products -->
-              <div v-else-if="availableProducts.length === 0"
-                   class="text-center py-10 px-6 rounded-xl border-2 border-dashed border-gray-200">
-                <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                  <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                  </svg>
-                </div>
-                <h4 class="font-semibold text-gray-700 mb-1">Shop nicht verfügbar</h4>
-                <p class="text-sm text-gray-500">Bitte kontaktieren Sie uns direkt.</p>
               </div>
 
               <!-- Product cards -->
@@ -432,7 +420,7 @@
         </div>
 
         <!-- ── FOOTER NAVIGATION ── -->
-        <div v-if="currentStep >= 1 && currentStep < 3 && availableProducts.length > 0"
+        <div v-if="currentStep >= 1 && currentStep < 3"
              class="px-5 py-4 bg-gray-50 border-t border-gray-100">
           <button @click="nextStep"
                   :disabled="!canProceedToNextStep"
