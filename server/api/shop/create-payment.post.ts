@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: 'Tenant nicht gefunden' })
     }
 
-    // Create payment record
+    // Create payment record — only columns that exist in the DB
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .insert({
@@ -57,15 +57,14 @@ export default defineEventHandler(async (event) => {
         lesson_price_rappen: 0,
         products_price_rappen: products_price_rappen ?? total_amount_rappen,
         discount_amount_rappen: discount_amount_rappen ?? 0,
-        admin_fee_rappen,
-        subtotal_rappen: total_amount_rappen,
+        voucher_discount_rappen: 0,
+        admin_fee_rappen: admin_fee_rappen ?? 0,
         total_amount_rappen,
         payment_method,
         payment_status: 'pending',
         currency,
         description,
-        is_standalone: true,
-        metadata: metadata ? JSON.stringify(metadata) : null
+        metadata: metadata ?? null
       })
       .select('id, total_amount_rappen, payment_status, tenant_id')
       .single()
