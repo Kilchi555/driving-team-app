@@ -61,7 +61,7 @@
         <div class="flex items-center justify-between gap-4">
           <div class="flex-1">
             <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
-            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ formatAmount(availableBalance) }}</p>
+            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ availableBalance.toFixed(2) }}</p>
             <!-- Pending withdrawal hint -->
             <p v-if="pendingWithdrawalRappen > 0" class="text-xs text-yellow-700 mt-1">
               CHF {{ formatAmount(pendingWithdrawalRappen) }} in Bearbeitung
