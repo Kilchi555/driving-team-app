@@ -791,12 +791,7 @@ async function openCreditTransactionsModal() {
   isLoadingCreditTransactions.value = true
   creditTransactions.value = []
   try {
-    const { useSupabaseClient } = await import('#imports')
-    const supabase = useSupabaseClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    const data = await $fetch<any[]>('/api/customer/get-credit-transactions', {
-      headers: { Authorization: `Bearer ${session?.access_token}` }
-    })
+    const data = await $fetch<any[]>('/api/customer/get-credit-transactions')
     creditTransactions.value = data || []
   } catch (e) {
     creditTransactions.value = []
