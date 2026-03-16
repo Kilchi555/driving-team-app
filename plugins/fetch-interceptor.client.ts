@@ -51,6 +51,17 @@ export default defineNuxtPlugin((nuxtApp) => {
         })
       }
 
+      // 🛒 Shop page / shop API requests — guest checkout, never redirect to login
+      const isShopPage = currentPath.startsWith('/shop')
+      const isShopRequest = url.includes('/api/shop/') || url.includes('/api/wallee/') || url.includes('/api/tenants/branding')
+      if ((isShopPage || isShopRequest) && status === 401) {
+        console.debug('ℹ️ Shop 401 - guest checkout allowed, no redirect')
+        throw createError({
+          statusCode: status,
+          statusMessage: response?.statusText || 'Request failed'
+        })
+      }
+
       // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
       // DON'T redirect for booking flow - let component show modal
       if (status === 401 && !isRedirecting && !isBookingFlow && !isAnyAuthEndpoint) {
