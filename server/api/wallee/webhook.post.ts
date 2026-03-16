@@ -1104,20 +1104,47 @@ async function processTopupCredits(payments: any[]) {
       if (payment.metadata) {
         metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata
       }
+
+      logger.info('🔍 processTopupCredits checking payment:', { id: payment.id, isTopup: metadata?.is_topup, metadata })
+
       if (!metadata?.is_topup) continue
 
       const amountRappen = metadata.topup_amount_rappen || payment.total_amount_rappen
-      if (!amountRappen || amountRappen <= 0) continue
+      if (!amountRappen || amountRappen <= 0) {
+        logger.warn('⚠️ processTopupCredits: invalid amountRappen:', amountRappen)
+        continue
+      }
 
-      const { data: currentCredit } = await supabase
+      // Idempotency check: skip if already credited for this payment
+      const { data: existingTx } = await supabase
+        .from('credit_transactions')
+        .select('id')
+        .eq('reference_id', payment.id)
+        .eq('transaction_type', 'deposit')
+        .eq('payment_method', 'wallee')
+        .maybeSingle()
+
+      if (existingTx) {
+        logger.info('⏭️ processTopupCredits: already credited for payment:', payment.id)
+        continue
+      }
+
+      const { data: currentCredit, error: creditFetchError } = await supabase
         .from('student_credits')
         .select('id, balance_rappen')
         .eq('user_id', payment.user_id)
         .eq('tenant_id', payment.tenant_id)
         .maybeSingle()
 
+      if (creditFetchError) {
+        logger.error('❌ processTopupCredits: credit fetch error:', creditFetchError)
+        continue
+      }
+
       const currentBalance = currentCredit?.balance_rappen || 0
       const newBalance = currentBalance + amountRappen
+
+      logger.info('💰 processTopupCredits: applying topup:', { userId: payment.user_id, currentBalance, amountRappen, newBalance })
 
       const { error: upsertError } = await supabase
         .from('student_credits')
@@ -1133,7 +1160,7 @@ async function processTopupCredits(payments: any[]) {
         continue
       }
 
-      await supabase
+      const { error: txInsertError } = await supabase
         .from('credit_transactions')
         .insert({
           user_id: payment.user_id,
@@ -1148,9 +1175,13 @@ async function processTopupCredits(payments: any[]) {
           notes: `Online-Einzahlung via Wallee (CHF ${(amountRappen / 100).toFixed(2)})`
         })
 
-      logger.debug('✅ Topup credit applied:', { userId: payment.user_id, amountRappen, newBalance })
+      if (txInsertError) {
+        logger.error('❌ processTopupCredits: credit_transactions insert failed:', txInsertError)
+      } else {
+        logger.info('✅ Topup credit applied:', { userId: payment.user_id, amountRappen, newBalance })
+      }
     } catch (err: any) {
-      logger.warn('⚠️ processTopupCredits failed for payment:', payment.id, err.message)
+      logger.error('❌ processTopupCredits failed for payment:', payment.id, err.message)
     }
   }
 }
