@@ -802,18 +802,24 @@ async function openCreditTransactionsModal() {
 
 function getCreditTransactionLabel(tx: any): string {
   const typeMap: Record<string, string> = {
-    deposit: 'Einzahlung',
-    withdrawal: 'Auszahlung',
-    payment: 'Zahlung',
+    // Credits (positive)
+    deposit: 'Bareinzahlung',
     refund: 'Rückerstattung',
-    cancellation: 'Stornierung',
-    cancellation_credit_refund: 'Guthaben-Rückerstattung',
+    topup: 'Guthaben aufgeladen',
+    credit_topup: 'Guthaben aufgeladen',
+    voucher: 'Gutschein eingelöst',
     manual: 'Manuelle Buchung',
     cash_deposit: 'Bar-Einzahlung',
+    cancellation: 'Stornierung',
+    cancellation_credit_refund: 'Stornierung (Rückerstattung)',
+    duration_reduction_credit: 'Fahrstunde verkürzt (Rückerstattung)',
+    // Debits (negative)
+    payment: 'Fahrstunde bezahlt',
     appointment: 'Fahrstunde bezahlt',
     appointment_payment: 'Fahrstunde bezahlt',
-    duration_reduction_credit: 'Rückerstattung (Dauer)',
-    voucher: 'Gutschein eingelöst',
+    withdrawal: 'Auszahlung',
+    withdrawal_pending: 'Auszahlung (ausstehend)',
+    withdrawal_completed: 'Auszahlung abgeschlossen',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }
