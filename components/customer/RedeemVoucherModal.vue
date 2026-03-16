@@ -198,11 +198,12 @@ const redeemVoucher = async () => {
 
   } catch (error: any) {
     console.error('❌ Error redeeming voucher:', error)
-    
-    if (error.status === 404 || error.statusCode === 404) {
+    const msg = error.data?.statusMessage || error.statusMessage || error.data?.message || error.message
+    const code = error.data?.statusCode || error.statusCode || error.status
+    if (code === 404) {
       errorMessage.value = 'Ungültiger Gutschein-Code'
-    } else if (error.status === 400 || error.statusCode === 400) {
-      errorMessage.value = error.data?.statusMessage || error.data?.error || 'Gutschein kann nicht eingelöst werden'
+    } else if (msg) {
+      errorMessage.value = msg
     } else {
       errorMessage.value = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
     }

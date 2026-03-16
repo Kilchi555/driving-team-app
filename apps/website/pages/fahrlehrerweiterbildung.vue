@@ -268,7 +268,7 @@ const currentStartTime = ref('08:00')
 // Remaining spots per date label – decremented on each successful registration
 const remainingSpots = ref<Record<string, number>>({
   'Donnerstag, 28. Mai 2026': 9,
-  'Donnerstag, 2. Juli 2026': 3,
+  'Donnerstag, 2. Juli 2026': 1,
 })
 
 function isSoldOut(date: string) {
