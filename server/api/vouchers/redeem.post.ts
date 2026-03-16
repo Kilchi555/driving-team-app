@@ -1,10 +1,10 @@
 // API Endpoint: Redeem Voucher Code
 // Description: Allows students to redeem voucher codes for credit top-up
 
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -22,66 +22,22 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('🎫 [redeem] Redeeming voucher:', code)
 
-    // Get auth token from Authorization header (set by @nuxtjs/supabase module)
-    logger.debug('🎫 [redeem] Getting auth header')
-    const authHeader = getHeader(event, 'authorization') || ''
-    let accessToken: string | null = null
-    
-    if (authHeader.startsWith('Bearer ')) {
-      accessToken = authHeader.substring(7)
-      logger.debug('🎫 [redeem] Found Bearer token')
+    // ── Auth ──────────────────────────────────────────────
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
     }
 
-    if (!accessToken) {
-      console.error('❌ No access token found')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Not authenticated'
-      })
-    }
+    const userId = authUser.db_user_id || authUser.id
 
-    // Create Supabase client with the access token
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const supabaseKey = process.env.SUPABASE_ANON_KEY
-
-    if (!supabaseKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const userClient = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      }
-    })
-
-    // Get current authenticated user
-    logger.debug('🎫 [redeem] Getting user from auth')
-    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser()
-    logger.debug('🎫 [redeem] Auth result:', { hasUser: !!authUser, hasError: !!authError })
-    
-    if (authError || !authUser) {
-      console.error('❌ Auth error:', authError)
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Not authenticated'
-      })
-    }
-
-    logger.debug('✅ Authenticated user:', authUser.id, authUser.email)
-
-    // Use admin client for database operations to bypass RLS
+    // Use admin client for database operations
     const supabaseAdmin = getSupabaseAdmin()
 
     // Get user profile with tenant_id
     const { data: userProfile, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, first_name, last_name')
-      .eq('auth_user_id', authUser.id)
+      .eq('id', userId)
       .single()
 
     if (userError || !userProfile) {

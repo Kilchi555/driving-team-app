@@ -433,7 +433,7 @@
         v-if="showRedeemModal"
         :current-balance="studentBalance"
         @close="showRedeemModal = false"
-        @success="(newBalance) => { studentBalance.value = newBalance; showRedeemModal = false }"
+        @success="handleVoucherRedeemed"
       />
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
         <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
@@ -1606,6 +1606,8 @@ const closeMedicalCertificateModal = () => {
 const handleVoucherRedeemed = async (newBalance: number) => {
   logger.debug('✅ Voucher redeemed, new balance:', newBalance)
   studentBalance.value = newBalance
+  showRedeemModal.value = false
+  showRedeemVoucherModal.value = false
   // Refresh all data to show updated balance
   await loadAllData()
 }
