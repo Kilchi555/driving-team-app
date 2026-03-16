@@ -38,6 +38,13 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { amountRappen } = body
 
+    logger.info('📥 request-credit-withdrawal body:', {
+      amountRappen,
+      type: typeof amountRappen,
+      userId,
+      hasWithdrawalPrefs: false // updated below
+    })
+
     if (!amountRappen || typeof amountRappen !== 'number' || amountRappen < 100) {
       throw createError({ statusCode: 400, message: 'Mindestbetrag CHF 1.00 erforderlich' })
     }
@@ -48,6 +55,14 @@ export default defineEventHandler(async (event) => {
       .select('id, iban_last4, account_holder, withdrawal_unlocked_at, street, zip, city')
       .eq('user_id', userProfile.id)
       .maybeSingle()
+
+    logger.info('🔍 withdrawal prefs check:', {
+      hasPrefs: !!withdrawalPrefs,
+      hasStreet: !!withdrawalPrefs?.street,
+      hasZip: !!withdrawalPrefs?.zip,
+      hasCity: !!withdrawalPrefs?.city,
+      unlockAt: withdrawalPrefs?.withdrawal_unlocked_at
+    })
 
     if (!withdrawalPrefs) {
       throw createError({ statusCode: 400, message: 'Bitte zuerst eine Auszahlungs-IBAN hinterlegen' })
@@ -63,6 +78,7 @@ export default defineEventHandler(async (event) => {
     // ── Check 24h lockout after IBAN change ───────────────
     const now = new Date()
     const unlockAt = new Date(withdrawalPrefs.withdrawal_unlocked_at)
+    logger.info('🔍 lockout check:', { now: now.toISOString(), unlockAt: unlockAt.toISOString(), isLocked: now < unlockAt })
     if (now < unlockAt) {
       const hoursLeft = Math.ceil((unlockAt.getTime() - now.getTime()) / (1000 * 60 * 60))
       throw createError({
@@ -79,10 +95,12 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     if (!creditData || creditData.balance_rappen <= 0) {
+      logger.info('🔍 credit check failed:', { hasCreditData: !!creditData, balance: creditData?.balance_rappen })
       throw createError({ statusCode: 400, message: 'Kein verfügbares Guthaben' })
     }
 
     const availableBalance = creditData.balance_rappen - (creditData.pending_withdrawal_rappen || 0)
+    logger.info('🔍 balance check:', { balance: creditData.balance_rappen, pending: creditData.pending_withdrawal_rappen, available: availableBalance, requested: amountRappen })
     if (amountRappen > availableBalance) {
       throw createError({
         statusCode: 400,
