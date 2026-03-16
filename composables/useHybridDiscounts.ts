@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import { supabase } from '~/utils/supabase'
 
 export interface DiscountCode {
   id: string

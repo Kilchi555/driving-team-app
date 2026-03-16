@@ -175,34 +175,34 @@ const redeemVoucher = async () => {
   errorMessage.value = ''
 
   try {
-    logger.debug('🎫 Redeeming voucher:', voucherCode.value)
-
-    const response = await $fetch('/api/vouchers/redeem', {
+    const response = await $fetch<any>('/api/vouchers/redeem', {
       method: 'POST',
       body: {
         code: voucherCode.value.trim().toUpperCase()
       }
     })
 
-    logger.debug('✅ Voucher redeemed:', response)
+    // Fix: API returns credit.new_balance_chf (string) or newBalance (rappen)
+    let balanceRappen = 0
+    if (response?.credit?.new_balance_chf) {
+      balanceRappen = Math.round(parseFloat(response.credit.new_balance_chf) * 100)
+    } else if (typeof response?.newBalance === 'number') {
+      balanceRappen = response.newBalance
+    }
 
-    // Success!
     redemptionSuccess.value = true
-    successMessage.value = response.message || 'Gutschein erfolgreich eingelöst!'
-    newBalance.value = response.newBalance || 0
+    successMessage.value = response?.message || 'Gutschein erfolgreich eingelöst!'
+    newBalance.value = balanceRappen
 
-    // Emit success event
-    emit('success', newBalance.value)
+    emit('success', balanceRappen)
 
   } catch (error: any) {
     console.error('❌ Error redeeming voucher:', error)
     
-    if (error.status === 404) {
+    if (error.status === 404 || error.statusCode === 404) {
       errorMessage.value = 'Ungültiger Gutschein-Code'
-    } else if (error.status === 400) {
-      errorMessage.value = error.data?.error || 'Gutschein kann nicht eingelöst werden'
-    } else if (error.status === 410) {
-      errorMessage.value = 'Dieser Gutschein ist bereits vollständig eingelöst worden'
+    } else if (error.status === 400 || error.statusCode === 400) {
+      errorMessage.value = error.data?.statusMessage || error.data?.error || 'Gutschein kann nicht eingelöst werden'
     } else {
       errorMessage.value = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
     }

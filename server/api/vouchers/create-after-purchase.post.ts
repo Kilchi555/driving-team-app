@@ -1,7 +1,7 @@
 // server/api/vouchers/create-after-purchase.post.ts
 // Automatische Gutschein-Erstellung nach erfolgreichem Kauf
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateVoucherCode } from '~/utils/voucherGenerator'
 import { logger } from '~/utils/logger'
 
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event): Promise<CreateVouchersResponse>
 
     logger.debug('🎁 Creating vouchers after purchase for payment:', paymentId)
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Hole Payment Details
     const { data: payment, error: paymentError } = await supabase

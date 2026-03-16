@@ -1,7 +1,7 @@
 // server/api/vouchers/download-pdf.post.ts
 // Gutschein-PDF Download API
 
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateVoucherPDFContent, type VoucherBranding } from '~/utils/voucherGenerator'
 import { setHeader, send } from 'h3'
 import chromium from '@sparticuz/chromium'

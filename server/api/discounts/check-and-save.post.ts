@@ -1,5 +1,5 @@
 // server/api/discounts/check-and-save.post.ts
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
 

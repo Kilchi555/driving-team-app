@@ -388,6 +388,20 @@
         </div>
       </div>
 
+      <!-- Gutschein & Rabattcodes (nur Admin) -->
+      <div v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'" class="border-b border-gray-200">
+        <button
+          @click="toggleSection('voucherCodes')"
+          class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+        >
+          <span class="font-medium text-gray-900">🎟️ Gutschein- & Rabattcodes</span>
+          <span class="text-gray-600 font-bold">{{ openSections.voucherCodes ? '−' : '+' }}</span>
+        </button>
+        <div v-if="openSections.voucherCodes" class="px-4 pb-4 border-t border-gray-100">
+          <VoucherCodesManager class="mt-4" />
+        </div>
+      </div>
+
       <!-- Footer with Logout Button and Calendar Link -->
       <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-between items-center">
         <button
@@ -846,9 +860,10 @@ const openSections = reactive({
   durations: false,
   worktime: false,
   notifications: false,
-  workingStats: false,    
+  workingStats: false,
   examLocations: false,
-  deviceManager: false
+  deviceManager: false,
+  voucherCodes: false
 })
 
 // NEUE STATE für Prüfungsstandorte

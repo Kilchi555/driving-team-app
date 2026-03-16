@@ -96,6 +96,12 @@
                     Guthaben aufladen
                   </button>
                   <button
+                    @click="showActionsDropdown = false; showRedeemModal = true"
+                    class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  >
+                    Code einlösen
+                  </button>
+                  <button
                     @click="showActionsDropdown = false; showWithdrawalModal = true"
                     :disabled="availableBalance <= 0"
                     class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -423,6 +429,12 @@
       </Teleport>
 
       <!-- Payment List -->
+      <RedeemVoucherModal
+        v-if="showRedeemModal"
+        :current-balance="studentBalance"
+        @close="showRedeemModal = false"
+        @success="(newBalance) => { studentBalance.value = newBalance; showRedeemModal = false }"
+      />
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
         <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
           <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
@@ -732,6 +744,7 @@ const showTopupModal = ref(false)
 const showCreditTransactionsModal = ref(false)
 const creditTransactions = ref<any[]>([])
 const isLoadingCreditTransactions = ref(false)
+const showRedeemModal = ref(false)
 const withdrawalStep = ref<'iban' | 'edit-iban' | 'amount' | 'confirm' | 'success'>('iban')
 const ibanInput = ref('')
 const accountHolderInput = ref('')
