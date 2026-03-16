@@ -60,7 +60,6 @@ export default defineEventHandler(async (event) => {
         admin_fee_rappen,
         subtotal_rappen: total_amount_rappen,
         total_amount_rappen,
-        amount_rappen: 0,
         payment_method,
         payment_status: 'pending',
         currency,
