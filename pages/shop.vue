@@ -747,8 +747,10 @@ import { useTenant } from '~/composables/useTenant'
 import { useVouchers } from '~/composables/useVouchers'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useFeatures } from '~/composables/useFeatures'
+import { useAuthStore } from '~/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const { loadTenant, tenantSlug, tenantName, tenantId, currentTenant } = useTenant()
 const { createVoucher, createVouchersAfterPurchase, downloadVoucherPDF, sendVoucherEmail } = useVouchers()
 const { validateDiscountCode } = useDiscounts()
