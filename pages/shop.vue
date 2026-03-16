@@ -1577,86 +1577,51 @@ const loadProducts = async () => {
   isLoadingProducts.value = true
   
   try {
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    
-    // Wait for tenant to be loaded
-    
-    // If tenant is not loaded yet, wait for it
+    // Wait for tenant to be loaded (up to 5s)
     if (!currentTenant.value) {
       logger.debug('🔄 Waiting for tenant to be loaded...')
-      
-      // Wait up to 5 seconds for tenant to be loaded
-      let attempts = 0
-      while (!currentTenant.value && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        attempts++
-      }
-      
-      if (!currentTenant.value) {
-        console.error('❌ Tenant not loaded after 5 seconds')
-        throw new Error('Kein Tenant verfügbar - Shop kann nicht geöffnet werden')
+      let waited = 0
+      while (!currentTenant.value && waited < 5000) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        waited += 200
       }
     }
     
-    const currentTenantId = tenantId.value
-    
-    if (!currentTenantId) {
-      console.error('❌ No tenant ID available for product loading')
-      throw new Error('Keine Tenant-ID verfügbar - Shop kann nicht geöffnet werden')
+    if (!currentTenant.value) {
+      console.error('❌ Tenant not loaded after 5 seconds')
+      availableProducts.value = []
+      return
     }
-    
-    logger.debug('🏢 Loading products for tenant:', currentTenantId)
-    logger.debug('🔍 Debug - currentTenant:', currentTenant.value)
-    logger.debug('🔍 Debug - tenantId.value:', tenantId.value)
-    logger.debug('🔍 Debug - tenantSlug:', tenantSlug.value)
-    logger.debug('🔍 Debug - tenantParam:', tenantParam.value)
-    logger.debug('🔍 Debug - route.query.tenant:', route.query.tenant)
-    logger.debug('🔍 Debug - route.params:', route.params)
-    
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .eq('tenant_id', currentTenantId)
-      .order('display_order')
-    
-    if (error) throw error
-    
-    availableProducts.value = data || []
+
+    // Use tenantId or tenantSlug to load via public API (no auth required)
+    const query = tenantId.value
+      ? { tenantId: tenantId.value }
+      : { tenant: tenantParam.value || tenantSlug.value }
+
+    if (!query.tenantId && !query.tenant) {
+      console.error('❌ No tenant identifier available for product loading')
+      availableProducts.value = []
+      return
+    }
+
+    logger.debug('🛍️ Loading products via API for tenant:', query)
+
+    const res = await $fetch('/api/shop/products', { query }) as any
+
+    availableProducts.value = res?.products || []
     logger.debug('✅ Products loaded:', availableProducts.value.length)
-    logger.debug('📦 Available products:', availableProducts.value)
-    
-    // Wenn keine Produkte in der DB sind, Shop als nicht verfügbar markieren
+
     if (availableProducts.value.length === 0) {
       logger.debug('⚠️ No products in database, shop not available')
-      availableProducts.value = []
-      // Shop wird als nicht verfügbar angezeigt
     }
-    
   } catch (error) {
     console.error('❌ Error loading products:', error)
-    // Bei Fehlern Shop als nicht verfügbar markieren
     availableProducts.value = []
-    
-    // Benutzer über das Problem informieren und zurückleiten
-    showToastMessage('❌ Shop kann nicht geöffnet werden. Kein Tenant verfügbar.')
-    
-    // Nach 2 Sekunden zurück zur Auswahl
-    setTimeout(() => {
-      const tenant = tenantParam.value || tenantSlug.value
-      if (tenant) {
-        navigateTo(`/auswahl?tenant=${tenant}`)
-      } else {
-        navigateTo('/auswahl')
-      }
-    }, 2000)
+    showToastMessage('❌ Shop kann nicht geöffnet werden. Fehler beim Laden der Produkte.')
   } finally {
     isLoadingProducts.value = false
   }
 }
-
-
 const isAppleDevice = computed(() => {
   if (process.client) {
     return /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)
