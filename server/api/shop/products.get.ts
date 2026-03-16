@@ -1,27 +1,29 @@
 // server/api/shop/products.get.ts
 // Public endpoint — returns active shop products for a given tenant slug or ID
-// No authentication required (shop is public)
+// Uses the anon Supabase client so RLS policies govern access (no service role key)
+// Requires DB migration: add_products_public_read_policy.sql
 
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getSupabaseAnon } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   const { tenant, tenantId } = getQuery(event) as { tenant?: string; tenantId?: string }
 
   if (!tenant && !tenantId) {
-    throw createError({ statusCode: 400, message: 'tenant or tenantId query parameter required' })
+    throw createError({ statusCode: 400, message: 'tenant oder tenantId Parameter erforderlich' })
   }
 
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAnon()
 
   let resolvedTenantId = tenantId as string | undefined
 
-  // Resolve slug → ID if only slug provided
+  // Resolve slug → ID via tenants table (anon_read_tenants policy allows this)
   if (!resolvedTenantId && tenant) {
     const { data: tenantRow } = await supabase
       .from('tenants')
       .select('id')
       .eq('slug', tenant)
+      .eq('is_active', true)
       .single()
 
     if (!tenantRow) {
@@ -30,10 +32,10 @@ export default defineEventHandler(async (event) => {
     resolvedTenantId = tenantRow.id
   }
 
+  // RLS policy "products_public_read" filters to is_active = true
   const { data: products, error } = await supabase
     .from('products')
     .select('id, name, description, price_rappen, category, display_order, is_voucher, allow_custom_amount, min_amount_rappen, max_amount_rappen')
-    .eq('is_active', true)
     .eq('tenant_id', resolvedTenantId!)
     .order('display_order')
 

@@ -16,4 +16,22 @@ export function getSupabaseAdmin() {
   })
 }
 
+/**
+ * Anon client — respects RLS policies.
+ * Use for public endpoints where data access should be governed by RLS.
+ */
+export function getSupabaseAnon() {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
 
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables (URL or ANON_KEY)')
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+}
