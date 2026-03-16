@@ -159,10 +159,13 @@
                     <span class="text-gray-500 text-lg">{{ product.is_voucher ? '🎁' : '📦' }}</span>
                   </div>
                   <div>
-                    <div class="text-sm font-medium text-gray-900 flex items-center">
+                    <div class="text-sm font-medium text-gray-900 flex items-center gap-1.5">
                       {{ product.name }}
-                      <span v-if="product.is_voucher" class="ml-2 inline-flex px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                      <span v-if="product.is_voucher" class="inline-flex px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
                         🎁 Gutschein
+                      </span>
+                      <span v-if="product.show_in_shop" class="inline-flex px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
+                        🛒 Shop
                       </span>
                     </div>
                     <div class="text-sm text-gray-500">{{ product.description }}</div>
@@ -485,6 +488,18 @@
               <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
+
+          <!-- Show in Shop -->
+          <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+            <div>
+              <label class="text-sm font-medium text-gray-700">Im Online-Shop anzeigen</label>
+              <p class="text-xs text-gray-500 mt-1">Nur ausgewählte Produkte erscheinen im öffentlichen Shop. Interne Produkte (Fahrzeug-Miete, Admin-Pauschale etc.) hier deaktiviert lassen.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" v-model="formData.show_in_shop" class="sr-only peer">
+              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+            </label>
+          </div>
         </div>
 
         <!-- Footer -->
@@ -545,6 +560,7 @@ interface Product {
   allow_custom_amount?: boolean
   is_credit_product?: boolean  // ✅ NEW
   credit_amount_rappen?: number  // ✅ NEW
+  show_in_shop?: boolean
 }
 
 // State
@@ -572,7 +588,8 @@ const formData = ref({
   is_voucher: false,
   allow_custom_amount: false,
   is_credit_product: false,  // ✅ NEW
-  credit_amount: 0  // ✅ NEW
+  credit_amount: 0,  // ✅ NEW
+  show_in_shop: false
 })
 
 // Computed
@@ -769,7 +786,8 @@ const editProduct = (product: Product) => {
     is_voucher: product.is_voucher || false,
     allow_custom_amount: product.allow_custom_amount || false,
     is_credit_product: product.is_credit_product || false,  // ✅ NEW
-    credit_amount: product.credit_amount_rappen ? product.credit_amount_rappen / 100 : 0  // ✅ NEW
+    credit_amount: product.credit_amount_rappen ? product.credit_amount_rappen / 100 : 0,  // ✅ NEW
+    show_in_shop: product.show_in_shop || false
   }
   showModal.value = true
 }
@@ -822,6 +840,7 @@ const saveProduct = async () => {
       allow_custom_amount: formData.value.is_voucher ? formData.value.allow_custom_amount : false,
       is_credit_product: formData.value.is_credit_product,  // ✅ NEW
       credit_amount_rappen: formData.value.is_credit_product ? Math.round(formData.value.credit_amount * 100) : null,  // ✅ NEW
+      show_in_shop: formData.value.show_in_shop,
       tenant_id: tenantId // ✅ Tenant ID hinzufügen
     }
 

@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
     .from('products')
     .select('id, name, description, price_rappen, category, display_order, is_voucher, allow_custom_amount, min_amount_rappen, max_amount_rappen')
     .eq('tenant_id', resolvedTenantId!)
+    .eq('show_in_shop', true)
     .order('display_order')
 
   if (error) {
