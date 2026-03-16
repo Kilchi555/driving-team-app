@@ -2941,12 +2941,18 @@ const useCreditForCurrentLesson = async () => {
   try {
     isUsingCredit.value = true
     
-    // Berechne den Preis für die aktuelle Lektion
-    const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100 // In Rappen
+    // Berechne den vollständigen Preis inkl. Admin-Fee, Produkte und Rabatt
+    const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100
+    const productsPrice = selectedProducts.value.reduce((sum: number, p: any) => {
+      return sum + ((p.product?.price || 0) * 100 * (p.quantity || 1))
+    }, 0)
+    const adminFeeRappen = Math.round((calculatedAdminFee.value || 0) * 100)
+    const discountRappen = Math.round((formData.value.discount || 0) * 100)
+    const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFeeRappen - discountRappen)
     
     const creditData = {
       user_id: selectedStudent.value.id,
-      amount_rappen: Math.min(studentCredit.value.balance_rappen, lessonPrice),
+      amount_rappen: Math.min(studentCredit.value.balance_rappen, totalPrice),
       appointment_id: props.eventData?.id || 'temp_' + Date.now(),
       notes: `Guthaben für Lektion: ${formData.value.title || 'Fahrstunde'}`
     }
