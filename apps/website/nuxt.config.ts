@@ -230,6 +230,8 @@ export default defineNuxtConfig({
     // Weitere standortspezifische Auto-Fahrschule URLs
     '/auto-fahrschule-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
     '/auto-fahrschule-zuerich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/auto-fahrschule-stgallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/auto-fahrschule-stgallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/auto-fahrschule-stgallen/„': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/auto-fahrstunden-lachen': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
     '/auto-fahrstunden-lachen/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
@@ -448,6 +450,9 @@ export default defineNuxtConfig({
     '/theoriepruefung-vorbereitung/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/verkehrskunde-vku-kurs': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
     '/verkehrskunde-vku-kurs/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+
+    '/fahrschule-kloten': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/fahrschule-kloten/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
 
     // Elementor-Seiten (WordPress-Überrest)
     '/elementor-7': { redirect: { to: '/', statusCode: 301 } },
