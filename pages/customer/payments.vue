@@ -69,7 +69,7 @@
           </div>
           <div class="flex items-center gap-3 relative">
             <!-- Aktionen Dropdown (nur auf Preview sichtbar) -->
-            <div v-if="$config.public.appEnv !== 'production'" class="relative">
+            <div v-if="appEnv !== 'production'" class="relative">
               <button
                 @click="showActionsDropdown = !showActionsDropdown"
                 class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
@@ -685,7 +685,7 @@
 
 import { logger } from '~/utils/logger'
 import { ref, computed, onMounted, watch } from 'vue'
-import { navigateTo } from '#app'
+import { navigateTo, useRuntimeConfig } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { storeToRefs } from 'pinia'
@@ -747,6 +747,7 @@ const expandedPaymentId = ref<string | null>(null)
 const showCancellationModal = ref(false)
 const selectedAppointment = ref<any>(null)
 const studentBalance = ref(0) // ✅ NEU: Student credit balance in Rappen
+const appEnv = useRuntimeConfig().public.appEnv as string | undefined
 const pendingWithdrawalRappen = ref(0)
 const savedIbanLast4 = ref<string | null>(null)
 const withdrawalUnlockedAt = ref<string | null>(null)
