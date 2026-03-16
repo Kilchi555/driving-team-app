@@ -73,6 +73,7 @@
               :spots_per_date="selectedCourse.spotsPerDate || {}"
               :location="selectedCourse.location"
               :start_time="selectedCourse.start_time"
+              :show_faber_birthdate="selectedCourse.showFaberBirthdate !== false"
               @submitted="onSubmitted"
             />
           </div>
@@ -95,9 +96,10 @@ export interface CourseOption {
   formType?: 'registration' | 'inquiry'
   dates?: string[]
   soldOutDates?: string[]
-  spotsPerDate?: Record<string, number> // remaining spots per date label
+  spotsPerDate?: Record<string, number>
   location?: string
   start_time?: string
+  showFaberBirthdate?: boolean
 }
 
 const props = defineProps<{
