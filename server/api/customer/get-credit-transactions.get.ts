@@ -8,10 +8,12 @@ export default defineEventHandler(async (event) => {
   const user = await getAuthenticatedUser(event)
   if (!user) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
 
+  const userId = user.db_user_id || user.id
+
   const { data, error } = await supabase
     .from('credit_transactions')
     .select('id, transaction_type, amount_rappen, balance_before_rappen, balance_after_rappen, payment_method, notes, created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(100)
 

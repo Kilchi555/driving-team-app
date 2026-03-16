@@ -2,12 +2,13 @@
 // Allows customers to save/update their payout IBAN (encrypted)
 // 24h lockout enforced after change before withdrawals are allowed
 
-import { defineEventHandler, readBody, getHeader, createError } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { validateIBAN, encryptIBAN } from '~/server/utils/iban-utils'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const ipAddress = getClientIP(event)
@@ -15,16 +16,13 @@ export default defineEventHandler(async (event) => {
 
   try {
     // ── Auth ──────────────────────────────────────────────
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
-    }
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+
+    const userId = authUser.db_user_id || authUser.id
 
     // ── Rate limiting: max 3 IBAN changes per day ─────────
-    const rateLimitResult = await checkRateLimit(user.id, 'update_withdrawal_iban', 3, 86400000)
+    const rateLimitResult = await checkRateLimit(userId, 'update_withdrawal_iban', 3, 86400000)
     if (!rateLimitResult.allowed) {
       throw createError({ statusCode: 429, statusMessage: 'Zu viele IBAN-Änderungen. Bitte morgen erneut versuchen.' })
     }
@@ -33,7 +31,7 @@ export default defineEventHandler(async (event) => {
     const { data: userProfile } = await supabase
       .from('users')
       .select('id, tenant_id, first_name, last_name, email')
-      .eq('auth_user_id', user.id)
+      .eq('id', userId)
       .single()
     if (!userProfile) throw createError({ statusCode: 404, statusMessage: 'Benutzerprofil nicht gefunden' })
 
