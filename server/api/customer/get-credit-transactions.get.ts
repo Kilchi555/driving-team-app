@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
     .from('credit_transactions')
     .select('id, transaction_type, amount_rappen, balance_before_rappen, balance_after_rappen, payment_method, notes, created_at')
     .eq('user_id', user.id)
-    .eq('tenant_id', user.tenant_id)
     .order('created_at', { ascending: false })
     .limit(100)
 
