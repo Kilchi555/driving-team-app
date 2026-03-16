@@ -1,170 +1,84 @@
 <!-- pages/shop.vue -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 p-2">
-    <div class="max-w-2xl mx-auto w-full">
-      
-              <!-- Header -->
-        <div class="bg-white rounded-t-xl shadow-2xl">
-          <div class="bg-gray-200 text-gray-700 p-2 rounded-t-xl">
-            <div class="text-center">
-              <LoadingLogo size="2xl" :tenant-id="tenantId"/>
+  <!-- Dynamic branded page background -->
+  <div class="min-h-screen" :style="pageBackground">
+    <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12">
+
+      <!-- ── CARD ── -->
+      <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+        <!-- Card Header -->
+        <div class="relative overflow-hidden" :style="{ background: headerGradient }">
+          <!-- Decorative circles -->
+          <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-10"
+               :style="{ background: 'white' }"></div>
+          <div class="absolute -bottom-6 -left-6 w-28 h-28 rounded-full opacity-10"
+               :style="{ background: 'white' }"></div>
+
+          <div class="relative z-10 px-6 py-4 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center">
+              <LoadingLogo size="lg" :tenant-id="tenantId" class="brightness-0 invert opacity-90"/>
+            </div>
+            <!-- Step label -->
+            <div v-if="currentStep >= 1"
+                 class="text-white/80 text-sm font-medium">
+              Schritt {{ currentStep }} von 3
             </div>
           </div>
 
-          <!-- Navigation Back -->
-          <div v-if="currentStep > 1" class="px-3 md:px-6 py-2 md:py-3 bg-gray-50 border-b">
-            <button
-              @click="previousStep"
-              class="text-gray-600 hover:text-gray-800 flex items-center text-sm w-full md:w-auto justify-center md:justify-start"
-            >
-              ← Zurück
-            </button>
+          <!-- Step title bar -->
+          <div v-if="currentStep >= 1" class="relative z-10 px-6 pb-4">
+            <h1 class="text-white text-xl font-bold">{{ stepTitle }}</h1>
+            <p class="text-white/70 text-sm mt-0.5">{{ stepSubtitle }}</p>
           </div>
+        </div>
+
+        <!-- Back navigation -->
+        <div v-if="currentStep > 1" class="px-5 pt-4 pb-0">
+          <button @click="previousStep"
+                  class="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+                  :style="{ color: brandPrimary }">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Zurück
+          </button>
+        </div>
 
         <!-- Step Content -->
-        <div class="bg-white p-3 md:p-6">
-          <!-- SCHRITT 0: KUNDENTYP -->
+        <div class="p-5">
+
+          <!-- ── SCHRITT 0: KUNDENTYP (legacy) ── -->
           <div v-if="currentStep === 0">
             <div class="text-center space-y-6">
               <h2 class="text-2xl font-bold text-gray-900">Willkommen in unserem Shop!</h2>
               <p class="text-gray-600">Bitte wählen Sie, wie Sie fortfahren möchten:</p>
-              
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                <!-- Bestehender Kunde -->
-                <div class="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all"
-                     :class="{ 'border-blue-500 bg-blue-50': customerType === 'existing' }">
-                  <div class="text-4xl mb-3">👤</div>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-2">Bestehender Kunde</h3>
-                  <p class="text-gray-600 text-sm">Ich habe bereits ein Konto und möchte mich anmelden</p>
-                  <div class="mt-4">
-                    <button @click="selectCustomerType('existing')"
-                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-                      Anmelden
-                    </button>
-                  </div>
-                </div>
-                
-                <!-- Neuer Kunde -->
-                <div class="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-green-300 hover:shadow-md transition-all"
-                     :class="{ 'border-green-500 bg-green-50': customerType === 'new' }">
-                  <div class="text-4xl mb-3">🆕</div>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-2">Neuer Kunde</h3>
-                  <p class="text-gray-600 text-sm">Ich möchte ein Konto erstellen und registrieren</p>
-                  <div class="mt-4">
-                    <button @click="selectCustomerType('new')"
-                            class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors">
-                      Registrieren
-                    </button>
-                  </div>
-                </div>
-                
-                <!-- Gast -->
-                <div class="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-orange-300 hover:shadow-md transition-all"
-                     :class="{ 'border-orange-500 bg-orange-50': customerType === 'guest' }">
-                  <div class="text-4xl mb-3">🛒</div>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-2">Als Gast bestellen</h3>
-                  <p class="text-gray-600 text-sm">Ich möchte ohne Konto bestellen</p>
-                  <div class="mt-4">
-                    <button @click="selectCustomerType('guest')"
-                            class="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 transition-colors">
-                      Weiter ohne Konto
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Login/Registrierungsformular (wird angezeigt wenn gewählt) -->
-              <div v-if="customerType === 'existing'" class="max-w-md mx-auto mt-8">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 class="text-lg font-semibold text-blue-900 mb-4">Anmeldung</h3>
-                  <form @submit.prevent="handleLogin" class="space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium text-blue-900 mb-2">E-Mail-Adresse</label>
-                      <input
-                        v-model="loginForm.email"
-                        type="email"
-                        placeholder="ihre.email@beispiel.ch"
-                        class="w-full px-3 py-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-blue-900 mb-2">Passwort</label>
-                      <input
-                        v-model="loginForm.password"
-                        type="password"
-                        placeholder="Ihr Passwort"
-                        class="w-full px-3 py-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      :disabled="!loginForm.email || !loginForm.password"
-                      class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Anmelden
-                    </button>
-                  </form>
-                </div>
-              </div>
-              
-              <div v-if="customerType === 'new'" class="max-w-md mx-auto mt-8">
-                <div class="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 class="text-lg font-semibold text-green-900 mb-4">Registrierung</h3>
-                  <form @submit.prevent="handleRegister" class="space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium text-green-900 mb-2">E-Mail-Adresse</label>
-                      <input
-                        v-model="registerForm.email"
-                        type="email"
-                        placeholder="ihre.email@beispiel.ch"
-                        class="w-full px-3 py-2 border border-green-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-green-900 mb-2">Passwort</label>
-                      <input
-                        v-model="registerForm.password"
-                        type="password"
-                        placeholder="Mindestens 12 Zeichen"
-                        class="w-full px-3 py-2 border border-green-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        required
-                        minlength="8"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-green-900 mb-2">Passwort bestätigen</label>
-                      <input
-                        v-model="registerForm.passwordConfirm"
-                        type="password"
-                        placeholder="Passwort wiederholen"
-                        class="w-full px-3 py-2 border border-green-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        required
-                        minlength="8"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      :disabled="!registerForm.email || !registerForm.password || registerForm.password !== registerForm.passwordConfirm"
-                      class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Registrieren
-                    </button>
-                  </form>
+                <div v-for="type in [
+                  { key: 'existing', icon: '👤', label: 'Bestehender Kunde', sub: 'Mit Konto anmelden', btn: 'Anmelden' },
+                  { key: 'new', icon: '🆕', label: 'Neuer Kunde', sub: 'Konto erstellen', btn: 'Registrieren' },
+                  { key: 'guest', icon: '🛒', label: 'Als Gast', sub: 'Ohne Konto bestellen', btn: 'Weiter' }
+                ]" :key="type.key"
+                     class="border-2 border-gray-200 rounded-xl p-5 text-center cursor-pointer hover:shadow-md transition-all"
+                     :style="customerType === type.key ? { borderColor: brandPrimary, background: brandBg } : {}"
+                     @click="selectCustomerType(type.key as any)">
+                  <div class="text-3xl mb-2">{{ type.icon }}</div>
+                  <div class="font-semibold text-gray-900 mb-1">{{ type.label }}</div>
+                  <div class="text-xs text-gray-500 mb-3">{{ type.sub }}</div>
+                  <button class="w-full py-2 rounded-lg text-white text-sm font-medium transition-opacity hover:opacity-90"
+                          :style="{ background: brandPrimary }">{{ type.btn }}</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- SCHRITT 1: PRODUKTÜBERSICHT & WARENKORB -->
+          <!-- ── SCHRITT 1: PRODUKTE ── -->
           <div v-if="currentStep === 1">
-            <div class="space-y-6">
-              <!-- Gutschein erstellen Button (oben) -->
-              <div v-if="isFeatureEnabled('voucher_creation')" class="mb-6">
-                <!-- Debug: Feature Status -->
+            <div class="space-y-5">
 
+              <!-- Voucher Selector -->
+              <div v-if="isFeatureEnabled('voucher_creation')">
                 <VoucherProductSelector
                   :existing-vouchers="availableVouchers"
                   @voucher-created="handleVoucherCreated"
@@ -172,392 +86,295 @@
                 />
               </div>
 
-              <!-- Produktübersicht -->
-              <div>
-                <h3 class="text-lg font-medium text-gray-900 mb-4">📦 Verfügbare Produkte</h3>
-                
-                <!-- Shop nicht verfügbar Nachricht -->
-                <div v-if="!isLoadingProducts && availableProducts.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6 text-center">
-                  <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                    </svg>
-                  </div>
-                  <h4 class="text-lg font-semibold text-yellow-800 mb-2">Shop aktuell nicht verfügbar</h4>
-                  <p class="text-yellow-700 mb-4">
-                    Der Online-Shop ist momentan nicht verfügbar. Bitte kontaktieren Sie uns direkt für Ihre Bestellung.
-                  </p>
-                  <div class="space-y-2 text-sm text-yellow-600">
-                    <p>📞 Telefon: <strong>+41 79 123 45 67</strong></p>
-                    <p>📧 E-Mail: <strong>info@driving-team.ch</strong></p>
-                  </div>
-                </div>
-                
-                <!-- Produktliste -->
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div v-for="product in availableProducts" :key="product.id" 
-                       class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start mb-3">
-                      <h4 class="font-medium text-gray-900">{{ product.name }}</h4>
-                      <span class="text-lg font-bold text-green-600">CHF {{ (product.price_rappen / 100).toFixed(2) }}</span>
-                    </div>
-                    <p v-if="product.description" class="text-sm text-gray-600 mb-3">{{ product.description }}</p>
-                    
-                    <!-- Menge hinzufügen -->
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center space-x-2">
-                        <button
-                          @click="updateQuantity(product.id, getProductQuantity(product.id) - 1)"
-                          :disabled="getProductQuantity(product.id) <= 0"
-                          class="w-8 h-8 flex items-center justify-center bg-gray-100 border border-gray-300 rounded text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          −
-                        </button>
-                        <span class="w-8 text-center font-medium">{{ getProductQuantity(product.id) }}</span>
-                        <button
-                          @click="updateQuantity(product.id, getProductQuantity(product.id) + 1)"
-                          class="w-8 h-8 flex items-center justify-center bg-green-100 border border-green-300 rounded text-green-600 hover:bg-green-200"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span class="text-sm text-gray-500">
-                        {{ getProductQuantity(product.id) > 0 ? `CHF ${(getProductQuantity(product.id) * product.price_rappen / 100).toFixed(2)}` : '' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              <!-- Loading skeleton -->
+              <div v-if="isLoadingProducts" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-for="i in 4" :key="i"
+                     class="h-28 rounded-xl bg-gray-100 animate-pulse"></div>
+              </div>
 
-                <!-- Warenkorb Zusammenfassung -->
-                <div v-if="hasProducts" class="bg-blue-50 rounded-lg p-4 border-2 border-blue-300">
-                  <h4 class="text-lg font-medium text-blue-900 mb-3">🛒 Ihr Warenkorb</h4>
-                  
-                  <!-- Produktliste im Warenkorb -->
-                  <div class="space-y-2 mb-4">
-                    <div v-for="item in selectedProducts" :key="item.product.id"
-                         class="flex justify-between items-center text-sm bg-blue-100 rounded-lg p-2">
-                      <div class="flex-1">
-                        <span class="text-blue-800">{{ item.product.name }} × {{ item.quantity }}</span>
+              <!-- No products -->
+              <div v-else-if="availableProducts.length === 0"
+                   class="text-center py-10 px-6 rounded-xl border-2 border-dashed border-gray-200">
+                <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                  </svg>
+                </div>
+                <h4 class="font-semibold text-gray-700 mb-1">Shop nicht verfügbar</h4>
+                <p class="text-sm text-gray-500">Bitte kontaktieren Sie uns direkt.</p>
+              </div>
+
+              <!-- Product cards -->
+              <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-for="product in availableProducts" :key="product.id"
+                     class="relative rounded-xl border-2 transition-all duration-200 overflow-hidden"
+                     :style="getProductQuantity(product.id) > 0
+                       ? { borderColor: brandPrimary, background: brandBg }
+                       : { borderColor: '#E5E7EB', background: 'white' }">
+
+                  <!-- Selected badge -->
+                  <div v-if="getProductQuantity(product.id) > 0"
+                       class="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                       :style="{ background: brandPrimary }">
+                    {{ getProductQuantity(product.id) }}
+                  </div>
+
+                  <div class="p-4">
+                    <!-- Category badge -->
+                    <div v-if="product.category" class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-2"
+                         :style="{ background: brandBg, color: brandPrimary }">
+                      {{ product.category }}
+                    </div>
+
+                    <h4 class="font-semibold text-gray-900 text-sm leading-snug mb-1">{{ product.name }}</h4>
+                    <p v-if="product.description" class="text-xs text-gray-500 mb-3 line-clamp-2">{{ product.description }}</p>
+
+                    <div class="flex items-center justify-between mt-auto">
+                      <!-- Price -->
+                      <span class="text-lg font-bold" :style="{ color: brandPrimary }">
+                        {{ product.allow_custom_amount ? 'Frei wählbar' : `CHF ${(product.price_rappen / 100).toFixed(2)}` }}
+                      </span>
+
+                      <!-- Quantity controls -->
+                      <div class="flex items-center gap-2">
+                        <button v-if="getProductQuantity(product.id) > 0"
+                                @click="updateQuantity(product.id, getProductQuantity(product.id) - 1)"
+                                class="w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold transition-colors"
+                                :style="{ borderColor: brandPrimary, color: brandPrimary }">−</button>
+                        <button @click="updateQuantity(product.id, getProductQuantity(product.id) + 1)"
+                                class="w-8 h-8 rounded-full text-white flex items-center justify-center text-sm font-bold shadow-sm transition-opacity hover:opacity-90"
+                                :style="{ background: brandPrimary }">+</button>
                       </div>
-                      <div class="flex items-center space-x-2">
-                        <span class="font-medium text-blue-800">CHF {{ item.total.toFixed(2) }}</span>
-                        <button
-                          @click="removeProduct(item.product.id)"
-                          class="text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full p-1 transition-colors"
-                          title="Produkt entfernen"
-                        >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cart summary -->
+              <Transition name="slide-up">
+                <div v-if="hasProducts"
+                     class="rounded-xl border-2 overflow-hidden"
+                     :style="{ borderColor: brandPrimary }">
+
+                  <!-- Cart header -->
+                  <div class="px-4 py-3 flex items-center justify-between"
+                       :style="{ background: brandPrimary }">
+                    <div class="flex items-center gap-2 text-white font-semibold text-sm">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-9H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                      </svg>
+                      Warenkorb
+                    </div>
+                    <span class="text-white/90 text-sm font-bold">CHF {{ totalPrice.toFixed(2) }}</span>
+                  </div>
+
+                  <!-- Cart items -->
+                  <div class="divide-y divide-gray-100 bg-white">
+                    <div v-for="item in selectedProducts" :key="item.product.id"
+                         class="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span class="text-gray-700 flex-1">{{ item.product.name }}
+                        <span class="text-gray-400 ml-1">×{{ item.quantity }}</span>
+                      </span>
+                      <div class="flex items-center gap-2 ml-3">
+                        <span class="font-medium text-gray-900">CHF {{ item.total.toFixed(2) }}</span>
+                        <button @click="removeProduct(item.product.id)"
+                                class="text-gray-300 hover:text-red-400 transition-colors">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                           </svg>
                         </button>
                       </div>
                     </div>
                   </div>
-                  
-                  <!-- Rabatte -->
-                  <div v-if="appliedDiscounts.length > 0" class="space-y-2 pt-3 border-t border-blue-200">
-                    <h5 class="text-sm font-medium text-blue-800">🎟️ Angewandte Rabatte:</h5>
-                    <div v-for="discount in appliedDiscounts" :key="discount.id" 
-                         class="flex justify-between items-center text-sm bg-green-100 rounded-lg p-2">
-                      <div class="flex-1">
-                        <span class="text-green-800">{{ discount.name }}</span>
-                        <span v-if="discount.discount_type === 'percentage'" class="text-green-600 ml-2">
-                          ({{ discount.discount_value }}%)
-                        </span>
-                      </div>
-                      <div class="flex items-center space-x-2">
-                        <span class="font-medium text-green-800">
-                          -CHF {{ (discount.discount_amount_rappen / 100).toFixed(2) }}
-                        </span>
-                      </div>
+
+                  <!-- Discounts -->
+                  <div v-if="appliedDiscounts.length > 0" class="divide-y divide-green-100 bg-green-50">
+                    <div v-for="discount in appliedDiscounts" :key="discount.id"
+                         class="flex items-center justify-between px-4 py-2 text-sm">
+                      <span class="text-green-700">🎟 {{ discount.name }}</span>
+                      <span class="text-green-700 font-medium">−CHF {{ (discount.discount_amount_rappen / 100).toFixed(2) }}</span>
                     </div>
                   </div>
-                  
-                  <!-- Gesamtpreis -->
-                  <div class="flex justify-between items-center pt-3 border-t border-blue-200">
-                    <span class="text-lg font-bold text-blue-900">Gesamtpreis:</span>
-                    <span class="text-xl font-bold text-blue-900">CHF {{ totalPrice.toFixed(2) }}</span>
-                  </div>
-                  
-                  <!-- Endpreis mit Rabatten -->
-                  <div v-if="appliedDiscounts.length > 0" class="flex justify-between items-center pt-2">
-                    <span class="text-lg font-bold text-green-700">Endpreis:</span>
-                    <span class="text-xl font-bold text-green-700">CHF {{ finalTotalPrice.toFixed(2) }}</span>
+
+                  <!-- Total with discounts -->
+                  <div v-if="appliedDiscounts.length > 0"
+                       class="px-4 py-3 flex justify-between items-center bg-gray-50 border-t">
+                    <span class="font-bold text-gray-900">Endpreis</span>
+                    <span class="text-lg font-bold" :style="{ color: brandPrimary }">CHF {{ finalTotalPrice.toFixed(2) }}</span>
                   </div>
                 </div>
-
-              </div>
+              </Transition>
             </div>
           </div>
 
-          <!-- SCHRITT 2: KUNDENDATEN -->
+          <!-- ── SCHRITT 2: KUNDENDATEN ── -->
           <div v-if="currentStep === 2">
-            <div class="space-y-6">
-              <!-- Kompakte Bestellübersicht -->
-              <div v-if="hasProducts" class="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-3">📦 Bestellübersicht</h3>
-                
-                <!-- Produktliste kompakt -->
-                <div class="space-y-3 mb-4">
+            <div class="space-y-5">
+
+              <!-- Order summary compact -->
+              <div v-if="hasProducts" class="rounded-xl border border-gray-200 overflow-hidden text-sm">
+                <div class="px-4 py-2.5 bg-gray-50 font-semibold text-gray-700 flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                  Bestellung
+                </div>
+                <div class="divide-y divide-gray-100">
                   <div v-for="item in selectedProducts" :key="item.product.id"
-                       class="bg-white rounded-lg p-3 border border-gray-200">
-                    <!-- Produktname und Preis auf einer Zeile -->
-                    <div class="flex justify-between items-start mb-2">
-                      <div class="flex-1 min-w-0">
-                        <h4 class="text-sm font-medium text-gray-900 truncate">{{ item.quantity }} x {{ item.product.name }}</h4>
+                       class="flex items-center justify-between px-4 py-2.5">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                      <span class="text-gray-600 truncate">{{ item.product.name }}</span>
+                      <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <button @click="updateQuantity(item.product.id, Math.max(0, item.quantity - 1))"
+                                :disabled="item.quantity <= 1"
+                                class="w-6 h-6 rounded-full border border-gray-300 text-gray-500 hover:border-gray-400 disabled:opacity-30 flex items-center justify-center text-xs">−</button>
+                        <span class="w-5 text-center text-sm font-medium">{{ item.quantity }}</span>
+                        <button @click="updateQuantity(item.product.id, item.quantity + 1)"
+                                class="w-6 h-6 rounded-full border flex items-center justify-center text-xs"
+                                :style="{ borderColor: brandPrimary, color: brandPrimary }">+</button>
                       </div>
-                      <button
-                        @click="removeProduct(item.product.id)"
-                        class="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full p-1 transition-colors ml-2 flex-shrink-0"
-                        title="Entfernen"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </div>
+                    <div class="flex items-center gap-2 ml-3">
+                      <span class="font-medium text-gray-900 whitespace-nowrap">CHF {{ item.total.toFixed(2) }}</span>
+                      <button @click="removeProduct(item.product.id)" class="text-gray-300 hover:text-red-400 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                       </button>
                     </div>
-                    
-                    <!-- Mengensteuerung auf separater Zeile -->
-                    <div class="flex items-center justify-center space-x-3">
-                      <span class="text-xs text-gray-500">Menge:</span>
-                      <button
-                        @click="updateQuantity(item.product.id, Math.max(0, item.quantity - 1))"
-                        :disabled="item.quantity <= 1"
-                        class="w-8 h-8 flex items-center justify-center bg-gray-100 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        −
-                      </button>
-                      <span class="w-8 text-center text-sm font-medium">{{ item.quantity }}</span>
-                      <button
-                        @click="updateQuantity(item.product.id, item.quantity + 1)"
-                        class="w-8 h-8 flex items-center justify-center bg-blue-100 border border-blue-300 rounded-full text-blue-600 hover:bg-blue-200"
-                      >
-                        +
-                      </button>
-                    </div>
                   </div>
                 </div>
 
-                <!-- Rabattcode-Eingabe kompakt -->
-                <div class="mb-4 bg-white rounded-lg p-3 border border-gray-200">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">🎟️ Rabattcode</label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input
-                      v-model="discountCode"
-                      type="text"
-                      placeholder="Rabattcode eingeben"
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <button
-                      @click="applyDiscountCode"
-                      :disabled="!discountCode.trim()"
-                      class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                    >
-                      Anwenden
-                    </button>
+                <!-- Discount code -->
+                <div class="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                  <div class="flex gap-2">
+                    <input v-model="discountCode" type="text" placeholder="Rabattcode"
+                           class="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                           @keyup.enter="applyDiscountCode" />
+                    <button @click="applyDiscountCode" :disabled="!discountCode.trim()"
+                            class="px-3 py-1.5 text-sm text-white rounded-lg disabled:opacity-40 whitespace-nowrap font-medium transition-opacity hover:opacity-90"
+                            :style="{ background: brandPrimary }">Einlösen</button>
                   </div>
-                  
-                  <!-- Angewandte Rabatte kompakt -->
-                  <div v-if="appliedDiscounts.length > 0" class="mt-3 space-y-2">
-                    <div v-for="discount in appliedDiscounts" :key="discount.id"
-                         class="flex justify-between items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-200">
-                      <div class="flex-1 min-w-0">
-                        <span class="text-sm font-medium">{{ discount.name }}</span>
-                      </div>
-                      <div class="flex items-center space-x-2 flex-shrink-0">
-                        <span class="text-sm font-semibold">-CHF {{ (discount.discount_amount_rappen / 100).toFixed(2) }}</span>
-                        <button
-                          @click="removeDiscount(discount.id)"
-                          class="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full p-1 transition-colors"
-                          title="Entfernen"
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  <div v-if="appliedDiscounts.length > 0" class="mt-2 space-y-1">
+                    <div v-for="d in appliedDiscounts" :key="d.id"
+                         class="flex justify-between items-center text-xs text-green-700 bg-green-50 rounded-lg px-3 py-1.5">
+                      <span>🎟 {{ d.name }}</span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-semibold">−CHF {{ (d.discount_amount_rappen / 100).toFixed(2) }}</span>
+                        <button @click="removeDiscount(d.id)" class="text-gray-300 hover:text-red-400">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                           </svg>
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                <!-- Gesamtpreis kompakt -->
-                <div class="bg-white rounded-lg p-3 border border-gray-200">
-                  <h4 class="text-sm font-medium text-gray-700 mb-2">💰 Preisübersicht</h4>
-                  <div class="space-y-2">
-                    <div class="flex justify-between items-center text-sm">
-                      <span class="text-gray-600">Zwischensumme:</span>
-                      <span class="text-gray-600">CHF {{ subtotalPrice.toFixed(2) }}</span>
-                    </div>
-                    <div v-if="totalDiscountAmount > 0" class="flex justify-between items-center text-sm">
-                      <span class="text-green-600">Rabatt:</span>
-                      <span class="text-green-600">-CHF {{ totalDiscountAmount.toFixed(2) }}</span>
-                    </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-gray-200">
-                      <span class="text-base font-bold text-gray-900">Gesamt:</span>
-                      <span class="text-lg font-bold text-gray-900">CHF {{ finalTotalPrice.toFixed(2) }}</span>
-                    </div>
+
+                <!-- Price summary -->
+                <div class="px-4 py-3 border-t border-gray-100 space-y-1 text-sm">
+                  <div class="flex justify-between text-gray-500">
+                    <span>Zwischensumme</span><span>CHF {{ subtotalPrice.toFixed(2) }}</span>
+                  </div>
+                  <div v-if="totalDiscountAmount > 0" class="flex justify-between text-green-600">
+                    <span>Rabatt</span><span>−CHF {{ totalDiscountAmount.toFixed(2) }}</span>
+                  </div>
+                  <div class="flex justify-between font-bold text-base pt-1.5 border-t border-gray-100">
+                    <span class="text-gray-900">Gesamt</span>
+                    <span :style="{ color: brandPrimary }">CHF {{ finalTotalPrice.toFixed(2) }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Kontaktdaten Formular -->
-              <div>
-                <h3 class="text-lg font-medium text-gray-900 mb-4">👤 Ihre Kontaktdaten</h3>
-                
-                <!-- Name -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <!-- Contact form -->
+              <div class="space-y-4">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kontaktdaten</h3>
+
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      Vorname *
-                    </label>
-                    <input
-                      v-model="formData.firstName"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Max"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Vorname *</label>
+                    <input v-model="formData.firstName" type="text" required placeholder="Max"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      Nachname *
-                    </label>
-                    <input
-                      v-model="formData.lastName"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Muster"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nachname *</label>
+                    <input v-model="formData.lastName" type="text" required placeholder="Muster"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
 
-                <!-- Contact -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      E-Mail *
-                    </label>
-                    <input
-                      v-model="formData.email"
-                      type="email"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="max@example.com"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
+                    <input v-model="formData.email" type="email" required placeholder="max@beispiel.ch"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      Telefon *
-                    </label>
-                    <input
-                      v-model="formData.phone"
-                      type="tel"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="+41 79 123 45 67"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Telefon *</label>
+                    <input v-model="formData.phone" type="tel" required placeholder="+41 79 123 45 67"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
 
-                <!-- Address -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      Straße *
-                    </label>
-                    <input
-                      v-model="formData.street"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Musterstraße"
-                    />
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Strasse *</label>
+                    <input v-model="formData.street" type="text" required placeholder="Musterstrasse"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      Hausnummer *
-                    </label>
-                    <input
-                      v-model="formData.streetNumber"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="123"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nr. *</label>
+                    <input v-model="formData.streetNumber" type="text" required placeholder="12"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      PLZ *
-                    </label>
-                    <input
-                      v-model="formData.zip"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="8000"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
+                    <input v-model="formData.zip" type="text" required placeholder="8000"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                      Ort *
-                    </label>
-                    <input
-                      v-model="formData.city"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Zürich"
-                    />
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Ort *</label>
+                    <input v-model="formData.city" type="text" required placeholder="Zürich"
+                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
 
-
-                <!-- Bemerkungen -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Bemerkungen (optional)
-                  </label>
-                  <textarea
-                    v-model="formData.notes"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Spezielle Wünsche, Zeitpräferenzen, etc."
-                  ></textarea>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Bemerkungen <span class="text-gray-400">(optional)</span></label>
+                  <textarea v-model="formData.notes" rows="2" placeholder="Spezielle Wünsche…"
+                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all resize-none"></textarea>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- SCHRITT 3: PAYMENT -->
+          <!-- ── SCHRITT 3: PAYMENT ── -->
           <div v-if="currentStep === 3">
-            <div class="space-y-4 md:space-y-6">
-              <!-- Bestellübersicht -->
-              <div class="bg-gray-50 rounded-lg p-3 md:p-4 border">
-                <h3 class="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">Bestellübersicht</h3>
-                
-                <!-- Kundendaten -->
-                <div class="mb-3 md:mb-4 pb-3 md:pb-4 border-b">
-                  <h4 class="text-xs md:text-sm font-medium text-gray-700 mb-2">Kunde:</h4>
-                  <div class="text-xs md:text-sm text-gray-600 space-y-1">
-                    <p class="break-words"><strong>{{ formData.firstName }} {{ formData.lastName }}</strong></p>
-                    <p class="break-words">{{ formData.street }} {{ formData.streetNumber }}</p>
-                    <p class="break-words">{{ formData.zip }} {{ formData.city }}</p>
-                    <p class="break-words">{{ formData.email }}</p>
-                    <p class="break-words">{{ formData.phone }}</p>
-                  </div>
+            <div class="space-y-4">
+              <!-- Customer summary -->
+              <div class="rounded-xl border border-gray-200 overflow-hidden text-sm">
+                <div class="px-4 py-2.5 bg-gray-50 font-semibold text-gray-700 flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  Bestellung für
+                </div>
+                <div class="px-4 py-3 text-sm text-gray-600 space-y-0.5">
+                  <p class="font-semibold text-gray-900">{{ formData.firstName }} {{ formData.lastName }}</p>
+                  <p>{{ formData.street }} {{ formData.streetNumber }}, {{ formData.zip }} {{ formData.city }}</p>
+                  <p>{{ formData.email }}</p>
                 </div>
               </div>
 
-              <!-- Payment Component -->
+              <!-- Payment -->
               <PaymentComponent
                 key="payment-component"
                 :appointment-id="undefined"
-                :user-id="null"
-                :staff-id="null"
+                :user-id="undefined"
+                :staff-id="undefined"
                 :is-standalone="true"
                 :is-read-only="false"
                 :customer-email="formData.email"
@@ -614,119 +431,91 @@
           </div>
         </div>
 
-        <!-- Footer mit Navigation -->
-        <div class="px-3 md:px-6 py-3 md:py-4 bg-gray-50 rounded-b-xl border-t">
-          <div class="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0">
-            <!-- Zurück Button -->
-            <button
-              v-if="currentStep > 0"
-              @click="previousStep"
-              class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
-            >
-              Zurück
-            </button>
-            <div v-else class="w-full sm:w-auto"></div>
-
-            <button
-              v-if="currentStep > 0 && currentStep < 3 && availableProducts.length > 0"
-              @click="nextStep"
-              :disabled="!canProceedToNextStep"
-              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
-            >
-              {{ getNextStepButtonText() }} →
-            </button>
-          </div>
+        <!-- ── FOOTER NAVIGATION ── -->
+        <div v-if="currentStep >= 1 && currentStep < 3 && availableProducts.length > 0"
+             class="px-5 py-4 bg-gray-50 border-t border-gray-100">
+          <button @click="nextStep"
+                  :disabled="!canProceedToNextStep"
+                  class="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200"
+                  :style="canProceedToNextStep
+                    ? { background: brandPrimary, boxShadow: `0 4px 14px ${brandPrimary}40` }
+                    : { background: '#D1D5DB', cursor: 'not-allowed' }">
+            {{ getNextStepButtonText() }}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
         </div>
+      </div>
+
+      <!-- Trusted badge -->
+      <div class="text-center mt-4 text-xs text-white/50 flex items-center justify-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        Sichere und verschlüsselte Übertragung
       </div>
     </div>
 
-    <!-- Toast Notification (oben zentriert) -->
-    <Transition 
+    <!-- ── TOAST ── -->
+    <Transition
       enter-active-class="transition-all duration-300 ease-out"
-      enter-from-class="opacity-0 transform translate-y-2"
-      enter-to-class="opacity-100 transform translate-y-0"
+      enter-from-class="opacity-0 -translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
       leave-active-class="transition-all duration-200 ease-in"
-      leave-from-class="opacity-100 transform translate-y-0"
-      leave-to-class="opacity-0 transform translate-y-2"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 -translate-y-2"
     >
-      <div v-if="showToast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-        <div class="bg-green-100 border border-green-300 rounded-lg shadow-lg px-6 py-2 min-w-80">
-          <div class="flex items-center justify-center text-green-800 font-medium text-sm">
-            <svg class="w-3 h-3 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span class="text-center">{{ toastMessage }}</span>
-          </div>
+      <div v-if="showToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+        <div class="flex items-center gap-2 bg-white border shadow-xl rounded-full px-5 py-2.5 text-sm font-medium text-gray-800">
+          <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ toastMessage }}
         </div>
       </div>
     </Transition>
 
-    <!-- Auto-Save Status (oben rechts) - nur beim Speichern, nicht bei "Gespeichert!" Nachrichten -->
-    <div v-if="autoSave.isAutoSaving.value" class="fixed top-4 right-4 z-40">
-      <Transition 
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 transform translate-y-2"
-        enter-to-class="opacity-100 transform translate-y-0"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 transform translate-y-0"
-        leave-to-class="opacity-0 transform translate-y-2"
-      >
-        <!-- Nur Auto-Saving Indicator anzeigen -->
-        <div class="bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 flex items-center space-x-2 shadow-lg">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          <span class="text-sm text-blue-700 font-medium">Speichere...</span>
-        </div>
-      </Transition>
-    </div>
+    <!-- Auto-save indicator -->
+    <Transition name="fade">
+      <div v-if="autoSave.isAutoSaving.value"
+           class="fixed bottom-4 right-4 z-40 flex items-center gap-2 bg-white border shadow-lg rounded-full px-4 py-2 text-xs text-gray-600">
+        <div class="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin"
+             :style="{ borderColor: brandPrimary }"></div>
+        Speichern…
+      </div>
+    </Transition>
 
-    <!-- Universal Recovery Modal -->
-    <div v-if="autoSave.showRecoveryModal.value" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
-        <div class="text-center mb-6">
-          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
+    <!-- Recovery modal -->
+    <Transition name="fade">
+      <div v-if="autoSave.showRecoveryModal.value"
+           class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+          <div class="text-center mb-5">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+                 :style="{ background: brandBg }">
+              <svg class="w-6 h-6" :style="{ color: brandPrimary }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-gray-900 mb-1">Eingaben wiederherstellen?</h3>
+            <p class="text-sm text-gray-500">Wir haben deine letzte Eingabe gefunden.</p>
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            Eingaben wiederherstellen?
-          </h3>
-          <p class="text-sm text-gray-600">
-            Wir haben Ihre letzte Eingabe gefunden. Möchten Sie dort weitermachen?
-          </p>
-        </div>
-
-        <!-- Recovery Info -->
-        <div v-if="autoSave.recoveryData.value" class="bg-gray-50 rounded-lg p-4 mb-6 text-sm">
-          <div class="flex justify-between items-center mb-2">
-            <span class="font-medium text-gray-700">Gefunden:</span>
-            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-              {{ autoSave.recoveryData.value.source }}
-            </span>
+          <div class="flex gap-3">
+            <button @click="autoSave.clearDraft()"
+                    class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              Neu beginnen
+            </button>
+            <button @click="autoSave.recoveryData.value && autoSave.restoreFromRecovery(autoSave.recoveryData.value)"
+                    :disabled="!autoSave.recoveryData.value"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                    :style="{ background: brandPrimary }">
+              Wiederherstellen
+            </button>
           </div>
-          <div class="text-xs text-gray-600">
-            Gespeichert: {{ new Date(autoSave.recoveryData.value.timestamp).toLocaleString('de-CH') }}
-          </div>
-        </div>
-
-        <!-- Buttons -->
-        <div class="flex space-x-3">
-          <button
-            @click="autoSave.clearDraft()"
-            class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Neu beginnen
-          </button>
-          <button
-            @click="autoSave.recoveryData.value && autoSave.restoreFromRecovery(autoSave.recoveryData.value)"
-            :disabled="!autoSave.recoveryData.value"
-            class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Wiederherstellen
-          </button>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 
   <!-- Voucher Download Modal -->
@@ -736,74 +525,117 @@
     @close="showVoucherDownloadModal = false"
   />
 
-  <!-- CHECKOUT-MODAL: Login / Registrieren / Gast (erscheint zwischen Schritt 1 und 2) -->
+  <!-- ── CHECKOUT AUTH MODAL ── -->
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="showCheckoutAuthModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
-          <div class="text-center">
-            <div class="text-4xl mb-2">🛒</div>
-            <h2 class="text-xl font-bold text-gray-900">Wie möchtest du fortfahren?</h2>
-            <p class="text-sm text-gray-500 mt-1">Melde dich an oder bestelle als Gast</p>
+      <div v-if="showCheckoutAuthModal"
+           class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+
+          <!-- Modal header -->
+          <div class="px-6 py-5 text-center" :style="{ background: headerGradient }">
+            <div class="text-3xl mb-2">🛒</div>
+            <h2 class="text-lg font-bold text-white">Wie möchtest du fortfahren?</h2>
+            <p class="text-white/70 text-sm mt-1">Anmelden oder als Gast bestellen</p>
           </div>
 
-          <!-- Option: Einloggen / Registrieren / Gast -->
-          <div v-if="checkoutAuthStep === 'choose'" class="space-y-3">
-            <button @click="checkoutAuthStep = 'login'" class="w-full flex items-center gap-3 border-2 border-blue-200 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all text-left">
-              <span class="text-2xl">👤</span>
-              <div>
-                <div class="font-semibold text-gray-900">Bestehender Kunde</div>
-                <div class="text-sm text-gray-500">Anmelden mit E-Mail & Passwort</div>
-              </div>
-            </button>
-            <button @click="checkoutAuthStep = 'register'" class="w-full flex items-center gap-3 border-2 border-green-200 rounded-xl p-4 hover:border-green-400 hover:bg-green-50 transition-all text-left">
-              <span class="text-2xl">🆕</span>
-              <div>
-                <div class="font-semibold text-gray-900">Neuer Kunde</div>
-                <div class="text-sm text-gray-500">Konto erstellen</div>
-              </div>
-            </button>
-            <button @click="continueAsGuest" class="w-full flex items-center gap-3 border-2 border-orange-200 rounded-xl p-4 hover:border-orange-400 hover:bg-orange-50 transition-all text-left">
-              <span class="text-2xl">🛒</span>
-              <div>
-                <div class="font-semibold text-gray-900">Als Gast bestellen</div>
-                <div class="text-sm text-gray-500">Ohne Konto, Daten einmalig eingeben</div>
-              </div>
-            </button>
-          </div>
-
-          <!-- Login-Formular -->
-          <div v-else-if="checkoutAuthStep === 'login'" class="space-y-4">
-            <button @click="checkoutAuthStep = 'choose'" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">← Zurück</button>
-            <form @submit.prevent="handleCheckoutLogin" class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-                <input v-model="loginForm.email" type="email" placeholder="ihre.email@beispiel.ch"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
-                <input v-model="loginForm.password" type="password" placeholder="Ihr Passwort"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
-              </div>
-              <p v-if="loginError" class="text-red-600 text-sm">{{ loginError }}</p>
-              <button type="submit" :disabled="isLoggingIn"
-                class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">
-                {{ isLoggingIn ? 'Wird angemeldet…' : 'Anmelden & weiter' }}
+          <div class="p-5 space-y-3">
+            <!-- Choose -->
+            <template v-if="checkoutAuthStep === 'choose'">
+              <button @click="checkoutAuthStep = 'login'"
+                      class="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 transition-all text-left"
+                      @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = brandPrimary"
+                      @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = '#F3F4F6'">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                     :style="{ background: brandBg }">
+                  <svg class="w-5 h-5" :style="{ color: brandPrimary }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900 text-sm">Bestehender Kunde</div>
+                  <div class="text-xs text-gray-400">Mit E-Mail & Passwort anmelden</div>
+                </div>
               </button>
-            </form>
-          </div>
 
-          <!-- Registrierungshinweis -->
-          <div v-else-if="checkoutAuthStep === 'register'" class="space-y-3">
-            <button @click="checkoutAuthStep = 'choose'" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">← Zurück</button>
-            <p class="text-sm text-gray-600">Im nächsten Schritt gibst du deine Kontaktdaten ein. Ein Konto wird automatisch erstellt.</p>
-            <button @click="continueAsGuest" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700">
-              Weiter zur Bestellung
+              <button @click="checkoutAuthStep = 'register'"
+                      class="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-300 transition-all text-left">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100">
+                  <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900 text-sm">Neuer Kunde</div>
+                  <div class="text-xs text-gray-400">Konto wird automatisch erstellt</div>
+                </div>
+              </button>
+
+              <button @click="continueAsGuest"
+                      class="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-300 transition-all text-left">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100">
+                  <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-9H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900 text-sm">Als Gast bestellen</div>
+                  <div class="text-xs text-gray-400">Ohne Konto, Daten einmalig eingeben</div>
+                </div>
+              </button>
+            </template>
+
+            <!-- Login form -->
+            <template v-else-if="checkoutAuthStep === 'login'">
+              <button @click="checkoutAuthStep = 'choose'" class="text-sm flex items-center gap-1 text-gray-400 hover:text-gray-600 mb-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Zurück
+              </button>
+              <form @submit.prevent="handleCheckoutLogin" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail</label>
+                  <input v-model="loginForm.email" type="email" placeholder="ihre.email@beispiel.ch" required
+                         class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Passwort</label>
+                  <input v-model="loginForm.password" type="password" placeholder="Ihr Passwort" required
+                         class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                </div>
+                <p v-if="loginError" class="text-xs text-red-500">{{ loginError }}</p>
+                <button type="submit" :disabled="isLoggingIn"
+                        class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+                        :style="{ background: brandPrimary }">
+                  {{ isLoggingIn ? 'Anmelden…' : 'Anmelden & weiter' }}
+                </button>
+              </form>
+            </template>
+
+            <!-- Register hint -->
+            <template v-else-if="checkoutAuthStep === 'register'">
+              <button @click="checkoutAuthStep = 'choose'" class="text-sm flex items-center gap-1 text-gray-400 hover:text-gray-600 mb-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Zurück
+              </button>
+              <div class="rounded-xl p-4 text-sm text-gray-600" :style="{ background: brandBg }">
+                Im nächsten Schritt gibst du deine Kontaktdaten ein. Ein Konto wird automatisch nach der Bestellung erstellt.
+              </div>
+              <button @click="continueAsGuest"
+                      class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
+                      :style="{ background: brandPrimary }">
+                Weiter zur Bestellung
+              </button>
+            </template>
+
+            <button @click="showCheckoutAuthModal = false"
+                    class="w-full text-center text-xs text-gray-400 hover:text-gray-500 py-1">
+              Abbrechen
             </button>
           </div>
-
-          <button @click="showCheckoutAuthModal = false" class="w-full text-center text-sm text-gray-400 hover:text-gray-600">Abbrechen</button>
         </div>
       </div>
     </Transition>
@@ -821,6 +653,7 @@ import { useVouchers } from '~/composables/useVouchers'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useFeatures } from '~/composables/useFeatures'
 import { useAuthStore } from '~/stores/auth'
+import { logger } from '~/utils/logger'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -875,6 +708,8 @@ interface Product {
   allow_custom_amount?: boolean
   min_amount_rappen?: number
   max_amount_rappen?: number
+  is_credit_product?: boolean
+  credit_amount_rappen?: number
   updated_at?: string
 }
 
@@ -919,7 +754,7 @@ const discountCode = ref('')
 const appliedDiscounts = ref<Array<{
   id: string
   name: string
-  discount_type: 'percentage' | 'fixed'
+  discount_type: 'percentage' | 'fixed' | 'free_lesson' | 'free_product'
   discount_value: number
   discount_amount_rappen: number
   min_amount_rappen?: number
@@ -1003,12 +838,62 @@ const hasProducts = computed(() => selectedProducts.value.length > 0)
 const stepTitle = computed(() => {
   switch (currentStep.value) {
     case 0: return 'Kundentyp wählen'
-    case 1: return 'Produktübersicht & Warenkorb'
+    case 1: return 'Produkte'
     case 2: return 'Ihre Kontaktdaten'
     case 3: return 'Bezahlung'
     default: return 'Laufkundschaft'
   }
 })
+
+const stepSubtitle = computed(() => {
+  switch (currentStep.value) {
+    case 1: return 'Wählen Sie Ihre gewünschten Produkte aus'
+    case 2: return 'Bitte füllen Sie Ihre Kontaktdaten aus'
+    case 3: return 'Wählen Sie Ihre Zahlungsmethode'
+    default: return ''
+  }
+})
+
+// ── Tenant Branding ────────────────────────────────────────────────────────
+const getBrandPrimary = (fallback = '#2563EB') => {
+  const hex = currentTenant.value?.primary_color || fallback
+  return /^#([0-9a-fA-F]{6})$/.test(hex) ? hex : fallback
+}
+
+const lightenColor = (hex: string, amount: number) => {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const blend = (c: number) => Math.round(c + (255 - c) * amount)
+  return `rgb(${blend(r)}, ${blend(g)}, ${blend(b)})`
+}
+
+const withAlpha = (hex: string, alpha: number) => {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const brandPrimary = computed(() => getBrandPrimary())
+const brandBg = computed(() => lightenColor(getBrandPrimary(), 0.93))
+
+const pageBackground = computed(() => ({
+  background: `linear-gradient(135deg, ${getBrandPrimary()} 0%, ${lightenColor(getBrandPrimary(), 0.35)} 100%)`,
+  padding: '1rem 0.75rem'
+}))
+
+const headerGradient = computed(() =>
+  `linear-gradient(135deg, ${getBrandPrimary()} 0%, ${lightenColor(getBrandPrimary(), 0.25)} 100%)`
+)
+
+// Inject dynamic CSS variables for shop-input focus ring
+watch(brandPrimary, (color) => {
+  if (process.client) {
+    document.documentElement.style.setProperty('--brand-primary', color)
+    document.documentElement.style.setProperty('--brand-primary-alpha', withAlpha(color, 0.2))
+  }
+}, { immediate: true })
 
 const getNextStepButtonText = () => {
   switch (currentStep.value) {
@@ -2127,3 +2012,35 @@ const handlePaymentFailed = (error: any) => {
   alert('❌ Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.')
 }
 </script>
+
+<style scoped>
+/* Slide-up transition for cart */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Dynamic focus ring for inputs — driven by CSS variable set inline via :style */
+.shop-input:focus {
+  border-color: var(--brand-primary, #2563EB);
+  box-shadow: 0 0 0 3px var(--brand-primary-alpha, rgba(37, 99, 235, 0.2));
+}
+</style>
