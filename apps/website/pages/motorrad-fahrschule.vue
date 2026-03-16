@@ -106,11 +106,11 @@
                 </ul>
               </div>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Zürich herunterladen - PDF">Lernfahrgesuch Zürich (PDF)</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Schwyz herunterladen - PDF">Lernfahrgesuch Schwyz (PDF)</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch St.Gallen herunterladen - PDF">Lernfahrgesuch St.Gallen (PDF)</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Aargau herunterladen - PDF">Lernfahrgesuch Aargau (PDF)</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Glarus herunterladen - PDF">Lernfahrgesuch Glarus (PDF)</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Zürich herunterladen - PDF">Lernfahrgesuch Zürich (PDF)</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Schwyz herunterladen - PDF">Lernfahrgesuch Schwyz (PDF)</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch St.Gallen herunterladen - PDF">Lernfahrgesuch St.Gallen (PDF)</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Aargau herunterladen - PDF">Lernfahrgesuch Aargau (PDF)</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Lernfahrgesuch Glarus herunterladen - PDF">Lernfahrgesuch Glarus (PDF)</a>
                 </div>
           </div>
         </details>

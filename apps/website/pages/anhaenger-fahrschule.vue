@@ -85,11 +85,11 @@
                 <p class="text-sm text-gray-600 mt-2">Auch wenn du mit dem Lernfahrausweis bereits alleine Fahrten unternehmen darfst, empfehlen wir dir dringend, dich frühzeitig bei unserer Fahrschule anzumelden.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Ab 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
-                  <a href="https://drivingteam.ch/wp-content/uploads/2023/03/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch St.Gallen</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Aargau</a>
+                  <a href="/documents/lernfahrgesuche/Gesuch-LFA-GL.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Glarus</a>
                 </div>
             </div>
           </details>
