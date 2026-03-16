@@ -102,6 +102,13 @@
                   >
                     Guthaben auszahlen
                   </button>
+                  <div class="border-t border-gray-100 my-1"></div>
+                  <button
+                    @click="showActionsDropdown = false; openCreditTransactionsModal()"
+                    class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Details
+                  </button>
                 </div>
               </Transition>
             </div>
@@ -357,6 +364,59 @@
               >
                 {{ isStartingTopup ? 'Wird vorbereitet…' : `CHF ${Number(topupAmountInput || 0).toFixed(2)} bezahlen` }}
               </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- Credit Transactions Modal -->
+      <Teleport to="body">
+        <div v-if="showCreditTransactionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/50" @click="showCreditTransactionsModal = false"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[80vh] flex flex-col">
+            <button @click="showCreditTransactionsModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+
+            <h2 class="text-lg font-bold text-gray-900 mb-1">Guthaben-Verlauf</h2>
+            <p class="text-sm text-gray-500 mb-4">Alle Transaktionen deines Guthabens</p>
+
+            <div class="overflow-y-auto flex-1">
+              <div v-if="isLoadingCreditTransactions" class="flex justify-center py-8">
+                <div class="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+
+              <div v-else-if="creditTransactions.length === 0" class="text-center py-8 text-gray-400 text-sm">
+                Noch keine Transaktionen vorhanden.
+              </div>
+
+              <div v-else class="space-y-2">
+                <div
+                  v-for="tx in creditTransactions"
+                  :key="tx.id"
+                  class="flex items-start justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50"
+                >
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                        :class="tx.amount_rappen >= 0 ? 'bg-green-500' : 'bg-red-400'"
+                      ></span>
+                      <span class="text-sm font-medium text-gray-800">{{ getCreditTransactionLabel(tx) }}</span>
+                    </div>
+                    <div v-if="tx.notes" class="text-xs text-gray-400 mt-0.5 ml-4">{{ tx.notes }}</div>
+                    <div class="text-xs text-gray-400 mt-0.5 ml-4">{{ formatTxDate(tx.created_at) }}</div>
+                  </div>
+                  <div class="text-right ml-4 flex-shrink-0">
+                    <span class="text-sm font-semibold" :class="tx.amount_rappen >= 0 ? 'text-green-600' : 'text-red-500'">
+                      {{ tx.amount_rappen >= 0 ? '+' : '' }}CHF {{ (Math.abs(tx.amount_rappen) / 100).toFixed(2) }}
+                    </span>
+                    <div class="text-xs text-gray-400">Saldo: CHF {{ (tx.balance_after_rappen / 100).toFixed(2) }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -669,6 +729,9 @@ const withdrawalUnlockedAt = ref<string | null>(null)
 const showWithdrawalModal = ref(false)
 const showActionsDropdown = ref(false)
 const showTopupModal = ref(false)
+const showCreditTransactionsModal = ref(false)
+const creditTransactions = ref<any[]>([])
+const isLoadingCreditTransactions = ref(false)
 const withdrawalStep = ref<'iban' | 'edit-iban' | 'amount' | 'confirm' | 'success'>('iban')
 const ibanInput = ref('')
 const accountHolderInput = ref('')
@@ -708,6 +771,44 @@ function closeTopupModal() {
   topupAmountInput.value = ''
   topupError.value = ''
   topupStep.value = 'amount'
+}
+
+async function openCreditTransactionsModal() {
+  showCreditTransactionsModal.value = true
+  isLoadingCreditTransactions.value = true
+  creditTransactions.value = []
+  try {
+    const { useSupabaseClient } = await import('#imports')
+    const supabase = useSupabaseClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const data = await $fetch<any[]>('/api/customer/get-credit-transactions', {
+      headers: { Authorization: `Bearer ${session?.access_token}` }
+    })
+    creditTransactions.value = data || []
+  } catch (e) {
+    creditTransactions.value = []
+  } finally {
+    isLoadingCreditTransactions.value = false
+  }
+}
+
+function getCreditTransactionLabel(tx: any): string {
+  const typeMap: Record<string, string> = {
+    deposit: 'Einzahlung',
+    withdrawal: 'Auszahlung',
+    payment: 'Zahlung',
+    refund: 'Rückerstattung',
+    cancellation: 'Stornierung',
+    manual: 'Manuelle Buchung',
+    cash_deposit: 'Bar-Einzahlung',
+  }
+  return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
+}
+
+function formatTxDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 async function startTopup() {
