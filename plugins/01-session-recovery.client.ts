@@ -26,6 +26,7 @@ const PUBLIC_PAGES = [
   '/privacy',
   '/terms',
   '/contact',
+  '/shop',
 ]
 
 export default defineNuxtPlugin(async (nuxtApp) => {
