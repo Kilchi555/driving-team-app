@@ -128,7 +128,7 @@
           <div class="absolute inset-0 bg-black/50" @click="closeWithdrawalModal"></div>
           <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
             <h2 class="text-lg font-bold text-gray-900 mb-1">Guthaben auszahlen</h2>
-            <p class="text-sm text-gray-500 mb-5">Der Betrag wird demnächstauf dein Bankkonto überwiesen.</p>
+            <p class="text-sm text-gray-500 mb-5">Der Betrag wird demnächst auf dein Bankkonto überwiesen.</p>
 
             <!-- Step 1: IBAN eingeben (wenn noch keine vorhanden) -->
             <div v-if="withdrawalStep === 'iban'" class="space-y-4">
@@ -253,9 +253,6 @@
                   <input v-model="cityInput" type="text" placeholder="Zürich"
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
-              </div>
-              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
-                ⚠️ Nach einer IBAN-Änderung sind Auszahlungen erst nach 24 Stunden möglich.
               </div>
               <p v-if="ibanError" class="text-red-600 text-xs">{{ ibanError }}</p>
               <div class="flex gap-2">
@@ -972,7 +969,6 @@ async function saveIban() {
     }) as any
     if (res?.success) {
       savedIbanLast4.value = res.ibanLast4
-      withdrawalUnlockedAt.value = res.withdrawalUnlockedAt
       ibanInput.value = ''
       accountHolderInput.value = ''
       streetInput.value = ''
