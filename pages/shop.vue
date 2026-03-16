@@ -363,6 +363,7 @@
                 :appointment-id="undefined"
                 :user-id="undefined"
                 :staff-id="undefined"
+                :tenant-id="tenantId || undefined"
                 :is-standalone="true"
                 :is-read-only="false"
                 :customer-email="formData.email"

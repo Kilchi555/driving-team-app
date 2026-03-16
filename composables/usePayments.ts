@@ -281,44 +281,47 @@ export const usePayments = () => {
 
   // Create standalone Wallee payment (without appointment)
   const createStandaloneWalleePayment = async (
-    userId: string | null,
+    userId: string | null | undefined,
     staffId: string | null,
     products: Product[],
     discounts: Discount[],
     customerEmail: string,
-    customerName: string
+    customerName: string,
+    providedTenantId?: string
   ): Promise<Payment & { payment_url: string }> => {
     isProcessing.value = true
 
     try {
-      // ✅ Get tenant_id from secure API instead of direct queries
-      let tenantId: string | null = null
-      let actualUserId: string | null = userId
-      
-      if (!userId) {
-        // Try to get from current auth user via API
-        const userInfo = await $fetch('/api/users/current', {
-          method: 'GET'
-        }) as any
-        
-        if (userInfo && userInfo.data) {
-          tenantId = userInfo.data.tenant_id
-          actualUserId = userInfo.data.id
+      // Resolve tenant and user IDs
+      let tenantId: string | null = providedTenantId || null
+      let actualUserId: string | null = userId || null
+
+      if (!tenantId) {
+        // Fallback: try to get from current auth user
+        try {
+          const userInfo = await $fetch('/api/users/current', { method: 'GET' }) as any
+          if (userInfo?.data) {
+            tenantId = userInfo.data.tenant_id
+            actualUserId = actualUserId || userInfo.data.id
+          }
+        } catch {
+          // Not logged in — tenantId stays null, will fail validation below
         }
-      } else {
-        // Get tenant info for provided userId
-        const userInfo = await $fetch('/api/users/get-tenant', {
-          method: 'GET',
-          query: { user_id: userId }
-        }) as any
-        
-        if (userInfo && userInfo.data) {
-          tenantId = userInfo.data.tenant_id
-          actualUserId = userInfo.data.id
+      } else if (userId) {
+        // tenantId provided but try to get the DB user id for the payment record
+        try {
+          const userInfo = await $fetch('/api/users/get-tenant', { method: 'GET', query: { user_id: userId } }) as any
+          if (userInfo?.data) actualUserId = userInfo.data.id
+        } catch {
+          // Non-critical — guest purchase, actualUserId may remain null
         }
       }
-      
-      logger.debug('💳 Creating payment with:', { userId: actualUserId, tenantId })
+
+      if (!tenantId) {
+        throw new Error('Tenant nicht gefunden — bitte Shop über den korrekten Link öffnen')
+      }
+
+      logger.debug('💳 Creating standalone Wallee payment:', { userId: actualUserId, tenantId })
       
       // Calculate total
       const subtotal = products.reduce((sum, product) => 
