@@ -228,6 +228,7 @@
                 :spots_per_date="remainingSpots"
                 :location="currentLocation"
                 :start_time="currentStartTime"
+                :show_faber_birthdate="true"
                 @submitted="onFormSubmitted"
               />
             </div>
@@ -312,6 +313,7 @@ const pickerCourses = computed<CourseOption[]>(() => [
     dates: [],
     location: 'Verkehrszentrum Tuggen/SZ',
     start_time: '08:00',
+    showFaberBirthdate: true,
   },
   {
     id: 'motorboot',
@@ -324,6 +326,7 @@ const pickerCourses = computed<CourseOption[]>(() => [
     spotsPerDate: remainingSpots.value,
     location: 'Hotel Marina Lachen/SZ',
     start_time: '08:00',
+    showFaberBirthdate: true,
   },
   {
     id: 'lastwagen',
@@ -334,6 +337,7 @@ const pickerCourses = computed<CourseOption[]>(() => [
     dates: [],
     location: 'Verkehrszentrum Tuggen/SZ',
     start_time: '08:00',
+    showFaberBirthdate: true,
   },
 ])
 
