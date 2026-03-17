@@ -695,17 +695,20 @@ onMounted(() => {
 
 <style scoped>
 .payment-component {
-  @apply max-w-4xl mx-auto;
+  max-width: 56rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .fas {
-  @apply inline-block;
+  display: inline-block;
 }
 
 /* Mobile-specific improvements */
 @media (max-width: 640px) {
   .payment-component {
-    @apply mx-0;
+    margin-left: 0;
+    margin-right: 0;
   }
   
   /* Ensure touch targets are at least 44px */
