@@ -137,6 +137,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import VoucherDownloadModal from '~/components/VoucherDownloadModal.vue'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,8 +152,9 @@ const vouchers = ref<any[]>([])
 let countdownInterval: NodeJS.Timeout | null = null
 let statusCheckInterval: NodeJS.Timeout | null = null
 
-const transactionId = route.query.transactionId as string
-const paymentId = route.query.paymentId as string
+// Support both camelCase (old) and snake_case (new) query params
+const transactionId = (route.query.transactionId || route.query.transaction_id) as string | undefined
+const paymentId = route.query.paymentId as string | undefined
 
 // ✅ Check if payment contains vouchers
 const hasVouchers = computed(() => {
@@ -182,20 +185,22 @@ const formatDate = (dateStr: string) => {
 const checkStatus = async () => {
   try {
     isLoading.value = true
-    const supabase = getSupabase()
     
-    // ✅ NEW: If no payment/transaction ID, try to find the most recent completed payment for logged-in user
+    // ✅ If no payment/transaction ID: try to find recent payment for logged-in user
     if (!paymentId && !transactionId) {
       logger.debug('🔍 No payment ID provided, trying to find recent payment for current user...')
       
-      const user = authStore.user // ✅ MIGRATED
-      if (user) {
-        logger.debug('👤 Auth user:', user.id)
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user
+
+      if (authUser) {
+        logger.debug('👤 Auth user:', authUser.id)
         
         const { data: userData } = await supabase
           .from('users')
           .select('id, tenant_id')
-          .eq('auth_user_id', user.id)
+          .eq('auth_user_id', authUser.id)
           .single()
         
         if (userData) {
@@ -235,7 +240,6 @@ const checkStatus = async () => {
             paymentStatus.value = recentPayment.payment_status
             isLoading.value = false
             
-            // ✅ NEW: Extract vouchers from metadata if they exist
             if (recentPayment.metadata) {
               try {
                 const metadata = typeof recentPayment.metadata === 'string' 
@@ -246,7 +250,6 @@ const checkStatus = async () => {
                   if (voucherProducts.length > 0) {
                     vouchers.value = voucherProducts
                     logger.debug('🎁 Found vouchers in metadata:', voucherProducts)
-                    // Show voucher modal instead of countdown if vouchers exist
                     showVoucherModal.value = true
                     return
                   }
@@ -265,7 +268,8 @@ const checkStatus = async () => {
           console.warn('⚠️ User data not found')
         }
       } else {
-        console.warn('⚠️ No authenticated user')
+        // Guest user — no session, can't look up by user
+        logger.debug('ℹ️ Guest user, no session — cannot look up payment by user')
       }
       
       console.error('No payment ID or transaction ID provided and could not find recent payment')
@@ -273,6 +277,8 @@ const checkStatus = async () => {
       return
     }
     
+    const supabase = getSupabase()
+
     let query = supabase
       .from('payments')
       .select(`
@@ -361,11 +367,12 @@ const startCountdown = () => {
   }, 3000)
 }
 
-const redirectToDashboard = () => {
+const redirectToDashboard = async () => {
   if (countdownInterval) clearInterval(countdownInterval)
   if (statusCheckInterval) clearInterval(statusCheckInterval)
-  // Force a hard page reload to ensure data is fresh from the server
-  window.location.href = '/customer-dashboard'
+  // Guests go back to shop, authenticated users go to their dashboard
+  const { data: { session } } = await getSupabase().auth.getSession()
+  window.location.href = session ? '/customer-dashboard' : '/shop'
 }
 
 onMounted(() => {
