@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabase()
@@ -18,15 +19,24 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
+  // Use admin client for all DB operations to bypass RLS
+  const supabaseAdmin = getSupabaseAdmin()
+
   // Get user profile
-  const { data: userProfile } = await supabase
+  const { data: userProfile } = await supabaseAdmin
     .from('users')
-    .select('id, tenant_id')
+    .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
     .single()
 
   if (!userProfile) {
     throw createError({ statusCode: 403, message: 'User profile not found' })
+  }
+
+  // Only staff/admin can deposit for other users
+  const allowedRoles = ['staff', 'admin', 'super_admin', 'tenant_admin', 'instructor']
+  if (!allowedRoles.includes(userProfile.role)) {
+    throw createError({ statusCode: 403, message: 'Insufficient permissions' })
   }
 
   // Read and validate body
@@ -40,8 +50,19 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Verify target student belongs to same tenant
+  const { data: targetStudent } = await supabaseAdmin
+    .from('users')
+    .select('id, tenant_id')
+    .eq('id', user_id)
+    .maybeSingle()
+
+  if (!targetStudent || targetStudent.tenant_id !== userProfile.tenant_id) {
+    throw createError({ statusCode: 403, message: 'Student not found or belongs to different tenant' })
+  }
+
   // Get current credit or create new
-  const { data: currentCredit } = await supabase
+  const { data: currentCredit } = await supabaseAdmin
     .from('student_credits')
     .select('*')
     .eq('user_id', user_id)
@@ -53,7 +74,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     // Upsert student credit
-    const { error: creditError } = await supabase
+    const { error: creditError } = await supabaseAdmin
       .from('student_credits')
       .upsert({
         user_id,
@@ -66,7 +87,7 @@ export default defineEventHandler(async (event) => {
     if (creditError) throw creditError
 
     // Log transaction
-    const { error: txError } = await supabase
+    const { error: txError } = await supabaseAdmin
       .from('credit_transactions')
       .insert({
         user_id,
@@ -84,10 +105,11 @@ export default defineEventHandler(async (event) => {
 
     if (txError) throw txError
 
-    console.log('✅ Credit deposit successful:', {
+    logger.info('✅ Credit deposit successful:', {
       userId: user_id,
       amount: amount_rappen,
-      newBalance
+      newBalance,
+      depositedBy: userProfile.id
     })
 
     return {
@@ -100,7 +122,7 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (err: any) {
-    console.error('Error during credit deposit:', err)
+    logger.error('Error during credit deposit:', err)
     throw createError({
       statusCode: 500,
       message: 'Failed to process credit deposit'
