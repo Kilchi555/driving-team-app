@@ -4,7 +4,8 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { generateVoucherPDFContent, type VoucherBranding } from '~/utils/voucherGenerator'
+import { generateVoucherPDFContent } from '~/utils/voucherGenerator'
+import { getTenantBranding } from '~/server/utils/tenant-branding'
 import { setHeader, send } from 'h3'
 import chromium from '@sparticuz/chromium'
 import { logger } from '~/utils/logger'
@@ -63,23 +64,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
-    // Branding laden (optional)
-    let branding: VoucherBranding = {}
+    // Load tenant branding (name, color, logo)
     const tenantId = voucher.tenant_id || voucher.metadata?.tenant_id || null
-    if (tenantId) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('primary_color, secondary_color, logo_url')
-        .eq('id', tenantId)
-        .single()
-      if (tenant) {
-        branding = {
-          primaryColor: tenant.primary_color || undefined,
-          secondaryColor: tenant.secondary_color || undefined,
-          logoUrl: tenant.logo_url || undefined
-        }
-      }
-    }
+    const branding = tenantId ? await getTenantBranding(tenantId) : {}
 
     // Betrag robust ermitteln (CHF)
     const parseNum = (v: any) => {

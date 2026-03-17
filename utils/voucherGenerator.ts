@@ -36,6 +36,7 @@ export const formatVoucherCode = (code: string): string => {
 }
 
 export interface VoucherBranding {
+  tenantName?: string
   primaryColor?: string
   secondaryColor?: string
   logoUrl?: string
@@ -58,6 +59,7 @@ export const generateVoucherPDFContent = (
   const primary = branding.primaryColor || '#2563eb'
   const secondary = branding.secondaryColor || '#6b7280'
   const logo = branding.logoUrl
+  const tenantName = branding.tenantName || 'Fahrschule'
 
   return `
     <!DOCTYPE html>
@@ -90,7 +92,7 @@ export const generateVoucherPDFContent = (
           ${logo ? `<img class=\"logo\" src=\"${logo}\" alt=\"Logo\" />` : ''}
           <div class="titlewrap">
             <div class="title">Gutschein</div>
-            <div class="subtitle">${voucher.name}</div>
+            <div class="subtitle">${voucher.name} · ${tenantName}</div>
           </div>
         </div>
         <div class="content">
@@ -132,21 +134,32 @@ export const generateVoucherPDFContent = (
 /**
  * Generiert Gutschein-E-Mail-Inhalt
  */
-export const generateVoucherEmailContent = (voucher: {
-  code: string
-  name: string
-  amount_chf: number
-  recipient_name?: string
-  recipient_email?: string
-  valid_until: string
-}) => {
+export const generateVoucherEmailContent = (
+  voucher: {
+    code: string
+    name: string
+    amount_chf: number
+    recipient_name?: string
+    recipient_email?: string
+    valid_until: string
+  },
+  branding: VoucherBranding = {}
+) => {
+  const primary = branding.primaryColor || '#1E40AF'
+  const tenantName = branding.tenantName || 'Ihre Fahrschule'
+  const logo = branding.logoUrl
+
+  // Darken primary for gradient end (simple approach: use the same color at 85% opacity via hex)
+  const headerGradient = `linear-gradient(135deg, ${primary}ee, ${primary}bb)`
+
   return {
-    subject: `🎁 Ihr Driving Team Gutschein - ${voucher.code}`,
+    subject: `🎁 Ihr Gutschein von ${tenantName} - ${voucher.code}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #3B82F6, #1E40AF); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <div style="background: ${headerGradient}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          ${logo ? `<img src="${logo}" alt="${tenantName}" style="height: 48px; width: auto; object-fit: contain; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />` : ''}
           <h1 style="margin: 0; font-size: 28px;">🎁 Ihr Gutschein ist bereit!</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Driving Team Gutschein</p>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">${tenantName}</p>
         </div>
         
         <div style="background: white; padding: 30px; border: 1px solid #E5E7EB; border-top: none;">
@@ -158,7 +171,7 @@ export const generateVoucherEmailContent = (voucher: {
             <div style="font-size: 24px; font-weight: bold; color: #059669; margin-bottom: 10px;">
               CHF ${voucher.amount_chf.toFixed(2)}
             </div>
-            <div style="background: #1E40AF; color: white; padding: 10px 20px; border-radius: 5px; font-family: monospace; font-size: 18px; font-weight: bold; letter-spacing: 2px; display: inline-block;">
+            <div style="background: ${primary}; color: white; padding: 10px 20px; border-radius: 5px; font-family: monospace; font-size: 18px; font-weight: bold; letter-spacing: 2px; display: inline-block;">
               ${voucher.code}
             </div>
           </div>
@@ -177,14 +190,14 @@ export const generateVoucherEmailContent = (voucher: {
         
         <div style="background: #F9FAFB; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #E5E7EB; border-top: none;">
           <p style="margin: 0; color: #6B7280; font-size: 14px;">
-            Bei Fragen wenden Sie sich gerne an Ihren Fahrlehrer oder das Driving Team.<br>
+            Bei Fragen wenden Sie sich gerne an ${tenantName}.<br>
             Viel Erfolg bei Ihrer Führerscheinausbildung! 🚗
           </p>
         </div>
       </div>
     `,
     text: `
-      Ihr Driving Team Gutschein ist bereit!
+      Ihr Gutschein von ${tenantName} ist bereit!
       
       Gutschein-Code: ${voucher.code}
       Betrag: CHF ${voucher.amount_chf.toFixed(2)}
@@ -195,7 +208,7 @@ export const generateVoucherEmailContent = (voucher: {
       2. Oder geben Sie den Code im Online-Buchungssystem ein
       3. Der Betrag wird automatisch von der Rechnung abgezogen
       
-      Bei Fragen wenden Sie sich an Ihren Fahrlehrer oder das Driving Team.
+      Bei Fragen wenden Sie sich an ${tenantName}.
     `
   }
 }
