@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -13,17 +13,15 @@ export default defineEventHandler(async (event) => {
 
   const token = authHeader.replace('Bearer ', '')
 
-  // Get current user
+  // Get current user and create authenticated client
+  const supabaseUser = getSupabase(token)
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !authUser) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
-  // Use admin client for all DB operations to bypass RLS
-  const supabaseAdmin = getSupabaseAdmin()
-
   // Get user profile
-  const { data: userProfile } = await supabaseAdmin
+  const { data: userProfile } = await supabaseUser
     .from('users')
     .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
@@ -50,21 +48,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify target student belongs to same tenant
-  const { data: targetStudent } = await supabaseAdmin
-    .from('users')
-    .select('id, tenant_id')
-    .eq('id', user_id)
-    .maybeSingle()
-
-  if (!targetStudent || targetStudent.tenant_id !== userProfile.tenant_id) {
-    throw createError({ statusCode: 403, message: 'Student not found or belongs to different tenant' })
-  }
-
-  // Get current credit or create new
-  const { data: currentCredit } = await supabaseAdmin
+  // Get current credit
+  const { data: currentCredit } = await supabaseUser
     .from('student_credits')
-    .select('*')
+    .select('balance_rappen')
     .eq('user_id', user_id)
     .eq('tenant_id', userProfile.tenant_id)
     .maybeSingle()
@@ -73,8 +60,8 @@ export default defineEventHandler(async (event) => {
   const newBalance = currentBalance + amount_rappen
 
   try {
-    // Upsert student credit
-    const { error: creditError } = await supabaseAdmin
+    // Upsert student credit (RLS allows staff to write within their tenant)
+    const { error: creditError } = await supabaseUser
       .from('student_credits')
       .upsert({
         user_id,
@@ -87,7 +74,7 @@ export default defineEventHandler(async (event) => {
     if (creditError) throw creditError
 
     // Log transaction
-    const { error: txError } = await supabaseAdmin
+    const { error: txError } = await supabaseUser
       .from('credit_transactions')
       .insert({
         user_id,
