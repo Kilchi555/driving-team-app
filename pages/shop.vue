@@ -1025,7 +1025,8 @@ const applyDiscountCode = async () => {
     const result = await validateDiscountCode(
       discountCode.value.trim(),
       subtotalPrice.value * 100, // Convert to rappen
-      undefined // category code
+      undefined, // category code
+      tenantId.value || undefined
     )
     
     if (result.isValid && result.discount) {

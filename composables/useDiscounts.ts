@@ -111,7 +111,8 @@ export const useDiscounts = () => {
   const validateDiscountCode = async (
     code: string, 
     amount_rappen: number, 
-    categoryCode?: string
+    categoryCode?: string,
+    tenantId?: string
   ): Promise<DiscountValidationResult> => {
     try {
       logger.debug('🔄 Validating discount code via API:', code)
@@ -122,7 +123,8 @@ export const useDiscounts = () => {
         body: {
           code,
           amount_rappen,
-          categoryCode
+          categoryCode,
+          ...(tenantId ? { tenant_id: tenantId } : {})
         }
       })
       

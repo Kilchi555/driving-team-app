@@ -61,6 +61,14 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: 'Ungültiger Gutschein-Code' })
     }
 
+    // Discount-type codes cannot be redeemed for credit — they are applied at checkout
+    if (voucher.type === 'discount') {
+      throw createError({
+        statusCode: 400,
+        message: 'Dieser Code ist ein Rabattcode und kann nicht als Guthaben eingelöst werden. Bitte geben Sie ihn beim Bezahlen als Rabattcode ein.'
+      })
+    }
+
     // 2. Validate voucher conditions
     const now = new Date()
 
