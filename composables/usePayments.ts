@@ -419,14 +419,7 @@ export const usePayments = () => {
         throw new Error(walleeResponse.error || 'Wallee transaction failed')
       }
 
-      // Update payment with Wallee transaction ID via API
-      await $fetch('/api/payments/update-wallee-id', {
-        method: 'POST',
-        body: {
-          payment_id: payment.id,
-          wallee_transaction_id: walleeResponse.transactionId
-        }
-      })
+      // wallee_transaction_id is already set by /api/wallee/create-transaction directly on the payment record
 
       // Return payment with Wallee URL
       return {
