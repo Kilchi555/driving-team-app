@@ -455,8 +455,8 @@
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 -translate-y-2"
     >
-      <div v-if="showToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-        <div class="flex items-center gap-2 bg-white border shadow-xl rounded-full px-5 py-2.5 text-sm font-medium text-gray-800">
+      <div v-if="showToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-max">
+        <div class="flex items-center gap-2 bg-white border shadow-xl rounded-full px-7 py-3 text-sm font-medium text-gray-800 whitespace-nowrap">
           <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
