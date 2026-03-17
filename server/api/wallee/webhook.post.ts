@@ -1251,7 +1251,9 @@ async function processVouchersAndCredits(payments: any[]) {
           try {
             const { generateVoucherEmailContent } = await import('~/utils/voucherGenerator')
             const { sendEmail } = await import('~/server/utils/email')
+            const { getTenantBranding } = await import('~/server/utils/tenant-branding')
             
+            const branding = payment.tenant_id ? await getTenantBranding(payment.tenant_id) : {}
             const amountChf = (product.unit_price_rappen || product.price_rappen || 0) / 100
             const emailContent = generateVoucherEmailContent({
               code: newVoucher.code,
@@ -1260,7 +1262,7 @@ async function processVouchersAndCredits(payments: any[]) {
               recipient_name: customerName || undefined,
               recipient_email: customerEmail,
               valid_until: validUntil
-            })
+            }, branding)
 
             await sendEmail({
               to: customerEmail,

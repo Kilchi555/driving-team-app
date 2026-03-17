@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { generateVoucherEmailContent } from '~/utils/voucherGenerator'
+import { getTenantBranding } from '~/server/utils/tenant-branding'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 
@@ -51,7 +52,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
     let voucher: any = null
     const { data: v1 } = await supabase
       .from('vouchers')
-      .select('id, code, name, description, amount_rappen, recipient_name, recipient_email, buyer_email, valid_until')
+      .select('id, code, name, description, amount_rappen, recipient_name, recipient_email, buyer_email, valid_until, tenant_id')
       .eq('id', voucherId)
       .single()
 
@@ -66,7 +67,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
     } else {
       const { data: v2 } = await supabase
         .from('discounts')
-        .select('id, code, name, description, discount_value, voucher_recipient_name, voucher_recipient_email, voucher_buyer_email, valid_until')
+        .select('id, code, name, description, discount_value, voucher_recipient_name, voucher_recipient_email, voucher_buyer_email, valid_until, tenant_id')
         .eq('id', voucherId)
         .eq('is_voucher', true)
         .single()
@@ -84,6 +85,8 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
 
     const amountChf = typeof voucher.discount_value === 'number' ? voucher.discount_value : (voucher.amount_rappen || 0) / 100
 
+    const branding = voucher.tenant_id ? await getTenantBranding(voucher.tenant_id) : {}
+
     const emailContent = generateVoucherEmailContent({
       code: voucher.code,
       name: voucher.name || 'Gutschein',
@@ -91,7 +94,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
       recipient_name: voucher.voucher_recipient_name || undefined,
       recipient_email: emailTo,
       valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-    })
+    }, branding)
 
     await sendEmail({
       to: emailTo,
