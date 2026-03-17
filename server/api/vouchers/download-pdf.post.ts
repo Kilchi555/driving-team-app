@@ -7,16 +7,18 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { generateVoucherPDFContent } from '~/utils/voucherGenerator'
 import { getTenantBranding } from '~/server/utils/tenant-branding'
 import { setHeader, send } from 'h3'
-import chromium from '@sparticuz/chromium'
 import { logger } from '~/utils/logger'
 
-// Use dynamic import for puppeteer to avoid issues in some environments
+// Lazy-load to avoid spawn EBADF on server start
 let puppeteer: any
 async function getPuppeteer() {
-  if (!puppeteer) {
-    puppeteer = await import('puppeteer-core')
-  }
+  if (!puppeteer) { puppeteer = await import('puppeteer-core') }
   return puppeteer
+}
+let chromiumModule: any
+async function getChromium() {
+  if (!chromiumModule) { chromiumModule = (await import('@sparticuz/chromium')).default }
+  return chromiumModule
 }
 
 interface DownloadRequest {
@@ -98,12 +100,18 @@ export default defineEventHandler(async (event) => {
 
     // ECHTES PDF mit Puppeteer rendern (mit Vercel Chromium Support)
     const { default: Puppeteer } = await getPuppeteer()
-    
-    const browser = await Puppeteer.launch({
+    const chromium = await getChromium()
+
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.USE_SPARTICUZ_CHROMIUM
+    const browser = await Puppeteer.launch(isProduction ? {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
+    } : {
+      headless: 'new',
+      pipe: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
     
     const page = await browser.newPage()

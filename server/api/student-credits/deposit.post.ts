@@ -93,6 +93,28 @@ export default defineEventHandler(async (event) => {
 
     if (txError) throw txError
 
+    // Also record in cash_transactions so it appears in the staff cash register
+    const { error: cashTxError } = await supabaseUser
+      .from('cash_transactions')
+      .insert({
+        instructor_id: userProfile.id,
+        student_id: user_id,
+        amount_rappen,
+        tenant_id: userProfile.tenant_id,
+        status: 'confirmed',
+        confirmed_by: userProfile.id,
+        confirmed_at: new Date().toISOString(),
+        collected_at: new Date().toISOString(),
+        notes: notes || 'Guthaben-Einzahlung',
+        transaction_source: 'credit_deposit',
+        created_at: new Date().toISOString()
+      })
+
+    if (cashTxError) {
+      logger.warn('⚠️ Could not record in cash_transactions:', cashTxError)
+      // Non-fatal — credit deposit itself succeeded
+    }
+
     logger.info('✅ Credit deposit successful:', {
       userId: user_id,
       amount: amount_rappen,
