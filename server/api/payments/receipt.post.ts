@@ -996,17 +996,19 @@ export default defineEventHandler(async (event) => {
     })))
     
     // ✅ SECURITY: Verify that all payments belong to the authenticated user
-    // Check if user is admin (can access any payment)
+    // Check if user is admin or staff (can access any payment within their tenant)
     let isAdmin = false
+    let userTenantId: string | null = null
     try {
       const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('role, tenant_id')
         .eq('id', user.id)
         .maybeSingle()
       
-      isAdmin = userData?.role === 'admin' || userData?.role === 'super_admin'
-      logger.debug('👤 User role check:', { userId: user.id, role: userData?.role, isAdmin })
+      isAdmin = ['admin', 'super_admin', 'staff', 'instructor'].includes(userData?.role || '')
+      userTenantId = userData?.tenant_id || null
+      logger.debug('👤 User role check:', { userId: user.id, role: userData?.role, isAdmin, tenantId: userTenantId })
     } catch (roleErr) {
       logger.warn('⚠️ Could not check user role:', roleErr)
     }
@@ -1024,10 +1026,18 @@ export default defineEventHandler(async (event) => {
         match: payment.user_id === user.id
       })
       
-      // User is admin - can access any payment
+      // User is admin/staff - can access any payment within their tenant
       if (isAdmin) {
-        logger.debug('✅ User is admin - payment authorized')
-        isAuthorized = true
+        // For staff/admin: verify same tenant
+        if (userTenantId && payment.tenant_id && payment.tenant_id !== userTenantId) {
+          logger.warn('⚠️ Staff/admin trying to access payment from different tenant:', {
+            payment_tenant_id: payment.tenant_id,
+            user_tenant_id: userTenantId
+          })
+        } else {
+          logger.debug('✅ User is staff/admin - payment authorized')
+          isAuthorized = true
+        }
       }
       // Payment belongs to user
       else if (payment.user_id === user.id) {
