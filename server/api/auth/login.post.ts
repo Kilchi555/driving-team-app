@@ -291,14 +291,16 @@ export default defineEventHandler(async (event) => {
 
       throw createError({
         statusCode: 401,
-        statusMessage: error.message || 'Anmeldung fehlgeschlagen'
+        statusMessage: error.message?.includes('Invalid login credentials') || error.message?.includes('invalid_credentials')
+          ? 'Benutzername und/oder Passwort ist falsch.'
+          : (error.message || 'Benutzername und/oder Passwort ist falsch.')
       })
     }
 
     if (!data.user || !data.session) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Anmeldung fehlgeschlagen'
+        statusMessage: 'Benutzername und/oder Passwort ist falsch.'
       })
     }
 
