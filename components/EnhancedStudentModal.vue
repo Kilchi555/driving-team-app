@@ -1159,7 +1159,7 @@
           </svg>
         </button>
         <h2 class="text-lg font-bold text-gray-900 mb-1">Bar einzahlen</h2>
-        <p class="text-sm text-gray-500 mb-4">Guthaben für <strong>{{ props.student?.full_name || 'Schüler' }}</strong> manuell einzahlen.</p>
+        <p class="text-sm text-gray-500 mb-4">Guthaben für <strong>{{ props.selectedStudent?.first_name }} {{ props.selectedStudent?.last_name }}</strong> manuell einzahlen.</p>
         <div class="space-y-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Betrag (CHF)</label>
@@ -1266,6 +1266,8 @@
 
 import { ref, computed, toRefs, watch } from 'vue'
 import { logger } from '~/utils/logger'
+import { getSupabase } from '~/utils/supabase'
+import { useAuthStore } from '~/stores/auth'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import EvaluationModal from '~/components/EvaluationModal.vue'
@@ -2025,7 +2027,7 @@ const onEvaluationSaved = async () => {
       
       if (notesData) {
         // Get all evaluations (with criteria_rating)
-        const allEvaluations = notesData.filter(n => n.evaluation_criteria_id && n.criteria_rating)
+        const allEvaluations = notesData.filter((n: any) => n.evaluation_criteria_id && n.criteria_rating)
         
         // ✅ CREATE A NEW OBJECT to trigger Vue's reactivity
         const updatedLesson = {
@@ -2259,7 +2261,7 @@ const loadLessons = async () => {
     lessons.value = lessonsWithEvaluations
     
     // Erstelle Progress-Daten aus Appointments
-    progressData.value = lessonsWithEvaluations.map(apt => ({
+    progressData.value = lessonsWithEvaluations.map((apt: any) => ({
       date: new Date(apt.start_time).toLocaleDateString('de-CH'),
       type: apt.type,
       status: apt.status,
@@ -2311,7 +2313,7 @@ const loadExamResults = async () => {
       throw aptError
     }
     
-    const appointmentIds = (studentAppointments || []).map(apt => apt.id)
+    const appointmentIds = (studentAppointments || []).map((apt: any) => apt.id)
     
     if (appointmentIds.length === 0) {
       examResults.value = []
@@ -2333,7 +2335,7 @@ const loadExamResults = async () => {
     
     // Lade Instructor-Namen für Prüfungen
     const instructorIds = [...new Set(studentAppointments
-      .map(apt => apt.staff_id)
+      .map((apt: any) => apt.staff_id)
       .filter(Boolean))]
     
     let instructorsMap: Record<string, any> = {}
@@ -2347,19 +2349,19 @@ const loadExamResults = async () => {
       if (instructorsError) {
         console.error('❌ Error loading instructors for exams:', instructorsError)
       } else if (instructorsData) {
-        instructorsData.forEach(instructor => {
+        instructorsData.forEach((instructor: any) => {
           instructorsMap[instructor.id] = instructor
         })
       }
     }
     
     // Verknüpfe exam_results mit appointment-Daten und Instructor-Namen
-    const appointmentsMap = new Map(studentAppointments.map(apt => [apt.id, {
+    const appointmentsMap = new Map(studentAppointments.map((apt: any) => [apt.id, {
       ...apt,
       instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
     }]))
     
-    examResults.value = (examResultsData || []).map(result => ({
+    examResults.value = (examResultsData || []).map((result: any) => ({
       ...result,
       appointments: appointmentsMap.get(result.appointment_id)
     }))
@@ -2394,7 +2396,7 @@ const loadCancellationPolicies = async () => {
     
     // Flache die Rules zu einer Liste um (für einfachere Verwendung)
     const allRules: any[] = []
-    policiesData?.forEach(policy => {
+    policiesData?.forEach((policy: any) => {
       if (policy.cancellation_rules) {
         policy.cancellation_rules.forEach((rule: any) => {
           allRules.push({
@@ -2808,8 +2810,19 @@ async function submitCashDeposit() {
 
   isSubmittingDeposit.value = true
   try {
-    const authStore = useAuthStore()
-    const token = authStore.session?.access_token
+    // Get token from localStorage session cache
+    let token: string | undefined
+    try {
+      const sessionCacheRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('supabase-session-cache') : null
+      if (sessionCacheRaw) {
+        token = JSON.parse(sessionCacheRaw)?.access_token
+      }
+    } catch { /* ignore */ }
+    if (!token) {
+      const supabaseClient = getSupabase()
+      const { data: { session } } = await supabaseClient.auth.getSession()
+      token = session?.access_token
+    }
     await $fetch('/api/student-credits/deposit', {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -2840,7 +2853,7 @@ async function submitCashDeposit() {
 function handleVoucherRedeemed(newBalance: number) {
   studentBalance.value = newBalance
   showRedeemVoucherModal.value = false
-  emit('studentUpdated', { id: props.selectedStudent?.id })
+  emit('studentUpdated', { id: props.selectedStudent?.id ?? '' })
 }
 
 // ── Credit Transaction History ─────────────────────────────
