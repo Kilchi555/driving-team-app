@@ -1790,7 +1790,11 @@ const submitOrderWithStatus = async (status: string) => {
       status: status,
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       
-      requested_product_id: selectedProducts.value[0]?.product.id || null,
+      requested_product_id: (() => {
+        const id = selectedProducts.value[0]?.product.id
+        // Only use real UUIDs — temporary voucher IDs like "voucher-123" are not valid
+        return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : null
+      })(),
       quantity: selectedProducts.value.reduce((sum, item) => sum + item.quantity, 0),
       total_price_rappen: Math.round(totalPrice.value * 100),
       
@@ -1977,7 +1981,7 @@ const handlePaymentCreated = async (payment: any) => {
   logger.debug('✅ Payment created:', payment)
   
   // Check if this is a Wallee payment with redirect URL
-  if (payment.payment_url && payment.payment_method === 'wallee') {
+  if (payment.payment_url) {
     logger.debug('🔄 Redirecting to Wallee payment page:', payment.payment_url)
     // Voucher creation + email sending happens server-side in the Wallee webhook
     window.location.href = payment.payment_url
