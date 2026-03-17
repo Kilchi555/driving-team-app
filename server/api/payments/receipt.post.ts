@@ -170,6 +170,26 @@ async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAsset
       return { logoSrc: logoUrl, logoDataUrl: dataUrl }
     }
     logger.warn('⚠️ Logo fetch failed:', response.status, response.statusText)
+
+    // Last resort: try fetching from the public website directly
+    const fallbackUrls = [
+      'https://www.drivingteam.ch/images/logo.webp',
+    ]
+    for (const fallbackUrl of fallbackUrls) {
+      try {
+        const fallbackResponse = await fetch(fallbackUrl, { headers: { Accept: 'image/*' } })
+        if (fallbackResponse.ok) {
+          const buffer = await fallbackResponse.arrayBuffer()
+          const base64 = Buffer.from(buffer).toString('base64')
+          const mimeType = fallbackResponse.headers.get('content-type') || 'image/webp'
+          const dataUrl = `data:${mimeType};base64,${base64}`
+          logger.debug('✅ Logo loaded via fallback URL, size:', dataUrl.length)
+          return { logoSrc: fallbackUrl, logoDataUrl: dataUrl }
+        }
+      } catch {
+        // ignore and continue
+      }
+    }
   } catch (err) {
     logger.error('❌ Could not load logo:', err)
   }

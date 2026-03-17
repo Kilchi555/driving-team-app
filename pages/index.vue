@@ -6,11 +6,11 @@
       <div class="container">
         <!-- Für KMU Label mit Logo -->
         <div class="kmu-label">
-          <span class="pill">Für KMU: Fahrschulen • Coaches • Studios • Agenturen</span>
+          <span class="pill">Für Lehrer, Coaches und Therapeuten</span>
           <img src="/simy-logo.png" alt="Simy Logo" class="kmu-logo">
         </div>
         
-        <h1 class="title" style="margin-top:30px">Simy – Die smarte Business‑Plattform für KMU</h1>
+        <h1 class="title" style="margin-top:30px">Simy – Die smarte Business‑Plattform für Coaches</h1>
         <p class="lead">Termine, Zahlungen, Kundenverwaltung und Branding – alles in einer Plattform. Schnell startklar, flexibel erweiterbar.</p>
         <div class="cta">
           <a class="btn btn-primary" href="mailto:info@simy.ch?subject=Interesse%20an%20Simy&body=Hallo%20Simy%2C%0Aich%20interessiere%20mich%20f%C3%BCr%20eure%20Plattform.%20Bitte%20kontaktiert%20mich.%0A%0AName%3A%20%0AFirma%3A%20%0ATelefon%3A%20">Kontakt aufnehmen</a>
@@ -169,9 +169,9 @@ definePageMeta({
 const currentYear = computed(() => new Date().getFullYear())
 
 useHead({
-  title: 'Simy – Die smarte Business-Plattform für KMU',
+  title: 'Simy – Die smarte Business-Plattform für Coaches',
   meta: [
-    { name: 'description', content: 'Simy hilft KMU wie Fahrschulen, Coaches, Studios und Agenturen bei Terminplanung, Zahlungen und Kundenverwaltung – alles in einer Plattform.' }
+    { name: 'description', content: 'Simy hilft KMU wie Fahrschulen, Coaches, Studios und Therapeuten bei Terminplanung, Zahlungen und Kundenverwaltung – alles in einer Plattform.' }
   ],
   link: [
     { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
