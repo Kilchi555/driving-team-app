@@ -79,4 +79,12 @@ USING (
       AND u.tenant_id = student_credits.tenant_id
       AND u.role IN ('staff', 'admin', 'super_admin', 'tenant_admin', 'instructor')
   )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM users u
+    WHERE u.auth_user_id = auth.uid()
+      AND u.tenant_id = student_credits.tenant_id
+      AND u.role IN ('staff', 'admin', 'super_admin', 'tenant_admin', 'instructor')
+  )
 );

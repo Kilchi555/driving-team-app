@@ -1,10 +1,8 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseServerWithSession, getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
-
   // Get auth token from headers
   const authHeader = getHeader(event, 'authorization')
   if (!authHeader?.startsWith('Bearer ')) {
@@ -13,9 +11,12 @@ export default defineEventHandler(async (event) => {
 
   const token = authHeader.replace('Bearer ', '')
 
-  // Get current user and create authenticated client
-  const supabaseUser = getSupabase(token)
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+  // Authenticated client — RLS runs as the logged-in user
+  const supabaseUser = getSupabaseServerWithSession(event)
+
+  // Verify token via admin client (doesn't affect RLS context)
+  const supabaseAdmin = getSupabaseAdmin()
+  const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !authUser) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
