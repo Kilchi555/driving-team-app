@@ -184,7 +184,6 @@
 
         <!-- No Discounts Message -->
         <div v-else class="text-center py-4 text-gray-500">
-          <div class="text-4xl mb-2">🏷️</div>
           <p>Keine Rabatte angewendet</p>
         </div>
       </div>
@@ -254,7 +253,13 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePayments } from '~/composables/usePayments'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useTenant } from '~/composables/useTenant'
+import { logger } from '~/utils/logger'
 import type { Product, Discount, PaymentMethod, PaymentStatus } from '~/types/payment'
+
+// Extended discount type used internally (includes computed discount_amount_rappen)
+interface AppliedDiscount extends Discount {
+  discount_amount_rappen: number
+}
 
 // Props
 interface Props {
@@ -507,8 +512,8 @@ const processPayment = async () => {
           props.tenantId
         )
       } else {
-        payment = await createStandalonePayment(
-          props.userId,
+      payment = await createStandalonePayment(
+          props.userId || '',
           props.staffId || '',
           Array.from(selectedProducts.value.values()),
           Array.from(appliedDiscounts.value.values()),
@@ -525,8 +530,8 @@ const processPayment = async () => {
 
       if (selectedPaymentMethod.value === 'cash') {
         payment = await processCashPayment(
-          props.appointmentId,
-          props.userId,
+          props.appointmentId || '',
+          props.userId || '',
           props.staffId || '',
           price,
           Array.from(selectedProducts.value.values()),
@@ -534,8 +539,8 @@ const processPayment = async () => {
         )
       } else if (selectedPaymentMethod.value === 'invoice') {
         payment = await processInvoicePayment(
-          props.appointmentId,
-          props.userId,
+          props.appointmentId || '',
+          props.userId || '',
           props.staffId || '',
           price,
           {}, // invoiceData
@@ -545,8 +550,8 @@ const processPayment = async () => {
       } else if (selectedPaymentMethod.value === 'wallee') {
         // Wallee Online-Zahlung
         payment = await processWalleePayment(
-          props.appointmentId,
-          props.userId,
+          props.appointmentId || '',
+          props.userId || '',
           props.staffId || '',
           price,
           Array.from(selectedProducts.value.values()),
@@ -614,7 +619,7 @@ watch(() => props.initialProducts, (newProducts) => {
   if (newProducts) {
     selectedProducts.value.clear()
     newProducts.forEach(product => {
-      selectedProducts.value.set(product.id, { ...product, quantity: product.quantity || 1 })
+      selectedProducts.value.set(product.id, { ...product, quantity: (product as any).quantity || 1 })
     })
     // Note: Don't recalculate here to avoid infinite loops
     // recalculateDiscounts() is called in user actions (updateProductQuantity, removeProduct)
@@ -649,7 +654,7 @@ watch(() => props.initialDiscounts, (newDiscounts) => {
     newDiscounts.forEach(discount => {
       appliedDiscounts.value.set(discount.id, { 
         ...discount, 
-        discount_amount_rappen: discount.discount_amount_rappen || 0 
+        discount_amount_rappen: (discount as any).discount_amount_rappen || 0 
       })
     })
     // Note: Don't recalculate here to avoid infinite loops
@@ -665,7 +670,7 @@ onMounted(() => {
   
   if (props.initialProducts) {
     props.initialProducts.forEach(product => {
-      selectedProducts.value.set(product.id, { ...product, quantity: product.quantity || 1 })
+      selectedProducts.value.set(product.id, { ...product, quantity: (product as any).quantity || 1 })
     })
     // Note: Don't emit here to avoid infinite loops
     // emitProductsSelected() is called in user actions (updateProductQuantity, removeProduct)
@@ -676,7 +681,7 @@ onMounted(() => {
     props.initialDiscounts.forEach(discount => {
       appliedDiscounts.value.set(discount.id, { 
         ...discount, 
-        discount_amount_rappen: discount.discount_amount_rappen || 0 
+        discount_amount_rappen: (discount as any).discount_amount_rappen || 0 
       })
     })
     // Note: Don't emit here to avoid infinite loops
