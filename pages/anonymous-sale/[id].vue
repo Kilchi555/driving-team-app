@@ -150,6 +150,8 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 import { useRoute } from '#app'
 
 const route = useRoute()
