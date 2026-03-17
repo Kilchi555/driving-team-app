@@ -62,6 +62,8 @@ interface PaymentContext {
   products: ProductInfo[]
   customer: CustomerInfo
   paymentDate: string
+  paymentMethod: string
+  isTopup: boolean
   appointmentInfo: AppointmentInfo
   appointmentTitle: string
   appointmentTimestamp: number | null
@@ -92,154 +94,80 @@ interface TenantAssets {
 }
 
 async function loadTenantAssets(tenant: any, supabase: any): Promise<TenantAssets> {
-  // Try logo_square_url first, then logo_url, then logo_wide_url
   const logoUrl = tenant?.logo_square_url || tenant?.logo_url || tenant?.logo_wide_url
-  
-  logger.debug('🔍 Tenant data for logo:', {
-    logo_square_url: tenant?.logo_square_url?.substring(0, 100),
-    logo_url: tenant?.logo_url?.substring(0, 100),
-    logo_wide_url: tenant?.logo_wide_url?.substring(0, 100),
-    resolved_logoUrl: logoUrl?.substring(0, 100)
-  })
-  
+
   if (!logoUrl) {
     logger.warn('⚠️ No logo URL found in tenant data')
     return { logoSrc: null, logoDataUrl: null }
   }
 
-  // If it's already a data URL, use it directly
   if (logoUrl.startsWith('data:')) {
-    logger.debug('✅ Logo is already a data URL', {
-      dataUrl_length: logoUrl.length,
-      dataUrl_starts_with: logoUrl.substring(0, 100)
-    })
-    return {
-      logoSrc: logoUrl,
-      logoDataUrl: logoUrl
-    }
+    return { logoSrc: logoUrl, logoDataUrl: logoUrl }
   }
 
   logger.debug('📷 Loading logo from URL:', logoUrl.substring(0, 100))
-  
+
   try {
-    // Check if it's a relative Storage path (starts with /storage/)
-    if (logoUrl.startsWith('/storage/v1/object/public/')) {
-      logger.debug('🔗 Detected relative storage path')
-      
-      // Extract bucket and path from relative path
-      // Format: /storage/v1/object/public/{bucket}/{path} or /storage/v1/object/public/{path}
-      const match = logoUrl.match(/\/storage\/v1\/object\/public\/([^\/]+)\/(.+)/)
-      let bucketName = 'tenant-assets'
-      let filePath = logoUrl
-      
-      if (match) {
-        // Has bucket name
-        bucketName = match[1]
-        filePath = match[2]
-        logger.debug('🔗 Extracted bucket and path from relative URL:', { bucketName, filePath })
-      } else {
-        // Try to extract just the path without bucket
-        const fileMatch = logoUrl.match(/\/storage\/v1\/object\/public\/(.+)$/)
-        if (fileMatch) {
-          filePath = fileMatch[1]
-          logger.debug('🔗 Extracted filename (no bucket in URL, using default tenant-assets):', { filePath })
-        }
-      }
-      
-      // Try Supabase Storage API
-      logger.debug('📥 Attempting to download from Supabase Storage:', { bucketName, filePath })
-      try {
-        const { data: buffer, error: storageError } = await supabase.storage
-          .from(bucketName)
-          .download(filePath)
-        
-        if (!storageError && buffer) {
-          logger.debug('✅ Logo downloaded via Storage API, size:', buffer.size)
-          const arrayBuffer = await buffer.arrayBuffer()
-          const base64 = Buffer.from(arrayBuffer).toString('base64')
-          
-          // Determine mime type
-          let mimeType = 'image/png'
-          if (filePath.includes('.jpg') || filePath.includes('.jpeg')) mimeType = 'image/jpeg'
-          else if (filePath.includes('.svg')) mimeType = 'image/svg+xml'
-          else if (filePath.includes('.webp')) mimeType = 'image/webp'
-          
-          const dataUrl = `data:${mimeType};base64,${base64}`
-          logger.debug('✅ Logo converted to data URL, size:', dataUrl.length)
-          return {
-            logoSrc: logoUrl,
-            logoDataUrl: dataUrl
-          }
-        } else {
-          logger.warn('⚠️ Storage API error, will fallback to fetch:', storageError)
-        }
-      } catch (storageErr) {
-        logger.warn('⚠️ Storage API download failed, will fallback to fetch:', storageErr)
+    // Extract bucket + path from any Supabase storage URL (relative or absolute)
+    let bucketName: string | null = null
+    let filePath: string | null = null
+
+    // Relative: /storage/v1/object/public/{bucket}/{path}
+    const relMatch = logoUrl.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/)
+    if (relMatch) {
+      bucketName = relMatch[1]
+      filePath = relMatch[2].split('?')[0] // strip query params
+    }
+
+    // Absolute: https://<ref>.supabase.co/storage/v1/object/public/{bucket}/{path}
+    if (!bucketName) {
+      const absMatch = logoUrl.match(/supabase\.co\/storage\/v1\/object\/public\/([^/]+)\/(.+)/)
+      if (absMatch) {
+        bucketName = absMatch[1]
+        filePath = absMatch[2].split('?')[0]
       }
     }
-    
-    // Fallback: Construct full public URL if it's a relative path and try fetch
-    let fullUrl = logoUrl
-    if (logoUrl.startsWith('/storage/v1/object/public/')) {
-      const projectRef = 'unyjaetebnaexaflpyoc' // Your Supabase project ref
-      fullUrl = `https://${projectRef}.supabase.co${logoUrl}`
-      logger.debug('🔗 Constructed full URL from relative path:', fullUrl.substring(0, 100))
-    }
-    
-    // Fallback: Try fetch with various options
-    const fetchOptions = [
-      { headers: {} },
-      { headers: { 'Accept': 'image/*' } },
-      { headers: { 'Accept': '*/*' } }
-    ]
-    
-    for (const opts of fetchOptions) {
-      try {
-        logger.debug('📡 Fetch attempt with options:', opts)
-        const response = await fetch(fullUrl, { ...opts, timeout: 10000 })
-        
-        logger.debug('📊 Logo fetch response:', { 
-          ok: response.ok, 
-          status: response.status,
-          statusText: response.statusText,
-          contentType: response.headers.get('content-type')
-        })
-        
-        if (response.ok) {
-          const buffer = await response.arrayBuffer()
-          logger.debug('✅ Logo buffer received, size:', buffer.byteLength)
-          
-          const base64 = Buffer.from(buffer).toString('base64')
-          
-          let mimeType = response.headers.get('content-type') || 'image/png'
-          if (fullUrl.includes('.jpg') || fullUrl.includes('.jpeg')) mimeType = 'image/jpeg'
-          else if (fullUrl.includes('.svg')) mimeType = 'image/svg+xml'
-          else if (fullUrl.includes('.webp')) mimeType = 'image/webp'
-          
-          const dataUrl = `data:${mimeType};base64,${base64}`
-          logger.debug('✅ Logo data URL created with mimeType:', mimeType)
-          
-          return {
-            logoSrc: logoUrl,
-            logoDataUrl: dataUrl
-          }
-        }
-      } catch (err) {
-        logger.warn('⚠️ Fetch attempt failed:', err)
-        continue
+
+    if (bucketName && filePath) {
+      logger.debug('📥 Downloading logo via Storage API:', { bucketName, filePath })
+      const { data: buffer, error: storageError } = await supabase.storage
+        .from(bucketName)
+        .download(filePath)
+
+      if (!storageError && buffer) {
+        const arrayBuffer = await buffer.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        let mimeType = 'image/png'
+        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) mimeType = 'image/jpeg'
+        else if (filePath.endsWith('.svg')) mimeType = 'image/svg+xml'
+        else if (filePath.endsWith('.webp')) mimeType = 'image/webp'
+        const dataUrl = `data:${mimeType};base64,${base64}`
+        logger.debug('✅ Logo loaded via Storage API, size:', dataUrl.length)
+        return { logoSrc: logoUrl, logoDataUrl: dataUrl }
       }
+      logger.warn('⚠️ Storage API download failed:', storageError)
     }
-    
-    logger.warn('⚠️ All fetch attempts failed, using URL directly')
-    return { logoSrc: logoUrl, logoDataUrl: logoUrl }
-    
+
+    // Fallback: plain fetch for external URLs
+    const fullUrl = logoUrl.startsWith('http') ? logoUrl
+      : `https://unyjaetebnaexaflpyoc.supabase.co${logoUrl}`
+
+    logger.debug('📡 Fetching logo via HTTP:', fullUrl.substring(0, 100))
+    const response = await fetch(fullUrl, { headers: { Accept: 'image/*' } })
+    if (response.ok) {
+      const buffer = await response.arrayBuffer()
+      const base64 = Buffer.from(buffer).toString('base64')
+      const mimeType = response.headers.get('content-type') || 'image/png'
+      const dataUrl = `data:${mimeType};base64,${base64}`
+      logger.debug('✅ Logo loaded via fetch, size:', dataUrl.length)
+      return { logoSrc: logoUrl, logoDataUrl: dataUrl }
+    }
+    logger.warn('⚠️ Logo fetch failed:', response.status, response.statusText)
   } catch (err) {
     logger.error('❌ Could not load logo:', err)
-    return {
-      logoSrc: logoUrl,
-      logoDataUrl: logoUrl
-    }
   }
+
+  return { logoSrc: logoUrl, logoDataUrl: null }
 }
 
 async function loadPaymentContext(payment: any, supabase: any, translateFn: any): Promise<PaymentContext> {
@@ -518,6 +446,27 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
   const appointmentTitle = appointment?.title || course?.name || payment.description || translateFn('eventType.lesson')
   const appointmentTimestamp = appointmentDateObj ? appointmentDateObj.getTime() : null
 
+  // Detect topup payment (no appointment, no course, description contains topup keywords)
+  const isTopup = !appointment && !course && (
+    payment.description?.toLowerCase().includes('topup') ||
+    payment.description?.toLowerCase().includes('guthaben') ||
+    payment.payment_method === 'topup' ||
+    payment.metadata?.type === 'topup'
+  )
+
+  // Human-readable payment method
+  const paymentMethodMap: Record<string, string> = {
+    cash: 'Bar',
+    twint: 'TWINT',
+    wallee: 'Online',
+    credit: 'Guthaben',
+    invoice: 'Rechnung',
+    bank_transfer: 'Banküberweisung',
+    card: 'Karte',
+    topup: 'Guthaben-Aufladung',
+  }
+  const paymentMethod = paymentMethodMap[payment.payment_method] || payment.payment_method || '—'
+
   const isCourse = !!course && !appointment
   const eventTypeKey = appointment?.event_type_code || appointment?.type || (isCourse ? 'course' : 'lesson')
   const eventTypeTranslated = isCourse ? (course?.name || translateFn('eventType.course')) : translateFn(`eventType.${eventTypeKey}`)
@@ -557,6 +506,8 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
       })
       return pd
     })(),
+    paymentMethod,
+    isTopup,
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
@@ -620,34 +571,47 @@ function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: s
 }
 
 function renderSingleReceipt(context: PaymentContext, tenant: any, assets: TenantAssets, translateFn: any) {
-  const { products, customer, paymentDate, appointmentInfo, amounts, creditInfo } = context
+  const { products, customer, paymentDate, paymentMethod, isTopup, appointmentInfo, amounts, creditInfo } = context
+
+  const serviceSection = isTopup ? `
+    <div class="section">
+      <div class="section-title">Guthaben-Aufladung</div>
+      <div class="row">
+        <div class="label">Aufladung via ${paymentMethod}</div>
+        <div class="value">CHF ${amounts.total.toFixed(2)}</div>
+      </div>
+    </div>
+  ` : `
+    <div class="section">
+      <div class="section-title">${appointmentInfo.isCourse ? translateFn('receipt.courseDetails') : translateFn('receipt.serviceDetails')}</div>
+      <div class="row">
+        <div class="label">
+          ${appointmentInfo.eventTypeLabel}${appointmentInfo.date ? ` - ${appointmentInfo.date}` : ''}${appointmentInfo.time ? ` ${appointmentInfo.time}` : ''}${appointmentInfo.duration ? ` - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}` : ''}
+        </div>
+        <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
+      </div>
+      ${appointmentInfo.courseLocation ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Ort</div><div class="value">${appointmentInfo.courseLocation}</div></div>` : ''}
+      ${appointmentInfo.staffFirstName && !appointmentInfo.isCourse ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
+      ${appointmentInfo.isCancelled ? `
+        <div class="row" style="background:#fee2e2; padding:8px 12px; margin:8px 0; border-radius:6px; border-left:3px solid #dc2626;">
+          <div style="font-size:12px; color:#991b1b;">
+            <div style="font-weight:600;">${translateFn('receipt.cancellation')}</div>
+            <div>${translateFn('receipt.date')}: ${appointmentInfo.cancellationDate}</div>
+            <div>${translateFn('receipt.reason')}: ${appointmentInfo.cancellationReason}</div>
+            <div>${translateFn('receipt.charged')}: ${appointmentInfo.isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</div>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `
 
   return `
     <div class="doc" style="page-break-after: always;">
       ${renderHeader(customer, 'receipt.paidDate', paymentDate, tenant, assets, translateFn)}
+
+      ${serviceSection}
       
-      <div class="section">
-        <div class="section-title">${appointmentInfo.isCourse ? translateFn('receipt.courseDetails') : translateFn('receipt.serviceDetails')}</div>
-        <div class="row">
-          <div class="label">
-            ${appointmentInfo.eventTypeLabel}${appointmentInfo.date ? ` - ${appointmentInfo.date}` : ''}${appointmentInfo.time ? ` ${appointmentInfo.time}` : ''}${appointmentInfo.duration ? ` - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}` : ''}
-          </div>
-          <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
-        </div>
-        ${appointmentInfo.courseLocation ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Ort</div><div class="value">${appointmentInfo.courseLocation}</div></div>` : ''}
-        ${appointmentInfo.staffFirstName && !appointmentInfo.isCourse ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
-        ${appointmentInfo.isCancelled ? `
-          <div class="row" style="background:#fee2e2; padding:8px 12px; margin:8px 0; border-radius:6px; border-left:3px solid #dc2626;">
-            <div style="font-size:12px; color:#991b1b;">
-              <div style="font-weight:600;">${translateFn('receipt.cancellation')}</div>
-              <div>${translateFn('receipt.date')}: ${appointmentInfo.cancellationDate}</div>
-              <div>${translateFn('receipt.reason')}: ${appointmentInfo.cancellationReason}</div>
-              <div>${translateFn('receipt.charged')}: ${appointmentInfo.isCharged ? translateFn('receipt.yes') : translateFn('receipt.no')}</div>
-            </div>
-          </div>
-        ` : ''}
-      </div>
-      
+      ${!isTopup ? `
       <div class="section">
         <div class="section-title">${translateFn('receipt.costBreakdown')}</div>
         ${amounts.adminFee > 0 ? `<div class="row"><div class="label">${translateFn('receipt.adminFee')}</div><div class="value">CHF ${amounts.adminFee.toFixed(2)}</div></div>` : ''}
@@ -685,6 +649,19 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
           <div class="amount">CHF ${amounts.total.toFixed(2)}</div>
         </div>
       </div>
+      ` : ''}
+
+      <!-- Payment info row -->
+      <div class="section" style="padding-top:12px; padding-bottom:12px;">
+        <div class="row" style="font-size:13px; color:#6b7280;">
+          <div class="label">Zahlungsmethode</div>
+          <div class="value" style="font-weight:500; color:#374151;">${paymentMethod}</div>
+        </div>
+        <div class="row" style="font-size:13px; color:#6b7280;">
+          <div class="label">Bezahlt am</div>
+          <div class="value" style="font-weight:500; color:#374151;">${paymentDate}</div>
+        </div>
+      </div>
       
       ${creditInfo ? `
         <div class="section">
@@ -693,29 +670,6 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
             <div class="label">${translateFn('receipt.currentBalance')}</div>
             <div class="value" style="color:#059669; font-size:16px; font-weight:700;">CHF ${creditInfo.currentBalance.toFixed(2)}</div>
           </div>
-          ${creditInfo.recentTransactions.length > 0 ? `
-            <div style="margin-top:16px;">
-              <div class="label" style="margin-bottom:8px;">${translateFn('receipt.recentTransactions')}</div>
-              <table style="width:100%; font-size:12px; border-collapse:collapse;">
-                <thead>
-                  <tr style="border-bottom:1px solid #e5e7eb;">
-                    <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.transactionType')}</th>
-                    <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.date')}</th>
-                    <th style="text-align:right; padding:6px 8px; color:#6b7280; font-weight:600;">${translateFn('receipt.amount')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${creditInfo.recentTransactions.map(tx => `
-                    <tr style="border-bottom:1px solid #f3f4f6;">
-                      <td style="padding:6px 8px;">${tx.type}</td>
-                      <td style="padding:6px 8px; color:#6b7280;">${tx.date}</td>
-                      <td style="padding:6px 8px; text-align:right; ${tx.type === 'Verwendet' ? 'color:#dc2626;' : 'color:#059669;'}">${tx.type === 'Verwendet' ? '-' : '+'} CHF ${tx.amount.toFixed(2)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          ` : ''}
         </div>
       ` : ''}
       
@@ -793,11 +747,12 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
       return `
         <tr>
           <td>
-            <div class="lesson-title">${lessonsDetails}</div>
+            <div class="lesson-title">${ctx.isTopup ? 'Guthaben-Aufladung' : lessonsDetails}</div>
             ${meta.length > 0 ? `<div class="lesson-meta">${meta.join('<br/>')}</div>` : ''}
           </td>
-          <td>${ctx.appointmentInfo.date} ${ctx.appointmentInfo.time}</td>
-          <td>${ctx.appointmentInfo.duration} ${translateFn('receipt.minutes')}</td>
+          <td>${ctx.appointmentInfo.date || ctx.paymentDate} ${ctx.appointmentInfo.time}</td>
+          <td>${ctx.isTopup ? '—' : `${ctx.appointmentInfo.duration} ${translateFn('receipt.minutes')}`}</td>
+          <td style="font-size:12px; color:#6b7280;">${ctx.paymentMethod}</td>
           <td class="amount">CHF ${ctx.amounts.total.toFixed(2)}</td>
         </tr>
       `
@@ -833,6 +788,7 @@ function renderCombinedReceipt(contexts: PaymentContext[], tenant: any, assets: 
               <th>${translateFn('receipt.table.header.service')}</th>
               <th>${translateFn('receipt.table.header.datetime')}</th>
               <th>${translateFn('receipt.table.header.duration')}</th>
+              <th>${translateFn('receipt.table.header.payment')}</th>
               <th>${translateFn('receipt.table.header.amount')}</th>
             </tr>
           </thead>
@@ -1148,6 +1104,7 @@ export default defineEventHandler(async (event) => {
         'receipt.table.header.service': 'Leistung',
         'receipt.table.header.datetime': 'Datum & Zeit',
         'receipt.table.header.duration': 'Dauer',
+        'receipt.table.header.payment': 'Zahlung',
         'receipt.table.header.amount': 'Betrag',
         'receipt.creditBalance': 'Guthaben',
         'receipt.currentBalance': 'Aktueller Guthabenstand',
