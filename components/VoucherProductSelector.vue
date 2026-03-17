@@ -103,7 +103,7 @@
             :disabled="!isValidAmount"
             class="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            🎁 Gutschein hinzufügen
+            Gutschein hinzufügen
           </button>
         </div>
       </div>
@@ -148,6 +148,7 @@
 <script setup lang="ts">
 
 import { ref, computed } from 'vue'
+import { logger } from '~/utils/logger'
 
 // Props
 interface Props {
