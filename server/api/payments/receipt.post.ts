@@ -3,7 +3,6 @@
 import { setHeader, send, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { verifyAuth } from '~/server/utils/auth-helper'
-import chromium from '@sparticuz/chromium'
 import { logger } from '~/utils/logger'
 
 let puppeteer: any
@@ -12,6 +11,14 @@ async function getPuppeteer() {
     puppeteer = await import('puppeteer-core')
   }
   return puppeteer
+}
+
+let chromiumModule: any
+async function getChromium() {
+  if (!chromiumModule) {
+    chromiumModule = (await import('@sparticuz/chromium')).default
+  }
+  return chromiumModule
 }
 
 interface ReceiptRequest { paymentId?: string; paymentIds?: string[] }
@@ -1172,9 +1179,10 @@ export default defineEventHandler(async (event) => {
       // Try to launch browser with appropriate settings for environment
       let launchOptions: any = { headless: 'new' }
       
-      // If we're in a serverless environment (Vercel), use chromium
-      if (process.env.VERCEL) {
-        logger.debug('📍 Serverless environment detected (Vercel), using chromium')
+      // If we're in a serverless/production environment, use @sparticuz/chromium
+      if (process.env.VERCEL || process.env.USE_SPARTICUZ_CHROMIUM || process.env.NODE_ENV === 'production') {
+        logger.debug('📍 Production/serverless environment detected, using @sparticuz/chromium')
+        const chromium = await getChromium()
         launchOptions = {
           args: chromium.args,
           defaultViewport: chromium.defaultViewport,
@@ -1184,10 +1192,27 @@ export default defineEventHandler(async (event) => {
       } else {
         // Local development: use system Chrome/Chromium
         logger.debug('📍 Local environment detected, using system Chrome')
+        const possiblePaths = [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+          '/Applications/Chromium.app/Contents/MacOS/Chromium',
+          '/usr/bin/google-chrome',
+          '/usr/bin/chromium-browser',
+          '/usr/bin/chromium',
+        ]
+        const { existsSync } = await import('node:fs')
+        const executablePath = possiblePaths.find(p => existsSync(p))
         launchOptions = {
           headless: 'new',
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
+          pipe: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+          ],
+          ...(executablePath ? { executablePath } : {})
         }
+        logger.debug('📍 Using executable:', executablePath || 'puppeteer default')
       }
       
       browser = await Puppeteer.launch(launchOptions)
