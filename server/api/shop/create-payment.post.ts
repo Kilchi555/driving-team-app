@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
         description,
         metadata: metadata ?? null
       })
-      .select('id, total_amount_rappen, payment_status, tenant_id')
+      .select('id, total_amount_rappen, payment_status, tenant_id, payment_method')
       .single()
 
     if (paymentError || !payment) {
