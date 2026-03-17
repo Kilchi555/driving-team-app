@@ -14,10 +14,7 @@ export default defineEventHandler(async (event) => {
     const { code } = body
 
     if (!code || typeof code !== 'string') {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Voucher code is required'
-      })
+      throw createError({ statusCode: 400, message: 'Voucher code is required' })
     }
 
     logger.debug('🎫 [redeem] Redeeming voucher:', code)
@@ -25,7 +22,7 @@ export default defineEventHandler(async (event) => {
     // ── Auth ──────────────────────────────────────────────
     const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
-      throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
+      throw createError({ statusCode: 401, message: 'Not authenticated' })
     }
 
     const userId = authUser.db_user_id || authUser.id
@@ -41,10 +38,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (userError || !userProfile) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'User profile not found'
-      })
+      throw createError({ statusCode: 404, message: 'User profile not found' })
     }
 
     logger.debug('🎫 Redeeming voucher:', {
@@ -64,36 +58,28 @@ export default defineEventHandler(async (event) => {
 
     if (voucherError || !voucher) {
       console.error('❌ Voucher not found:', voucherError)
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Ungültiger Gutschein-Code'
-      })
+      throw createError({ statusCode: 404, message: 'Ungültiger Gutschein-Code' })
     }
 
     // 2. Validate voucher conditions
     const now = new Date()
 
-    // Check validity period
     if (voucher.valid_from && new Date(voucher.valid_from) > now) {
       throw createError({
         statusCode: 400,
-        statusMessage: `Dieser Gutschein ist erst ab ${new Date(voucher.valid_from).toLocaleDateString('de-CH')} gültig`
+        message: `Dieser Gutschein ist erst ab ${new Date(voucher.valid_from).toLocaleDateString('de-CH')} gültig`
       })
     }
 
     if (voucher.valid_until && new Date(voucher.valid_until) < now) {
       throw createError({
         statusCode: 400,
-        statusMessage: `Dieser Gutschein ist abgelaufen (gültig bis ${new Date(voucher.valid_until).toLocaleDateString('de-CH')})`
+        message: `Dieser Gutschein ist abgelaufen (gültig bis ${new Date(voucher.valid_until).toLocaleDateString('de-CH')})`
       })
     }
 
-    // Check redemption limit
     if (voucher.current_redemptions >= voucher.max_redemptions) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Dieser Gutschein wurde bereits vollständig eingelöst'
-      })
+      throw createError({ statusCode: 400, message: 'Dieser Gutschein wurde bereits vollständig eingelöst' })
     }
 
     // Check if user already redeemed this voucher (if single-use)
@@ -105,10 +91,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (existingRedemption) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Sie haben diesen Gutschein bereits eingelöst'
-      })
+      throw createError({ statusCode: 400, message: 'Sie haben diesen Gutschein bereits eingelöst' })
     }
 
     logger.debug('✅ Voucher is valid:', {
@@ -124,10 +107,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (creditError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Fehler beim Laden des Guthabens'
-      })
+      throw createError({ statusCode: 500, message: 'Fehler beim Laden des Guthabens' })
     }
 
     const oldBalance = studentCredit.balance_rappen || 0
@@ -136,17 +116,11 @@ export default defineEventHandler(async (event) => {
     // 4. Update student credit balance
     const { error: updateError } = await supabaseAdmin
       .from('student_credits')
-      .update({
-        balance_rappen: newBalance,
-        updated_at: new Date().toISOString()
-      })
+      .update({ balance_rappen: newBalance, updated_at: new Date().toISOString() })
       .eq('id', studentCredit.id)
 
     if (updateError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Fehler beim Aktualisieren des Guthabens'
-      })
+      throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Guthabens' })
     }
 
     logger.debug('💰 Credit balance updated:', {
@@ -176,13 +150,10 @@ export default defineEventHandler(async (event) => {
 
     if (txError) {
       console.error('❌ Error creating credit transaction:', txError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Fehler beim Erstellen der Transaktion'
-      })
+      throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Transaktion' })
     }
 
-    // 6. Create voucher redemption record (trigger will auto-increment counter)
+    // 6. Create voucher redemption record
     const { error: redemptionError } = await supabaseAdmin
       .from('voucher_redemptions')
       .insert({
@@ -196,10 +167,7 @@ export default defineEventHandler(async (event) => {
 
     if (redemptionError) {
       console.error('❌ Error creating redemption record:', redemptionError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Fehler beim Speichern der Einlösung'
-      })
+      throw createError({ statusCode: 500, message: 'Fehler beim Speichern der Einlösung' })
     }
 
     logger.debug('✅ Voucher redeemed successfully:', {
@@ -232,7 +200,7 @@ export default defineEventHandler(async (event) => {
     
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Ein Fehler ist beim Einlösen des Gutscheins aufgetreten'
+      message: error.message || 'Ein Fehler ist beim Einlösen des Gutscheins aufgetreten'
     })
   }
 })
