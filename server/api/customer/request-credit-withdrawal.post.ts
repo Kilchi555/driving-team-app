@@ -95,14 +95,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ── Check no duplicate pending withdrawal ─────────────
-    if ((creditData.pending_withdrawal_rappen || 0) > 0) {
-      throw createError({
-        statusCode: 400,
-        message: 'Es gibt bereits einen ausstehenden Auszahlungsantrag'
-      })
-    }
-
     // ── Create credit_transaction (withdrawal_pending) ────
     const now = new Date()
     const { data: transaction, error: txError } = await supabase
@@ -126,11 +118,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Transaktion' })
     }
 
-    // ── Freeze the amount in student_credits ──────────────
+    // ── Freeze the amount in student_credits (cumulative) ──
     const { error: updateError } = await supabase
       .from('student_credits')
       .update({
-        pending_withdrawal_rappen: amountRappen,
+        pending_withdrawal_rappen: (creditData.pending_withdrawal_rappen || 0) + amountRappen,
         last_withdrawal_at: now.toISOString(),
         updated_at: now.toISOString()
       })
