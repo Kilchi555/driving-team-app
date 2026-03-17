@@ -618,9 +618,15 @@ const handleLogin = async () => {
 
     // Check if login failed
     if (!response?.success) {
-      const errorMsg = response?.statusMessage || 'Anmeldung fehlgeschlagen'
+      const errorMsg = response?.statusMessage || ''
       logger.debug('❌ Login failed:', errorMsg)
-      loginError.value = errorMsg
+      if (errorMsg.includes('Invalid login credentials') || errorMsg.includes('falsch') || errorMsg.includes('invalid_credentials')) {
+        loginError.value = 'Benutzername und/oder Passwort ist falsch.'
+      } else if (errorMsg.includes('zu viele') || errorMsg.includes('too many')) {
+        loginError.value = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es in einigen Minuten erneut.'
+      } else {
+        loginError.value = errorMsg || 'Benutzername und/oder Passwort ist falsch.'
+      }
       return
     }
 
@@ -730,6 +736,8 @@ const handleLogin = async () => {
     console.error('Login error:', error)
     
     const errorMsg = error?.data?.statusMessage || 
+                     error?.data?.message ||
+                     error?.statusMessage ||
                      error?.message || 
                      error?.cause?.statusMessage ||
                      'Anmeldung fehlgeschlagen'
@@ -767,10 +775,14 @@ const handleLogin = async () => {
         }
       }, 1000)
     } else if (errorMsg?.includes('Account wurde temporär gesperrt') || errorMsg?.includes('temporarily locked')) {
-      // Account locked due to too many failed attempts
       loginError.value = errorMsg
-    } else if (errorMsg?.includes('Invalid login credentials')) {
-      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Passwort.'
+    } else if (
+      errorMsg?.includes('Invalid login credentials') || 
+      errorMsg?.includes('falsch') || 
+      errorMsg?.includes('invalid_credentials') ||
+      error?.status === 401 || error?.statusCode === 401 || error?.data?.statusCode === 401
+    ) {
+      loginError.value = 'Benutzername und/oder Passwort ist falsch.'
     } else {
       loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }

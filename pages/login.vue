@@ -683,7 +683,9 @@ const handleLogin = async () => {
     
     // Get the status message from multiple possible paths
     const errorMsg = error?.data?.statusMessage || 
+                     error?.data?.message ||
                      error?.cause?.statusMessage ||
+                     error?.statusMessage ||
                      error?.message || 
                      'Anmeldung fehlgeschlagen'
     
@@ -720,20 +722,22 @@ const handleLogin = async () => {
           rateLimitCountdown.value = 0
         }
       }, 1000)
-    } else if (errorMsg?.includes('Invalid login credentials')) {
-      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+    } else if (errorMsg?.includes('Invalid login credentials') || errorMsg?.includes('falsch') || errorMsg?.includes('invalid_credentials')) {
+      loginError.value = 'Benutzername und/oder Passwort ist falsch.'
     } else if (errorMsg?.includes('Account')) {
       loginError.value = errorMsg
     } else if (errorMsg?.includes('Email not confirmed')) {
       loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst.'
     } else if (errorMsg?.includes('User not found')) {
-      loginError.value = 'Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.'
+      loginError.value = 'Benutzername und/oder Passwort ist falsch.'
     } else if (errorMsg?.includes('disabled')) {
       loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
     } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {
       loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'
+    } else if (error?.status === 401 || error?.statusCode === 401 || error?.data?.statusCode === 401) {
+      loginError.value = 'Benutzername und/oder Passwort ist falsch.'
     } else {
-      loginError.value = errorMsg
+      loginError.value = errorMsg || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
   } finally {
     isLoading.value = false
