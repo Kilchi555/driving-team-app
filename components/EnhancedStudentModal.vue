@@ -470,12 +470,34 @@
                 <svg class="w-7 h-7" :class="studentBalance < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
                 </svg>
-                <button
-                  @click="showCashDepositModal = true"
-                  class="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors shadow-sm font-medium whitespace-nowrap"
-                >
-                  + Bar einzahlen
-                </button>
+                <div class="flex flex-wrap justify-end gap-1.5">
+                  <button
+                    @click="showCashDepositModal = true"
+                    class="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors shadow-sm font-medium whitespace-nowrap"
+                  >
+                    + Bar einzahlen
+                  </button>
+                  <button
+                    @click="showRedeemVoucherModal = true"
+                    class="text-xs px-2.5 py-1 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors shadow-sm font-medium whitespace-nowrap"
+                  >
+                    🎁 Code einlösen
+                  </button>
+                  <button
+                    @click="openCreditTransactionsModal"
+                    class="text-xs px-2.5 py-1 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium whitespace-nowrap"
+                  >
+                    Verlauf
+                  </button>
+                  <button
+                    v-if="paidPayments.length > 0"
+                    @click="downloadReceipts"
+                    :disabled="isProcessingReceipt"
+                    class="text-xs px-2.5 py-1 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium whitespace-nowrap disabled:opacity-50"
+                  >
+                    {{ isProcessingReceipt ? '…' : '↓ Quittungen' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1116,6 +1138,67 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- Credit Transactions Modal -->
+  <Teleport to="body">
+    <div v-if="showCreditTransactionsModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="showCreditTransactionsModal = false"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[80vh] flex flex-col">
+        <button @click="showCreditTransactionsModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <h2 class="text-lg font-bold text-gray-900 mb-1">Guthaben-Verlauf</h2>
+        <p class="text-sm text-gray-500 mb-4">
+          Alle Transaktionen für {{ selectedStudent?.first_name }} {{ selectedStudent?.last_name }}
+        </p>
+        <div class="overflow-y-auto flex-1">
+          <div v-if="isLoadingCreditTransactions" class="flex justify-center py-8">
+            <div class="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div v-else-if="creditTransactions.length === 0" class="text-center py-8 text-gray-400 text-sm">
+            Noch keine Transaktionen vorhanden.
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="tx in creditTransactions"
+              :key="tx.id"
+              class="flex items-start justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50"
+            >
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    :class="tx.amount_rappen >= 0 ? 'bg-green-500' : 'bg-red-400'"
+                  ></span>
+                  <span class="text-sm font-medium text-gray-800">{{ getCreditTransactionLabel(tx) }}</span>
+                </div>
+                <div v-if="tx.notes" class="text-xs text-gray-400 mt-0.5 ml-4">{{ tx.notes }}</div>
+                <div class="text-xs text-gray-400 mt-0.5 ml-4">{{ formatTxDate(tx.created_at) }}</div>
+              </div>
+              <div class="text-right ml-4 flex-shrink-0">
+                <span class="text-sm font-semibold" :class="tx.amount_rappen >= 0 ? 'text-green-600' : 'text-red-500'">
+                  {{ tx.amount_rappen >= 0 ? '+' : '' }}CHF {{ (Math.abs(tx.amount_rappen) / 100).toFixed(2) }}
+                </span>
+                <div class="text-xs text-gray-400">Saldo: CHF {{ (tx.balance_after_rappen / 100).toFixed(2) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- Redeem Voucher Modal (Staff on behalf of student) -->
+  <Teleport to="body">
+    <RedeemVoucherModal
+      v-if="showRedeemVoucherModal && selectedStudent"
+      :current-balance="studentBalance ?? 0"
+      @close="showRedeemVoucherModal = false"
+      @success="handleVoucherRedeemed"
+    />
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -1126,6 +1209,7 @@ import { useUserDocuments, type UserDocument } from '~/composables/useUserDocume
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
+import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 
 interface Student {
   id: string
@@ -1379,6 +1463,17 @@ const cashDepositAmount = ref<number | ''>('')
 const cashDepositNote = ref('')
 const cashDepositError = ref('')
 const isSubmittingDeposit = ref(false)
+
+// ── Redeem Voucher (Staff on behalf of student) ────────────
+const showRedeemVoucherModal = ref(false)
+
+// ── Credit Transactions History ────────────────────────────
+const showCreditTransactionsModal = ref(false)
+const creditTransactions = ref<any[]>([])
+const isLoadingCreditTransactions = ref(false)
+
+// ── Receipt Download ───────────────────────────────────────
+const isProcessingReceipt = ref(false)
 const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
 const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt
 const isLoadingPayments = ref(false)
@@ -2668,6 +2763,86 @@ async function submitCashDeposit() {
     cashDepositError.value = e?.data?.message || e?.message || 'Fehler beim Einzahlen'
   } finally {
     isSubmittingDeposit.value = false
+  }
+}
+
+// ── Redeem Voucher ─────────────────────────────────────────
+function handleVoucherRedeemed(newBalance: number) {
+  studentBalance.value = newBalance
+  showRedeemVoucherModal.value = false
+  emit('studentUpdated', { id: props.selectedStudent?.id })
+}
+
+// ── Credit Transaction History ─────────────────────────────
+async function openCreditTransactionsModal() {
+  showCreditTransactionsModal.value = true
+  isLoadingCreditTransactions.value = true
+  creditTransactions.value = []
+  try {
+    const data = await $fetch<any[]>(`/api/staff/get-credit-transactions?user_id=${props.selectedStudent?.id}`)
+    creditTransactions.value = data || []
+  } catch {
+    creditTransactions.value = []
+  } finally {
+    isLoadingCreditTransactions.value = false
+  }
+}
+
+function getCreditTransactionLabel(tx: any): string {
+  const typeMap: Record<string, string> = {
+    deposit: 'Bareinzahlung',
+    refund: 'Rückerstattung',
+    topup: 'Guthaben aufgeladen',
+    credit_topup: 'Guthaben aufgeladen',
+    voucher: 'Gutschein eingelöst',
+    manual: 'Manuelle Buchung',
+    cash_deposit: 'Bar-Einzahlung',
+    cancellation: 'Stornierung',
+    cancellation_credit_refund: 'Stornierung (Rückerstattung)',
+    duration_reduction_credit: 'Fahrstunde verkürzt (Rückerstattung)',
+    payment: 'Fahrstunde bezahlt',
+    appointment: 'Fahrstunde bezahlt',
+    appointment_payment: 'Fahrstunde bezahlt',
+    withdrawal: 'Auszahlung',
+    withdrawal_pending: 'Auszahlung (ausstehend)',
+    withdrawal_completed: 'Auszahlung abgeschlossen',
+  }
+  return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
+}
+
+function formatTxDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+// ── Receipts Download ─────────────────────────────────────
+const paidPayments = computed(() =>
+  payments.value.filter(p => p.payment_status === 'completed' && p.paid_at)
+)
+
+async function downloadReceipts() {
+  if (isProcessingReceipt.value || paidPayments.value.length === 0) return
+  isProcessingReceipt.value = true
+  try {
+    const paymentIds = paidPayments.value.map((p: any) => p.id)
+    const response = await $fetch('/api/payments/receipt', {
+      method: 'POST',
+      body: { paymentIds }
+    }) as { success: boolean; pdfUrl?: string; filename?: string; error?: string }
+    if (!response.success || !response.pdfUrl) {
+      throw new Error(response.error || 'PDF konnte nicht generiert werden')
+    }
+    const pdfResponse = await fetch(response.pdfUrl)
+    if (!pdfResponse.ok) throw new Error(`PDF download failed: ${pdfResponse.status}`)
+    const blob = await pdfResponse.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    window.open(blobUrl, '_blank')
+  } catch (err: any) {
+    logger.error('❌ Error downloading receipts:', err)
+    alert(`Fehler beim Erstellen der Quittungen: ${err.message}`)
+  } finally {
+    isProcessingReceipt.value = false
   }
 }
 
