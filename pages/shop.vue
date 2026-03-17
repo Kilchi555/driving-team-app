@@ -838,7 +838,7 @@ const stepSubtitle = computed(() => {
   switch (currentStep.value) {
     case 1: return 'Wählen Sie Ihre gewünschten Produkte aus'
     case 2: return 'Bitte füllen Sie Ihre Kontaktdaten aus'
-    case 3: return 'Wählen Sie Ihre Zahlungsmethode'
+    case 3: return 'Kontrollieren Sie Ihre Bestellung'
     default: return ''
   }
 })
