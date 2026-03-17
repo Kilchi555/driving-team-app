@@ -75,9 +75,6 @@
                 class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
               >
                 Aktionen
-                <svg class="w-4 h-4 transition-transform" :class="showActionsDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
               </button>
 
               <!-- Invisible overlay to close on outside click -->
