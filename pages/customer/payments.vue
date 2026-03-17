@@ -667,14 +667,6 @@
       @close="closeMedicalCertificateModal"
       @uploaded="loadAllData"
     />
-
-    <!-- ✅ NEW: Redeem Voucher Modal -->
-    <RedeemVoucherModal
-      v-if="showRedeemVoucherModal"
-      :current-balance="studentBalance"
-      @close="showRedeemVoucherModal = false"
-      @success="handleVoucherRedeemed"
-    />
   </div>
 </template>
 
@@ -1014,7 +1006,6 @@ async function submitWithdrawal() {
 }
 const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
 const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
-const showRedeemVoucherModal = ref(false) // ✅ NEW: Voucher Modal
 const currentUserData = ref<any>(null) // ✅ NEW: User data from get-payment-page-data API
 
 // Computed properties
@@ -1698,7 +1689,6 @@ const handleVoucherRedeemed = async (newBalance: number) => {
   logger.debug('✅ Voucher redeemed, new balance:', newBalance)
   studentBalance.value = newBalance
   showRedeemModal.value = false
-  showRedeemVoucherModal.value = false
   // Refresh all data to show updated balance
   await loadAllData()
 }

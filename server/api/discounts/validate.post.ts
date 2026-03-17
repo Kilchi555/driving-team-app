@@ -9,13 +9,8 @@ import { logger } from '~/utils/logger'
  */
 export default defineEventHandler(async (event) => {
   try {
-    const authUser = await getAuthenticatedUser(event)
-    if (!authUser?.tenant_id) {
-      throw createError({ statusCode: 401, statusMessage: 'User has no tenant assigned' })
-    }
-
     const body = await readBody(event)
-    const { code, amount_rappen, categoryCode } = body
+    const { code, amount_rappen, categoryCode, tenant_id: bodyTenantId } = body
 
     if (!code) {
       throw createError({ statusCode: 400, statusMessage: 'Discount code is required' })
@@ -25,7 +20,20 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Amount in rappen is required' })
     }
 
-    logger.debug('🔍 Validating discount code:', code, 'for tenant:', authUser.tenant_id)
+    // Resolve tenant_id from auth or from body (for guest/shop checkout)
+    let tenantId: string | null = null
+    const authUser = await getAuthenticatedUser(event).catch(() => null)
+    if (authUser?.tenant_id) {
+      tenantId = authUser.tenant_id
+    } else if (bodyTenantId) {
+      tenantId = bodyTenantId
+    }
+
+    if (!tenantId) {
+      throw createError({ statusCode: 401, statusMessage: 'User has no tenant assigned' })
+    }
+
+    logger.debug('🔍 Validating discount code:', code, 'for tenant:', tenantId)
 
     const supabaseAdmin = getSupabaseAdmin()
 
@@ -34,7 +42,7 @@ export default defineEventHandler(async (event) => {
       .from('voucher_codes')
       .select('*')
       .ilike('code', code)
-      .eq('tenant_id', authUser.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .maybeSingle()
 
@@ -59,11 +67,42 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      logger.debug('✅ Voucher code valid:', voucherData.id)
+      // Credit-type: adds balance to student wallet — not a checkout discount
+      if (!voucherData.type || voucherData.type === 'credit') {
+        return {
+          isValid: false,
+          discount_amount_rappen: 0,
+          error: 'Dieser Code ist ein Guthaben-Gutschein. Bitte lösen Sie ihn unter "Guthaben" → "Code einlösen" ein.'
+        }
+      }
+
+      // Discount-type: calculate the actual discount amount based on discount_type
+      let discountAmount = 0
+      if (voucherData.discount_type === 'percentage') {
+        discountAmount = Math.round((amount_rappen * voucherData.discount_value) / 100)
+        if (voucherData.max_discount_rappen) {
+          discountAmount = Math.min(discountAmount, voucherData.max_discount_rappen)
+        }
+      } else if (voucherData.discount_type === 'fixed') {
+        // discount_value is stored in rappen
+        discountAmount = voucherData.discount_value || 0
+      }
+
+      // Never exceed the actual cart amount
+      discountAmount = Math.min(discountAmount, amount_rappen)
+
+      logger.debug('✅ Voucher discount code valid:', voucherData.id, 'amount:', discountAmount)
       return {
         isValid: true,
-        discount_amount_rappen: voucherData.credit_amount_rappen,
-        discount: voucherData
+        discount_amount_rappen: discountAmount,
+        discount: {
+          ...voucherData,
+          // Normalize to discounts-compatible shape for frontend
+          discount_value: voucherData.discount_value,
+          min_amount_rappen: voucherData.min_amount_rappen || 0,
+          max_discount_rappen: voucherData.max_discount_rappen || null,
+          is_voucher_code: true
+        }
       }
     }
 
@@ -72,7 +111,7 @@ export default defineEventHandler(async (event) => {
       .from('discounts')
       .select('*')
       .ilike('code', code)
-      .eq('tenant_id', authUser.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .maybeSingle()
 
