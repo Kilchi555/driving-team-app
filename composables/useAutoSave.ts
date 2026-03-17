@@ -175,6 +175,22 @@ export const useAutoSave = <T>(
   const saveDraftToDatabase = async () => {
     if (!canSaveToDatabase.value || isAutoSaving.value) return
     
+    // Skip database save for unauthenticated (guest) users — localStorage only
+    if (process.client) {
+      try {
+        const { getSupabase } = await import('~/utils/supabase')
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          saveToLocalStorage()
+          return
+        }
+      } catch {
+        saveToLocalStorage()
+        return
+      }
+    }
+    
     // Transform data for database - moved outside try block for catch access
     const transformedData = finalConfig.transformForSave 
       ? finalConfig.transformForSave(formData.value)
