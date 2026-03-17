@@ -22,11 +22,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     onResponseError: async ({ response, error, request }) => {
       const status = response?.status
-      const url = (request?.url || '').toLowerCase()
+      // request can be a string (URL) or a Request object — normalize to string
+      const url = (typeof request === 'string' ? request : (request as any)?.url || '').toLowerCase()
 
       // 🚨 CRITICAL: Don't redirect for ANY /api/auth/* endpoints - these are ALWAYS credential errors
       // This includes: login, logout, register, refresh, current-user
-      const isAnyAuthEndpoint = url.includes('/api/auth/') || request?.headers?.['X-Auth-Request'] === 'true'
+      const isAnyAuthEndpoint = url.includes('/api/auth/') || (request as any)?.headers?.['X-Auth-Request'] === 'true'
       
       if (status === 401 && isAnyAuthEndpoint) {
         console.debug('ℹ️ Auth endpoint returned 401 - credential error, let component handle it')
@@ -39,8 +40,19 @@ export default defineNuxtPlugin((nuxtApp) => {
       // Check if this is a booking flow request (should show modal instead of redirecting)
       const route = useRoute()
       const currentPath = route.path
+
+      // 🚨 CRITICAL: Don't redirect if we're already on a login page (/:slug or /login)
+      // A login attempt returning 401 = wrong credentials, NOT an expired session
+      const isOnLoginPage = !currentPath.includes('/customer') && !currentPath.includes('/staff') && !currentPath.includes('/admin') && !currentPath.includes('/booking')
+      if (status === 401 && isOnLoginPage) {
+        console.debug('ℹ️ 401 on login page - wrong credentials, let component handle it')
+        throw createError({
+          statusCode: status,
+          statusMessage: response?.statusText || 'Request failed'
+        })
+      }
       const isBookingAvailabilityPage = currentPath.includes('/booking/availability/')
-      const isBookingFlow = isBookingAvailabilityPage || url.includes('/api/booking/create-appointment') || url.includes('x-booking-flow=true') || request?.headers?.['X-Booking-Flow'] === 'true'
+      const isBookingFlow = isBookingAvailabilityPage || url.includes('/api/booking/create-appointment') || url.includes('x-booking-flow=true') || (request as any)?.headers?.['X-Booking-Flow'] === 'true'
 
       // 🚨 If this is a booking flow request, don't redirect - let component handle it
       if (isBookingFlow && status === 401) {
