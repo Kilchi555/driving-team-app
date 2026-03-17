@@ -2789,7 +2789,7 @@ async function submitCashDeposit() {
     return
   }
 
-  const userId = props.student?.id
+  const userId = props.selectedStudent?.id
   if (!userId) {
     cashDepositError.value = 'Schüler-ID fehlt'
     return
