@@ -868,7 +868,7 @@ const brandPrimary = computed(() => getBrandPrimary())
 const brandBg = computed(() => lightenColor(getBrandPrimary(), 0.93))
 
 const pageBackground = computed(() => ({
-  background: `linear-gradient(135deg, ${getBrandPrimary()} 0%, ${lightenColor(getBrandPrimary(), 0.35)} 100%)`,
+  background: '#ffffff',
   padding: '1rem 0.75rem'
 }))
 
