@@ -470,33 +470,91 @@
                 <svg class="w-7 h-7" :class="studentBalance < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
                 </svg>
-                <div class="flex flex-wrap justify-end gap-1.5">
+                  <!-- Aktionen Dropdown -->
+                <div class="relative">
                   <button
-                    @click="showCashDepositModal = true"
-                    class="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors shadow-sm font-medium whitespace-nowrap"
+                    @click="showPaymentActionsDropdown = !showPaymentActionsDropdown"
+                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium"
                   >
-                    + Bar einzahlen
+                    Aktionen
+                    <svg
+                      class="w-3.5 h-3.5 transition-transform duration-200"
+                      :class="{ 'rotate-180': showPaymentActionsDropdown }"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
                   </button>
-                  <button
-                    @click="showRedeemVoucherModal = true"
-                    class="text-xs px-2.5 py-1 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors shadow-sm font-medium whitespace-nowrap"
+
+                  <!-- Click-outside overlay -->
+                  <div v-if="showPaymentActionsDropdown" class="fixed inset-0 z-40" @click="showPaymentActionsDropdown = false"></div>
+
+                  <!-- Dropdown Menu -->
+                  <Transition
+                    enter-active-class="transition ease-out duration-150"
+                    enter-from-class="opacity-0 scale-95 -translate-y-1"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition ease-in duration-100"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 -translate-y-1"
                   >
-                    🎁 Code einlösen
-                  </button>
-                  <button
-                    @click="openCreditTransactionsModal"
-                    class="text-xs px-2.5 py-1 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium whitespace-nowrap"
-                  >
-                    Verlauf
-                  </button>
-                  <button
-                    v-if="paidPayments.length > 0"
-                    @click="downloadReceipts"
-                    :disabled="isProcessingReceipt"
-                    class="text-xs px-2.5 py-1 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium whitespace-nowrap disabled:opacity-50"
-                  >
-                    {{ isProcessingReceipt ? '…' : '↓ Quittungen' }}
-                  </button>
+                    <div
+                      v-if="showPaymentActionsDropdown"
+                      class="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50"
+                    >
+                      <button
+                        @click="showCashDepositModal = true; showPaymentActionsDropdown = false"
+                        class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-green-100 text-green-600 shrink-0">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                          </svg>
+                        </span>
+                        Bar einzahlen
+                      </button>
+
+                      <button
+                        @click="showRedeemVoucherModal = true; showPaymentActionsDropdown = false"
+                        class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-600 shrink-0 text-base leading-none">
+                          🎁
+                        </span>
+                        Code einlösen
+                      </button>
+
+                      <button
+                        @click="openCreditTransactionsModal(); showPaymentActionsDropdown = false"
+                        class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 text-gray-600 shrink-0">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                        </span>
+                        Verlauf
+                      </button>
+
+                      <button
+                        v-if="paidPayments.length > 0"
+                        @click="downloadReceipts(); showPaymentActionsDropdown = false"
+                        :disabled="isProcessingReceipt"
+                        class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 text-gray-600 shrink-0">
+                          <svg v-if="!isProcessingReceipt" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                        </span>
+                        {{ isProcessingReceipt ? 'Wird erstellt…' : 'Quittungen' }}
+                      </button>
+                    </div>
+                  </Transition>
                 </div>
               </div>
             </div>
@@ -1459,6 +1517,7 @@ const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste un
 
 // ── Cash Deposit ──────────────────────────────────────────
 const showCashDepositModal = ref(false)
+const showPaymentActionsDropdown = ref(false)
 const cashDepositAmount = ref<number | ''>('')
 const cashDepositNote = ref('')
 const cashDepositError = ref('')
