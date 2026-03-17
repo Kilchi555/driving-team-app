@@ -178,8 +178,7 @@ export const generateVoucherEmailContent = (
           
           <h3 style="color: #374151;">So lösen Sie Ihren Gutschein ein:</h3>
           <ol style="color: #6B7280; line-height: 1.8;">
-            <li>Zeigen Sie den Code bei Ihrer nächsten Fahrstunde vor</li>
-            <li>Oder geben Sie den Code im Online-Buchungssystem ein</li>
+            <li>Geben Sie den Code im Online-Buchungssystem ein</li>
             <li>Der Betrag wird automatisch von der Rechnung abgezogen</li>
           </ol>
           
@@ -191,7 +190,7 @@ export const generateVoucherEmailContent = (
         <div style="background: #F9FAFB; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #E5E7EB; border-top: none;">
           <p style="margin: 0; color: #6B7280; font-size: 14px;">
             Bei Fragen wenden Sie sich gerne an ${tenantName}.<br>
-            Viel Erfolg bei Ihrer Führerscheinausbildung! 🚗
+            Viel Erfolg bei Ihrer Fahrausbildung! 🚗
           </p>
         </div>
       </div>
@@ -204,9 +203,8 @@ export const generateVoucherEmailContent = (
       Gültig bis: ${new Date(voucher.valid_until).toLocaleDateString('de-CH')}
       
       So lösen Sie Ihren Gutschein ein:
-      1. Zeigen Sie den Code bei Ihrer nächsten Fahrstunde vor
-      2. Oder geben Sie den Code im Online-Buchungssystem ein
-      3. Der Betrag wird automatisch von der Rechnung abgezogen
+      1. Geben Sie den Code im Online-Buchungssystem ein
+      2. Der Betrag wird automatisch von der Rechnung abgezogen
       
       Bei Fragen wenden Sie sich an ${tenantName}.
     `

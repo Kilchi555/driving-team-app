@@ -1159,10 +1159,10 @@
           </svg>
         </button>
         <h2 class="text-lg font-bold text-gray-900 mb-1">Bar einzahlen</h2>
-        <p class="text-sm text-gray-500 mb-4">Guthaben für <strong>{{ props.selectedStudent?.first_name }} {{ props.selectedStudent?.last_name }}</strong> manuell einzahlen.</p>
+        <p class="text-sm text-gray-500 mb-4"><strong>{{ props.selectedStudent?.first_name }} {{ props.selectedStudent?.last_name }}</strong> hat folgenden Betrag bar bezahlt.</p>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Betrag (CHF)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">CHF</span>
               <input
@@ -1170,20 +1170,11 @@
                 type="number"
                 min="1"
                 step="0.05"
-                placeholder="0.00"
                 class="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Notiz (optional)</label>
-            <input
-              v-model="cashDepositNote"
-              type="text"
-              placeholder="z.B. Bar erhalten von ..."
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
+       
           <p v-if="cashDepositError" class="text-red-600 text-xs">{{ cashDepositError }}</p>
           <div class="flex gap-2 pt-1">
             <button @click="showCashDepositModal = false" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Abbrechen</button>
@@ -1267,7 +1258,6 @@
 import { ref, computed, toRefs, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
-import { useAuthStore } from '~/stores/auth'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import EvaluationModal from '~/components/EvaluationModal.vue'
@@ -2146,9 +2136,8 @@ const loadRatingPoints = async () => {
   if (!props.selectedStudent) return
   
   try {
-    // Get tenant_id from auth store or selected student
-    const authStore = useAuthStore()
-    const tenantId = authStore.userProfile?.tenant_id || props.selectedStudent.tenant_id
+    // Get tenant_id from selected student
+    const tenantId = props.selectedStudent.tenant_id
     
     if (!tenantId) {
       console.warn('⚠️ No tenant_id found for loading rating points')
@@ -2552,8 +2541,7 @@ watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
     // Load tenant branding first
     const { loadTenantBrandingById } = useTenantBranding()
-    const authStore = useAuthStore()
-    const tenantId = authStore.userProfile?.tenant_id || newStudent.tenant_id
+    const tenantId = newStudent.tenant_id
     if (tenantId) {
       loadTenantBrandingById(tenantId)
     }
