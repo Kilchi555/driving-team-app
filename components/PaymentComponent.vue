@@ -222,7 +222,8 @@
         <button
           @click="processPayment"
           :disabled="!canProcessPayment || isLoadingOverlay"
-          class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation font-medium text-base"
+          class="flex-1 text-white py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation font-medium text-base"
+          :style="{ background: tenantPrimaryColor, boxShadow: `0 4px 14px ${tenantPrimaryColor}40` }"
         >
           <span v-if="isLoadingOverlay">
             <span class="animate-spin mr-2">⟳</span>
@@ -230,7 +231,7 @@
           </span>
           <span v-else>
             <span class="mr-2">💳</span>
-            Zahlung abschließen
+            Zahlung abschliessen
           </span>
         </button>
       </div>
@@ -252,6 +253,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePayments } from '~/composables/usePayments'
 import { useDiscounts } from '~/composables/useDiscounts'
+import { useTenant } from '~/composables/useTenant'
 import type { Product, Discount, PaymentMethod, PaymentStatus } from '~/types/payment'
 
 // Props
@@ -279,6 +281,8 @@ const props = withDefaults(defineProps<Props>(), {
     { value: 'wallee', label: 'Online-Zahlung', icon: '💳' }
   ]
 })
+
+const { tenantPrimaryColor } = useTenant()
 
 // Emits
 const emit = defineEmits<{
