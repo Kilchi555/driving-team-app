@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 5: FETCH STUDENT CREDIT ============
     const { data: creditData, error: creditError } = await supabaseAdmin
       .from('student_credits')
-      .select('id, balance_rappen, user_id, tenant_id')
+      .select('id, balance_rappen, pending_withdrawal_rappen, user_id, tenant_id')
       .eq('user_id', requestedStudentId)
       .eq('tenant_id', tenantId)
       .single()
@@ -332,6 +332,8 @@ export default defineEventHandler(async (event) => {
       success: true,
       data: {
         student_balance: creditData?.balance_rappen || 0,
+        student_pending_withdrawal_rappen: creditData?.pending_withdrawal_rappen || 0,
+        student_available_balance: Math.max(0, (creditData?.balance_rappen || 0) - (creditData?.pending_withdrawal_rappen || 0)),
         payments: enrichedPayments
       }
     }

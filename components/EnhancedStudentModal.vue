@@ -442,9 +442,9 @@
         <!-- Payments Tab -->
         <div v-if="activeTab === 'payments'" class="p-4">
           <!-- Student Credit Balance Card -->
-          <div v-if="studentBalance !== undefined" :class="[
+          <div v-if="studentAvailableBalance !== undefined" :class="[
             'mb-4 rounded-lg border p-4',
-            studentBalance < 0 
+            (studentAvailableBalance ?? 0) < 0 
               ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' 
               : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
           ]">
@@ -452,22 +452,25 @@
               <div>
                 <p :class="[
                   'text-xs font-medium mb-1',
-                  studentBalance < 0 ? 'text-red-700' : 'text-green-700'
+                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-700' : 'text-green-700'
                 ]">
-                  {{ studentBalance < 0 ? '⚠️ Offener Betrag' : 'Verfügbares Guthaben' }}
+                  {{ (studentAvailableBalance ?? 0) < 0 ? '⚠️ Offener Betrag' : 'Verfügbares Guthaben' }}
                 </p>
                 <p :class="[
                   'text-2xl font-bold',
-                  studentBalance < 0 ? 'text-red-600' : 'text-green-600'
+                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-600' : 'text-green-600'
                 ]">
-                  CHF {{ (Math.abs(studentBalance) / 100).toFixed(2) }}
+                  CHF {{ (Math.abs(studentAvailableBalance ?? 0) / 100).toFixed(2) }}
                 </p>
-                <p v-if="studentBalance < 0" class="text-xs text-red-600 mt-1">
+                <p v-if="(studentAvailableBalance ?? 0) < 0" class="text-xs text-red-600 mt-1">
                   Wird bei nächster Zahlung verrechnet
+                </p>
+                <p v-if="studentPendingWithdrawalRappen > 0" class="text-xs text-yellow-700 mt-1">
+                  CHF {{ (studentPendingWithdrawalRappen / 100).toFixed(2) }} in Bearbeitung (Auszahlung)
                 </p>
               </div>
               <div class="flex flex-col items-end gap-2">
-                <svg class="w-7 h-7" :class="studentBalance < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-7 h-7" :class="(studentAvailableBalance ?? 0) < 0 ? 'text-red-500' : 'text-green-500'" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
                 </svg>
                   <!-- Aktionen Dropdown -->
@@ -1252,7 +1255,7 @@
   <Teleport to="body">
     <RedeemVoucherModal
       v-if="showRedeemVoucherModal && selectedStudent"
-      :current-balance="studentBalance ?? 0"
+      :current-balance="studentAvailableBalance ?? 0"
       @close="showRedeemVoucherModal = false"
       @success="handleVoucherRedeemed"
     />
@@ -1509,7 +1512,14 @@ const payments = ref<any[]>([])
 const studentDocuments = ref<any[]>([])
 const examResults = ref<any[]>([])
 const cancellationPolicies = ref<any[]>([])
-const studentBalance = ref<number | undefined>(undefined) // ✅ NEU: Student credit balance
+const studentBalance = ref<number | undefined>(undefined) // ✅ NEU: Student credit balance (raw)
+const studentPendingWithdrawalRappen = ref(0) // Ausstehende Auszahlungen
+
+const studentAvailableBalance = computed(() => {
+  if (studentBalance.value === undefined) return undefined
+  if (studentBalance.value < 0) return studentBalance.value
+  return Math.max(0, studentBalance.value - studentPendingWithdrawalRappen.value)
+})
 const userBillingAddresses = ref<any[]>([]) // ✅ NEU: Firmen-Rechnungsadressen für diesen User
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
@@ -2431,11 +2441,12 @@ const loadPayments = async () => {
     }
     
     // Extract data from API response
-    const { student_balance, payments: paymentsData } = response.data
+    const { student_balance, student_pending_withdrawal_rappen, payments: paymentsData } = response.data
     
     // Update student balance
     studentBalance.value = student_balance || 0
-    logger.debug('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF')
+    studentPendingWithdrawalRappen.value = student_pending_withdrawal_rappen || 0
+    logger.debug('💰 Student balance loaded:', ((studentBalance.value || 0) / 100).toFixed(2), 'CHF, pending:', ((studentPendingWithdrawalRappen.value) / 100).toFixed(2), 'CHF')
     
     // ✅ API returns fully enriched payments with all related data
     payments.value = paymentsData || []
