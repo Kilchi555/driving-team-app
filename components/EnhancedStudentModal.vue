@@ -443,22 +443,22 @@
         <div v-if="activeTab === 'payments'" class="p-4">
           <!-- Student Credit Balance Card -->
           <div v-if="studentAvailableBalance !== undefined" :class="[
-            'mb-4 rounded-lg border p-4',
+            'mb-4 rounded-xl border shadow-sm p-4',
             (studentAvailableBalance ?? 0) < 0 
               ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' 
               : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
           ]">
             <div class="flex items-center justify-between gap-4">
-              <div>
+              <div class="flex-1">
                 <p :class="[
-                  'text-xs font-medium mb-1',
+                  'text-sm font-medium mb-1',
                   (studentAvailableBalance ?? 0) < 0 ? 'text-red-700' : 'text-green-700'
                 ]">
                   {{ (studentAvailableBalance ?? 0) < 0 ? '⚠️ Offener Betrag' : 'Verfügbares Guthaben' }}
                 </p>
                 <p :class="[
                   'text-2xl font-bold',
-                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-600' : 'text-green-600'
+                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-900' : 'text-green-900'
                 ]">
                   CHF {{ (Math.abs(studentAvailableBalance ?? 0) / 100).toFixed(2) }}
                 </p>
@@ -469,12 +469,17 @@
                   CHF {{ (studentPendingWithdrawalRappen / 100).toFixed(2) }} in Bearbeitung (Auszahlung)
                 </p>
               </div>
-              <div class="flex flex-col items-end gap-2">
-                  <!-- Aktionen Dropdown -->
+              <div class="flex items-center gap-3 relative">
+                <!-- Aktionen Dropdown -->
                 <div class="relative">
                   <button
                     @click="showPaymentActionsDropdown = !showPaymentActionsDropdown"
-                    class="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium"
+                    :class="[
+                      'inline-flex items-center gap-1.5 px-3 py-2 bg-white text-sm font-medium rounded-lg transition-colors shadow-sm',
+                      (studentAvailableBalance ?? 0) < 0
+                        ? 'border border-red-300 text-red-700 hover:bg-red-50'
+                        : 'border border-green-300 text-green-700 hover:bg-green-50'
+                    ]"
                   >
                     Aktionen
                     <svg
@@ -757,7 +762,20 @@
                 </div>
                 
                 <!-- Product Sales & Discounts Section -->
-                <div v-if="(payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || payment.discount_amount_rappen > 0 || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0) || (payment.credit_used_rappen && payment.credit_used_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
+                <div v-if="payment.lesson_price_rappen > 0 || (payment.product_sales && payment.product_sales.length > 0) || payment.discount_sale || payment.discount_amount_rappen > 0 || (payment.admin_fee_rappen && payment.admin_fee_rappen > 0) || (payment.credit_used_rappen && payment.credit_used_rappen > 0)" class="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
+                  <!-- Lesson Price -->
+                  <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between items-center">
+                    <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
+                      Fahrstunde
+                    </span>
+                    <span :class="[
+                      'font-semibold',
+                      payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-900'
+                    ]">
+                      {{ (payment.lesson_price_rappen / 100).toFixed(2) }} CHF
+                    </span>
+                  </div>
+
                   <!-- Product Sales -->
                   <div v-for="productSale in (payment.product_sales || [])" :key="productSale.id" class="flex justify-between items-center">
                     <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
