@@ -1033,17 +1033,22 @@ watch(() => props.isOpen, (isOpen) => {
     logger.debug('🔄 EvaluationModal - loading data...')
     // Kleine Verzögerung um sicherzustellen dass alle Props gesetzt sind
     nextTick(async () => {
+      await loadRatingColors()
       await loadAllCriteria()
       
       // Versuche zuerst die Bewertungen für den aktuellen Termin zu laden
       const hasCurrentEvaluations = await loadCurrentAppointmentEvaluations()
       
-      // Wenn keine aktuellen Bewertungen vorhanden sind, lade die Historie
-      if (!hasCurrentEvaluations) {
-        logger.debug('📚 No current evaluations found, loading history...')
-        await loadStudentEvaluationHistory()
-      } else {
-        logger.debug('✅ Current evaluations loaded, skipping history')
+      // Lade immer die Historie für Dropdown-Farben (allCriteriaRatings)
+      // Wenn aktuelle Bewertungen vorhanden, werden sie danach wieder gemergt
+      logger.debug('📚 Loading history for dropdown colors...')
+      await loadStudentEvaluationHistory()
+      
+      // Wenn aktuelle Bewertungen vorhanden, überschreibe criteriaRatings wieder
+      // damit die aktuelle Session korrekt angezeigt wird
+      if (hasCurrentEvaluations) {
+        logger.debug('✅ Re-applying current evaluations on top of history')
+        await loadCurrentAppointmentEvaluations()
       }
     })
   } else {
@@ -1097,6 +1102,26 @@ watch(() => props.appointment?.id, (newAppointmentId) => {
 // ✅ NEU: Helper Funktionen für Rating-Farben
 const allRatings = ref<any[]>([])
 
+const loadRatingColors = async () => {
+  if (allRatings.value.length > 0) return // bereits geladen
+  try {
+    const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
+    if (!tenantId) return
+
+    const response = await $fetch('/api/staff/get-rating-points', {
+      method: 'POST',
+      body: { tenantId }
+    }) as any
+
+    if (response?.success) {
+      allRatings.value = response.data || []
+      logger.debug('✅ Ratings loaded:', allRatings.value.length)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Failed to load ratings:', err)
+  }
+}
+
 const getRatingColor = (ratingValue: number): string => {
   const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
   return rating?.color || '#999999'
@@ -1113,27 +1138,7 @@ const getAllRatingsForCriteria = (criteriaId: string): number[] => {
 }
 
 onMounted(async () => {
-  try {
-    const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
-    if (!tenantId) {
-      logger.warn('⚠️ No tenant ID available for loading ratings')
-      return
-    }
-    
-    const response = await $fetch('/api/staff/get-rating-points', {
-      method: 'POST',
-      body: { tenantId }
-    }) as any
-    
-    if (response?.success) {
-      allRatings.value = response.data || []
-      logger.debug('✅ Ratings loaded:', allRatings.value.length)
-    } else {
-      logger.warn('⚠️ Failed to load ratings:', response?.error)
-    }
-  } catch (err) {
-    logger.warn('⚠️ Failed to load ratings:', err)
-  }
+  await loadRatingColors()
 })
 </script>
 
