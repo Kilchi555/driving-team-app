@@ -275,6 +275,11 @@ interface Props {
   paymentMethods?: { value: PaymentMethod; label: string; icon: string }[]
   customerEmail?: string
   customerName?: string
+  customerPhone?: string
+  customerStreet?: string
+  customerStreetNumber?: string
+  customerZip?: string
+  customerCity?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -509,7 +514,14 @@ const processPayment = async () => {
           Array.from(appliedDiscounts.value.values()),
           customerEmail,
           customerName,
-          props.tenantId
+          props.tenantId,
+          {
+            phone: props.customerPhone,
+            street: props.customerStreet,
+            streetNumber: props.customerStreetNumber,
+            zip: props.customerZip,
+            city: props.customerCity
+          }
         )
       } else {
       payment = await createStandalonePayment(

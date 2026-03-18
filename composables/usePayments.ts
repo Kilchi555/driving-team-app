@@ -287,7 +287,8 @@ export const usePayments = () => {
     discounts: Discount[],
     customerEmail: string,
     customerName: string,
-    providedTenantId?: string
+    providedTenantId?: string,
+    customerDetails?: { phone?: string; street?: string; streetNumber?: string; zip?: string; city?: string }
   ): Promise<Payment & { payment_url: string }> => {
     isProcessing.value = true
 
@@ -369,7 +370,14 @@ export const usePayments = () => {
           products: products,
           discounts: discounts,
           customer_email: customerEmail,
-          customer_name: customerName
+          customer_name: customerName,
+          customer_phone: customerDetails?.phone || undefined,
+          customer_address: customerDetails ? {
+            street: customerDetails.street,
+            street_number: customerDetails.streetNumber,
+            zip: customerDetails.zip,
+            city: customerDetails.city
+          } : undefined
         }
       }
 

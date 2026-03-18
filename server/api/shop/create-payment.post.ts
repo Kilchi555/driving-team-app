@@ -4,11 +4,11 @@
 // tenantId must be provided in body (validated against DB)
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getSupabaseAnon } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseAnon()
 
   try {
     const body = await readBody(event)
