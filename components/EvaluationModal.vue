@@ -1026,6 +1026,43 @@ watch(showDropdown, (isOpen) => {
   }
 })
 
+// ✅ Helper Funktionen für Rating-Farben (müssen VOR den Watches definiert sein)
+const allRatings = ref<any[]>([])
+
+const loadRatingColors = async () => {
+  if (allRatings.value.length > 0) return // bereits geladen
+  try {
+    const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
+    if (!tenantId) return
+
+    const response = await $fetch('/api/staff/get-rating-points', {
+      method: 'POST',
+      body: { tenantId }
+    }) as any
+
+    if (response?.success) {
+      allRatings.value = response.data || []
+      logger.debug('✅ Ratings loaded:', allRatings.value.length)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Failed to load ratings:', err)
+  }
+}
+
+const getRatingColor = (ratingValue: number): string => {
+  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
+  return rating?.color || '#999999'
+}
+
+const getRatingLabel = (ratingValue: number): string => {
+  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
+  return rating?.label || 'Unbekannt'
+}
+
+const getAllRatingsForCriteria = (criteriaId: string): number[] => {
+  return allCriteriaRatings.value[criteriaId] || []
+}
+
 // Watchers
 watch(() => props.isOpen, (isOpen) => {
   
@@ -1098,44 +1135,6 @@ watch(() => props.appointment?.id, (newAppointmentId) => {
     newlyRatedCriteria.value = []
   }
 }, { immediate: true })
-
-// ✅ NEU: Helper Funktionen für Rating-Farben
-const allRatings = ref<any[]>([])
-
-const loadRatingColors = async () => {
-  if (allRatings.value.length > 0) return // bereits geladen
-  try {
-    const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
-    if (!tenantId) return
-
-    const response = await $fetch('/api/staff/get-rating-points', {
-      method: 'POST',
-      body: { tenantId }
-    }) as any
-
-    if (response?.success) {
-      allRatings.value = response.data || []
-      logger.debug('✅ Ratings loaded:', allRatings.value.length)
-    }
-  } catch (err) {
-    logger.warn('⚠️ Failed to load ratings:', err)
-  }
-}
-
-const getRatingColor = (ratingValue: number): string => {
-  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
-  return rating?.color || '#999999'
-}
-
-const getRatingLabel = (ratingValue: number): string => {
-  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
-  return rating?.label || 'Unbekannt'
-}
-
-// ✅ NEU: Funktion um alle Bewertungen für ein Kriterium zu bekommen
-const getAllRatingsForCriteria = (criteriaId: string): number[] => {
-  return allCriteriaRatings.value[criteriaId] || []
-}
 
 onMounted(async () => {
   await loadRatingColors()
