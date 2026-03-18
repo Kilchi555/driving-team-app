@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabaseServerWithSession, getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -10,19 +10,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const token = authHeader.replace('Bearer ', '')
-
-  // Authenticated client — RLS runs as the logged-in user
-  const supabaseUser = getSupabaseServerWithSession(event)
-
-  // Verify token via admin client (doesn't affect RLS context)
   const supabaseAdmin = getSupabaseAdmin()
+
+  // Verify token
   const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !authUser) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
   // Get user profile
-  const { data: userProfile } = await supabaseUser
+  const { data: userProfile } = await supabaseAdmin
     .from('users')
     .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
@@ -32,7 +29,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'User profile not found' })
   }
 
-  // Only staff/admin can deposit for other users
+  // Only staff/admin can deposit
   const allowedRoles = ['staff', 'admin', 'super_admin', 'tenant_admin', 'instructor']
   if (!allowedRoles.includes(userProfile.role)) {
     throw createError({ statusCode: 403, message: 'Insufficient permissions' })
@@ -50,7 +47,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get current credit
-  const { data: currentCredit } = await supabaseUser
+  const { data: currentCredit } = await supabaseAdmin
     .from('student_credits')
     .select('balance_rappen')
     .eq('user_id', user_id)
@@ -61,8 +58,8 @@ export default defineEventHandler(async (event) => {
   const newBalance = currentBalance + amount_rappen
 
   try {
-    // Upsert student credit (RLS allows staff to write within their tenant)
-    const { error: creditError } = await supabaseUser
+    // Upsert student credit
+    const { error: creditError } = await supabaseAdmin
       .from('student_credits')
       .upsert({
         user_id,
@@ -74,8 +71,8 @@ export default defineEventHandler(async (event) => {
 
     if (creditError) throw creditError
 
-    // Log transaction
-    const { error: txError } = await supabaseUser
+    // Log credit transaction
+    const { error: txError } = await supabaseAdmin
       .from('credit_transactions')
       .insert({
         user_id,
@@ -93,8 +90,8 @@ export default defineEventHandler(async (event) => {
 
     if (txError) throw txError
 
-    // Also record in cash_transactions so it appears in the staff cash register
-    const { error: cashTxError } = await supabaseUser
+    // Record in cash_transactions so it appears in the staff cash register
+    const { error: cashTxError } = await supabaseAdmin
       .from('cash_transactions')
       .insert({
         instructor_id: userProfile.id,
@@ -111,7 +108,7 @@ export default defineEventHandler(async (event) => {
       })
 
     if (cashTxError) {
-      logger.warn('⚠️ Could not record in cash_transactions:', cashTxError)
+      logger.error('⚠️ Could not record in cash_transactions:', cashTxError)
       // Non-fatal — credit deposit itself succeeded
     }
 

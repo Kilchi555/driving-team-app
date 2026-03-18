@@ -441,6 +441,18 @@
 
         <!-- Payments Tab -->
         <div v-if="activeTab === 'payments'" class="p-4">
+
+          <!-- Receipt Loading Banner -->
+          <Transition name="fade">
+            <div v-if="isProcessingReceipt" class="mb-4 flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-sm shadow-sm">
+              <svg class="w-4 h-4 animate-spin shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              <span>Quittung wird erstellt, bitte warten…</span>
+            </div>
+          </Transition>
+
           <!-- Student Credit Balance Card -->
           <div v-if="studentAvailableBalance !== undefined" :class="[
             'mb-4 rounded-xl border shadow-sm p-4',
@@ -448,7 +460,7 @@
               ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' 
               : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
           ]">
-            <div class="flex items-center justify-between gap-4">
+            <div class="flex items-start justify-between gap-4">
               <div class="flex-1">
                 <p :class="[
                   'text-sm font-medium mb-1',
@@ -692,24 +704,38 @@
               >
                 <!-- Header Row with Main Info -->
                 <div class="p-4">
-                  <!-- Main Content -->
-                  <div class="flex-1 min-w-0">
-                    <!-- Amount + Status Row -->
-                    <div class="flex items-center justify-between gap-3 mb-2">
-                      <div class="flex items-center gap-2">
+                  <div class="flex items-start gap-3">
+                    <!-- Left column: amount + description (narrower) -->
+                    <div class="flex-1 min-w-0">
+                      <!-- Amount -->
+                      <div class="flex items-baseline gap-1.5 mb-0.5">
                         <span :class="[
-                          'text-xl font-bold',
+                          'text-xl font-bold leading-none',
                           payment.appointment?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
                         ]">
                           {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
                         </span>
                         <span class="text-xs font-semibold text-gray-500">CHF</span>
                       </div>
-                      
-                      <!-- Status Badges on Right -->
-                      <!-- Combined Status Badge -->
+
+                      <!-- Line 1: Service type + category -->
+                      <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-800'" class="text-sm font-medium leading-snug truncate">
+                        {{ payment.appointment.event_type_label || payment.appointment.event_types?.name || payment.appointment.event_type_code || 'Termin' }}<span v-if="payment.appointment?.type"> · Kat. {{ payment.appointment.type }}</span>
+                      </div>
+
+                      <!-- Line 2: Date + instructor (smaller, lighter) -->
+                      <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'" class="text-xs font-normal leading-snug mt-0.5">
+                        {{ formatLocalDate(payment.appointment?.start_time || payment.created_at) }}
+                        {{ formatLocalTime(payment.appointment?.start_time || payment.created_at) }}
+                        <template v-if="payment.appointment?.duration_minutes"> · {{ payment.appointment.duration_minutes }} min</template>
+                        <template v-if="payment.appointment?.staff"> · {{ payment.appointment.staff.first_name }}</template>
+                      </div>
+                    </div>
+
+                    <!-- Right column: status badge (wider, right-aligned) -->
+                    <div class="shrink-0">
                       <div :class="[
-                        'px-3 py-1 text-xs font-semibold rounded-full flex flex-col items-end',
+                        'px-3 py-1 text-xs font-semibold rounded-full flex flex-col items-end whitespace-nowrap',
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
@@ -720,43 +746,23 @@
                         'bg-gray-100 text-gray-700'
                       ]">
                         <span>
-                          {{ payment.appointment?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'Abgesagt • Rückvergütet' :
-                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'Abgesagt • Bezahlt' :
-                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt • Unbezahlt' :
-                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt • Fehlgeschlagen' :
+                          {{ payment.appointment?.status === 'cancelled' && payment.payment_status === 'refunded' ? 'Abgesagt · Rückvergütet' :
+                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'Abgesagt · Bezahlt' :
+                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt · Unbezahlt' :
+                             payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt · Fehlgeschlagen' :
                              payment.payment_status === 'completed' ? 'Bezahlt' :
                              payment.payment_status === 'pending' ? 'Unbezahlt' :
                              payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
                              payment.payment_status === 'refunded' ? 'Rückvergütet' :
                              payment.payment_status }}
                         </span>
-                        <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="text-xs font-normal opacity-90 whitespace-nowrap">
+                        <span v-if="payment.payment_status === 'completed' && payment.paid_at" class="text-xs font-normal opacity-75 mt-0.5">
                           {{ formatLocalDate(payment.paid_at) }} {{ formatLocalTime(payment.paid_at) }}
                         </span>
-                        <span v-if="payment.payment_status === 'refunded' && payment.refunded_at" class="text-xs font-normal opacity-90 whitespace-nowrap">
+                        <span v-if="payment.payment_status === 'refunded' && payment.refunded_at" class="text-xs font-normal opacity-75 mt-0.5">
                           {{ formatLocalDate(payment.refunded_at) }} {{ formatLocalTime(payment.refunded_at) }}
                         </span>
                       </div>
-                    </div>
-                    
-                    <!-- Date and Time -->
-                    <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'" class="text-xs">
-                      <span class="font-medium">{{ formatLocalDate(payment.appointment?.start_time || payment.created_at) }}</span>
-                      <span class="mx-1">•</span>
-                      <span>{{ formatLocalTime(payment.appointment?.start_time || payment.created_at) }} Uhr</span>
-                      <span v-if="payment.appointment?.duration_minutes" class="mx-1">•</span>
-                      <span v-if="payment.appointment?.duration_minutes" class="font-medium">{{ payment.appointment.duration_minutes }} min</span>
-                    </div>
-                    
-                    <!-- Service Description (on new line) -->
-                    <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-700'" class="text-sm font-medium">
-                      {{ payment.appointment.event_type_label || payment.appointment.event_types?.name || payment.appointment.event_type_code || 'Termin' }}
-                      <span v-if="payment.appointment?.type" class="font-normal">
-                        Kat. {{ payment.appointment.type }}
-                      </span>
-                      <span v-if="payment.appointment.staff" class="font-normal text-gray-600">
-                        mit {{ payment.appointment.staff.first_name }}
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -1179,13 +1185,14 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
             <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">CHF</span>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">CHF</span>
               <input
                 v-model="cashDepositAmount"
                 type="number"
                 min="1"
                 step="0.05"
-                class="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="0.00"
+                class="w-full pl-14 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
           </div>

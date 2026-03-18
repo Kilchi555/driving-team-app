@@ -17,7 +17,13 @@ async function getPuppeteer() {
 }
 let chromiumModule: any
 async function getChromium() {
-  if (!chromiumModule) { chromiumModule = (await import('@sparticuz/chromium')).default }
+  if (!chromiumModule) {
+    try {
+      chromiumModule = (await import('@sparticuz/chromium')).default
+    } catch {
+      throw new Error('@sparticuz/chromium is not available in this environment (local dev). Set USE_SPARTICUZ_CHROMIUM=true only in production.')
+    }
+  }
   return chromiumModule
 }
 
@@ -100,19 +106,25 @@ export default defineEventHandler(async (event) => {
 
     // ECHTES PDF mit Puppeteer rendern (mit Vercel Chromium Support)
     const { default: Puppeteer } = await getPuppeteer()
-    const chromium = await getChromium()
 
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.USE_SPARTICUZ_CHROMIUM
-    const browser = await Puppeteer.launch(isProduction ? {
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    } : {
-      headless: 'new',
-      pipe: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-    })
+    let launchOptions: any
+    if (isProduction) {
+      const chromium = await getChromium()
+      launchOptions = {
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      }
+    } else {
+      launchOptions = {
+        headless: 'new',
+        pipe: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      }
+    }
+    const browser = await Puppeteer.launch(launchOptions)
     
     const page = await browser.newPage()
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
