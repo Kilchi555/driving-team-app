@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { logger } from '~/utils/logger'
 import type { Discount } from '~/types/payment'
 
-export interface DiscountCode {
+interface LocalDiscountCode {
   id: string
   name: string
   code?: string
@@ -26,14 +26,14 @@ export interface DiscountCode {
 
 export interface DiscountValidationResult {
   isValid: boolean
-  discount?: DiscountCode
+  discount?: LocalDiscountCode
   discount_amount_rappen: number
   error?: string
 }
 
 export const useDiscounts = () => {
   // State
-  const discounts = ref<DiscountCode[]>([])
+  const discounts = ref<LocalDiscountCode[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -168,7 +168,7 @@ export const useDiscounts = () => {
     }
   }
 
-  const createDiscount = async (discountData: Partial<DiscountCode>) => {
+  const createDiscount = async (discountData: Partial<LocalDiscountCode>) => {
     try {
       logger.debug('🔄 Creating discount via API')
       
@@ -192,7 +192,7 @@ export const useDiscounts = () => {
     }
   }
 
-  const updateDiscount = async (id: string, updates: Partial<DiscountCode>) => {
+  const updateDiscount = async (id: string, updates: Partial<LocalDiscountCode>) => {
     try {
       logger.debug('🔄 Updating discount via API:', id)
       

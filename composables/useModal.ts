@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export const useModal = () => {
+export const useAppModal = () => {
   const isOpen = ref(false)
 
   const open = () => {

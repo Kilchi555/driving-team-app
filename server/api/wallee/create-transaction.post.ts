@@ -26,14 +26,34 @@ export default defineEventHandler(async (event) => {
       failedUrl
     } = body
 
-    if (!orderId || !amount || !customerEmail || !customerName || !tenantId) {
-      throw createError({ statusCode: 400, message: 'Pflichtfelder fehlen: orderId, amount, customerEmail, customerName, tenantId' })
+    if (!orderId || !amount || !customerEmail || !customerName) {
+      throw createError({ statusCode: 400, message: 'Pflichtfelder fehlen: orderId, amount, customerEmail, customerName' })
+    }
+    if (typeof amount !== 'number' || amount <= 0) {
+      throw createError({ statusCode: 400, message: 'amount muss eine positive Zahl sein' })
+    }
+
+    // Keep endpoint resilient for public callers:
+    // if tenantId is missing in client payload, derive it from the payment record.
+    let resolvedTenantId = tenantId
+    if (!resolvedTenantId) {
+      const { data: paymentData, error: paymentLookupError } = await supabase
+        .from('payments')
+        .select('tenant_id')
+        .eq('id', orderId)
+        .maybeSingle()
+
+      if (paymentLookupError || !paymentData?.tenant_id) {
+        throw createError({ statusCode: 400, message: 'tenantId fehlt und konnte nicht aus payment ermittelt werden' })
+      }
+      resolvedTenantId = paymentData.tenant_id
+      logger.debug('ℹ️ Resolved tenantId from payment:', { orderId, tenantId: resolvedTenantId })
     }
 
     // ── Wallee config for this tenant ─────────────────────
     let walleeConfig: any
     try {
-      walleeConfig = getWalleeConfigForTenant(tenantId)
+      walleeConfig = getWalleeConfigForTenant(resolvedTenantId)
     } catch (e: any) {
       throw createError({ statusCode: 500, message: `Wallee nicht konfiguriert für diesen Tenant: ${e.message}` })
     }
@@ -75,7 +95,7 @@ export default defineEventHandler(async (event) => {
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: customerEmail,
-      customerId: `dt-${tenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
+      customerId: `dt-${resolvedTenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
       shippingAddress: null,
       billingAddress: null,
       deviceSessionIdentifier: null,
@@ -84,7 +104,7 @@ export default defineEventHandler(async (event) => {
       failedUrl: resolvedFailedUrl
     }
 
-    logger.debug('💳 Creating Wallee transaction for shop order:', { orderId, amount, customerEmail, tenantId })
+    logger.debug('💳 Creating Wallee transaction for shop order:', { orderId, amount, customerEmail, tenantId: resolvedTenantId })
 
     let createdTransaction: any
     try {

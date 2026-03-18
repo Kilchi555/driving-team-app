@@ -30,7 +30,7 @@ interface ValidationResult {
 /**
  * Extrahiert PLZ aus einer Adresse
  */
-export function extractPLZFromAddress(address: string): string | null {
+function extractPLZFromAddress(address: string): string | null {
   if (!address) return null
   
   // Suche nach 4-stelliger Zahl (Schweizer PLZ)

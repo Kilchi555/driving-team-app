@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "sh -c 'ulimit -n 65536 && nuxt dev --no-fork'",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
@@ -67,5 +67,8 @@
   "bugs": {
     "url": "https://github.com/Kilchi555/driving-team-app/issues"
   },
-  "homepage": "https://github.com/Kilchi555/driving-team-app#readme"
+  "homepage": "https://github.com/Kilchi555/driving-team-app#readme",
+  "overrides": {
+    "chokidar": "^3"
+  }
 }

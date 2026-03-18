@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
-import { sanitizeString, validatePassword, validateEmail } from '~/server/utils/validators'
+import { sanitizeString, validateBasicPassword, validateEmail } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Disposable email check passed')
 
     // ✅ LAYER 5: Password validation
-    const passwordValidation = validatePassword(password)
+    const passwordValidation = validateBasicPassword(password)
     if (!passwordValidation.valid) {
       throw createError({
         statusCode: 400,

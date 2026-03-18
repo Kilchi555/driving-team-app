@@ -7,7 +7,7 @@ import { logAudit } from '~/server/utils/audit'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import {
   validateRequiredString,
-  validatePassword,
+  validateBasicPassword,
   validateEmail,
   validateUUID,
   sanitizeString,
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
       errors.email = 'Ungültige E-Mail-Adresse'
     }
     
-    const passwordValidation = validatePassword(password)
+    const passwordValidation = validateBasicPassword(password)
     if (!passwordValidation.valid) {
       errors.password = passwordValidation.message!
     }

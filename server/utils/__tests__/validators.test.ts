@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest'
 import {
   sanitizeString,
   validateEmail,
-  validatePassword,
+  validateBasicPassword,
   validateUUID,
   validateRequiredString,
   validatePositiveNumber,
@@ -80,45 +80,45 @@ describe('String Validators', () => {
     })
   })
 
-  describe('validatePassword', () => {
+  describe('validateBasicPassword', () => {
     it('should accept strong passwords with special characters', () => {
-      const result = validatePassword('SecurePass123!')
+      const result = validateBasicPassword('SecurePass123!')
       expect(result.valid).toBe(true)
     })
 
     it('should reject passwords without uppercase', () => {
-      const result = validatePassword('securepass123!')
+      const result = validateBasicPassword('securepass123!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Großbuchstaben')
     })
 
     it('should reject passwords without lowercase', () => {
-      const result = validatePassword('SECUREPASS123!')
+      const result = validateBasicPassword('SECUREPASS123!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Kleinbuchstaben')
     })
 
     it('should reject passwords without numbers', () => {
-      const result = validatePassword('SecurePassword!')
+      const result = validateBasicPassword('SecurePassword!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Zahlen')
     })
 
     it('should reject passwords without special characters', () => {
-      const result = validatePassword('SecurePassword123')
+      const result = validateBasicPassword('SecurePassword123')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('Sonderzeichen')
     })
 
     it('should reject passwords shorter than 12 chars', () => {
-      const result = validatePassword('Pass12!')
+      const result = validateBasicPassword('Pass12!')
       expect(result.valid).toBe(false)
       expect(result.message).toContain('mindestens 12')
     })
 
     it('should reject null/undefined', () => {
-      expect(validatePassword(null).valid).toBe(false)
-      expect(validatePassword(undefined).valid).toBe(false)
+      expect(validateBasicPassword(null).valid).toBe(false)
+      expect(validateBasicPassword(undefined).valid).toBe(false)
     })
   })
 

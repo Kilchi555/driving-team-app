@@ -109,7 +109,7 @@ export const usePaymentMethods = () => {
   }
 }
 
-export const useCompanyBilling = () => {
+export const useBillingAddresses = () => {
   const billingAddresses = ref<CompanyBillingAddress[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)

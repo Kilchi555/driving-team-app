@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { validateTravelTimeBetweenAppointments, isWithinTimeWindows, extractPLZFromAddress, parseTimeWindows } from '~/utils/travelTimeValidation'
+import { validateTravelTimeBetweenAppointments, isWithinTimeWindows, parseTimeWindows } from '~/utils/travelTimeValidation'
+import { extractPLZFromAddress } from '~/utils/postalCodeUtils'
 
 // Types
 interface Staff {

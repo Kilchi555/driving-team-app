@@ -98,7 +98,7 @@ export const calculateCancellationCharges = (
     
     // Create invoice description
     const invoiceDescription = shouldCreateInvoice 
-      ? `Stornogebühr für Termin am ${formatDate(appointmentDate)} (${calculation.chargePercentage}% von ${formatCurrency(basePrice)})`
+      ? `Stornogebühr für Termin am ${formatPolicyDate(appointmentDate)} (${calculation.chargePercentage}% von ${formatCurrency(basePrice)})`
       : ''
     
     return {
@@ -161,7 +161,7 @@ export const calculateCancellationCharges = (
 
   // Create invoice description
   const invoiceDescription = shouldCreateInvoice 
-    ? `Stornogebühr für Termin am ${formatDate(appointmentDate)} (${calculation.chargePercentage}% von ${formatCurrency(basePrice)})`
+    ? `Stornogebühr für Termin am ${formatPolicyDate(appointmentDate)} (${calculation.chargePercentage}% von ${formatCurrency(basePrice)})`
     : ''
 
   return {
@@ -268,7 +268,7 @@ export const formatCurrency = (rappen: number): string => {
 /**
  * Format date for display
  */
-export const formatDate = (date: Date): string => {
+const formatPolicyDate = (date: Date): string => {
   return date.toLocaleDateString('de-CH', {
     day: '2-digit',
     month: '2-digit',
@@ -421,7 +421,7 @@ export const createCancellationFeeInvoice = async (
     const invoiceItemData = {
       invoice_id: invoice.id,
       appointment_id: appointmentData.id,
-      appointment_title: `Stornogebühr - ${formatDate(new Date(appointmentData.start_time))}`,
+      appointment_title: `Stornogebühr - ${formatPolicyDate(new Date(appointmentData.start_time))}`,
       appointment_date: appointmentData.start_time,
       appointment_duration_minutes: appointmentData.duration_minutes,
       product_name: 'Stornogebühr',

@@ -8,6 +8,23 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: false },
   ssr: false,
+  // Avoid watching thousands of non-app files in repository root.
+  ignore: [
+    '**/*.sql',
+    '**/*.md',
+    '**/*.backup',
+    '**/*.txt',
+    '**/*.tar.gz',
+    '**/node_modules/**',
+    '**/.git/**',
+    '**/.cursor/**',
+    '**/.nuxt/**',
+    '**/.output/**',
+    '**/migrations/**',
+    '**/sql_migrations/**',
+    '**/database/**',
+    '**/agent-transcripts/**',
+  ],
   
   // --- Module Configuration ---
   modules: [
@@ -50,8 +67,9 @@ export default defineNuxtConfig({
   // --- Nitro Configuration ---
   nitro: {
     experimental: {
-      wasm: true
+      wasm: process.env.NODE_ENV === 'production'
     },
+    workerThreads: false,
     externals: {
       external: ['puppeteer-core', '@sparticuz/chromium']
     },
@@ -74,11 +92,51 @@ export default defineNuxtConfig({
   // --- Vite Configuration ---
   vite: {
     server: {
+      watch: {
+        usePolling: true,
+        interval: 800,
+        ignored: [
+          '**/*.sql',
+          '**/*.md',
+          '**/*.backup',
+          '**/*.txt',
+          '**/*.tar.gz',
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.cursor/**',
+          '**/.nuxt/**',
+          '**/.output/**',
+          '**/migrations/**',
+          '**/sql_migrations/**',
+          '**/database/**',
+        ]
+      },
       allowedHosts: [
         '.ngrok-free.dev',
         '.ngrok.io'
       ]
     }
+  },
+  watchers: {
+    chokidar: {
+      usePolling: true,
+      interval: 800,
+      ignored: [
+        '**/*.sql',
+        '**/*.md',
+        '**/*.backup',
+        '**/*.txt',
+        '**/*.tar.gz',
+        '**/node_modules/**',
+        '**/.git/**',
+        '**/.cursor/**',
+        '**/.nuxt/**',
+        '**/.output/**',
+        '**/migrations/**',
+        '**/sql_migrations/**',
+        '**/database/**',
+      ],
+    },
   },
   
   experimental: {
