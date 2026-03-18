@@ -65,11 +65,11 @@ export default defineEventHandler(async (event) => {
       // Check if the referred user has a completed payment linked to an appointment
       const { data: completedPayment } = await supabase
         .from('payments')
-        .select('id, appointment_id, tenant_id')
+        .select('id, appointment_id, course_registration_id, tenant_id')
         .eq('user_id', referral.referred_user_id)
         .eq('tenant_id', referral.tenant_id)
         .eq('payment_status', 'completed')
-        .not('appointment_id', 'is', null)
+        .or('appointment_id.not.is.null,course_registration_id.not.is.null')
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle()
@@ -79,14 +79,45 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
+      // Fetch driving category from appointment if available
+      let drivingCategory: string | null = null
+      let courseId: string | null = null
+      if (completedPayment.appointment_id) {
+        try {
+          const { data: appt } = await supabase
+            .from('appointments')
+            .select('type')
+            .eq('id', completedPayment.appointment_id)
+            .maybeSingle()
+          drivingCategory = appt?.type ?? null
+        } catch {
+          // non-fatal
+        }
+      } else if (completedPayment.course_registration_id) {
+        try {
+          const { data: reg } = await supabase
+            .from('course_registrations')
+            .select('course_id, courses(category)')
+            .eq('id', completedPayment.course_registration_id)
+            .maybeSingle()
+          drivingCategory = (reg as any)?.courses?.category ?? null
+          courseId = (reg as any)?.course_id ?? null
+        } catch {
+          // non-fatal
+        }
+      }
+
       // Trigger the reward (idempotent – safe to call even if already credited)
       try {
         const result = await $fetch('/api/affiliate/process-reward', {
           method: 'POST',
           body: {
-            appointment_id: completedPayment.appointment_id,
+            appointment_id: completedPayment.appointment_id || undefined,
+            course_registration_id: completedPayment.course_registration_id || undefined,
+            course_id: courseId || undefined,
             user_id: referral.referred_user_id,
             tenant_id: referral.tenant_id,
+            driving_category: drivingCategory,
           }
         }) as any
 
