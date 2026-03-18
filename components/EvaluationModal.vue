@@ -267,7 +267,8 @@ const sortByNewest = ref(true) // true = neueste zuerst, false = schlechteste zu
 const criteriaTimestamps = ref<Record<string, string>>({}) // Neue ref für Timestamps
 const criteriaAppointments = ref<Record<string, { appointment_id: string, start_time: string }>>({})
 const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly rated in this session
-const allCriteriaRatings = ref<Record<string, number[]>>({}) // ✅ NEU: Speichert ALLE Bewertungen pro Kriterium
+const allCriteriaRatings = ref<Record<string, number[]>>({}) // Bewertungen des aktuellen Termins
+const historyRatings = ref<Record<string, number[]>>({}) // Historische Bewertungen früherer Termine (für Dropdown-Farben)
 
 
 // Computed
@@ -936,21 +937,20 @@ const loadStudentEvaluationHistory = async () => {
     // selectedCriteriaOrder.value = sortedByLessonDate
 
     // Setup data for dropdown display only
-    allCriteriaRatings.value = {}
-    
+    historyRatings.value = {}
+
     evaluations.forEach((note: any) => {
       const criteriaId = note.evaluation_criteria_id
-      criteriaRatings.value[criteriaId] = note.criteria_rating || 0
       criteriaNotes.value[criteriaId] = note.criteria_note || ''
-      
+
       // Sammle ALLE Bewertungen für dieses Kriterium (für Dropdown-Anzeige)
-      if (!allCriteriaRatings.value[criteriaId]) {
-        allCriteriaRatings.value[criteriaId] = []
+      if (!historyRatings.value[criteriaId]) {
+        historyRatings.value[criteriaId] = []
       }
-      if (note.criteria_rating && !allCriteriaRatings.value[criteriaId].includes(note.criteria_rating)) {
-        allCriteriaRatings.value[criteriaId].push(note.criteria_rating)
+      if (note.criteria_rating && !historyRatings.value[criteriaId].includes(note.criteria_rating)) {
+        historyRatings.value[criteriaId].push(note.criteria_rating)
       }
-      
+
       criteriaAppointments.value[criteriaId] = {
         appointment_id: note.appointment_id,
         start_time: note.lesson_date
@@ -1060,6 +1060,10 @@ const getRatingLabel = (ratingValue: number): string => {
 }
 
 const getAllRatingsForCriteria = (criteriaId: string): number[] => {
+  // History hat Vorrang für Dropdown-Farben (letzte bekannte Bewertung früherer Lektionen)
+  const history = historyRatings.value[criteriaId]
+  if (history && history.length > 0) return history
+  // Fallback auf aktuellen Termin
   return allCriteriaRatings.value[criteriaId] || []
 }
 
@@ -1072,21 +1076,12 @@ watch(() => props.isOpen, (isOpen) => {
     nextTick(async () => {
       await loadRatingColors()
       await loadAllCriteria()
-      
-      // Versuche zuerst die Bewertungen für den aktuellen Termin zu laden
-      const hasCurrentEvaluations = await loadCurrentAppointmentEvaluations()
-      
-      // Lade immer die Historie für Dropdown-Farben (allCriteriaRatings)
-      // Wenn aktuelle Bewertungen vorhanden, werden sie danach wieder gemergt
-      logger.debug('📚 Loading history for dropdown colors...')
+
+      // Lade History zuerst (für Dropdown-Farben)
       await loadStudentEvaluationHistory()
-      
-      // Wenn aktuelle Bewertungen vorhanden, überschreibe criteriaRatings wieder
-      // damit die aktuelle Session korrekt angezeigt wird
-      if (hasCurrentEvaluations) {
-        logger.debug('✅ Re-applying current evaluations on top of history')
-        await loadCurrentAppointmentEvaluations()
-      }
+
+      // Lade aktuelle Termin-Bewertungen (überschreibt criteriaRatings, nicht historyRatings)
+      await loadCurrentAppointmentEvaluations()
     })
   } else {
     logger.debug('🔥 EvaluationModal - resetting form...')
@@ -1100,7 +1095,8 @@ watch(() => props.isOpen, (isOpen) => {
     error.value = null
     criteriaTimestamps.value = {}
     newlyRatedCriteria.value = [] // Clear tracking
-    allCriteriaRatings.value = {} // ✅ NEU: Reset rating history
+    allCriteriaRatings.value = {}
+    historyRatings.value = {}
     
 
     
@@ -1131,6 +1127,7 @@ watch(() => props.appointment?.id, (newAppointmentId) => {
     criteriaNotes.value = {}
     criteriaAppointments.value = {}
     allCriteriaRatings.value = {}
+    historyRatings.value = {}
     originalNotes.value = {}
     newlyRatedCriteria.value = []
   }
