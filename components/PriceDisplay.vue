@@ -597,7 +597,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { usePaymentMethods, useCompanyBilling } from '~/composables/usePaymentMethods'
+import { usePaymentMethods, useBillingAddresses } from '~/composables/usePaymentMethods'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { useAuthStore } from '~/stores/auth'
@@ -670,7 +670,7 @@ const emit = defineEmits<{
 
 // Composables
 const { loadPaymentMethods, activePaymentMethods, isLoading: isLoadingPaymentMethods } = usePaymentMethods()
-const { createBillingAddress } = useCompanyBilling()
+const { createBillingAddress } = useBillingAddresses()
 const authStore = useAuthStore()
 const supabase = getSupabase()
 

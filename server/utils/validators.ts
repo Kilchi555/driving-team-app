@@ -53,7 +53,7 @@ export function validateEmail(email: string | null | undefined): { valid: boolea
  * NIST SP 800-63B: length is the only enforced complexity requirement.
  * Breach checking (HIBP) is handled separately after basic validation.
  */
-export function validatePassword(password: string | null | undefined): { valid: boolean; message?: string } {
+export function validateBasicPassword(password: string | null | undefined): { valid: boolean; message?: string } {
   if (!password) return { valid: false, message: 'Passwort ist erforderlich' }
   if (password.length < 12) return { valid: false, message: 'Passwort muss mindestens 12 Zeichen lang sein' }
   if (password.length > 500) return { valid: false, message: 'Passwort darf maximal 500 Zeichen lang sein' }

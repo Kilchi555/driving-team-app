@@ -18,7 +18,7 @@ export interface ConsolidatedDiscount {
   created_at: string
 }
 
-export interface DiscountCalculation {
+interface ConsolidatedDiscountCalculation {
   discount_amount_rappen: number
   original_amount_rappen: number
   final_amount_rappen: number
@@ -142,7 +142,7 @@ export const useDiscountsConsolidated = () => {
   const calculatePaymentDiscount = async (
     paymentId: string,
     baseAmountRappen: number
-  ): Promise<DiscountCalculation> => {
+  ): Promise<ConsolidatedDiscountCalculation> => {
     try {
       const discount = await getEntityDiscount('payment', paymentId)
       
@@ -180,7 +180,7 @@ export const useDiscountsConsolidated = () => {
   const calculateAppointmentDiscount = async (
     appointmentId: string,
     baseAmountRappen: number
-  ): Promise<DiscountCalculation> => {
+  ): Promise<ConsolidatedDiscountCalculation> => {
     try {
       const discount = await getEntityDiscount('appointment', appointmentId)
       
@@ -218,7 +218,7 @@ export const useDiscountsConsolidated = () => {
   const calculateProductSaleDiscount = async (
     productSaleId: string,
     baseAmountRappen: number
-  ): Promise<DiscountCalculation> => {
+  ): Promise<ConsolidatedDiscountCalculation> => {
     try {
       const discount = await getEntityDiscount('product_sale', productSaleId)
       

@@ -41,9 +41,9 @@
 
 <script setup>
 
-import { useModal } from '~/composables/useModal'
+import { useAppModal } from '~/composables/useModal'
 
-const modal = useModal()
+const modal = useAppModal()
 
 const handleSave = () => {
   logger.debug('Save clicked')

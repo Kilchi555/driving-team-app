@@ -3971,7 +3971,7 @@ import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
 import { useRoomReservations } from '~/composables/useRoomReservations'
 import { useVehicleReservations } from '~/composables/useVehicleReservations'
-import { useModal } from '~/composables/useModal'
+import { useAppModal } from '~/composables/useModal'
 import { useGeneralResources } from '~/composables/useGeneralResources'
 import { formatDateTime, formatDate, formatTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
@@ -4002,7 +4002,7 @@ definePageMeta({
 
 // Composables
 const { currentUser, fetchCurrentUser } = useCurrentUser()
-const modal = useModal()
+const modal = useAppModal()
 
 // Business Type
 const tenantBusinessType = ref<string>('')

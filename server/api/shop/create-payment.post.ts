@@ -39,6 +39,8 @@ export default defineEventHandler(async (event) => {
       metadata
     } = body
 
+    const MAX_TOTAL_AMOUNT_RAPPEN = 5000000 // CHF 50'000 hard cap for public checkout
+    const MAX_METADATA_CHARS = 20000
     const tenantId = sanitizeString(tenant_id, 64)
     const userId = user_id ? sanitizeString(user_id, 64) : null
     const staffId = staff_id ? sanitizeString(staff_id, 64) : null
@@ -91,6 +93,87 @@ export default defineEventHandler(async (event) => {
     if (paymentCurrency !== 'CHF') {
       throw createError({ statusCode: 400, message: 'Nur CHF wird unterstützt' })
     }
+    if (total_amount_rappen > MAX_TOTAL_AMOUNT_RAPPEN) {
+      throw createError({ statusCode: 400, message: 'Betrag überschreitet das erlaubte Maximum' })
+    }
+    if (paymentMethod !== 'wallee') {
+      throw createError({ statusCode: 400, message: 'Nur wallee wird unterstützt' })
+    }
+
+    const normalizedProductsPrice = products_price_rappen ?? total_amount_rappen
+    const normalizedDiscount = discount_amount_rappen ?? 0
+    const normalizedAdminFee = admin_fee_rappen ?? 0
+    const expectedTotal = normalizedProductsPrice - normalizedDiscount + normalizedAdminFee
+    if (normalizedDiscount > normalizedProductsPrice) {
+      throw createError({ statusCode: 400, message: 'discount_amount_rappen darf products_price_rappen nicht übersteigen' })
+    }
+    if (expectedTotal !== total_amount_rappen) {
+      throw createError({ statusCode: 400, message: 'Preisangaben inkonsistent' })
+    }
+
+    if (metadata !== undefined && metadata !== null) {
+      if (typeof metadata !== 'object') {
+        throw createError({ statusCode: 400, message: 'metadata muss ein Objekt sein' })
+      }
+      const metadataSize = JSON.stringify(metadata).length
+      if (metadataSize > MAX_METADATA_CHARS) {
+        throw createError({ statusCode: 400, message: 'metadata ist zu groß' })
+      }
+    }
+
+    // Server-side tenant validation to prevent cross-tenant abuse.
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id, is_active')
+      .eq('id', tenantId)
+      .maybeSingle()
+    if (tenantError || !tenant || tenant.is_active === false) {
+      throw createError({ statusCode: 400, message: 'Ungültiger oder inaktiver Tenant' })
+    }
+
+    // If user_id is provided, enforce tenant ownership and expected checkout role.
+    if (userId) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, tenant_id, role, is_active')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (userError || !userData) {
+        throw createError({ statusCode: 400, message: 'Ungültiger user_id' })
+      }
+      if (userData.tenant_id !== tenantId) {
+        throw createError({ statusCode: 403, message: 'user_id gehört nicht zum tenant_id' })
+      }
+      if (userData.role !== 'client') {
+        throw createError({ statusCode: 400, message: 'user_id muss ein Client sein' })
+      }
+      if (userData.is_active === false) {
+        throw createError({ statusCode: 400, message: 'user_id ist inaktiv' })
+      }
+    }
+
+    // staff_id is optional; if provided, verify same tenant + allowed role.
+    if (staffId) {
+      const { data: staffData, error: staffError } = await supabase
+        .from('users')
+        .select('id, tenant_id, role, is_active')
+        .eq('id', staffId)
+        .maybeSingle()
+
+      if (staffError || !staffData) {
+        throw createError({ statusCode: 400, message: 'Ungültiger staff_id' })
+      }
+      if (staffData.tenant_id !== tenantId) {
+        throw createError({ statusCode: 403, message: 'staff_id gehört nicht zum tenant_id' })
+      }
+      if (!['staff', 'admin', 'tenant_admin'].includes(staffData.role)) {
+        throw createError({ statusCode: 400, message: 'staff_id hat keine gültige Rolle' })
+      }
+      if (staffData.is_active === false) {
+        throw createError({ statusCode: 400, message: 'staff_id ist inaktiv' })
+      }
+    }
 
     // Create payment record — only columns that exist in the DB
     const { data: payment, error: paymentError } = await supabase
@@ -101,10 +184,10 @@ export default defineEventHandler(async (event) => {
         tenant_id: tenantId,
         appointment_id: null,
         lesson_price_rappen: 0,
-        products_price_rappen: products_price_rappen ?? total_amount_rappen,
-        discount_amount_rappen: discount_amount_rappen ?? 0,
+        products_price_rappen: normalizedProductsPrice,
+        discount_amount_rappen: normalizedDiscount,
         voucher_discount_rappen: 0,
-        admin_fee_rappen: admin_fee_rappen ?? 0,
+        admin_fee_rappen: normalizedAdminFee,
         total_amount_rappen,
         payment_method: paymentMethod,
         payment_status: 'pending',
