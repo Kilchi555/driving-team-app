@@ -196,12 +196,37 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
       // ✅ AFFILIATE REWARD HOOK – trigger after first completed payment
       if (payment.user_id) {
+        // Fetch driving category from appointment or course
+        let drivingCategory: string | null = null
+        let courseId: string | null = null
+        try {
+          if (payment.appointment_id) {
+            const { data: appt } = await supabase
+              .from('appointments')
+              .select('type')
+              .eq('id', payment.appointment_id)
+              .maybeSingle()
+            drivingCategory = appt?.type ?? null
+          } else if (payment.course_registration_id) {
+            const { data: reg } = await supabase
+              .from('course_registrations')
+              .select('course_id, courses(category)')
+              .eq('id', payment.course_registration_id)
+              .maybeSingle()
+            drivingCategory = (reg as any)?.courses?.category ?? null
+            courseId = (reg as any)?.course_id ?? null
+          }
+        } catch { /* non-fatal */ }
+
         $fetch('/api/affiliate/process-reward', {
           method: 'POST',
           body: {
-            appointment_id: payment.appointment_id,
+            appointment_id: payment.appointment_id || undefined,
+            course_registration_id: payment.course_registration_id || undefined,
+            course_id: courseId || undefined,
             user_id: payment.user_id,
-            tenant_id: payment.tenant_id
+            tenant_id: payment.tenant_id,
+            driving_category: drivingCategory,
           }
         }).catch((err: any) =>
           logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)

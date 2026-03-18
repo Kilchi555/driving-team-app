@@ -26,10 +26,14 @@ export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
 
   const body = await readBody(event)
-  const { appointment_id, user_id, tenant_id, driving_category } = body
+  const { appointment_id, course_registration_id, user_id, tenant_id, driving_category, course_id } = body
 
-  if (!appointment_id || !user_id || !tenant_id) {
-    throw createError({ statusCode: 400, message: 'appointment_id, user_id, and tenant_id are required' })
+  // Either appointment_id or course_registration_id must be provided as the reference
+  const referenceId = appointment_id || course_registration_id
+  const referenceType = appointment_id ? 'appointment' : 'course_registration'
+
+  if (!referenceId || !user_id || !tenant_id) {
+    throw createError({ statusCode: 400, message: 'user_id, tenant_id and either appointment_id or course_registration_id are required' })
   }
 
   // Look up the user's referred_by_code
@@ -61,20 +65,56 @@ export default defineEventHandler(async (event) => {
     return { success: true, credited: false, reason: 'already_credited' }
   }
 
-  // Fetch reward amount: category-specific rule takes priority, fallback to 0
+  // Fetch reward amount:
+  // Priority 1: course_id-specific reward
+  // Priority 2: driving_category reward
+  // Priority 3: global tenant setting fallback
   let rewardRappen = 0
 
-  if (driving_category) {
+  if (course_id) {
+    const { data: courseReward } = await supabaseAdmin
+      .from('affiliate_category_rewards')
+      .select('reward_rappen')
+      .eq('tenant_id', tenant_id)
+      .eq('course_id', course_id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (courseReward) {
+      rewardRappen = courseReward.reward_rappen
+    }
+  }
+
+  if (rewardRappen <= 0 && driving_category) {
     const { data: categoryReward } = await supabaseAdmin
       .from('affiliate_category_rewards')
       .select('reward_rappen')
       .eq('tenant_id', tenant_id)
       .eq('driving_category', driving_category)
       .eq('is_active', true)
+      .is('course_id', null)
       .maybeSingle()
 
     if (categoryReward) {
       rewardRappen = categoryReward.reward_rappen
+    }
+  }
+
+  // Fallback: global tenant reward setting
+  if (rewardRappen <= 0) {
+    const { data: tenantSetting } = await supabaseAdmin
+      .from('tenant_settings')
+      .select('value')
+      .eq('tenant_id', tenant_id)
+      .eq('category', 'affiliate')
+      .eq('key', 'reward_rappen')
+      .maybeSingle()
+
+    if (tenantSetting?.value) {
+      const parsed = parseInt(tenantSetting.value, 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        rewardRappen = parsed
+      }
     }
   }
 
@@ -115,9 +155,11 @@ export default defineEventHandler(async (event) => {
     balance_before_rappen: balanceBefore,
     balance_after_rappen: balanceAfter,
     payment_method: 'affiliate',
-    reference_type: 'appointment',
-    reference_id: appointment_id,
-    notes: `Affiliate-Prämie für Empfehlung (Termin ${appointment_id})`,
+    reference_type: referenceType,
+    reference_id: referenceId,
+    notes: referenceType === 'course_registration'
+      ? `Affiliate-Prämie für Empfehlung (Kursanmeldung ${referenceId})`
+      : `Affiliate-Prämie für Empfehlung (Termin ${referenceId})`,
     created_at: new Date().toISOString(),
   })
 
@@ -127,7 +169,7 @@ export default defineEventHandler(async (event) => {
     .update({
       status: 'credited',
       reward_rappen: rewardRappen,
-      first_appointment_id: appointment_id,
+      first_appointment_id: appointment_id || null,
       credited_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

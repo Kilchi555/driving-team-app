@@ -420,6 +420,23 @@ const handler = defineEventHandler(async (event) => {
 
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
 
+    // ✅ AFFILIATE REWARD HOOK – trigger for cash course enrollment
+    if (guestUserId) {
+      let courseCategory: string | null = course.category || null
+      $fetch('/api/affiliate/process-reward', {
+        method: 'POST',
+        body: {
+          course_registration_id: enrollment.id,
+          course_id: course.id,
+          user_id: guestUserId,
+          tenant_id: tenantId,
+          driving_category: courseCategory,
+        }
+      }).catch((err: any) => {
+        logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+      })
+    }
+
     // 11. Send confirmation email
     try {
       await $fetch('/api/emails/send-course-enrollment-confirmation', {

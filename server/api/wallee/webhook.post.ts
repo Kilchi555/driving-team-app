@@ -725,9 +725,11 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 8: AFFILIATE REWARD HOOK ============
     if (paymentStatus === 'completed') {
       for (const payment of paymentsToUpdate) {
-        if (payment.user_id && payment.appointment_id) {
-          // Fetch driving category from the appointment so the reward can be category-specific
+        if (payment.user_id && (payment.appointment_id || payment.course_registration_id)) {
+          // Fetch driving category from appointment or course
           let drivingCategory: string | null = payment.metadata?.category ?? null
+          let courseId: string | null = null
+
           if (!drivingCategory && payment.appointment_id) {
             try {
               const { data: appt } = await supabase
@@ -741,10 +743,28 @@ export default defineEventHandler(async (event) => {
             }
           }
 
+          if (payment.course_registration_id) {
+            try {
+              const { data: reg } = await supabase
+                .from('course_registrations')
+                .select('course_id, courses(category)')
+                .eq('id', payment.course_registration_id)
+                .maybeSingle()
+              if (!drivingCategory) {
+                drivingCategory = (reg as any)?.courses?.category ?? null
+              }
+              courseId = (reg as any)?.course_id ?? null
+            } catch {
+              // non-fatal
+            }
+          }
+
           $fetch('/api/affiliate/process-reward', {
             method: 'POST',
             body: {
-              appointment_id: payment.appointment_id,
+              appointment_id: payment.appointment_id || undefined,
+              course_registration_id: payment.course_registration_id || undefined,
+              course_id: courseId || undefined,
               user_id: payment.user_id,
               tenant_id: payment.tenant_id,
               driving_category: drivingCategory,
