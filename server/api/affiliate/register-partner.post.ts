@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { logger } from '~/utils/logger'
 
 /**
  * POST /api/affiliate/register-partner
@@ -16,7 +17,14 @@ import { getClientIP } from '~/server/utils/ip-utils'
  * Rate limited by IP.
  */
 
-const DRIVING_TEAM_TENANT_SLUG = 'driving-team'
+const DEFAULT_TENANT_SLUG = 'driving-team'
+
+function generateAffiliateCode(length = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = new Uint8Array(length)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes).map(b => chars[b % chars.length]).join('')
+}
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -28,7 +36,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { firstName, lastName, email } = body
+  const { firstName, lastName, email, tenantSlug } = body
 
   if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
     throw createError({ statusCode: 400, message: 'Vorname, Nachname und E-Mail sind erforderlich.' })
@@ -39,30 +47,88 @@ export default defineEventHandler(async (event) => {
   if (!emailRegex.test(emailLower)) {
     throw createError({ statusCode: 400, message: 'Bitte gib eine gültige E-Mail-Adresse ein.' })
   }
+  const normalizedTenantSlug = typeof tenantSlug === 'string' && tenantSlug.trim()
+    ? tenantSlug.trim().toLowerCase()
+    : DEFAULT_TENANT_SLUG
 
   // Lookup tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, domain')
-    .eq('slug', DRIVING_TEAM_TENANT_SLUG)
+    .select('id, domain, slug, is_active')
+    .eq('slug', normalizedTenantSlug)
     .maybeSingle()
 
-  if (!tenant) {
+  if (!tenant || tenant.is_active === false) {
     throw createError({ statusCode: 500, message: 'Tenant nicht gefunden.' })
+  }
+
+  const ensureAffiliateCode = async (tenantId: string, userId: string) => {
+    const { data: existingCode } = await supabase
+      .from('affiliate_codes')
+      .select('id, code')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (existingCode) {
+      return { codeRow: existingCode, created: false }
+    }
+
+    let generatedCode = ''
+    let attempts = 0
+    while (attempts < 10) {
+      const candidate = generateAffiliateCode()
+      const { data: clash } = await supabase
+        .from('affiliate_codes')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('code', candidate)
+        .maybeSingle()
+      if (!clash) {
+        generatedCode = candidate
+        break
+      }
+      attempts++
+    }
+
+    if (!generatedCode) {
+      throw createError({ statusCode: 500, message: 'Affiliate-Code konnte nicht erstellt werden.' })
+    }
+
+    const { data: insertedCode, error: insertCodeError } = await supabase
+      .from('affiliate_codes')
+      .insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        code: generatedCode,
+        is_active: true,
+      })
+      .select('id, code')
+      .single()
+
+    if (insertCodeError || !insertedCode) {
+      throw createError({ statusCode: 500, message: 'Affiliate-Code konnte nicht erstellt werden.' })
+    }
+
+    return { codeRow: insertedCode, created: true }
   }
 
   // Check if user already exists
   let userId: string | null = null
+  let authUserId: string | null = null
+  let existingUser = false
 
-  const { data: existingUser } = await supabase
+  const { data: existingUserRow } = await supabase
     .from('users')
-    .select('id, role')
+    .select('id, role, auth_user_id')
     .eq('email', emailLower)
     .eq('tenant_id', tenant.id)
     .maybeSingle()
 
-  if (existingUser) {
-    userId = existingUser.id
+  if (existingUserRow) {
+    existingUser = true
+    userId = existingUserRow.id
+    authUserId = existingUserRow.auth_user_id
     // If they already have a higher-permission role, don't downgrade
   } else {
     // Create Supabase auth user
@@ -76,10 +142,12 @@ export default defineEventHandler(async (event) => {
         // Auth user exists but no users row – look up by auth
         const { data: byAuth } = await supabase
           .from('users')
-          .select('id')
+          .select('id, auth_user_id')
           .eq('email', emailLower)
+          .eq('tenant_id', tenant.id)
           .maybeSingle()
         userId = byAuth?.id ?? null
+        authUserId = byAuth?.auth_user_id ?? null
       } else {
         throw createError({ statusCode: 500, message: 'Registrierung fehlgeschlagen.' })
       }
@@ -98,6 +166,7 @@ export default defineEventHandler(async (event) => {
         .select('id')
         .single()
       userId = newUser?.id ?? null
+      authUserId = authData.user.id
 
       // Create empty student_credits row (for potential payouts)
       if (userId) {
@@ -115,6 +184,23 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Benutzer konnte nicht erstellt werden.' })
   }
 
+  const affiliateCodeResult = await ensureAffiliateCode(tenant.id, userId)
+  const affiliateShareLink = `https://simy.ch/register/${tenant.slug}?ref=${affiliateCodeResult.codeRow.code}`
+
+  if (!authUserId) {
+    return {
+      success: true,
+      emailSent: false,
+      message: 'Partner ist bereits vorhanden. Affiliate-Code wurde geprüft/erstellt. Bitte mit bestehendem Konto einloggen.',
+      status: affiliateCodeResult.created ? 'existing_user_code_created' : 'existing_user_code_exists',
+      affiliateCode: {
+        code: affiliateCodeResult.codeRow.code,
+        link: affiliateShareLink,
+        createdNow: affiliateCodeResult.created,
+      },
+    }
+  }
+
   // Generate magic link token (password-reset style)
   const tokenBytes = new Uint8Array(32)
   crypto.getRandomValues(tokenBytes)
@@ -130,41 +216,78 @@ export default defineEventHandler(async (event) => {
   })
 
   // Build dashboard link
-  const baseUrl = tenant.domain ? `https://${tenant.domain}` : 'https://app.drivingteam.ch'
+  // Keep tenant URL construction aligned with app conventions (simy.ch).
+  const tenantDomain = String(tenant.domain || '').trim()
+  const baseUrl = tenantDomain
+    ? (tenantDomain.startsWith('http://') || tenantDomain.startsWith('https://')
+      ? tenantDomain
+      : `https://${tenantDomain}`)
+    : 'https://simy.ch'
   const dashboardLink = `${baseUrl}/affiliate-dashboard?token=${token}`
 
   // Send email via Resend
   const resendKey = process.env.RESEND_API_KEY
+  const resendFrom = process.env.RESEND_FROM || 'Driving Team <noreply@drivingteam.ch>'
+  let emailSent = false
+
   if (resendKey) {
-    await $fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Driving Team <noreply@drivingteam.ch>',
-        to: [emailLower],
-        subject: 'Dein Affiliate-Zugang – Driving Team',
-        html: `
-          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
-            <h2 style="color:#111;font-size:22px;margin-bottom:8px">Willkommen, ${firstName.trim()}!</h2>
-            <p style="color:#555;font-size:15px;line-height:1.6;margin-bottom:24px">
-              Klicke auf den Button unten um dein Affiliate-Dashboard zu öffnen und deinen persönlichen Empfehlungslink zu aktivieren.
-            </p>
-            <a href="${dashboardLink}"
-               style="display:inline-block;background:#111;color:#fff;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;text-decoration:none;margin-bottom:24px">
-              Affiliate-Dashboard öffnen →
-            </a>
-            <p style="color:#999;font-size:12px;margin-top:24px">
-              Dieser Link ist 1 Stunde gültig und kann nur einmal verwendet werden.<br>
-              Falls du keine Anfrage gestellt hast, kannst du diese E-Mail ignorieren.
-            </p>
-          </div>
-        `,
-      }),
-    })
+    try {
+      await $fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [emailLower],
+          subject: 'Dein Affiliate-Zugang – Driving Team',
+          html: `
+            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#111;font-size:22px;margin-bottom:8px">Willkommen, ${firstName.trim()}!</h2>
+              <p style="color:#555;font-size:15px;line-height:1.6;margin-bottom:24px">
+                Klicke auf den Button unten um dein Affiliate-Dashboard zu öffnen und deinen persönlichen Empfehlungslink zu aktivieren.
+              </p>
+              <a href="${dashboardLink}"
+                 style="display:inline-block;background:#111;color:#fff;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;text-decoration:none;margin-bottom:24px">
+                Affiliate-Dashboard öffnen →
+              </a>
+              <p style="color:#999;font-size:12px;margin-top:24px">
+                Dieser Link ist 1 Stunde gültig und kann nur einmal verwendet werden.<br>
+                Falls du keine Anfrage gestellt hast, kannst du diese E-Mail ignorieren.
+              </p>
+            </div>
+          `,
+        }),
+      })
+      emailSent = true
+    } catch (emailError: any) {
+      logger.warn('⚠️ affiliate/register-partner: Failed to send email via Resend', {
+        message: emailError?.message,
+        statusCode: emailError?.statusCode,
+        email: emailLower,
+      })
+    }
+  } else {
+    logger.warn('⚠️ affiliate/register-partner: RESEND_API_KEY missing, skipping email send')
   }
 
-  return { success: true, message: 'Zugangslink wurde gesendet.' }
+  const isProd = process.env.NODE_ENV === 'production'
+  return {
+    success: true,
+    message: emailSent
+      ? 'Zugangslink wurde gesendet.'
+      : 'Partner erstellt. E-Mail-Versand aktuell nicht möglich.',
+    status: existingUser
+      ? (affiliateCodeResult.created ? 'existing_user_code_created' : 'existing_user_code_exists')
+      : 'new_user_created',
+    emailSent,
+    affiliateCode: {
+      code: affiliateCodeResult.codeRow.code,
+      link: affiliateShareLink,
+      createdNow: affiliateCodeResult.created,
+    },
+    // Dev fallback for local testing when email delivery is unavailable.
+    ...(isProd ? {} : { debugDashboardLink: dashboardLink }),
+  }
 })
