@@ -52,7 +52,6 @@ export default defineNuxtConfig({
     experimental: {
       wasm: true
     },
-    // Keep puppeteer/chromium external — bundling them causes spawn EBADF on worker start
     externals: {
       external: ['puppeteer-core', '@sparticuz/chromium']
     },
