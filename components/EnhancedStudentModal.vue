@@ -1184,19 +1184,23 @@
         <div class="space-y-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
-            <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">CHF</span>
+            <div class="flex items-center gap-2">
               <input
                 v-model="cashDepositAmount"
                 type="number"
                 min="1"
                 step="0.05"
                 placeholder="0.00"
-                class="w-full pl-14 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
+              <span class="text-sm font-medium text-gray-500 shrink-0">CHF</span>
             </div>
           </div>
        
+          <p v-if="cashDepositSuccess" class="text-green-700 text-sm font-medium bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            {{ cashDepositSuccess }}
+          </p>
           <p v-if="cashDepositError" class="text-red-600 text-xs">{{ cashDepositError }}</p>
           <div class="flex gap-2 pt-1">
             <button @click="showCashDepositModal = false" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Abbrechen</button>
@@ -1545,6 +1549,7 @@ const showPaymentActionsDropdown = ref(false)
 const cashDepositAmount = ref<number | ''>('')
 const cashDepositNote = ref('')
 const cashDepositError = ref('')
+const cashDepositSuccess = ref('')
 const isSubmittingDeposit = ref(false)
 
 // ── Redeem Voucher (Staff on behalf of student) ────────────
@@ -2806,6 +2811,7 @@ watch(() => props.selectedStudent, async () => {
 
 async function submitCashDeposit() {
   cashDepositError.value = ''
+  cashDepositSuccess.value = ''
   const amount = Number(cashDepositAmount.value)
   if (!amount || amount <= 0) {
     cashDepositError.value = 'Bitte gültigen Betrag eingeben'
@@ -2848,10 +2854,15 @@ async function submitCashDeposit() {
     const newBalance = (studentBalance.value || 0) + Math.round(amount * 100)
     studentBalance.value = newBalance
 
-    showCashDepositModal.value = false
     cashDepositAmount.value = ''
     cashDepositNote.value = ''
+    cashDepositSuccess.value = `CHF ${amount.toFixed(2)} erfolgreich einbezahlt`
     emit('studentUpdated', { id: userId })
+
+    setTimeout(() => {
+      showCashDepositModal.value = false
+      cashDepositSuccess.value = ''
+    }, 2000)
   } catch (e: any) {
     cashDepositError.value = e?.data?.message || e?.message || 'Fehler beim Einzahlen'
   } finally {

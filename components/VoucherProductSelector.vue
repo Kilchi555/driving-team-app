@@ -2,23 +2,23 @@
 <template>
   <div class="space-y-4">
     <!-- Gutschein-Selector -->
-    <div v-if="showVoucherInput" class="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50">
+    <div v-if="showVoucherInput" class="border-2 border-dashed rounded-xl p-5"
+         :style="{ borderColor: brandBorder, background: brandBg }">
       <div class="flex items-center justify-between mb-4">
-        <h4 class="text-lg font-medium text-blue-900 flex items-center">
+        <h4 class="text-lg font-medium text-gray-900 flex items-center">
           🎁 Gutschein erstellen
         </h4>
         <button
           @click="cancelVoucher"
-          class="text-blue-600 hover:text-blue-800 text-xl"
+          class="hover:opacity-70 text-xl text-gray-500"
         >
           ✕
         </button>
       </div>
 
-      <!-- Betrag eingeben -->
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-blue-800 mb-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
             Gutschein-Betrag (CHF) *
           </label>
           <div class="relative">
@@ -29,50 +29,50 @@
               min="1"
               max="1000"
               placeholder="z.B. 100.00"
-              class="w-full px-4 py-3 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+              class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 text-lg bg-white"
+              :style="{ borderColor: brandBorder, '--tw-ring-color': props.brandColor }"
               @keydown.enter="createVoucher"
             />
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-              <span class="text-blue-600 font-medium">CHF</span>
+              <span class="font-medium" :style="{ color: props.brandColor }">CHF</span>
             </div>
           </div>
-          <p class="text-xs text-blue-600 mt-1">
+          <p class="text-xs mt-1" :style="{ color: props.brandColor }">
             Mindestbetrag: CHF 1.00, Maximum: CHF 1'000.00
           </p>
         </div>
 
-        <!-- Empfänger (optional) - MOVED BEFORE DESCRIPTION -->
         <div>
-          <label class="block text-sm font-medium text-blue-800 mb-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
             Empfänger (optional)
           </label>
           <input
             v-model="voucherRecipient"
             type="text"
             placeholder="z.B. Max Mustermann"
-            class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white"
+            :style="{ borderColor: brandBorder, '--tw-ring-color': props.brandColor }"
           />
         </div>
 
-        <!-- Beschreibung (optional) -->
         <div>
-          <label class="block text-sm font-medium text-blue-800 mb-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
             Beschreibung (optional)
           </label>
           <input
             v-model="voucherDescription"
             type="text"
             placeholder="z.B. Geburtstags-Gutschein, Weihnachtsgeschenk"
-            class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white"
+            :style="{ borderColor: brandBorder, '--tw-ring-color': props.brandColor }"
           />
         </div>
 
-        <!-- Vorschau des Gutschein-Textes -->
-        <div v-if="voucherAmount" class="bg-white border border-blue-200 rounded-lg p-4">
-          <h5 class="text-sm font-medium text-blue-800 mb-2 flex items-center">
+        <div v-if="voucherAmount" class="bg-white border rounded-xl p-4" :style="{ borderColor: brandBorder }">
+          <h5 class="text-sm font-medium text-gray-700 mb-2 flex items-center">
             👁️ Vorschau des Gutscheins:
           </h5>
-          <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-100">
+          <div class="rounded-lg p-3 border" :style="{ background: brandBg, borderColor: brandBorder }">
             <div class="text-center">
               <div class="text-lg font-bold text-gray-800 mb-1">
                 {{ generateVoucherName() }}
@@ -80,7 +80,7 @@
               <div class="text-sm text-gray-600 mb-2">
                 {{ generateVoucherDescription() }}
               </div>
-              <div class="text-2xl font-bold text-blue-600">
+              <div class="text-2xl font-bold" :style="{ color: props.brandColor }">
                 CHF {{ voucherAmount.toFixed(2) }}
               </div>
             </div>
@@ -90,18 +90,18 @@
           </p>
         </div>
 
-        <!-- Buttons -->
         <div class="flex justify-end space-x-3 pt-2">
           <button
             @click="cancelVoucher"
-            class="px-4 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-100"
+            class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 border-gray-300"
           >
             Abbrechen
           </button>
           <button
             @click="createVoucher"
             :disabled="!isValidAmount"
-            class="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-6 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            :style="{ background: props.brandColor }"
           >
             Gutschein hinzufügen
           </button>
@@ -113,7 +113,8 @@
     <div v-if="!showVoucherInput" class="text-center">
       <button
         @click="openVoucherInput"
-        class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 font-medium shadow-md transition-all"
+        class="inline-flex items-center px-6 py-3 rounded-xl font-medium border-2 transition-all hover:opacity-80"
+        :style="{ borderColor: props.brandColor, color: props.brandColor, background: 'transparent' }"
       >
         🎁 Gutschein erstellen
       </button>
@@ -130,13 +131,13 @@
           v-for="voucher in existingVouchers"
           :key="voucher.id"
           @click="addExistingVoucher(voucher)"
-          class="flex justify-between items-center p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 text-left transition-colors"
+          class="flex justify-between items-center p-3 border border-gray-200 rounded-lg text-left transition-colors hover:opacity-80"
         >
           <div>
             <div class="font-medium text-gray-900">{{ voucher.name }}</div>
             <div class="text-sm text-gray-500">{{ voucher.description }}</div>
           </div>
-          <div class="text-lg font-bold text-blue-600">
+          <div class="text-lg font-bold" :style="{ color: props.brandColor }">
             CHF {{ (voucher.price_rappen / 100).toFixed(2) }}
           </div>
         </button>
@@ -158,10 +159,28 @@ interface Props {
     description?: string
     price_rappen: number
   }>
+  brandColor?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  existingVouchers: () => []
+  existingVouchers: () => [],
+  brandColor: '#2563EB'
+})
+
+const brandBg = computed(() => {
+  const hex = props.brandColor
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, 0.07)`
+})
+
+const brandBorder = computed(() => {
+  const hex = props.brandColor
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, 0.3)`
 })
 
 // Emits
@@ -252,19 +271,6 @@ const generateVoucherDescription = () => {
 </script>
 
 <style scoped>
-/* Gradient animation for the voucher button */
-.bg-gradient-to-r:hover {
-  background-size: 200% 200%;
-  animation: gradient 2s ease infinite;
-}
-
-@keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Number input styling */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -275,10 +281,5 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
-}
-
-/* Focus states */
-input:focus, select:focus {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 </style>

@@ -81,6 +81,7 @@
               <div v-if="isFeatureEnabled('voucher_creation')">
                 <VoucherProductSelector
                   :existing-vouchers="availableVouchers"
+                  :brand-color="brandPrimary"
                   @voucher-created="handleVoucherCreated"
                   @voucher-selected="handleVoucherSelected"
                 />
@@ -342,18 +343,54 @@
           <!-- ── SCHRITT 3: PAYMENT ── -->
           <div v-if="currentStep === 3">
             <div class="space-y-4">
-              <!-- Customer summary -->
+              <!-- Customer summary / editable -->
               <div class="rounded-xl border border-gray-200 overflow-hidden text-sm">
-                <div class="px-4 py-2.5 bg-gray-50 font-semibold text-gray-700 flex items-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                  </svg>
-                  Bestellung für
+                <div class="px-4 py-2.5 bg-gray-50 font-semibold text-gray-700 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    Bestellung für
+                  </div>
+                  <button @click="editingCustomerData = !editingCustomerData"
+                          class="text-xs font-medium transition-colors"
+                          :style="{ color: brandPrimary }">
+                    {{ editingCustomerData ? 'Fertig' : 'Bearbeiten' }}
+                  </button>
                 </div>
-                <div class="px-4 py-3 text-sm text-gray-600 space-y-0.5">
+
+                <!-- Read-only view -->
+                <div v-if="!editingCustomerData" class="px-4 py-3 text-sm text-gray-600 space-y-0.5">
                   <p class="font-semibold text-gray-900">{{ formData.firstName }} {{ formData.lastName }}</p>
                   <p>{{ formData.street }} {{ formData.streetNumber }}, {{ formData.zip }} {{ formData.city }}</p>
                   <p>{{ formData.email }}</p>
+                  <p v-if="formData.phone">{{ formData.phone }}</p>
+                </div>
+
+                <!-- Editable form -->
+                <div v-else class="px-4 py-3 space-y-3">
+                  <div class="grid grid-cols-2 gap-2">
+                    <input v-model="formData.firstName" type="text" placeholder="Vorname"
+                           class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                    <input v-model="formData.lastName" type="text" placeholder="Nachname"
+                           class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                  </div>
+                  <input v-model="formData.email" type="email" placeholder="E-Mail"
+                         class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                  <input v-model="formData.phone" type="tel" placeholder="Telefon"
+                         class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                  <div class="grid grid-cols-3 gap-2">
+                    <input v-model="formData.street" type="text" placeholder="Strasse" class="col-span-2
+                           shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                    <input v-model="formData.streetNumber" type="text" placeholder="Nr."
+                           class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <input v-model="formData.zip" type="text" placeholder="PLZ"
+                           class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                    <input v-model="formData.city" type="text" placeholder="Ort"
+                           class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                  </div>
                 </div>
               </div>
 
@@ -361,13 +398,18 @@
               <PaymentComponent
                 key="payment-component"
                 :appointment-id="undefined"
-                :user-id="undefined"
+                :user-id="guestUserId || (customerData?.id) || undefined"
                 :staff-id="undefined"
                 :tenant-id="tenantId || undefined"
                 :is-standalone="true"
                 :is-read-only="false"
                 :customer-email="formData.email"
                 :customer-name="`${formData.firstName} ${formData.lastName}`"
+                :customer-phone="formData.phone"
+                :customer-street="formData.street"
+                :customer-street-number="formData.streetNumber"
+                :customer-zip="formData.zip"
+                :customer-city="formData.city"
                 :initial-products="selectedProducts.map(item => ({
                   id: item.product.id,
                   name: item.product.name,
@@ -475,36 +517,6 @@
       </div>
     </Transition>
 
-    <!-- Recovery modal -->
-    <Transition name="fade">
-      <div v-if="autoSave.showRecoveryModal.value"
-           class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-          <div class="text-center mb-5">
-            <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-                 :style="{ background: brandBg }">
-              <svg class="w-6 h-6" :style="{ color: brandPrimary }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-              </svg>
-            </div>
-            <h3 class="font-semibold text-gray-900 mb-1">Eingaben wiederherstellen?</h3>
-            <p class="text-sm text-gray-500">Wir haben deine letzte Eingabe gefunden.</p>
-          </div>
-          <div class="flex gap-3">
-            <button @click="autoSave.clearDraft()"
-                    class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              Neu beginnen
-            </button>
-            <button @click="autoSave.recoveryData.value && autoSave.restoreFromRecovery(autoSave.recoveryData.value)"
-                    :disabled="!autoSave.recoveryData.value"
-                    class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                    :style="{ background: brandPrimary }">
-              Wiederherstellen
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
   </div>
 
   <!-- Voucher Download Modal -->
@@ -718,6 +730,8 @@ interface WalleeResponse {
 
 // Reactive data - Multi-Step Process
 const currentStep = ref(0) // 0: Kundentyp, 1: Produktübersicht, 2: Kontaktdaten, 3: Payment
+const editingCustomerData = ref(false)
+const guestUserId = ref<string | null>(null)
 const isSubmitting = ref(false)
 const isLoadingProducts = ref(false)
 const availableProducts = ref<Product[]>([])
@@ -925,8 +939,34 @@ const validateProductSelection = () => {
   return true
 }
 
+const ensureGuestUser = async () => {
+  if (isLoggedIn.value || !tenantId.value) return
+  try {
+    const response = await $fetch('/api/shop/find-or-create-guest-user', {
+      method: 'POST',
+      body: {
+        tenant_id: tenantId.value,
+        email: formData.value.email,
+        first_name: formData.value.firstName,
+        last_name: formData.value.lastName,
+        phone: formData.value.phone,
+        street: formData.value.street,
+        street_number: formData.value.streetNumber,
+        zip: formData.value.zip,
+        city: formData.value.city
+      }
+    }) as any
+    if (response?.data?.id) {
+      guestUserId.value = response.data.id
+      logger.debug('✅ Guest user resolved:', response.data)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Could not create guest user, continuing without:', err)
+  }
+}
+
 // Step Navigation
-const nextStep = () => {
+const nextStep = async () => {
   if (currentStep.value === 0) {
     if (!customerType.value) {
       alert('❌ Bitte wählen Sie einen Kundentyp aus.')
@@ -956,13 +996,16 @@ const nextStep = () => {
   }
   
   if (currentStep.value < 3) {
-    // Speichere sofort beim Wechseln der Steps
     saveImmediately()
     
-    // ✅ Skip step 2 (contact data) for logged-in users
+    // Skip step 2 for logged-in users
     if (currentStep.value === 1 && isLoggedIn.value && customerData.value) {
       logger.debug('⏭️ Skipping step 2 (contact data) - user is logged in')
-      currentStep.value = 3 // Jump directly to payment
+      currentStep.value = 3
+    } else if (currentStep.value === 2) {
+      // Going from contact form to payment: create/find guest user first
+      await ensureGuestUser()
+      currentStep.value = 3
     } else {
       currentStep.value++
     }
@@ -1680,50 +1723,8 @@ const autoSave = useAutoSave(
         currentStep: dbData.metadata?.current_step || 1
     }),
     
-    // Callbacks
-    onRestore: (data) => {
-      logger.debug('🔄 Shop data restored!')
-      
-      // Tenant-ID Validierung: Prüfe ob wiederhergestellte Daten zum aktuellen Tenant gehören
-      if (data.tenant_id && data.tenant_id !== tenantId.value) {
-        console.warn('⚠️ Restored data belongs to different tenant, ignoring:', {
-          restored_tenant: data.tenant_id,
-          current_tenant: tenantId.value
-        })
-        return // Ignoriere Daten von anderem Tenant
-      }
-      
-      // Daten direkt in State-Variablen laden
-      if (data.formData) {
-        // Formulardaten einzeln setzen
-        formData.value.firstName = data.formData.firstName || ''
-        formData.value.lastName = data.formData.lastName || ''
-        formData.value.email = data.formData.email || ''
-        formData.value.phone = data.formData.phone || ''
-        formData.value.street = data.formData.street || ''
-        formData.value.streetNumber = data.formData.streetNumber || ''
-        formData.value.zip = data.formData.zip || ''
-        formData.value.city = data.formData.city || ''
-        formData.value.notes = data.formData.notes || ''
-      }
-      if (data.selectedProducts) {
-        selectedProducts.value = data.selectedProducts
-      }
-      if (data.appliedDiscounts) {
-        appliedDiscounts.value = data.appliedDiscounts
-        logger.debug('✅ Applied discounts restored:', appliedDiscounts.value)
-      }
-      if (data.currentStep) {
-        // Never restore to step 0 - shop always starts at step 1
-        currentStep.value = Math.max(1, data.currentStep)
-      }
-      
-      // Produkte laden falls noch nicht da
-      if (availableProducts.value.length === 0) {
-        loadProducts()
-      }
-    },
-    
+    onRestore: () => {},
+
     onError: (error) => {
       console.error('💾 Auto-save error:', error)
     }
@@ -1907,13 +1908,8 @@ onMounted(async () => {
       await loadFeatures(tenantId.value)
     }
     
-    // AutoSave: Nach gespeicherten Daten suchen
-    logger.debug('💾 Checking for saved data...')
-    const recoveryData = await autoSave.checkRecovery()
-    if (recoveryData) {
-      logger.debug('🔄 Found saved data, showing recovery modal')
-      // Das AutoSave-System zeigt automatisch das Recovery-Modal
-    }
+    // Clear any old drafts on mount so recovery never triggers
+    autoSave.clearDraft()
     
     // Produkte laden nachdem Tenant geladen ist
     logger.debug('🛍️ Shop mounted - Step-by-step process started')
