@@ -134,7 +134,7 @@
 
         <!-- Experten-Verhalten bewerten -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Experten-Verhalten</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Experten-Verhalten <span class="text-red-500">*</span></label>
           <div class="space-y-3">
             <!-- Bewertung 1-6 -->
             <div class="space-y-2">
@@ -190,9 +190,10 @@
         </button>
         <button 
           @click="saveExamResult" 
-          :disabled="isSaving"
-          class="px-4 py-2 text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-          :style="{ backgroundColor: primaryColor || '#2563eb' }"
+          :disabled="isSaving || !isFormValid"
+          class="px-4 py-2 text-white rounded-md disabled:cursor-not-allowed transition-all"
+          :style="isFormValid ? { backgroundColor: primaryColor || '#2563eb' } : {}"
+          :class="isFormValid ? 'hover:opacity-90' : 'bg-gray-300'"
         >
           <span v-if="isSaving" class="flex items-center">
             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -282,7 +283,7 @@ const selectedExaminerName = ref('')
 const examResult = ref({
   examiner_id: '',
   passed: null as boolean | null,
-  examiner_behavior_rating: 1,
+  examiner_behavior_rating: null as number | null,
   examiner_behavior_notes: ''
 })
 
@@ -295,7 +296,8 @@ const newExaminer = ref({
 // Computed
 const isFormValid = computed(() => {
   return examResult.value.passed !== null &&
-         examResult.value.examiner_behavior_rating > 0
+         examResult.value.examiner_behavior_rating !== null &&
+         examResult.value.examiner_behavior_rating >= 1
 })
 
 // Gefilterte Experten basierend auf der Suche
@@ -419,7 +421,7 @@ const validateForm = () => {
   //   validationErrors.value.push('Bitte wählen Sie einen Experten aus.')
   // }
   
-  if (!examResult.value.examiner_behavior_rating || examResult.value.examiner_behavior_rating < 1 || examResult.value.examiner_behavior_rating > 6) {
+  if (examResult.value.examiner_behavior_rating === null || examResult.value.examiner_behavior_rating < 1 || examResult.value.examiner_behavior_rating > 6) {
     validationErrors.value.push('Bitte bewerten Sie das Experten-Verhalten (1-6).')
   }
   
@@ -522,7 +524,7 @@ watch(() => props.appointment, (newAppointment) => {
     examResult.value = {
       examiner_id: '',
       passed: null,
-      examiner_behavior_rating: 1,
+      examiner_behavior_rating: null,
       examiner_behavior_notes: ''
     }
     validationErrors.value = []

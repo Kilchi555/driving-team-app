@@ -195,7 +195,7 @@ export default defineEventHandler(async (event) => {
         }
 
         // Create unique ID for event (using appointment ID)
-        const eventUid = `${apt.id}@${new URL(process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname}`
+        const eventUid = `${apt.id}@${new URL(process.env.NUXT_PUBLIC_BASE_URL || process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname}`
 
         // Build title: "Vorname Name - Kategorie Type"
         const vehicleType = apt.type || 'Fahrstunde'

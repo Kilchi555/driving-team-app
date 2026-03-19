@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
       type: 'invite',
       email,
       options: {
-        redirectTo: `${process.env.NUXT_PUBLIC_SITE_URL}/login/set-password`
+        redirectTo: `${process.env.NUXT_PUBLIC_BASE_URL || process.env.NUXT_PUBLIC_SITE_URL}/login/set-password`
       }
     })
 

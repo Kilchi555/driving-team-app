@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
       challenge: challengeBase64,
       rp: {
         name: 'Driving Team',
-        id: new URL(process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname
+        id: new URL(process.env.NUXT_PUBLIC_BASE_URL || process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname
       },
       user: {
         id: userProfile.id,

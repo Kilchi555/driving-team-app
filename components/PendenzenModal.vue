@@ -54,16 +54,6 @@
           >
             Bewertungen
           </button>
-          <button
-            :class="[
-              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
-              activeTab === 'unconfirmed' ? 'border-b-2 font-bold' : 'border-transparent',
-              activeTab === 'unconfirmed' && unconfirmedNext24hCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'unconfirmed' ? 'border-green-600 text-green-700' : unconfirmedNext24hCount > 0 ? 'text-red-600' : 'text-green-600'
-            ]"
-            @click="activeTab = 'unconfirmed'"
-          >
-            Unbestätigt
-          </button>
         </div>
       </div>
 
@@ -285,42 +275,6 @@
           </div>
         </div>
 
-        <!-- Unconfirmed Appointments -->
-        <div v-else-if="activeTab === 'unconfirmed'" class="p-4 space-y-3">
-          <!-- Termine Liste -->
-          <div v-if="filteredUnconfirmedAppointments.length === 0" class="text-center py-8 text-gray-500">
-            <p>Keine unbestätigten Termine</p>
-          </div>
-          
-          <div
-            v-for="appointment in filteredUnconfirmedAppointments"
-            :key="appointment.id"
-            :class="[
-              'rounded-lg border p-4 hover:shadow-md transition-all relative',
-              appointment.dueStatus === 'overdue_past' ? 'border-red-500 bg-red-50' :
-              appointment.dueStatus === 'overdue_24h' ? 'border-orange-400 bg-orange-50' :
-              appointment.dueStatus === 'due' ? 'border-yellow-400 bg-yellow-50' :
-              'border-green-300 bg-green-50'
-            ]"
-          >
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center space-x-2 mb-1">
-                  <span class="text-sm font-semibold text-gray-700">Nicht bestätigt</span>
-                  <span :class="['text-xs px-2 py-1 rounded-full font-medium', getDueStatusLabel(appointment.dueStatus).color]">
-                    {{ getDueStatusLabel(appointment.dueStatus).label }}
-                  </span>
-                </div>
-                <div class="text-gray-900 font-medium">{{ appointment.users?.first_name }} {{ appointment.users?.last_name }}</div>
-                <div class="text-sm text-gray-600 mt-1">
-                  {{ getAppointmentFormattedDate(appointment) }} • 
-                  {{ getAppointmentFormattedTime(appointment, 'start') }} - 
-                  {{ getAppointmentFormattedTime(appointment, 'end') }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -386,7 +340,7 @@ import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 interface Props {
   isOpen: boolean
   currentUser: any
-  defaultTab?: 'pendenzen' | 'bewertungen' | 'unconfirmed'
+  defaultTab?: 'pendenzen' | 'bewertungen'
 }
 
 const props = defineProps<Props>()
@@ -429,7 +383,7 @@ const {
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'pendenzen' | 'bewertungen' | 'unconfirmed'>(props.defaultTab || 'bewertungen')
+const activeTab = ref<'pendenzen' | 'bewertungen'>(props.defaultTab === 'unconfirmed' ? 'bewertungen' : (props.defaultTab || 'bewertungen'))
 
 
 // Cash Payment Confirmation Modal
