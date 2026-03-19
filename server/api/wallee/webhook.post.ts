@@ -1296,7 +1296,8 @@ async function processVouchersAndCredits(payments: any[]) {
                 name: product.product_name || product.name || 'Gutschein',
                 amount_chf: amountChf,
                 recipient_name: customerName || undefined,
-                valid_until: validUntil
+                valid_until: validUntil,
+                description: product.description || undefined
               }, branding)
               await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
               const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } })
@@ -1313,7 +1314,8 @@ async function processVouchersAndCredits(payments: any[]) {
               amount_chf: amountChf,
               recipient_name: customerName || undefined,
               recipient_email: customerEmail,
-              valid_until: validUntil
+              valid_until: validUntil,
+              description: product.description || undefined,
             }, branding)
 
             await sendEmail({

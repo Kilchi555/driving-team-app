@@ -78,6 +78,7 @@
                   <span class="text-xl font-semibold opacity-80 align-top mt-2.5 inline-block mr-1">CHF</span>{{ (voucher.amount_rappen / 100).toFixed(2) }}
                 </div>
                 <div class="text-white/80 text-sm font-medium">{{ voucher.name }}</div>
+                <div v-if="voucher.description" class="text-white/60 text-xs mt-0.5">{{ voucher.description }}</div>
               </div>
             </div>
 
@@ -125,22 +126,8 @@
                 </div>
               </div>
 
-              <!-- Download PDF button -->
-              <button
-                @click="downloadVoucherPDF(voucher.id)"
-                :disabled="downloadingId === voucher.id"
-                class="w-full py-3 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
-                :style="`background:${brandPrimary}; color:white; opacity:${downloadingId === voucher.id ? 0.7 : 1};`"
-              >
-                <svg v-if="downloadingId !== voucher.id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                <div v-else class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-                {{ downloadingId === voucher.id ? 'PDF wird erstellt…' : 'PDF herunterladen' }}
-              </button>
-
               <p class="text-center text-xs text-gray-400 mt-3">
-                📧 Gutschein wurde auch an deine E-Mail-Adresse gesendet (inkl. PDF)
+                📧 Gutschein wurde an deine E-Mail-Adresse gesendet (inkl. PDF)
               </p>
             </div>
           </div>

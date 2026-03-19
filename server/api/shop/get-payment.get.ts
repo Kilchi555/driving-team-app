@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     // Also load vouchers so the success page doesn't need a second round-trip
     const { data: voucherData } = await supabase
       .from('vouchers')
-      .select('id, code, name, amount_rappen, recipient_name, valid_until, tenant_id')
+      .select('id, code, name, description, amount_rappen, recipient_name, valid_until, tenant_id')
       .eq('payment_id', data.id)
 
     return { data, vouchers: voucherData || [] }
