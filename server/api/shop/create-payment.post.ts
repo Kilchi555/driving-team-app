@@ -107,7 +107,8 @@ export default defineEventHandler(async (event) => {
     if (normalizedDiscount > normalizedProductsPrice) {
       throw createError({ statusCode: 400, message: 'discount_amount_rappen darf products_price_rappen nicht übersteigen' })
     }
-    if (expectedTotal !== total_amount_rappen) {
+    if (Math.round(expectedTotal) !== Math.round(total_amount_rappen)) {
+      logger.error('❌ shop/create-payment: Inconsistent amounts:', { normalizedProductsPrice, normalizedDiscount, normalizedAdminFee, expectedTotal, total_amount_rappen })
       throw createError({ statusCode: 400, message: 'Preisangaben inkonsistent' })
     }
 
