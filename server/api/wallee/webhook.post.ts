@@ -1266,15 +1266,47 @@ async function processVouchersAndCredits(payments: any[]) {
 
         logger.info('✅ Voucher created in webhook:', newVoucher.code)
 
-        // ── Send voucher email automatically ──────────────────
+        // ── Send voucher email automatically (with PDF attachment) ──────────
         if (customerEmail) {
           try {
-            const { generateVoucherEmailContent } = await import('~/utils/voucherGenerator')
+            const { generateVoucherEmailContent, generateVoucherPDFContent } = await import('~/utils/voucherGenerator')
             const { sendEmail } = await import('~/server/utils/email')
             const { getTenantBranding } = await import('~/server/utils/tenant-branding')
             
             const branding = payment.tenant_id ? await getTenantBranding(payment.tenant_id) : {}
             const amountChf = (product.unit_price_rappen || product.price_rappen || 0) / 100
+
+            // Generate PDF buffer
+            let pdfAttachment: { filename: string; content: Buffer; contentType: string } | undefined
+            try {
+              const puppeteerMod = await import('puppeteer-core')
+              const Puppeteer = puppeteerMod.default
+              const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.USE_SPARTICUZ_CHROMIUM
+              let launchOptions: any
+              if (isProduction) {
+                const chromium = (await import('@sparticuz/chromium')).default
+                launchOptions = { args: chromium.args, defaultViewport: chromium.defaultViewport, executablePath: await chromium.executablePath(), headless: chromium.headless }
+              } else {
+                launchOptions = { headless: 'new', pipe: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] }
+              }
+              const browser = await Puppeteer.launch(launchOptions)
+              const page = await browser.newPage()
+              const htmlContent = generateVoucherPDFContent({
+                code: newVoucher.code,
+                name: product.product_name || product.name || 'Gutschein',
+                amount_chf: amountChf,
+                recipient_name: customerName || undefined,
+                valid_until: validUntil
+              }, branding)
+              await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
+              const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } })
+              await page.close()
+              await browser.close()
+              pdfAttachment = { filename: `Gutschein_${newVoucher.code}.pdf`, content: Buffer.from(pdfBuffer), contentType: 'application/pdf' }
+            } catch (pdfErr: any) {
+              logger.warn('⚠️ PDF generation failed (email will be sent without attachment):', pdfErr.message)
+            }
+
             const emailContent = generateVoucherEmailContent({
               code: newVoucher.code,
               name: product.product_name || product.name || 'Gutschein',
@@ -1287,10 +1319,11 @@ async function processVouchersAndCredits(payments: any[]) {
             await sendEmail({
               to: customerEmail,
               subject: emailContent.subject,
-              html: emailContent.html
+              html: emailContent.html,
+              ...(pdfAttachment ? { attachments: [pdfAttachment] } : {})
             })
 
-            logger.info('✅ Voucher email sent to:', customerEmail, 'code:', newVoucher.code)
+            logger.info('✅ Voucher email sent to:', customerEmail, 'code:', newVoucher.code, pdfAttachment ? '(with PDF)' : '(no PDF)')
           } catch (emailErr: any) {
             logger.warn('⚠️ Voucher email send failed (non-critical):', emailErr.message)
           }
