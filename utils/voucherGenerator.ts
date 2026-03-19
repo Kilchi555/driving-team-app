@@ -355,6 +355,7 @@ export const generateVoucherEmailContent = (
     recipient_name?: string
     recipient_email?: string
     valid_until: string
+    description?: string
     downloadUrl?: string
   },
   branding: VoucherBranding = {}
@@ -395,6 +396,7 @@ export const generateVoucherEmailContent = (
         <span style="font-size:26px;font-weight:600;vertical-align:top;margin-top:12px;display:inline-block;opacity:0.85;">CHF </span>${voucher.amount_chf.toFixed(2)}
       </div>
       <div style="color:rgba(255,255,255,0.8);font-size:15px;font-weight:500;">${voucher.name}</div>
+      ${voucher.description ? `<div style="color:rgba(255,255,255,0.65);font-size:13px;margin-top:6px;font-style:italic;">«${voucher.description}»</div>` : ''}
     </td>
   </tr>
 

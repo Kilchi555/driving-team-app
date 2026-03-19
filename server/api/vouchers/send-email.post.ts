@@ -103,7 +103,8 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
         name: voucher.name || 'Gutschein',
         amount_chf: amountChf,
         recipient_name: voucher.voucher_recipient_name || undefined,
-        valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+        valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        description: voucher.description || undefined
       }, branding)
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
       const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } })
@@ -120,7 +121,8 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
       amount_chf: amountChf,
       recipient_name: voucher.voucher_recipient_name || undefined,
       recipient_email: emailTo,
-      valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      description: voucher.description || undefined
     }, branding)
 
     await sendEmail({
