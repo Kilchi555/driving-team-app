@@ -1466,18 +1466,8 @@ const loadProducts = async () => {
   isLoadingProducts.value = true
   
   try {
-    // Wait for tenant to be loaded (up to 5s)
     if (!currentTenant.value) {
-      logger.debug('🔄 Waiting for tenant to be loaded...')
-      let waited = 0
-      while (!currentTenant.value && waited < 5000) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-        waited += 200
-      }
-    }
-    
-    if (!currentTenant.value) {
-      console.error('❌ Tenant not loaded after 5 seconds')
+      console.error('❌ Tenant not loaded')
       availableProducts.value = []
       return
     }
@@ -1828,11 +1818,9 @@ onMounted(async () => {
     if (tenantParam.value) {
       logger.debug('🏢 Shop - Loading tenant from URL parameter:', tenantParam.value)
       await loadTenant(tenantParam.value)
-      logger.debug('🏢 Shop - After loading tenant, tenantId is now:', tenantId.value)
     } else if (route.query.tenant) {
       logger.debug('🏢 Shop - Loading tenant from route query:', route.query.tenant)
       await loadTenant(route.query.tenant as string)
-      logger.debug('🏢 Shop - After loading tenant, tenantId is now:', tenantId.value)
     } else {
       // Kein Tenant-Parameter gefunden - lade den aktuellen Benutzer-Tenant als Fallback
       logger.debug('🏢 Shop - No tenant parameter found, using current user tenant as fallback')
@@ -1869,59 +1857,52 @@ onMounted(async () => {
         console.error('❌ Error loading user tenant as fallback:', error)
       }
     }
-    
-    // Wait a bit for tenant to be fully initialized
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    // Load features for the current tenant
-    if (tenantId.value) {
-      logger.debug('🔍 Loading features for tenant:', tenantId.value)
-      await loadFeatures(tenantId.value)
-    }
-    
-    // Clear any old drafts on mount so recovery never triggers
-    autoSave.clearDraft()
-    
-    // Produkte laden nachdem Tenant geladen ist
-    logger.debug('🛍️ Shop mounted - Step-by-step process started')
-    await loadProducts()
 
-    // Auth-Status prüfen (Kundendaten vorab laden wenn eingeloggt)
+    // Run features, products and user-data in parallel — no artificial delay needed
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
     const user = authStore.user
-    
-    if (user) {
-      logger.debug('👤 User is already logged in')
-      isLoggedIn.value = true
-      customerType.value = 'existing'
-      
-      // Load customer data
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single()
-      
-      if (userData) {
-        customerData.value = userData
-        logger.debug('✅ Customer data loaded:', userData.email)
-        
-        // ✅ NEW: Pre-fill form data with customer information
-        formData.value = {
-          firstName: userData.first_name || '',
-          lastName: userData.last_name || '',
-          email: userData.email || user.email || '',
-          phone: userData.phone || '',
-          street: userData.street || '',
-          streetNumber: userData.street_number || '',
-          zip: userData.zip || '',
-          city: userData.city || '',
-          notes: ''
+
+    await Promise.all([
+      // Load feature flags
+      tenantId.value ? loadFeatures(tenantId.value) : Promise.resolve(),
+
+      // Load products
+      loadProducts(),
+
+      // Load auth user data if already logged in
+      (async () => {
+        if (!user) return
+        isLoggedIn.value = true
+        customerType.value = 'existing'
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', user.id)
+          .single()
+        if (userData) {
+          customerData.value = userData
+          logger.debug('✅ Customer data loaded:', userData.email)
+          formData.value = {
+            firstName: userData.first_name || '',
+            lastName: userData.last_name || '',
+            email: userData.email || user.email || '',
+            phone: userData.phone || '',
+            street: userData.street || '',
+            streetNumber: userData.street_number || '',
+            zip: userData.zip || '',
+            city: userData.city || '',
+            notes: ''
+          }
+          logger.debug('✅ Form data pre-filled with customer info')
         }
-        logger.debug('✅ Form data pre-filled with customer info')
-      }
-    }
+      })()
+    ])
+
+    // Clear any old drafts on mount so recovery never triggers
+    autoSave.clearDraft()
+
+    logger.debug('🛍️ Shop ready')
 
     isShopReady.value = true
   } catch (error) {
