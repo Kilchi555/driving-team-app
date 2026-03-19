@@ -5,28 +5,28 @@
     <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12">
 
       <!-- ── LOADING SKELETON ── -->
-      <div v-if="!isShopReady" class="bg-white rounded-2xl shadow-2xl overflow-hidden animate-pulse">
-        <!-- Header skeleton -->
-        <div class="h-28 bg-gray-200 relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"></div>
-          <div class="relative z-10 px-6 py-4 flex items-center justify-between">
-            <div class="h-8 w-32 bg-white/30 rounded-lg"></div>
-            <div class="h-5 w-20 bg-white/30 rounded-full"></div>
+      <div v-if="!isShopReady" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Header with real branding colors + logo -->
+        <div class="relative overflow-hidden px-6 py-5 flex items-center justify-between"
+             :style="{ background: headerGradient }">
+          <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-10 bg-white"></div>
+          <div class="absolute -bottom-6 -left-6 w-28 h-28 rounded-full opacity-10 bg-white"></div>
+          <div class="relative z-10">
+            <LoadingLogo size="2xl" :tenant-id="tenantId || undefined" :tenant-slug="tenantParam || undefined" class="brightness-0 invert opacity-90" />
           </div>
-          <div class="relative z-10 px-6 pb-4">
-            <div class="h-6 w-40 bg-white/30 rounded-lg mb-2"></div>
-            <div class="h-4 w-56 bg-white/20 rounded-lg"></div>
+          <div class="relative z-10 flex items-center gap-2 text-white/70 text-sm font-medium">
+            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+            Wird geladen…
           </div>
         </div>
-        <!-- Content skeleton -->
-        <div class="p-5 space-y-4">
-          <div class="h-5 w-28 bg-gray-200 rounded-lg"></div>
+        <!-- Skeleton content -->
+        <div class="p-5 space-y-3 animate-pulse">
+          <div class="h-4 w-24 bg-gray-200 rounded-lg"></div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div v-for="i in 4" :key="i" class="h-28 bg-gray-100 rounded-xl"></div>
           </div>
         </div>
-        <!-- Footer skeleton -->
-        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100">
+        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 animate-pulse">
           <div class="h-12 bg-gray-200 rounded-xl"></div>
         </div>
       </div>
@@ -1956,15 +1956,6 @@ const handlePaymentFailed = (error: any) => {
 </script>
 
 <style scoped>
-/* Shimmer loading animation */
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-.animate-shimmer {
-  animation: shimmer 1.5s infinite;
-}
-
 /* Slide-up transition for cart */
 .slide-up-enter-active,
 .slide-up-leave-active {
