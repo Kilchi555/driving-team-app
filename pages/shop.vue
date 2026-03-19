@@ -4,8 +4,35 @@
   <div class="min-h-screen" :style="pageBackground">
     <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12">
 
+      <!-- ── LOADING SKELETON ── -->
+      <div v-if="!isShopReady" class="bg-white rounded-2xl shadow-2xl overflow-hidden animate-pulse">
+        <!-- Header skeleton -->
+        <div class="h-28 bg-gray-200 relative overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"></div>
+          <div class="relative z-10 px-6 py-4 flex items-center justify-between">
+            <div class="h-8 w-32 bg-white/30 rounded-lg"></div>
+            <div class="h-5 w-20 bg-white/30 rounded-full"></div>
+          </div>
+          <div class="relative z-10 px-6 pb-4">
+            <div class="h-6 w-40 bg-white/30 rounded-lg mb-2"></div>
+            <div class="h-4 w-56 bg-white/20 rounded-lg"></div>
+          </div>
+        </div>
+        <!-- Content skeleton -->
+        <div class="p-5 space-y-4">
+          <div class="h-5 w-28 bg-gray-200 rounded-lg"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div v-for="i in 4" :key="i" class="h-28 bg-gray-100 rounded-xl"></div>
+          </div>
+        </div>
+        <!-- Footer skeleton -->
+        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100">
+          <div class="h-12 bg-gray-200 rounded-xl"></div>
+        </div>
+      </div>
+
       <!-- ── CARD ── -->
-      <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div v-show="isShopReady" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
 
         <!-- Card Header -->
         <div class="relative overflow-hidden" :style="{ background: headerGradient }">
@@ -730,6 +757,7 @@ interface WalleeResponse {
 
 // Reactive data - Multi-Step Process
 const currentStep = ref(1) // Start directly at products (step 0 legacy removed)
+const isShopReady = ref(false)
 const editingCustomerData = ref(false)
 const guestUserId = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -1894,10 +1922,13 @@ onMounted(async () => {
         logger.debug('✅ Form data pre-filled with customer info')
       }
     }
+
+    isShopReady.value = true
   } catch (error) {
     console.error('❌ Error in shop onMounted:', error)
     // Fallback: Produkte trotzdem laden (mit Fallback-Produkten)
     loadProducts()
+    isShopReady.value = true
   }
 })
 
@@ -1944,6 +1975,15 @@ const handlePaymentFailed = (error: any) => {
 </script>
 
 <style scoped>
+/* Shimmer loading animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
 /* Slide-up transition for cart */
 .slide-up-enter-active,
 .slide-up-leave-active {
