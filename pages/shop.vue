@@ -531,7 +531,6 @@
       </div>
     </Transition>
 
-    </div>
   </div>
 
   <!-- Voucher Download Modal -->
