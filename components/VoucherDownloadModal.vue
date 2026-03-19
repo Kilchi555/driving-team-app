@@ -113,7 +113,8 @@ interface Props {
     id: string
     code: string
     name: string
-    amount_chf: number
+    amount_chf?: number
+    amount_rappen?: number
   }>
   onClose?: () => void
 }
