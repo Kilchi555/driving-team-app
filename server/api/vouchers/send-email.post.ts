@@ -82,6 +82,38 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
 
     const branding = voucher.tenant_id ? await getTenantBranding(voucher.tenant_id) : {}
 
+    // Generate PDF attachment
+    let pdfAttachment: { filename: string; content: Buffer; contentType: string } | undefined
+    try {
+      const puppeteerMod = await import('puppeteer-core')
+      const Puppeteer = puppeteerMod.default
+      const { generateVoucherPDFContent } = await import('~/utils/voucherGenerator')
+      const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.USE_SPARTICUZ_CHROMIUM
+      let launchOptions: any
+      if (isProduction) {
+        const chromium = (await import('@sparticuz/chromium')).default
+        launchOptions = { args: chromium.args, defaultViewport: chromium.defaultViewport, executablePath: await chromium.executablePath(), headless: chromium.headless }
+      } else {
+        launchOptions = { headless: 'new', pipe: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] }
+      }
+      const browser = await Puppeteer.launch(launchOptions)
+      const page = await browser.newPage()
+      const htmlContent = generateVoucherPDFContent({
+        code: voucher.code,
+        name: voucher.name || 'Gutschein',
+        amount_chf: amountChf,
+        recipient_name: voucher.voucher_recipient_name || undefined,
+        valid_until: voucher.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      }, branding)
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
+      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } })
+      await page.close()
+      await browser.close()
+      pdfAttachment = { filename: `Gutschein_${voucher.code}.pdf`, content: Buffer.from(pdfBuffer), contentType: 'application/pdf' }
+    } catch (pdfErr: any) {
+      logger.warn('⚠️ PDF generation failed, sending email without attachment:', pdfErr.message)
+    }
+
     const emailContent = generateVoucherEmailContent({
       code: voucher.code,
       name: voucher.name || 'Gutschein',
@@ -94,10 +126,11 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
     await sendEmail({
       to: emailTo,
       subject: emailContent.subject,
-      html: emailContent.html
+      html: emailContent.html,
+      ...(pdfAttachment ? { attachments: [pdfAttachment] } : {})
     })
 
-    logger.debug('✅ Voucher email sent to:', emailTo, 'code:', voucher.code)
+    logger.debug('✅ Voucher email sent to:', emailTo, 'code:', voucher.code, pdfAttachment ? '(with PDF)' : '(no PDF)')
 
     return {
       success: true,

@@ -1,386 +1,340 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-    <div class="max-w-md w-full">
-      <!-- Voucher Download Modal -->
-      <VoucherDownloadModal
-        v-if="paymentDetails && hasVouchers"
-        :show-modal="showVoucherModal"
-        :vouchers="vouchers"
-        @close="showVoucherModal = false; startCountdown()"
-      />
+  <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%);">
+    <div class="w-full max-w-lg">
 
-      <!-- Main Success Card -->
-      <div class="bg-white rounded-2xl shadow-xl p-8">
-        <!-- Loading State -->
-        <div v-if="isLoading" class="text-center">
-          <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mb-4"></div>
-          <h2 class="text-xl font-semibold text-gray-900 mb-2">Zahlung wird verarbeitet...</h2>
-          <p class="text-gray-600">Bitte warten Sie einen Moment.</p>
+      <!-- Loading -->
+      <div v-if="isLoading" class="bg-white rounded-3xl shadow-2xl p-12 text-center">
+        <div class="inline-block w-14 h-14 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-6"></div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2">Zahlung wird verarbeitet…</h2>
+        <p class="text-gray-500 text-sm">Bitte einen Moment warten.</p>
+      </div>
+
+      <!-- ── SUCCESS + VOUCHERS ── -->
+      <div v-else-if="paymentStatus === 'completed' || paymentStatus === 'authorized'">
+
+        <!-- Success header card -->
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden mb-4">
+
+          <!-- Green top banner -->
+          <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-8 text-center text-white">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+              <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <h1 class="text-2xl font-bold mb-1">Zahlung erfolgreich!</h1>
+            <p class="text-emerald-100 text-sm">
+              <span v-if="paymentStatus === 'authorized'">Autorisiert – wird zum Termin abgebucht.</span>
+              <span v-else>Deine Zahlung wurde erfolgreich verarbeitet.</span>
+            </p>
+          </div>
+
+          <!-- Amount -->
+          <div v-if="paymentDetails" class="px-8 py-5 border-b border-gray-100 flex items-center justify-between">
+            <span class="text-sm text-gray-500 font-medium">Bezahlter Betrag</span>
+            <span class="text-lg font-bold text-gray-900">CHF {{ (paymentDetails.total_amount_rappen / 100).toFixed(2) }}</span>
+          </div>
+
+          <!-- Redirect hint or button -->
+          <div class="px-8 py-5 text-center">
+            <p v-if="!hasVouchers" class="text-sm text-gray-400 mb-4">
+              Weiterleitung in {{ countdown }} Sekunden…
+            </p>
+            <button
+              @click="redirectToDashboard"
+              class="w-full py-3 rounded-2xl font-semibold text-sm text-white transition-all"
+              style="background: linear-gradient(135deg, #10b981, #0d9488);"
+            >
+              Zum Dashboard
+            </button>
+          </div>
         </div>
 
-      <!-- Success State -->
-      <div v-else-if="paymentStatus === 'completed' || paymentStatus === 'authorized'" class="text-center">
-        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-          <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        <!-- ── Voucher cards ── -->
+        <div v-if="hasVouchers && vouchers.length > 0" class="space-y-4">
+
+          <div class="text-center mb-2">
+            <span class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 bg-white/80 rounded-full px-4 py-1.5 shadow-sm">
+              🎁 Deine Gutscheine wurden per E-Mail verschickt
+            </span>
+          </div>
+
+          <div
+            v-for="voucher in vouchers"
+            :key="voucher.id"
+            class="bg-white rounded-3xl shadow-2xl overflow-hidden"
+          >
+            <!-- Voucher hero -->
+            <div class="relative overflow-hidden px-8 py-7 text-white" :style="`background: linear-gradient(135deg, ${brandPrimary} 0%, ${brandPrimary}cc 100%);`">
+              <!-- Decorative circles -->
+              <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/10"></div>
+              <div class="absolute -bottom-10 left-1/4 w-48 h-48 rounded-full bg-white/5"></div>
+
+              <div class="relative z-10">
+                <div class="inline-block bg-white/15 border border-white/25 text-white text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-4">
+                  Geschenkgutschein
+                </div>
+                <div class="text-5xl font-black tracking-tight mb-1">
+                  <span class="text-xl font-semibold opacity-80 align-top mt-2.5 inline-block mr-1">CHF</span>{{ (voucher.amount_rappen / 100).toFixed(2) }}
+                </div>
+                <div class="text-white/80 text-sm font-medium">{{ voucher.name }}</div>
+              </div>
+            </div>
+
+            <!-- Tear line -->
+            <div class="relative h-5 bg-gray-50">
+              <div class="absolute inset-0 flex items-center justify-between px-5">
+                <div class="w-5 h-5 rounded-full bg-gray-50 -ml-2.5 shadow-inner"></div>
+                <div class="flex-1 border-t-2 border-dashed border-gray-200 mx-2"></div>
+                <div class="w-5 h-5 rounded-full bg-gray-50 -mr-2.5 shadow-inner"></div>
+              </div>
+            </div>
+
+            <!-- Code & info -->
+            <div class="px-8 py-6">
+              <!-- Code -->
+              <div class="mb-5">
+                <p class="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Gutscheincode</p>
+                <div class="inline-flex items-center gap-3 rounded-xl px-5 py-3 border-2" :style="`background:${brandPrimary}08; border-color:${brandPrimary}25;`">
+                  <span class="text-lg">🎟</span>
+                  <span class="font-mono text-xl font-black tracking-widest" :style="`color:${brandPrimary};`">{{ voucher.code }}</span>
+                  <button
+                    @click="copyCode(voucher.code)"
+                    class="ml-1 text-gray-400 hover:text-gray-700 transition-colors"
+                    title="Code kopieren"
+                  >
+                    <svg v-if="copiedCode !== voucher.code" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <svg v-else class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Meta row -->
+              <div class="flex items-center justify-between text-sm mb-6">
+                <div>
+                  <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Empfänger</p>
+                  <p class="font-semibold text-gray-800">{{ voucher.recipient_name || 'Inhaber/in' }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Gültig bis</p>
+                  <p class="font-semibold text-gray-800">{{ formatValidUntil(voucher.valid_until) }}</p>
+                </div>
+              </div>
+
+              <!-- Download PDF button -->
+              <button
+                @click="downloadVoucherPDF(voucher.id)"
+                :disabled="downloadingId === voucher.id"
+                class="w-full py-3 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                :style="`background:${brandPrimary}; color:white; opacity:${downloadingId === voucher.id ? 0.7 : 1};`"
+              >
+                <svg v-if="downloadingId !== voucher.id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <div v-else class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                {{ downloadingId === voucher.id ? 'PDF wird erstellt…' : 'PDF herunterladen' }}
+              </button>
+
+              <p class="text-center text-xs text-gray-400 mt-3">
+                📧 Gutschein wurde auch an deine E-Mail-Adresse gesendet (inkl. PDF)
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Failed -->
+      <div v-else-if="paymentStatus === 'failed'" class="bg-white rounded-3xl shadow-2xl p-10 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-5">
+          <svg class="w-9 h-9 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Zahlung erfolgreich!</h2>
-        <p class="text-gray-600 mb-6">
-          <span v-if="paymentStatus === 'authorized'">Ihre Zahlung wurde autorisiert und wird zum Termin abgebucht.</span>
-          <span v-else>Ihre Zahlung wurde erfolgreich verarbeitet.</span>
-        </p>
-        
-        <div v-if="paymentDetails" class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-          <div class="flex justify-between mb-2">
-            <span class="text-gray-600">Betrag:</span>
-            <span class="font-semibold text-gray-900">CHF {{ (paymentDetails.total_amount_rappen / 100).toFixed(2) }}</span>
-          </div>
-          <div v-if="paymentDetails.appointment" class="flex justify-between">
-            <span class="text-gray-600">Termin:</span>
-            <span class="font-semibold text-gray-900">{{ formatDate(paymentDetails.appointment.start_time) }}</span>
-          </div>
-        </div>
-
-        <p class="text-sm text-gray-500 mb-6">
-          Sie werden in {{ countdown }} Sekunden automatisch weitergeleitet...
-        </p>
-
-        <button
-          @click="redirectToDashboard"
-          class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
-        >
-          Zum Dashboard
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Zahlung fehlgeschlagen</h2>
+        <p class="text-gray-500 text-sm mb-6">Die Zahlung konnte nicht verarbeitet werden.</p>
+        <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-800 text-white font-semibold text-sm">
+          Zurück
         </button>
       </div>
 
-      <!-- Failed State -->
-      <div v-else-if="paymentStatus === 'failed'" class="text-center">
-        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-          <svg class="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      <!-- Pending -->
+      <div v-else-if="paymentStatus === 'pending'" class="bg-white rounded-3xl shadow-2xl p-10 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-5">
+          <svg class="w-9 h-9 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Zahlung fehlgeschlagen</h2>
-        <p class="text-gray-600 mb-6">Ihre Zahlung konnte nicht verarbeitet werden.</p>
-
-        <button
-          @click="redirectToDashboard"
-          class="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold"
-        >
-          Zurück zum Dashboard
-        </button>
-      </div>
-
-      <!-- Pending State -->
-      <div v-else-if="paymentStatus === 'pending'" class="text-center">
-        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-4">
-          <svg class="h-10 w-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Zahlung wird verarbeitet</h2>
-        <p class="text-gray-600 mb-6">Ihre Zahlung wird noch verarbeitet. Dies kann einige Minuten dauern.</p>
-
-        <button
-          @click="checkStatus"
-          class="w-full bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors font-semibold mb-3"
-        >
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Zahlung wird verarbeitet</h2>
+        <p class="text-gray-500 text-sm mb-6">Das kann einen Moment dauern.</p>
+        <button @click="checkStatus" class="w-full py-3 rounded-2xl bg-amber-500 text-white font-semibold text-sm mb-3">
           Status aktualisieren
         </button>
-
-        <button
-          @click="redirectToDashboard"
-          class="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-        >
+        <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm">
           Zum Dashboard
         </button>
       </div>
 
-      <!-- Error State -->
-      <div v-else class="text-center">
-        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-4">
-          <svg class="h-10 w-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+      <!-- Not found -->
+      <div v-else class="bg-white rounded-3xl shadow-2xl p-10 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-5">
+          <svg class="w-9 h-9 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Zahlung nicht gefunden</h2>
-        <p class="text-gray-600 mb-4">Die Zahlungsinformationen konnten nicht geladen werden.</p>
-        <p class="text-sm text-gray-500 mb-6">
-          Die Zahlung wird möglicherweise noch verarbeitet. Bitte versuchen Sie es erneut.
-        </p>
-
-        <button
-          @click="checkStatus"
-          class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold mb-3"
-        >
-          <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Zahlung nicht gefunden</h2>
+        <p class="text-gray-500 text-sm mb-6">Die Zahlungsinformationen konnten nicht geladen werden.</p>
+        <button @click="checkStatus" class="w-full py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm mb-3">
           Neu laden
         </button>
-
-        <button
-          @click="redirectToDashboard"
-          class="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-        >
+        <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm">
           Zum Dashboard
         </button>
       </div>
-      </div>
+
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import VoucherDownloadModal from '~/components/VoucherDownloadModal.vue'
+import { useRoute } from 'vue-router'
 import { getSupabase } from '~/utils/supabase'
+import { useVouchers } from '~/composables/useVouchers'
 import { logger } from '~/utils/logger'
 
 const route = useRoute()
-const router = useRouter()
 
 const isLoading = ref(true)
 const paymentStatus = ref<string | null>(null)
 const paymentDetails = ref<any>(null)
 const countdown = ref(5)
-const showVoucherModal = ref(false)
 const vouchers = ref<any[]>([])
+const copiedCode = ref<string | null>(null)
+const downloadingId = ref<string | null>(null)
+const brandPrimary = ref('#1a56db')
+
 let countdownInterval: NodeJS.Timeout | null = null
 let statusCheckInterval: NodeJS.Timeout | null = null
 
-// Support both camelCase (old) and snake_case (new) query params
+const { downloadVoucherPDF: doDownloadPDF } = useVouchers()
+
 const transactionId = (route.query.transactionId || route.query.transaction_id) as string | undefined
 const paymentId = route.query.paymentId as string | undefined
 
-// ✅ Check if payment contains vouchers
-const hasVouchers = computed(() => {
-  if (!paymentDetails.value?.metadata) return false
-  try {
-    const metadata = typeof paymentDetails.value.metadata === 'string' 
-      ? JSON.parse(paymentDetails.value.metadata) 
-      : paymentDetails.value.metadata
-    return metadata.products?.some((p: any) => p.is_voucher)
-  } catch {
-    return false
-  }
-})
+const hasVouchers = computed(() => vouchers.value.length > 0)
 
-const formatDate = (dateStr: string) => {
-  const parts = dateStr.replace('T', ' ').replace('Z', '').split(/[-: ]/)
-  const d = new Date(
-    parseInt(parts[0]),
-    parseInt(parts[1]) - 1,
-    parseInt(parts[2]),
-    parseInt(parts[3] || '0'),
-    parseInt(parts[4] || '0'),
-    parseInt(parts[5] || '0')
-  )
-  return `${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+const formatValidUntil = (dateStr: string) => {
+  if (!dateStr) return '–'
+  return new Date(dateStr).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+const copyCode = async (code: string) => {
+  try {
+    await navigator.clipboard.writeText(code)
+    copiedCode.value = code
+    setTimeout(() => { copiedCode.value = null }, 2000)
+  } catch { /* ignore */ }
+}
+
+const downloadVoucherPDF = async (voucherId: string) => {
+  downloadingId.value = voucherId
+  try {
+    await doDownloadPDF(voucherId)
+  } finally {
+    downloadingId.value = null
+  }
+}
+
+// Load tenant branding for voucher card color
+const loadBranding = async (tenantId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data } = await supabase.from('tenants').select('primary_color').eq('id', tenantId).single()
+    if (data?.primary_color) brandPrimary.value = data.primary_color
+  } catch { /* ignore */ }
+}
+
+const loadVouchersFromDB = async (paymentId: string, supabase: any) => {
+  const { data } = await supabase
+    .from('vouchers')
+    .select('id, code, name, amount_rappen, recipient_name, valid_until, tenant_id')
+    .eq('payment_id', paymentId)
+  return data || []
 }
 
 const checkStatus = async () => {
   try {
     isLoading.value = true
-    
-    // ✅ If no payment/transaction ID: try to find recent payment for logged-in user
+
     if (!paymentId && !transactionId) {
-      logger.debug('🔍 No payment ID provided, trying to find recent payment for current user...')
-      
       const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
       const authUser = session?.user
-
       if (authUser) {
-        logger.debug('👤 Auth user:', authUser.id)
-        
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id, tenant_id')
-          .eq('auth_user_id', authUser.id)
-          .single()
-        
+        const { data: userData } = await supabase.from('users').select('id, tenant_id').eq('auth_user_id', authUser.id).single()
         if (userData) {
-          logger.debug('🏢 User data found:', { user_id: userData.id, tenant_id: userData.tenant_id })
-          
-          // Find the most recent completed OR authorized payment (created within last 5 minutes)
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-          
-          const { data: recentPayment, error: recentError } = await supabase
+          const { data: recentPayment } = await supabase
             .from('payments')
-            .select(`
-              id,
-              payment_status,
-              total_amount_rappen,
-              wallee_transaction_id,
-              created_at,
-              metadata,
-              appointments (
-                id,
-                start_time,
-                title
-              )
-            `)
+            .select('id, payment_status, total_amount_rappen, metadata')
             .eq('user_id', userData.id)
-            .eq('tenant_id', userData.tenant_id)
             .in('payment_status', ['completed', 'authorized'])
             .gte('created_at', fiveMinutesAgo)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
-          
-          logger.debug('📊 Query result:', { payment: recentPayment, error: recentError })
-          
-            if (recentPayment) {
-              logger.debug('✅ Found recent payment:', recentPayment.id)
-              paymentDetails.value = recentPayment
-              paymentStatus.value = recentPayment.payment_status
-              isLoading.value = false
-              
-              if (recentPayment.metadata) {
-                try {
-                  const metadata = typeof recentPayment.metadata === 'string' 
-                    ? JSON.parse(recentPayment.metadata) 
-                    : recentPayment.metadata
-                  if (metadata.products && Array.isArray(metadata.products)) {
-                    const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
-                    if (voucherProducts.length > 0) {
-                      // Load actual voucher records from DB (created by webhook)
-                      const { data: voucherRecords } = await supabase
-                        .from('vouchers')
-                        .select('id, code, name, amount_rappen')
-                        .eq('payment_id', recentPayment.id)
-                      
-                      if (voucherRecords && voucherRecords.length > 0) {
-                        vouchers.value = voucherRecords
-                      } else {
-                        await new Promise(resolve => setTimeout(resolve, 2000))
-                        const { data: retryRecords } = await supabase
-                          .from('vouchers')
-                          .select('id, code, name, amount_rappen')
-                          .eq('payment_id', recentPayment.id)
-                        vouchers.value = retryRecords || []
-                      }
 
-                      logger.debug('🎁 Loaded vouchers from DB:', vouchers.value)
-                      showVoucherModal.value = true
-                      return
-                    }
-                  }
-                } catch (err) {
-                  console.error('Error parsing vouchers from metadata:', err)
-                }
-              }
-              
-              startCountdown()
-              return
-          } else {
-            console.warn('⚠️ No recent completed payment found within 5 minutes')
+          if (recentPayment) {
+            paymentDetails.value = recentPayment
+            paymentStatus.value = recentPayment.payment_status
+            isLoading.value = false
+            await checkForVouchers(recentPayment, supabase)
+            if (!hasVouchers.value) startCountdown()
+            return
           }
-        } else {
-          console.warn('⚠️ User data not found')
         }
-      } else {
-        // Guest user — no session, can't look up by user
-        logger.debug('ℹ️ Guest user, no session — cannot look up payment by user')
       }
-      
-      console.error('No payment ID or transaction ID provided and could not find recent payment')
       isLoading.value = false
       return
     }
-    
-    const supabase = getSupabase()
 
+    const supabase = getSupabase()
     let query = supabase
       .from('payments')
-      .select(`
-        id,
-        payment_status,
-        total_amount_rappen,
-        wallee_transaction_id,
-        metadata,
-        appointments (
-          id,
-          start_time,
-          title
-        )
-      `)
-    
+      .select('id, payment_status, total_amount_rappen, metadata, tenant_id')
+
     if (paymentId) {
       query = query.eq('id', paymentId)
     } else if (transactionId) {
-      // transactionId could be either a payment ID or wallee_transaction_id
-      // Try payment ID first, then wallee_transaction_id
       query = query.or(`id.eq.${transactionId},wallee_transaction_id.eq.${transactionId}`)
     }
-    
+
     const { data, error } = await query.single()
-    
+
     if (error || !data) {
-      console.error('Payment not found:', error)
       paymentStatus.value = null
       isLoading.value = false
       return
     }
-    
+
     paymentDetails.value = data
     paymentStatus.value = data.payment_status
     isLoading.value = false
-    
-    // ✅ NEW: Extract vouchers from metadata if they exist
-    if (data.metadata) {
-      try {
-        const metadata = typeof data.metadata === 'string' 
-          ? JSON.parse(data.metadata) 
-          : data.metadata
-        if (metadata.products && Array.isArray(metadata.products)) {
-          const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
-          if (voucherProducts.length > 0) {
-            // Load actual voucher records from DB (created by webhook, have code + amount)
-            const { data: voucherRecords } = await supabase
-              .from('vouchers')
-              .select('id, code, name, amount_rappen')
-              .eq('payment_id', data.id)
-            
-            if (voucherRecords && voucherRecords.length > 0) {
-              vouchers.value = voucherRecords
-            } else {
-              // Webhook may still be processing — retry once after a short delay
-              await new Promise(resolve => setTimeout(resolve, 2000))
-              const { data: retryRecords } = await supabase
-                .from('vouchers')
-                .select('id, code, name, amount_rappen')
-                .eq('payment_id', data.id)
-              vouchers.value = retryRecords || []
-            }
 
-            logger.debug('🎁 Loaded vouchers from DB:', vouchers.value)
-            // Show voucher modal instead of countdown if vouchers exist
-            showVoucherModal.value = true
-            isLoading.value = false
-            return
-          }
-        }
-      } catch (err) {
-        console.error('Error parsing vouchers from metadata:', err)
-      }
-    }
-    
-    // Start countdown if payment is completed or authorized
-    if ((data.payment_status === 'completed' || data.payment_status === 'authorized') && !countdownInterval) {
+    if (data.tenant_id) await loadBranding(data.tenant_id)
+
+    await checkForVouchers(data, supabase)
+
+    if ((data.payment_status === 'completed' || data.payment_status === 'authorized') && !hasVouchers.value) {
       startCountdown()
     }
-    
-    // Stop checking if payment is completed, authorized, or failed
-    if (data.payment_status === 'completed' || data.payment_status === 'authorized' || data.payment_status === 'failed') {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval)
-        statusCheckInterval = null
-      }
+
+    if (['completed', 'authorized', 'failed'].includes(data.payment_status)) {
+      if (statusCheckInterval) { clearInterval(statusCheckInterval); statusCheckInterval = null }
     }
   } catch (err) {
     console.error('Error checking payment status:', err)
@@ -388,45 +342,53 @@ const checkStatus = async () => {
   }
 }
 
+const checkForVouchers = async (payment: any, supabase: any) => {
+  try {
+    const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata
+    const hasVoucherProducts = metadata?.products?.some((p: any) => p.is_voucher)
+    if (!hasVoucherProducts) return
+
+    let records = await loadVouchersFromDB(payment.id, supabase)
+    if (records.length === 0) {
+      await new Promise(resolve => setTimeout(resolve, 2500))
+      records = await loadVouchersFromDB(payment.id, supabase)
+    }
+    if (records.length > 0) {
+      vouchers.value = records
+      logger.debug('🎁 Vouchers loaded:', records.length)
+      // Load branding from first voucher's tenant if not already loaded
+      if (brandPrimary.value === '#1a56db' && records[0]?.tenant_id) {
+        await loadBranding(records[0].tenant_id)
+      }
+    }
+  } catch { /* ignore parse errors */ }
+}
+
 const startCountdown = () => {
-  // Wait 3 seconds for webhook to process, then start countdown
   setTimeout(() => {
     countdownInterval = setInterval(() => {
       countdown.value--
-      if (countdown.value <= 0) {
-        redirectToDashboard()
-      }
+      if (countdown.value <= 0) redirectToDashboard()
     }, 1000)
-  }, 3000)
+  }, 2000)
 }
 
 const redirectToDashboard = async () => {
   if (countdownInterval) clearInterval(countdownInterval)
   if (statusCheckInterval) clearInterval(statusCheckInterval)
-  // Guests go back to shop, authenticated users go to their dashboard
   const { data: { session } } = await getSupabase().auth.getSession()
   window.location.href = session ? '/customer-dashboard' : '/shop'
 }
 
 onMounted(() => {
-  // Initial status check
   checkStatus()
-  
-  // Check status every 2 seconds if still pending (for max 30 seconds)
   let pollCount = 0
-  const maxPolls = 15 // 15 * 2s = 30s
-  
   statusCheckInterval = setInterval(() => {
     pollCount++
-    
-    if (paymentStatus.value === 'pending' && pollCount < maxPolls) {
+    if (paymentStatus.value === 'pending' && pollCount < 15) {
       checkStatus()
-    } else if (pollCount >= maxPolls) {
-      // Stop polling after 30s
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval)
-        statusCheckInterval = null
-      }
+    } else if (pollCount >= 15) {
+      if (statusCheckInterval) { clearInterval(statusCheckInterval); statusCheckInterval = null }
     }
   }, 2000)
 })
@@ -436,4 +398,3 @@ onUnmounted(() => {
   if (statusCheckInterval) clearInterval(statusCheckInterval)
 })
 </script>
-
