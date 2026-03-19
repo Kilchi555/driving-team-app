@@ -145,8 +145,8 @@ export default defineEventHandler(async (event) => {
       if (userData.tenant_id !== tenantId) {
         throw createError({ statusCode: 403, message: 'user_id gehört nicht zum tenant_id' })
       }
-      if (userData.role !== 'client') {
-        throw createError({ statusCode: 400, message: 'user_id muss ein Client sein' })
+      if (!['client', 'staff', 'admin', 'tenant_admin'].includes(userData.role)) {
+        throw createError({ statusCode: 400, message: 'user_id hat keine gültige Rolle' })
       }
       if (userData.is_active === false) {
         throw createError({ statusCode: 400, message: 'user_id ist inaktiv' })

@@ -324,13 +324,13 @@ export const usePayments = () => {
 
       logger.debug('💳 Creating standalone Wallee payment:', { userId: actualUserId, tenantId })
       
-      // Calculate total
+      // Calculate total — products array carries quantity from the shop cart
       const subtotal = products.reduce((sum, product) => 
-        sum + (product.price_rappen), 0
+        sum + (product.price_rappen * (product.quantity || 1)), 0
       )
       
       const totalDiscount = discounts.reduce((sum, discount) => 
-        sum + (discount.discount_value || 0), 0
+        sum + (discount.discount_amount_rappen || 0), 0
       )
       
       const total = subtotal - totalDiscount
@@ -451,13 +451,13 @@ export const usePayments = () => {
     isProcessing.value = true
 
     try {
-      // Calculate total
+      // Calculate total — products carry quantity from cart
       const subtotal = products.reduce((sum, product) => 
-        sum + (product.price_rappen), 0
+        sum + (product.price_rappen * (product.quantity || 1)), 0
       )
       
       const totalDiscount = discounts.reduce((sum, discount) => 
-        sum + (discount.discount_value || 0), 0
+        sum + (discount.discount_amount_rappen || 0), 0
       )
       
       const total = subtotal - totalDiscount
