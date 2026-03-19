@@ -234,33 +234,49 @@ const checkStatus = async () => {
           
           logger.debug('📊 Query result:', { payment: recentPayment, error: recentError })
           
-          if (recentPayment) {
-            logger.debug('✅ Found recent payment:', recentPayment.id)
-            paymentDetails.value = recentPayment
-            paymentStatus.value = recentPayment.payment_status
-            isLoading.value = false
-            
-            if (recentPayment.metadata) {
-              try {
-                const metadata = typeof recentPayment.metadata === 'string' 
-                  ? JSON.parse(recentPayment.metadata) 
-                  : recentPayment.metadata
-                if (metadata.products && Array.isArray(metadata.products)) {
-                  const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
-                  if (voucherProducts.length > 0) {
-                    vouchers.value = voucherProducts
-                    logger.debug('🎁 Found vouchers in metadata:', voucherProducts)
-                    showVoucherModal.value = true
-                    return
+            if (recentPayment) {
+              logger.debug('✅ Found recent payment:', recentPayment.id)
+              paymentDetails.value = recentPayment
+              paymentStatus.value = recentPayment.payment_status
+              isLoading.value = false
+              
+              if (recentPayment.metadata) {
+                try {
+                  const metadata = typeof recentPayment.metadata === 'string' 
+                    ? JSON.parse(recentPayment.metadata) 
+                    : recentPayment.metadata
+                  if (metadata.products && Array.isArray(metadata.products)) {
+                    const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
+                    if (voucherProducts.length > 0) {
+                      // Load actual voucher records from DB (created by webhook)
+                      const { data: voucherRecords } = await supabase
+                        .from('vouchers')
+                        .select('id, code, name, amount_rappen')
+                        .eq('payment_id', recentPayment.id)
+                      
+                      if (voucherRecords && voucherRecords.length > 0) {
+                        vouchers.value = voucherRecords
+                      } else {
+                        await new Promise(resolve => setTimeout(resolve, 2000))
+                        const { data: retryRecords } = await supabase
+                          .from('vouchers')
+                          .select('id, code, name, amount_rappen')
+                          .eq('payment_id', recentPayment.id)
+                        vouchers.value = retryRecords || []
+                      }
+
+                      logger.debug('🎁 Loaded vouchers from DB:', vouchers.value)
+                      showVoucherModal.value = true
+                      return
+                    }
                   }
+                } catch (err) {
+                  console.error('Error parsing vouchers from metadata:', err)
                 }
-              } catch (err) {
-                console.error('Error parsing vouchers from metadata:', err)
               }
-            }
-            
-            startCountdown()
-            return
+              
+              startCountdown()
+              return
           } else {
             console.warn('⚠️ No recent completed payment found within 5 minutes')
           }
@@ -324,8 +340,25 @@ const checkStatus = async () => {
         if (metadata.products && Array.isArray(metadata.products)) {
           const voucherProducts = metadata.products.filter((p: any) => p.is_voucher)
           if (voucherProducts.length > 0) {
-            vouchers.value = voucherProducts
-            logger.debug('🎁 Found vouchers in metadata:', voucherProducts)
+            // Load actual voucher records from DB (created by webhook, have code + amount)
+            const { data: voucherRecords } = await supabase
+              .from('vouchers')
+              .select('id, code, name, amount_rappen')
+              .eq('payment_id', data.id)
+            
+            if (voucherRecords && voucherRecords.length > 0) {
+              vouchers.value = voucherRecords
+            } else {
+              // Webhook may still be processing — retry once after a short delay
+              await new Promise(resolve => setTimeout(resolve, 2000))
+              const { data: retryRecords } = await supabase
+                .from('vouchers')
+                .select('id, code, name, amount_rappen')
+                .eq('payment_id', data.id)
+              vouchers.value = retryRecords || []
+            }
+
+            logger.debug('🎁 Loaded vouchers from DB:', vouchers.value)
             // Show voucher modal instead of countdown if vouchers exist
             showVoucherModal.value = true
             isLoading.value = false

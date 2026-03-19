@@ -21,7 +21,8 @@ interface SendEmailResponse {
 }
 
 export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
-  // ── Auth: eingeloggte User (Staff/Admin) ODER interner Webhook-Aufruf ──
+  // ── Auth: any authenticated user OR internal webhook call ──
+  // Customers who just bought a voucher must also be able to trigger the email resend.
   const serverSecret = process.env.INTERNAL_API_SECRET
   const internalHeader = getHeader(event, 'x-internal-secret')
   const isInternal = serverSecret && internalHeader === serverSecret
@@ -29,12 +30,6 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
   if (!isInternal) {
     const authUser = await getAuthenticatedUser(event)
     if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
-    const userId = authUser.db_user_id || authUser.id
-    const supabaseCheck = getSupabaseAdmin()
-    const { data: profile } = await supabaseCheck.from('users').select('role').eq('id', userId).single()
-    if (!profile || !['admin', 'tenant_admin', 'staff'].includes(profile.role)) {
-      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-    }
   }
 
   try {

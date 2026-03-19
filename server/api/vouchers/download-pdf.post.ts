@@ -32,7 +32,9 @@ interface DownloadRequest {
 }
 
 export default defineEventHandler(async (event) => {
-  // ── Auth ──────────────────────────────────────────────
+  // ── Auth: any authenticated user can download their own voucher ──
+  // For guest purchases we still require a logged-in session; the voucher
+  // was sent by email in the webhook so guests can use the email link instead.
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
 

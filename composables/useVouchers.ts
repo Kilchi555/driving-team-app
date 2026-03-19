@@ -4,6 +4,7 @@
 import { ref, computed, readonly } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { generateVoucherPDFContent, generateVoucherEmailContent } from '~/utils/voucherGenerator'
+import { logger } from '~/utils/logger'
 
 export interface Voucher {
   id: string
@@ -299,25 +300,19 @@ export const useVouchers = () => {
     error?: string
   }> => {
     try {
+      // Look up in local state for recipient email fallback — but don't require it
       const voucher = vouchers.value.find(v => v.id === voucherId)
-      if (!voucher) {
-        return {
-          success: false,
-          error: 'Gutschein nicht gefunden'
-        }
-      }
 
-      // Verwende die API-Route für E-Mail-Versendung
       const response = await $fetch('/api/vouchers/send-email', {
         method: 'POST',
         body: { 
           voucherId,
-          recipientEmail: recipientEmail || voucher.voucher_recipient_email
+          recipientEmail: recipientEmail || voucher?.voucher_recipient_email
         }
       }) as { success: boolean; message?: string; error?: string }
 
       if (response.success) {
-        logger.debug('✅ Voucher email sent:', voucher.code)
+        logger.debug('✅ Voucher email sent:', voucherId)
         return {
           success: true,
           message: response.message || 'E-Mail erfolgreich gesendet'
@@ -340,15 +335,30 @@ export const useVouchers = () => {
 
   const downloadVoucherPDF = async (voucherId: string): Promise<void> => {
     try {
-      const blob = await generateVoucherPDF(voucherId)
-      if (!blob) {
-        throw new Error('PDF konnte nicht generiert werden')
+      // Get auth token for the request
+      const { getSupabase } = await import('~/utils/supabase')
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const response = await fetch('/api/vouchers/download-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ voucherId })
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error((err as any).error || `HTTP ${response.status}`)
       }
 
+      const blob = await response.blob()
       const voucher = vouchers.value.find(v => v.id === voucherId)
-      const filename = `gutschein-${voucher?.code || voucherId}.html`
+      const filename = `Gutschein-${voucher?.code || voucherId}.pdf`
 
-      // Create download link
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -363,6 +373,7 @@ export const useVouchers = () => {
     } catch (err: any) {
       console.error('❌ Error downloading voucher PDF:', err)
       error.value = err.message
+      throw err
     }
   }
 
