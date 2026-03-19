@@ -294,7 +294,8 @@ const team = [
     bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automatik',
-    area: 'Zürich-Oerlikon, Zürich-Altstetten, Zürich-Enge'
+    area: 'Zürich-Oerlikon, Zürich-Altstetten, Zürich-Enge',
+    photo: '/images/team/samir.webp'
   },
   {
     name: 'Rahel',
