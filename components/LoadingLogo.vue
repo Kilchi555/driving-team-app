@@ -39,6 +39,8 @@ const props = withDefaults(defineProps<Props>(), {
   alt: ''
 })
 
+const emit = defineEmits<{ 'logo-loaded': [] }>()
+
 // State
 const tenantLogo = ref<string | null>(null)
 const imageError = ref(false)
@@ -82,6 +84,7 @@ const handleImageError = () => {
 
 const handleImageLoad = () => {
   imageError.value = false
+  emit('logo-loaded')
 }
 
 // Function to load logo for a specific tenant
@@ -97,6 +100,7 @@ const loadLogoForTenant = async (tenantId: string | null, tenantSlug?: string) =
       if (cached && (Date.now() - cached.timestamp) < 5 * 60 * 1000) {
         logger.debug('⚡ LoadingLogo: Instant cache hit!', cached.url)
         tenantLogo.value = cached.url
+        emit('logo-loaded')
         // Still load in background to refresh cache
         getTenantLogo(tenantId).then((url: string | null) => {
           if (url !== tenantLogo.value) {
