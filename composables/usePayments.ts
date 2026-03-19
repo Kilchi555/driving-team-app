@@ -325,20 +325,20 @@ export const usePayments = () => {
       logger.debug('💳 Creating standalone Wallee payment:', { userId: actualUserId, tenantId })
       
       // Calculate total — products array carries quantity from the shop cart
+      // Math.round() ensures we always have integers (guards against float imprecision)
       const subtotal = products.reduce((sum, product) => 
-        sum + (product.price_rappen * (product.quantity || 1)), 0
+        sum + Math.round(product.price_rappen * (product.quantity || 1)), 0
       )
       
       const totalDiscount = discounts.reduce((sum, discount) => 
-        sum + (discount.discount_amount_rappen || 0), 0
+        sum + Math.round(discount.discount_amount_rappen || 0), 0
       )
       
-      const total = subtotal - totalDiscount
-
-      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
+      // Round each component first, then derive total — avoids rounding drift
       const roundedSubtotalRappen = roundToNearestFranken(subtotal)
       const roundedTotalDiscountRappen = roundToNearestFranken(totalDiscount)
-      const roundedTotalRappen = roundToNearestFranken(total)
+      // Total is always derived from the rounded components, never rounded independently
+      const roundedTotalRappen = roundedSubtotalRappen - roundedTotalDiscountRappen
 
       // Create payment record
       const paymentData: Partial<Payment> = {
@@ -453,19 +453,16 @@ export const usePayments = () => {
     try {
       // Calculate total — products carry quantity from cart
       const subtotal = products.reduce((sum, product) => 
-        sum + (product.price_rappen * (product.quantity || 1)), 0
+        sum + Math.round(product.price_rappen * (product.quantity || 1)), 0
       )
       
       const totalDiscount = discounts.reduce((sum, discount) => 
-        sum + (discount.discount_amount_rappen || 0), 0
+        sum + Math.round(discount.discount_amount_rappen || 0), 0
       )
-      
-      const total = subtotal - totalDiscount
 
-      // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
       const roundedSubtotalRappen = roundToNearestFranken(subtotal)
       const roundedTotalDiscountRappen = roundToNearestFranken(totalDiscount)
-      const roundedTotalRappen = roundToNearestFranken(total)
+      const roundedTotalRappen = roundedSubtotalRappen - roundedTotalDiscountRappen
 
       // Create payment record mit neuen Spalten
       const paymentData: Partial<Payment> = {
