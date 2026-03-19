@@ -77,34 +77,45 @@ export default defineEventHandler(async (event) => {
       if (notesError) throw notesError
 
       // Filter notes by category if specified
+      // B-family: treat "B", "B Automatik", "B Schaltung" as the same group
+      const getBFamily = (cat: string) => {
+        const b = ['B', 'B Automatik', 'B Schaltung']
+        return b.includes(cat) ? 'B_FAMILY' : cat
+      }
       let filteredNotes = notes || []
       if (student_category) {
+        const targetFamily = getBFamily(student_category)
         filteredNotes = filteredNotes.filter((note: any) => {
           const appointmentType = appointmentTypeMap.get(note.appointment_id)
-          return appointmentType === student_category
+          return getBFamily(appointmentType) === targetFamily
         })
       }
 
-      // Group by criteria and get latest
-      const latestByCriteria = new Map()
+      // Group by criteria and keep the 3 most recent ratings
+      const criteriaBucket = new Map<string, any[]>()
       filteredNotes.forEach((note: any) => {
         const criteriaId = note.evaluation_criteria_id
         const appointmentDate = appointmentDateMap.get(note.appointment_id)
+        if (!criteriaBucket.has(criteriaId)) criteriaBucket.set(criteriaId, [])
+        criteriaBucket.get(criteriaId)!.push({ ...note, lesson_date: appointmentDate })
+      })
 
-        if (!latestByCriteria.has(criteriaId)) {
-          latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
-        } else {
-          const existing = latestByCriteria.get(criteriaId)
-          if (appointmentDate && existing.lesson_date && new Date(appointmentDate) > new Date(existing.lesson_date)) {
-            latestByCriteria.set(criteriaId, { ...note, lesson_date: appointmentDate })
-          }
+      const latestThreeByCriteria: any[] = []
+      criteriaBucket.forEach((notes, criteriaId) => {
+        const sorted = notes
+          .filter((n: any) => n.lesson_date)
+          .sort((a: any, b: any) => new Date(b.lesson_date).getTime() - new Date(a.lesson_date).getTime())
+          .slice(0, 3)
+        if (sorted.length > 1) {
+          logger.debug(`🔍 criteria ${criteriaId}: ${sorted.length} ratings → [${sorted.map((n: any) => n.criteria_rating).join(', ')}]`)
         }
+        latestThreeByCriteria.push(...sorted)
       })
 
       result = {
         success: true,
         data: {
-          evaluations: Array.from(latestByCriteria.values()),
+          evaluations: latestThreeByCriteria,
           appointmentDateMap: Object.fromEntries(appointmentDateMap),
           appointmentTypeMap: Object.fromEntries(appointmentTypeMap)
         }

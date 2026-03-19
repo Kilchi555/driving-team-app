@@ -398,7 +398,7 @@
           <span class="text-gray-600 font-bold">{{ openSections.voucherCodes ? '−' : '+' }}</span>
         </button>
         <div v-if="openSections.voucherCodes" class="px-4 pb-4 border-t border-gray-100">
-          <VoucherCodesManager class="mt-4" />
+          <p class="mt-4 text-sm text-gray-500">Gutschein- & Rabattcodes werden in Kürze verfügbar sein.</p>
         </div>
       </div>
 
@@ -1080,21 +1080,11 @@ const loadCalendarToken = async () => {
   isLoadingCalendarToken.value = true
   try {
     logger.debug('📅 Loading existing calendar token...')
-    const { query } = useDatabaseQuery()
     
-    const tokenData = await query({
-      action: 'select',
-      table: 'calendar_tokens',
-      select: 'token',
-      filters: [
-        { column: 'staff_id', operator: 'eq', value: props.currentUser.id },
-        { column: 'is_active', operator: 'eq', value: true }
-      ],
-      single: true
-    })
+    const response = await $fetch<{ success: boolean; token: string | null; calendarLink: string | null }>('/api/calendar/get-token')
     
-    if (tokenData?.token) {
-      calendarTokenLink.value = `https://simy.ch/api/calendar/ics?token=${tokenData.token}`
+    if (response?.calendarLink) {
+      calendarTokenLink.value = response.calendarLink
       logger.debug('✅ Calendar token loaded:', calendarTokenLink.value)
     } else {
       logger.debug('ℹ️ No active calendar token found')
@@ -1211,7 +1201,6 @@ const parseLocalDateTime = (dateTimeStr: string): Date => {
 // Methods
 // In StaffSettings.vue - ersetzen Sie die Funktion mit dieser typisierten Version:
 import { saveWithOfflineSupport } from '~/utils/offlineQueue'
-import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 
 const loadExamLocations = async () => {
   if (!props.currentUser?.id) return;
@@ -1221,39 +1210,19 @@ const loadExamLocations = async () => {
 
   try {
     const staffId = props.currentUser.id;
-    const { query } = useDatabaseQuery()
 
-    // 1. Alle verfügbaren globalen Prüfungsstandorte laden (tenant_id = null, staff_ids = empty/null)
-    const allLocations = await query({
-      action: 'select',
-      table: 'locations',
-      select: '*',
-      filters: [
-        { column: 'location_type', operator: 'eq', value: 'exam' },
-        { column: 'is_active', operator: 'eq', value: true }
-      ],
-      order: { column: 'name', ascending: true }
-    })
-
-    availableExamLocations.value = allLocations || [];
-
-    // 2. Die spezifischen Präferenzen des aktuellen Mitarbeiters laden (where staffId is in staff_ids)
-    const userTenantId = props.currentUser.tenant_id;
-
-    const staffExamLocationsData = await query({
-      action: 'select',
-      table: 'locations',
-      select: '*',
-      filters: [
-        { column: 'location_type', operator: 'eq', value: 'exam' },
-        { column: 'is_active', operator: 'eq', value: true },
-        { column: 'tenant_id', operator: 'eq', value: userTenantId }
-      ],
-      order: { column: 'name', ascending: true }
-    })
+    // 1. Load all available exam locations for this tenant
+    logger.debug('🔍 Loading all Swiss exam locations (global)')
+    const allResponse = await $fetch<any>('/api/staff/get-all-exam-locations')
+    const allLocations = allResponse?.data || []
+    logger.debug('✅ Loaded exam locations:', allLocations.length)
+    logger.debug('🔍 First few locations:', allLocations.slice(0, 5))
     
-    // ✅ Filter im Frontend: Nur Locations wo dieser Staff in staff_ids drin ist
-    staffExamLocations.value = (staffExamLocationsData || []).filter((loc: any) => {
+    // All locations for the tenant (to show all possible options)
+    availableExamLocations.value = allLocations;
+
+    // 2. Staff-specific: filter to only ones where this staff is in staff_ids
+    staffExamLocations.value = allLocations.filter((loc: any) => {
       const staffIds = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
       return staffIds.includes(staffId)
     });
@@ -1311,58 +1280,30 @@ const toggleExamLocation = async (location: any) => {
   error.value = null;
 
   try {
-    const { query } = useDatabaseQuery();
+    const authStore = useAuthStore()
     const staffId = props.currentUser.id;
+    const authUserId = authStore.user?.id;
 
-    // Wir identifizieren einen Standort nicht nur über die ID, sondern auch über Name & Adresse
-    const existingPreference = await query({
-      action: 'select',
-      table: 'locations',
-      select: 'id',
-      filters: [
-        { column: 'staff_id', operator: 'eq', value: staffId },
-        { column: 'name', operator: 'eq', value: location.name },
-        { column: 'address', operator: 'eq', value: location.address },
-        { column: 'location_type', operator: 'eq', value: 'exam' }
-      ],
-      single: true
-    });
+    if (!authUserId) throw new Error('Not authenticated')
 
-    if (existingPreference) {
-      // Wenn die Präferenz-Zeile existiert, löschen wir sie
-      await query({
-        action: 'delete',
-        table: 'locations',
-        filters: [{ column: 'id', operator: 'eq', value: existingPreference.id }]
-      });
+    const isCurrentlyActive = isExamLocationActive(location.id)
+    const action = isCurrentlyActive ? 'removeLocation' : 'addLocation'
 
-      logger.debug('✅ Prüfungsstandort-Präferenz gelöscht für:', location.name);
-    } else {
-      // Wenn keine Präferenz-Zeile existiert, erstellen wir eine neue
-      await query({
-        action: 'insert',
-        table: 'locations',
-        data: {
-          staff_id: staffId,
-          name: location.name,
-          address: location.address,
-          location_type: 'exam',
-          is_active: true,
-          city: location.city,
-          canton: location.canton,
-          postal_code: location.postal_code
-        }
-      });
+    await $fetch('/api/staff/exam-locations', {
+      method: 'POST',
+      body: {
+        action,
+        data: { authUserId, staffId, location }
+      }
+    })
 
-      logger.debug('✅ Neue Prüfungsstandort-Präferenz erstellt für:', location.name);
-    }
+    logger.debug(`✅ Prüfungsstandort ${action === 'addLocation' ? 'aktiviert' : 'deaktiviert'}:`, location.name)
 
   } catch (err: any) {
     console.error('❌ Fehler beim Umschalten des Prüfungsstandorts:', err);
     error.value = `Fehler beim Speichern der Präferenz: ${err.message}`;
   } finally {
     isSavingExamLocation.value = false;
-    // Lade die Daten neu, damit die UI den neuen Status anzeigt
     await loadExamLocations();
   }
 }
@@ -1822,21 +1763,11 @@ const loadData = async () => {
   error.value = null
 
   try {
-    const { query } = useDatabaseQuery()
-
     logger.debug('🔥 Loading staff settings data...')
 
-    // Kategorien laden (nur für aktuellen Tenant)
-    const categories = await query({
-      action: 'select',
-      table: 'categories',
-      select: '*',
-      filters: [
-        { column: 'tenant_id', operator: 'eq', value: props.currentUser.tenant_id },
-        { column: 'is_active', operator: 'eq', value: true }
-      ],
-      order: { column: 'name', ascending: true }
-    })
+    // Kategorien laden via Backend API
+    const categoriesResponse = await $fetch<any>('/api/staff/get-categories').catch(() => ({ data: [] }))
+    const categories = categoriesResponse?.data || categoriesResponse?.categories || []
     
     // Filter categories: 
     // - Show all subcategories (parent_category_id != null)
@@ -1863,16 +1794,9 @@ const loadData = async () => {
       displayCount: availableCategories.value.length
     })
 
-    // Alle Standard-Standorte des Tenants laden (mit allen staff_ids)
-    const allLocations = await query({
-      action: 'select',
-      table: 'locations',
-      select: '*',
-      filters: [
-        { column: 'tenant_id', operator: 'eq', value: props.currentUser.tenant_id },
-        { column: 'location_type', operator: 'eq', value: 'standard' }
-      ]
-    })
+    // Alle Standard-Standorte des Tenants laden via Backend API
+    const locationsResponse = await $fetch<any>('/api/staff/get-locations').catch(() => ({ data: [] }))
+    const allLocations = locationsResponse?.data || locationsResponse?.locations || []
     
     // Parse staff_ids from JSON strings to arrays
     allTenantLocations.value = (allLocations || []).map((loc: any) => ({
@@ -1941,18 +1865,24 @@ const loadWorkingHoursData = async () => {
   }
   
   try {
-    const { query } = useDatabaseQuery()
-    
     logger.debug('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
     
-    const appointments = await query({
-      action: 'select',
-      table: 'appointments',
-      select: '*',
-      filters: [
-        { column: 'staff_id', operator: 'eq', value: props.currentUser.id }
-      ]
+    // Use the secure backend API instead of direct DB access
+    const now = new Date()
+    const threeMonthsAgoForQuery = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+    const nextMonthEndForQuery = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
+
+    const response = await $fetch<any>('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-existing-appointments',
+        staff_id: props.currentUser.id,
+        start_date: threeMonthsAgoForQuery.toISOString(),
+        end_date: nextMonthEndForQuery.toISOString()
+      }
     })
+    
+    const appointments = response?.data || []
     
     logger.debug('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
     
@@ -1965,9 +1895,6 @@ const loadWorkingHoursData = async () => {
     const validAppointments = appointments.filter((apt: any) => 
       !apt.deleted_at // Nur nicht gelöschte Termine
     )
-    
-    // Aktuelle Zeit
-    const now = new Date()
     
     // Filter Termine nach Zeitpunkt (in der Vergangenheit = gearbeitet, in der Zukunft = geplant)
     const workedAppointments = validAppointments.filter((apt: any) => {
@@ -2522,13 +2449,31 @@ const clearWorkingHours = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  await loadData()
-  await loadWorkingHoursData()
-  await loadExamLocations()
+  try {
+    await loadData()
+  } catch (err) {
+    logger.warn('ℹ️ loadData failed (non-fatal):', err)
+  }
+  
+  try {
+    await loadWorkingHoursData()
+  } catch (err) {
+    logger.warn('ℹ️ loadWorkingHoursData failed (non-fatal):', err)
+  }
+  
+  try {
+    await loadExamLocations()
+  } catch (err) {
+    logger.warn('ℹ️ loadExamLocations failed (non-fatal):', err)
+  }
   
   // Load working hours from composable
   if (props.currentUser?.id) {
-    await loadWorkingHours(props.currentUser.id)
+    try {
+      await loadWorkingHours(props.currentUser.id)
+    } catch (err) {
+      logger.warn('ℹ️ loadWorkingHours failed (non-fatal):', err)
+    }
   }
   
   // Initialize working hours form after data is loaded

@@ -121,6 +121,8 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { logger } from '~/utils/logger'
+import { getSupabase } from '~/utils/supabase'
 
 interface Props {
   currentStaffId: string
@@ -169,11 +171,28 @@ const manualLocationInput = ref('') // New: Holds manual input value
 
 // Computed property wie in StaffSettings
 const activeExamLocations = computed(() => {
-  return availableExamLocations.value.filter(examLoc => {
-    return staffExamLocations.value.some(staffLoc => 
-      staffLoc.name === examLoc.name && staffLoc.is_active
-    )
+  logger.debug('🔍 Computing activeExamLocations:', {
+    available: availableExamLocations.value.map(l => ({ id: l.id, name: l.name })),
+    staffPrefs: staffExamLocations.value.map(l => ({ id: l.id, name: l.name, is_active: l.is_active }))
   })
+  
+  const filtered = availableExamLocations.value.filter(examLoc => {
+    const match = staffExamLocations.value.some(staffLoc => {
+      const nameMatch = staffLoc.name && examLoc.name && 
+                       staffLoc.name.toLowerCase().trim() === examLoc.name.toLowerCase().trim()
+      const isActive = staffLoc.is_active
+      
+      if (nameMatch && isActive) {
+        logger.debug('✅ Match found:', { staffName: staffLoc.name, examName: examLoc.name, active: isActive })
+      }
+      
+      return nameMatch && isActive
+    })
+    return match
+  })
+  
+  logger.debug('📊 activeExamLocations result:', { count: filtered.length, filtered: filtered.map(l => l.name) })
+  return filtered
 })
 
 
@@ -249,9 +268,11 @@ const loadExamLocations = async () => {
 }
 
 const isExamLocationActive = (location: any): boolean => {
-  return staffExamLocations.value.some(staffLoc => 
-    staffLoc.name === location.name && staffLoc.is_active
-  )
+  return staffExamLocations.value.some(staffLoc => {
+    const nameMatch = staffLoc.name && location.name && 
+                     staffLoc.name.toLowerCase().trim() === location.name.toLowerCase().trim()
+    return nameMatch && staffLoc.is_active
+  })
 }
 
 

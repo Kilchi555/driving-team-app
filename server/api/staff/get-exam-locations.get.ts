@@ -4,18 +4,12 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import logger from '~/utils/logger'
 
 /**
- * ✅ GET /api/staff/get-exam-locations
- * 
- * Secure API to fetch exam locations for staff
- * 
- * Security Layers:
- *   1. Bearer Token Authentication
- *   2. Tenant Isolation
+ * GET /api/staff/get-exam-locations
+ * Returns exam locations where the current staff member is in staff_ids.
+ * Used in ExamLocationSelector when creating appointments.
  */
-
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ 1. AUTHENTIFIZIERUNG
     const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
       throw createError({ statusCode: 401, message: 'Unauthorized' })
@@ -23,7 +17,6 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Get user from users table to get tenant_id
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, tenant_id, role')
@@ -34,46 +27,40 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, message: 'User not found' })
     }
 
-    const tenantId = user.tenant_id
+    const staffId = user.id
 
-    // ✅ 2. GET ALL EXAM LOCATIONS for this tenant
+    // Load all global exam locations
     const { data: allExamLocations, error } = await supabase
       .from('locations')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .is('tenant_id', null)
       .eq('location_type', 'exam')
       .eq('is_active', true)
       .order('name', { ascending: true })
 
     if (error) {
       logger.error('❌ Error fetching exam locations:', error)
-      throw createError({
-        statusCode: 500,
-        message: 'Failed to fetch exam locations'
-      })
+      throw createError({ statusCode: 500, message: 'Failed to fetch exam locations' })
     }
 
-    logger.debug('✅ Exam locations fetched:', {
-      userId: user.id,
-      tenantId: tenantId,
-      count: allExamLocations?.length || 0
+    // Return only locations where this staff member is in staff_ids
+    const staffLocations = (allExamLocations || []).filter(loc => {
+      const staffIds = loc.staff_ids || []
+      if (!Array.isArray(staffIds) || staffIds.length === 0) return false
+      return staffIds.includes(staffId)
     })
 
-    return {
-      success: true,
-      data: allExamLocations || []
-    }
+    logger.debug('✅ Exam locations for staff:', {
+      staffId,
+      total: allExamLocations?.length || 0,
+      forThisStaff: staffLocations.length
+    })
+
+    return { success: true, data: staffLocations }
 
   } catch (error: any) {
     logger.error('❌ Error in get-exam-locations API:', error.message)
-    
-    if (error.statusCode) {
-      throw error
-    }
-    
-    throw createError({
-      statusCode: 500,
-      message: error.message || 'Failed to fetch exam locations'
-    })
+    if (error.statusCode) throw error
+    throw createError({ statusCode: 500, message: error.message || 'Failed to fetch exam locations' })
   }
 })

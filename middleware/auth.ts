@@ -22,7 +22,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     '/tenant-debug',
     '/login',
     '/register',
-    '/reset-password'
+    '/reset-password',
+    '/partner'
   ]
   
   // Skip for dynamic routes that are public (like /[slug]/services, /[slug]/register)
@@ -31,6 +32,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const isPublicRoute = publicRoutes.includes(to.path) || 
                        to.path.includes('/services') || 
                        to.path.includes('/register') ||
+                       to.path.startsWith('/partner/') ||
                        to.path.match(/^\/[^\/]+\/(services|register)/) ||
                        to.path.startsWith('/customer/courses') ||
                        to.path.startsWith('/shop') ||

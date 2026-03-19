@@ -3,6 +3,7 @@
 
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 
 export interface CategoryWithParent {
   id: string
@@ -31,7 +32,7 @@ export interface EvaluationCriteria {
 }
 
 export const useCategoryWithFallback = () => {
-  const supabase = useSupabaseClient()
+  const supabase = getSupabase()
 
   /**
    * Load evaluation criteria for a category

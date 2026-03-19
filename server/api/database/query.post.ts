@@ -1,6 +1,7 @@
-import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
+import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 /**
  * Generic secure database query endpoint
@@ -73,6 +74,12 @@ interface QueryRequest {
 
 export default defineEventHandler(async (event) => {
   try {
+    // ✅ AUTHENTIFIZIERUNG - nur eingeloggte User dürfen Queries machen
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
+
     const body = await readBody<QueryRequest>(event)
     
     // Validate request
@@ -116,18 +123,51 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get Supabase admin client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // ✅ Create a user-scoped Supabase client using the user's JWT
+    // This respects RLS policies - the user can only access what they're allowed to
+    const authHeader = getHeader(event, 'authorization')
+    let userToken = authHeader?.replace('Bearer ', '') || null
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
+    // If no Authorization header, try to extract from cookies (same logic as getAuthenticatedUser)
+    if (!userToken) {
+      const cookies = event.node.req.headers.cookie || ''
+      for (const cookie of cookies.split(';').map(c => c.trim())) {
+        if (!cookie.includes('=')) continue
+        const [name, ...valueParts] = cookie.split('=')
+        const cookieName = name.trim()
+        const value = valueParts.join('=')
+        if (cookieName === 'sb-session' || cookieName === 'sb-auth-token' ||
+            (cookieName.startsWith('sb-') && (cookieName.includes('session') || cookieName.includes('auth')))) {
+          try {
+            const decoded = decodeURIComponent(value)
+            const sessionData = JSON.parse(decoded)
+            if (sessionData?.access_token) {
+              userToken = sessionData.access_token
+              break
+            }
+          } catch { /* continue */ }
+        }
+      }
     }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey)
+    if (!userToken) {
+      throw createError({ statusCode: 401, statusMessage: 'No auth token provided' })
+    }
+
+    // Use ANON key + user JWT → Supabase will apply RLS as this user
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${userToken}` }
+        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
 
     logger.debug('📊 Executing database query:', {
       action: body.action,
@@ -296,13 +336,18 @@ export default defineEventHandler(async (event) => {
     }
 
     if (error) {
-      logger.debug('❌ Database query error:', {
+      logger.error('❌ Database query error:', {
         table: body.table,
         action: body.action,
         code: error.code,
-        message: error.message
+        message: error.message,
+        details: error.details,
+        hint: error.hint
       })
-      throw error
+      throw createError({
+        statusCode: 500,
+        statusMessage: `Query failed: ${error.message}`
+      })
     }
 
     logger.debug('✅ Database query successful:', {

@@ -10,7 +10,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
-const CACHE_DURATION = 60 * 60 * 1000 // 60 minutes
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 const criteriaCache = new Map<string, { data: any; timestamp: number }>()
 
 /**

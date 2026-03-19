@@ -2,8 +2,11 @@
  * Composable to work with error logs
  */
 
+import { ref } from 'vue'
+import { getSupabase } from '~/utils/supabase'
+
 export const useErrorLogs = () => {
-  const supabase = useSupabaseClient()
+  const supabase = getSupabase()
   const errorLogs = ref([])
   const loading = ref(false)
   const error = ref(null)

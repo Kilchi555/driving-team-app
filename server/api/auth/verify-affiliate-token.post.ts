@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
   const { data: magicLinkData, error: magicError } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
     email: authUser.user.email,
-    options: { redirectTo: `${process.env.NUXT_PUBLIC_APP_URL ?? 'https://app.drivingteam.ch'}/affiliate-dashboard` },
+    options: { redirectTo: `${process.env.NUXT_PUBLIC_APP_URL ?? 'https://simy.ch'}/affiliate-dashboard` },
   })
 
   if (magicError || !magicLinkData?.properties?.hashed_token) {

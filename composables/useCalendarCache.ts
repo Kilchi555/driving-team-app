@@ -12,7 +12,7 @@ interface CacheEntry<T> {
 const cache = new Map<string, CacheEntry<any>>()
 
 export const useCalendarCache = () => {
-  // Cache TTL: 5 minutes for calendar data
+  // Cache TTL: 5 minutes for calendar data (balanced between freshness and stability)
   const DEFAULT_TTL = 5 * 60 * 1000
 
   const getCacheKey = (endpoint: string, params?: Record<string, any>) => {
@@ -40,7 +40,7 @@ export const useCalendarCache = () => {
 
     // Check cache
     const cached = cache.get(cacheKey)
-    if (cached && !isExpired(cached)) {
+    if (cached && (Date.now() - cached.timestamp) < ttl) {
       logger.debug(`📦 Using cached data for ${cacheKey} (age: ${Date.now() - cached.timestamp}ms)`)
       return cached.data
     }

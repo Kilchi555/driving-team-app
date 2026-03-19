@@ -12,7 +12,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
-const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes (courses can change more often)
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 const coursesCache = new Map<string, { data: any; timestamp: number }>()
 
 interface TransformedCourse {

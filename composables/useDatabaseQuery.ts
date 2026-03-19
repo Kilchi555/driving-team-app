@@ -77,8 +77,18 @@ export const useDatabaseQuery = () => {
         table: options.table
       })
 
+      // Get current user's JWT token for RLS-compliant queries
+      let authToken: string | null = null
+      try {
+        const { getSupabase } = await import('~/utils/supabase')
+        const supabase = getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        authToken = session?.access_token || null
+      } catch { /* continue without token */ }
+
       const response = await $fetch('/api/database/query', {
         method: 'POST',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
         body: {
           action: options.action,
           table: options.table,

@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
 
     // Derive base URL from request headers (works on any deployment)
     const forwardedHost = getHeader(event, 'x-forwarded-host')
-    const host = forwardedHost || getHeader(event, 'host') || 'app.drivingteam.ch'
+    const host = forwardedHost || getHeader(event, 'host') || 'simy.ch'
     const proto = getHeader(event, 'x-forwarded-proto') || 'https'
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL
       ? `https://${process.env.NUXT_PUBLIC_APP_URL}`

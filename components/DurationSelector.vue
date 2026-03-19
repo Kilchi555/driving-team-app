@@ -83,7 +83,8 @@ const props = withDefaults(defineProps<Props>(), {
   showDebugInfo: false,
   isPastAppointment: false,
   appointmentId: undefined,
-  originalDuration: undefined
+  originalDuration: undefined,
+  mode: 'create'
 })
 
 const emit = defineEmits<Emits>()
