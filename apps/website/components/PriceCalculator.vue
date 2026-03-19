@@ -158,12 +158,22 @@
 
                   <!-- Email Input -->
                   <label class="block text-sm font-semibold text-gray-900 mb-2">Kalkulation per E-Mail erhalten:</label>
-                  <input
-                    v-model="emailInput"
-                    type="email"
-                    placeholder="deine@email.com"
-                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:outline-none"
-                  />
+                  <div class="flex gap-2 mb-2">
+                    <input
+                      v-model="firstNameInput"
+                      type="text"
+                      placeholder="Vorname"
+                      autocomplete="given-name"
+                      class="w-1/3 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:outline-none"
+                    />
+                    <input
+                      v-model="emailInput"
+                      type="email"
+                      placeholder="deine@email.com"
+                      autocomplete="email"
+                      class="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:outline-none"
+                    />
+                  </div>
                   <p class="text-xs text-gray-400 mt-2">Optional – du kannst den Schritt auch überspringen</p>
 
                   <!-- Success Message -->
@@ -332,6 +342,7 @@ const totalSteps = ref(3)
 const selectedCategory = ref('auto')
 const lessonsCount = ref(22)
 const emailInput = ref('')
+const firstNameInput = ref('')
 const emailSendSuccess = ref(false)
 const emailSendError = ref('')
 const isSending = ref(false)
@@ -505,6 +516,7 @@ const closeModal = () => {
   setTimeout(() => {
     currentStep.value = 1
     emailInput.value = ''
+    firstNameInput.value = ''
     emailSendSuccess.value = false
     emailSendError.value = ''
   }, 300)
@@ -528,6 +540,7 @@ const sendCalculationEmail = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: emailInput.value,
+        firstName: firstNameInput.value.trim() || undefined,
         category: currentCategory.value?.label,
         lessonsCount: lessonsCount.value,
         totalCost: totalCost.value,
