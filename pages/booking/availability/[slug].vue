@@ -2564,24 +2564,20 @@ const generateTimeSlotsForSpecificCombination = async () => {
       ? filters.value.duration_minutes[0] || 45 
       : filters.value.duration_minutes || 45
     
-    // ✅ Pre-load customer's existing appointments for conflict checking (composable is initialized at top-level)
-    await checkCustomerConflicts(startDate, endDate)
-    logger.debug('✅ Customer appointment conflict check initialized', {
-      existingAppointments: customerAppointments.value.length
-    })
-    
-    // Fetch slots from secure API
-    const slots = await fetchAvailableSlots({
-      tenant_id: currentTenant.value?.id || '',
-      staff_id: selectedInstructor.value.id,
-      location_id: selectedLocation.value.id,
-      category_code: selectedCategory.value.code,
-      duration_minutes: duration,
-      start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
-      end_date: endDate.toISOString().split('T')[0]
-    })
-    
-    logger.debug('✅ Fetched', slots.length, 'pre-computed slots from API')
+    // ✅ Run conflict check and slot fetch in parallel
+    const [slots] = await Promise.all([
+      fetchAvailableSlots({
+        tenant_id: currentTenant.value?.id || '',
+        staff_id: selectedInstructor.value.id,
+        location_id: selectedLocation.value.id,
+        category_code: selectedCategory.value.code,
+        duration_minutes: duration,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      }),
+      checkCustomerConflicts(startDate, endDate)
+    ])
+    logger.debug('✅ Fetched', slots.length, 'slots and conflict check done in parallel')
     
     // Convert to format expected by UI
     let timeSlots = slots

@@ -100,24 +100,17 @@
           <div class="bg-white rounded-lg p-6 shadow-sm text-center border border-gray-200">
             <p class="text-3xl mb-3">💻</p>
             <h3 class="font-bold text-gray-800 mb-2">Lernplattform Online</h3>
-            <p class="text-xl font-bold text-primary-600 mb-2">CHF 29.-</p>
-            <p class="text-sm text-gray-600">365 Tage Login für eine Lernplattform mit offiziellen Prüfungsfragen. Verfügbar auf Computer, Tablet & Smartphone.</p>
+            <p class="text-sm text-gray-600">Eine Lernplattform mit offiziellen Prüfungsfragen. Verfügbar auf Computer, Tablet & Smartphone.</p>
           </div>
           <div class="bg-white rounded-lg p-6 shadow-sm text-center border border-gray-200">
             <p class="text-3xl mb-3">📚</p>
             <h3 class="font-bold text-gray-800 mb-2">Lern-Bücher</h3>
-            <p class="text-xl font-bold text-primary-600 mb-2">CHF 24.90.-</p>
             <p class="text-sm text-gray-600">Theoriebuch für das Verständnis der Verkehrsregeltheorie.</p>
           </div>
-          <div class="bg-white rounded-lg p-6 shadow-sm text-center border border-gray-200">
-            <p class="text-3xl mb-3">💿</p>
-            <h3 class="font-bold text-gray-800 mb-2">Lern-CD inkl. Theorie-Buch</h3>
-            <p class="text-xl font-bold text-primary-600 mb-2">CHF 59.90.-</p>
-            <p class="text-sm text-gray-600">CD mit aktuellen Prüfungsfragen für zeitlich unbeschränktes Lernen.</p>
-          </div>
+         
         </div>
         <div class="text-center mt-8">
-          <a href="https://www.ctmalder.ch/theoriepruefung-bestellen-lernmittel-fuer-fahrschueler-und-fahrlehrer-von-theorie24/" target="_blank" rel="noopener noreferrer" class="btn-primary">
+          <a href="https://auto.itheorie.ch/de" target="_blank" rel="noopener noreferrer" class="btn-primary">
             📦 Lehrmittel bestellen
           </a>
         </div>
@@ -193,10 +186,10 @@
         </details>
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Wie kann ich eure Rechnungen auf dem Smartphone bezahlen?
+            Wie kann ich eure Lektionen auf dem Smartphone bezahlen?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Wir versenden dir die Rechnung per E-Mail mit einer PDF-Datei im Anhang. Öffne diese PDF-Datei, geh dann auf «Teilen» und öffne die PDF-Datei mit deinem Mobile-Banking App. So kannst du unsere Rechnung unkompliziert bezahlen.</p>
+          <p class="text-gray-600 mt-4">Du kannst sie unkompliziert mit unserem Fahrschul-App bezahlen.</p>
         </details>
       </div>
     </section>
@@ -215,6 +208,8 @@
         <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
         <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
         <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-pfaeffikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon/SZ</a>
+
       </div>
     </section>
 
@@ -225,9 +220,6 @@
         <div class="flex flex-col md:flex-row gap-4 justify-center">
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
-          </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
-            📞 +41 44 431 00 33
           </a>
         </div>
       </div>

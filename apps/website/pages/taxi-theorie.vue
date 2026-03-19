@@ -33,7 +33,7 @@
       <h2 class="heading-md mb-8 text-center">Taxi Theorie</h2>
       <div class="max-w-3xl mx-auto space-y-4 text-gray-700">
         <p>Im berufsmässigen Personentransport bist du verpflichtet, die Anweisungen über Arbeits-, Lenk- und Ruhezeit einzuhalten. Diese Regelungen sind in der ARV festgehalten und werden mit der Taxi Theorie (ARV 2) geprüft.</p>
-        <p>Lernen kannst Du die Theorie am besten mit der <strong>Wegleitung ARV2</strong>, welches Du bei uns für CHF 19.- kaufen kannst, mit diversen Softwareprogrammen (CD/App's) oder in unseren lehrreichen Theoriestunden.</p>
+        <p>Lernen kannst Du die Theorie am besten mit der <strong>Wegleitung ARV2</strong>, welches Du bei Arvag für CHF 17.- kaufen kannst oder in unseren lehrreichen Theoriestunden.</p>
         <p>Bei Fragen oder Interesse darfst Du dich jederzeit bei uns melden.</p>
       </div>
     </section>
@@ -86,9 +86,9 @@
         <div class="max-w-sm mx-auto bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
           <p class="text-3xl mb-3">📚</p>
           <h3 class="font-bold text-gray-800 mb-2">Wegleitung ARV 2</h3>
-          <p class="text-xl font-bold text-primary-600 mb-2">CHF 19.-</p>
-          <p class="text-sm text-gray-600 mb-4">Offizielles Lehrmittel für die ARV 2 Theorie – direkt bei uns erhältlich.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary w-full block text-center">Lehrmittel bestellen</a>
+          <p class="text-xl font-bold text-primary-600 mb-2">CHF 17.-</p>
+          <p class="text-sm text-gray-600 mb-4">Offizielles Lehrmittel für die ARV 2 Theorie – direkt bei Arvag erhältlich.</p>
+          <a href="https://www.arvag.ch/product-page/arv-2-deutsch" target="_blank" rel="noopener noreferrer" class="btn-primary w-full block text-center">Lehrmittel bestellen</a>
         </div>
       </div>
     </section>

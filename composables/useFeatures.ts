@@ -45,13 +45,20 @@ export function useFeatures() {
     logger.debug('🔍 useFeatures.load() starting to load features for tenant:', currentTenantId)
     cache.isLoading.value = true
     try {
-      // Load feature definitions for current tenant
-      const { data: definitionsData, error: definitionsError } = await supabase
-        .from('tenant_settings')
-        .select('setting_key, setting_value')
-        .eq('tenant_id', currentTenantId)
-        .eq('category', 'features')
-        .order('created_at')
+      // Load feature definitions and tenant business_type in parallel
+      const [{ data: definitionsData, error: definitionsError }, { data: tenantData }] = await Promise.all([
+        supabase
+          .from('tenant_settings')
+          .select('setting_key, setting_value')
+          .eq('tenant_id', currentTenantId)
+          .eq('category', 'features')
+          .order('created_at'),
+        supabase
+          .from('tenants')
+          .select('business_type')
+          .eq('id', currentTenantId)
+          .single()
+      ])
 
       if (definitionsError) throw definitionsError
 
@@ -60,13 +67,6 @@ export function useFeatures() {
       // Build feature definitions from the loaded data
       const definitions: FeatureDefinition[] = []
       const flags: FeatureFlags = {}
-
-      // Get tenant business_type first to filter features
-      const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('business_type')
-        .eq('id', currentTenantId)
-        .single()
 
       definitionsData?.forEach(row => {
         try {
