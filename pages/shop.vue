@@ -19,12 +19,7 @@
       </Transition>
 
       <!-- ── CARD ── -->
-      <Transition
-        enter-active-class="transition-opacity duration-500"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-      >
-        <div v-if="isShopVisible" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div v-if="isShopVisible" class="bg-white rounded-2xl shadow-2xl overflow-hidden shop-fade-in">
 
         <!-- Card Header -->
         <div class="relative overflow-hidden" :style="{ background: headerGradient }">
@@ -536,8 +531,6 @@
       </div>
     </Transition>
 
-        </div>
-      </Transition>
     </div>
   </div>
 
@@ -1993,5 +1986,13 @@ const handlePaymentFailed = (error: any) => {
 .shop-input:focus {
   border-color: var(--brand-primary, #2563EB);
   box-shadow: 0 0 0 3px var(--brand-primary-alpha, rgba(37, 99, 235, 0.2));
+}
+
+@keyframes shopFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.shop-fade-in {
+  animation: shopFadeIn 0.5s ease-out both;
 }
 </style>
