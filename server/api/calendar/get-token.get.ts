@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: 'Failed to load calendar token' })
     }
 
-    const baseUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
+    const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.NUXT_PUBLIC_SITE_URL || 'https://simy.ch'
 
     return {
       success: true,

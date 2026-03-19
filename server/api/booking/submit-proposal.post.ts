@@ -200,7 +200,7 @@ export default defineEventHandler(async (event) => {
       if (!internalApiSecret) {
         console.error('❌ NUXT_INTERNAL_API_SECRET is not configured. Skipping email sending.')
       } else {
-        await fetch(`${process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/emails/send-booking-proposal`, {
+        await fetch(`${process.env.NUXT_PUBLIC_BASE_URL || process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/emails/send-booking-proposal`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
