@@ -303,7 +303,8 @@ const team = [
     bio: 'Als Fahrlehrerin und Mutter ist Rahel immer unterwegs. Mit ihrer ausgeglichenen Art bleibt sie dabei jedoch immer gelassen und souverän – diese Ruhe überträgt sie auf ihre Fahrschüler:innen.',
     languages: 'Deutsch',
     categories: 'Auto Automatik',
-    area: 'Lachen, Pfäffikon/SZ, Wollerau, Schindeleggi'
+    area: 'Lachen, Pfäffikon/SZ, Wollerau, Schindeleggi',
+    photo: '/images/team/rahel.webp'
   }
 ]
 
