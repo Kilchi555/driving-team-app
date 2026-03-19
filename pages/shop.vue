@@ -1,16 +1,30 @@
 <!-- pages/shop.vue -->
 <template>
   <!-- Dynamic branded page background -->
-  <div class="min-h-screen" :style="isShopReady ? pageBackground : 'background: white'">
+  <div class="min-h-screen" :style="isShopVisible ? pageBackground : 'background: white'">
     <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12">
 
-      <!-- ── LOADING ── -->
-      <div v-if="!isShopReady" class="fixed inset-0 bg-white flex items-center justify-center z-50">
-        <LoadingLogo size="2xl" :tenant-id="tenantId || undefined" :tenant-slug="tenantParam || undefined" />
-      </div>
+      <!-- ── LOADING: white screen with centered logo ── -->
+      <Transition
+        enter-active-class="transition-opacity duration-300"
+        enter-from-class="opacity-100"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-400"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="!isShopVisible" class="fixed inset-0 bg-white flex items-center justify-center z-50">
+          <LoadingLogo size="2xl" :tenant-id="tenantId || undefined" :tenant-slug="tenantParam || undefined" />
+        </div>
+      </Transition>
 
       <!-- ── CARD ── -->
-      <div v-show="isShopReady" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <Transition
+        enter-active-class="transition-opacity duration-500"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+      >
+        <div v-if="isShopVisible" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
 
         <!-- Card Header -->
         <div class="relative overflow-hidden" :style="{ background: headerGradient }">
@@ -23,7 +37,7 @@
           <div class="relative z-10 px-6 py-4 flex items-center justify-between">
             <!-- Logo -->
             <div class="flex items-center">
-              <LoadingLogo size="2xl" :tenant-id="tenantId" class="brightness-0 invert opacity-90"/>
+              <LoadingLogo size="2xl" :tenant-id="tenantId" class="brightness-0 invert opacity-90" @logo-loaded="onHeaderLogoLoaded" />
             </div>
             <!-- Step label -->
             <div v-if="currentStep >= 1"
@@ -522,6 +536,9 @@
       </div>
     </Transition>
 
+      </div>
+      </Transition>
+    </div>
   </div>
 
   <!-- Voucher Download Modal -->
@@ -736,6 +753,20 @@ interface WalleeResponse {
 // Reactive data - Multi-Step Process
 const currentStep = ref(1) // Start directly at products (step 0 legacy removed)
 const isShopReady = ref(false)
+const isShopVisible = ref(false)
+const headerLogoLoaded = ref(false)
+
+// Show shop only when both data AND header logo are ready
+const onHeaderLogoLoaded = () => {
+  headerLogoLoaded.value = true
+  if (isShopReady.value) isShopVisible.value = true
+}
+
+watch(isShopReady, (ready) => {
+  if (ready && headerLogoLoaded.value) isShopVisible.value = true
+  // Safety fallback: show after 3s even if logo never fires
+  if (ready) setTimeout(() => { isShopVisible.value = true }, 3000)
+})
 const editingCustomerData = ref(false)
 const guestUserId = ref<string | null>(null)
 const isSubmitting = ref(false)
