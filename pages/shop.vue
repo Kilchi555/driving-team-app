@@ -1,34 +1,12 @@
 <!-- pages/shop.vue -->
 <template>
   <!-- Dynamic branded page background -->
-  <div class="min-h-screen" :style="pageBackground">
+  <div class="min-h-screen" :style="isShopReady ? pageBackground : 'background: white'">
     <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12">
 
-      <!-- ── LOADING SKELETON ── -->
-      <div v-if="!isShopReady" class="bg-white rounded-2xl shadow-2xl overflow-hidden">
-        <!-- Header with real branding colors + logo -->
-        <div class="relative overflow-hidden px-6 py-5 flex items-center justify-between"
-             :style="{ background: headerGradient }">
-          <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-10 bg-white"></div>
-          <div class="absolute -bottom-6 -left-6 w-28 h-28 rounded-full opacity-10 bg-white"></div>
-          <div class="relative z-10">
-            <LoadingLogo size="2xl" :tenant-id="tenantId || undefined" :tenant-slug="tenantParam || undefined" class="brightness-0 invert opacity-90" />
-          </div>
-          <div class="relative z-10 flex items-center gap-2 text-white/70 text-sm font-medium">
-            <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-            Wird geladen…
-          </div>
-        </div>
-        <!-- Skeleton content -->
-        <div class="p-5 space-y-3 animate-pulse">
-          <div class="h-4 w-24 bg-gray-200 rounded-lg"></div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div v-for="i in 4" :key="i" class="h-28 bg-gray-100 rounded-xl"></div>
-          </div>
-        </div>
-        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 animate-pulse">
-          <div class="h-12 bg-gray-200 rounded-xl"></div>
-        </div>
+      <!-- ── LOADING ── -->
+      <div v-if="!isShopReady" class="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <LoadingLogo size="2xl" :tenant-id="tenantId || undefined" :tenant-slug="tenantParam || undefined" />
       </div>
 
       <!-- ── CARD ── -->

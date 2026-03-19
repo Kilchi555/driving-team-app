@@ -258,14 +258,6 @@ const loadBranding = async (tenantId: string) => {
   } catch { /* ignore */ }
 }
 
-const loadVouchersFromDB = async (paymentId: string, supabase: any) => {
-  const { data } = await supabase
-    .from('vouchers')
-    .select('id, code, name, amount_rappen, recipient_name, valid_until, tenant_id')
-    .eq('payment_id', paymentId)
-  return data || []
-}
-
 const checkStatus = async () => {
   try {
     isLoading.value = true
@@ -292,7 +284,7 @@ const checkStatus = async () => {
             paymentDetails.value = recentPayment
             paymentStatus.value = recentPayment.payment_status
             isLoading.value = false
-            await checkForVouchers(recentPayment, supabase)
+            await checkForVouchers(recentPayment, [])
             if (!hasVouchers.value) startCountdown()
             return
           }
@@ -302,20 +294,24 @@ const checkStatus = async () => {
       return
     }
 
-    const supabase = getSupabase()
-    let query = supabase
-      .from('payments')
-      .select('id, payment_status, total_amount_rappen, metadata, tenant_id')
+    // Use the server-side endpoint so guest users (no session) can also read their payment
+    const params = new URLSearchParams()
+    if (paymentId) params.set('payment_id', paymentId)
+    else if (transactionId) params.set('transaction_id', transactionId)
 
-    if (paymentId) {
-      query = query.eq('id', paymentId)
-    } else if (transactionId) {
-      query = query.or(`id.eq.${transactionId},wallee_transaction_id.eq.${transactionId}`)
+    let data: any = null
+    let apiVouchers: any[] = []
+    try {
+      const response = await $fetch<{ data: any; vouchers: any[] }>(`/api/shop/get-payment?${params.toString()}`)
+      data = response.data
+      apiVouchers = response.vouchers || []
+    } catch {
+      paymentStatus.value = null
+      isLoading.value = false
+      return
     }
 
-    const { data, error } = await query.single()
-
-    if (error || !data) {
+    if (!data) {
       paymentStatus.value = null
       isLoading.value = false
       return
@@ -327,7 +323,7 @@ const checkStatus = async () => {
 
     if (data.tenant_id) await loadBranding(data.tenant_id)
 
-    await checkForVouchers(data, supabase)
+    await checkForVouchers(data, apiVouchers)
 
     if ((data.payment_status === 'completed' || data.payment_status === 'authorized') && !hasVouchers.value) {
       startCountdown()
@@ -342,21 +338,25 @@ const checkStatus = async () => {
   }
 }
 
-const checkForVouchers = async (payment: any, supabase: any) => {
+const checkForVouchers = async (payment: any, initialVouchers: any[]) => {
   try {
     const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata
     const hasVoucherProducts = metadata?.products?.some((p: any) => p.is_voucher)
     if (!hasVoucherProducts) return
 
-    let records = await loadVouchersFromDB(payment.id, supabase)
+    let records = initialVouchers
     if (records.length === 0) {
+      // Webhook may still be processing — retry once via API
       await new Promise(resolve => setTimeout(resolve, 2500))
-      records = await loadVouchersFromDB(payment.id, supabase)
+      try {
+        const params = new URLSearchParams({ payment_id: payment.id })
+        const response = await $fetch<{ data: any; vouchers: any[] }>(`/api/shop/get-payment?${params.toString()}`)
+        records = response.vouchers || []
+      } catch { /* ignore */ }
     }
     if (records.length > 0) {
       vouchers.value = records
       logger.debug('🎁 Vouchers loaded:', records.length)
-      // Load branding from first voucher's tenant if not already loaded
       if (brandPrimary.value === '#1a56db' && records[0]?.tenant_id) {
         await loadBranding(records[0].tenant_id)
       }
