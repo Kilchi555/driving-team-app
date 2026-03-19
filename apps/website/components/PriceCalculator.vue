@@ -221,7 +221,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+
+const props = defineProps({
+  autoOpen: {
+    type: Boolean,
+    default: false
+  }
+})
 
 interface Category {
   id: string
@@ -337,6 +344,12 @@ const categories: Category[] = [
 const showModal = ref(false)
 const currentStep = ref(1)
 const totalSteps = ref(3)
+
+onMounted(() => {
+  if (props.autoOpen) {
+    showModal.value = true
+  }
+})
 
 // Form State
 const selectedCategory = ref('auto')
