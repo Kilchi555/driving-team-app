@@ -224,8 +224,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   })
 
   // ===== CACHE SYSTEM =====
-  const PRICING_RULES_CACHE_DURATION = 10 * 60 * 1000  // 10 Minuten
-  const PRICE_CALCULATION_CACHE_DURATION = 2 * 60 * 1000  // 2 Minuten
+  const PRICING_RULES_CACHE_DURATION = 5 * 60 * 1000  // 5 minutes
+  const PRICE_CALCULATION_CACHE_DURATION = 5 * 60 * 1000  // 5 minutes
 
   const priceCalculationCache = ref<Map<string, { data: CalculatedPrice; timestamp: number }>>(new Map())
 

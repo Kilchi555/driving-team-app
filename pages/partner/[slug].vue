@@ -238,6 +238,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { useRoute } from 'vue-router'
+
 definePageMeta({ layout: false })
 
 const route = useRoute()

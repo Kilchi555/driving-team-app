@@ -1,6 +1,6 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
-    <div class="bg-white rounded-lg max-w-4xl w-full h-[calc(100svh-1rem)] sm:h-[90vh] flex flex-col evaluation-modal-container">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
+    <div class="bg-white rounded-lg max-w-4xl w-full flex flex-col evaluation-modal-container" style="height: calc(100svh - 1rem - env(safe-area-inset-bottom)); max-height: calc(100svh - 1rem - env(safe-area-inset-bottom));">
       <div class="bg-green-600 text-white p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
@@ -62,8 +62,8 @@
             <div class="relative">
               <input
                 v-model="searchQuery"
-                @click="showDropdown = true"
-                @input="showDropdown = true"
+                @click="showDropdown = true; loadRatingColors()"
+                @input="showDropdown = true; loadRatingColors()"
                 type="text"
                 placeholder="Thema suchen und hinzufügen..."
                 class="search-input w-full pl-10 pr-2 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -73,13 +73,13 @@
 
             <div 
               v-if="showDropdown && filteredCriteria.length > 0"
-              class="criteria-dropdown absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 shadow-lg z-50 max-h-60 overflow-y-auto"
+              class="criteria-dropdown absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 shadow-lg z-50 max-h-96 overflow-y-auto"
             >
                           <!-- Gruppierte Kriterien nach Kategorien -->
             <template v-for="(categoryGroup, categoryName) in groupedCriteria" :key="categoryName">
               <!-- Kategorie-Überschrift -->
-              <div class="px-3 py-3 bg-blue-50 border-b border-blue-200">
-                <h3 class="text-base font-bold text-blue-800">{{ categoryName }}</h3>
+              <div class="px-3 py-1.5 bg-blue-50 border-b border-blue-200">
+                <h3 class="text-xs font-bold text-blue-800 uppercase tracking-wide">{{ categoryName }}</h3>
               </div>
               
               <!-- Kriterien dieser Kategorie -->
@@ -87,17 +87,18 @@
                 v-for="criteria in categoryGroup"
                 :key="criteria.id"
                 @click="selectCriteria(criteria)"
-                class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 flex items-center justify-between"
+                class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 flex items-center justify-between"
               >
-                <div class="flex-1">
-                  <h4 class="font-medium text-gray-900">{{ criteria.name }}</h4>
+                <div class="flex-1 min-w-0">
+                  <h4 class="text-sm font-medium text-gray-900 leading-tight">{{ criteria.name }}</h4>
+                  <p v-if="historyNotes[criteria.id]" class="text-xs text-gray-400 mt-0.5 truncate">{{ historyNotes[criteria.id] }}</p>
                 </div>
                 
                 <!-- ✅ NEU: Zeige nur Punkte in Farben wenn bereits bewertet -->
                 <div v-if="getAllRatingsForCriteria(criteria.id).length > 0" class="ml-3 flex items-center gap-1">
                   <div
-                    v-for="rating in getAllRatingsForCriteria(criteria.id)"
-                    :key="rating"
+                    v-for="(rating, idx) in getAllRatingsForCriteria(criteria.id)"
+                    :key="idx"
                     :style="{ backgroundColor: getRatingColor(rating) }"
                     class="w-6 h-6 rounded-full flex items-center justify-center"
                   >
@@ -261,7 +262,7 @@ const allCriteria = ref<any[]>([]) // Wird von v_evaluation_matrix geladen
 
 // Selected Criteria (in order of selection, newest first)
 const selectedCriteriaOrder = ref<string[]>([])
-const criteriaRatings = ref<Record<string, number>>({})
+const criteriaRatings = ref<Record<string, number | null>>({})
 const criteriaNotes = ref<Record<string, string>>({})
 const sortByNewest = ref(true) // true = neueste zuerst, false = schlechteste zuerst
 const criteriaTimestamps = ref<Record<string, string>>({}) // Neue ref für Timestamps
@@ -269,6 +270,7 @@ const criteriaAppointments = ref<Record<string, { appointment_id: string, start_
 const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly rated in this session
 const allCriteriaRatings = ref<Record<string, number[]>>({}) // Bewertungen des aktuellen Termins
 const historyRatings = ref<Record<string, number[]>>({}) // Historische Bewertungen früherer Termine (für Dropdown-Farben)
+const historyNotes = ref<Record<string, string>>({}) // Aktuellste Note pro Criteria (für Dropdown-Anzeige)
 
 
 // Computed
@@ -620,9 +622,9 @@ const selectCriteria = (criteria: any) => {
     }
   }
   
-  // Initialize rating and note
-  if (!criteriaRatings.value[criteria.id]) {
-    criteriaRatings.value[criteria.id] = 0
+  // Initialize rating and note (no default rating - user must select)
+  if (criteriaRatings.value[criteria.id] === undefined) {
+    criteriaRatings.value[criteria.id] = null
   }
   if (!criteriaNotes.value[criteria.id]) {
     criteriaNotes.value[criteria.id] = ''
@@ -938,16 +940,20 @@ const loadStudentEvaluationHistory = async () => {
 
     // Setup data for dropdown display only
     historyRatings.value = {}
+    historyNotes.value = {}
 
     evaluations.forEach((note: any) => {
       const criteriaId = note.evaluation_criteria_id
       criteriaNotes.value[criteriaId] = note.criteria_note || ''
 
-      // Sammle ALLE Bewertungen für dieses Kriterium (für Dropdown-Anzeige)
       if (!historyRatings.value[criteriaId]) {
         historyRatings.value[criteriaId] = []
+        // First entry per criteria = most recent (API returns newest first)
+        if (note.criteria_note?.trim()) {
+          historyNotes.value[criteriaId] = note.criteria_note.trim()
+        }
       }
-      if (note.criteria_rating && !historyRatings.value[criteriaId].includes(note.criteria_rating)) {
+      if (note.criteria_rating) {
         historyRatings.value[criteriaId].push(note.criteria_rating)
       }
 
@@ -957,7 +963,15 @@ const loadStudentEvaluationHistory = async () => {
       }
     })
 
-    logger.debug('🔍 DEBUG: lesson dates saved:', criteriaAppointments.value)
+    // API returns newest first – reverse so oldest is left, newest is right
+    Object.keys(historyRatings.value).forEach(criteriaId => {
+      historyRatings.value[criteriaId] = historyRatings.value[criteriaId].reverse()
+    })
+
+    // Debug: wie viele Ratings pro Kriterium wurden gesammelt?
+    const multiRatingCriteria = Object.entries(historyRatings.value).filter(([, v]) => (v as number[]).length > 1)
+    logger.debug('🔍 DEBUG: historyRatings total criteria:', Object.keys(historyRatings.value).length)
+    logger.debug('🔍 DEBUG: criteria with >1 rating:', multiRatingCriteria.length, multiRatingCriteria.slice(0, 3))
 
   } catch (err: any) {
     console.error('❌ Error loading student history:', err)
@@ -1027,6 +1041,15 @@ watch(showDropdown, (isOpen) => {
 })
 
 // ✅ Helper Funktionen für Rating-Farben (müssen VOR den Watches definiert sein)
+const FALLBACK_RATING_COLORS: Record<number, string> = {
+  1: '#ef4444',
+  2: '#f97316',
+  3: '#eab308',
+  4: '#3b82f6',
+  5: '#22c55e',
+  6: '#10b981',
+}
+
 const allRatings = ref<any[]>([])
 
 const loadRatingColors = async () => {
@@ -1050,8 +1073,9 @@ const loadRatingColors = async () => {
 }
 
 const getRatingColor = (ratingValue: number): string => {
+  if (allRatings.value.length === 0) return FALLBACK_RATING_COLORS[ratingValue] || '#999999'
   const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
-  return rating?.color || '#999999'
+  return rating?.color || FALLBACK_RATING_COLORS[ratingValue] || '#999999'
 }
 
 const getRatingLabel = (ratingValue: number): string => {
@@ -1097,6 +1121,7 @@ watch(() => props.isOpen, (isOpen) => {
     newlyRatedCriteria.value = [] // Clear tracking
     allCriteriaRatings.value = {}
     historyRatings.value = {}
+    historyNotes.value = {}
     
 
     
@@ -1128,6 +1153,7 @@ watch(() => props.appointment?.id, (newAppointmentId) => {
     criteriaAppointments.value = {}
     allCriteriaRatings.value = {}
     historyRatings.value = {}
+    historyNotes.value = {}
     originalNotes.value = {}
     newlyRatedCriteria.value = []
   }
@@ -1141,8 +1167,6 @@ onMounted(async () => {
 <style scoped>
 /* iOS Safari Fix: Use dynamic viewport height */
 .evaluation-modal-container {
-  max-height: 95vh;
-  max-height: 95dvh; /* Dynamic viewport height for iOS */
   overflow: hidden;
 }
 
@@ -1190,21 +1214,14 @@ input:focus, textarea:focus {
 /* Mobile optimization for iOS */
 @media (max-width: 640px) {
   .evaluation-modal-container {
-    max-height: 95vh;
-    max-height: 95dvh; /* Full height on mobile */
+    border-radius: 0.5rem;
   }
 }
 
-/* Fallback for browsers that don't support dvh */
-@supports not (height: 1dvh) {
+/* Fallback for browsers that don't support svh */
+@supports not (height: 1svh) {
   .evaluation-modal-container {
-    max-height: 95vh;
-  }
-  
-  @media (max-width: 640px) {
-    .evaluation-modal-container {
-      max-height: 95vh; /* Full height on mobile */
-    }
+    max-height: calc(95vh - env(safe-area-inset-bottom));
   }
 }
 </style>

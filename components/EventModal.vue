@@ -4,13 +4,13 @@
     <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
 
       <!-- ✅ FIXED HEADER (nur im Edit/View mode) -->
-      <div v-if="props.mode === 'edit' || props.mode === 'view'" class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <div v-if="props?.mode === 'edit' || props?.mode === 'view'" class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <!-- Links: Staff Selector und Reload Button -->
         <div class="flex items-center space-x-4">        
 
         </div>   
         <!-- Action-Buttons (nur bei edit/view mode) -->
-        <div v-if="(props.mode === 'edit' || props.mode === 'view') && props.eventData?.id" class="flex items-center space-x-2">
+        <div v-if="(props?.mode === 'edit' || props?.mode === 'view') && props?.eventData?.id" class="flex items-center space-x-2">
           
           <!-- Kopieren Button -->
           <button
@@ -43,7 +43,7 @@
           <p class="text-sm text-gray-500">Termindaten werden geladen...</p>
         </div>
 
-        <div v-else class="px-4 py-4 space-y-4">
+        <div v-else-if="formData" class="px-4 py-4 space-y-4">
           
           <!-- Student Selector -->
           <div v-if="showStudentSelector" class="py-0">
@@ -176,10 +176,10 @@
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
               :price-per-minute="dynamicPricing.pricePerMinute || 2.11"
-              :disabled="props.mode === 'edit' && isPastAppointment"
-              :show-buttons="!(props.mode === 'edit' && isPastAppointment)"
-              :is-past-appointment="props.mode === 'edit' && isPastAppointment"
-              :mode="props.mode"
+              :disabled="props?.mode === 'edit' && isPastAppointment"
+              :show-buttons="!(props?.mode === 'edit' && isPastAppointment)"
+              :is-past-appointment="props?.mode === 'edit' && isPastAppointment"
+              :mode="props?.mode || 'create'"
               :selected-student="selectedStudent"
               :appointment-id="props.eventData?.id"
               :original-duration="props.eventData?.duration_minutes"
@@ -199,8 +199,8 @@
               :event-type="(formData.eventType as 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite')"
               :selected-student="selectedStudent"
               :selected-special-type="formData.selectedSpecialType"
-              :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              :mode="props.mode"
+              :disabled="props?.mode === 'view' || (props?.mode === 'edit' && isPastAppointment)"
+              :mode="props?.mode || 'create'"
               @update:start-date="handleStartDateUpdate"
               @update:start-time="handleStartTimeUpdate"
               @update:end-time="handleEndTimeUpdate"
@@ -714,6 +714,12 @@ interface SmsPayload {
 const props = withDefaults(defineProps<Props>(), {
   mode: 'create'
 })
+
+// ✅ DEFENSIVE: Prüfe ob props initialisiert ist
+if (!props || typeof props !== 'object') {
+  console.error('🚨 CRITICAL: EventModal props not initialized properly!', { props, type: typeof props })
+  throw new Error('EventModal props initialization failed')
+}
 
 // ✅ DEBUG: Log props beim ersten Laden
 logger.debug('🚀 EventModal initialized with props:', {
