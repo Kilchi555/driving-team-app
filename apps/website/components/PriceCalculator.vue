@@ -176,14 +176,6 @@
                   </div>
                   <p class="text-xs text-gray-400 mt-2">Optional – du kannst den Schritt auch überspringen</p>
 
-                  <!-- Success Message -->
-                  <div
-                    v-if="emailSendSuccess"
-                    class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm"
-                  >
-                    ✅ Kalkulation wurde erfolgreich versendet!
-                  </div>
-
                   <!-- Error Message -->
                   <div
                     v-if="emailSendError"
@@ -211,6 +203,52 @@
                 class="flex-1 px-4 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-bold rounded-lg transition"
               >
                 {{ currentStep === totalSteps ? (emailInput && isValidEmail ? '📧 Versenden' : 'Fertig') : 'Weiter →' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Success Modal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-200"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="emailSendSuccess"
+          class="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4"
+          @click.self="closeSuccessModal"
+        >
+          <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center space-y-5 animate-scale-in">
+            <div class="mx-auto w-20 h-20 rounded-full bg-primary-600 flex items-center justify-center text-white text-3xl">
+              ✓
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900">Kalkulation versendet!</h3>
+              <p class="text-sm text-gray-500 mt-2">
+                Wir haben dir die Kostenschätzung per E-Mail geschickt. Schau auch im Spam-Ordner nach.
+              </p>
+            </div>
+            <div class="space-y-3">
+              <a
+                href="https://simy.ch/booking/availability/driving-team"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition text-sm"
+              >
+                Jetzt Termin buchen →
+              </a>
+              <button
+                @click="closeSuccessModal"
+                class="block w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition text-sm"
+              >
+                Schliessen
               </button>
             </div>
           </div>
@@ -535,6 +573,14 @@ const closeModal = () => {
   }, 300)
 }
 
+const closeSuccessModal = () => {
+  emailSendSuccess.value = false
+  currentStep.value = 1
+  emailInput.value = ''
+  firstNameInput.value = ''
+  emailSendError.value = ''
+}
+
 const sendCalculationEmail = async () => {
   if (!emailInput.value || !isValidEmail.value) {
     closeModal()
@@ -567,9 +613,7 @@ const sendCalculationEmail = async () => {
 
     emailSendSuccess.value = true
     isSending.value = false
-    setTimeout(() => {
-      closeModal()
-    }, 2000)
+    showModal.value = false // close main modal, show success modal
   } catch (error) {
     isSending.value = false
     emailSendError.value =
@@ -624,8 +668,23 @@ const buildEmailBody = (): string => {
   }
 }
 
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.3s ease;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
 }
 
 button,
