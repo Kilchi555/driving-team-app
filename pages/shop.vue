@@ -729,7 +729,7 @@ interface WalleeResponse {
 }
 
 // Reactive data - Multi-Step Process
-const currentStep = ref(0) // 0: Kundentyp, 1: Produktübersicht, 2: Kontaktdaten, 3: Payment
+const currentStep = ref(1) // Start directly at products (step 0 legacy removed)
 const editingCustomerData = ref(false)
 const guestUserId = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -840,11 +840,10 @@ const hasProducts = computed(() => selectedProducts.value.length > 0)
 
 const stepTitle = computed(() => {
   switch (currentStep.value) {
-    case 0: return 'Kundentyp wählen'
     case 1: return 'Produkte'
     case 2: return 'Ihre Kontaktdaten'
     case 3: return 'Bezahlung'
-    default: return 'Laufkundschaft'
+    default: return ''
   }
 })
 
@@ -900,9 +899,7 @@ watch(brandPrimary, (color) => {
 
 const getNextStepButtonText = () => {
   switch (currentStep.value) {
-    case 0: return 'Weiter'
     case 1: 
-      // ✅ NEW: Show "Zur Bezahlung" for logged-in users
       return isLoggedIn.value && customerData.value ? 'Zur Bezahlung' : 'Zu Kontaktdaten'
     case 2: return 'Zur Bezahlung'
     default: return 'Weiter'
@@ -911,15 +908,9 @@ const getNextStepButtonText = () => {
 
 const canProceedToNextStep = computed(() => {
   switch (currentStep.value) {
-    case 0: 
-      if (customerType.value === 'guest') return true
-      if (customerType.value === 'existing' || customerType.value === 'new') {
-        return isLoggedIn.value
-      }
-      return false
     case 1: return hasProducts.value
     case 2: return canSubmitStep1.value
-    default: false
+    default: return false
   }
 })
 
@@ -967,17 +958,6 @@ const ensureGuestUser = async () => {
 
 // Step Navigation
 const nextStep = async () => {
-  if (currentStep.value === 0) {
-    if (!customerType.value) {
-      alert('❌ Bitte wählen Sie einen Kundentyp aus.')
-      return
-    }
-    if ((customerType.value === 'existing' || customerType.value === 'new') && !isLoggedIn.value) {
-      alert('❌ Bitte melden Sie sich an oder registrieren Sie sich zuerst.')
-      return
-    }
-  }
-  
   if (currentStep.value === 1 && !hasProducts.value) {
     alert('❌ Bitte wählen Sie mindestens ein Produkt aus.')
     return
@@ -1009,11 +989,6 @@ const nextStep = async () => {
     } else {
       currentStep.value++
     }
-    
-    // Produkte laden wenn wir zu Schritt 1 gehen
-    if (currentStep.value === 1 && availableProducts.value.length === 0) {
-      loadProducts()
-    }
   }
 }
 
@@ -1025,38 +1000,6 @@ const previousStep = () => {
   } else if (currentStep.value === 1 && isLoggedIn.value) {
     logger.debug('🔙 Shop - User is logged in, going back to dashboard')
     navigateTo('/customer')
-  }
-}
-
-// Methods
-const goBack = () => {
-  if (currentStep.value > 0) {
-    // Gehe einen Schritt zurück im Shop
-    currentStep.value--
-    logger.debug('🔙 Shop - Going back to step:', currentStep.value)
-  } else {
-    // Nur wenn wir bereits in Schritt 0 sind, zurück zur Auswahl
-    const tenant = tenantParam.value || tenantSlug.value
-    if (tenant) {
-      const url = `/auswahl?tenant=${tenant}`
-      logger.debug('🔙 Shop - Going back to tenant selection:', url)
-      
-      if (typeof navigateTo !== 'undefined') {
-        navigateTo(url)
-      } else {
-        window.location.href = url
-      }
-    } else {
-      // Fallback ohne spezifischen Tenant
-      const url = '/auswahl'
-      logger.debug('🔙 Shop - Going back to general selection:', url)
-      
-      if (typeof navigateTo !== 'undefined') {
-        navigateTo(url)
-      } else {
-        window.location.href = url
-      }
-    }
   }
 }
 
@@ -1763,7 +1706,7 @@ Gesamtpreis: CHF ${totalPrice.value.toFixed(2)}
 
 Sie erhalten in Kürze eine Rechnung per E-Mail.`)
     
-    goBack()
+    currentStep.value = 1
     
   } catch (error: any) {
     console.error('❌ Error submitting order:', error)
@@ -1914,9 +1857,6 @@ onMounted(async () => {
     // Produkte laden nachdem Tenant geladen ist
     logger.debug('🛍️ Shop mounted - Step-by-step process started')
     await loadProducts()
-    
-    // Immer direkt auf Step 1 (Produktauswahl) starten
-    currentStep.value = 1
 
     // Auth-Status prüfen (Kundendaten vorab laden wenn eingeloggt)
     const { getSupabase } = await import('~/utils/supabase')
@@ -1994,7 +1934,7 @@ const handlePaymentCreated = async (payment: any) => {
 
   alert(`✅ Zahlung erfolgreich!\n\nHallo ${formData.value.firstName},\n\nIhre Bestellung wurde erfolgreich abgeschlossen:\n\n${productList}\n\nGesamtpreis: CHF ${totalPrice.value.toFixed(2)}\n\nSie erhalten in Kürze eine Bestätigung per E-Mail.`)
   
-  goBack()
+  currentStep.value = 1
 }
 
 const handlePaymentFailed = (error: any) => {
