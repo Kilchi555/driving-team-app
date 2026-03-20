@@ -175,11 +175,21 @@ const redeemVoucher = async () => {
   errorMessage.value = ''
 
   try {
+    // For shop checkout: user_id is provided by shop state
+    // For authenticated users: API will resolve from auth
+    const body: any = {
+      code: voucherCode.value.trim().toUpperCase()
+    }
+    
+    // Try to include user_id if available (for guest checkout)
+    const shopCheckout = useShopCheckout?.()
+    if (shopCheckout?.currentUserId?.value) {
+      body.user_id = shopCheckout.currentUserId.value
+    }
+
     const response = await $fetch<any>('/api/vouchers/redeem', {
       method: 'POST',
-      body: {
-        code: voucherCode.value.trim().toUpperCase()
-      }
+      body
     })
 
     // Fix: API returns credit.new_balance_chf (string) or newBalance (rappen)

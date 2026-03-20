@@ -24,12 +24,27 @@ export default defineEventHandler(async (event) => {
     logger.debug('🎫 [redeem] Redeeming voucher:', normalizedCode)
 
     // ── Auth ──────────────────────────────────────────────
+    // Support both authenticated users AND guest users (from shop)
+    // - Authenticated: auth.uid() exists
+    // - Guest: user_id provided in body (created by find-or-create-guest-user)
+    
     const authUser = await getAuthenticatedUser(event)
-    if (!authUser) {
-      throw createError({ statusCode: 401, message: 'Not authenticated' })
+    const guestUserId = body.user_id // For guest checkout (passed from shop)
+    
+    let userId: string
+
+    if (authUser) {
+      // Authenticated user
+      userId = authUser.db_user_id || authUser.id
+      logger.debug('🎫 [redeem] Authenticated user:', userId)
+    } else if (guestUserId && typeof guestUserId === 'string') {
+      // Guest user from shop
+      userId = guestUserId
+      logger.debug('🎫 [redeem] Guest user:', userId)
+    } else {
+      throw createError({ statusCode: 401, message: 'Authentication required or guest user_id missing' })
     }
 
-    const userId = authUser.db_user_id || authUser.id
     const supabaseAdmin = getSupabaseAdmin()
 
     // Get user profile with tenant_id
