@@ -1,92 +1,61 @@
--- Migration: Add Anonymous-Safe RLS Policies for Voucher Lookup
--- Purpose: Allow anonymous users to lookup voucher codes (view only, no redemption)
--- Security: Policies are restricted by tenant_id and code uniqueness
+-- Migration: Secure Voucher Lookup for Shop (Anonymous Access)
+-- Date: 2026-03-20
+--
+-- Architecture decision:
+--   The lookup API (lookup.post.ts) uses getSupabaseAdmin() which BYPASSES RLS.
+--   This means we do NOT need any anon SELECT policies on vouchers/voucher_codes.
+--   All validation (tenant_id, is_active, dates) happens at the API layer.
+--
+--   This is the safest approach because:
+--   - No voucher codes are ever exposed via direct PostgREST/anon access
+--   - Anon users cannot enumerate codes across tenants
+--   - The API controls exactly which fields are returned
+--   - Rate limiting can be applied at the API layer
+--
+-- What this migration does:
+--   1. Ensures no dangerous anon policies exist
+--   2. Adds performance indexes for code lookups
 
 -- =====================================================
--- 1. VOUCHER_CODES: Add anon SELECT policy (lookup only)
+-- 1. CLEANUP: Remove any overly permissive anon policies
 -- =====================================================
 
--- Allow anonymous users to lookup a specific voucher code
--- This is safe because:
--- - Cannot update/delete, only SELECT
--- - Must be within valid date range
--- - Cannot list all codes (no WHERE tenant_id check means RLS is permissive for lookups only)
--- - Code is case-sensitive and unique, so brute force is impractical
--- - Only active codes visible
-CREATE POLICY "Anon can lookup active voucher codes"
-  ON voucher_codes FOR SELECT
-  USING (
-    is_active = true
-    AND (valid_from IS NULL OR valid_from <= NOW())
-    AND (valid_until IS NULL OR valid_until > NOW())
-  );
+-- Remove anon SELECT policies if they were previously created
+-- These are dangerous because they allow direct PostgREST enumeration
+DROP POLICY IF EXISTS "Anon can lookup active voucher codes by code and tenant" ON voucher_codes;
+DROP POLICY IF EXISTS "Anon can lookup active voucher codes" ON voucher_codes;
+DROP POLICY IF EXISTS "Anon can lookup active vouchers by code" ON vouchers;
+DROP POLICY IF EXISTS "Anon can lookup active vouchers" ON vouchers;
 
--- =====================================================
--- 2. VOUCHERS: Add anon SELECT policy (lookup only)
--- =====================================================
-
--- Allow anonymous users to lookup a specific purchased voucher by code
--- This is safe because:
--- - Cannot update/delete, only SELECT
--- - Must be within valid date range
--- - Can only see active, unredeemed vouchers
--- - No auth check needed - permission validated at API layer via tenant_id parameter
-CREATE POLICY "Anon can lookup active vouchers"
-  ON vouchers FOR SELECT
-  USING (
-    is_active = true
-    AND redeemed_at IS NULL
-    AND (valid_from IS NULL OR valid_from <= NOW())
-    AND (valid_until IS NULL OR valid_until > NOW())
-  );
-
--- =====================================================
--- 3. Prevent Unauthorized Updates/Deletes
--- =====================================================
-
--- Deny anonymous/public users from updating voucher_codes
--- Only admins can update via admin client
--- NOTE: The existing "Admins can manage vouchers" policy is NOT deleted
---       Admin updates/deletes still work via that policy
+-- Remove no-op DENY policies (permissive USING(false) has zero effect in PostgreSQL)
 DROP POLICY IF EXISTS "Prevent anon updates to voucher_codes" ON voucher_codes;
-CREATE POLICY "Prevent anon updates to voucher_codes"
-  ON voucher_codes FOR UPDATE
-  USING (false)  -- Deny all public users (including anon)
-  WITH CHECK (false);
-
--- Deny anonymous/public users from deleting voucher_codes
 DROP POLICY IF EXISTS "Prevent anon deletes from voucher_codes" ON voucher_codes;
-CREATE POLICY "Prevent anon deletes from voucher_codes"
-  ON voucher_codes FOR DELETE
-  USING (false);  -- Deny all public users (including anon)
-
--- Deny anonymous/public users from updating vouchers
 DROP POLICY IF EXISTS "Prevent anon updates to vouchers" ON vouchers;
-CREATE POLICY "Prevent anon updates to vouchers"
-  ON vouchers FOR UPDATE
-  USING (false)  -- Deny all public users (including anon)
-  WITH CHECK (false);
-
--- Deny anonymous/public users from deleting vouchers
 DROP POLICY IF EXISTS "Prevent anon deletes from vouchers" ON vouchers;
-CREATE POLICY "Prevent anon deletes from vouchers"
-  ON vouchers FOR DELETE
-  USING (false);  -- Deny all public users (including anon)
 
 -- =====================================================
--- 4. Existing Policies Remain Intact
+-- 2. VERIFY: Existing policies provide correct access
 -- =====================================================
 
--- Note: The existing authenticated policies that checked auth.uid() are still in place:
--- - Admin views of all vouchers in their tenant
--- - Authenticated user redemptions
--- - These are OR'ed with the anon policies, so both access patterns work
+-- vouchers table should have these policies (from create_vouchers_table.sql):
+--   "Users can view their own vouchers"       FOR SELECT  (auth.uid() match)
+--   "Admins can view all vouchers of their tenant" FOR SELECT  (admin/staff + tenant match)
+--   "Admins can manage vouchers"              FOR ALL     (admin + tenant match)
+--
+-- voucher_codes table should have these policies (from add_credit_products_and_vouchers.sql):
+--   "Users can view active vouchers of their tenant" FOR SELECT (auth.uid() + tenant + active)
+--   "Admins can manage vouchers"              FOR ALL     (admin + tenant match)
+--
+-- These are sufficient because:
+--   - Authenticated users can see their own vouchers (SELECT)
+--   - Admins can manage all vouchers in their tenant (ALL)
+--   - Anon users have NO direct access (correct!)
+--   - All anon operations go through API endpoints that use getSupabaseAdmin()
 
 -- =====================================================
--- 5. INDEXES (ensure fast code lookups)
+-- 3. INDEXES for fast code lookups (used by admin client)
 -- =====================================================
 
--- These should already exist from previous migrations, but verify:
 CREATE INDEX IF NOT EXISTS idx_voucher_codes_code_active 
   ON voucher_codes(code) WHERE is_active = true;
 
@@ -94,24 +63,21 @@ CREATE INDEX IF NOT EXISTS idx_vouchers_code_active
   ON vouchers(code) WHERE is_active = true AND redeemed_at IS NULL;
 
 -- =====================================================
--- 6. MIGRATION COMPLETE
+-- 4. MIGRATION COMPLETE
 -- =====================================================
 
--- Summary of changes:
--- ✅ Added anon SELECT policy for voucher_codes table (lookup by code)
--- ✅ Added anon SELECT policy for vouchers table (lookup by code)
--- ✅ Added DENY policies to prevent unauthorized UPDATE/DELETE
--- ✅ All redemption logic remains unchanged (requires authentication)
--- ✅ Indexes optimized for fast code-based lookups
--- ✅ Existing admin/user policies remain intact
--- ✅ Security: Anon can only see active, non-redeemed vouchers (SELECT only)
--- ✅ Security: No anon user can modify vouchers (UPDATE/DELETE blocked)
--- ✅ Tenant validation happens at API layer (lookup.post.ts, redeem.post.ts)
-
--- Note for developers:
--- - Anon users can call: POST /api/vouchers/lookup with { code, tenant_id }
--- - Anon users CANNOT call: POST /api/vouchers/redeem (requires auth or guest user_id)
--- - The lookup endpoint validates tenant_id before returning voucher info
--- - The redeem endpoint requires either auth.uid() or valid guest user_id
--- - RLS is permissive for code lookups because validation happens at API layer
--- - All modifications (update/delete) are only via admin API or authenticated admin users
+-- Final policy state for `vouchers` table:
+--   ✅ SELECT: Auth users see own vouchers (via redeemed_by, recipient_email, payment)
+--   ✅ SELECT: Admin/Staff see all tenant vouchers
+--   ✅ ALL:    Admin can manage tenant vouchers
+--   ✅ ANON:   NO direct access (all anon operations via API + admin client)
+--
+-- Final policy state for `voucher_codes` table:
+--   ✅ SELECT: Auth users see active codes in their tenant
+--   ✅ ALL:    Admin can manage tenant codes
+--   ✅ ANON:   NO direct access (all anon operations via API + admin client)
+--
+-- API endpoints:
+--   POST /api/vouchers/lookup  → uses getSupabaseAdmin() → bypasses RLS → safe
+--   POST /api/vouchers/redeem  → uses getSupabaseAdmin() → bypasses RLS → safe
+--   Both validate tenant_id, code, dates at the application layer

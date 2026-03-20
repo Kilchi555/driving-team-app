@@ -2,12 +2,14 @@
 // Purpose: Allow anonymous users to lookup voucher code information (non-sensitive data only)
 // Security: 
 //   - No authentication required (safe for shop checkout)
+//   - Uses admin client (bypasses RLS) - all validation done at API layer
 //   - Returns only metadata: code, name, amount, validity info
-//   - Does NOT return tenant_id or sensitive internal data
-//   - Rate-limited via Supabase (can add explicit rate limiting if needed)
+//   - Does NOT return tenant_id, IDs or sensitive internal data
+//   - Rate limiting can be added via checkRateLimit()
 
-import { defineEventHandler, readBody, createError } from 'h3'
-import { getSupabaseClient } from '~/server/utils/supabase'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logger } from '~/utils/logger'
 
 interface LookupResponse {
@@ -34,11 +36,25 @@ export default defineEventHandler(async (event): Promise<LookupResponse> => {
       throw createError({ statusCode: 400, message: 'Tenant ID is required' })
     }
 
+    // Rate limit: max 15 lookups per IP per 60 seconds
+    const ip = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim()
+      || getHeader(event, 'x-real-ip')
+      || event.node.req.socket.remoteAddress
+      || 'unknown'
+
+    const rateLimit = await checkRateLimit(ip, 'voucher_lookup', 15, 60_000, undefined, tenant_id)
+    if (!rateLimit.allowed) {
+      throw createError({
+        statusCode: 429,
+        message: 'Zu viele Anfragen. Bitte versuchen Sie es in einer Minute erneut.'
+      })
+    }
+
     const normalizedCode = code.trim().toUpperCase()
     logger.debug('🎫 [lookup] Anonymous voucher lookup:', { normalizedCode, tenant_id })
 
-    // Use anon client (respects RLS policies)
-    const supabase = getSupabaseClient()
+    // Use admin client (bypasses RLS) - validation happens at API layer
+    const supabase = getSupabaseAdmin()
 
     const now = new Date()
 
