@@ -113,7 +113,9 @@
               class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
             >
               <div>
-                <div class="text-sm font-medium text-gray-700">Empfehlung</div>
+                <div class="text-sm font-medium text-gray-700">
+                  {{ ref.users?.first_name }} {{ ref.users?.last_name }}
+                </div>
                 <div class="text-xs text-gray-400">{{ formatDate(ref.created_at) }}</div>
               </div>
               <div class="flex items-center gap-3">

@@ -39,15 +39,54 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: `Status must be one of: ${allowedStatuses.join(', ')}` })
     }
 
-    // Verify payout belongs to tenant
+    // Verify payout belongs to tenant & get current status + amount
     const { data: existing } = await supabase
       .from('affiliate_payout_requests')
-      .select('id, tenant_id')
+      .select('id, tenant_id, user_id, amount_rappen, status')
       .eq('id', payoutId)
       .maybeSingle()
 
     if (!existing || existing.tenant_id !== admin.tenant_id) {
       throw createError({ statusCode: 404, message: 'Payout request not found' })
+    }
+
+    // If rejecting a previously pending payout, restore the balance
+    if (status === 'rejected' && existing.status === 'pending') {
+      // Get current balance
+      const { data: credits } = await supabase
+        .from('student_credits')
+        .select('balance_rappen')
+        .eq('user_id', existing.user_id)
+        .eq('tenant_id', admin.tenant_id)
+        .maybeSingle()
+
+      const currentBalance = credits?.balance_rappen ?? 0
+      const restoredBalance = currentBalance + existing.amount_rappen
+
+      // Restore balance
+      await supabase
+        .from('student_credits')
+        .upsert({
+          user_id: existing.user_id,
+          tenant_id: admin.tenant_id,
+          balance_rappen: restoredBalance,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,tenant_id' })
+
+      // Log reversal transaction
+      await supabase.from('credit_transactions').insert({
+        user_id: existing.user_id,
+        tenant_id: admin.tenant_id,
+        transaction_type: 'withdrawal_reversed',
+        amount_rappen: existing.amount_rappen,
+        balance_before_rappen: currentBalance,
+        balance_after_rappen: restoredBalance,
+        payment_method: 'bank_transfer',
+        reference_type: 'payout_request',
+        reference_id: payoutId,
+        notes: `Affiliate-Auszahlung abgelehnt – Guthaben wiederhergestellt (Antrag: ${payoutId})`,
+        created_at: new Date().toISOString(),
+      })
     }
 
     await supabase
@@ -60,7 +99,7 @@ export default defineEventHandler(async (event) => {
       })
       .eq('id', payoutId)
 
-    return { success: true }
+    return { success: true, reversed: status === 'rejected' && existing.status === 'pending' }
   }
 
   // GET – list all requests

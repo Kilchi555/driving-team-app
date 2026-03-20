@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   const { data: referrals } = affiliateCode
     ? await supabaseAdmin
         .from('affiliate_referrals')
-        .select('id, status, reward_rappen, credited_at, created_at, referred_user_id')
+        .select('id, status, reward_rappen, credited_at, created_at, referred_user_id, users(first_name, last_name, email)')
         .eq('affiliate_code_id', affiliateCode.id)
         .order('created_at', { ascending: false })
     : { data: [] }
