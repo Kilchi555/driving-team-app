@@ -586,7 +586,8 @@
                     <div class="text-gray-900 font-medium mb-1">
                       {{ getAppointmentTitle(payment) }}
                     </div>
-                    <div class="text-gray-500 text-xs">
+                    <!-- Hide datetime for shop purchases (products without appointment) -->
+                    <div v-if="!(!payment.appointments && Number(payment.products_price_rappen) > 0)" class="text-gray-500 text-xs">
                       {{ getAppointmentDateTime(payment) }}
                     </div>
                   </div>
@@ -602,7 +603,8 @@
                   <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.admin_fee_rappen) }}</span>
                 </div>
                 
-                <div v-if="payment.products_price_rappen > 0" class="flex justify-between">
+                <!-- Hide products label for shop purchases since title already shows it -->
+                <div v-if="payment.products_price_rappen > 0 && payment.appointments" class="flex justify-between">
                   <span class="text-gray-600">{{ getProductsLabel(payment) }}</span>
                   <span class="font-medium text-gray-600">CHF {{ formatAmount(payment.products_price_rappen) }}</span>
                 </div>
@@ -1485,17 +1487,37 @@ const togglePaymentDetails = (payment: any) => {
   }
 }
 
-// ✅ NEW: Get product names from metadata
+/** metadata kommt von Supabase oft als Objekt, manchmal als JSON-String */
+function parsePaymentMetadata(payment: any): Record<string, any> {
+  const raw = payment?.metadata
+  if (!raw) return {}
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return {}
+    }
+  }
+  return typeof raw === 'object' ? raw : {}
+}
+
+// ✅ Produktzeile inkl. gekaufter Gutscheine (Shop)
 const getProductsLabel = (payment: any): string => {
-  if (!payment.metadata?.products || payment.metadata.products.length === 0) {
+  const meta = parsePaymentMetadata(payment)
+  const products = meta?.products
+  if (!Array.isArray(products) || products.length === 0) {
+    if (Number(payment.products_price_rappen) > 0) return 'Shop / Produktkauf'
     return 'Produkte'
   }
-  
-  const productNames = payment.metadata.products
-    .map((p: any) => p.name)
-    .join(', ')
-  
-  return productNames || 'Produkte'
+
+  const parts = products.map((p: any) => {
+    const qty = p.quantity && Number(p.quantity) > 1 ? `${p.quantity}× ` : ''
+    const name = (p.name || p.product_name || '').trim() || 'Position'
+    if (p.is_voucher) return `${qty}Gutschein: ${name}`
+    return `${qty}${name}`
+  })
+
+  return parts.filter(Boolean).join(', ') || 'Produkte'
 }
 
 const formatPaymentTimeline = (dateString: string): string => {
@@ -1741,9 +1763,7 @@ const onAppointmentCancelled = async (appointmentId: string) => {
 
 const getAppointmentTitle = (payment: any): string => {
   // Parse metadata (can be string or object)
-  const metadata = payment.metadata
-    ? (typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata)
-    : {}
+  const metadata = parsePaymentMetadata(payment)
 
   // Top-up payment
   if (metadata?.is_topup) {
@@ -1756,7 +1776,38 @@ const getAppointmentTitle = (payment: any): string => {
   }
 
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
-  if (!appointment) return 'Fahrlektion'
+
+  // Shop / Produktkauf (z. B. Gutschein) — ohne Termin
+  if (!appointment) {
+    const productPart = Number(payment.products_price_rappen) > 0
+    const shopMeta = metadata?.source === 'shop' || productPart
+    if (shopMeta) {
+      const prods = Array.isArray(metadata?.products) ? metadata.products : []
+      const voucherProds = prods.filter((p: any) => p?.is_voucher)
+      if (voucherProds.length > 0 && voucherProds.length === prods.length) {
+        if (prods.length === 1) {
+          let name = (voucherProds[0].name || voucherProds[0].product_name || '').trim()
+          // Remove "Gutschein für:" or "Gutschein:" prefix from the name
+          name = name.replace(/^Gutschein\s+für:\s*/i, '').replace(/^Gutschein:\s*/i, '')
+          return name ? `${name}` : 'Gutschein gekauft'
+        }
+        return `Gutscheine gekauft (${prods.length} Positionen)`
+      }
+      if (prods.length > 0) {
+        const names = prods
+          .map((p: any) => {
+            let name = (p.name || p.product_name || '').trim()
+            // Remove "Gutschein für:" or "Gutschein:" prefix
+            name = name.replace(/^Gutschein\s+für:\s*/i, '').replace(/^Gutschein:\s*/i, '')
+            return name
+          })
+          .filter(Boolean)
+        if (names.length) return names.join(', ')
+      }
+      return payment.description?.trim() || 'Shop / Produktkauf'
+    }
+    return 'Fahrlektion'
+  }
 
   const staff = Array.isArray(appointment.staff) ? appointment.staff[0] : appointment.staff
   const staffFirstName = staff?.first_name || ''
@@ -1768,9 +1819,11 @@ const getAppointmentTitle = (payment: any): string => {
 }
 
 const getAppointmentDateTime = (payment: any): string => {
+  const meta = parsePaymentMetadata(payment)
+
   // For course payments, show the course start date from metadata
-  if (!payment.appointments && payment.metadata?.course_start_date) {
-    const dateStr = payment.metadata.course_start_date
+  if (!payment.appointments && meta?.course_start_date) {
+    const dateStr = meta.course_start_date
     try {
       const date = new Date(dateStr)
       const formattedDate = date.toLocaleDateString('de-CH', {
@@ -1784,9 +1837,32 @@ const getAppointmentDateTime = (payment: any): string => {
       return 'Kursbeginn: -'
     }
   }
-  
+
   const appointment = Array.isArray(payment.appointments) ? payment.appointments[0] : payment.appointments
-  if (!appointment || !appointment.start_time) return ''
+  if (!appointment || !appointment.start_time) {
+    const isShopLike =
+      Number(payment.products_price_rappen) > 0 || meta?.source === 'shop'
+    if (isShopLike) {
+      const raw = payment.paid_at || payment.created_at
+      if (!raw) return ''
+      try {
+        const date = new Date(raw)
+        return (
+          date.toLocaleDateString('de-CH', {
+            timeZone: 'Europe/Zurich',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) + ' Uhr'
+        )
+      } catch {
+        return ''
+      }
+    }
+    return ''
+  }
   
   try {
     // Convert UTC to Europe/Zurich timezone

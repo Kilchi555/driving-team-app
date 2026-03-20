@@ -358,6 +358,7 @@ export const usePayments = () => {
         description: 'Produktkauf',
         is_standalone: true,
         metadata: {
+          source: 'shop',
           products_count: products.length,
           discounts_count: discounts.length,
           price_breakdown: {

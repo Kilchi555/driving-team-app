@@ -309,8 +309,23 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
-                    <input v-model="formData.email" type="email" required placeholder="max@beispiel.ch" autocomplete="email"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.email" 
+                      type="email" 
+                      required 
+                      placeholder="max@beispiel.ch" 
+                      autocomplete="email"
+                      @blur="onEmailBlur"
+                      :disabled="isResolving"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all disabled:opacity-50" 
+                    />
+                    <!-- Resolution status / warning -->
+                    <div v-if="isResolving" class="text-xs text-blue-600 mt-1">⏳ Prüfe E-Mail...</div>
+                    <div v-else-if="hasResolvedCustomer && isLoginAccount" class="text-xs text-amber-600 mt-1">
+                      ⚠️ Es existiert ein Login-Konto — möchtest du dich <a href="/login" class="underline">anmelden</a>?
+                    </div>
+                    <div v-else-if="hasResolvedCustomer && isNewGuest" class="text-xs text-green-600 mt-1">✅ Neue Bestellung</div>
+                    <div v-else-if="hasResolvedCustomer" class="text-xs text-green-600 mt-1">✅ Benutzer erkannt</div>
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Telefon *</label>
@@ -389,8 +404,15 @@
                     <input v-model="formData.lastName" type="text" placeholder="Nachname" autocomplete="family-name"
                            class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   </div>
-                  <input v-model="formData.email" type="email" placeholder="E-Mail" autocomplete="email"
-                         class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
+                  <input 
+                    v-model="formData.email" 
+                    type="email" 
+                    placeholder="E-Mail" 
+                    autocomplete="email"
+                    @blur="onEmailBlur"
+                    :disabled="isResolving"
+                    class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none disabled:opacity-50" 
+                  />
                   <input v-model="formData.phone" type="tel" placeholder="Telefon" autocomplete="tel"
                          class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   <div class="grid grid-cols-3 gap-2">
@@ -412,7 +434,7 @@
               <PaymentComponent
                 key="payment-component"
                 :appointment-id="undefined"
-                :user-id="guestUserId || (customerData?.id) || undefined"
+                :user-id="currentCustomer?.id || (customerData?.id) || undefined"
                 :staff-id="undefined"
                 :tenant-id="tenantId || undefined"
                 :is-standalone="true"
@@ -663,6 +685,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { definePageMeta } from '#imports'
 import { useAutoSave } from '~/composables/useAutoSave'
+import { useShopCheckout } from '~/composables/useShopCheckout'
 import { useTenant } from '~/composables/useTenant'
 import { useVouchers } from '~/composables/useVouchers'
 import { useDiscounts } from '~/composables/useDiscounts'
@@ -760,7 +783,17 @@ watch(isShopReady, (ready) => {
   if (ready) setTimeout(() => { isShopVisible.value = true }, 3000)
 })
 const editingCustomerData = ref(false)
-const guestUserId = ref<string | null>(null)
+// ✅ NEW: Centralized checkout state
+const {
+  currentCustomer,
+  isResolving,
+  resolutionError,
+  hasResolvedCustomer,
+  isNewGuest,
+  isLoginAccount,
+  resolveCustomer,
+  resetCheckout
+} = useShopCheckout()
 const isSubmitting = ref(false)
 const isLoadingProducts = ref(false)
 const availableProducts = ref<Product[]>([])
@@ -959,29 +992,20 @@ const validateProductSelection = () => {
   return true
 }
 
-const ensureGuestUser = async () => {
-  if (isLoggedIn.value || !tenantId.value) return
+// ✅ NEW: Resolve customer on email blur
+const onEmailBlur = async () => {
+  if (isLoggedIn.value || !tenantId.value || !formData.value.email) return
+  
   try {
-    const response = await $fetch('/api/shop/find-or-create-guest-user', {
-      method: 'POST',
-      body: {
-        tenant_id: tenantId.value,
-        email: formData.value.email,
-        first_name: formData.value.firstName,
-        last_name: formData.value.lastName,
-        phone: formData.value.phone,
-        street: formData.value.street,
-        street_number: formData.value.streetNumber,
-        zip: formData.value.zip,
-        city: formData.value.city
-      }
-    }) as any
-    if (response?.data?.id) {
-      guestUserId.value = response.data.id
-      logger.debug('✅ Guest user resolved:', response.data)
+    await resolveCustomer(tenantId.value, formData.value.email)
+    
+    // Optional: Show warning if login account exists
+    if (isLoginAccount.value) {
+      logger.warn('⚠️ Login account exists for this email — user might want to log in instead')
+      showToastMessage('Ein Login-Konto mit dieser E-Mail existiert bereits — möchtest du dich anmelden?')
     }
   } catch (err) {
-    logger.warn('⚠️ Could not create guest user, continuing without:', err)
+    logger.warn('⚠️ Customer resolution failed:', err)
   }
 }
 
@@ -1012,8 +1036,16 @@ const nextStep = async () => {
       logger.debug('⏭️ Skipping step 2 (contact data) - user is logged in')
       currentStep.value = 3
     } else if (currentStep.value === 2) {
-      // Going from contact form to payment: create/find guest user first
-      await ensureGuestUser()
+      // Ensure customer is resolved before payment
+      if (!hasResolvedCustomer.value && formData.value.email && tenantId.value) {
+        try {
+          await resolveCustomer(tenantId.value, formData.value.email)
+        } catch (err) {
+          logger.error('❌ Failed to resolve customer before payment:', err)
+          alert('⚠️ Fehler beim Laden der Kundendaten. Bitte versuchen Sie es erneut.')
+          return
+        }
+      }
       currentStep.value = 3
     } else {
       currentStep.value++
@@ -1808,6 +1840,9 @@ defineExpose({
 // Lifecycle
 onMounted(async () => {
   try {
+    // ✅ Reset checkout state on fresh shop mount
+    resetCheckout()
+    
     logger.debug('🔍 Shop onMounted - tenantParam:', tenantParam.value)
     logger.debug('🔍 Shop onMounted - tenantSlug:', tenantSlug.value)
     logger.debug('🔍 Shop onMounted - tenantId:', tenantId.value)
