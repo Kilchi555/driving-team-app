@@ -8,10 +8,13 @@
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center space-x-4">
               <!-- Tenant Logo or Initials -->
-              <div v-if="currentTenantBranding?.logos?.standard" class="h-12 flex items-center">
+              <div v-if="currentTenantBranding?.logos?.square" class="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0" :style="{ background: `${secondaryColor}20` }">
+                <img :src="currentTenantBranding.logos.square" :alt="currentTenantBranding.name" class="w-full h-full object-cover">
+              </div>
+              <div v-else-if="currentTenantBranding?.logos?.standard" class="h-12 flex items-center">
                 <img :src="currentTenantBranding.logos.standard" :alt="currentTenantBranding.name" class="h-full object-contain max-w-xs">
               </div>
-              <div v-else class="w-12 h-12 rounded-full flex items-center justify-center" :style="{ background: `${secondaryColor}dd` }">
+              <div v-else class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" :style="{ background: `${secondaryColor}dd` }">
                 <span class="text-white font-bold text-lg">
                   {{ getInitials() }}
                 </span>
