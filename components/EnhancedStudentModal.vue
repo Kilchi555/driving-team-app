@@ -939,12 +939,24 @@
 
           <!-- Persönliche Informationen -->
           <div class="bg-white rounded-lg border p-6">
-            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-              Persönliche Daten
-            </h4>
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                Persönliche Daten
+              </h4>
+              <button
+                @click="showDetailsEditModal = true"
+                class="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Bearbeiten"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                Bearbeiten
+              </button>
+            </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="space-y-4">
@@ -1276,6 +1288,15 @@
       @close="showRedeemVoucherModal = false"
       @success="handleVoucherRedeemed"
     />
+
+    <!-- Student Details Edit Modal -->
+    <StudentDetailsEditModal
+      :is-open="showDetailsEditModal"
+      :student="selectedStudent"
+      :selectable-categories="availableCategories"
+      @close="showDetailsEditModal = false"
+      @save="handleDetailsUpdated"
+    />
   </Teleport>
 </template>
 
@@ -1289,6 +1310,7 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
+import StudentDetailsEditModal from '~/components/StudentDetailsEditModal.vue'
 
 interface Student {
   id: string
@@ -1339,6 +1361,20 @@ const { primaryColor, secondaryColor } = useTenantBranding()
 
 // Reactive state
 const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>(props.initialTab || 'details')
+
+// Details Edit Modal
+const showDetailsEditModal = ref(false)
+
+const handleDetailsUpdated = async (updatedData: any) => {
+  if (selectedStudent.value) {
+    // Update local state
+    Object.assign(selectedStudent.value, updatedData)
+    showDetailsEditModal.value = false
+    // Emit update to parent
+    emit('studentUpdated', selectedStudent.value)
+    logger.debug('✅ Student details updated:', updatedData)
+  }
+}
 
 // Document requirements now loaded dynamically from database
 
