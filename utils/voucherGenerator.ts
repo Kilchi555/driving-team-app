@@ -304,9 +304,9 @@ export const generateVoucherPDFContent = (
       </div>
 
       ${voucher.description ? `
-      <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:20px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#92400e;margin-bottom:4px;">Hinweis</div>
-        <div style="font-size:13px;color:#78350f;">${voucher.description}</div>
+      <div style="background:white;border:2px solid ${primary};border-radius:10px;padding:20px 16px;margin-bottom:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${primary};margin-bottom:8px;">Nachricht</div>
+        <div style="font-size:13px;color:#1e293b;">${voucher.description}</div>
       </div>` : ''}
 
       <!-- How to use -->
