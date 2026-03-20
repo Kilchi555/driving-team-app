@@ -195,6 +195,20 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
       })
     }
 
+    // ============ LAYER 4B: LOAD AFFILIATE SETTINGS ============
+    const { data: affiliateEnabledSetting } = await supabaseAdmin
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenant.id)
+      .eq('category', 'affiliate')
+      .eq('setting_key', 'enabled')
+      .maybeSingle()
+
+    const affiliateEnabled = affiliateEnabledSetting?.setting_value !== 'false'
+    tenant.features = {
+      affiliate_enabled: affiliateEnabled
+    }
+
     // ============ LAYER 5: FIELD FILTERING & XSS PREVENTION ============
     
     // Determine if user can access sensitive fields

@@ -305,10 +305,7 @@ async function loadTenant() {
     tenant.logo = response.data.logo_square_url || response.data.logo_url || ''
 
     // Check if affiliate system is enabled
-    const affiliateStatus = await $fetch('/api/affiliate/admin-settings', {
-      method: 'GET',
-    }) as any
-    tenant.affiliateEnabled = affiliateStatus?.data?.enabled === true
+    tenant.affiliateEnabled = response.data.features?.affiliate_enabled === true
 
     if (!tenant.affiliateEnabled) {
       tenantError.value = 'Das Affiliate-Programm ist derzeit nicht aktiviert.'
