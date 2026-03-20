@@ -307,12 +307,11 @@
           </div>
         </div>
 
-        <!-- ✅ NEW: Shop / Abos Karte -->
-        <!-- Vorläufig auskommentiert - wird später aktiviert -->
-        <!--
-        <div 
+        <!-- Shop: nur wenn tenant_settings.features.product_sales_enabled aktiv -->
+        <div
+          v-if="shopEnabled"
           @click="handleClickWithDelay('shop', navigateToShop)"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'shop' }"
           :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
         >
@@ -327,7 +326,7 @@
                 Shop
               </h3>
             </div>
-            
+
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <p class="text-gray-600 text-sm">
@@ -337,7 +336,6 @@
             </div>
           </div>
         </div>
-        -->
 
         <!-- Lernbereich - Uses Accent Color -->
         <div 
@@ -1139,6 +1137,7 @@ import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTenant } from '~/composables/useTenant'
 import { replacePlaceholders } from '~/utils/reglementPlaceholders'
+import { checkFeatureFlag } from '~/utils/featureFlags'
 import ProfileModal from './ProfileModal.vue'
 
 // Composables
@@ -1208,6 +1207,8 @@ const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
 const affiliateEnabled = ref(false)
+/** Shop-Karte: tenant_settings features.product_sales_enabled (wie Admin „Produktverkauf“) */
+const shopEnabled = ref(false)
 const showReglementTitle = ref('')
 
 // XSS Protection: Sanitize HTML content before rendering
@@ -2719,7 +2720,8 @@ onMounted(async () => {
       await loadPendingConfirmations()
     }
     
-    // Load affiliate enabled state early so card is hidden if disabled
+    // Feature-Flags aus tenant_settings (Kunde darf eigene Tenant-Settings lesen)
+    await loadShopFeatureEnabled()
     loadAffiliateStats()
     
     // Show payment status toast
