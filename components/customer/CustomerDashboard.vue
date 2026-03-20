@@ -309,7 +309,7 @@
 
         <!-- Shop: nur wenn tenant_settings.features.product_sales_enabled aktiv -->
         <div
-          v-if="shopEnabled"
+          v-if="appEnv !== 'production' && shopEnabled"
           @click="handleClickWithDelay('shop', navigateToShop)"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'shop' }"
@@ -459,7 +459,7 @@
 
         <!-- Affiliate / Empfehlen Card -->
         <div
-          v-if="affiliateEnabled"
+          v-if="appEnv !== 'production' && affiliateEnabled"
           @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
           class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
@@ -1209,6 +1209,9 @@ const affiliateLoading = ref(false)
 const affiliateEnabled = ref(false)
 /** Shop-Karte: tenant_settings features.product_sales_enabled (wie Admin „Produktverkauf“) */
 const shopEnabled = ref(false)
+
+// Environment check for preview-only features
+const appEnv = useRuntimeConfig().public.appEnv as string | undefined
 
 async function loadShopFeatureEnabled() {
   const tenantId = userData.value?.tenant_id
