@@ -1293,7 +1293,6 @@
     <StudentDetailsEditModal
       :is-open="showDetailsEditModal"
       :student="selectedStudent"
-      :selectable-categories="availableCategoriesForEdit"
       @close="showDetailsEditModal = false"
       @save="handleDetailsUpdated"
     />
