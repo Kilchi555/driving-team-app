@@ -106,7 +106,55 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ SECOND: Try discounts table
+    // ✅ SECOND: Try vouchers table (purchased gift cards from shop)
+    const { data: giftCardData, error: giftCardError } = await supabaseAdmin
+      .from('vouchers')
+      .select('*')
+      .ilike('code', code)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (!giftCardError && giftCardData) {
+      // Check if already redeemed
+      if (giftCardData.redeemed_at) {
+        return {
+          isValid: false,
+          discount_amount_rappen: 0,
+          error: 'Dieser Gutschein wurde bereits eingelöst'
+        }
+      }
+
+      // Check if expired
+      const now = new Date()
+      if (giftCardData.valid_until && new Date(giftCardData.valid_until) < now) {
+        return {
+          isValid: false,
+          discount_amount_rappen: 0,
+          error: 'Dieser Gutschein ist abgelaufen'
+        }
+      }
+
+      // Gift cards: use full amount as discount
+      const discountAmount = giftCardData.amount_rappen
+
+      logger.debug('✅ Gift card voucher valid:', giftCardData.id, 'amount:', discountAmount)
+      return {
+        isValid: true,
+        discount_amount_rappen: discountAmount,
+        discount: {
+          ...giftCardData,
+          // Normalize to discounts-compatible shape for frontend
+          discount_type: 'fixed',
+          discount_value: giftCardData.amount_rappen,
+          min_amount_rappen: 0,
+          max_discount_rappen: giftCardData.amount_rappen,
+          is_gift_card: true
+        }
+      }
+    }
+
+    // ✅ THIRD: Try discounts table
     const { data: discountData, error: discountError } = await supabaseAdmin
       .from('discounts')
       .select('*')
