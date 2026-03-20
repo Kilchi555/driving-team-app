@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
-import { logger } from '~/utils/logger'
+import logger from '~/utils/logger'
 
 /**
  * ✅ POST /api/staff/update-student-details
@@ -76,12 +76,10 @@ export default defineEventHandler(async (event) => {
       phone,
       category,
       birthdate,
-      faberid,
       street,
       street_nr,
       zip,
-      city,
-      invoice_address
+      city
     } = body
 
     if (!user_id) {
@@ -135,12 +133,10 @@ export default defineEventHandler(async (event) => {
     if (phone !== undefined) updateData.phone = phone
     if (category !== undefined) updateData.category = category
     if (birthdate !== undefined) updateData.birthdate = birthdate
-    if (faberid !== undefined) updateData.faberid = faberid
     if (street !== undefined) updateData.street = street
     if (street_nr !== undefined) updateData.street_nr = street_nr
     if (zip !== undefined) updateData.zip = zip
     if (city !== undefined) updateData.city = city
-    if (invoice_address !== undefined) updateData.invoice_address = invoice_address
 
     logger.debug('📝 Update data:', updateData)
 
