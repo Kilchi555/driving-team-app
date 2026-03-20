@@ -1209,6 +1209,22 @@ const affiliateLoading = ref(false)
 const affiliateEnabled = ref(false)
 /** Shop-Karte: tenant_settings features.product_sales_enabled (wie Admin „Produktverkauf“) */
 const shopEnabled = ref(false)
+
+async function loadShopFeatureEnabled() {
+  const tenantId = userData.value?.tenant_id
+  if (!tenantId) {
+    shopEnabled.value = false
+    return
+  }
+  try {
+    const res = await checkFeatureFlag(tenantId, 'product_sales_enabled')
+    shopEnabled.value = !!res?.enabled
+  } catch (e) {
+    logger.warn('⚠️ loadShopFeatureEnabled failed:', e)
+    shopEnabled.value = false
+  }
+}
+
 const showReglementTitle = ref('')
 
 // XSS Protection: Sanitize HTML content before rendering
@@ -2737,7 +2753,18 @@ onMounted(async () => {
     
   } catch (err: any) {
     console.error('❌ Error during mount:', err)
-    await navigateTo('/login')
+    // Nicht bei jedem Fehler zu /login: eingeloggte Clients würden sofort zurück zum Dashboard
+    // geschickt → Endlosschleife (z. B. bei fehlender Hilfsfunktion oder 429).
+    const msg = String(err?.message || err || '')
+    const looksUnauthorized =
+      err?.statusCode === 401 ||
+      err?.status === 401 ||
+      /401|unauthorized|nicht angemeldet/i.test(msg)
+    if (looksUnauthorized) {
+      await navigateTo('/login')
+    } else {
+      error.value = msg || 'Dashboard konnte nicht vollständig geladen werden.'
+    }
   }
 })
 
