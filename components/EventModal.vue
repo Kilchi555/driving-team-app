@@ -1243,10 +1243,12 @@ const handleSaveAppointment = async () => {
           })
           
           // Calculate new total based on ORIGINAL payment
-          const newTotalRappen = newLessonPriceRappen + 
+          const newTotalRappen = Math.round(
+            newLessonPriceRappen + 
             (originalPaymentData.admin_fee_rappen || 0) + 
             (originalPaymentData.products_price_rappen || 0) - 
             (originalPaymentData.discount_amount_rappen || 0)
+          )
           
           // ✅ Update payment amount via secure API, preserving payment_status
           const updateData: any = {
