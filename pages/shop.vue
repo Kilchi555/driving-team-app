@@ -325,7 +325,18 @@
                       ⚠️ Es existiert ein Login-Konto — möchtest du dich <a href="/login" class="underline">anmelden</a>?
                     </div>
                     <div v-else-if="hasResolvedCustomer && isNewGuest" class="text-xs text-green-600 mt-1">✅ Neue Bestellung</div>
-                    <div v-else-if="hasResolvedCustomer" class="text-xs text-green-600 mt-1">✅ Benutzer erkannt</div>
+                    <div v-else-if="hasResolvedCustomer" class="text-xs text-green-600 mt-1">
+                      ✅ Benutzer erkannt
+                      <button 
+                        v-if="currentCustomer && !formData.street"
+                        @click="autofillFormData" 
+                        :disabled="isResolving"
+                        class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-lg transition-all text-white"
+                        :style="{ background: brandPrimary }"
+                      >
+                        🚀 Alle ausfüllen
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Telefon *</label>
@@ -413,6 +424,14 @@
                     :disabled="isResolving"
                     class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none disabled:opacity-50" 
                   />
+                  <button 
+                    v-if="currentCustomer && !isResolving"
+                    @click="autofillFormData" 
+                    class="w-full px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-white"
+                    :style="{ background: brandPrimary }"
+                  >
+                    🚀 Restliche Felder ausfüllen
+                  </button>
                   <input v-model="formData.phone" type="tel" placeholder="Telefon" autocomplete="tel"
                          class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   <div class="grid grid-cols-3 gap-2">
@@ -1006,6 +1025,31 @@ const onEmailBlur = async () => {
     }
   } catch (err) {
     logger.warn('⚠️ Customer resolution failed:', err)
+  }
+}
+
+// ✅ NEW: Auto-fill all form fields from resolved customer data
+const autofillFormData = async () => {
+  if (!currentCustomer.value) return
+  
+  try {
+    const customer = currentCustomer.value
+    
+    // Fill all available fields at once
+    formData.value.firstName = customer.firstName || formData.value.firstName
+    formData.value.lastName = customer.lastName || formData.value.lastName
+    formData.value.email = customer.email || formData.value.email
+    formData.value.phone = customer.phone || formData.value.phone || ''
+    formData.value.street = customer.street || formData.value.street || ''
+    formData.value.streetNumber = customer.streetNumber || formData.value.streetNumber || ''
+    formData.value.zip = customer.zip || formData.value.zip || ''
+    formData.value.city = customer.city || formData.value.city || ''
+    
+    logger.debug('✅ Form auto-filled with customer data')
+    showToastMessage('✅ Alle Felder gefüllt!')
+  } catch (err) {
+    logger.error('❌ Failed to autofill form:', err)
+    showToastMessage('❌ Fehler beim Ausfüllen der Felder')
   }
 }
 
