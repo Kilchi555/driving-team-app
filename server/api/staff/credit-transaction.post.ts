@@ -169,6 +169,7 @@ export default defineEventHandler(async (event) => {
         balance_before_rappen: credit.balance_rappen,
         balance_after_rappen: newBalance,
         description: reason,
+        notes: reason,  // Keep both for backwards compatibility
         reference_type: referenceType,
         reference_id: referenceId,
         created_by: userProfile.id
