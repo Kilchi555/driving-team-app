@@ -41,7 +41,7 @@ const checkCourseAvailability = async (
   try {
     const { data: course, error } = await supabase
       .from('courses')
-      .select('id, name, status, max_participants, current_participants')
+      .select('id, name, status, max_participants, current_participants, category')
       .eq('id', courseId)
       .eq('tenant_id', tenantId)
       .single()
@@ -205,6 +205,19 @@ export default defineEventHandler(async (event) => {
     // ========== LAYER 3: DATABASE TRANSACTION ==========
     
     const enrollment = await createEnrollment(supabase, userId, courseId, tenantId)
+
+    // ✅ AFFILIATE REWARD HOOK – trigger for course enrollment
+    $fetch('/api/affiliate/process-reward', {
+      method: 'POST',
+      body: {
+        course_id: courseId,
+        user_id: userId,
+        tenant_id: tenantId,
+        driving_category: availability.course?.category || null,
+      }
+    }).catch((err: any) => {
+      logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+    })
 
     const duration = Date.now() - startTime
     logger.debug(`✅ Enrollment completed in ${duration}ms`)
