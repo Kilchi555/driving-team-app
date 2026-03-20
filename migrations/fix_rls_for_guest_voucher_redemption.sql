@@ -87,7 +87,14 @@ CREATE POLICY "student_credits_insert_own"
 -- INSERT: API with admin role can insert (for system operations)
 CREATE POLICY "student_credits_insert_system"
   ON student_credits FOR INSERT
-  WITH CHECK (true);  -- Admin API bypasses this
+  WITH CHECK (
+    -- Only allow if the user_id belongs to the current authenticated user or is guest
+    user_id IN (
+      SELECT id FROM users WHERE auth_user_id = auth.uid()
+    )
+    OR user_id = auth.uid()
+    -- Note: Admin API bypasses this via getSupabaseAdmin()
+  );
 
 -- UPDATE: Users can update their own credits
 -- Note: Actual updates happen via admin API, but policy allows it for their own records
@@ -168,7 +175,14 @@ CREATE POLICY "credit_transactions_insert_own"
 -- INSERT: System/Admin can insert (for API operations)
 CREATE POLICY "credit_transactions_insert_system"
   ON credit_transactions FOR INSERT
-  WITH CHECK (true);  -- Admin API bypasses
+  WITH CHECK (
+    -- Only allow if the user_id belongs to the current authenticated user or is guest
+    user_id IN (
+      SELECT id FROM users WHERE auth_user_id = auth.uid()
+    )
+    OR user_id = auth.uid()
+    -- Note: Admin API bypasses this via getSupabaseAdmin()
+  );
 
 -- UPDATE: Staff/Admins can update their tenant's transactions
 CREATE POLICY "credit_transactions_update_staff"
