@@ -104,14 +104,14 @@ export default defineEventHandler(async (event) => {
   if (rewardRappen <= 0) {
     const { data: tenantSetting } = await supabaseAdmin
       .from('tenant_settings')
-      .select('value')
+      .select('setting_value')
       .eq('tenant_id', tenant_id)
       .eq('category', 'affiliate')
-      .eq('key', 'reward_rappen')
+      .eq('setting_key', 'reward_rappen')
       .maybeSingle()
 
-    if (tenantSetting?.value) {
-      const parsed = parseInt(tenantSetting.value, 10)
+    if (tenantSetting?.setting_value) {
+      const parsed = parseInt(tenantSetting.setting_value, 10)
       if (!isNaN(parsed) && parsed > 0) {
         rewardRappen = parsed
       }

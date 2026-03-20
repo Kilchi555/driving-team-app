@@ -1,6 +1,8 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 /**
  * POST /api/affiliate/generate-code
@@ -15,9 +17,15 @@ function generateCode(length = 8): string {
 
 export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
+  const ipAddress = getClientIP(event)
 
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
+
+  const rateLimit = await checkRateLimit(ipAddress, 'generate_code', undefined, undefined)
+  if (!rateLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warte kurz.' })
+  }
 
   const { data: userProfile, error: profileError } = await supabaseAdmin
     .from('users')

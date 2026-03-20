@@ -1,8 +1,8 @@
 <!-- pages/customer/payments.vue -->
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-    <!-- Header -->
-    <div class="bg-white shadow-lg border-b">
+    <!-- Header (Sticky) -->
+    <div class="sticky top-0 z-40 bg-white shadow-lg border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-3 sm:py-4">
           <div class="flex items-center space-x-2 sm:space-x-4">

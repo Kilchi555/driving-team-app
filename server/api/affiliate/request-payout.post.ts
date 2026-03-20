@@ -1,15 +1,23 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 /**
  * POST /api/affiliate/request-payout
  */
 export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
+  const ipAddress = getClientIP(event)
 
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
+
+  const rateLimit = await checkRateLimit(ipAddress, 'request_payout', undefined, undefined)
+  if (!rateLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warte kurz.' })
+  }
 
   const { data: userProfile } = await supabaseAdmin
     .from('users')
