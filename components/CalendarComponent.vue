@@ -357,6 +357,9 @@ let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 // ✅ NEW: Event types color map (loaded from DB)
 const eventTypeColorsMap = ref<Record<string, string>>({})
 
+// ✅ Driving license categories: code → color from tenant `categories` table
+const drivingCategoryColorsMap = ref<Record<string, string>>({})
+
 // Working Hours Management
 const { 
   loadWorkingHours, 
@@ -410,6 +413,100 @@ const loadEventTypeColors = async () => {
   } catch (err) {
     logger.warn('⚠️ Error loading event type colors:', err)
   }
+}
+
+/** Build lookup: appointment `category` string → hex from DB (`categories.code` + `color`). */
+const buildDrivingCategoryColorMap = (categories: any[]): Record<string, string> => {
+  const map: Record<string, string> = {}
+  if (!Array.isArray(categories)) return map
+  for (const c of categories) {
+    const raw = c?.color
+    if (raw == null || raw === '') continue
+    const col = String(raw).trim()
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(col)) continue
+    const code = c?.code
+    if (!code || typeof code !== 'string') continue
+    map[code] = col
+    map[code.toUpperCase()] = col
+    map[code.toLowerCase()] = col
+  }
+  // Alias: appointments sometimes use "Boot" vs DB code "Motorboot" (or vice versa)
+  if (!map.Boot && map.Motorboot) map.Boot = map.Motorboot
+  if (!map.boot && map.motorboot) map.boot = map.motorboot
+  if (!map.Motorboot && map.Boot) map.Motorboot = map.Boot
+  if (!map.motorboot && map.boot) map.motorboot = map.boot
+  return map
+}
+
+const loadDrivingCategoryColors = async () => {
+  try {
+    const response = (await $fetch('/api/staff/get-categories')) as { success?: boolean; data?: any[] }
+    if (response?.data && Array.isArray(response.data)) {
+      drivingCategoryColorsMap.value = buildDrivingCategoryColorMap(response.data)
+      logger.debug('✅ Driving category colors loaded:', drivingCategoryColorsMap.value)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Error loading driving category colors:', err)
+  }
+}
+
+/** Resolve hex for a calendar event category (DB first). */
+const resolveDrivingCategoryColor = (category: string): string | undefined => {
+  const m = drivingCategoryColorsMap.value
+  if (!category || !m || Object.keys(m).length === 0) return undefined
+  if (m[category]) return m[category]
+  const u = category.toUpperCase()
+  if (m[u]) return m[u]
+  const l = category.toLowerCase()
+  if (m[l]) return m[l]
+  if (category === 'Boot' && m.Motorboot) return m.Motorboot
+  if (category === 'Motorboot' && m.Boot) return m.Boot
+  return undefined
+}
+
+/** HSL (0–360, 0–100, 0–100) → #rrggbb */
+const hslToHex = (h: number, s: number, l: number): string => {
+  const sat = s / 100
+  const light = l / 100
+  const c = (1 - Math.abs(2 * light - 1)) * sat
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+  const m = light - c / 2
+  let rp = 0
+  let gp = 0
+  let bp = 0
+  if (h < 60) {
+    rp = c; gp = x; bp = 0
+  } else if (h < 120) {
+    rp = x; gp = c; bp = 0
+  } else if (h < 180) {
+    rp = 0; gp = c; bp = x
+  } else if (h < 240) {
+    rp = 0; gp = x; bp = c
+  } else if (h < 300) {
+    rp = x; gp = 0; bp = c
+  } else {
+    rp = c; gp = 0; bp = x
+  }
+  const r = Math.round((rp + m) * 255)
+  const g = Math.round((gp + m) * 255)
+  const b = Math.round((bp + m) * 255)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
+/**
+ * Stabile „Zufalls“-Farbe pro Kategorie (gleicher String → gleiche Farbe).
+ * Für neue/unkannte Codes wenn DB leer oder nicht erreichbar — nie weiß/bleich.
+ */
+const colorFromCategoryKey = (category: string): string => {
+  const key = category.trim().toLowerCase()
+  if (!key) return '#4b5563'
+  let hash = 2166136261
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  const hue = (hash >>> 0) % 360
+  return hslToHex(hue, 58, 46)
 }
 
 // NEUE FUNKTION: Nicht-Arbeitszeiten via Backend API laden
@@ -975,7 +1072,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
       } else if (apt.event_type_code) {
         // Standard event type explicitly set
         eventType = apt.event_type_code
-      } else if (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) {
+      } else if (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'Boot', 'BPT'].includes(apt.type)) {
         // Has a driving category, so it's a lesson
         eventType = 'lesson'
       }
@@ -1052,7 +1149,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
           appointment_type: apt.event_type_code || 'lesson', // ✅ KORRIGIERT: event_type_code verwenden
           is_team_invite: isTeamInvite,
           original_type: (apt as any).user?.category || apt.type || 'B',
-          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson'), // ✅ KORRIGIERT: event_type_code für eventType verwenden
+          eventType: (apt.type && ['B', 'A', 'A1', 'A35kW', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'Motorboot', 'Boot', 'BPT'].includes(apt.type)) ? 'lesson' : (apt.event_type_code || 'lesson'), // ✅ KORRIGIERT: event_type_code für eventType verwenden
           // ✅ NEW: Payment status for color indication
           payment_status: apt.payment_status || null,
           paid_at: apt.paid_at || null,
@@ -1151,22 +1248,6 @@ const loadAppointments = async (forceReload = false) => {
 
 // ✅ Helper-Funktion für Event-Farben
 const getEventColor = (type: string, status?: string, category?: string, paymentStatus?: string | null, userId?: string | null): string => {
-  // ✅ Kategorie-basierte Farben für Fahrstunden
-  const categoryColors = {
-    'B': '#10b981',      // Grün für Auto
-    'A': '#f59e0b',      // Orange für Motorrad
-    'A1': '#f59e0b',     // Orange für Motorrad A1
-    'A35kW': '#f59e0b',  // Orange für Motorrad A35kW
-    'BE': '#3b82f6',     // Blau für Anhänger
-    'C': '#8b5cf6',      // Lila für LKW
-    'C1': '#8b5cf6',     // Lila für LKW C1
-    'CE': '#ef4444',     // Rot für LKW CE
-    'D': '#06b6d4',      // Cyan für Bus
-    'D1': '#06b6d4',     // Cyan für Bus D1
-    'Motorboot': '#1d4ed8', // Dunkelblau für Motorboot
-    'BPT': '#10b981'     // Grün für BPT
-  }
-  
   // ✅ Typ-basierte Farben für andere Termine (Fallback wenn nicht in DB)
   const typeColorsFallback = {
     'lesson': '#10b981',      // Grün für Fahrstunden
@@ -1188,11 +1269,9 @@ const getEventColor = (type: string, status?: string, category?: string, payment
   
   let baseColor = defaultColor
   
-  // ✅ PRIORITÄT 1: Kategorie-basierte Farbe für Lessons/Exams/Theory
-  // Diese Events nutzen die Farben aus driving_categories, nicht aus event_types!
-  if (category && categoryColors[category as keyof typeof categoryColors] && 
-      (!type || ['lesson', 'exam', 'theory'].includes(type))) {
-    baseColor = categoryColors[category as keyof typeof categoryColors]
+  // ✅ PRIORITÄT 1: Kategorie für Fahrstunde/Prüfung/Theorie — nur DB (`categories.color`), sonst stabiler Hash pro Code
+  if (category && (!type || ['lesson', 'exam', 'theory'].includes(type))) {
+    baseColor = resolveDrivingCategoryColor(category) ?? colorFromCategoryKey(category)
   }
   // ✅ PRIORITÄT 2: Event type colors from DB (für VKU, Nothelfer, etc.)
   else if (type && eventTypeColorsMap.value[type]) {
@@ -2041,7 +2120,7 @@ const pasteAppointmentDirectly = async () => {
     // ✅ FIRST: Calculate payment amount BEFORE sending email
     const basePriceMapping: Record<string, number> = {
       'B': 95, 'A': 95, 'A1': 95, 'BE': 120, 'C': 170, 
-      'C1': 150, 'D': 200, 'CE': 200, 'Motorboot': 120, 'BPT': 95
+      'C1': 150, 'D': 200, 'CE': 200, 'Motorboot': 120, 'Boot': 120, 'BPT': 95
     }
     
     const durationUnits = Math.ceil((newAppointment.duration_minutes || 45) / 45)
@@ -2442,8 +2521,8 @@ onMounted(async () => {
     isCalendarReady.value = true
     attachSwipe()
     
-    // ✅ Load event type colors from DB
-    await loadEventTypeColors()
+    // ✅ Load event-type + driving-category colors from DB (parallel)
+    await Promise.all([loadEventTypeColors(), loadDrivingCategoryColors()])
     
     // ✅ Load tenant name for SMS/Email via API
     try {
@@ -3138,7 +3217,8 @@ defineExpose({
   background-color: #06b6d4 !important;
 }
 
-.fc-event.category-Motorboot {
+.fc-event.category-Motorboot,
+.fc-event.category-Boot {
   background-color: #1d4ed8 !important;
 }
 
@@ -3325,7 +3405,8 @@ defineExpose({
   border-style: solid !important;
 }
 
-.category-Motorboot {
+.category-Motorboot,
+.category-Boot {
   background-color: #1d4ed8 !important;
   border-color: #1e40af !important;
   border-width: 1px !important;

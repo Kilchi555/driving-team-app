@@ -38,6 +38,7 @@ export const useCategoryData = () => {
     'CE': { name: 'LKW CE', color: '#8b5cf6', lesson_duration_minutes: [135], exam_duration_minutes: 90 },
     'D': { name: 'Bus D', color: '#06b6d4', lesson_duration_minutes: [135], exam_duration_minutes: 90 },
     'Motorboot': { name: 'Motorboot', color: '#3b82f6', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 },
+    'Boot': { name: 'Motorboot', color: '#3b82f6', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 },
     'BPT': { name: 'Berufsprüfung Transport', color: '#1e40af', lesson_duration_minutes: [45, 90], exam_duration_minutes: 60 }
   }
 
