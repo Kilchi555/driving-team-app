@@ -1738,8 +1738,10 @@ async function loadAffiliateStats() {
     affiliateStats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     affiliateShareLink.value = result.data.share_link ?? ''
-  } catch (err) {
-    console.error('Failed to load affiliate stats', err)
+    logger.debug('✅ Affiliate stats loaded:', { enabled: affiliateEnabled.value, stats: affiliateStats.value })
+  } catch (err: any) {
+    logger.warn('⚠️ Failed to load affiliate stats:', err?.message || err)
+    affiliateEnabled.value = false
   } finally {
     affiliateLoading.value = false
   }
