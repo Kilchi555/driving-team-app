@@ -296,12 +296,12 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Vorname *</label>
-                    <input v-model="formData.firstName" type="text" required placeholder="Max" autocomplete="given-name"
+                    <input v-model="formData.firstName" name="given-name" type="text" required placeholder="Max" autocomplete="given-name"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nachname *</label>
-                    <input v-model="formData.lastName" type="text" required placeholder="Muster" autocomplete="family-name"
+                    <input v-model="formData.lastName" name="family-name" type="text" required placeholder="Muster" autocomplete="family-name"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
@@ -311,6 +311,7 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
                     <input 
                       v-model="formData.email" 
+                      name="email"
                       type="email" 
                       required 
                       placeholder="max@beispiel.ch" 
@@ -340,7 +341,7 @@
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Telefon *</label>
-                    <input v-model="formData.phone" type="tel" required placeholder="+41 79 123 45 67" autocomplete="tel"
+                    <input v-model="formData.phone" name="tel" type="tel" required placeholder="+41 79 123 45 67" autocomplete="tel"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
@@ -348,12 +349,12 @@
                 <div class="grid grid-cols-3 gap-3">
                   <div class="col-span-2">
                     <label class="block text-xs font-medium text-gray-600 mb-1">Strasse *</label>
-                    <input v-model="formData.street" type="text" required placeholder="Musterstrasse" autocomplete="address-line1"
+                    <input v-model="formData.street" name="street-address" type="text" required placeholder="Musterstrasse" autocomplete="street-address"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nr. *</label>
-                    <input v-model="formData.streetNumber" type="text" required placeholder="12" autocomplete="address-line2"
+                    <input v-model="formData.streetNumber" name="address-line2" type="text" required placeholder="12" autocomplete="address-line2"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
@@ -361,19 +362,19 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
-                    <input v-model="formData.zip" type="text" required placeholder="8000" autocomplete="postal-code"
+                    <input v-model="formData.zip" name="postal-code" type="text" required placeholder="8000" autocomplete="postal-code"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Ort *</label>
-                    <input v-model="formData.city" type="text" required placeholder="Zürich" autocomplete="address-level2"
+                    <input v-model="formData.city" name="address-level1" type="text" required placeholder="Zürich" autocomplete="address-level2"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                 </div>
 
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">Bemerkungen <span class="text-gray-400">(optional)</span></label>
-                  <textarea v-model="formData.notes" rows="2" placeholder="Spezielle Wünsche…"
+                  <textarea v-model="formData.notes" name="notes" rows="2" placeholder="Spezielle Wünsche…"
                             class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all resize-none"></textarea>
                 </div>
               </form>
@@ -410,13 +411,14 @@
                 <!-- Editable form -->
                 <div v-else class="px-4 py-3 space-y-3">
                   <div class="grid grid-cols-2 gap-2">
-                    <input v-model="formData.firstName" type="text" placeholder="Vorname" autocomplete="given-name"
+                    <input v-model="formData.firstName" name="given-name" type="text" placeholder="Vorname" autocomplete="given-name"
                            class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
-                    <input v-model="formData.lastName" type="text" placeholder="Nachname" autocomplete="family-name"
+                    <input v-model="formData.lastName" name="family-name" type="text" placeholder="Nachname" autocomplete="family-name"
                            class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   </div>
                   <input 
                     v-model="formData.email" 
+                    name="email"
                     type="email" 
                     placeholder="E-Mail" 
                     autocomplete="email"
@@ -432,18 +434,18 @@
                   >
                     🚀 Restliche Felder ausfüllen
                   </button>
-                  <input v-model="formData.phone" type="tel" placeholder="Telefon" autocomplete="tel"
+                  <input v-model="formData.phone" name="tel" type="tel" placeholder="Telefon" autocomplete="tel"
                          class="shop-input w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   <div class="grid grid-cols-3 gap-2">
-                    <input v-model="formData.street" type="text" placeholder="Strasse" autocomplete="address-line1" class="col-span-2
+                    <input v-model="formData.street" name="street-address" type="text" placeholder="Strasse" autocomplete="street-address" class="col-span-2
                            shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
-                    <input v-model="formData.streetNumber" type="text" placeholder="Nr." autocomplete="address-line2"
+                    <input v-model="formData.streetNumber" name="address-line2" type="text" placeholder="Nr." autocomplete="address-line2"
                            class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   </div>
                   <div class="grid grid-cols-2 gap-2">
-                    <input v-model="formData.zip" type="text" placeholder="PLZ" autocomplete="postal-code"
+                    <input v-model="formData.zip" name="postal-code" type="text" placeholder="PLZ" autocomplete="postal-code"
                            class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
-                    <input v-model="formData.city" type="text" placeholder="Ort" autocomplete="address-level2"
+                    <input v-model="formData.city" name="address-level1" type="text" placeholder="Ort" autocomplete="address-level2"
                            class="shop-input px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none" />
                   </div>
                 </div>
