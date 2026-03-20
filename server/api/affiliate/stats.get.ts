@@ -27,7 +27,8 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', userProfile.tenant_id)
     .maybeSingle()
 
-  // Load referrals
+  // If user doesn't have an affiliate code yet, still allow viewing dashboard
+  // Just with empty stats - they can generate a code from there
   const { data: referrals } = affiliateCode
     ? await supabaseAdmin
         .from('affiliate_referrals')

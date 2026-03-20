@@ -294,10 +294,7 @@ onMounted(async () => {
 
 async function loadStats() {
   try {
-    const token = authStore.accessToken
-    const result = await $fetch<any>('/api/affiliate/stats', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const result = await $fetch<any>('/api/affiliate/stats')
     stats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     shareLink.value = result.data.share_link ?? ''
@@ -309,10 +306,8 @@ async function loadStats() {
 async function generateCode() {
   generatingCode.value = true
   try {
-    const token = authStore.accessToken
     const result = await $fetch<any>('/api/affiliate/generate-code', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
     })
     affiliateCode.value = result.data.code
     shareLink.value = result.data.link
@@ -337,10 +332,8 @@ async function submitPayout() {
   payoutError.value = ''
   payoutLoading.value = true
   try {
-    const token = authStore.accessToken
     await $fetch('/api/affiliate/request-payout', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
       body: {
         type: 'bank',
         amount_rappen: payoutForm.value.amountChf * 100,
