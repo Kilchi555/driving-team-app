@@ -24,8 +24,12 @@
 
     <!-- Error -->
     <div v-else-if="tenantError" class="flex-1 flex items-center justify-center p-6">
-      <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-500 text-sm text-center max-w-sm">
-        {{ tenantError }}
+      <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-600 text-sm text-center max-w-sm">
+        <div class="text-3xl mb-3">⚠️</div>
+        <p class="font-semibold mb-2">{{ tenantError }}</p>
+        <NuxtLink :to="`/${tenant.slug || 'driving-team'}`" class="text-red-700 underline hover:text-red-900">
+          Zurück zur Startseite →
+        </NuxtLink>
       </div>
     </div>
 
@@ -267,6 +271,7 @@ const tenant = reactive({
   slug: 'driving-team',
   primaryColor: '#6366f1',
   logo: '',
+  affiliateEnabled: false,
 })
 
 const benefits = [
@@ -298,6 +303,16 @@ async function loadTenant() {
     tenant.slug = response.data.slug || slug
     tenant.primaryColor = response.data.primary_color || '#6366f1'
     tenant.logo = response.data.logo_square_url || response.data.logo_url || ''
+
+    // Check if affiliate system is enabled
+    const affiliateStatus = await $fetch('/api/affiliate/admin-settings', {
+      method: 'GET',
+    }) as any
+    tenant.affiliateEnabled = affiliateStatus?.data?.enabled === true
+
+    if (!tenant.affiliateEnabled) {
+      tenantError.value = 'Das Affiliate-Programm ist derzeit nicht aktiviert.'
+    }
   } catch (error: any) {
     tenantError.value = error?.data?.message || error?.message || 'Tenant konnte nicht geladen werden.'
   } finally {
