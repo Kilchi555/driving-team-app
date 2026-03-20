@@ -96,49 +96,50 @@
         @click.self="closeModal"
       >
         <Transition name="slide-up">
-          <div v-if="showModal" class="bg-white rounded-3xl shadow-2xl w-full max-w-md relative">
+          <div v-if="showModal" class="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden">
 
             <!-- Close Button -->
             <button
               @click="closeModal"
-              class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition text-gray-500 text-sm"
+              class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition text-gray-600 hover:text-gray-900 z-10"
             >
               ✕
             </button>
 
             <!-- Existing User State -->
-            <div v-if="existingUser" class="p-8 text-center">
-              <div class="w-16 h-16 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5">
+            <div v-if="existingUser" class="p-10 pt-12 text-center">
+              <div class="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-200 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6">
                 👤
               </div>
-              <h2 class="text-2xl font-black text-gray-900 mb-3">Willkommen zurück!</h2>
-              <p class="text-gray-500 text-sm leading-relaxed mb-6">
-                Du bist bereits als {{ submittedEmail }} registriert. Melde dich an, um dein Affiliate-Dashboard zu öffnen.
+              <h2 class="text-3xl font-black text-gray-900 mb-2">Willkommen zurück!</h2>
+              <p class="text-gray-500 text-sm leading-relaxed mb-8">
+                Du bist bereits als <span class="font-semibold text-gray-700">{{ submittedEmail }}</span> registriert. Melde dich an, um dein Affiliate-Dashboard zu öffnen.
               </p>
 
-              <div class="space-y-3 mb-6">
+              <div class="space-y-4 mb-8">
                 <NuxtLink
                   :to="`/${tenant.slug}?redirect_to=affiliate-dashboard`"
-                  class="block w-full bg-blue-600 text-white rounded-xl px-6 py-3 text-sm font-semibold hover:bg-blue-700 transition"
+                  class="block w-full text-white rounded-xl px-6 py-3.5 text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg"
+                  :style="{ backgroundColor: tenant.primaryColor }"
                 >
                   Jetzt einloggen →
                 </NuxtLink>
 
                 <template v-if="existingCodeInfo">
                   <div class="border-t border-gray-200 pt-6">
-                    <p class="text-xs font-semibold text-gray-500 mb-3 tracking-wide uppercase">Oder nutze direkt deinen Link</p>
-                    <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 mb-3">
-                      <span class="flex-1 text-xs text-gray-600 truncate">{{ existingCodeInfo.link }}</span>
-                      <button @click="copyLink(existingCodeInfo!.link)" class="flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-lg transition" :class="copied ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                    <p class="text-xs font-bold text-gray-500 mb-4 tracking-wide uppercase">Oder nutze direkt deinen Link</p>
+                    <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4">
+                      <span class="flex-1 text-xs text-gray-700 font-mono break-all">{{ existingCodeInfo.link }}</span>
+                      <button @click="copyLink(existingCodeInfo!.link)" class="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition whitespace-nowrap" :class="copied ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
                         {{ copied ? '✓ Kopiert' : 'Kopieren' }}
                       </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                      <button @click="shareWhatsapp(existingCodeInfo!.link)" class="flex items-center justify-center gap-2 bg-[#25D366] text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:opacity-90 transition">
+                    <div class="grid grid-cols-2 gap-3">
+                      <button @click="shareWhatsapp(existingCodeInfo!.link)" class="flex items-center justify-center gap-2 text-white rounded-xl px-4 py-3 text-sm font-bold hover:scale-105 active:scale-95 transition" style="background-color: #25D366">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.554 4.103 1.523 5.83L.057 23.197a.75.75 0 0 0 .921.912l5.517-1.456A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.732 9.732 0 0 1-4.952-1.352l-.355-.21-3.676.97.985-3.595-.23-.368A9.718 9.718 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
                         WhatsApp
                       </button>
-                      <button @click="shareMail(existingCodeInfo!.link)" class="flex items-center justify-center gap-2 bg-gray-800 text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:opacity-90 transition">
+                      <button @click="shareMail(existingCodeInfo!.link)" class="flex items-center justify-center gap-2 bg-gray-800 text-white rounded-xl px-4 py-3 text-sm font-bold hover:scale-105 active:scale-95 transition">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                         E-Mail
                       </button>
@@ -149,82 +150,85 @@
 
               <button
                 @click="closeModal"
-                class="w-full border border-gray-200 rounded-xl px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                class="w-full border-2 border-gray-200 rounded-xl px-6 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
               >
                 Schliessen
               </button>
             </div>
 
             <!-- Success State -->
-            <div v-else-if="emailSent" class="p-8 text-center">
-              <div class="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5">
+            <div v-else-if="emailSent" class="p-10 pt-12 text-center">
+              <div class="w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6">
                 📬
               </div>
-              <h2 class="text-2xl font-black text-gray-900 mb-3">Zugangslink gesendet!</h2>
-              <p class="text-gray-500 text-sm leading-relaxed mb-1">Wir haben einen Link an</p>
-              <p class="text-gray-900 font-semibold text-sm mb-4">{{ submittedEmail }}</p>
-              <p class="text-gray-400 text-xs leading-relaxed mb-6">
+              <h2 class="text-3xl font-black text-gray-900 mb-2">Zugangslink gesendet!</h2>
+              <p class="text-gray-500 text-sm leading-relaxed mb-2">Wir haben einen Link an</p>
+              <p class="text-gray-900 font-bold text-sm mb-6">{{ submittedEmail }}</p>
+              <p class="text-gray-400 text-xs leading-relaxed mb-8">
                 Öffne die E-Mail und klicke auf den Link, um dein Affiliate-Dashboard zu öffnen. Der Link ist 1 Stunde gültig.
               </p>
 
               <button
                 @click="closeModal"
-                class="mt-4 w-full border border-gray-200 rounded-xl px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                class="w-full border-2 border-gray-200 rounded-xl px-6 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
               >
                 Schliessen
               </button>
             </div>
 
             <!-- Form State -->
-            <div v-else class="p-8">
-              <div class="mb-6">
-                <h2 class="text-2xl font-black text-gray-900 mb-1.5">Jetzt starten</h2>
-                <p class="text-gray-400 text-sm">Kein Passwort nötig – du erhältst einen Zugangslink per E-Mail.</p>
+            <div v-else class="p-10 pt-12">
+              <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-900 mb-2">Jetzt starten</h2>
+                <p class="text-gray-500 text-sm leading-relaxed">Kein Passwort nötig – du erhältst einen Zugangslink per E-Mail.</p>
               </div>
 
-              <form @submit.prevent="handleSubmit" class="space-y-4">
-                <div class="grid grid-cols-2 gap-3">
+              <form @submit.prevent="handleSubmit" class="space-y-5">
+                <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-2 tracking-wide uppercase">Vorname</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-2 tracking-wide uppercase">Vorname</label>
                     <input
                       v-model="form.firstName"
                       type="text"
                       required
                       placeholder="Max"
-                      class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition"
+                      class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition"
+                      :style="{ 'focus:ring-color': tenant.primaryColor + '30' }"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-2 tracking-wide uppercase">Nachname</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-2 tracking-wide uppercase">Nachname</label>
                     <input
                       v-model="form.lastName"
                       type="text"
                       required
                       placeholder="Mustermann"
-                      class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition"
+                      class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition"
+                      :style="{ 'focus:ring-color': tenant.primaryColor + '30' }"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 mb-2 tracking-wide uppercase">E-Mail-Adresse</label>
+                  <label class="block text-xs font-bold text-gray-600 mb-2 tracking-wide uppercase">E-Mail-Adresse</label>
                   <input
                     v-model="form.email"
                     type="email"
                     required
                     placeholder="max@beispiel.ch"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition"
+                    :style="{ 'focus:ring-color': tenant.primaryColor + '30' }"
                   />
                 </div>
 
-                <div v-if="errorMessage" class="bg-red-50 border border-red-200 rounded-xl p-3 text-red-500 text-sm">
+                <div v-if="errorMessage" class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm font-medium">
                   {{ errorMessage }}
                 </div>
 
                 <button
                   type="submit"
                   :disabled="loading"
-                  class="w-full text-white rounded-xl px-6 py-3.5 font-bold text-sm transition-all disabled:opacity-40 hover:scale-[1.02] active:scale-[0.98]"
+                  class="w-full text-white rounded-xl px-6 py-4 font-bold text-sm transition-all disabled:opacity-50 hover:scale-105 active:scale-95 shadow-lg"
                   :style="{ backgroundColor: tenant.primaryColor }"
                 >
                   <span v-if="loading" class="flex items-center justify-center gap-2">
@@ -251,9 +255,13 @@
 import { ref, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 
-definePageMeta({ layout: false })
+definePageMeta({ 
+  layout: false,
+  middleware: 'validate-tenant'
+})
 
 const route = useRoute()
+const { setFavicon } = useFavicon()
 const form = ref({ firstName: '', lastName: '', email: '' })
 const loading = ref(false)
 const emailSent = ref(false)
@@ -303,6 +311,9 @@ async function loadTenant() {
     tenant.slug = response.data.slug || slug
     tenant.primaryColor = response.data.primary_color || '#6366f1'
     tenant.logo = response.data.logo_square_url || response.data.logo_url || ''
+
+    // Set favicon from tenant logo
+    setFavicon(tenant.logo, '🤝')
 
     // Check if affiliate system is enabled
     tenant.affiliateEnabled = response.data.features?.affiliate_enabled === true
