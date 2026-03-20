@@ -1293,7 +1293,7 @@
     <StudentDetailsEditModal
       :is-open="showDetailsEditModal"
       :student="selectedStudent"
-      :selectable-categories="availableCategories"
+      :selectable-categories="availableCategoriesForEdit"
       @close="showDetailsEditModal = false"
       @save="handleDetailsUpdated"
     />
@@ -1346,6 +1346,9 @@ interface Emits {
   (e: 'close'): void
   (e: 'studentUpdated', data: { id: string, [key: string]: any }): void
   (e: 'open-reminder-modal', student: any): void
+  (e: 'edit'): void
+  (e: 'createAppointment'): void
+  (e: 'evaluateLesson'): void
 }
 
 const props = defineProps<Props>()
@@ -1735,6 +1738,13 @@ const availableCategories = computed(() => {
   const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
   const categories = new Set(lessonsOnly.map(lesson => lesson.type).filter(Boolean))
   return ['alle', ...Array.from(categories).sort()]
+})
+
+// Kategorien für das Edit-Modal (ohne 'alle')
+const availableCategoriesForEdit = computed(() => {
+  const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
+  const categories = new Set(lessonsOnly.map(lesson => lesson.type).filter(Boolean))
+  return Array.from(categories).sort()
 })
 
 // Gefilterte und sortierte Lektionen
