@@ -155,7 +155,36 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 6: Update credit balance
+    // ✅ LAYER 6 & 7: ATOMIC OPERATIONS - Update credit AND log transaction together
+    // This ensures we never have a credit balance update without a corresponding transaction log
+    
+    // First, insert the transaction record (will fail if there's an issue)
+    const { error: logError } = await supabaseAdmin
+      .from('credit_transactions')
+      .insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        amount_rappen: amountRappen,
+        transaction_type: type,
+        balance_before_rappen: credit.balance_rappen,
+        balance_after_rappen: newBalance,
+        description: reason,
+        reference_type: referenceType,
+        reference_id: referenceId,
+        created_by: userProfile.id
+      })
+      .select()
+      .single()
+
+    if (logError) {
+      logger.error('❌ Error creating credit transaction:', logError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to create credit transaction - operation aborted'
+      })
+    }
+
+    // Now update the balance (we're confident the transaction was logged)
     const { error: updateError } = await supabaseAdmin
       .from('student_credits')
       .update({ balance_rappen: newBalance })
@@ -167,25 +196,6 @@ export default defineEventHandler(async (event) => {
         statusCode: 500,
         statusMessage: 'Failed to update credit balance'
       })
-    }
-
-    // ✅ LAYER 7: Log transaction
-    const { error: logError } = await supabaseAdmin
-      .from('credit_transactions')
-      .insert({
-        user_id: userId,
-        tenant_id: tenantId,
-        amount_rappen: amountRappen,
-        transaction_type: type,
-        description: reason,
-        reference_type: referenceType,
-        reference_id: referenceId,
-        created_by: userProfile.id
-      })
-
-    if (logError) {
-      logger.error('❌ Error logging credit transaction:', logError)
-      // Don't fail the transaction if logging fails
     }
 
     // ✅ LAYER 8: AUDIT LOGGING
