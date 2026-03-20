@@ -48,8 +48,8 @@
           <!-- Kategorien -->
           <div class="space-y-2">
             <label class="block text-sm font-medium text-gray-900">Kategorien</label>
-            <div class="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div v-for="cat in selectableCategories" :key="cat" class="flex items-center">
+            <div v-if="props.selectableCategories && props.selectableCategories.length > 0" class="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div v-for="cat in props.selectableCategories" :key="cat" class="flex items-center">
                 <input
                   :id="`cat-${cat}`"
                   v-model="formData.category"
@@ -59,6 +59,9 @@
                 />
                 <label :for="`cat-${cat}`" class="ml-2 text-sm text-gray-700">{{ cat }}</label>
               </div>
+            </div>
+            <div v-else class="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500 italic">
+              Keine Kategorien verfügbar
             </div>
             <p class="text-xs text-gray-500">{{ formData.category.length }} Kategorie{{ formData.category.length !== 1 ? 'n' : '' }} ausgewählt</p>
           </div>
