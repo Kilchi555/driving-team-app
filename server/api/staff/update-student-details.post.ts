@@ -125,9 +125,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Student verified in same tenant')
 
     // ✅ Update student
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    }
+    const updateData: any = {}
 
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone

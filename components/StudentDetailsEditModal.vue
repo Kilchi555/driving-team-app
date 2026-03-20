@@ -80,16 +80,13 @@
                   :value="cat.code"
                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 flex items-center gap-1.5">
-                  <span v-if="cat.color" :style="{ backgroundColor: cat.color }" class="w-2.5 h-2.5 rounded-full flex-shrink-0"></span>
-                  {{ cat.name || cat.code }}
-                </span>
+                <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ (cat.name || cat.code).replace(/^Kategorie\s*/i, '') }}</span>
               </label>
             </div>
             <div v-else class="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500 italic">
               Keine Kategorien verfügbar
             </div>
-            <p class="text-xs text-gray-500">{{ formData.category.length }} Kategorie{{ formData.category.length !== 1 ? 'n' : '' }} ausgewählt</p>
+            <p class="text-xs text-gray-500">{{ formData.category.length }} ausgewählt</p>
           </div>
 
           <!-- Geburtsdatum -->
@@ -142,8 +139,7 @@
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="flex gap-3 px-6 py-4 bg-gray-50 border-t flex-shrink-0">
+        <!-- Actions -->        <div class="flex gap-3 px-6 py-4 bg-gray-50 border-t flex-shrink-0">
           <button
             @click="$emit('close')"
             class="flex-1 px-4 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
@@ -213,6 +209,31 @@ async function loadCategories() {
   }
 }
 
+// Load billing address
+async function loadBillingAddress() {
+  if (!props.student?.id) return
+  try {
+    loadingBilling.value = true
+    const response = await $fetch<{ success: boolean; data: any }>(`/api/staff/get-billing-address?user_id=${props.student.id}`)
+    if (response.data) {
+      billingData.value = {
+        company_name: response.data.company_name || '',
+        contact_person: response.data.contact_person || '',
+        email: response.data.email || '',
+        phone: response.data.phone || '',
+        street: response.data.street || '',
+        street_number: response.data.street_number || '',
+        zip: response.data.zip || '',
+        city: response.data.city || ''
+      }
+    }
+  } catch (error: any) {
+    logger.error('❌ Error loading billing address:', error)
+  } finally {
+    loadingBilling.value = false
+  }
+}
+
 // Init form + load categories when opened
 watch(
   () => props.isOpen,
@@ -223,7 +244,6 @@ watch(
     }
   }
 )
-
 // Populate form when student changes
 watch(
   () => props.student,

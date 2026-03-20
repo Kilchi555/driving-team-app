@@ -948,13 +948,12 @@
               </h4>
               <button
                 @click="showDetailsEditModal = true"
-                class="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="Bearbeiten"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                 </svg>
-                Bearbeiten
               </button>
             </div>
             
@@ -1086,48 +1085,49 @@
 
           <!-- Rechnungsadresse -->
           <div class="bg-white rounded-lg border p-6">
-            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-              Rechnungsadresse
-            </h4>
-            
-            <div v-if="selectedStudent.invoice_address" class="text-sm text-gray-700 whitespace-pre-wrap">
-              {{ selectedStudent.invoice_address }}
-            </div>
-            <div v-else class="text-sm text-gray-500 italic">Keine Rechnungsadresse vorhanden</div>
-          </div>
-
-          <!-- Firmen-Rechnungsadressen -->
-          <div v-if="userBillingAddresses.length > 0" class="bg-white rounded-lg border p-6">
-            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-              Firmen-Rechnungsadressen
-            </h4>
-            
-            <div class="space-y-3">
-              <div 
-                v-for="address in userBillingAddresses" 
-                :key="address.id" 
-                class="p-3 bg-gray-50 rounded border border-gray-200 text-sm"
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                Rechnungsadresse
+              </h4>
+              <button
+                @click="openBillingAddressModal(userBillingAddresses.length > 0 ? userBillingAddresses[0] : null)"
+                class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                :title="userBillingAddresses.length > 0 ? 'Rechnungsadresse bearbeiten' : 'Rechnungsadresse hinzufügen'"
               >
-                <div class="font-semibold text-gray-900">{{ address.company_name }}</div>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div v-if="userBillingAddresses.length > 0" class="space-y-3">
+              <div
+                v-for="address in userBillingAddresses"
+                :key="address.id"
+                class="relative p-3 bg-gray-50 rounded border border-gray-200 text-sm"
+              >
+                <button
+                  @click="deleteBillingAddress(address.id)"
+                  class="absolute top-2 right-2 p-0.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                  title="Löschen"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+                <div class="font-semibold text-gray-900 pr-5">{{ address.company_name }}</div>
                 <div v-if="address.contact_person" class="text-gray-600">{{ address.contact_person }}</div>
-                <div v-if="address.street && address.street_number" class="text-gray-600">
-                  {{ address.street }} {{ address.street_number }}
-                </div>
-                <div v-if="address.zip && address.city" class="text-gray-600">
-                  {{ address.zip }} {{ address.city }}
-                </div>
+                <div v-if="address.street && address.street_number" class="text-gray-600">{{ address.street }} {{ address.street_number }}</div>
+                <div v-if="address.zip && address.city" class="text-gray-600">{{ address.zip }} {{ address.city }}</div>
                 <div v-if="address.email" class="text-gray-600">{{ address.email }}</div>
                 <div v-if="address.phone" class="text-gray-600">{{ address.phone }}</div>
               </div>
             </div>
+            <div v-else class="text-sm text-gray-500 italic">Keine Rechnungsadresse vorhanden</div>
           </div>
-
           <!-- Andere Details... -->
         </div>
       </div>
@@ -1296,6 +1296,15 @@
       @close="showDetailsEditModal = false"
       @save="handleDetailsUpdated"
     />
+
+    <!-- Billing Address Edit Modal -->
+    <BillingAddressEditModal
+      :is-open="showBillingAddressModal"
+      :student="selectedStudent"
+      :existing-address="editingBillingAddress"
+      @close="showBillingAddressModal = false"
+      @saved="handleBillingAddressSaved"
+    />
   </Teleport>
 </template>
 
@@ -1310,6 +1319,7 @@ import EvaluationModal from '~/components/EvaluationModal.vue'
 import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import StudentDetailsEditModal from '~/components/StudentDetailsEditModal.vue'
+import BillingAddressEditModal from '~/components/BillingAddressEditModal.vue'
 
 interface Student {
   id: string
@@ -1366,6 +1376,33 @@ const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>(props.i
 
 // Details Edit Modal
 const showDetailsEditModal = ref(false)
+
+// Billing Address Edit Modal
+const showBillingAddressModal = ref(false)
+const editingBillingAddress = ref<any>(null)
+
+function openBillingAddressModal(address: any) {
+  editingBillingAddress.value = address
+  showBillingAddressModal.value = true
+}
+
+async function handleBillingAddressSaved() {
+  if (selectedStudent.value) {
+    await loadUserBillingAddresses()
+  }
+}
+
+async function deleteBillingAddress(id: string) {
+  try {
+    await $fetch('/api/staff/delete-billing-address', {
+      method: 'POST',
+      body: { id }
+    })
+    await loadUserBillingAddresses()
+  } catch (error: any) {
+    logger.error('❌ Error deleting billing address:', error)
+  }
+}
 
 const handleDetailsUpdated = async (updatedData: any) => {
   if (selectedStudent.value) {
