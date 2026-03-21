@@ -679,14 +679,56 @@
                 </svg>
                 Zurück
               </button>
-              <div class="rounded-xl p-4 text-sm text-gray-600" :style="{ background: brandBg }">
-                Im nächsten Schritt gibst du deine Kontaktdaten ein. Ein Konto wird automatisch nach der Bestellung erstellt.
-              </div>
-              <button @click="continueAsGuest"
-                      class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90"
-                      :style="{ background: brandPrimary }">
-                Weiter zur Bestellung
-              </button>
+              <form @submit.prevent="handleRegister" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
+                  <input 
+                    v-model="registerForm.email" 
+                    type="email" 
+                    required 
+                    placeholder="max@beispiel.ch"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    :disabled="isLoggingIn"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Passwort *</label>
+                  <input 
+                    v-model="registerForm.password" 
+                    type="password" 
+                    required 
+                    placeholder="12+ Zeichen, beliebig komplex"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    :disabled="isLoggingIn"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">Mindestens 12 Zeichen</p>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Passwort wiederholen *</label>
+                  <input 
+                    v-model="registerForm.passwordConfirm" 
+                    type="password" 
+                    required 
+                    placeholder="Passwort bestätigen"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    :disabled="isLoggingIn"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  :disabled="isLoggingIn"
+                  class="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+                  :style="{ background: brandPrimary }">
+                  <span v-if="!isLoggingIn">Konto erstellen & weiter</span>
+                  <span v-else class="flex items-center justify-center">
+                    <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Wird registriert...
+                  </span>
+                </button>
+              </form>
             </template>
 
             <button @click="showCheckoutAuthModal = false"
@@ -1229,6 +1271,11 @@ const handleCheckoutLogin = async () => {
       formData.value.firstName = customerData.value.firstName
       formData.value.lastName = customerData.value.lastName
       formData.value.email = customerData.value.email
+      formData.value.phone = userData.phone || ''
+      formData.value.street = userData.street || ''
+      formData.value.streetNumber = userData.street_number || ''
+      formData.value.zip = userData.zip || ''
+      formData.value.city = userData.city || ''
     }
 
     saveImmediately()
@@ -1289,35 +1336,101 @@ const handleRegister = async () => {
     return
   }
   
-  if (registerForm.value.password.length < 8) {
+  // Password complexity validation (MUST MATCH ONBOARDING REQUIREMENTS!)
+  if (registerForm.value.password.length < 12) {
     showToastMessage('Passwort muss mindestens 12 Zeichen lang sein')
+    return
+  }
+  if (registerForm.value.password.length > 500) {
+    showToastMessage('Passwort darf maximal 500 Zeichen lang sein')
+    return
+  }
+  if (!/[A-Z]/.test(registerForm.value.password)) {
+    showToastMessage('Passwort muss mindestens einen Großbuchstaben enthalten')
+    return
+  }
+  if (!/[a-z]/.test(registerForm.value.password)) {
+    showToastMessage('Passwort muss mindestens einen Kleinbuchstaben enthalten')
+    return
+  }
+  if (!/[0-9]/.test(registerForm.value.password)) {
+    showToastMessage('Passwort muss mindestens eine Zahl enthalten')
+    return
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(registerForm.value.password)) {
+    showToastMessage('Passwort muss mindestens ein Sonderzeichen enthalten')
     return
   }
   
   try {
-    // TODO: Implement actual registration logic with Supabase Auth
+    isLoggingIn.value = true
     logger.debug('🆕 Registration attempt:', registerForm.value.email)
     
-    // Simulate successful registration for now
+    // Check if password has been pwned via HIBP API
+    logger.debug('🔐 Checking password against Have I Been Pwned...')
+    const pwnedCheck = await $fetch('/api/auth/check-password-pwned', {
+      method: 'POST',
+      body: { password: registerForm.value.password }
+    }) as any
+    
+    if (pwnedCheck.isPwned) {
+      showToastMessage(`❌ Dieses Passwort ist unsicher (in ${pwnedCheck.count} Datenlecks gefunden)`)
+      return
+    }
+    
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    
+    // 1. Create auth user with Supabase
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: registerForm.value.email,
+      password: registerForm.value.password
+    })
+    
+    if (authError) throw authError
+    if (!authData.user) throw new Error('Registration failed - no user returned')
+    
+    // 2. Create user profile in database
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert({
+        auth_user_id: authData.user.id,
+        email: registerForm.value.email,
+        tenant_id: tenantId.value,
+        is_active: true
+      })
+      .select('*')
+      .single()
+    
+    if (profileError) throw profileError
+    
     isLoggedIn.value = true
+    customerType.value = 'new'
     customerData.value = {
       email: registerForm.value.email,
-      firstName: '', // Would be filled in next step
+      firstName: '',
       lastName: ''
     }
     
     // Pre-fill email for registered user
     formData.value.email = customerData.value.email
     
-    showToastMessage('✅ Registrierung erfolgreich!')
-    currentStep.value = 1 // Weiter zu Produktauswahl
+    showCheckoutAuthModal.value = false
+    showToastMessage('✅ Registrierung erfolgreich! Sie können jetzt Ihre Bestellung abschließen.')
     
-    // Speichere sofort bei Registrierung
+    // Registered users go directly to payment (Step 3) 
+    currentStep.value = 3
+    
     saveImmediately()
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Registration failed:', error)
-    showToastMessage('❌ Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.')
+    const errorMessage = error?.message?.includes('already registered')
+      ? 'Diese E-Mail-Adresse ist bereits registriert.'
+      : error?.message || 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    showToastMessage('❌ ' + errorMessage)
+  } finally {
+    isLoggingIn.value = false
   }
 }
 
