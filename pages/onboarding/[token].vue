@@ -109,49 +109,45 @@
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Mindestens 12 Zeichen"
                 >
-                <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md space-y-2">
-                  <p class="text-xs font-semibold text-gray-700 mb-3">Anforderungen für sicheres Passwort:</p>
+                
+                <!-- Password validation feedback -->
+                <div class="mt-3 space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <span :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                      {{ form.password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
+                    </span>
+                  </div>
                   
-                  <div class="flex items-center space-x-2" :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="form.password.length >= 12 ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ form.password.length >= 12 ? '✓' : '-' }}
+                  <!-- zxcvbn strength bar (shown once 12+ chars) -->
+                  <div v-if="zxcvbnScore !== null" class="mt-2">
+                    <div class="flex gap-1 h-2">
+                      <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
+                        :class="i <= zxcvbnScore ? [
+                          zxcvbnScore <= 1 ? 'bg-red-500' :
+                          zxcvbnScore === 2 ? 'bg-yellow-400' :
+                          zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                        ] : 'bg-gray-200'"
+                      />
                     </div>
-                    <span class="text-sm">Mindestens 12 Zeichen (aktuell: {{ form.password.length }})</span>
+                    <p class="text-xs mt-2" :class="
+                      zxcvbnScore <= 1 ? 'text-red-500' :
+                      zxcvbnScore === 2 ? 'text-yellow-600' :
+                      zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+                    ">
+                      {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
+                      <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                    </p>
                   </div>
-
-                  <div class="flex items-center space-x-2" :class="/[A-Z]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[A-Z]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ /[A-Z]/.test(form.password) ? '✓' : '-' }}
-                    </div>
-                    <span class="text-sm">Mindestens ein Großbuchstabe (A-Z)</span>
-                  </div>
-
-                  <div class="flex items-center space-x-2" :class="/[a-z]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[a-z]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ /[a-z]/.test(form.password) ? '✓' : '-' }}
-                    </div>
-                    <span class="text-sm">Mindestens ein Kleinbuchstabe (a-z)</span>
-                  </div>
-
-                  <div class="flex items-center space-x-2" :class="/[0-9]/.test(form.password) ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="/[0-9]/.test(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ /[0-9]/.test(form.password) ? '✓' : '-' }}
-                    </div>
-                    <span class="text-sm">Mindestens eine Zahl (0-9)</span>
-                  </div>
-
-                  <div class="flex items-center space-x-2" :class="hasSpecialChar(form.password) ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="hasSpecialChar(form.password) ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ hasSpecialChar(form.password) ? '✓' : '-' }}
-                    </div>
-                    <span class="text-sm">Mindestens ein Sonderzeichen (!@#$%^&*)</span>
-                  </div>
-
-                  <div class="flex items-center space-x-2" :class="form.password.length <= 500 ? 'text-green-600' : 'text-gray-400'">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" :class="form.password.length <= 500 ? 'bg-green-100 border border-green-600' : 'bg-gray-100 border border-gray-300'">
-                      {{ form.password.length <= 500 ? '✓' : '-' }}
-                    </div>
-                    <span class="text-sm">Maximal 500 Zeichen</span>
+                  
+                  <!-- HIBP feedback -->
+                  <div v-if="hibpStatus !== 'idle'" class="flex items-center space-x-2 text-xs">
+                    <span v-if="hibpStatus === 'checking'" class="text-gray-400">⏳ Sicherheitsprüfung läuft...</span>
+                    <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
+                      ✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden
+                    </span>
+                    <span v-else-if="hibpStatus === 'safe'" class="text-green-600">
+                      ✓ Nicht in bekannten Datenlecks gefunden
+                    </span>
                   </div>
                 </div>
               </div>
@@ -707,9 +703,6 @@ import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholde
 const route = useRoute()
 const token = route.params.token as string
 
-// Helper function for password validation
-const hasSpecialChar = (password: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)
-
 const step = ref(0)
 const steps = ['Passwort', 'Profil', 'Dokumente', 'AGB']
 
@@ -728,6 +721,43 @@ const categoryError = ref('')
 const emailStatus = ref('')  // ← NEW: 'available', 'taken', 'checking', 'error', or empty
 const emailCheckMessage = ref('')  // ← NEW: Visual feedback message
 let emailCheckTimeout: NodeJS.Timeout | null = null  // ← NEW: Debounce timer
+
+// Password strength validation
+const zxcvbnScore = ref<0 | 1 | 2 | 3 | 4 | null>(null)
+const hibpStatus = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
+const hibpCount = ref(0)
+let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const checkPasswordStrength = async (password: string) => {
+  // zxcvbn runs synchronously in the browser
+  const { default: zxcvbn } = await import('zxcvbn')
+  const result = zxcvbn(password)
+  zxcvbnScore.value = result.score as 0 | 1 | 2 | 3 | 4
+
+  // Only call HIBP if zxcvbn score is acceptable (≥ 2)
+  if (result.score < 2) {
+    hibpStatus.value = 'idle'
+    return
+  }
+
+  hibpStatus.value = 'checking'
+  
+  // Debounce HIBP checks
+  if (hibpDebounceTimer) clearTimeout(hibpDebounceTimer)
+  hibpDebounceTimer = setTimeout(async () => {
+    try {
+      const hibp = await $fetch<{ isPwned: boolean; count: number }>('/api/auth/check-password-pwned', {
+        method: 'POST',
+        body: { password }
+      })
+      hibpCount.value = hibp.count
+      hibpStatus.value = hibp.isPwned ? 'pwned' : 'safe'
+    } catch (err) {
+      logger.debug('⚠️ HIBP check failed (non-critical):', err)
+      hibpStatus.value = 'idle'
+    }
+  }, 500)
+}
 
 // Field-specific errors
 const fieldErrors = ref<Record<string, string>>({
@@ -920,7 +950,7 @@ function validateZip() {
   }
 }
 
-// Load user data by token
+// Watch password changes for real-time strength checking
 onMounted(async () => {
   // DEV MODE: Allow testing with 'dev' token
   const token = route.params.token as string
@@ -1224,37 +1254,21 @@ const isFormValid = computed(() => {
 const handleNextStep = async () => {
   // Validate current step
   if (step.value === 0) {
-    // Password validation - MUST MATCH BACKEND REQUIREMENTS!
-    // Backend checks in complete-onboarding.post.ts:
-    // 1. Length >= 12
-    // 2. At least one uppercase letter [A-Z]
-    // 3. At least one lowercase letter [a-z]
-    // 4. At least one digit [0-9]
-    // 5. At least one special character [!@#$%^&*()_+-=[]{}...] 
-    // 6. Max 500 characters
-    
+    // Password validation using zxcvbn score
     if (form.password.length < 12) {
       passwordError.value = 'Passwort muss mindestens 12 Zeichen lang sein'
       return
     }
-    if (form.password.length > 500) {
-      passwordError.value = 'Passwort darf maximal 500 Zeichen lang sein'
+    if (zxcvbnScore.value === null || zxcvbnScore.value < 2) {
+      passwordError.value = 'Passwort ist zu einfach. Bitte wählen Sie ein stärkeres Passwort.'
       return
     }
-    if (!/[A-Z]/.test(form.password)) {
-      passwordError.value = 'Passwort muss mindestens einen Großbuchstaben enthalten'
+    if (hibpStatus.value === 'checking') {
+      passwordError.value = 'Sicherheitsprüfung läuft... Bitte warten Sie.'
       return
     }
-    if (!/[a-z]/.test(form.password)) {
-      passwordError.value = 'Passwort muss mindestens einen Kleinbuchstaben enthalten'
-      return
-    }
-    if (!/[0-9]/.test(form.password)) {
-      passwordError.value = 'Passwort muss mindestens eine Zahl enthalten'
-      return
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.password)) {
-      passwordError.value = 'Passwort muss mindestens ein Sonderzeichen enthalten'
+    if (hibpStatus.value === 'pwned') {
+      passwordError.value = `Dieses Passwort ist unsicher (in ${hibpCount.value} Datenlecks gefunden)`
       return
     }
     if (form.password !== form.confirmPassword) {
@@ -1443,6 +1457,16 @@ const completeOnboarding = async () => {
     isSubmitting.value = false
   }
 }
+
+// Watch password changes for real-time strength checking
+watch(() => form.password, (newPassword) => {
+  if (newPassword.length >= 12) {
+    checkPasswordStrength(newPassword)
+  } else {
+    zxcvbnScore.value = null
+    hibpStatus.value = 'idle'
+  }
+})
 </script>
 
 
