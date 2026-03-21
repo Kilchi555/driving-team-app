@@ -159,8 +159,13 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           } catch (err: any) {
             logger.warn('⚠️ Token refresh failed:', err.message)
             
+            // 🛒 Don't redirect for shop page - guest checkout doesn't need auth
+            const { useRoute } = await import('#app')
+            const route = useRoute()
+            const isShopPage = route.path.startsWith('/shop')
+            
             // If refresh fails due to invalid/expired refresh token, redirect to tenant login
-            if (err?.response?.status === 401 || err?.statusCode === 401) {
+            if ((err?.response?.status === 401 || err?.statusCode === 401) && !isShopPage) {
               logger.warn('🚪 Refresh token invalid/expired, redirecting to tenant login')
               
               try {
