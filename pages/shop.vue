@@ -701,7 +701,47 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     :disabled="isLoggingIn"
                   />
-                  <p class="text-xs text-gray-500 mt-1">Mindestens 12 Zeichen</p>
+                  
+                  <!-- Password validation feedback -->
+                  <div class="mt-2 space-y-1">
+                    <div class="flex items-center space-x-2">
+                      <span :class="registerForm.password.length >= 12 ? 'text-green-600' : 'text-gray-400'" class="text-xs">
+                        {{ registerForm.password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
+                      </span>
+                    </div>
+                    
+                    <!-- zxcvbn strength bar (shown once 12+ chars) -->
+                    <div v-if="zxcvbnScore !== null" class="mt-2">
+                      <div class="flex gap-1 h-1">
+                        <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
+                          :class="i <= zxcvbnScore ? [
+                            zxcvbnScore <= 1 ? 'bg-red-500' :
+                            zxcvbnScore === 2 ? 'bg-yellow-400' :
+                            zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                          ] : 'bg-gray-200'"
+                        />
+                      </div>
+                      <p class="text-xs mt-1" :class="
+                        zxcvbnScore <= 1 ? 'text-red-500' :
+                        zxcvbnScore === 2 ? 'text-yellow-600' :
+                        zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+                      ">
+                        {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
+                        <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                      </p>
+                    </div>
+                    
+                    <!-- HIBP feedback -->
+                    <div v-if="hibpStatus !== 'idle'" class="flex items-center space-x-2 text-xs">
+                      <span v-if="hibpStatus === 'checking'" class="text-gray-400">⏳ Sicherheitsprüfung läuft...</span>
+                      <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
+                        ✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden
+                      </span>
+                      <span v-else-if="hibpStatus === 'safe'" class="text-green-600">
+                        ✓ Nicht in bekannten Datenlecks gefunden
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">Passwort wiederholen *</label>
@@ -907,8 +947,55 @@ const registerForm = ref({
   passwordConfirm: ''
 })
 
+// Password strength validation
+const zxcvbnScore = ref<0 | 1 | 2 | 3 | 4 | null>(null)
+const hibpStatus = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
+const hibpCount = ref(0)
+let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const checkPasswordStrength = async (password: string) => {
+  // zxcvbn runs synchronously in the browser
+  const { default: zxcvbn } = await import('zxcvbn')
+  const result = zxcvbn(password)
+  zxcvbnScore.value = result.score as 0 | 1 | 2 | 3 | 4
+
+  // Only call HIBP if zxcvbn score is acceptable (≥ 2)
+  if (result.score < 2) {
+    hibpStatus.value = 'idle'
+    return
+  }
+
+  hibpStatus.value = 'checking'
+  
+  // Debounce HIBP checks
+  if (hibpDebounceTimer) clearTimeout(hibpDebounceTimer)
+  hibpDebounceTimer = setTimeout(async () => {
+    try {
+      const hibp = await $fetch<{ isPwned: boolean; count: number }>('/api/auth/check-password-pwned', {
+        method: 'POST',
+        body: { password }
+      })
+      hibpCount.value = hibp.count
+      hibpStatus.value = hibp.isPwned ? 'pwned' : 'safe'
+    } catch (err) {
+      logger.debug('⚠️ HIBP check failed (non-critical):', err)
+      hibpStatus.value = 'idle'
+    }
+  }, 500)
+}
+
 // Debug: Log initial state
 logger.debug('🔔 Initial toast state:', { showToast: showToast.value, message: toastMessage.value })
+
+// Watch password changes for real-time strength checking
+watch(() => registerForm.value.password, (newPassword) => {
+  if (newPassword.length >= 12) {
+    checkPasswordStrength(newPassword)
+  } else {
+    zxcvbnScore.value = null
+    hibpStatus.value = 'idle'
+  }
+})
 
 // Gutschein-Funktionalität
 const availableVouchers = ref<any[]>([])
@@ -1336,47 +1423,30 @@ const handleRegister = async () => {
     return
   }
   
-  // Password complexity validation (MUST MATCH ONBOARDING REQUIREMENTS!)
+  // Password validation: MUST match zxcvbn score requirements
   if (registerForm.value.password.length < 12) {
     showToastMessage('Passwort muss mindestens 12 Zeichen lang sein')
     return
   }
-  if (registerForm.value.password.length > 500) {
-    showToastMessage('Passwort darf maximal 500 Zeichen lang sein')
+  
+  if (zxcvbnScore.value === null || zxcvbnScore.value < 2) {
+    showToastMessage('Passwort ist zu einfach. Bitte wählen Sie ein stärkeres Passwort.')
     return
   }
-  if (!/[A-Z]/.test(registerForm.value.password)) {
-    showToastMessage('Passwort muss mindestens einen Großbuchstaben enthalten')
+  
+  if (hibpStatus.value === 'checking') {
+    showToastMessage('Sicherheitsprüfung läuft... Bitte warten Sie.')
     return
   }
-  if (!/[a-z]/.test(registerForm.value.password)) {
-    showToastMessage('Passwort muss mindestens einen Kleinbuchstaben enthalten')
-    return
-  }
-  if (!/[0-9]/.test(registerForm.value.password)) {
-    showToastMessage('Passwort muss mindestens eine Zahl enthalten')
-    return
-  }
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(registerForm.value.password)) {
-    showToastMessage('Passwort muss mindestens ein Sonderzeichen enthalten')
+  
+  if (hibpStatus.value === 'pwned') {
+    showToastMessage(`❌ Dieses Passwort ist unsicher (in ${hibpCount.value} Datenlecks gefunden)`)
     return
   }
   
   try {
     isLoggingIn.value = true
     logger.debug('🆕 Registration attempt:', registerForm.value.email)
-    
-    // Check if password has been pwned via HIBP API
-    logger.debug('🔐 Checking password against Have I Been Pwned...')
-    const pwnedCheck = await $fetch('/api/auth/check-password-pwned', {
-      method: 'POST',
-      body: { password: registerForm.value.password }
-    }) as any
-    
-    if (pwnedCheck.isPwned) {
-      showToastMessage(`❌ Dieses Passwort ist unsicher (in ${pwnedCheck.count} Datenlecks gefunden)`)
-      return
-    }
     
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
