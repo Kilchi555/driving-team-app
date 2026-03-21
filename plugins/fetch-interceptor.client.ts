@@ -65,7 +65,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
       // 🛒 Shop page / shop API requests — guest checkout, never redirect to login
       const isShopPage = currentPath.startsWith('/shop')
-      const isShopRequest = url.includes('/api/shop/') || url.includes('/api/wallee/') || url.includes('/api/tenants/branding')
+      const isShopRequest = url.includes('/api/shop/') || url.includes('/api/wallee/') || url.includes('/api/tenants/branding') || url.includes('/api/auth/current-user')
       if ((isShopPage || isShopRequest) && status === 401) {
         console.debug('ℹ️ Shop 401 - guest checkout allowed, no redirect')
         throw createError({
