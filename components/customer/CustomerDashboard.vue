@@ -8,7 +8,7 @@
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center space-x-4">
               <!-- Tenant Logo or Initials -->
-              <div v-if="currentTenantBranding?.logos?.square" class="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0" :style="{ background: `${secondaryColor}20` }">
+              <div v-if="currentTenantBranding?.logos?.square" class="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0" style="background: white">
                 <img :src="currentTenantBranding.logos.square" :alt="currentTenantBranding.name" class="w-full h-full object-cover">
               </div>
               <div v-else-if="currentTenantBranding?.logos?.standard" class="h-12 flex items-center">
