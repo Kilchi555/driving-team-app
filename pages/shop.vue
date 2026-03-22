@@ -1696,8 +1696,8 @@ const handleRegister = async () => {
     showCheckoutAuthModal.value = false
     showToastMessage('✅ Registrierung erfolgreich! Ihre Kontaktdaten sind vorgefüllt.')
     
-    // Registered users go to Step 2 (customer data) - now in view mode since data is pre-filled
-    currentStep.value = 2
+    // Registered users go directly to Step 3 (payment) since contact data is pre-filled
+    currentStep.value = 3
     
     saveImmediately()
     
