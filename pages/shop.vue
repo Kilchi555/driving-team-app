@@ -291,18 +291,47 @@
 
               <!-- Contact form -->
               <form autocomplete="on" class="space-y-4" @submit.prevent>
-                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kontaktdaten</h3>
+                <div class="flex items-center justify-between">
+                  <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kontaktdaten</h3>
+                  <button 
+                    v-if="!isEditingStep2" 
+                    @click="isEditingStep2 = true" 
+                    type="button"
+                    class="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all text-white"
+                    :style="{ background: brandPrimary }"
+                  >
+                    ✏️ Bearbeiten
+                  </button>
+                </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Vorname *</label>
-                    <input v-model="formData.firstName" name="given-name" type="text" required placeholder="Max" autocomplete="given-name"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.firstName" 
+                      name="given-name" 
+                      type="text" 
+                      required 
+                      placeholder="Max" 
+                      autocomplete="given-name"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" 
+                    />
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nachname *</label>
-                    <input v-model="formData.lastName" name="family-name" type="text" required placeholder="Muster" autocomplete="family-name"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.lastName" 
+                      name="family-name" 
+                      type="text" 
+                      required 
+                      placeholder="Muster" 
+                      autocomplete="family-name"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" 
+                    />
                   </div>
                 </div>
 
@@ -317,7 +346,8 @@
                       placeholder="max@beispiel.ch" 
                       autocomplete="email"
                       @blur="onEmailBlur"
-                      :disabled="isResolving"
+                      :disabled="isResolving || !isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
                       class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all disabled:opacity-50" 
                     />
                     <!-- Resolution status / warning -->
@@ -341,41 +371,92 @@
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Telefon *</label>
-                    <input v-model="formData.phone" name="tel" type="tel" required placeholder="+41 79 123 45 67" autocomplete="tel"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.phone" 
+                      name="tel" 
+                      type="tel" 
+                      required 
+                      placeholder="+41 79 123 45 67" 
+                      autocomplete="tel"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" 
+                    />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                   <div class="col-span-2">
                     <label class="block text-xs font-medium text-gray-600 mb-1">Strasse *</label>
-                    <input v-model="formData.street" name="street-address" type="text" required placeholder="Musterstrasse" autocomplete="street-address"
+                    <input 
+                      v-model="formData.street" 
+                      name="street-address" 
+                      type="text" 
+                      required 
+                      placeholder="Musterstrasse" 
+                      autocomplete="street-address"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nr. *</label>
-                    <input v-model="formData.streetNumber" name="address-line2" type="text" required placeholder="12" autocomplete="address-line2"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.streetNumber" 
+                      name="address-line2" 
+                      type="text" 
+                      required 
+                      placeholder="12" 
+                      autocomplete="address-line2"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" 
+                    />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
-                    <input v-model="formData.zip" name="postal-code" type="text" required placeholder="8000" autocomplete="postal-code"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.zip" 
+                      name="postal-code" 
+                      type="text" 
+                      required 
+                      placeholder="8000" 
+                      autocomplete="postal-code"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" 
+                    />
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Ort *</label>
-                    <input v-model="formData.city" name="address-level1" type="text" required placeholder="Zürich" autocomplete="address-level2"
-                           class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" />
+                    <input 
+                      v-model="formData.city" 
+                      name="address-level1" 
+                      type="text" 
+                      required 
+                      placeholder="Zürich" 
+                      autocomplete="address-level2"
+                      :disabled="!isEditingStep2"
+                      :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                      class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all" 
+                    />
                   </div>
                 </div>
 
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">Bemerkungen <span class="text-gray-400">(optional)</span></label>
-                  <textarea v-model="formData.notes" name="notes" rows="2" placeholder="Spezielle Wünsche…"
-                            class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all resize-none"></textarea>
+                  <textarea 
+                    v-model="formData.notes" 
+                    name="notes" 
+                    rows="2" 
+                    placeholder="Spezielle Wünsche…"
+                    :disabled="!isEditingStep2"
+                    :class="{ 'opacity-60 bg-gray-50': !isEditingStep2 }"
+                    class="shop-input w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none transition-all resize-none"
+                  ></textarea>
                 </div>
               </form>
             </div>
@@ -901,6 +982,7 @@ const tenantParam = ref(route.query.tenant as string || '')
 // ── Checkout Auth Modal ────────────────────────────────
 const showCheckoutAuthModal = ref(false)
 const checkoutAuthStep = ref<'choose' | 'login' | 'register'>('choose')
+const isEditingStep2 = ref(true) // Edit mode for contact data (false = view mode for already logged-in customers)
 
 // Watch for route changes to update tenant
 watch(() => route.query.tenant, (newTenant) => {
@@ -1499,6 +1581,9 @@ const handleLogin = async () => {
     formData.value.lastName = customerData.value.lastName
     formData.value.email = customerData.value.email
     
+    // Logged-in users have their data in view mode (not editable unless they click "Bearbeiten")
+    isEditingStep2.value = false
+    
     showToastMessage('✅ Erfolgreich angemeldet!')
     currentStep.value = 1 // Weiter zu Produktauswahl
     
@@ -1593,6 +1678,9 @@ const handleRegister = async () => {
     formData.value.streetNumber = registerForm.value.streetNumber
     formData.value.zip = registerForm.value.zip
     formData.value.city = registerForm.value.city
+    
+    // After registration, show contact data in view mode (not edit mode)
+    isEditingStep2.value = false
     
     showCheckoutAuthModal.value = false
     showToastMessage('✅ Registrierung erfolgreich! Ihre Kontaktdaten sind vorgefüllt.')
