@@ -1481,10 +1481,10 @@ const handleRegister = async () => {
     formData.value.email = customerData.value.email
     
     showCheckoutAuthModal.value = false
-    showToastMessage('✅ Registrierung erfolgreich! Sie können jetzt Ihre Bestellung abschließen.')
+    showToastMessage('✅ Registrierung erfolgreich! Bitte geben Sie Ihre Kontaktdaten ein.')
     
-    // Registered users go directly to payment (Step 3) 
-    currentStep.value = 3
+    // Registered users go to Step 2 (customer data) first
+    currentStep.value = 2
     
     saveImmediately()
     
