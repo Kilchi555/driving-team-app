@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
         last_name: lastName || '',
         phone: phone || '',
         street: street || '',
-        street_number: streetNumber || '',
+        street_nr: streetNumber || '',
         zip: zip || '',
         city: city || '',
         tenant_id: tenantId,
