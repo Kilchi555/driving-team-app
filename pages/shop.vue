@@ -784,7 +784,9 @@
                   <input 
                     v-model="registerForm.password" 
                     type="password" 
+                    name="new-password"
                     required 
+                    autocomplete="new-password"
                     placeholder="12+ Zeichen, beliebig komplex"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     :disabled="isLoggingIn"
@@ -836,6 +838,7 @@
                   <input 
                     v-model="registerForm.passwordConfirm" 
                     type="password" 
+                    name="new-password"
                     required 
                     autocomplete="new-password"
                     placeholder="Passwort bestätigen"
