@@ -141,6 +141,25 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ User profile created successfully:', { id: profileData.id })
 
+    // Create student_credits record for new client
+    const { data: studentCredit, error: creditError } = await supabaseAdmin
+      .from('student_credits')
+      .insert({
+        user_id: profileData.id,
+        tenant_id: tenantId,
+        balance_rappen: 0,
+        notes: 'Automatisch erstellt bei Shop-Registrierung'
+      })
+      .select()
+      .single()
+
+    if (creditError) {
+      logger.warn('⚠️ Error creating student_credits (non-critical):', creditError)
+      // Don't fail the whole registration if this fails
+    } else {
+      logger.debug('✅ student_credits record created:', studentCredit.id)
+    }
+
     return {
       success: true,
       userId: profileData.id,
