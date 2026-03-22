@@ -278,6 +278,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { definePageMeta } from '#imports'
+
+// Allow guest access to success page (don't require auth)
+definePageMeta({
+  ssr: false
+})
+
 import { getSupabase } from '~/utils/supabase'
 import { useVouchers } from '~/composables/useVouchers'
 import { logger } from '~/utils/logger'
