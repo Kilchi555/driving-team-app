@@ -863,6 +863,7 @@
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">Passwort *</label>
                   <input 
+                    id="new-password"
                     v-model="registerForm.password" 
                     type="password" 
                     name="new-password"
@@ -917,9 +918,10 @@
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">Passwort wiederholen *</label>
                   <input 
+                    id="confirm-password"
                     v-model="registerForm.passwordConfirm" 
                     type="password" 
-                    name="new-password"
+                    name="confirm-password"
                     required 
                     autocomplete="new-password"
                     placeholder="Passwort bestätigen"
