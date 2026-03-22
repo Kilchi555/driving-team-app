@@ -33,29 +33,29 @@
       {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
-        "name": "Driving Team Fahrschule Zürich",
+        "name": "Fahrschule Driving Team Zürich",
         "description": "Professionelle Fahrschule in Zürich für Auto, Motorrad, Lastwagen, Taxi und mehr",
         "url": "https://drivingteam.ch",
-        "telephone": "+41 44 XXX XX XX",
+        "telephone": "+41 44 431 00 33",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Altstetten",
+          "streetAddress": "Baslerstrasse 145",
           "addressLocality": "Zürich",
-          "postalCode": "8000",
+          "postalCode": "8048",
           "addressCountry": "CH"
         },
         "image": "https://drivingteam.ch/images/og-image.webp",
         "areaServed": {
           "@type": "GeoShape",
-          "name": ["Zürich", "Limmattal", "Wettswil", "Bülach", "Baden", "Thalwil"]
+          "name": ["Zürich", "Limmattal", "Wettswil", "Birmensdorf", "Spreitenbach", "Enge"]
         },
-        "priceRange": "CHF 100-150",
+        "priceRange": "CHF 95-200",
         "aggregateRating": {
           "@type": "AggregateRating",
-          "ratingValue": "4.8",
-          "ratingCount": "250"
+          "ratingValue": "4.9",
+          "ratingCount": "368"
         },
-        "serviceType": ["Auto Fahrschule", "Motorrad Fahrschule", "Lastwagen Fahrschule", "Taxi Fahrschule"]
+        "serviceType": ["Auto Fahrschule", "Anhänger Fahrschule", "Motorrad Fahrschule", "Lastwagen Fahrschule", "Taxi Fahrschule", "Bus Fahrschule", "Motorboot Fahrschule"]
       }
       </script>
       
@@ -64,7 +64,7 @@
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "Driving Team",
+        "name": "Fahrschule Driving Team Zürich",
         "url": "https://drivingteam.ch",
         "logo": "https://drivingteam.ch/logo.png",
         "sameAs": ["https://www.facebook.com/drivingteam", "https://www.instagram.com/drivingteam"]
@@ -78,17 +78,17 @@
       <div class="absolute inset-0 bg-white"></div>
 
       <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
-        <!-- Hero Headline (optimiert für SEO) -->
+        <!-- Hero Headline (optimiert für SEO, dezent gestylt) -->
         <div class="mb-6 md:mb-10">
-          <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase mb-4">
             Fahrschule Zürich - Auto & Motorrad Fahrstunden mit 95% Erfolgsquote
           </h1>
           <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-4">
-            Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien. Flexible Fahrstunden ab CHF 100/Lektion mit erfahrenen Fahrlehrers. Jetzt Termin buchen!
+            Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien. Flexible Fahrstunden ab CHF 95.-/Lektion mit erfahrenen Fahrlehrern. Jetzt Termin buchen!
           </p>
         </div>
         <div class="w-full max-w-7xl">
-          <h2 class="text-2xl font-bold text-gray-900 mb-8">Fahrstunden in Zürich für alle Kategorien</h2>
+          <h2 class="text-xs md:text-sm font-semibold text-gray-400 tracking-widest uppercase mb-8">Fahrstunden in Zürich für alle Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
@@ -109,7 +109,7 @@
             <!-- Motorrad -->
             <a href="/motorrad-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
-              <img src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW und A Fahrstunden mit erfahrenen Fahrlehrers" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
+              <img src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW und A Fahrstunden mit erfahrenen Fahrlehrern" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
