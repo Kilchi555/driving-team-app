@@ -1448,31 +1448,26 @@ const handleRegister = async () => {
     isLoggingIn.value = true
     logger.debug('🆕 Registration attempt:', registerForm.value.email)
     
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    
-    // 1. Create auth user with Supabase
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: registerForm.value.email,
-      password: registerForm.value.password
+    // Use backend API to register (creates auth user + profile via service role)
+    const response = await fetch('/api/auth/register-guest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: registerForm.value.email,
+        password: registerForm.value.password,
+        tenantId: tenantId.value
+      })
     })
     
-    if (authError) throw authError
-    if (!authData.user) throw new Error('Registration failed - no user returned')
+    const data = await response.json()
     
-    // 2. Create user profile in database
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert({
-        auth_user_id: authData.user.id,
-        email: registerForm.value.email,
-        tenant_id: tenantId.value,
-        is_active: true
-      })
-      .select('*')
-      .single()
+    if (!response.ok) {
+      throw new Error(data.statusMessage || 'Registrierung fehlgeschlagen')
+    }
     
-    if (profileError) throw profileError
+    logger.debug('✅ User registered successfully:', data.userId)
     
     isLoggedIn.value = true
     customerType.value = 'new'
