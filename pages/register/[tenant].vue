@@ -559,19 +559,6 @@
               </label>
             </div>
 
-            <!-- hCaptcha - only show if required -->
-            <div v-if="requiresCaptcha" class="flex flex-col items-center">
-              <div
-                id="hcaptcha"
-                :class="{ 'ring-2 ring-red-500 rounded': captchaError }"
-              ></div>
-              <p v-if="captchaError" class="text-sm text-red-600 mt-2 text-center">
-                Bitte bestätigen Sie, dass Sie kein Roboter sind
-              </p>
-              <p class="text-xs text-gray-500 mt-2 text-center">
-                Sicherheitsüberprüfung erforderlich (mehrere Registrierungen erkannt)
-              </p>
-            </div>
           </form>
         </div>
       </div>
@@ -672,13 +659,7 @@ import { useAffiliateRef } from '~/composables/useAffiliateRef'
 // Load hCaptcha script - ensure it loads immediately
 if (typeof window !== 'undefined') {
   useHead({
-    script: [
-      {
-        src: 'https://js.hcaptcha.com/1/api.js',
-        async: true,
-        defer: false
-      }
-    ]
+    script: []
   })
 }
 
@@ -713,8 +694,6 @@ const prefilledData = ref({
 // State
 const currentStep = ref(1)
 const isSubmitting = ref(false)
-const captchaError = ref(false) // Track captcha errors
-const requiresCaptcha = ref(false) // Adaptive captcha flag
 const uploadedImage = ref<string | null>(null)
 const uploadedFileType = ref<string | null>(null)
 // Camera toggle state
@@ -1181,73 +1160,8 @@ const submitRegistration = async () => {
   if (!canSubmit.value) return
   
   isSubmitting.value = true
-  captchaError.value = false // Reset captcha error
   
   try {
-    // Debug: Check if hCaptcha element and script exist
-    const hcaptchaElement = document.getElementById('hcaptcha')
-    logger.debug('🔍 hCaptcha element exists:', !!hcaptchaElement)
-    logger.debug('🔍 window.hcaptcha exists:', !!(window as any).hcaptcha)
-    logger.debug('🔍 Requires captcha:', requiresCaptcha.value)
-    
-    // Get hCaptcha token - only if captcha is required
-    let captchaToken: string | null = null
-    
-    if (requiresCaptcha.value) {
-      // Try to get token with retries
-      const widgetId = hcaptchaWidgetId.value
-      logger.debug('🔍 Using hCaptcha widget ID:', widgetId)
-      
-      for (let attempt = 0; attempt < 10; attempt++) {
-        logger.debug(`🔄 Attempt ${attempt + 1}: checking for hcaptcha.getResponse`)
-        
-        if ((window as any).hcaptcha?.getResponse) {
-          try {
-            // Try to get response using widget ID
-            let response: string
-            if (widgetId !== null) {
-              response = (window as any).hcaptcha.getResponse(widgetId)
-            } else {
-              // Fallback to container ID if widget ID not available
-              response = (window as any).hcaptcha.getResponse('hcaptcha')
-            }
-            logger.debug(`✅ Got captcha response on attempt ${attempt + 1}:`, !!response, 'First 20 chars:', response?.substring(0, 20))
-            
-            // If we got a token, use it
-            if (response && typeof response === 'string' && response.length > 0) {
-              captchaToken = response
-              break
-            } else if (attempt === 0) {
-              logger.debug('ℹ️ hCaptcha response is empty - user might not have completed the challenge yet')
-            }
-          } catch (error: any) {
-            logger.debug(`⚠️ Error calling getResponse on attempt ${attempt + 1}:`, error?.message || error?.cause || error)
-            if (attempt === 0) {
-              logger.debug('🔍 Full error object:', error)
-            }
-          }
-        } else {
-          logger.debug(`❌ hcaptcha.getResponse not available on attempt ${attempt + 1}`)
-        }
-        
-        // Wait 200ms before retrying
-        if (attempt < 9 && !captchaToken) {
-          await new Promise(resolve => setTimeout(resolve, 200))
-        }
-      }
-      
-      if (!captchaToken) {
-        console.error('❌ Failed to get hCaptcha token after retries')
-        console.error('❌ window.hcaptcha:', (window as any).hcaptcha)
-        console.error('❌ hcaptcha element:', hcaptchaElement)
-        throw new Error('Bitte führen Sie die Captcha-Verifikation durch')
-      }
-      
-      logger.debug('✅ hCaptcha token received')
-    } else {
-      logger.debug('ℹ️ Captcha not required for this registration')
-    }
-    
     logger.debug('🚀 Starting registration via backend API...')
     
     // Load tenant by slug
@@ -1285,7 +1199,6 @@ const submitRegistration = async () => {
         lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
         tenantId: activeTenantId,
         isAdmin: isAdminRegistration.value,
-        captchaToken: captchaToken,
         referredByCode: refCode || null,
       })
     })
@@ -1376,10 +1289,6 @@ const submitRegistration = async () => {
         : 'Passwort erfüllt die Sicherheitsanforderungen nicht. Bitte alle Kriterien beachten.'
       isSubmitting.value = false
       return
-    } else if (errorMessage.includes('Captcha') || errorMessage.includes('captcha') || errorMessage.includes('hCaptcha')) {
-      errorTitle = 'Captcha-Verifizierung fehlgeschlagen'
-      errorMessage = 'Die Captcha-Verifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut und stellen Sie sicher, dass Sie das Captcha korrekt ausgefüllt haben.'
-      captchaError.value = true // Highlight captcha field
     } else if (errorMessage.includes('Dokument-Upload')) {
       errorTitle = 'Dokument-Upload fehlgeschlagen'
       // errorMessage bleibt wie es ist (enthält bereits Details)
@@ -1517,18 +1426,6 @@ onMounted(async () => {
   // Run async tasks in parallel (non-blocking for form display)
   const asyncTasks: Promise<void>[] = []
 
-  asyncTasks.push(
-    $fetch('/api/auth/check-registration-risk', { method: 'POST' })
-      .then((riskCheck: any) => {
-        requiresCaptcha.value = riskCheck.requiresCaptcha || false
-        logger.debug('🔍 Registration risk check:', riskCheck)
-      })
-      .catch((err) => {
-        logger.warn('⚠️ Risk check failed, defaulting to require captcha:', err)
-        requiresCaptcha.value = true
-      })
-  )
-
   if (tenantSlug.value) {
     logger.debug('🏢 Loading tenant from URL parameter:', tenantSlug.value)
     asyncTasks.push(
@@ -1571,41 +1468,6 @@ watch(
     }
   }
 )
-
-// Watch for step changes and render hCaptcha when on last step AND captcha is required
-watch(currentStep, async (newStep) => {
-  if (newStep === maxSteps.value && requiresCaptcha.value) {
-    logger.debug('📍 Reached final step with captcha required, rendering hCaptcha...')
-    
-    // Wait for DOM to update
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    if ((window as any).hcaptcha) {
-      const hcaptchaContainer = document.getElementById('hcaptcha')
-      logger.debug('🔍 hCaptcha container found:', !!hcaptchaContainer)
-      
-      if (hcaptchaContainer && hcaptchaContainer.children.length === 0) {
-        try {
-          const siteKey = hcaptchaSiteKey.value
-          const keyPreview = typeof siteKey === 'string' ? siteKey.substring(0, 10) : siteKey
-          logger.debug('🎨 Rendering hCaptcha widget with sitekey:', keyPreview)
-          const widgetId = (window as any).hcaptcha.render('hcaptcha', {
-            sitekey: siteKey,
-            theme: 'light'
-          })
-          hcaptchaWidgetId.value = widgetId
-          logger.debug('✅ hCaptcha rendered successfully on step change with widget ID:', widgetId)
-        } catch (error: any) {
-          console.error('❌ Error rendering hCaptcha:', error?.message || error)
-        }
-      } else if (hcaptchaContainer) {
-        logger.debug('✅ hCaptcha already rendered')
-      }
-    } else {
-      console.warn('⚠️ window.hcaptcha not available')
-    }
-  }
-})
 
 // Auto-save form data to localStorage
 watch(formData, (newData) => {
