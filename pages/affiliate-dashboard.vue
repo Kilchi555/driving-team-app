@@ -440,30 +440,22 @@ async function submitPayout() {
 
 function generateWhatsAppMessage() {
   const firstName = userName.value.split(' ')[0] || 'Ich'
-  return `Hallo! 👋
-
-Ich empfehle dir ${brandConfig.value.name || 'Driving Team'} wirklich sehr weiter! 🚗
-
-${firstName} hat mir den Link geschickt und es lohnt sich:
+  return `Hallo, hier ist der Link zur Fahrschule ${brandConfig.value.name || 'Driving Team'}, die ich dir sehr empfehlen kann.
 
 ${shareLink.value}
 
-Viel Erfolg beim Fahren! 🎓`
+Beste Grüsse
+${firstName}`
 }
 
 function generateEmailMessage() {
   const firstName = userName.value.split(' ')[0] || 'Ich'
-  return `Hallo,
+  return `Hallo, hier ist der Link zur Fahrschule ${brandConfig.value.name || 'Driving Team'}, die ich dir sehr empfehlen kann.
 
-ich möchte dir ${brandConfig.value.name || 'Driving Team'} empfehlen. Das ist wirklich eine großartige Fahrschule/Anbieter!
-
-${firstName} hat mir den Link weitergegeben:
 ${shareLink.value}
 
-Schau dir das an – es ist sehr zu empfehlen! 👍
-
-Liebe Grüße,
-${userName.value}`
+Beste Grüsse
+${firstName}`
 }
 
 function goBack() {
