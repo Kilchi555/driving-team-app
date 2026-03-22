@@ -155,7 +155,7 @@
             </div>
 
             <!-- Birth Date -->
-            <div>
+            <div class="min-w-0">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Geburtsdatum *
               </label>
