@@ -146,6 +146,68 @@
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wieviel betragen die ungefähren Gesamtkosten für die Auto Prüfung?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
             <p class="text-gray-600 mt-4 text-sm leading-relaxed">Die Gesamtkosten sind hauptsächlich abhängig von der Anzahl der benötigten Fahrstunden. Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–.</p>
           </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich Fahrstunden flexibel buchen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir bieten flexible Buchungen an. Du kannst Deine Fahrstunden nach Deinen Wünschen und Verfügbarkeiten mit uns abstimmen. Ob Abend-, Wochenend- oder Feiertagsfahrten – wir versuchen, Deine Vorstellungen umzusetzen.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie lange gültig ist mein Lernfahrausweis?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Mit diesem Dokument darfst Du mit einer geeigneten Begleitperson privat üben. Sollte Dein Lernfahrausweis auslaufen, kannst Du diesen kostenlos bei der Gemeinde verlängern.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich die Fahrstunden auch stornieren?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, Stornierungen sind möglich. Solltest Du einen Termin nicht wahrnehmen können, bitten wir Dich, uns mindestens 48 Stunden vorher Bescheid zu geben. Bei kurzfristigen Absagen behalten wir uns vor, die Fahrstunde in Rechnung zu stellen.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Sind Fahrstunden in englischer oder albanischer Sprache möglich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, absolut! Wir bieten Fahrstunden auch in Englisch und Albanisch an. Falls Du eine andere Sprache benötigst, sprich uns gerne an – wir versuchen, eine Lösung für Dich zu finden.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Fahrzeuge verwendet Ihr beim Unterricht?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung (Pedale und Lenkrad für den Fahrlehrer). Unsere Autos sind regelmässig gewartet und versichert. Bei Bedarf können wir auch Fahrzeuge mit Automatik- oder Schaltgetriebe zur Verfügung stellen.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Was sollte ich zur ersten Fahrstunde mitbringen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <div class="text-gray-600 mt-4 text-sm leading-relaxed">
+              <p class="mb-2">Zur ersten Fahrstunde solltest Du folgende Dinge mitbringen:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Deinen Lernfahrausweis</li>
+                <li>Deine Ausweisdokumente (Pass oder ID)</li>
+                <li>Bequeme Kleidung und geeignete Schuhe (keine Flip-Flops oder Sandalen)</li>
+                <li>Ggf. eine Brille, wenn Du diese benötigst</li>
+              </ul>
+            </div>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie bereite ich mich optimal auf die Fahrprüfung vor?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <div class="text-gray-600 mt-4 text-sm leading-relaxed">
+              <p class="mb-2">Mit diesen Tipps bist Du bestens vorbereitet:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Regelmässiges Üben: 2-4 Fahrstunden pro Woche sind optimal</li>
+                <li>Private Lernfahrten mit einem erfahrenen Begleiter</li>
+                <li>Theorie lernen: Verkehrsregeln gut kennen</li>
+                <li>Simulator-Training: Wir bieten optionale Fahrsimulatoren an</li>
+                <li>Tipps des Fahrlehrers umsetzen: Ernst nehmen und anwenden</li>
+              </ul>
+            </div>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Bietet Ihr auch Nothelferkurse an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir bieten in Kooperation mit zertifizierten Anbietern auch Nothelferkurse an. Diese sind eine wichtige Voraussetzung für die Fahrprüfung. Kontaktiere uns für mehr Informationen und Termine.</p>
+          </details>
+          <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Kategorien bietet Ihr in Zürich an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
+            <div class="text-gray-600 mt-4 text-sm leading-relaxed">
+              <p class="mb-2">Wir bieten Fahrstunden für folgende Kategorien an:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Kategorie B (Auto)</li>
+                <li>Kategorie A1, A35kW, A (Motorrad)</li>
+                <li>Kategorie C1, C, CE (Lastwagen)</li>
+                <li>Kategorie D1, D (Bus)</li>
+                <li>Kategorie BE (Anhänger)</li>
+              </ul>
+            </div>
+          </details>
         </div>
       </div>
     </section>
