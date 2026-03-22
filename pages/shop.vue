@@ -718,6 +718,55 @@
                   />
                 </div>
 
+                <!-- Address Fields -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Strasse *</label>
+                  <input 
+                    v-model="registerForm.street" 
+                    type="text" 
+                    required 
+                    placeholder="Hauptstrasse"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    :disabled="isLoggingIn"
+                  />
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nr *</label>
+                    <input 
+                      v-model="registerForm.streetNumber" 
+                      type="text" 
+                      required 
+                      placeholder="123"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      :disabled="isLoggingIn"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
+                    <input 
+                      v-model="registerForm.zip" 
+                      type="text" 
+                      required 
+                      placeholder="8000"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      :disabled="isLoggingIn"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Ort *</label>
+                    <input 
+                      v-model="registerForm.city" 
+                      type="text" 
+                      required 
+                      placeholder="Zürich"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      :disabled="isLoggingIn"
+                    />
+                  </div>
+                </div>
+
                 <!-- Email & Password -->
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
@@ -984,6 +1033,10 @@ const registerForm = ref({
   firstName: '',
   lastName: '',
   phone: '',
+  street: '',
+  streetNumber: '',
+  zip: '',
+  city: '',
   email: '',
   password: '',
   passwordConfirm: ''
@@ -1499,6 +1552,13 @@ const handleRegister = async () => {
       body: JSON.stringify({
         email: registerForm.value.email,
         password: registerForm.value.password,
+        firstName: registerForm.value.firstName,
+        lastName: registerForm.value.lastName,
+        phone: registerForm.value.phone,
+        street: registerForm.value.street,
+        streetNumber: registerForm.value.streetNumber,
+        zip: registerForm.value.zip,
+        city: registerForm.value.city,
         tenantId: tenantId.value
       })
     })
