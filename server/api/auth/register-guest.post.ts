@@ -91,6 +91,8 @@ export default defineEventHandler(async (event) => {
       .insert({
         auth_user_id: authData.user.id,
         email: email.toLowerCase(),
+        first_name: '',
+        last_name: '',
         tenant_id: tenantId,
         is_active: true,
         onboarding_status: 'completed',
