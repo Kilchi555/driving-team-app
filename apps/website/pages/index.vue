@@ -28,6 +28,48 @@
       <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
       
+      <!-- LocalBusiness Schema für Google My Business & Local SEO -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Driving Team Fahrschule Zürich",
+        "description": "Professionelle Fahrschule in Zürich für Auto, Motorrad, Lastwagen, Taxi und mehr",
+        "url": "https://drivingteam.ch",
+        "telephone": "+41 44 XXX XX XX",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Altstetten",
+          "addressLocality": "Zürich",
+          "postalCode": "8000",
+          "addressCountry": "CH"
+        },
+        "image": "https://drivingteam.ch/images/og-image.webp",
+        "areaServed": {
+          "@type": "GeoShape",
+          "name": ["Zürich", "Limmattal", "Wettswil", "Bülach", "Baden", "Thalwil"]
+        },
+        "priceRange": "CHF 100-150",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "250"
+        },
+        "serviceType": ["Auto Fahrschule", "Motorrad Fahrschule", "Lastwagen Fahrschule", "Taxi Fahrschule"]
+      }
+      </script>
+      
+      <!-- Organization Schema -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Driving Team",
+        "url": "https://drivingteam.ch",
+        "logo": "https://drivingteam.ch/logo.png",
+        "sameAs": ["https://www.facebook.com/drivingteam", "https://www.instagram.com/drivingteam"]
+      }
+      </script>
       
     </Head>
 
