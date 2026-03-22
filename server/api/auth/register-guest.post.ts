@@ -15,7 +15,18 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { email, password, tenantId } = body
+    const { 
+      email, 
+      password, 
+      firstName, 
+      lastName, 
+      phone, 
+      street, 
+      streetNumber, 
+      zip, 
+      city, 
+      tenantId 
+    } = body
 
     // Validate required fields
     if (!email || !password || !tenantId) {
@@ -91,13 +102,13 @@ export default defineEventHandler(async (event) => {
       .insert({
         auth_user_id: authData.user.id,
         email: email.toLowerCase(),
-        first_name: '',
-        last_name: '',
-        phone: '',
-        street: '',
-        street_number: '',
-        zip: '',
-        city: '',
+        first_name: firstName || '',
+        last_name: lastName || '',
+        phone: phone || '',
+        street: street || '',
+        street_number: streetNumber || '',
+        zip: zip || '',
+        city: city || '',
         tenant_id: tenantId,
         is_active: true,
         onboarding_status: 'completed',
