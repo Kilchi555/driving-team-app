@@ -13,9 +13,32 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
           <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      
+      <!-- BreadcrumbList Schema für SEO -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://drivingteam.ch/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Fahrschule Zürich",
+            "item": "https://drivingteam.ch/fahrschule-zuerich/"
+          }
+        ]
+      }
+      </script>
     </Head>
 
-    <!-- 1. Hero -->
+    <!-- Breadcrumb Navigation -->
+    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich' }]" />
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Zürich" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
