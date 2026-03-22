@@ -75,7 +75,11 @@ export default defineEventHandler(async (event) => {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase(),
       password: password,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName || '',
+        last_name: lastName || ''
+      }
     })
 
     if (authError) {
