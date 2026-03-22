@@ -1585,11 +1585,19 @@ const handleRegister = async () => {
     
     // Pre-fill email for registered user
     formData.value.email = customerData.value.email
+    // Fill all contact data from registration
+    formData.value.firstName = registerForm.value.firstName
+    formData.value.lastName = registerForm.value.lastName
+    formData.value.phone = registerForm.value.phone
+    formData.value.street = registerForm.value.street
+    formData.value.streetNumber = registerForm.value.streetNumber
+    formData.value.zip = registerForm.value.zip
+    formData.value.city = registerForm.value.city
     
     showCheckoutAuthModal.value = false
-    showToastMessage('✅ Registrierung erfolgreich! Bitte geben Sie Ihre Kontaktdaten ein.')
+    showToastMessage('✅ Registrierung erfolgreich! Ihre Kontaktdaten sind vorgefüllt.')
     
-    // Registered users go to Step 2 (customer data) first
+    // Registered users go to Step 2 (customer data) - now in view mode since data is pre-filled
     currentStep.value = 2
     
     saveImmediately()
