@@ -148,15 +148,15 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich Fahrstunden flexibel buchen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir bieten flexible Buchungen an. Du kannst Deine Fahrstunden nach Deinen Wünschen und Verfügbarkeiten mit uns abstimmen. Ob Abend-, Wochenend- oder Feiertagsfahrten – wir versuchen, Deine Vorstellungen umzusetzen.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir bieten flexible Buchungen an. Du kannst Deine Fahrstunden nach Deinen Wünschen und Verfügbarkeiten mit uns abstimmen. Ob Abend-, Wochenend- oder Morgenfahrten – wir versuchen, Deine Vorstellungen umzusetzen.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie lange gültig ist mein Lernfahrausweis?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Mit diesem Dokument darfst Du mit einer geeigneten Begleitperson privat üben. Sollte Dein Lernfahrausweis auslaufen, kannst Du diesen kostenlos bei der Gemeinde verlängern.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Mit diesem Dokument darfst Du mit einer geeigneten Begleitperson privat üben. Sollte Dein Lernfahrausweis auslaufen, kannst Du diesen noch ein 2 Mal beim Strassenverkehrsamt neu beantragen.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich die Fahrstunden auch stornieren?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, Stornierungen sind möglich. Solltest Du einen Termin nicht wahrnehmen können, bitten wir Dich, uns mindestens 48 Stunden vorher Bescheid zu geben. Bei kurzfristigen Absagen behalten wir uns vor, die Fahrstunde in Rechnung zu stellen.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, Stornierungen sind möglich. Solltest Du einen Termin nicht wahrnehmen können, bitten wir Dich, uns mindestens 24 Stunden vorher in der App abzusagen. Bei kurzfristigen Absagen behalten wir uns vor, die Fahrstunde zu verrechnen.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Sind Fahrstunden in englischer oder albanischer Sprache möglich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -164,7 +164,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Fahrzeuge verwendet Ihr beim Unterricht?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung (Pedale und Lenkrad für den Fahrlehrer). Unsere Autos sind regelmässig gewartet und versichert. Bei Bedarf können wir auch Fahrzeuge mit Automatik- oder Schaltgetriebe zur Verfügung stellen.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung (Pedale für den Fahrlehrer). Unsere Autos sind regelmässig gewartet und Vollkasko versichert. Bei Bedarf finden wir auch für Fahrstunden mit Schaltgetriebe ein Lösung.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was sollte ich zur ersten Fahrstunde mitbringen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -172,9 +172,8 @@
               <p class="mb-2">Zur ersten Fahrstunde solltest Du folgende Dinge mitbringen:</p>
               <ul class="list-disc pl-5 space-y-1">
                 <li>Deinen Lernfahrausweis</li>
-                <li>Deine Ausweisdokumente (Pass oder ID)</li>
                 <li>Bequeme Kleidung und geeignete Schuhe (keine Flip-Flops oder Sandalen)</li>
-                <li>Ggf. eine Brille, wenn Du diese benötigst</li>
+                <li>Gegebenenfalls eine Brille, wenn Du diese benötigst</li>
               </ul>
             </div>
           </details>
@@ -185,15 +184,14 @@
               <ul class="list-disc pl-5 space-y-1">
                 <li>Regelmässiges Üben: 2-4 Fahrstunden pro Woche sind optimal</li>
                 <li>Private Lernfahrten mit einem erfahrenen Begleiter</li>
-                <li>Theorie lernen: Verkehrsregeln gut kennen</li>
-                <li>Simulator-Training: Wir bieten optionale Fahrsimulatoren an</li>
-                <li>Tipps des Fahrlehrers umsetzen: Ernst nehmen und anwenden</li>
+                <li>Theorie lernen: Verkehrsregeln gut kennen und verstehen</li>
+                <li>Tipps des Fahrlehrers umsetzen: Ernst nehmen und konsequent anwenden</li>
               </ul>
             </div>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Bietet Ihr auch Nothelferkurse an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir bieten in Kooperation mit zertifizierten Anbietern auch Nothelferkurse an. Diese sind eine wichtige Voraussetzung für die Fahrprüfung. Kontaktiere uns für mehr Informationen und Termine.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir bieten in Kooperation mit zertifizierten Anbietern auch Nothelferkurse an. Diese sind eine wichtige Voraussetzung für die Fahrprüfung. Auf der Website findest Du einen Link zu einem Online Nothelferkurs, der Du selbstständig absolvieren kannst.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Kategorien bietet Ihr in Zürich an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -202,9 +200,11 @@
               <ul class="list-disc pl-5 space-y-1">
                 <li>Kategorie B (Auto)</li>
                 <li>Kategorie A1, A35kW, A (Motorrad)</li>
-                <li>Kategorie C1, C, CE (Lastwagen)</li>
-                <li>Kategorie D1, D (Bus)</li>
+                <li>Kategorie C1, C, CE (Lastwagen) ab Wädenswil/ZH</li>
+                <li>Kategorie D1, D (Bus) ab Pfäffikon/SZ</li>
                 <li>Kategorie BE (Anhänger)</li>
+                <li>Kategorie A (Motorboot) ab Lachen/SZ</li>
+                <li>Kategorie T (Taxi) ab Zürich-Altstetten</li>
               </ul>
             </div>
           </details>
@@ -232,6 +232,172 @@
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Zürich", "description": "Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien.", "url": "https://drivingteam.ch/fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Baslerstrasse 145", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" }, "geo": { "@type": "GeoCoordinates", "latitude": 47.3905, "longitude": 8.4877 }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/zuerich-hero.webp", "priceRange": "CHF 100-200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "reviewCount": "366" }, "sameAs": ["https://drivingteam.ch"] }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Zürich", "item": "https://drivingteam.ch/fahrschule-zuerich/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Wieviele Fahrstunden benötige ich?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Das ist sehr unterschiedlich. Mit seriöser Vorbereitung und regelmässigem Üben mit Tips des Fahrlehrers erreichen die meisten Schüler ihr Ziel in nützlicher Zeit."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wie kann ich meine Fahrausbildung beschleunigen?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Optimal sind 2-4 Fahrten pro Woche. Wichtig beim privat Üben ist, dass Du genau so fährst, wie es Dir Dein Fahrlehrer gezeigt hat, um schnell Automatismen zu entwickeln."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wieso dauert die Fahrstunde des Driving Teams 45 Minuten?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt. Je nach Übungsgebiet kann man auch 1.5 oder Doppellektionen buchen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wie rechtfertigen sich eure Preise?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Wir setzen auf Professionalität - von gut bezahlten und versicherten Fahrlehrern bis zu top gewarteten Fahrzeugen. Das rechtfertigt unsere Preise."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wo bietet Ihr Fahrstunden an?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Unsere Lokale befinden sich in Zürich-Altstetten und Lachen/SZ. Das Tätigkeitsgebiet erstreckt sich von Baden bis nach Thalwil und von Bülach bis ins Knonaueramt."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Soll ich geschaltet oder automatisch fahren lernen?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Das muss jeder für sich entscheiden. Rechtlich ist es egal - nach bestandener Prüfung darfst Du beides fahren."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Was sind die Voraussetzungen für private Lernfahrten?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Die Begleitperson muss einen gültigen Führerausweis haben und nüchtern sein. Beim Auto muss sie mindestens 23 Jahre alt sein und die Prüfung vor min. 3 Jahren bestanden haben."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Was ist die Admin- und Versicherungspauschale?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet Aufwände ausserhalb der Fahrlektionen und die spezielle Vollkaskoversicherung des Fahrschulfahrzeugs."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Was haben eure Fahrlehrer:innen für eine Ausbildung?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Alle Fahrlehrer:innen haben eine vollumfängliche Ausbildung mit eidgenössischem Fachausweis absolviert und absolvieren jedes Jahr mindestens einen Weiterbildungstag."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Welches sind die häufigsten Prüfungsrouten ab Zürich-Albisgütli?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Häufige Routen sind: Enge/Wollishofen/Kilchberg, Leimbach/Adliswil/Thalwil, Sihlcity/Wettswil/Ringlikon, Uitikon Waldegg/Birmensdorf, Wiedikon/Albisrieden/Altstetten."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wieviel betragen die ungefähren Gesamtkosten für die Auto Prüfung?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Kann ich Fahrstunden flexibel buchen?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja, wir bieten flexible Buchungen an. Ob Abend-, Wochenend- oder Feiertagsfahrten – wir versuchen, Deine Vorstellungen umzusetzen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wie lange gültig ist mein Lernfahrausweis?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Du kannst ihn kostenlos bei der Gemeinde verlängern."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Kann ich die Fahrstunden auch stornieren?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja, Stornierungen sind möglich. Bitte gib uns mindestens 48 Stunden Bescheid. Bei kurzfristigen Absagen behalten wir uns vor, die Fahrstunde in Rechnung zu stellen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Sind Fahrstunden in englischer oder albanischer Sprache möglich?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja, absolut! Wir bieten Fahrstunden auch in Englisch und Albanisch an. Sprich uns gerne an für andere Sprachen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Welche Fahrzeuge verwendet Ihr beim Unterricht?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung. Bei Bedarf können wir auch Fahrzeuge mit Automatik- oder Schaltgetriebe zur Verfügung stellen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Was sollte ich zur ersten Fahrstunde mitbringen?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Bringe Deinen Lernfahrausweis, Ausweisdokumente, bequeme Kleidung, geeignete Schuhe und ggf. eine Brille mit."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wie bereite ich mich optimal auf die Fahrprüfung vor?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Regelmässiges Üben (2-4x pro Woche), private Lernfahrten, Theorie lernen und die Tipps des Fahrlehrers umsetzen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Bietet Ihr auch Nothelferkurse an?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja, wir bieten in Kooperation mit zertifizierten Anbietern Nothelferkurse an. Kontaktiere uns für Termine."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Welche Kategorien bietet Ihr in Zürich an?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Wir bieten Fahrstunden für Kategorie B (Auto), A1/A35kW/A (Motorrad), C1/C/CE (Lastwagen), D1/D (Bus) und BE (Anhänger) an."
+        }
+      }
+    ]
+  }) }
 ]
 useHead({ script: jsonLdScripts })
 
