@@ -128,7 +128,7 @@
 
             <div class="grid grid-cols-2 gap-3">
               <a
-                :href="`https://wa.me/?text=Ich%20empfehle%20${encodeURIComponent(brandConfig.name || 'Driving Team')}%20%E2%80%93%20hier%20der%20Link%3A%20${encodeURIComponent(shareLink)}`"
+                :href="`https://wa.me/?text=${encodeURIComponent(generateWhatsAppMessage())}`"
                 target="_blank"
                 class="text-center font-semibold py-3 rounded-xl text-white transition hover:scale-105 active:scale-95"
                 style="background-color: #25D366"
@@ -136,7 +136,7 @@
                 📱 WhatsApp
               </a>
               <a
-                :href="`mailto:?subject=Empfehlung%20von%20${encodeURIComponent(brandConfig.name || 'Driving Team')}&body=Schau%20mal%3A%20${encodeURIComponent(shareLink)}`"
+                :href="`mailto:?subject=Empfehlung%20von%20${encodeURIComponent(userName)}&body=${encodeURIComponent(generateEmailMessage())}`"
                 class="text-center font-semibold py-3 rounded-xl transition hover:scale-105 active:scale-95"
                 :style="{ color: brandConfig.primary_color, backgroundColor: `${brandConfig.primary_color}15` }"
               >
@@ -436,6 +436,34 @@ async function submitPayout() {
   } finally {
     payoutLoading.value = false
   }
+}
+
+function generateWhatsAppMessage() {
+  const firstName = userName.value.split(' ')[0] || 'Ich'
+  return `Hallo! 👋
+
+Ich empfehle dir ${brandConfig.value.name || 'Driving Team'} wirklich sehr weiter! 🚗
+
+${firstName} hat mir den Link geschickt und es lohnt sich:
+
+${shareLink.value}
+
+Viel Erfolg beim Fahren! 🎓`
+}
+
+function generateEmailMessage() {
+  const firstName = userName.value.split(' ')[0] || 'Ich'
+  return `Hallo,
+
+ich möchte dir ${brandConfig.value.name || 'Driving Team'} empfehlen. Das ist wirklich eine großartige Fahrschule/Anbieter!
+
+${firstName} hat mir den Link weitergegeben:
+${shareLink.value}
+
+Schau dir das an – es ist sehr zu empfehlen! 👍
+
+Liebe Grüße,
+${userName.value}`
 }
 
 function goBack() {
