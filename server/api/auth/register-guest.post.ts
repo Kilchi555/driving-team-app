@@ -106,6 +106,7 @@ export default defineEventHandler(async (event) => {
       .insert({
         auth_user_id: authData.user.id,
         email: email.toLowerCase(),
+        role: 'client',
         first_name: firstName || '',
         last_name: lastName || '',
         phone: phone || '',
