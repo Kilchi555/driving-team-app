@@ -870,6 +870,7 @@
                     required 
                     autocomplete="new-password"
                     placeholder="12+ Zeichen, beliebig komplex"
+                    @change="onPasswordChange"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     :disabled="isLoggingIn"
                   />
@@ -1165,6 +1166,14 @@ const checkPasswordStrength = async (password: string) => {
       hibpStatus.value = 'idle'
     }
   }, 500)
+}
+
+// Auto-fill password confirmation when password is changed
+const onPasswordChange = () => {
+  // When user fills in password, auto-fill confirmation field
+  if (registerForm.value.password && !registerForm.value.passwordConfirm) {
+    registerForm.value.passwordConfirm = registerForm.value.password
+  }
 }
 
 // Debug: Log initial state
