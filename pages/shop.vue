@@ -680,6 +680,45 @@
                 Zurück
               </button>
               <form @submit.prevent="handleRegister" class="space-y-3">
+                <!-- Personal Data First -->
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Vorname *</label>
+                    <input 
+                      v-model="registerForm.firstName" 
+                      type="text" 
+                      required 
+                      placeholder="Max"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      :disabled="isLoggingIn"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nachname *</label>
+                    <input 
+                      v-model="registerForm.lastName" 
+                      type="text" 
+                      required 
+                      placeholder="Mustermann"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      :disabled="isLoggingIn"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 mb-1">Telefon *</label>
+                  <input 
+                    v-model="registerForm.phone" 
+                    type="tel" 
+                    required 
+                    placeholder="079 123 45 67"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    :disabled="isLoggingIn"
+                  />
+                </div>
+
+                <!-- Email & Password -->
                 <div>
                   <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
                   <input 
@@ -942,6 +981,9 @@ const loginForm = ref({
 
 // Register form
 const registerForm = ref({
+  firstName: '',
+  lastName: '',
+  phone: '',
   email: '',
   password: '',
   passwordConfirm: ''
