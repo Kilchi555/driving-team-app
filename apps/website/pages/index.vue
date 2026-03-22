@@ -1,9 +1,9 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Schweiz | Auto, Motorrad, Kurse | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Driving Team - Auto, Motorrad, LKW, Bus & Kurse. 95% Erfolgsquote, flexible Zeiten, ab CHF 100/Lektion. Jetzt buchen!" />
-      <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule, Taxi Fahrschule, Lastwagen Fahrschule, Führerschein, Fahrausbildung, Fahrstunden Zürich, Prüfungsvorbereitung" />
+      <Title>Fahrschule Zürich | Auto, Motorrad & Fahrstunden | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich - professionelle Auto- & Motorrad-Fahrstunden mit 95% Erfolgsquote. Flexible Zeiten ab CHF 100/Lektion. Erfahrene Fahrlehrers in Zürich-Altstetten. Jetzt Termin buchen!" />
+      <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Prüfungsvorbereitung Zürich, Fahrschule Altstetten" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
@@ -36,17 +36,22 @@
       <div class="absolute inset-0 bg-white"></div>
 
       <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
-        <!-- Hero Headline (sichtbar für SEO, dezent gestylt) -->
-        <div class="mb-2 md:mb-5">
-          <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase">Fahrschule Driving Team</h1>
+        <!-- Hero Headline (optimiert für SEO) -->
+        <div class="mb-6 md:mb-10">
+          <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+            Fahrschule Zürich - Auto & Motorrad Fahrstunden mit 95% Erfolgsquote
+          </h1>
+          <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-4">
+            Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien. Flexible Fahrstunden ab CHF 100/Lektion mit erfahrenen Fahrlehrers. Jetzt Termin buchen!
+          </p>
         </div>
         <div class="w-full max-w-7xl">
-          <h2 class="sr-only">Unsere Fahrkategorien</h2>
+          <h2 class="text-2xl font-bold text-gray-900 mb-8">Fahrstunden in Zürich für alle Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
               <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
-              <img src="/images/categories/auto-fahrschule.webp" width="360" height="241" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
+              <img src="/images/categories/auto-fahrschule.webp" width="360" height="241" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden und Prüfungsvorbereitung mit Driving Team in Zürich-Altstetten" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -62,7 +67,7 @@
             <!-- Motorrad -->
             <a href="/motorrad-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
-              <img src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW, A mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
+              <img src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW und A Fahrstunden mit erfahrenen Fahrlehrers" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -78,7 +83,7 @@
             <!-- Lastwagen -->
             <a href="/lastwagen-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-yellow-500 to-yellow-700 group-hover:from-yellow-600 group-hover:to-yellow-800 transition-all duration-500"></div>
-              <img src="/images/categories/lastwagen-fahrschule.webp" width="360" height="235" alt="Lastwagen Fahrschule Zürich - Kategorie C1, C, CE mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/categories/lastwagen-fahrschule.webp" width="360" height="235" alt="Lastwagen Fahrschule Zürich - Kategorie C1, C und CE mit professioneller Ausbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -94,7 +99,7 @@
             <!-- Taxi -->
             <a href="/taxi-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 group-hover:from-purple-600 group-hover:to-purple-800 transition-all duration-500"></div>
-              <img src="/images/categories/taxi-fahrschule.webp" width="360" height="239" alt="Taxi Fahrschule Zürich - BPT 121 & 122 mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/categories/taxi-fahrschule.webp" width="360" height="239" alt="Taxi Fahrschule Zürich - BPT 121 und 122 Ausbildung mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -110,7 +115,7 @@
             <!-- Bus -->
             <a href="/bus-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.4s">
               <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-green-700 group-hover:from-green-600 group-hover:to-green-800 transition-all duration-500"></div>
-              <img src="/images/categories/bus-fahrschule.webp" width="360" height="202" alt="Bus Fahrschule Zürich - Kategorie D1 & D mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <img src="/images/categories/bus-fahrschule.webp" width="360" height="202" alt="Bus Fahrschule Zürich - Kategorie D1 und D Fahrstunden und Ausbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
