@@ -588,16 +588,16 @@
     <Transition name="fade">
       <div v-if="showCheckoutAuthModal"
            class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden">
 
           <!-- Modal header -->
-          <div class="px-6 py-5 text-center" :style="{ background: headerGradient }">
+          <div class="px-6 py-5 text-center flex-shrink-0" :style="{ background: headerGradient }">
             <div class="text-3xl mb-2">🛒</div>
             <h2 class="text-lg font-bold text-white">Wie möchtest du fortfahren?</h2>
             <p class="text-white/70 text-sm mt-1">Anmelden oder als Gast bestellen</p>
           </div>
 
-          <div class="p-5 space-y-3">
+          <div class="p-5 space-y-3 overflow-y-auto flex-1">
             <!-- Choose -->
             <template v-if="checkoutAuthStep === 'choose'">
               <button @click="checkoutAuthStep = 'login'"
