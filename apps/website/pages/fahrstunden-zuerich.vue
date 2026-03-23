@@ -11,6 +11,7 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="date" :content="new Date().toISOString()" />
     </Head>
 
     <!-- Breadcrumb Navigation -->
@@ -468,14 +469,21 @@ const jsonLdScripts = [
       "longitude": 8.4877
     },
     "priceRange": "CHF 95-150",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "bestRating": "5",
-      "worstRating": "1",
-      "reviewCount": "366"
-    },
     "sameAs": ["https://drivingteam.ch"]
+  }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "AggregateRating",
+    "itemReviewed": {
+      "@type": "LocalBusiness",
+      "name": "Fahrstunden Zürich - Driving Team",
+      "url": "https://drivingteam.ch/fahrstunden-zuerich/"
+    },
+    "ratingValue": 4.9,
+    "bestRating": 5,
+    "worstRating": 1,
+    "ratingCount": 366,
+    "reviewCount": 366
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
