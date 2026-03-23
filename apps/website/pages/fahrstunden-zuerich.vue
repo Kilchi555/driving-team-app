@@ -2,10 +2,10 @@
   <div>
     <Head>
       <Title>Fahrstunden Zürich ab CHF 95.- | Auto, Motorrad, Anhänger | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden Zürich ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger ✓ 95% Erfolgsquote ✓ Flexible Zeiten ✓ Online buchen! Professionelle Instruktoren in Zürich-Altstetten." />
+      <Meta name="description" content="Fahrstunden Zürich ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger ✓ 85% Erfolgsquote ✓ Flexible Zeiten ✓ Online buchen! Professionelle Instruktoren in Zürich-Altstetten." />
       <Meta name="keywords" content="Fahrstunden Zürich, Fahrstunden Zürich Kosten, Auto Fahrstunden Zürich, Motorrad Fahrstunden Zürich, Anhänger Fahrstunden Zürich, Fahrstunden Zürich buchen, Fahrstunden Zürich Preis" />
       <Meta property="og:title" content="Fahrstunden Zürich ab CHF 95.- | Auto & Motorrad | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrstunden in Zürich ab CHF 95.-/Lektion. Auto, Motorrad, Anhänger. Flexible Zeiten, 95% Erfolgsquote. Jetzt online buchen!" />
+      <Meta property="og:description" content="Professionelle Fahrstunden in Zürich ab CHF 95.-/Lektion. Auto, Motorrad, Anhänger. Flexible Zeiten, 85% Erfolgsquote. Jetzt online buchen!" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrstunden-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -43,13 +43,13 @@
             </h1>
             
             <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
-              Auto, Motorrad & Anhänger in Zürich. Flexible Zeiten, erfahrene Instruktor:innen, 95% Erfolgsquote. Buche jetzt online Deine erste Fahrstunde.
+              Auto, Motorrad & Anhänger in Zürich. Flexible Zeiten, erfahrene Instruktor:innen, 85% Erfolgsquote. Buche jetzt online Deine erste Fahrstunde.
             </p>
             
             <!-- Stats Row -->
             <div class="flex gap-8 mb-10">
               <div class="group">
-                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">95%</p>
+                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">85%</p>
                 <p class="text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div class="group">
@@ -187,7 +187,7 @@
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> Automatik & Schaltung</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> Flexible Zeiten</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> CHF 95.-/Lektion</li>
-                <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> 95% Erfolgsquote</li>
+                <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> 85% Erfolgsquote</li>
               </ul>
               <p class="text-3xl font-black text-primary-600 mb-4">CHF 95.-</p>
               <a href="/auto-fahrschule/" class="block w-full text-center bg-gradient-to-r from-primary-600 to-primary-700 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition">
@@ -242,7 +242,7 @@
     <!-- Why Choose Us -->
     <FeatureSection
       title="Warum Fahrstunden bei Driving Team Zürich?"
-      subtitle="Professionelle Fahrausbildung mit 95% Erfolgsquote. Erfahrene Instruktoren, moderne Fahrzeuge, flexible Zeiten – alles zum besten Preis in Zürich."
+      subtitle="Professionelle Fahrausbildung mit 85% Erfolgsquote. Erfahrene Instruktoren, moderne Fahrzeuge, flexible Zeiten – alles zum besten Preis in Zürich."
       :extras="['Fahrstunden in Englisch & Albanisch verfügbar!']"
     />
 
@@ -430,7 +430,7 @@
       <div class="max-w-4xl mx-auto px-4 text-center">
         <h2 class="text-4xl md:text-5xl font-black mb-6">Bereit für Deine erste Fahrstunde in Zürich?</h2>
         <p class="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-          Buche jetzt ganz einfach online. Flexible Zeiten, professionelle Instruktoren, 95% Erfolgsquote. Los geht's!
+          Buche jetzt ganz einfach online. Flexible Zeiten, professionelle Instruktoren, 85% Erfolgsquote. Los geht's!
         </p>
         <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 hover:bg-primary-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl">
           → Fahrstunde buchen
