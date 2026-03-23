@@ -161,22 +161,6 @@ onUnmounted(() => {
 // Generate AggregateRating Schema with individual Review objects
 const aggregateRatingSchema = computed(() => {
   const reviewCount = reviews.value.length
-  const reviewObjects = reviews.value.map(review => ({
-    '@type': 'Review',
-    '@context': 'https://schema.org',
-    'itemReviewed': {
-      '@type': 'LocalBusiness',
-      'name': 'Driving Team'
-    },
-    'ratingValue': '5',
-    'bestRating': '5',
-    'worstRating': '1',
-    'author': {
-      '@type': 'Person',
-      'name': review.author || 'Anonymous'
-    },
-    'reviewBody': review.text
-  }))
   
   return {
     '@context': 'https://schema.org',
@@ -185,11 +169,11 @@ const aggregateRatingSchema = computed(() => {
       '@type': 'LocalBusiness',
       'name': 'Driving Team'
     },
-    'ratingValue': '5.0',
-    'bestRating': '5',
-    'worstRating': '1',
-    'ratingCount': reviewCount.toString(),
-    'reviewCount': reviewCount.toString()
+    'ratingValue': 4.9,
+    'bestRating': 5,
+    'worstRating': 1,
+    'ratingCount': reviewCount,
+    'reviewCount': reviewCount
   }
 })
 
@@ -210,9 +194,12 @@ useHead({
           '@type': 'LocalBusiness',
           'name': 'Driving Team'
         },
-        'ratingValue': '5',
-        'bestRating': '5',
-        'worstRating': '1',
+        'reviewRating': {
+          '@type': 'Rating',
+          'ratingValue': 5,
+          'bestRating': 5,
+          'worstRating': 1
+        },
         'author': {
           '@type': 'Person',
           'name': review.author || 'Anonymous'
