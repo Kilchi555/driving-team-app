@@ -198,17 +198,25 @@ const getEventTypeByCode = async (code: string, tenantId: string) => {
   }
 }
 
+// ===== MODULE-LEVEL SHARED STATE =====
+// All usePricing() instances share this state to avoid duplicate API calls and enable cross-instance caching
+const _sharedPricingRules = ref<PricingRule[]>([])
+const _sharedIsLoading = ref(false)
+const _sharedError = ref<string>('')
+const _sharedLastLoaded = ref<Date | null>(null)
+const _sharedPriceCache = ref<Map<string, { data: CalculatedPrice; timestamp: number }>>(new Map())
+let _sharedLoadingPromise: Promise<void> | null = null
+
 // ===== HAUPT-COMPOSABLE =====
 export const usePricing = (options: UsePricingOptions = {}) => {
   // ✅ NO DIRECT SUPABASE QUERIES - All database operations via APIs
 
-  // ===== CORE STATE =====
-  const pricingRules = ref<PricingRule[]>([])
-  const isLoadingPrices = ref(false)
-  const pricingError = ref<string>('')
-  // In-flight deduplication: if a load is already in progress, reuse that promise
-  let _loadingPromise: Promise<void> | null = null
-  const lastLoaded = ref<Date | null>(null)
+  // ===== CORE STATE (shared at module level) =====
+  const pricingRules = _sharedPricingRules
+  const isLoadingPrices = _sharedIsLoading
+  const pricingError = _sharedError
+  const lastLoaded = _sharedLastLoaded
+  // In-flight deduplication: shared across all instances
 
   // ===== DYNAMIC PRICING STATE =====
   const dynamicPricing = ref<DynamicPricing>({
@@ -227,7 +235,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   const PRICING_RULES_CACHE_DURATION = 5 * 60 * 1000  // 5 minutes
   const PRICE_CALCULATION_CACHE_DURATION = 5 * 60 * 1000  // 5 minutes
 
-  const priceCalculationCache = ref<Map<string, { data: CalculatedPrice; timestamp: number }>>(new Map())
+  const priceCalculationCache = _sharedPriceCache
 
   // ===== CACHE HELPERS =====
   const generatePriceKey = (categoryCode: string, durationMinutes: number, userId?: string): string => {
@@ -281,14 +289,14 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
 
     // Deduplicate concurrent requests – return the same promise if already loading
-    if (_loadingPromise) {
-      return _loadingPromise
+    if (_sharedLoadingPromise) {
+      return _sharedLoadingPromise
     }
 
     isLoadingPrices.value = true
     pricingError.value = ''
 
-    _loadingPromise = (async () => {
+    _sharedLoadingPromise = (async () => {
     try {
       logger.debug('🔄 Loading pricing rules from API...')
       
@@ -343,11 +351,11 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       await createFallbackPricingRules()
     } finally {
       isLoadingPrices.value = false
-      _loadingPromise = null
+      _sharedLoadingPromise = null
     }
     })()
 
-    return _loadingPromise
+    return _sharedLoadingPromise
   }
 
   // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen

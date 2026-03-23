@@ -636,7 +636,7 @@ import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
 import { useCategoryWithFallback, type CategoryWithParent, type EvaluationCriteria } from '~/composables/useCategoryWithFallback'
 
 // Composables
-const { getEvaluationCriteriaForCategory, getCategoryWithParent } = useCategoryWithFallback()
+const { getCategoryWithParent } = useCategoryWithFallback()
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -821,9 +821,21 @@ const loadEvaluationCriteria = async (category: CategoryWithParent | null) => {
     evaluationCriteria.value = []
     return
   }
-  logger.debug('🔄 Loading evaluation criteria for category:', { categoryCode: category.code, categoryId: category.id, parentId: category.parent_category_id })
-  evaluationCriteria.value = await getEvaluationCriteriaForCategory(category.id, category.parent_category_id)
-  logger.debug('✅ Loaded evaluation criteria:', evaluationCriteria.value.length)
+  logger.debug('🔄 Loading evaluation criteria for category:', { categoryCode: category.code })
+  try {
+    const isTheory = formData.value.eventType === 'theory'
+    const response = await $fetch<{ success: boolean, criteria: any[] }>('/api/staff/get-evaluation-criteria', {
+      query: {
+        isTheoryLesson: isTheory.toString(),
+        studentCategory: category.code
+      }
+    })
+    evaluationCriteria.value = response?.criteria || []
+    logger.debug('✅ Loaded evaluation criteria:', evaluationCriteria.value.length)
+  } catch (err: any) {
+    logger.error('❌ Error loading evaluation criteria:', err)
+    evaluationCriteria.value = []
+  }
 }
 
 
@@ -843,19 +855,6 @@ const productSale = {
 watch(priceDisplayRef, (newRef) => {
   if (newRef) {
     newRef.productSale = productSale
-  }
-}, { immediate: true })
-
-watch(() => formData.value.type, async (newType) => {
-  if (isPopulating.value) return
-  if (newType) {
-    logger.debug('🔄 Category type changed, loading evaluation criteria:', newType)
-    // Find the full category object (with parent_category_id)
-    const fullCategory = await getCategoryWithParent(newType)
-    await loadEvaluationCriteria(fullCategory)
-  } else {
-    logger.debug('⚠️ Category type cleared, clearing evaluation criteria')
-    evaluationCriteria.value = []
   }
 }, { immediate: true })
 
@@ -1581,6 +1580,18 @@ const {
   isPopulating,
 } = modalForm
 
+watch(() => formData.value.type, async (newType) => {
+  if (isPopulating.value) return
+  if (newType) {
+    logger.debug('🔄 Category type changed, loading evaluation criteria:', newType)
+    const fullCategory = await getCategoryWithParent(newType)
+    await loadEvaluationCriteria(fullCategory)
+  } else {
+    logger.debug('⚠️ Category type cleared, clearing evaluation criteria')
+    evaluationCriteria.value = []
+  }
+}, { immediate: true })
+
 
 
 const handlers = useEventModalHandlers(
@@ -1622,21 +1633,13 @@ const handleDurationsChanged = (durations: number[]) => {
 const handleCategorySelected = async (category: any) => {
   logger.debug('🎯 Enhanced category selected:', category?.code)
   
-  // Call original handler first
+  // Load durations and update selectedCategory (handles duration loading via API)
   await originalHandleCategorySelected(category)
   
-  // Then load durations from database if staff is available
-  if (category?.code && currentUser.value?.id) {
-    await loadDurationsFromDatabase(currentUser.value.id, category.code)
-  }
-  
-  // ✅ NEU: Stelle sicher, dass eine Dauer vorausgewählt wird
-  if (availableDurations.value.length > 0) {
-    // ✅ Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
-    // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
+  // After durations are loaded, try to pre-select the student's last used duration
+  if (category?.code && availableDurations.value.length > 0) {
     if (props.mode === 'edit' && formData.value.duration_minutes) {
       logger.debug('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
-      // Stelle sicher, dass die ursprüngliche Dauer in availableDurations enthalten ist
       if (!availableDurations.value.includes(formData.value.duration_minutes)) {
         availableDurations.value.unshift(formData.value.duration_minutes)
         availableDurations.value.sort((a, b) => a - b)
@@ -1648,19 +1651,11 @@ const handleCategorySelected = async (category: any) => {
         if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
           logger.debug('✅ Category change - using last appointment duration:', lastDuration, 'min')
           formData.value.duration_minutes = lastDuration
-        } else {
-          // ✅ FALLBACK: Auto-select first available duration
-          formData.value.duration_minutes = availableDurations.value[0]
-          logger.debug('⏱️ Category change - using first available duration:', availableDurations.value[0], 'min')
         }
+        // Fallback already set by originalHandleCategorySelected (first available)
       } catch (err) {
-        logger.debug('⚠️ Category change - could not load last duration, using first available')
-        formData.value.duration_minutes = availableDurations.value[0]
+        logger.debug('⚠️ Category change - could not load last duration, keeping current')
       }
-    } else {
-      // ✅ FALLBACK: Auto-select first available duration
-      formData.value.duration_minutes = availableDurations.value[0]
-      logger.debug('⏱️ Category change - no student, using first available duration:', availableDurations.value[0], 'min')
     }
   }
 }
@@ -2101,95 +2096,96 @@ const handleEndTimeUpdate = (newEndTime: string) => {
 }
 
 // ✅ 4. ZENTRALE PREISBERECHNUNG (mit appointment_type Support)
-const calculatePriceForCurrentData = async () => {
+let _priceCalcInFlight: Promise<void> | null = null
+const calculatePriceForCurrentData = (): Promise<void> => {
+  if (_priceCalcInFlight) return _priceCalcInFlight
   if (!formData.value.type || !formData.value.duration_minutes || formData.value.eventType !== 'lesson') {
     logger.debug('🚫 Skipping price calculation - missing data:', {
       type: formData.value.type,
       duration: formData.value.duration_minutes,
       eventType: formData.value.eventType
     })
-    return
+    return Promise.resolve()
   }
 
-  // ✅ WICHTIG: Stelle sicher, dass duration_minutes eine einzelne Zahl ist
-  let durationValue = formData.value.duration_minutes
-  if (Array.isArray(durationValue)) {
-    durationValue = durationValue[0] || 45 // Nimm den ersten Wert oder 45 als Fallback
-    logger.debug('⚠️ duration_minutes war ein Array, verwende ersten Wert:', durationValue)
-    // ✅ KORRIGIERT: Setze die formData direkt auf die einzelne Zahl
-    formData.value.duration_minutes = durationValue
+  // Fix array duration before entering the in-flight block
+  if (Array.isArray(formData.value.duration_minutes)) {
+    formData.value.duration_minutes = formData.value.duration_minutes[0] || 45
+    logger.debug('⚠️ duration_minutes war ein Array, verwende ersten Wert:', formData.value.duration_minutes)
   }
 
-  const appointmentNum = appointmentNumber?.value || 1
-  
-  logger.debug('💰 Calculating price for current data:', {
-    category: formData.value.type,
-    duration: durationValue, // ✅ Verwende den korrigierten durationValue
-    originalDuration: formData.value.duration_minutes, // ✅ Zeige auch den ursprünglichen Wert
-    appointmentType: formData.value.appointment_type, // ✅ NEU: appointment_type hinzugefügt
-    appointmentNumber: appointmentNum,
-    online: navigator.onLine
-  })
+  _priceCalcInFlight = (async () => {
+    try {
+      const durationValue = formData.value.duration_minutes as number
+      const appointmentNum = appointmentNumber?.value || 1
 
-  try {
-    if (navigator.onLine) {
-      // ✅ Online Berechnung mit appointment_type
-      const { calculatePrice } = usePricing()
-      const priceResult = await calculatePrice(
-        formData.value.type, 
-        durationValue, // ✅ Verwende den korrigierten durationValue
-        formData.value.user_id || undefined,
-        formData.value.appointment_type, // ✅ NEU: appointment_type übergeben
-        props.mode === 'edit', // ✅ NEU: Edit-Mode flag
-        props.eventData?.id // ✅ NEU: Appointment ID für Edit-Mode
-      )
-      
-      logger.debug('✅ Online price calculated:', priceResult)
-      
-      // Update dynamic pricing
-      // ✅ In Edit-Mode: Berechne pricePerMinute basierend auf ORIGINAL-Duration, nicht aktueller Duration
-      const durationForPricePerMinute = priceResult.original_duration_minutes || durationValue
-      const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
-      
-      logger.debug('💰 Price per minute calculation:', {
-        base_price_rappen: priceResult.base_price_rappen,
-        original_duration: priceResult.original_duration_minutes,
-        current_duration: durationValue,
-        using_duration: durationForPricePerMinute,
-        pricePerMinute: calculatedPricePerMinute
-      })
-      
-      dynamicPricing.value = {
-        pricePerMinute: calculatedPricePerMinute,
-        adminFeeChf: parseFloat(priceResult.admin_fee_chf),
-        adminFeeRappen: priceResult.admin_fee_rappen || 0, // ✅ NEU: Admin-Fee in Rappen
-        adminFeeAppliesFrom: 2, // ✅ Standard: Admin-Fee ab 2. Termin
-        appointmentNumber: priceResult.appointment_number,
-        hasAdminFee: priceResult.admin_fee_rappen > 0,
-        totalPriceChf: priceResult.total_chf,
+      logger.debug('💰 Calculating price for current data:', {
         category: formData.value.type,
-        duration: durationValue, // ✅ Verwende den korrigierten durationValue
-        isLoading: false,
-        error: ''
+        duration: durationValue,
+        originalDuration: formData.value.duration_minutes,
+        appointmentType: formData.value.appointment_type,
+        appointmentNumber: appointmentNum,
+        online: navigator.onLine
+      })
+
+      if (navigator.onLine) {
+        const { calculatePrice } = usePricing()
+        const priceResult = await calculatePrice(
+          formData.value.type,
+          durationValue,
+          formData.value.user_id || undefined,
+          formData.value.appointment_type,
+          props.mode === 'edit',
+          props.eventData?.id
+        )
+
+        logger.debug('✅ Online price calculated:', priceResult)
+
+        const durationForPricePerMinute = priceResult.original_duration_minutes || durationValue
+        const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
+
+        logger.debug('💰 Price per minute calculation:', {
+          base_price_rappen: priceResult.base_price_rappen,
+          original_duration: priceResult.original_duration_minutes,
+          current_duration: durationValue,
+          using_duration: durationForPricePerMinute,
+          pricePerMinute: calculatedPricePerMinute
+        })
+
+        dynamicPricing.value = {
+          pricePerMinute: calculatedPricePerMinute,
+          adminFeeChf: parseFloat(priceResult.admin_fee_chf),
+          adminFeeRappen: priceResult.admin_fee_rappen || 0,
+          adminFeeAppliesFrom: 2,
+          appointmentNumber: priceResult.appointment_number,
+          hasAdminFee: priceResult.admin_fee_rappen > 0,
+          totalPriceChf: priceResult.total_chf,
+          category: formData.value.type,
+          duration: durationValue,
+          isLoading: false,
+          error: ''
+        }
+
+        logger.debug('💰 EventModal - Updated pricing data:', {
+          category: formData.value.type,
+          appointmentType: formData.value.appointment_type,
+          pricePerMinute: calculatedPricePerMinute,
+          adminFee: priceResult.admin_fee_chf,
+          totalPrice: priceResult.total_chf
+        })
+      } else {
+        logger.debug('📱 Using offline calculation')
+        calculateOfflinePrice(formData.value.type, durationValue, appointmentNum)
       }
-      
-      logger.debug('💰 EventModal - Updated pricing data:', {
-        category: formData.value.type,
-        appointmentType: formData.value.appointment_type, // ✅ NEU: appointment_type loggen
-        pricePerMinute: calculatedPricePerMinute,
-        adminFee: priceResult.admin_fee_chf,
-        totalPrice: priceResult.total_chf
-      })
-      
-    } else {
-      // ✅ Offline Berechnung
-      logger.debug('📱 Using offline calculation')
-      calculateOfflinePrice(formData.value.type, durationValue, appointmentNum)
+    } catch (error) {
+      logger.debug('🔄 Price calculation failed, using offline fallback:', error)
+      calculateOfflinePrice(formData.value.type, formData.value.duration_minutes as number, appointmentNumber?.value || 1)
+    } finally {
+      _priceCalcInFlight = null
     }
-  } catch (error) {
-    logger.debug('🔄 Price calculation failed, using offline fallback:', error)
-    calculateOfflinePrice(formData.value.type, durationValue, appointmentNum)
-  }
+  })()
+
+  return _priceCalcInFlight
 }
 
 // ✅ Get fallback duration based on category code
@@ -5863,41 +5859,13 @@ watch(() => selectedStudent.value, async (newStudent, oldStudent) => {
 })
 
 // ✅ Admin-Fee und Preis neu berechnen wenn Kategorie sich ändert
-watch(() => formData.value.type, async (newType) => {
+watch(() => formData.value.type, async (newType, oldType) => {
   if (isPopulating.value) return
+  logger.debug('🚨 formData.type CHANGED:', { from: oldType, to: newType })
   if (selectedStudent.value && newType && formData.value.eventType === 'lesson') {
     await calculatePriceForCurrentData()
   }
 }, { immediate: false })
-
-// ✅ Doppelte Watches entfernt - wird bereits oben behandelt
-
-// ✅ Im EventModal.vue - bei den anderen Watchers hinzufügen:
-watch(() => formData.value.eventType, (newVal, oldVal) => {
-  if (isPopulating.value) return
-  logger.debug('🚨 formData.eventType CHANGED:', {
-    from: oldVal,
-    to: newVal,
-    stack: new Error().stack
-  })
-  
-  if (newVal === 'lesson') {
-    calculatePriceForCurrentData()
-  }
-}, { immediate: false })
-
-// ✅ Add watcher for category/type changes
-watch(() => formData.value.type, (newType, oldType) => {
-  if (isPopulating.value) return
-  logger.debug('🚨 formData.type CHANGED:', {
-    from: oldType,
-    to: newType
-  })
-  
-  if (newType && formData.value.eventType === 'lesson') {
-    calculatePriceForCurrentData()
-  }
-})
 
 // ✅ NEU: Watch für mode changes - reset form when switching to create mode
 watch(() => props.mode, (newMode, oldMode) => {

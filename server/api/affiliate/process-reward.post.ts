@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import logger from '~/utils/logger'
 
 /**
  * POST /api/affiliate/process-reward
@@ -28,11 +29,14 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { appointment_id, course_registration_id, user_id, tenant_id, driving_category, course_id } = body
 
+  logger.debug('📋 [Affiliate] process-reward called with:', { appointment_id, course_registration_id, user_id, tenant_id, driving_category, course_id })
+
   // Either appointment_id or course_registration_id must be provided as the reference
   const referenceId = appointment_id || course_registration_id
   const referenceType = appointment_id ? 'appointment' : 'course_registration'
 
   if (!referenceId || !user_id || !tenant_id) {
+    logger.error('❌ [Affiliate] Missing required params:', { referenceId, user_id, tenant_id })
     throw createError({ statusCode: 400, message: 'user_id, tenant_id and either appointment_id or course_registration_id are required' })
   }
 
@@ -46,8 +50,11 @@ export default defineEventHandler(async (event) => {
 
   if (!referredUser?.referred_by_code) {
     // User was not referred – nothing to do
+    logger.debug('ℹ️ [Affiliate] User not referred:', user_id)
     return { success: true, credited: false, reason: 'not_referred' }
   }
+
+  logger.debug('✅ [Affiliate] User referred by:', referredUser.referred_by_code)
 
   // Find the affiliate referral entry
   const { data: referral } = await supabaseAdmin
@@ -58,8 +65,11 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
 
   if (!referral) {
+    logger.warn('⚠️ [Affiliate] No referral record found for user:', user_id)
     return { success: true, credited: false, reason: 'no_referral_record' }
   }
+
+  logger.debug('✅ [Affiliate] Found referral for affiliate:', referral.affiliate_user_id)
 
   // NEW: Check if THIS SPECIFIC course/appointment was already rewarded
   // (allow multiple rewards per referral for different courses/categories)
@@ -74,6 +84,7 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
 
   if (existingReward) {
+    logger.info('ℹ️ [Affiliate] Already credited for this course/appointment:', referenceId)
     return { success: true, credited: false, reason: 'already_credited_for_this_course' }
   }
 
@@ -94,6 +105,7 @@ export default defineEventHandler(async (event) => {
 
     if (courseReward) {
       rewardRappen = courseReward.reward_rappen
+      logger.debug('✅ [Affiliate] Found course-specific reward:', { course_id, rewardRappen })
     }
   }
 
@@ -109,6 +121,7 @@ export default defineEventHandler(async (event) => {
 
     if (categoryReward) {
       rewardRappen = categoryReward.reward_rappen
+      logger.debug('✅ [Affiliate] Found category-specific reward:', { driving_category, rewardRappen })
     }
   }
 
@@ -126,13 +139,17 @@ export default defineEventHandler(async (event) => {
       const parsed = parseInt(tenantSetting.setting_value, 10)
       if (!isNaN(parsed) && parsed > 0) {
         rewardRappen = parsed
+        logger.debug('✅ [Affiliate] Found global reward setting:', rewardRappen)
       }
     }
   }
 
   if (rewardRappen <= 0) {
+    logger.warn('⚠️ [Affiliate] No reward configured for:', { course_id, driving_category, tenant_id })
     return { success: true, credited: false, reason: 'reward_is_zero' }
   }
+
+  logger.info('💰 [Affiliate] Will reward:', { affiliate_user_id: referral.affiliate_user_id, rewardRappen, referenceId })
 
   // Credit the affiliate's student_credits
   const { data: currentCredit } = await supabaseAdmin
@@ -155,11 +172,14 @@ export default defineEventHandler(async (event) => {
     }, { onConflict: 'user_id,tenant_id' })
 
   if (upsertError) {
+    logger.error('❌ [Affiliate] Failed to credit account:', upsertError)
     throw createError({ statusCode: 500, message: 'Failed to credit affiliate account' })
   }
 
+  logger.debug('✅ [Affiliate] Credit updated:', { balanceBefore, balanceAfter })
+
   // Log credit transaction
-  await supabaseAdmin.from('credit_transactions').insert({
+  const { error: txError } = await supabaseAdmin.from('credit_transactions').insert({
     user_id: referral.affiliate_user_id,
     tenant_id,
     transaction_type: 'affiliate_reward',
@@ -175,8 +195,15 @@ export default defineEventHandler(async (event) => {
     created_at: new Date().toISOString(),
   })
 
+  if (txError) {
+    logger.error('❌ [Affiliate] Failed to log transaction:', txError)
+    throw createError({ statusCode: 500, message: 'Failed to log credit transaction' })
+  }
+
+  logger.debug('✅ [Affiliate] Transaction logged')
+
   // Mark referral as processed (keep status as pending since we allow multiple rewards per referral)
-  await supabaseAdmin
+  const { error: refError } = await supabaseAdmin
     .from('affiliate_referrals')
     .update({
       // Keep status as 'pending' to allow multiple category rewards per referral
@@ -184,6 +211,19 @@ export default defineEventHandler(async (event) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', referral.id)
+
+  if (refError) {
+    logger.error('❌ [Affiliate] Failed to update referral:', refError)
+  } else {
+    logger.debug('✅ [Affiliate] Referral updated')
+  }
+
+  logger.info('🎉 [Affiliate] Reward processed successfully!', { 
+    affiliate_user_id: referral.affiliate_user_id, 
+    student_user_id: user_id,
+    reward_rappen: rewardRappen, 
+    referenceId 
+  })
 
   // Update affiliate_codes counters (single update with correct values)
   const { data: codeRow } = await supabaseAdmin

@@ -411,8 +411,9 @@ const loadCategories = async () => {
         let targetCode: string | null = null
         
         // In edit mode: always respect the current modelValue (appointment's category)
-        // Only use the student's default category as a hint for create mode
-        if (props.modelValue) {
+        // In create mode: prefer user's category over the default "B"
+        const isDefaultCategory = props.modelValue === 'B' && !props.categoryCode
+        if (props.modelValue && !isDefaultCategory) {
           targetCode = props.modelValue
           logger.debug('🔄 Post-init: using existing modelValue as target:', targetCode)
         } else if (props.selectedUser?.category) {
@@ -430,7 +431,7 @@ const loadCategories = async () => {
           if (!selected) {
             const parentCat = allCategories.value.find(cat => cat.code === targetCode)
             if (parentCat) {
-              selected = availableCategoriesForUser.value.find(cat => cat.parent_category_id === parentCat.id)
+              selected = availableCategoriesForUser.value.find(cat => String(cat.parent_category_id) === String(parentCat.id))
               logger.debug('🎯 Post-init: falling back to first child category:', selected?.code)
             }
           }
@@ -571,16 +572,28 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
    
    logger.debug('🎯 Using primary category:', primaryCategory)
    
-   // ✅ Direkt in der gefilterten Liste suchen (ohne Parents)
+   // ✅ STEP 1: Suche in der gefilterten Liste (Subcategories)
    let selected = availableCategoriesForUser.value.find(cat => cat.code === primaryCategory)
+   logger.debug('🔍 Step 1 - Found in filtered list (subcategories):', selected?.code)
    
-   // ✅ Falls Kategorie ein Parent ist (wird rausgefiltert): erstes Kind nehmen
+     // ✅ STEP 2: Falls nicht gefunden, suche in ALL categories (auch Parents)
    if (!selected) {
-     logger.debug('🔍 Primary category not in filtered list (likely a parent), looking for first child...')
-     const parentCat = allCategories.value.find(cat => cat.code === primaryCategory)
-     if (parentCat) {
-       selected = availableCategoriesForUser.value.find(cat => cat.parent_category_id === parentCat.id)
-       logger.debug('🎯 Falling back to first child category:', selected?.code)
+     const allCat = allCategories.value.find(cat => cat.code === primaryCategory)
+     if (allCat) {
+       logger.debug('🔍 Step 2 - Found in all categories (might be parent):', allCat.code)
+       // ✅ Falls Parent: nehme das Kind
+       if (allCat.parent_category_id === null && allCat.id) {
+         // Das ist ein Parent - suche das erste Kind
+         const childCat = allCategories.value.find(cat => String(cat.parent_category_id) === String(allCat.id))
+         if (childCat) {
+           selected = availableCategoriesForUser.value.find(cat => cat.code === childCat.code)
+           logger.debug('🎯 Primary is parent - using first child:', selected?.code)
+         }
+       } else {
+         // Das ist ein Subcategory - suche es in der verfügbaren Liste
+         selected = availableCategoriesForUser.value.find(cat => cat.code === allCat.code)
+         logger.debug('🎯 Primary is subcategory - using it:', selected?.code)
+       }
      }
    }
    

@@ -115,19 +115,26 @@ export default defineEventHandler(async (event) => {
         throw new Error('User tenant not found')
       }
 
-      const { data, error } = await supabaseAdmin
+      // Use .limit(1) to avoid "multiple rows" error when parent category has duplicate entries
+      // Prefer non-parent categories (with parent_category_id set) over parent entries
+      const { data: rows, error } = await supabaseAdmin
         .from('categories')
-        .select('lesson_duration_minutes, exam_duration_minutes')
+        .select('lesson_duration_minutes, exam_duration_minutes, parent_category_id')
         .eq('code', body.categoryCode)
         .eq('tenant_id', userData.tenant_id)
         .eq('is_active', true)
-        .maybeSingle()
 
       if (error) {
-        throw new Error(error.message)
+        logger.warn('⚠️ Duration query error, using defaults:', error.message)
+        return { success: true, data: { lesson_duration: 45, exam_duration: 90 } }
       }
 
-      logger.debug('✅ Duration data found')
+      // Prefer the non-parent entry (leaf category) if multiple rows exist
+      const data = rows && rows.length > 0
+        ? (rows.find(r => r.parent_category_id !== null) ?? rows[0])
+        : null
+
+      logger.debug('✅ Duration data found:', { rows: rows?.length, selected: data?.lesson_duration_minutes })
 
       return {
         success: true,
@@ -157,23 +164,27 @@ export default defineEventHandler(async (event) => {
         throw new Error('User tenant not found')
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data: rows2, error } = await supabaseAdmin
         .from('categories')
-        .select('lesson_duration_minutes')
+        .select('lesson_duration_minutes, parent_category_id')
         .eq('code', body.categoryCode)
         .eq('tenant_id', userData.tenant_id)
         .eq('is_active', true)
-        .maybeSingle()
 
       if (error) {
-        throw new Error(error.message)
+        logger.warn('⚠️ Lesson duration query error, using default:', error.message)
+        return { success: true, data: 45 }
       }
 
-      logger.debug('✅ Lesson duration found:', data?.lesson_duration_minutes)
+      const data2 = rows2 && rows2.length > 0
+        ? (rows2.find(r => r.parent_category_id !== null) ?? rows2[0])
+        : null
+
+      logger.debug('✅ Lesson duration found:', data2?.lesson_duration_minutes)
 
       return {
         success: true,
-        data: data?.lesson_duration_minutes || 45
+        data: data2?.lesson_duration_minutes || 45
       }
     }
 

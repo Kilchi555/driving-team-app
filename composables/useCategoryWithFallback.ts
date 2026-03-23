@@ -175,9 +175,16 @@ export const useCategoryWithFallback = () => {
         query = query.eq('tenant_id', tenantId)
       }
 
-      const { data, error } = await query.single()
+      const { data: rows, error } = await query
 
       if (error) throw error
+
+      if (!rows || rows.length === 0) return null
+
+      // If multiple rows (parent + child with same code), prefer the leaf/child category
+      const data = rows.length > 1
+        ? (rows.find(r => r.parent_category_id !== null) ?? rows[0])
+        : rows[0]
 
       return (data || null) as CategoryWithParent | null
 
