@@ -65,7 +65,6 @@
 <script setup lang="ts">
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "VKU Kurs – Verkehrskundeunterricht", "description": "Obligatorischer Verkehrskundeunterricht vor der praktischen Führerprüfung. 8 Stunden in 2 Teilen.", "url": "https://drivingteam.ch/vku-kurse/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen" } }] }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "Course", "name": "VKU Kurs – Verkehrskundeunterricht", "url": "https://drivingteam.ch/vku-kurse/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 366, "reviewCount": 366 }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "VKU Kurse", "item": "https://drivingteam.ch/vku-kurse/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
