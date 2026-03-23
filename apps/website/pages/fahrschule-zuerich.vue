@@ -16,7 +16,7 @@
     <!-- Breadcrumb Navigation -->
     <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich' }]" />
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Zürich" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/locations/zuerich-hero.webp" alt="Fahrstunden in Zürich-Altstetten – Auto, Motorrad, Anhänger mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -32,8 +32,8 @@
 
     <!-- 2. Features (weiß) — Warum wir -->
     <FeatureSection
-      title="Warum Driving Team Zürich?"
-      subtitle="Melde Dich in unserer Fahrschule Zürich an und Du kannst folgende Punkte von uns erwarten…"
+      title="Warum Driving Team Zürich Altstetten?"
+      subtitle="Unser Hauptstandort in Zürich-Altstetten. Hier finden alle Kurse (Nothelfer, VKU, Theorie) statt. Melde Dich an und du kannst folgende Punkte von uns erwarten…"
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 
