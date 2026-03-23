@@ -28,65 +28,6 @@
       <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
       
-      <!-- LocalBusiness Schema für Google My Business & Local SEO -->
-      <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "Fahrschule Driving Team Zürich",
-        "description": "Professionelle Fahrschule in Zürich für Auto, Motorrad, Lastwagen, Taxi und mehr",
-        "url": "https://drivingteam.ch",
-        "telephone": "+41 44 431 00 33",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "Baslerstrasse 145",
-          "addressLocality": "Zürich",
-          "postalCode": "8048",
-          "addressCountry": "CH"
-        },
-        "image": "https://drivingteam.ch/images/og-image.webp",
-        "areaServed": {
-          "@type": "GeoShape",
-          "name": ["Zürich", "Limmattal", "Wettswil", "Birmensdorf", "Spreitenbach", "Enge"]
-        },
-        "priceRange": "CHF 95-200",
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "ratingCount": "368"
-        },
-        "serviceType": ["Auto Fahrschule", "Anhänger Fahrschule", "Motorrad Fahrschule", "Lastwagen Fahrschule", "Taxi Fahrschule", "Bus Fahrschule", "Motorboot Fahrschule"]
-      }
-      </script>
-      
-      <!-- Organization Schema -->
-      <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Fahrschule Driving Team Zürich",
-        "url": "https://drivingteam.ch",
-        "logo": "https://drivingteam.ch/logo.png",
-        "sameAs": ["https://www.facebook.com/drivingteam", "https://www.instagram.com/drivingteam"]
-      }
-      </script>
-      
-      <!-- BreadcrumbList Schema für Homepage -->
-      <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "https://drivingteam.ch/"
-          }
-        ]
-      }
-      </script>
-      
     </Head>
 
     <!-- Immersive Hero Intro Section WITH Categories -->
