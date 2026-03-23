@@ -594,11 +594,6 @@ export default defineNuxtConfig({
     '/sq/wab-course-english': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
     '/sq/wab-course-english/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
 
-    // Mehrsprachige Seiten-Varianten ohne Abschluss-Slash
-    '/en/motorrad-fahrstunden)': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
-    '/it/motorrad-fahrstunden)': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
-    '/sq/motorrad-fahrstunden)': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
-
     // VKU Varianten
     '/vku-zurich': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
     '/vku-zurich/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
