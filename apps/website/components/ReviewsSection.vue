@@ -158,13 +158,33 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
 })
 
-// Generate AggregateRating Schema
+// Generate AggregateRating Schema with individual Review objects
 const aggregateRatingSchema = computed(() => {
   const reviewCount = reviews.value.length
-  // All reviews are 5 stars, so average is always 5.0
+  const reviewObjects = reviews.value.map(review => ({
+    '@type': 'Review',
+    '@context': 'https://schema.org',
+    'itemReviewed': {
+      '@type': 'LocalBusiness',
+      'name': 'Driving Team'
+    },
+    'ratingValue': '5',
+    'bestRating': '5',
+    'worstRating': '1',
+    'author': {
+      '@type': 'Person',
+      'name': review.author || 'Anonymous'
+    },
+    'reviewBody': review.text
+  }))
+  
   return {
     '@context': 'https://schema.org',
     '@type': 'AggregateRating',
+    'itemReviewed': {
+      '@type': 'LocalBusiness',
+      'name': 'Driving Team'
+    },
     'ratingValue': '5.0',
     'bestRating': '5',
     'worstRating': '1',
@@ -173,15 +193,35 @@ const aggregateRatingSchema = computed(() => {
   }
 })
 
-// Register schema in head
+// Register schemas in head - both AggregateRating and individual Reviews
 useHead({
-  script: [
+  script: computed(() => [
     {
       type: 'application/ld+json',
       innerHTML: JSON.stringify(aggregateRatingSchema.value),
       key: `aggregate-rating-${props.category}`
-    }
-  ]
+    },
+    ...reviews.value.map((review, index) => ({
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Review',
+        'itemReviewed': {
+          '@type': 'LocalBusiness',
+          'name': 'Driving Team'
+        },
+        'ratingValue': '5',
+        'bestRating': '5',
+        'worstRating': '1',
+        'author': {
+          '@type': 'Person',
+          'name': review.author || 'Anonymous'
+        },
+        'reviewBody': review.text
+      }),
+      key: `review-${props.category}-${index}`
+    }))
+  ])
 })
 
 function onScroll() {
