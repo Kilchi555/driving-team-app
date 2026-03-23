@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrstunden Zürich - ab CHF 95/Lektion | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrstunden Zürich mit Driving Team. 85% Erfolgsquote, flexible Zeiten, erfahrene Fahrlehrer für Kategorie B. Jetzt buchen!" />
+      <Title>Auto Fahrschule Zürich & Lachen - schnell zur Prüfung | Driving Team</Title>
+      <Meta name="description" content="Auto Fahrschule Zürich & Lachen mit Driving Team. 85% Erfolgsquote, flexible Zeiten, erfahrene Fahrlehrer für Kategorie B. Jetzt online buchen!" />
       <Meta property="og:title" content="Auto Fahrschule Kategorie B | Driving Team" />
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule/" />
