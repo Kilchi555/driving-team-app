@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich & Lachen | Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot | Driving Team</Title>
+      <Title>Fahrschule Zürich & Lachen | Auto, Anhänger, Lastwagen, etc.</Title>
       <Meta name="description" content="Fahrschule in Zürich & Lachen ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 85% Erfolgsquote ✓ Professionelle Instruktoren ✓ Flexible Termine. Termin online buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrschule Lachen, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Bus Fahrschule Zürich, Motorboot Fahrschule Lachen" />
       <Meta name="author" content="Driving Team" />
@@ -25,8 +25,6 @@
       
       <!-- Canonical & Language -->
       <Link rel="canonical" href="https://drivingteam.ch/" />
-      <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
-      <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
       <Meta name="date" :content="new Date().toISOString()" />
       
     </Head>
@@ -448,7 +446,7 @@
             Wieso dauert die Fahrstunde des Driving Teams in 45 Minuten?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vorallem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte. Im Stadtverkehr von Zürich ist man auch schnell nach 45 bis 60min ausgelaugt. Auf ländlichen Gebiet wie Lachen braucht man auch schnell mal 90min, wenn man irgendwo hinkommen möchte.</p>
+          <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vor allem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte. Im Stadtverkehr von Zürich ist man auch schnell nach 45 bis 60min ausgelaugt. Auf ländlichen Gebiet wie Lachen braucht man auch schnell mal 90min, wenn man irgendwo hinkommen möchte.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -527,7 +525,7 @@
             Warum sind eure Verkehrskundekurse so teuer?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Unsere Verkehrskundekurse sind im oberen Preissegment, weil wir auch in diesem Bereich sehr bemüht sind zu den besten Fahrschulen zu gehören und euch einen möglichst grossen Nutzen für die Fahrstunden zu gewährleisten. Ihr erhält diverse für den Strassenverkehr wichtigen Unterlagen und es werden viele praxisnahe Themen diskutiert, angeschaut und geübt. Eines der Ziele ist ganz klar, dass Ihr durch den Besuch unseres Verkehrskundekurses neu erlerntes Wissen direkt in den Fahrstunden umsetzen könnt und somit auch am Ende weniger Fahrstunde benötigt. Das heisst, die Kosten des Verkehrskundekurses sind gut investiert, vorallem geht es am Schluss immer um eine sichere Fahrweise und dass wir keine Unfälle verursachen.</p>
+          <p class="text-gray-600 mt-4">Unsere Verkehrskundekurse sind im oberen Preissegment, weil wir auch in diesem Bereich sehr bemüht sind zu den besten Fahrschulen zu gehören und euch einen möglichst grossen Nutzen für die Fahrstunden zu gewährleisten. Ihr erhält diverse für den Strassenverkehr wichtigen Unterlagen und es werden viele praxisnahe Themen diskutiert, angeschaut und geübt. Eines der Ziele ist ganz klar, dass Ihr durch den Besuch unseres Verkehrskundekurses neu erlerntes Wissen direkt in den Fahrstunden umsetzen könnt und somit auch am Ende weniger Fahrstunde benötigt. Das heisst, die Kosten des Verkehrskundekurses sind gut investiert, vor allem geht es am Schluss immer um eine sichere Fahrweise und dass wir keine Unfälle verursachen.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">

@@ -58,7 +58,6 @@ export default defineNuxtConfig({
         { name: 'twitter:image', content: 'https://drivingteam.ch/images/og-image.webp' },
       ],
       link: [
-        { rel: 'alternate', hreflang: 'de', href: 'https://drivingteam.ch' },
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
         { rel: 'apple-touch-icon', href: '/favicon.png' },
         { rel: 'preload', as: 'image', href: '/images/categories/auto-fahrschule.webp', fetchpriority: 'high' },
