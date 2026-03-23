@@ -5,7 +5,8 @@
       <Meta name="description" :content="`${categoryData.shortDesc} in Zürich. Professionelle Fahrschule mit erfahrenen Fahrlehrern.`" />
       <Meta property="og:title" :content="categoryData.title" />
       <Meta property="og:description" :content="categoryData.shortDesc" />
-      <Link rel="canonical" :href="`https://drivingteam.ch/categories/${slug}`" />
+      <Meta property="og:url" :content="`https://drivingteam.ch/categories/${slug}/`" />
+      <Link rel="canonical" :href="`https://drivingteam.ch/categories/${slug}/`" />
     </Head>
 
     <!-- Hero Section -->
