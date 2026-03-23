@@ -7,34 +7,10 @@
       <Meta property="og:title" content="Fahrstunden Zürich Altstetten – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrstunden in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 95% Erfolgsquote, flexible Zeiten." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
-      
-      
-          <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
-          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-      
-      <!-- BreadcrumbList Schema für SEO -->
-      <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "https://drivingteam.ch/"
-          },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Fahrstunden Zürich Altstetten",
-            "item": "https://drivingteam.ch/fahrschule-zuerich/"
-          }
-        ]
-      }
-      </script>
+      <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- Breadcrumb Navigation -->
@@ -409,4 +385,28 @@ definePageMeta({
 })
 
 const instructors = getInstructorsByLocation('zuerich')
+
+// BreadcrumbList Schema für Zürich Seite
+const jsonLdScripts = [
+  { type: 'application/ld+json', innerHTML: JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://drivingteam.ch/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Fahrstunden Zürich Altstetten",
+        "item": "https://drivingteam.ch/fahrschule-zuerich/"
+      }
+    ]
+  }) },
+]
+
+useHead({ script: jsonLdScripts })
 </script>
