@@ -538,7 +538,6 @@ export default defineNuxtConfig({
     '/blog': { redirect: { to: '/blog/', statusCode: 301 } },
     '/faq': { redirect: { to: '/faq/', statusCode: 301 } },
     '/weiterbildung': { redirect: { to: '/weiterbildungen/', statusCode: 301 } },
-    '/motorboot': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/motorboot-theorie': { redirect: { to: '/motorboot-theorie/', statusCode: 301 } },
     '/motorboot-fahrschule': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/nothelfer': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
@@ -558,8 +557,6 @@ export default defineNuxtConfig({
     '/bus-fahrschule': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
 
     // Mehrsprachige Seiten - alte Locations (Frauenfeld, Winterthur, Wil)
-    '/it/fahrschule-wil': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
-    '/it/fahrschule-wil/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
     '/it/fahrschule-winterthur': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
     '/it/fahrschule-winterthur/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
     '/it/fahrschule-frauenfeld': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
@@ -622,6 +619,16 @@ export default defineNuxtConfig({
     // Bootsfahrschule Varianten
     '/bootsfahrschule': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/bootsfahrschule/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+
+    // Zusätzliche fehlende Redirects (aus GSC Coverage Drilldown)
+    '/motorrad': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/taxi-fahrschule-aargau': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
+    '/taxi-fahrschule-schwyz': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/drivers-license-convert': { redirect: { to: '/drivers-license-converting/', statusCode: 301 } },
+    '/anhänger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/weg-zur-anhaengerpruefung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
   },
 
   // Sitemap wird als static file serviert: /public/sitemap.xml
