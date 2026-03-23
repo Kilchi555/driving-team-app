@@ -7,7 +7,6 @@ export default defineNuxtConfig({
     configPath: 'tailwind.config.ts',
     exposeConfig: false,
     viewer: false,
-    injectPosition: 'first',
   },
 
   features: {
@@ -15,7 +14,6 @@ export default defineNuxtConfig({
   },
 
   experimental: {
-    treeshakeClientOnly: true,
     payloadExtraction: false,
     renderJsonPayloads: false,
     headNext: true,
@@ -76,28 +74,26 @@ export default defineNuxtConfig({
       crawlLinks: true,
       failOnError: false,
     },
-    routeRules: {
-      '/**': {
-        headers: {
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'SAMEORIGIN',
-          'X-XSS-Protection': '1; mode=block',
-        },
-      },
-      '/images/**': {
-        headers: {
-          'Cache-Control': 'public, max-age=31536000, immutable',
-        },
-      },
-      '/_nuxt/**': {
-        headers: {
-          'Cache-Control': 'public, max-age=31536000, immutable',
-        },
-      },
-    },
   },
 
   routeRules: {
+    '/**': {
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+      },
+    },
+    '/images/**': {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    },
+    '/_nuxt/**': {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    },
     '/': { prerender: true },
 
     // ===== REDIRECTS VON ALTER WORDPRESS-SEITE (301) =====
@@ -193,9 +189,8 @@ export default defineNuxtConfig({
     '/en/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
 
     // Weitere Weg-zur-Prüfung Seiten
-    '/weg-zur-anhaengerpruefung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
-    '/weg-zur-anhaengerpruefung/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
-    '/weg-zur-buspruefung': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/weg-zur-anhangerprufung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/weg-zur-anhangerprufung/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
 
     // Mehrsprachige Seiten (WordPress Multilingual Plugin)
     '/it': { redirect: { to: '/', statusCode: 301 } },
@@ -345,12 +340,6 @@ export default defineNuxtConfig({
     // Englische Seiten (weitere)
     '/driving-lessons': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
     '/driving-lessons/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/road-awareness-courses': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
-    '/road-awareness-courses/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
-
-    // Weitere Anhänger-Varianten
-    '/weg-zur-anhangerprufung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
-    '/weg-zur-anhangerprufung/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
 
     // CZV / Chauffeurweiterbildung
     '/chauffeurweiterbildung': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
@@ -526,4 +515,6 @@ export default defineNuxtConfig({
     '/thank-you-theory': { redirect: { to: '/', statusCode: 301 } },
     '/thank-you-theory/': { redirect: { to: '/', statusCode: 301 } },
   },
+
+  // Sitemap wird als static file serviert: /public/sitemap.xml
 })
