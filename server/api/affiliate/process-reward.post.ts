@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
   // Find the affiliate referral entry
   const { data: referral } = await supabaseAdmin
     .from('affiliate_referrals')
-    .select('id, status, affiliate_code_id, affiliate_user_id')
+    .select('id, status, affiliate_code_id, affiliate_user_id, first_appointment_id')
     .eq('referred_user_id', user_id)
     .eq('tenant_id', tenant_id)
     .maybeSingle()
@@ -61,8 +61,20 @@ export default defineEventHandler(async (event) => {
     return { success: true, credited: false, reason: 'no_referral_record' }
   }
 
-  if (referral.status === 'credited') {
-    return { success: true, credited: false, reason: 'already_credited' }
+  // NEW: Check if THIS SPECIFIC course/appointment was already rewarded
+  // (allow multiple rewards per referral for different courses/categories)
+  const { data: existingReward } = await supabaseAdmin
+    .from('credit_transactions')
+    .select('id')
+    .eq('user_id', referral.affiliate_user_id)
+    .eq('tenant_id', tenant_id)
+    .eq('transaction_type', 'affiliate_reward')
+    .eq('reference_type', referenceType)
+    .eq('reference_id', referenceId)
+    .maybeSingle()
+
+  if (existingReward) {
+    return { success: true, credited: false, reason: 'already_credited_for_this_course' }
   }
 
   // Fetch reward amount:
@@ -163,14 +175,12 @@ export default defineEventHandler(async (event) => {
     created_at: new Date().toISOString(),
   })
 
-  // Mark referral as credited
+  // Mark referral as processed (keep status as pending since we allow multiple rewards per referral)
   await supabaseAdmin
     .from('affiliate_referrals')
     .update({
-      status: 'credited',
-      reward_rappen: rewardRappen,
-      first_appointment_id: appointment_id || null,
-      credited_at: new Date().toISOString(),
+      // Keep status as 'pending' to allow multiple category rewards per referral
+      first_appointment_id: referral.first_appointment_id || appointment_id || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', referral.id)
