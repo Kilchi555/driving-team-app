@@ -248,6 +248,7 @@
               :appointment-id="props.eventData?.id"
               :student-credit="studentCredit"
               :is-loading-credit="isLoadingStudentCredit"
+              :is-calculating-price="dynamicPricing.isLoading"
               @discount-changed="handleDiscountChanged"
               @product-removed="handleProductRemoved"
               @product-added="handleProductAdded"
@@ -2096,96 +2097,103 @@ const handleEndTimeUpdate = (newEndTime: string) => {
 }
 
 // ✅ 4. ZENTRALE PREISBERECHNUNG (mit appointment_type Support)
-let _priceCalcInFlight: Promise<void> | null = null
-const calculatePriceForCurrentData = (): Promise<void> => {
-  if (_priceCalcInFlight) return _priceCalcInFlight
+// Uses a sequence number to discard stale results when inputs change mid-flight
+let _priceCalcSeq = 0
+const calculatePriceForCurrentData = async (): Promise<void> => {
   if (!formData.value.type || !formData.value.duration_minutes || formData.value.eventType !== 'lesson') {
     logger.debug('🚫 Skipping price calculation - missing data:', {
       type: formData.value.type,
       duration: formData.value.duration_minutes,
       eventType: formData.value.eventType
     })
-    return Promise.resolve()
+    return
   }
 
-  // Fix array duration before entering the in-flight block
+  // Fix array duration
   if (Array.isArray(formData.value.duration_minutes)) {
     formData.value.duration_minutes = formData.value.duration_minutes[0] || 45
     logger.debug('⚠️ duration_minutes war ein Array, verwende ersten Wert:', formData.value.duration_minutes)
   }
 
-  _priceCalcInFlight = (async () => {
-    try {
-      const durationValue = formData.value.duration_minutes as number
-      const appointmentNum = appointmentNumber?.value || 1
+  // Capture inputs at call time – detect if we've been superseded before writing results
+  const mySeq = ++_priceCalcSeq
+  const capturedType = formData.value.type
 
-      logger.debug('💰 Calculating price for current data:', {
-        category: formData.value.type,
-        duration: durationValue,
-        originalDuration: formData.value.duration_minutes,
-        appointmentType: formData.value.appointment_type,
-        appointmentNumber: appointmentNum,
-        online: navigator.onLine
+  // Mark as calculating so the UI shows the loading placeholder
+  dynamicPricing.value = { ...dynamicPricing.value, isLoading: true }
+  const capturedDuration = formData.value.duration_minutes as number
+  const capturedUserId = formData.value.user_id
+  const capturedAppointmentType = formData.value.appointment_type
+  const appointmentNum = appointmentNumber?.value || 1
+
+  logger.debug('💰 Calculating price for current data:', {
+    category: capturedType,
+    duration: capturedDuration,
+    appointmentType: capturedAppointmentType,
+    appointmentNumber: appointmentNum,
+    online: navigator.onLine
+  })
+
+  try {
+    if (navigator.onLine) {
+      const { calculatePrice } = usePricing()
+      const priceResult = await calculatePrice(
+        capturedType,
+        capturedDuration,
+        capturedUserId || undefined,
+        capturedAppointmentType,
+        props.mode === 'edit',
+        props.eventData?.id
+      )
+
+      // Discard if a newer call has started since we began
+      if (mySeq !== _priceCalcSeq) {
+        logger.debug('🚫 Stale price result discarded (superseded by newer call)')
+        return
+      }
+
+      logger.debug('✅ Online price calculated:', priceResult)
+
+      const durationForPricePerMinute = priceResult.original_duration_minutes || capturedDuration
+      const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
+
+      logger.debug('💰 Price per minute calculation:', {
+        base_price_rappen: priceResult.base_price_rappen,
+        original_duration: priceResult.original_duration_minutes,
+        current_duration: capturedDuration,
+        using_duration: durationForPricePerMinute,
+        pricePerMinute: calculatedPricePerMinute
       })
 
-      if (navigator.onLine) {
-        const { calculatePrice } = usePricing()
-        const priceResult = await calculatePrice(
-          formData.value.type,
-          durationValue,
-          formData.value.user_id || undefined,
-          formData.value.appointment_type,
-          props.mode === 'edit',
-          props.eventData?.id
-        )
-
-        logger.debug('✅ Online price calculated:', priceResult)
-
-        const durationForPricePerMinute = priceResult.original_duration_minutes || durationValue
-        const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
-
-        logger.debug('💰 Price per minute calculation:', {
-          base_price_rappen: priceResult.base_price_rappen,
-          original_duration: priceResult.original_duration_minutes,
-          current_duration: durationValue,
-          using_duration: durationForPricePerMinute,
-          pricePerMinute: calculatedPricePerMinute
-        })
-
-        dynamicPricing.value = {
-          pricePerMinute: calculatedPricePerMinute,
-          adminFeeChf: parseFloat(priceResult.admin_fee_chf),
-          adminFeeRappen: priceResult.admin_fee_rappen || 0,
-          adminFeeAppliesFrom: 2,
-          appointmentNumber: priceResult.appointment_number,
-          hasAdminFee: priceResult.admin_fee_rappen > 0,
-          totalPriceChf: priceResult.total_chf,
-          category: formData.value.type,
-          duration: durationValue,
-          isLoading: false,
-          error: ''
-        }
-
-        logger.debug('💰 EventModal - Updated pricing data:', {
-          category: formData.value.type,
-          appointmentType: formData.value.appointment_type,
-          pricePerMinute: calculatedPricePerMinute,
-          adminFee: priceResult.admin_fee_chf,
-          totalPrice: priceResult.total_chf
-        })
-      } else {
-        logger.debug('📱 Using offline calculation')
-        calculateOfflinePrice(formData.value.type, durationValue, appointmentNum)
+      dynamicPricing.value = {
+        pricePerMinute: calculatedPricePerMinute,
+        adminFeeChf: parseFloat(priceResult.admin_fee_chf),
+        adminFeeRappen: priceResult.admin_fee_rappen || 0,
+        adminFeeAppliesFrom: 2,
+        appointmentNumber: priceResult.appointment_number,
+        hasAdminFee: priceResult.admin_fee_rappen > 0,
+        totalPriceChf: priceResult.total_chf,
+        category: capturedType,
+        duration: capturedDuration,
+        isLoading: false,
+        error: ''
       }
-    } catch (error) {
-      logger.debug('🔄 Price calculation failed, using offline fallback:', error)
-      calculateOfflinePrice(formData.value.type, formData.value.duration_minutes as number, appointmentNumber?.value || 1)
-    } finally {
-      _priceCalcInFlight = null
-    }
-  })()
 
-  return _priceCalcInFlight
+      logger.debug('💰 EventModal - Updated pricing data:', {
+        category: capturedType,
+        appointmentType: capturedAppointmentType,
+        pricePerMinute: calculatedPricePerMinute,
+        adminFee: priceResult.admin_fee_chf,
+        totalPrice: priceResult.total_chf
+      })
+    } else {
+      logger.debug('📱 Using offline calculation')
+      calculateOfflinePrice(capturedType, capturedDuration, appointmentNum)
+    }
+  } catch (error) {
+    logger.debug('🔄 Price calculation failed, using offline fallback:', error)
+    calculateOfflinePrice(capturedType, capturedDuration, appointmentNum)
+  }
 }
 
 // ✅ Get fallback duration based on category code
