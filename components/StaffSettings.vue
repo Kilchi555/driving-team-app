@@ -9,7 +9,7 @@
           <!-- Exam Statistics Button -->
           <button
             @click="openExamStatistics"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
           >
             <span>Statistik</span>
           </button>
@@ -17,7 +17,7 @@
           <!-- Cash Control Button -->
           <button
             @click="openCashControl"
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+            class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
           >
             <span>Kasse</span>
           </button>
@@ -26,7 +26,7 @@
           <button
             v-if="affiliateEnabled"
             @click="openAffiliateModal"
-            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+            class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
           >
             <span>Empfehlen</span>
           </button>
