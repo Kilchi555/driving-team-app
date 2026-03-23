@@ -30,6 +30,23 @@
       </div>
     </section>
 
+    <!-- Intro Section — Altstetten Focus -->
+    <section class="py-12 md:py-16 bg-gradient-to-b from-primary-50 to-white">
+      <div class="max-w-3xl mx-auto px-4 text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
+          Herzlich willkommen in unserem Hauptstandort
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p class="text-lg leading-relaxed">
+            Zürich-Altstetten ist das Zentrum des <strong>Driving Team</strong>. Hier finden alle Kurse statt – von Nothelferkursen bis zu Verkehrskunde – und hier starten Ihre Fahrstunden.
+          </p>
+          <p class="text-lg leading-relaxed">
+            <strong>Zentral gelegen</strong> • <strong>Flexible Zeiten</strong> • <strong>Professionelle Instruktoren</strong> • <strong>Ab CHF 95.–/Lektion</strong>
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- 2. Features (weiß) — Warum wir -->
     <FeatureSection
       title="Warum Driving Team Zürich Altstetten?"
