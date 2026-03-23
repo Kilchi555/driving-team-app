@@ -205,9 +205,28 @@
             <p class="text-base md:text-lg leading-relaxed">
               Unser Hauptstandort in <strong>Zürich-Altstetten</strong> ist das Zentrum unserer Fahrschule. Hier finden alle Kurse statt: Nothelferkurs, Verkehrskunde (VKU), Theorie-Unterricht.
             </p>
-            <p class="text-base md:text-lg leading-relaxed">
-              Professionelle Instruktoren • Flexible Zeiten • Ab CHF 95.–/Lektion
-            </p>
+            <ul class="space-y-3">
+              <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>Professionelle Instruktoren</span>
+              </li>
+              <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>Flexible Zeiten</span>
+              </li>
+              <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>Ab CHF 95.–/Lektion</span>
+              </li>
+              <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
+                <span class="text-primary-600 font-bold">✓</span>
+                <span>
+                  <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:text-primary-700 font-semibold underline">
+                    Online Buchung
+                  </a>
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
         <h2 class="sr-only">Unsere Fahrschule führt folgende Kurse durch</h2>
