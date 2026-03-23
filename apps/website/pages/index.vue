@@ -9,7 +9,7 @@
       
       <!-- Open Graph -->
       <Meta property="og:title" content="Fahrschule Zürich & Lachen | Driving Team - Wir sind Profis für allen Kategorien" />
-      <Meta property="og:description" content="Professionelle Fahrschule in Zürich & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot. Ab CHF 95.-/Lektion, 85% Erfolgsquote, flexible Zeiten." />
+      <Meta property="og:description" content="Professionelle Fahrschule in Zürich & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Motorboot, etc. 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
