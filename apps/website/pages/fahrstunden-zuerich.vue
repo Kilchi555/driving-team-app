@@ -419,7 +419,13 @@
       </div>
     </section>
 
-    <!-- Booking CTA -->
+    <!-- Warum Section - Fahrstunden Zürich Keywords -->
+    <WarumSection category="fahrstunden-zuerich" />
+
+    <!-- Reviews - Social Proof VOR Booking CTA! -->
+    <ReviewsSection category="zuerich" />
+
+    <!-- Booking CTA - Nach Social Proof für höhere Conversion -->
     <section class="py-20 bg-gradient-to-r from-primary-600 to-primary-800 text-white">
       <div class="max-w-4xl mx-auto px-4 text-center">
         <h2 class="text-4xl md:text-5xl font-black mb-6">Bereit für Deine erste Fahrstunde in Zürich?</h2>
@@ -431,12 +437,6 @@
         </a>
       </div>
     </section>
-
-    <!-- Warum Section - Fahrstunden Zürich Keywords -->
-    <WarumSection category="fahrstunden-zuerich" />
-
-    <!-- Reviews -->
-    <ReviewsSection category="zuerich" />
 
     <!-- Other Locations -->
     <StandorteSection exclude="zuerich" />
