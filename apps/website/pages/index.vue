@@ -36,12 +36,14 @@
 
       <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
         <!-- Hero Headline (optimiert für SEO, dezent gestylt) -->
-        <div class="mb-6 md:mb-10">
+        <div>
           <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase mb-4">
-            Fahrstunden Zürich & Lachen – Alle Kategorien
+            <span>Fahrstunden Zürich & Lachen</span>
+            <span class="hidden md:inline"> – </span>
+            <span class="block md:inline">Alle Kategorien</span>
           </h1>
           <p class="sr-only">
-            Professionelle Fahrstunden in Zürich-Altstetten & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
+            Professionelle Fahrstunden in Zürich & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
           </p>
         </div>
         <div class="w-full max-w-7xl">
@@ -195,6 +197,11 @@
     <!-- Courses Section -->
     <section id="kurse" class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
+        <div class="mb-16">
+          <p class="text-lg text-gray-700 max-w-3xl mx-auto mb-12 leading-relaxed">
+            Fahrstunden in Zürich-Altstetten und Lachen. Unser Hauptstandort ist in Zürich-Altstetten, wo alle Kurse (Nothelfer, Theorie, VKU) stattfinden. Professionelle Instruktoren, flexible Zeiten, ab CHF 95.-/Lektion.
+          </p>
+        </div>
         <h2 class="sr-only">Unsere Fahrschule führt folgende Kurse durch</h2>
         
         <!-- Theorie & Grundkurse -->
@@ -332,6 +339,16 @@
             </a>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Link zu Lachen Section -->
+    <section class="py-12 bg-gray-50 border-t border-gray-200">
+      <div class="max-w-5xl mx-auto px-4 text-center">
+        <p class="text-lg text-gray-700 mb-6">Fahrstunden auch in Lachen/SZ verfügbar</p>
+        <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition">
+          → Fahrstunden in Lachen
+        </a>
       </div>
     </section>
 
