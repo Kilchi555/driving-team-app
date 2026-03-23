@@ -2851,23 +2851,23 @@ const loadUserBillingAddresses = async () => {
   try {
     logger.debug('🏢 Loading billing addresses for user:', props.selectedStudent.id)
     
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('company_billing_addresses')
-      .select('*')
-      .eq('user_id', props.selectedStudent.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    // ✅ Use secure API instead of direct Supabase access
+    const response = await $fetch<any>('/api/staff/get-billing-address', {
+      query: {
+        user_id: props.selectedStudent.id
+      }
+    })
     
-    if (error) {
-      console.error('❌ Error loading billing addresses:', error)
-      return
+    if (response?.data) {
+      userBillingAddresses.value = [response.data]
+      logger.debug('✅ Loaded billing address for user')
+    } else {
+      userBillingAddresses.value = []
+      logger.debug('ℹ️ No billing address found')
     }
-    
-    userBillingAddresses.value = data || []
-    logger.debug('✅ Loaded', userBillingAddresses.value.length, 'billing addresses for user')
   } catch (err: any) {
     console.error('❌ Error in loadUserBillingAddresses:', err)
+    userBillingAddresses.value = []
   }
 }
 
