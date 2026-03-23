@@ -53,7 +53,7 @@
                 <p class="text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div class="group">
-                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">7/7</p>
+                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">6/7</p>
                 <p class="text-sm text-white/70">Tage verfügbar</p>
               </div>
               <div class="group">
@@ -78,22 +78,22 @@
             <div class="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 hover:border-white/40 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">🚗</p>
               <p class="font-bold mb-1 text-lg">Auto</p>
-              <p class="text-sm text-white/70">Ab CHF 95.-/45min</p>
+              <p class="text-sm text-white/70">CHF 95.-/45min</p>
             </div>
             <div class="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 hover:border-white/40 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">🏍️</p>
               <p class="font-bold mb-1 text-lg">Motorrad</p>
-              <p class="text-sm text-white/70">Ab CHF 120.-/45min</p>
+              <p class="text-sm text-white/70">CHF 95.-/45min</p>
             </div>
             <div class="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 hover:border-white/40 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">🚐</p>
               <p class="font-bold mb-1 text-lg">Anhänger</p>
-              <p class="text-sm text-white/70">Ab CHF 140.-/45min</p>
+              <p class="text-sm text-white/70">CHF 120.-/45min</p>
             </div>
             <div class="group bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">⭐</p>
               <p class="font-bold mb-1 text-lg">4.9/5.0</p>
-              <p class="text-sm text-white/70">366 Bewertungen</p>
+              <p class="text-sm text-white/70">368 Bewertungen</p>
             </div>
           </div>
         </div>
@@ -109,7 +109,7 @@
           </div>
           <h2 class="text-4xl md:text-5xl font-black text-gray-900 mb-4">Fahrstunden-Preise Zürich</h2>
           <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-            Fair, wettbewerbsfähig, alles inklusive. Keine versteckten Gebühren.
+            Fair, wettbewerbsfähig, zielorientiert.
           </p>
         </div>
         
@@ -119,37 +119,29 @@
             <thead>
               <tr class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
                 <th class="px-6 py-5 text-left font-bold text-lg">Kategorie</th>
-                <th class="px-6 py-5 text-left font-bold text-lg">Fahrzeug</th>
                 <th class="px-6 py-5 text-center font-bold text-lg">45 Min</th>
                 <th class="px-6 py-5 text-center font-bold text-lg">90 Min</th>
-                <th class="px-6 py-5 text-center font-bold text-lg">180 Min</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr class="hover:bg-primary-50 transition">
                 <td class="px-6 py-5 font-bold text-gray-900">🚗 Auto (B)</td>
-                <td class="px-6 py-5 text-gray-600">Automatik/Schaltung</td>
                 <td class="px-6 py-5 text-center"><span class="inline-block bg-green-100 text-green-700 font-bold px-4 py-2 rounded-lg">CHF 95.-</span></td>
-                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 180.-</span></td>
-                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 340.-</span></td>
+                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 190.-</span></td>
               </tr>
               <tr class="hover:bg-red-50 transition">
                 <td class="px-6 py-5 font-bold text-gray-900">🏍️ Motorrad (A1/A35/A)</td>
-                <td class="px-6 py-5 text-gray-600">Je nach Kategorie</td>
-                <td class="px-6 py-5 text-center"><span class="inline-block bg-red-100 text-red-700 font-bold px-4 py-2 rounded-lg">CHF 120.-</span></td>
-                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 230.-</span></td>
-                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 440.-</span></td>
+                <td class="px-6 py-5 text-center"><span class="inline-block bg-red-100 text-red-700 font-bold px-4 py-2 rounded-lg">CHF 95.-</span></td>
+                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 190.-</span></td>
               </tr>
               <tr class="hover:bg-orange-50 transition">
                 <td class="px-6 py-5 font-bold text-gray-900">🚐 Anhänger (BE)</td>
-                <td class="px-6 py-5 text-gray-600">Mit Anhängerzug</td>
-                <td class="px-6 py-5 text-center"><span class="inline-block bg-orange-100 text-orange-700 font-bold px-4 py-2 rounded-lg">CHF 140.-</span></td>
-                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 270.-</span></td>
-                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 520.-</span></td>
+                <td class="px-6 py-5 text-center"><span class="inline-block bg-orange-100 text-orange-700 font-bold px-4 py-2 rounded-lg">CHF 120.-</span></td>
+                <td class="px-6 py-5 text-center"><span class="font-bold text-gray-900">CHF 240.-</span></td>
               </tr>
               <tr class="bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-150 hover:to-gray-100 transition">
                 <td colspan="2" class="px-6 py-5 font-bold text-gray-900">⚙️ Admin-/Versicherungspauschale</td>
-                <td colspan="3" class="px-6 py-5 text-center font-bold text-primary-600">CHF 150.- (einmalig, für gesamte Ausbildung)</td>
+                <td colspan="3" class="px-6 py-5 text-center font-bold text-primary-600">CHF 120.- (einmalig, für gesamte Ausbildung)</td>
               </tr>
             </tbody>
           </table>
@@ -158,18 +150,18 @@
         <div class="mt-10 grid md:grid-cols-3 gap-6">
           <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
             <p class="text-3xl mb-2">💚</p>
-            <p class="font-bold text-gray-900 mb-2">Paketrabatte</p>
-            <p class="text-sm text-gray-600">Buche 10+ Fahrstunden und spare bis zu 15%</p>
+            <p class="font-bold text-gray-900 mb-2">Empfehlungs-Rabatte</p>
+            <p class="text-sm text-gray-600">Empfehle einen Freund und erhalte 50.- Rabatt auf deine nächste Fahrstunde.</p>
           </div>
           <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6">
             <p class="text-3xl mb-2">💳</p>
-            <p class="font-bold text-gray-900 mb-2">Flexible Zahlung</p>
-            <p class="text-sm text-gray-600">Online oder bar. Wir akzeptieren alle gängigen Zahlungsarten</p>
+            <p class="font-bold text-gray-900 mb-2">Online Zahlung</p>
+            <p class="text-sm text-gray-600">Online mit Twint, Debit- oder Kreditkarte.</p>
           </div>
           <div class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6">
             <p class="text-3xl mb-2">✨</p>
             <p class="font-bold text-gray-900 mb-2">Keine Versteckten Kosten</p>
-            <p class="text-sm text-gray-600">Alles ist in den Preisen enthalten: Fahrzeug, Versicherung, Benzin</p>
+            <p class="text-sm text-gray-600">Alles ist in den Preisen enthalten: Fahrzeug, Benzin, Instruktor:in, Bestätigung etc.</p>
           </div>
         </div>
       </div>
@@ -194,7 +186,7 @@
               <ul class="space-y-3 mb-8">
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> Automatik & Schaltung</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> Flexible Zeiten</li>
-                <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> Ab CHF 95.-/Lektion</li>
+                <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> CHF 95.-/Lektion</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-primary-600 font-bold">✓</span> 95% Erfolgsquote</li>
               </ul>
               <p class="text-3xl font-black text-primary-600 mb-4">CHF 95.-</p>
@@ -214,10 +206,10 @@
               <ul class="space-y-3 mb-8">
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-red-600 font-bold">✓</span> A1, A35kW, A</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-red-600 font-bold">✓</span> Erfahrene Instruktoren</li>
-                <li class="flex items-center gap-3 text-gray-700"><span class="text-red-600 font-bold">✓</span> Ab CHF 120.-/Lektion</li>
+                <li class="flex items-center gap-3 text-gray-700"><span class="text-red-600 font-bold">✓</span> CHF 95.-/Lektion</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-red-600 font-bold">✓</span> Moderne Fahrzeuge</li>
               </ul>
-              <p class="text-3xl font-black text-red-600 mb-4">CHF 120.-</p>
+              <p class="text-3xl font-black text-red-600 mb-4">CHF 95.-</p>
               <a href="/motorrad-fahrschule/" class="block w-full text-center bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition">
                 Motorrad Fahrstunden →
               </a>
@@ -234,10 +226,10 @@
               <ul class="space-y-3 mb-8">
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> Kategorie BE</li>
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> Professionelle Schulung</li>
-                <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> Ab CHF 140.-/Lektion</li>
-                <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> Kleine Gruppen</li>
+                <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> CHF 120.-/Lektion</li>
+                <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> Kleine Gruppen möglich</li>
               </ul>
-              <p class="text-3xl font-black text-orange-600 mb-4">CHF 140.-</p>
+              <p class="text-3xl font-black text-orange-600 mb-4">CHF 120.-</p>
               <a href="/anhaenger-fahrschule/" class="block w-full text-center bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition">
                 Anhänger Fahrstunden →
               </a>
@@ -280,7 +272,7 @@
               <span>💰 Wie viel kosten Fahrstunden in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Auto Fahrstunden kosten ab CHF 95.- pro 45-Minuten-Lektion in Zürich. Motorrad kostet ab CHF 120.- und Anhänger ab CHF 140.-. Hinzu kommt eine einmalige Pauschale von CHF 150.- für die Admin und Versicherung über die gesamte Fahrausbildung.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Auto Fahrstunden kosten CHF 95.- pro 45-Minuten-Lektion in Zürich. Motorrad kostet CHF 95.- und Anhänger CHF 120.-. Hinzu kommt eine einmalige Pauschale von CHF 120.- für die Admin und Versicherung über die gesamte Fahrausbildung (nicht Motorrad).</p>
           </details>
 
           <!-- Q2 -->
@@ -289,7 +281,7 @@
               <span>📅 Kann ich Fahrstunden in Zürich flexibel buchen?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja! Wir bieten Fahrstunden 7 Tage die Woche an – Morgen, Mittag, Abend. Buche einfach online über unser Buchungssystem. Wähle Datum, Uhrzeit und deine Kategorie. Du erhältst sofort eine Bestätigung mit deinem Fahrlehrernamen.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja! Wir bieten Fahrstunden 6 Tage die Woche an – Morgen, Mittag, Abend. Buche einfach online über unser Buchungssystem. Wähle Datum, Uhrzeit und deine Kategorie. Du erhältst sofort eine Bestätigung. Da wir ein Fahrlehrer-Team sind findest du immer einen freien Termin</p>
           </details>
 
           <!-- Q3 -->
@@ -316,7 +308,7 @@
               <span>❌ Kann ich eine Fahrstunde in Zürich stornieren?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja, Stornierungen sind möglich. Bitte teile uns mindestens 24 Stunden vor der geplanten Fahrstunde mit, falls du absagen möchtest. Bei kurzfristigen Absagen (unter 24 Stunden) können wir die Fahrstunde verrechnen.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja, Stornierungen sind möglich. Bitte sage die Fahrstunde direkt im App mindestens 24 Stunden vor der geplanten Fahrstunde ab, falls du absagen möchtest. Bei kurzfristigen Absagen (unter 24 Stunden) können wir die Fahrstunde verrechnen.</p>
           </details>
 
           <!-- Q6 -->
@@ -334,7 +326,7 @@
               <span>🚗 Welche Fahrzeuge werden bei den Fahrstunden in Zürich verwendet?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung. Alle Autos sind regelmässig gewartet und Vollkasko versichert. Bei Bedarf findest du auch ein Schaltgetriebe-Fahrzeug für deine Fahrstunden in Zürich.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung der Marke Seat und Audi. Alle Autos sind regelmässig gewartet und Vollkasko versichert. Bei Bedarf findest du auch ein Schaltgetriebe-Fahrzeug für deine Fahrstunden in Zürich.</p>
           </details>
 
           <!-- Q8 -->
@@ -345,7 +337,7 @@
             </summary>
             <div class="text-gray-600 px-6 pb-5 text-sm leading-relaxed space-y-2">
               <p>Zur ersten Fahrstunde in Zürich solltest du folgende Dinge mitbringen:</p>
-              <ul class="list-disc pl-5 space-y-1"><li>Deinen Lernfahrausweis (sehr wichtig!)</li><li>Deine Ausweisdokumente</li><li>Bequeme Kleidung und geeignete Schuhe (keine Flip-Flops oder Sandalen)</li><li>Eine Brille (falls du eine benötigst)</li></ul>
+              <ul class="list-disc pl-5 space-y-1"><li>Deinen Lernfahrausweis (sehr wichtig!)</li><li>Bequeme Kleidung und geeignete Schuhe (keine Flip-Flops oder Sandalen)</li><li>Eine Brille (falls du eine benötigst)</li></ul>
             </div>
           </details>
 
@@ -376,7 +368,7 @@
               <span>📍 Wo genau finden die Fahrstunden in Zürich statt?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Unsere Fahrstunden in Zürich finden hauptsächlich in Zürich-Altstetten statt – unserem Hauptstandort. Das Tätigkeitsgebiet erstreckt sich von Baden über Thalwil bis nach Bülach. Flexible Treffpunkte sind möglich – wir holen dich gerne zu Hause oder bei der Arbeit ab.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Unsere Fahrstunden in Zürich finden hauptsächlich in Zürich-Altstetten statt – unserem Hauptstandort. Das Tätigkeitsgebiet erstreckt sich von Baden über Thalwil bis nach Dübendorf. Flexible Treffpunkte sind möglich – wir holen dich gerne zu Hause oder bei der Arbeit nach Möglichkeitab.</p>
           </details>
 
           <!-- Q12 -->
@@ -385,7 +377,7 @@
               <span>🎓 Welche Ausbildung haben eure Fahrlehrer in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Alle unsere Fahrlehrers in Zürich haben eine vollumfängliche Ausbildung mit eidgenössischem Fachausweis absolviert. Zusätzlich besuchen sie jedes Jahr mindestens einen Weiterbildungstag. Kompetenz ist unsere Stärke!</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Alle unsere Fahrlehrer:innen in Zürich haben eine vollumfängliche Ausbildung mit eidgenössischem Fachausweis absolviert. Zusätzlich besuchen sie jedes Jahr mindestens einen Weiterbildungstag. Kompetenz ist unsere Stärke!</p>
           </details>
 
           <!-- Q13 -->
@@ -394,7 +386,7 @@
               <span>💳 Welche Zahlungsarten akzeptiert ihr für Fahrstunden in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Wir akzeptieren online Zahlung und bar. Alle gängigen Zahlungsarten werden unterstützt. Du kannst die Fahrstunden direkt nach der Buchung online bezahlen oder bar beim Fahrlehrer bezahlen.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Wir akzeptieren online Zahlung. Alle gängigen Zahlungsarten werden unterstützt. Du kannst die Fahrstunden direkt nach der Buchung online bezahlen.</p>
           </details>
 
           <!-- Q14 -->
@@ -403,7 +395,7 @@
               <span>⏰ Wie lange dauert eine Fahrstunde in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Eine Standard-Fahrstunde in Zürich dauert 45 Minuten. Dahinter steckt eine psychologische Auswahl – die Konzentration lässt nach dieser Zeit nach. Du kannst aber auch 90-Minuten oder 180-Minuten Fahrstunden buchen, wenn du möchtest.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Eine Standard-Fahrstunde in Zürich dauert 45 Minuten. Dahinter steckt eine psychologische Komponente – die Konzentration lässt nach dieser Zeit nach. Du kannst aber auch 90-Minuten buchen, wenn du möchtest. Je nach Übungsgebiet und Ausbildungsstand kann dies Sinn machen.</p>
           </details>
 
           <!-- Q15 -->
@@ -412,7 +404,7 @@
               <span>🎁 Gibt es Rabatte für Fahrstunden-Pakete in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja! Buche 10 oder mehr Fahrstunden im Voraus und spare bis zu 15% auf den regulären Preis. Kontaktiere uns direkt für ein individuelles Paketangebot – unsere Instruktoren helfen dir gerne weiter!</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Nein, aber für eine nachweisbare Empfehlung bekommst du 50.- Rabatt auf deine nächste Fahrstunde. </p>
           </details>
 
           <!-- Q16 -->
@@ -421,7 +413,7 @@
               <span>🏅 Wie hoch ist eure Erfolgsquote bei Fahrstunden in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Wir sind stolz auf unsere 95% Erfolgsquote bei der Fahrprüfung! Das ist deutlich über dem Schweizer Durchschnitt. Unsere Erfolgsgeheimnis: Professionelle Fahrlehrers, regelmässige Übungen und persönliches Coaching.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Wir sind stolz auf unsere 85% Erfolgsquote bei der Fahrprüfung! Das ist deutlich über dem Schweizer Durchschnitt. Unsere Erfolgsgeheimnis: Professionelle Fahrlehrer:innen, regelmässige Übungen und persönliches Coaching.</p>
           </details>
         </div>
       </div>
@@ -439,6 +431,9 @@
         </a>
       </div>
     </section>
+
+    <!-- Warum Section - Fahrstunden Zürich Keywords -->
+    <WarumSection category="fahrstunden-zuerich" />
 
     <!-- Reviews -->
     <ReviewsSection category="zuerich" />
