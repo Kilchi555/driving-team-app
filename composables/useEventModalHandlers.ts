@@ -171,41 +171,13 @@ const handleCategorySelected = async (category: any) => {
   selectedCategory.value = category
   
   if (category) {
-    try {
-      const response = await $fetch('/api/appointments/get-appointment-info', {
-        method: 'POST',
-        body: {
-          action: 'duration-by-category',
-          categoryCode: category.code,
-          staffId: formData.value.staff_id || currentUser?.id
-        }
-      }) as any
-
-      if (response?.success && response?.data) {
-        logger.debug('💰 Category data loaded from API')
-        selectedCategory.value = { 
-          ...category, 
-          lesson_duration_minutes: response.data.lesson_duration,
-          exam_duration_minutes: response.data.exam_duration
-        }
-        // ✅ Use correct durations based on appointment_type
-        const isExam = formData.value.appointment_type === 'exam'
-        availableDurations.value = isExam
-          ? [response.data.exam_duration || 135]
-          : [response.data.lesson_duration || 45]
-      }
-    } catch (err) {
-      console.error('❌ Error loading category from API:', err)
-    }
-    
-    // ✅ Load durations for this category and staff
+    // ✅ SINGLE API call for durations (merged to avoid duplicate requests)
     try {
       const staffId = formData.value.staff_id || currentUser?.id
       if (staffId) {
         logger.debug('⏱️ Loading durations for category:', category.code, 'staff:', staffId)
         const durations = await loadStaffDurations(category.code, staffId)
         
-        // Update available durations
         availableDurations.value = durations
         logger.debug('✅ Durations updated:', durations)
         
@@ -214,13 +186,12 @@ const handleCategorySelected = async (category: any) => {
         if (appointmentType === 'exam' && selectedCategory.value?.exam_duration_minutes) {
           const examDuration = selectedCategory.value.exam_duration_minutes
           formData.value.duration_minutes = examDuration
-          // Add exam duration to available durations if not present
           if (!availableDurations.value.includes(examDuration)) {
             availableDurations.value = [examDuration, ...availableDurations.value].sort((a, b) => a - b)
           }
           logger.debug('🎯 Exam detected - using exam duration:', examDuration)
         }
-        // ✅ Auto-select first duration if current duration is not in the list (only for non-exams, only in create mode)
+        // ✅ Auto-select first duration if current duration is not in the list (only in create mode)
         else if (!durations.includes(formData.value.duration_minutes) && formData.value._mode !== 'edit' && formData.value._mode !== 'view') {
           formData.value.duration_minutes = durations[0] || 45
           logger.debug('🔄 Auto-selected duration:', formData.value.duration_minutes)
@@ -228,7 +199,6 @@ const handleCategorySelected = async (category: any) => {
       }
     } catch (err) {
       console.error('❌ Error loading durations:', err)
-      // Fallback to default durations
       availableDurations.value = [45]
     }
     
