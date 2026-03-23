@@ -514,6 +514,110 @@ export default defineNuxtConfig({
     '/thank-you-driving-lessons/': { redirect: { to: '/', statusCode: 301 } },
     '/thank-you-theory': { redirect: { to: '/', statusCode: 301 } },
     '/thank-you-theory/': { redirect: { to: '/', statusCode: 301 } },
+
+    // ===== FEHLENDE REDIRECTS FÜR GSC COVERAGE VALIDATION =====
+    // Kontrollfahrt
+    '/kontrollfahrt': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/kontrollfahrt/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/kontrollfahrt-2': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/kontrollfahrt-2/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+
+    // Alte Standorte (nicht mehr aktiv)
+    '/fahrschule-wil': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/fahrschule-wil/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/fahrschule-winterthur': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/fahrschule-winterthur/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/fahrschule-frauenfeld': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/fahrschule-frauenfeld/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+
+    // Basis-Seiten ohne Slash
+    '/kontakt': { redirect: { to: '/kontakt/', statusCode: 301 } },
+    '/team': { redirect: { to: '/team/', statusCode: 301 } },
+    '/agb': { redirect: { to: '/agb/', statusCode: 301 } },
+    '/datenschutz': { redirect: { to: '/datenschutz/', statusCode: 301 } },
+    '/blog': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/faq': { redirect: { to: '/faq/', statusCode: 301 } },
+    '/weiterbildung': { redirect: { to: '/weiterbildungen/', statusCode: 301 } },
+    '/motorboot-theorie': { redirect: { to: '/motorboot-theorie/', statusCode: 301 } },
+    '/nothelfer': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+    '/lastwagen-theorie': { redirect: { to: '/lastwagen-theorie/', statusCode: 301 } },
+    '/taxi-theorie': { redirect: { to: '/taxi-theorie/', statusCode: 301 } },
+    '/nothelferkurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+    '/taxi': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/anhaenger': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/fahrschule': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/vku': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+
+    // Mehrsprachige Seiten - alte Locations (Frauenfeld, Winterthur, Wil)
+    '/it/fahrschule-wil': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
+    '/it/fahrschule-wil/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
+    '/it/fahrschule-winterthur': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
+    '/it/fahrschule-winterthur/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
+    '/it/fahrschule-frauenfeld': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
+    '/it/fahrschule-frauenfeld/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
+
+    '/en/fahrschule-wil': { redirect: { to: '/', statusCode: 301 } },
+    '/en/fahrschule-wil/': { redirect: { to: '/', statusCode: 301 } },
+    '/en/fahrschule-kloten': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/en/fahrschule-kloten/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+
+    '/sq/fahrschule-wil': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/fahrschule-wil/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Mehrsprachige Kontrollfahrt
+    '/en/kontrollfahrt': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/en/kontrollfahrt/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/sq/kontrollfahrt': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/sq/kontrollfahrt/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/it/kontrollfahrt': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    '/it/kontrollfahrt/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+
+    // Mehrsprachige Danke-Seiten (zusätzliche)
+    '/en/danke-auto-theorie': { redirect: { to: '/', statusCode: 301 } },
+    '/en/danke-auto-theorie/': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/danke-auto-theorie': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/danke-auto-theorie/': { redirect: { to: '/', statusCode: 301 } },
+    '/it/danke-auto-theorie': { redirect: { to: '/', statusCode: 301 } },
+    '/it/danke-auto-theorie/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Fehlerhafte URL-Varianten aus GSC
+    '/wab-kurse-zuerich': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/wab-kurse-zuerich/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/wab-kurse-schwyz': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/wab-kurse-schwyz/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+
+    // Mehrsprachige WAB Kurse
+    '/en/wab-course-english': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/en/wab-course-english/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/it/wab-course-english': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/it/wab-course-english/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/sq/wab-course-english': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    '/sq/wab-course-english/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+
+    // Mehrsprachige Seiten-Varianten ohne Abschluss-Slash
+    '/en/motorrad-fahrstunden)': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/it/motorrad-fahrstunden)': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/sq/motorrad-fahrstunden)': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+
+    // VKU Varianten
+    '/vku-zurich': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/vku-zurich/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
+    '/vku-lachen': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
+    '/vku-lachen/': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
+
+    // CZV Kurse
+    '/czv-kurse': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
+    '/czv-kurse/': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
+
+    // Bus-Theorie und weitere Theorie-Kurse
+    '/bustheorie': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
+    '/bustheorie/': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
+    '/carbustheorie': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
+    '/carbustheorie/': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
+
+    // Bootsfahrschule Varianten
+    '/bootsfahrschule': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    '/bootsfahrschule/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
   },
 
   // Sitemap wird als static file serviert: /public/sitemap.xml
