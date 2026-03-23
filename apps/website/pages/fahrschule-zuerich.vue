@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrstunden Zürich Altstetten | Auto & Motorrad | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden in Zürich-Altstetten ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 95% Erfolgsquote ✓ Flexible Termine ✓ Professionelle Instruktoren. Jetzt buchen!" />
-      <Meta name="keywords" content="Fahrstunden Zürich Altstetten, Fahrschule Zürich, Auto Fahrschule Zürich Altstetten, Motorrad Fahrschule Zürich, Fahrstunden Altstetten" />
-      <Meta property="og:title" content="Fahrstunden Zürich Altstetten – Auto & Motorrad | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrstunden in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 95% Erfolgsquote, flexible Zeiten." />
+      <Title>Fahrschule in Zürich-Altstetten | Auto, Motorrad, Anhänger | Driving Team</Title>
+      <Meta name="description" content="Fahrschule in Zürich-Altstetten ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 95% Erfolgsquote ✓ Flexible Termine ✓ Professionelle Instruktoren. Jetzt online buchen!" />
+      <Meta name="keywords" content="Fahrschule Zürich-Altstetten, Auto Fahrschule Zürich Altstetten, Motorrad Fahrschule Zürich Altstetten, Anhänger Fahrschule Zürich Altstetten, Lastwagen Fahrschule Zürich Altstetten, Taxi Fahrschule Zürich Altstetten, Bus Fahrschule Zürich Altstetten, Motorboot Fahrschule Zürich Altstetten, Fahrschule Altstetten" />
+      <Meta property="og:title" content="Fahrschule Zürich-Altstetten – Auto & Motorrad | Driving Team" />
+      <Meta property="og:description" content="Professionelle Fahrschule in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 95% Erfolgsquote, flexible Zeiten." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -16,13 +16,13 @@
     <!-- Breadcrumb Navigation -->
     <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich' }]" />
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/zuerich-hero.webp" alt="Fahrstunden in Zürich-Altstetten – Auto, Motorrad, Anhänger mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule in Zürich-Altstetten – Auto, Motorrad, Anhänger mit der Fahrschule Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrstunden in Zürich-Altstetten</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Unser Hauptstandort. Professionelle Fahrstunden für Auto, Motorrad und Anhänger. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
+          <h1 class="heading-lg text-white mb-6">Fahrschule in Zürich-Altstetten</h1>
+          <p class="hidden xs:block text-xl text-white mb-8">Unser Hauptstandort. Professionelle Fahrschule für Auto, Motorrad und Anhänger. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
           <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -38,7 +38,7 @@
         </h2>
         <div class="space-y-4 text-gray-700">
           <p class="text-lg leading-relaxed">
-            Zürich-Altstetten ist das Zentrum des <strong>Driving Team</strong>. Hier finden alle Kurse statt – von Nothelferkursen bis zu Verkehrskunde – und hier starten Ihre Fahrstunden.
+            Zürich-Altstetten ist das Zentrum der Fahrschule <strong>Driving Team</strong>. Hier führen wir alle Kurse durch – von Nothelferkursen bis zu Verkehrskunde und Motorrad-Grundkursen – und hier starten Ihre Fahrstunden.
           </p>
           <p class="text-lg leading-relaxed">
             <strong>Zentral gelegen</strong> • <strong>Flexible Zeiten</strong> • <strong>Professionelle Instruktoren</strong> • <strong>Ab CHF 95.–/Lektion</strong>
@@ -49,7 +49,7 @@
 
     <!-- 2. Features (weiß) — Warum wir -->
     <FeatureSection
-      title="Warum Driving Team Zürich Altstetten?"
+      title="Warum die Fahrschule Driving Team in Zürich Altstetten?"
       subtitle="Unser Hauptstandort in Zürich-Altstetten. Hier finden alle Kurse (Nothelfer, VKU, Theorie) statt. Melde Dich an und du kannst folgende Punkte von uns erwarten…"
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
@@ -69,7 +69,7 @@
     <ReviewsSection category="zuerich" />
 
     <!-- 6. CTA (primary) & Preise — Jetzt buchen -->
-    <CtaSection title="Jetzt in Zürich starten!" />
+    <CtaSection title="Jetzt in Zürich-Alstetten starten!" />
 
     <PriceSection />
 
@@ -214,7 +214,7 @@
     <WarumSection category="zuerich" />
 
     <!-- 9. Finale CTA (primary) -->
-    <CtaSection title="Bereit? Jetzt Termin buchen!" />
+    <CtaSection title="Bereit? Jetzt Termin in Zürich-Altstetten buchen!" />
 
     <!-- 10. Andere Standorte (weiß) -->
     <StandorteSection exclude="zuerich" />

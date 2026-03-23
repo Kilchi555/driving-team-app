@@ -337,10 +337,10 @@ export default defineNuxtConfig({
     '/grundkurs-zuerich/': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
 
     // Fahrstunden-Zürich Varianten (neue Keywords)
-    '/fahrstunden-zurich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
-    '/fahrstunden-zurich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
-    '/fahrstunden-zürich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
-    '/fahrstunden-zürich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    '/fahrstunden-zurich': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
+    '/fahrstunden-zurich/': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
+    '/fahrstunden-zürich': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
+    '/fahrstunden-zürich/': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
 
     // Englische Seiten (weitere)
     '/driving-lessons': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
