@@ -123,6 +123,42 @@ export default defineEventHandler(async (event) => {
       rewardRappen = categoryReward.reward_rappen
       logger.debug('✅ [Affiliate] Found category-specific reward:', { driving_category, rewardRappen })
     }
+
+    // Fallback: try parent category if no reward found for exact code
+    if (rewardRappen <= 0) {
+      const { data: catRow } = await supabaseAdmin
+        .from('categories')
+        .select('parent_category_id')
+        .eq('code', driving_category)
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle()
+
+      if (catRow?.parent_category_id) {
+        const { data: parentCat } = await supabaseAdmin
+          .from('categories')
+          .select('code')
+          .eq('id', catRow.parent_category_id)
+          .maybeSingle()
+
+        if (parentCat?.code) {
+          const { data: parentReward } = await supabaseAdmin
+            .from('affiliate_category_rewards')
+            .select('reward_rappen')
+            .eq('tenant_id', tenant_id)
+            .eq('driving_category', parentCat.code)
+            .eq('is_active', true)
+            .is('course_id', null)
+            .maybeSingle()
+
+          if (parentReward) {
+            rewardRappen = parentReward.reward_rappen
+            logger.debug('✅ [Affiliate] Found parent category reward:', { driving_category, parentCode: parentCat.code, rewardRappen })
+          }
+        }
+      }
+    }
   }
 
   // Fallback: global tenant reward setting
