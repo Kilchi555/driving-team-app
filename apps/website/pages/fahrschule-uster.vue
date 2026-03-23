@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>Auto Fahrschule Uster | 6 Schritte zur Autofahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Uster - Auto, Motorrad, Lastwagen Fahrstunden im Zürcher Oberland. 95% Erfolgsquote, erfahrene Fahrlehrer, flexible Zeiten. Jetzt Termin buchen!" />
+      <Meta name="description" content="Fahrschule Uster - Auto, Motorrad, Lastwagen Fahrstunden im Zürcher Oberland. 85% Erfolgsquote, erfahrene Fahrlehrer, flexible Zeiten. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Fahrschule Uster – Auto & Motorrad im Zürcher Oberland | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Uster ZH. 95% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten." />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in Uster ZH. 85% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-uster/" />
       
       
@@ -12,6 +12,7 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
           <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="date" :content="new Date().toISOString()" />
     </Head>
 
     <!-- 1. Hero -->

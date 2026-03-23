@@ -2,14 +2,14 @@
   <div>
     <Head>
       <Title>Fahrschule Zürich & Lachen | Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot | Driving Team</Title>
-      <Meta name="description" content="Fahrschule in Zürich & Lachen ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 95% Erfolgsquote ✓ Professionelle Instruktoren ✓ Flexible Termine. Termin online buchen!" />
+      <Meta name="description" content="Fahrschule in Zürich & Lachen ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 85% Erfolgsquote ✓ Professionelle Instruktoren ✓ Flexible Termine. Termin online buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrschule Lachen, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Bus Fahrschule Zürich, Motorboot Fahrschule Lachen" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
       <Meta property="og:title" content="Fahrschule Zürich & Lachen | Driving Team - Wir sind Profis für allen Kategorien" />
-      <Meta property="og:description" content="Professionelle Fahrschule in Zürich & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot. Ab CHF 95.-/Lektion, 95% Erfolgsquote, flexible Zeiten." />
+      <Meta property="og:description" content="Professionelle Fahrschule in Zürich & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot. Ab CHF 95.-/Lektion, 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -44,7 +44,7 @@
             <span class="block md:inline">Alle Kategorien</span>
           </h1>
           <p class="sr-only">
-            Professionelle Fahrschule in Zürich & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
+            Professionelle Fahrschule in Zürich & Lachen. Ab CHF 95.-/Lektion mit 85% Erfolgsquote.
           </p>
         </div>
         <div class="w-full max-w-7xl">

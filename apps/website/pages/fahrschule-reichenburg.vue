@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>Fahrschule Reichenburg | In 6 Schritten zur Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Reichenburg - Auto, Motorrad, Lastwagen Fahrstunden im Kanton Schwyz. English & Deutsch, 95% Erfolgsquote, flexible Zeiten. Jetzt Termin buchen!" />
+      <Meta name="description" content="Fahrschule Reichenburg - Auto, Motorrad, Lastwagen Fahrstunden im Kanton Schwyz. English & Deutsch, 85% Erfolgsquote, flexible Zeiten. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Fahrschule Reichenburg – Auto & Motorrad | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Reichenburg SZ. Englisch & Deutsch, 95% Erfolgsquote, flexible Zeiten." />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in Reichenburg SZ. Englisch & Deutsch, 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-reichenburg/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-reichenburg/" />
       
