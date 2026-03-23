@@ -404,6 +404,4 @@ definePageMeta({
 })
 
 const instructors = getInstructorsByLocation('zuerich')
-
-useHead({ script: jsonLdScripts })
 </script>
