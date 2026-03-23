@@ -137,7 +137,8 @@
           <!-- Gesamtpreis (nach Guthaben) -->
           <div class="flex justify-between text-lg font-bold">
             <span class="text-gray-700">Zu bezahlen</span>
-            <span class="text-blue-600">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice * 100)) / 100).toFixed(2) }}</span>
+            <span v-if="props.isCalculatingPrice" class="text-gray-400 text-base italic font-normal">wird berechnet...</span>
+            <span v-else class="text-blue-600">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice * 100)) / 100).toFixed(2) }}</span>
           </div>
           
           <!-- Gratis Info wenn vollständig durch Guthaben gedeckt -->
@@ -635,6 +636,7 @@ interface Props {
   appointmentId?: string // ✅ NEU: Appointment ID für Payment-Daten laden
   studentCredit?: any // ✅ NEU: Student credit information
   isLoadingCredit?: boolean // ✅ NEU: Loading state for credit
+  isCalculatingPrice?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -651,7 +653,8 @@ const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
   appointmentId: undefined,
   studentCredit: undefined,
-  isLoadingCredit: false
+  isLoadingCredit: false,
+  isCalculatingPrice: false
 })
 
 // Emits
