@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /.nuxt/
+Disallow: /node_modules/
+Disallow: /_nuxt/
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemap
+Sitemap: https://drivingteam.ch/sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 1
