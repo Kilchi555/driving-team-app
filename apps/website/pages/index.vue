@@ -570,7 +570,6 @@ const jsonLdScripts = [
     "ratingValue": 4.9,
     "bestRating": 5,
     "worstRating": 1,
-    "ratingCount": 366,
     "reviewCount": 366
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
