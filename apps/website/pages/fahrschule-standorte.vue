@@ -38,7 +38,7 @@
         <!-- Zürich -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-primary-600">
           <div class="h-40 bg-gradient-to-br from-primary-500 to-primary-700 overflow-hidden">
-            <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Zürich" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Zürich-Altstetten – Auto, Motorrad, Anhänger Fahrstunden mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-primary-600 mb-2">Zürich-Altstetten</h3>
@@ -57,7 +57,7 @@
         <!-- Lachen -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-red-600">
           <div class="h-40 bg-gradient-to-br from-red-500 to-red-700 overflow-hidden">
-            <img src="/images/locations/lachen-hero.webp" alt="Fahrschule Lachen" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/lachen-hero.webp" alt="Fahrschule Lachen – Auto, Motorrad, Anhänger und Motorboot mit Driving Team in Kanton Schwyz" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-red-600 mb-2">Lachen</h3>
@@ -76,7 +76,7 @@
         <!-- Pfäffikon -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-blue-600">
           <div class="h-40 bg-gradient-to-br from-blue-500 to-blue-700 overflow-hidden">
-            <img src="/images/locations/pfaeffikon-hero.webp" alt="Fahrschule Pfäffikon/SZ" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/pfaeffikon-hero.webp" alt="Fahrschule Pfäffikon/SZ – Auto, Motorrad, Lastwagen, Bus, Anhänger Fahrstunden mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-blue-600 mb-2">Pfäffikon/SZ</h3>
@@ -95,7 +95,7 @@
         <!-- Uster -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-yellow-600">
           <div class="h-40 bg-gradient-to-br from-yellow-500 to-yellow-700 overflow-hidden">
-            <img src="/images/locations/uster-hero.webp" alt="Fahrschule Uster" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/uster-hero.webp" alt="Fahrschule Uster/ZH – Auto und Motorrad Fahrstunden im Zürcher Oberland mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-yellow-600 mb-2">Uster</h3>
@@ -114,7 +114,7 @@
         <!-- St. Gallen -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-green-600">
           <div class="h-40 bg-gradient-to-br from-green-500 to-green-700 overflow-hidden">
-            <img src="/images/locations/stgallen-hero.webp" alt="Fahrschule St.Gallen" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/stgallen-hero.webp" alt="Fahrschule St. Gallen – Auto, Motorrad, Lastwagen, Bus, Anhänger mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-green-600 mb-2">St. Gallen</h3>
@@ -133,7 +133,7 @@
         <!-- Dietikon -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-purple-600">
           <div class="h-40 bg-gradient-to-br from-purple-500 to-purple-700 overflow-hidden">
-            <img src="/images/locations/dietikon-hero.webp" alt="Fahrschule Dietikon" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/dietikon-hero.webp" alt="Fahrschule Dietikon – Auto und Anhänger Fahrstunden im Limmattal mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-purple-600 mb-2">Dietikon</h3>
@@ -152,7 +152,7 @@
         <!-- Aargau -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-orange-600">
           <div class="h-40 bg-gradient-to-br from-orange-500 to-orange-700 overflow-hidden">
-            <img src="/images/locations/aargau-hero.webp" alt="Fahrschule Aargau" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/aargau-hero.webp" alt="Fahrschule Aargau – Auto und Anhänger Fahrstunden in Baden und Wettingen mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-orange-600 mb-2">Aargau</h3>
@@ -171,7 +171,7 @@
         <!-- Reichenburg -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-cyan-600">
           <div class="h-40 bg-gradient-to-br from-cyan-500 to-cyan-700 overflow-hidden">
-            <img src="/images/locations/reichenburg-hero.webp" alt="Fahrschule Reichenburg" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/reichenburg-hero.webp" alt="Fahrschule Reichenburg/SZ – Auto, Motorrad und Anhänger mit Driving Team im Kanton Schwyz" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6">
             <h3 class="text-2xl font-bold text-cyan-600 mb-2">Reichenburg</h3>

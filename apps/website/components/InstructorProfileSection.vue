@@ -25,7 +25,7 @@
                 <img
                   v-if="instructor.image"
                   :src="instructor.image"
-                  :alt="instructor.name"
+                  :alt="`${instructor.name}, ${instructor.title} bei Driving Team`"
                   class="w-full h-full object-cover"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center text-xl">👨‍🏫</div>

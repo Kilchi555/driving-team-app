@@ -1,15 +1,15 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrstunden Zürich & Lachen | Auto, Motorrad, Anhänger | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden in Zürich-Altstetten & Lachen ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 95% Erfolgsquote ✓ Professionelle Instruktoren ✓ Flexible Termine. Jetzt buchen!" />
-      <Meta name="keywords" content="Fahrstunden Zürich, Fahrschule Zürich, Auto Fahrschule Zürich, Fahrstunden Lachen, Motorrad Fahrschule Zürich, Prüfungsvorbereitung Zürich" />
+      <Title>Fahrschule Zürich & Lachen | Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot | Driving Team</Title>
+      <Meta name="description" content="Fahrschule in Zürich & Lachen ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 95% Erfolgsquote ✓ Professionelle Instruktoren ✓ Flexible Termine. Termin online buchen!" />
+      <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrschule Lachen, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Bus Fahrschule Zürich, Motorboot Fahrschule Lachen" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
-      <Meta property="og:title" content="Fahrstunden Zürich & Lachen | Driving Team - Auto & Motorrad" />
-      <Meta property="og:description" content="Professionelle Fahrstunden in Zürich-Altstetten & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot. Ab CHF 95.-/Lektion, 95% Erfolgsquote, flexible Zeiten." />
+      <Meta property="og:title" content="Fahrschule Zürich & Lachen | Driving Team - Wir sind Profis für allen Kategorien" />
+      <Meta property="og:description" content="Professionelle Fahrschule in Zürich & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Bus, Motorboot. Ab CHF 95.-/Lektion, 95% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -20,7 +20,7 @@
       
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Zürich | Driving Team" />
+      <Meta name="twitter:title" content="Fahrschule Zürich & Lachen | Driving Team" />
       <Meta name="twitter:description" content="Auto, Motorrad, Taxi & Lastwagen Fahrschule in Zürich - professionelle Fahrausbildung mit hoher Prüfungserfolgsquote" />
       
       <!-- Canonical & Language -->
@@ -38,16 +38,16 @@
         <!-- Hero Headline (optimiert für SEO, dezent gestylt) -->
         <div>
           <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase mb-4">
-            <span>Fahrstunden Zürich & Lachen</span>
+            <span>Fahrschule Zürich & Lachen</span>
             <span class="hidden md:inline"> – </span>
             <span class="block md:inline">Alle Kategorien</span>
           </h1>
           <p class="sr-only">
-            Professionelle Fahrstunden in Zürich & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
+            Professionelle Fahrschule in Zürich & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
           </p>
         </div>
         <div class="w-full max-w-7xl">
-          <h2 class="sr-only">Fahrstunden in Zürich für alle Kategorien</h2>
+          <h2 class="sr-only">Fahrschule in Zürich für alle Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
@@ -60,7 +60,7 @@
                   <p class="text-white font-semibold">Kategorie B</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Auto Führerschein Klasse B. Professionelle Fahrerausbildung für alle Altersgruppen in Zürich.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Auto Führerausweis Kategorie B. Professionelle Fahrausbildung für alle Altersgruppen in Zürich.</p>
                 </div>
               </div>
             </a>
@@ -76,7 +76,7 @@
                   <p class="text-red-100 font-semibold">Kategorie A1/A35kW/A</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Motorrad Fahrschule für A1, A35kW und A. Sicher fahren auf zwei Rädern mit erfahrenen Fahrlehrern.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Motorrad Fahrschule für die Kategorien A1, A35kW und A. Sicher fahren auf zwei Rädern mit erfahrenen Fahrlehrern.</p>
                 </div>
               </div>
             </a>
@@ -92,7 +92,7 @@
                   <p class="text-yellow-100 font-semibold">Kategorie C1/C/CE</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Lastwagen Führerschein C1, C und CE. Professionelle Ausbildung für Lkw-Fahrer in Zürich.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Lastwagen Führerausweis Kategorie C1, C und CE. Professionelle Ausbildung für LKW-Fahrer in Zürich & Lachen.</p>
                 </div>
               </div>
             </a>
@@ -108,7 +108,7 @@
                   <p class="text-purple-100 font-semibold">Kategorie BPT</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Taxi Führerschein BPT. Zertifizierte Ausbildung für professionelle Taxifahrer.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Taxi Führerausweis BPT. Zertifizierte Ausbildung für professionelle Taxifahrer in Zürich und Lachen.</p>
                 </div>
               </div>
             </a>
@@ -124,7 +124,7 @@
                   <p class="text-green-100 font-semibold">Kategorie D1/D</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Bus Führerschein D1/D. Fahrausbildung für Busfahrer und Fahrzeuglenker.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Bus Führerausweis D1/D. Fahrausbildung für Busfahrer und Fahrzeuglenker.</p>
                 </div>
               </div>
             </a>
@@ -140,7 +140,7 @@
                   <p class="text-orange-100 font-semibold">Kategorie BE</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Anhänger Führerschein BE. Sichere Ausbildung zum Fahren mit Anhänger in Zürich.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Anhänger Führerausweis Kategorie BE. Sichere Ausbildung zum Fahren mit Anhänger in Zürich.</p>
                 </div>
               </div>
             </a>
@@ -156,7 +156,7 @@
                   <p class="text-cyan-100 font-semibold">Bootführerschein</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Motorboot Führerschein. Sichere Bootsausbildung auf See und Binnengewässer.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Motorboot Führerschein. Sichere Motorboot-Fahrausbildung auf dem See ab Lachen/SZ.</p>
                 </div>
               </div>
             </a>
@@ -172,7 +172,7 @@
                   <p class="text-white font-semibold">Alle Kategorien</p>
                 </div>
                 <div class="absolute inset-0 p-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Kontrollfahrten für alle Führerschein-Kategorien. Professionelle Vorbereitung auf die Prüfung.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Kontrollfahrten für alle Führerausweis-Kategorien. Professionelle Vorbereitung auf die Kontrollfahrt.</p>
                 </div>
               </div>
             </a>
@@ -199,20 +199,20 @@
       <div class="max-w-7xl mx-auto px-4">
         <div class="mb-16">
           <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6">
-            Fahrstunden in Zürich-Altstetten & Lachen
+            Fahrschule in Zürich & Lachen
           </h2>
           <div class="max-w-3xl mx-auto space-y-3 text-gray-600">
             <p class="text-base md:text-lg leading-relaxed">
-              Unser Hauptstandort in <strong>Zürich-Altstetten</strong> ist das Zentrum unserer Fahrschule. Hier finden alle Kurse statt: Nothelferkurs, Verkehrskunde (VKU), Theorie-Unterricht.
+              Der Hauptstandort ist in <strong>Zürich</strong> . Die Nothelfer, Verkehrskunde und Theorie-Kurse finden jedoch an beiden Standorten statt.
             </p>
             <ul class="space-y-3">
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Professionelle Instruktoren</span>
+                <span>Professionelle & motivierte Instruktor:innen</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Flexible Zeiten</span>
+                <span>Flexible Zeiten & Treffpunkte</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
@@ -222,7 +222,7 @@
                 <span class="text-primary-600 font-bold">✓</span>
                 <span>
                   <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:text-primary-700 font-semibold underline">
-                    Online Buchung
+                    Online Buchung und Bezahlung
                   </a>
                 </span>
               </li>
@@ -247,7 +247,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">Auto Theorie</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Professionelle Theoriekurse für die Auto-Führerscheinprüfung in Zürich. Moderne Unterrichtsmethoden für sicheres Fahren.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Professionelle Theoriekurse für alle Kategorien in Zürich & Lachen. Moderne Unterrichtsmethoden für sicheres Fahren.</p>
                 </div>
               </div>
             </a>
@@ -262,7 +262,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">Nothelferkurse</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Lebensrettende Nothelferkurse für den Führerschein. Zertifiziert und praxisorientiert im Zentrum Zürich.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Lebensrettende Nothelferkurse für den Führerausweis. Zertifiziert und praxisorientiert in Zürich & Lachen.</p>
                 </div>
               </div>
             </a>
@@ -277,7 +277,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">Motorrad Grundkurs</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Fundierter Motorrad Grundkurs für A1, A35kW und A Kategorien. Sicher auf zwei Rädern durchs Zürcher Oberland.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Fundierter Motorrad Grundkurs für A1, A35kW und A Kategorien. Sicher auf zwei Rädern in Zürich & Lachen.</p>
                 </div>
               </div>
             </a>
@@ -292,7 +292,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">VKU Kurse</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Verkehrskundeunterricht für sichere Fahrer. Praxisorientierte VKU Kurse in Zürich und Lachen.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Verkehrskundeunterricht für sichere Fahrer:innen. Praxisorientierte VKU Kurse in Zürich und Lachen.</p>
                 </div>
               </div>
             </a>
@@ -315,7 +315,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">CZV Grundkurs</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">CZV Grundkurs für Berufskraftfahrer. Fachlich kompetent und zeiteffizient in Zürich-Altstetten.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">CZV Grundkurs für Berufsfahrer. Fachlich kompetent und zeiteffizient in Zürich & Lachen.</p>
                 </div>
               </div>
             </a>
@@ -330,7 +330,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">CZV Weiterbildung</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Kontinuierliche CZV Weiterbildung für Fahrzeuglenker. Professionelle Schulung im Driving Team.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Kontinuierliche CZV Weiterbildung für Berufs-Chauffeuren. Professionelle Schulung im Driving Team.</p>
                 </div>
               </div>
             </a>
@@ -345,7 +345,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">WAB Kurse</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Weiterbildung Allgemeine Fahrkompetenz (WAB). Expert trainiert in Zürich und Schwyz.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Weiterausbildungskurs nach der Fahrprüfung (WAB). Von den Fahrexperten der Transportschule in Pfäffikon/ZH und Tuggen/SZ durchgeführt.</p>
                 </div>
               </div>
             </a>
@@ -360,7 +360,7 @@
                   <h4 class="font-black text-lg md:text-xl text-white">Motorrad-Weiterbildung</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Motorrad Weiterbildung für erfahrene Fahrer. Sicherheit und Fahrtechnik auf höchstem Niveau.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Motorrad Weiterbildung für Anfänger:innen sowie erfahrene Motorradfahrer:innen. Sicherheit und Fahrtechnik auf höchstem Niveau.</p>
                 </div>
               </div>
             </a>
@@ -372,7 +372,7 @@
     <!-- Link zu Lachen Section -->
     <section class="py-12 bg-gray-50 border-t border-gray-200">
       <div class="max-w-5xl mx-auto px-4 text-center">
-        <p class="text-lg text-gray-700 mb-6">Fahrstunden auch in Lachen/SZ verfügbar</p>
+        <p class="text-lg text-gray-700 mb-6">Fahrstunden auch in <b>Lachen/SZ</b> verfügbar</p>
         <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition">
           → Fahrstunden in Lachen
         </a>
@@ -389,7 +389,7 @@
           <div class="bg-white rounded-xl p-8 shadow-lg border-t-4 border-primary-600">
             <h3 class="text-2xl font-bold text-primary-600 mb-4">📊 Alle Kategorien vergleichen</h3>
             <p class="text-gray-600 mb-6">
-              Unsicher welche Fahrschule zu dir passt? Vergleiche alle 7 Kategorien nach Kosten, Dauer und Anforderungen.
+              Unsicher welche Kategorie zu dir passt? Vergleiche alle 7 Kategorien nach Kosten, Dauer und Anforderungen.
             </p>
             <ul class="space-y-2 mb-6 text-sm text-gray-600">
               <li>✓ Detaillierte Vergleichstabelle</li>
@@ -405,7 +405,7 @@
           <div class="bg-white rounded-xl p-8 shadow-lg border-t-4 border-green-600">
             <h3 class="text-2xl font-bold text-green-600 mb-4">📍 Fahrschule in deiner Nähe</h3>
             <p class="text-gray-600 mb-6">
-              Finde unsere 7 Standorte in der Schweiz. Mit Öffnungszeiten, Kategorien und direktem Kontakt.
+              Finde unsere 8 Standorte in der Schweiz.
             </p>
             <ul class="space-y-2 mb-6 text-sm text-gray-600">
               <li>✓ Alle Standorte im Überblick</li>
@@ -423,12 +423,12 @@
 
     <!-- FAQ Section -->
     <section class="section-container py-20">
-      <h2 class="heading-md text-center mb-16">Die häufigsten Fragen & Antworten bezüglich der Fahrschule Driving Team</h2>
+      <h2 class="text-3xl text-center mb-16">Die häufigsten <b>Fragen & Antworten</b> bezüglich der Fahrschule Driving Team</h2>
       
       <div class="max-w-4xl mx-auto space-y-4">
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Wieviele Fahrstunden benötige ich?
+            Wieviele Fahrstunden benötige ich in der Fahrschule Zürich & Lachen?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
           <p class="text-gray-600 mt-4">Das ist eine sehr häufig gestellte Frage, die gleichzeitig sehr schwierig zu beantworten ist. Ein Fahrzeug fahren lernen kannst Du mit dem Erlernen einer neuen Sportart, eines neuen Instruments oder einer Fremdsprache vergleichen. Zu Beginn wirst Du die noch völlig unbekannte Sache als sehr schwierig empfinden und das von Dir gesteckte Ziel scheint noch unerreichbar zu sein. Wenn Du das Projekt Fahrprüfung jedoch seriös angehst, sprich die Tipps und Tricks des Fahrlehrers ernst nimmst und probierst umzusetzen, dann wirst Du Dein Ziel in nützlicher Zeit erreichen. Die meisten Auto-Fahrschüler:innen haben bis zur Fahrprüfung zwischen 15-30 Fahrlektionen. Wenn man keine Möglichkeit hat, um privat zu üben, dann bewegen sich die benötigten Fahrstunden in der Regel zwischen 30-50 Stück. </p>
@@ -444,10 +444,10 @@
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-            Wieso dauert die Fahrstunde des Driving Teams 45 Minuten?
+            Wieso dauert die Fahrstunde des Driving Teams in 45 Minuten?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vorallem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte.</p>
+          <p class="text-gray-600 mt-4">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vorallem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte. Im Stadtverkehr von Zürich ist man auch schnell nach 45 bis 60min ausgelaugt. Auf ländlichen Gebiet wie Lachen braucht man auch schnell mal 90min, wenn man irgendwo hinkommen möchte.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
