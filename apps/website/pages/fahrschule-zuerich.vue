@@ -11,6 +11,7 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="date" :content="new Date().toISOString()" />
     </Head>
 
     <!-- Breadcrumb Navigation -->
