@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>CZV Kurse | Berufliche Weiterbildung Lastwagen & Bus | Driving Team</Title>
-      <Meta name="description" content="CZV Kurse beim Driving Team. Grundkurs (140h) und Weiterbildung für Berufschauffeure. CZV Weiterbildung ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren. Jetzt informieren!" />
+      <Meta name="description" content="CZV Kurse beim Driving Team. Grundkurs und Weiterbildung für Berufschauffeure. CZV Weiterbildung ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren. Jetzt informieren!" />
       <Meta property="og:title" content="CZV Kurse – Berufliche Weiterbildung für Berufschauffeure | Driving Team" />
-      <Meta property="og:description" content="CZV Grundkurs (140h) und Weiterbildungskurse für Berufschauffeure. Ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren." />
+      <Meta property="og:description" content="CZV Grundkurs und Weiterbildungskurse für Berufschauffeure. Ab CHF 190.- pro Tag. 5 Kurse in 5 Jahren." />
       <Meta property="og:url" content="https://drivingteam.ch/czv-kurse/" />
       <Link rel="canonical" href="https://drivingteam.ch/czv-kurse/" />
       
@@ -20,7 +20,7 @@
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">CZV Kurse</h1>
         <p class="text-xl text-white mb-4">Obligatorische Berufliche Weiterbildung für Lastwagen- und Busfahrer</p>
-        <p class="text-primary-200 mb-8">CZV Grundkurs (140h) und Weiterbildung (5 x 7h in 5 Jahren)</p>
+        <p class="text-primary-200 mb-8">CZV Grundkurs und Weiterbildung (5 x 7h in 5 Jahren)</p>
         <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           ✉️ Anfrage stellen
         </a>
