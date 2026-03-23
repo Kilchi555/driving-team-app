@@ -97,14 +97,14 @@
         <!-- Hero Headline (optimiert für SEO, dezent gestylt) -->
         <div class="mb-6 md:mb-10">
           <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase mb-4">
-            Fahrstunden Zürich & Lachen - Auto, Motorrad & Anhänger mit 95% Erfolgsquote
+            Fahrstunden Zürich & Lachen – Alle Kategorien
           </h1>
           <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-4">
-            Professionelle Fahrstunden in Zürich-Altstetten & Lachen. Auto, Motorrad, Anhänger - flexibel, erfahren, erfolgreich. Ab CHF 95.-/Lektion. Jetzt Termin buchen!
+            Professionelle Fahrstunden in Zürich-Altstetten & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
           </p>
         </div>
         <div class="w-full max-w-7xl">
-          <h2 class="text-xs md:text-sm font-semibold text-gray-400 tracking-widest uppercase mb-8">Fahrstunden in Zürich für alle Kategorien</h2>
+          <h2 class="sr-only">Fahrstunden in Zürich für alle Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
@@ -238,12 +238,6 @@
 
         <!-- Button zu Kursen -->
         <div class="text-center mt-10">
-          <a
-            href="/fahrschule-zuerich/"
-            class="inline-flex items-center gap-2 bg-white text-primary-600 font-bold py-3 px-8 rounded-lg hover:bg-primary-50 transition shadow-lg text-lg mr-4"
-          >
-            Fahrstunden in Zürich Altstetten →
-          </a>
           <a
             href="#kurse"
             class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg text-lg"
