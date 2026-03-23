@@ -198,9 +198,17 @@
     <section id="kurse" class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
         <div class="mb-16">
-          <p class="text-lg text-gray-700 max-w-3xl mx-auto mb-12 leading-relaxed">
-            Fahrstunden in Zürich-Altstetten und Lachen. Unser Hauptstandort ist in Zürich-Altstetten, wo alle Kurse (Nothelfer, Theorie, VKU) stattfinden. Professionelle Instruktoren, flexible Zeiten, ab CHF 95.-/Lektion.
-          </p>
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6">
+            Fahrstunden in Zürich-Altstetten & Lachen
+          </h2>
+          <div class="max-w-3xl mx-auto space-y-3 text-gray-600">
+            <p class="text-base md:text-lg leading-relaxed">
+              Unser Hauptstandort in <strong>Zürich-Altstetten</strong> ist das Zentrum unserer Fahrschule. Hier finden alle Kurse statt: Nothelferkurs, Verkehrskunde (VKU), Theorie-Unterricht.
+            </p>
+            <p class="text-base md:text-lg leading-relaxed">
+              Professionelle Instruktoren • Flexible Zeiten • Ab CHF 95.–/Lektion
+            </p>
+          </div>
         </div>
         <h2 class="sr-only">Unsere Fahrschule führt folgende Kurse durch</h2>
         
