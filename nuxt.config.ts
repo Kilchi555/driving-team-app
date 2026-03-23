@@ -183,6 +183,33 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      htmlAttrs: { lang: 'de' },
+      meta: [
+        { name: 'description', content: 'Driving Team - Fahrausbildung Online Buchen. Auto, Motorrad, Taxi, Lastwagen, Bus & Motorboot Fahrstunden in Zürich, Lachen, St.Gallen und Umgebung.' },
+        { name: 'keywords', content: 'Fahrstunden buchen, Fahrschule Zürich, Auto Fahrstunden, Motorrad Ausbildung, Driving Team' },
+        { name: 'theme-color', content: '#1e40af' },
+        { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
+        { property: 'og:title', content: 'Driving Team - Fahrstunden Online Buchen' },
+        { property: 'og:description', content: 'Buche deine Fahrstunden online. Auto, Motorrad, Taxi, Lastwagen, Bus & Motorboot Ausbildung in Zürich, Lachen und St.Gallen.' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'Driving Team' },
+        { property: 'og:locale', content: 'de_CH' },
+        { property: 'og:url', content: 'https://simy.ch/' },
+        { property: 'og:image', content: 'https://simy.ch/simy-logo.png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Driving Team - Fahrstunden Online Buchen' },
+        { name: 'twitter:description', content: 'Buche deine Fahrstunden online. Auto, Motorrad, Taxi, Lastwagen, Bus & Motorboot Ausbildung.' },
+        { name: 'twitter:image', content: 'https://simy.ch/simy-logo.png' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/simy-favicon.png' },
+        { rel: 'apple-touch-icon', href: '/simy-favicon.png' },
+        { rel: 'canonical', href: 'https://simy.ch/' },
+      ],
       script: [
         // Google Maps loaded via plugins/google-maps-loader.client.ts with proper async loading
         // hCaptcha loaded dynamically in registration page

@@ -1,2 +1,12 @@
 User-Agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /debug/
+Disallow: /_nuxt/
+Disallow: /.nuxt/
+Disallow: /components/
+Disallow: /middleware/
+
+Sitemap: https://simy.ch/sitemap.xml
+Sitemap: https://drivingteam.ch/sitemap.xml
