@@ -40,7 +40,7 @@
           <h1 class="text-sm md:text-base font-semibold text-gray-400 tracking-widest uppercase mb-4">
             Fahrstunden Zürich & Lachen – Alle Kategorien
           </h1>
-          <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-4">
+          <p class="sr-only">
             Professionelle Fahrstunden in Zürich-Altstetten & Lachen. Ab CHF 95.-/Lektion mit 95% Erfolgsquote.
           </p>
         </div>
