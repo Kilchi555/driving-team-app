@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>Auto Fahrschule Aargau | 6 Schritte zur Fahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Aargau - Auto, Motorrad, Lastwagen Fahrstunden. 95% Erfolgsquote, ab CHF 100/Lektion, Deutsch & Albanisch. Flexible Zeiten. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule Aargau - Auto, Motorrad, Lastwagen Fahrstunden. 85% Erfolgsquote, ab CHF 100/Lektion, Deutsch & Albanisch. Flexible Zeiten. Jetzt anmelden!" />
       <Meta property="og:title" content="Fahrschule Aargau – Auto & Motorrad | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 95% Erfolgsquote, ab CHF 100/Lektion." />
+      <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 85% Erfolgsquote, ab CHF 100/Lektion." />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-aargau/" />
       
       

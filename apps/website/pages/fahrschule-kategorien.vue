@@ -15,8 +15,6 @@
           <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
-    <h1 class="sr-only">Fahrschule Kategorien Vergleich</h1>
-
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-500 to-primary-700 text-white py-16 md:py-24">
       <div class="section-container">

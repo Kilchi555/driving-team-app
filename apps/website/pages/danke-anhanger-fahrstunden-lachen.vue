@@ -2,6 +2,7 @@
   <div>
     <Head>
       <Title>Danke - Anhänger Fahrstunden Lachen | Driving Team</Title>
+      <Meta name="description" content="Vielen Dank für deine Anmeldung zu Anhänger Fahrstunden in Lachen! Wir werden dich in Kürze kontaktieren." />
       <Meta name="robots" content="noindex, nofollow" />
           <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
