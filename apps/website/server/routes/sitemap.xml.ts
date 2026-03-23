@@ -69,6 +69,12 @@ export default defineEventHandler((event) => {
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/fahrstunden-zuerich/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/fahrschule-lachen/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -120,6 +126,12 @@ export default defineEventHandler((event) => {
   <!-- ===== PREISE ===== -->
   <url>
     <loc>https://drivingteam.ch/fahrschule-preise/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/kostenrechner/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

@@ -5,8 +5,8 @@
       <Meta name="description" content="Fahrlehrer Weiterbildung beim Driving Team. Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für mehr Informationen." />
       <Meta property="og:title" content="Fahrlehrer Weiterbildung – Obligatorische Schulung | Driving Team" />
       <Meta property="og:description" content="Obligatorische Fahrlehrer-Weiterbildung für eidg. Fachausweis. Jetzt informieren!" />
-      <Meta property="og:url" content="https://drivingteam.ch/fahrlehrer-weiterbildung/" />
-      <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-weiterbildung/" />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrlehrerweiterbildung/" />
+      <Link rel="canonical" href="https://drivingteam.ch/fahrlehrerweiterbildung/" />
       
           <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
