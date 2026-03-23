@@ -27,6 +27,7 @@
       <Link rel="canonical" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/" />
       <Link rel="alternate" hreflang="de-ch" href="https://drivingteam.ch/" />
+      <Meta name="date" :content="new Date().toISOString()" />
       
     </Head>
 
