@@ -45,7 +45,8 @@ const handler = defineEventHandler(async (event) => {
       tenantId,
       email,
       phone,
-      customSessions // Optional: for flexible session selection
+      customSessions, // Optional: for flexible session selection
+      referralCode    // Optional: affiliate referral code
     } = body
 
     logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions })
@@ -364,6 +365,8 @@ const handler = defineEventHandler(async (event) => {
             phone: finalPhone,
             // ✅ NEW: Store custom sessions for webhook
             custom_sessions: customSessions || null,
+            // ✅ Affiliate referral code (if present)
+            referral_code: referralCode || null,
             // ✅ NEW: Validation metadata for SARI
             sari_validation_data: {
               license: customerData.license,

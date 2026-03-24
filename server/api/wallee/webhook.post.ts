@@ -487,9 +487,11 @@ export default defineEventHandler(async (event) => {
                         email: payment.metadata?.email,
                         phone: payment.metadata?.phone,
                         tenant_id: course.tenant_id,
-                        role: 'student',
+                        role: 'client',
                         is_active: true,
                         auth_user_id: null,
+                        // Set referral code if present in payment metadata
+                        ...(payment.metadata?.referral_code ? { referred_by_code: payment.metadata.referral_code } : {}),
                         // ✅ NEW: Generate onboarding token for guest user to complete profile later
                         onboarding_token: crypto.randomUUID ? crypto.randomUUID() : 'token-' + Date.now(),
                         onboarding_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
@@ -501,6 +503,34 @@ export default defineEventHandler(async (event) => {
                     if (newUser) {
                       userId = newUser.id
                       logger.debug('✅ Created guest user:', userId)
+
+                      // Create affiliate_referrals row if a referral code was stored
+                      const refCode = payment.metadata?.referral_code
+                      if (refCode) {
+                        const { data: affCode } = await supabase
+                          .from('affiliate_codes')
+                          .select('id, user_id')
+                          .eq('code', refCode)
+                          .eq('is_active', true)
+                          .maybeSingle()
+
+                        if (affCode && affCode.user_id !== userId) {
+                          const { error: refInsertError } = await supabase
+                            .from('affiliate_referrals')
+                            .insert({
+                              tenant_id: course.tenant_id,
+                              affiliate_code_id: affCode.id,
+                              affiliate_user_id: affCode.user_id,
+                              referred_user_id: userId,
+                              status: 'pending',
+                            })
+                          if (refInsertError) {
+                            logger.error('❌ Failed to create affiliate_referrals row for guest user:', refInsertError.message)
+                          } else {
+                            logger.info('✅ Created affiliate_referrals row for guest user:', { userId, refCode })
+                          }
+                        }
+                      }
                     } else {
                       logger.error('❌ Failed to create guest user:', {
                         error_code: createUserError?.code,
