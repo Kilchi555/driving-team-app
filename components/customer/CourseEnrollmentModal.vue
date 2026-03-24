@@ -392,6 +392,7 @@ import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { extractCityFromCourseDescription, determinePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
 import { useTenant } from '~/composables/useTenant'
+import { useAffiliateRef } from '~/composables/useAffiliateRef'
 
 interface Props {
   isOpen: boolean
@@ -405,6 +406,7 @@ const emit = defineEmits(['close', 'enrolled'])
 
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()
+const { getStoredRefCode } = useAffiliateRef()
 
 // Helper functions for colors
 const getTenantPrimaryColor = () => {
@@ -964,7 +966,8 @@ const submitEnrollment = async () => {
         tenantId: props.tenantId,
         email: formData.value.email,
         phone: formData.value.phone,
-        customSessions: hasCustomSessions ? customSessions.value : null
+        customSessions: hasCustomSessions ? customSessions.value : null,
+        referralCode: getStoredRefCode() ?? undefined
       }
     }) as any
     
