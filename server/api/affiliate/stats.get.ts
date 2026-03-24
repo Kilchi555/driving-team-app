@@ -29,13 +29,40 @@ export default defineEventHandler(async (event) => {
 
   // If user doesn't have an affiliate code yet, still allow viewing dashboard
   // Just with empty stats - they can generate a code from there
-  const { data: referrals } = affiliateCode
+  const { data: referralsRaw, error: referralsError } = affiliateCode
     ? await supabaseAdmin
         .from('affiliate_referrals')
-        .select('id, status, reward_rappen, credited_at, created_at, referred_user_id, users(first_name, last_name, email)')
+        .select('id, status, reward_rappen, credited_at, created_at, referred_user_id')
         .eq('affiliate_code_id', affiliateCode.id)
         .order('created_at', { ascending: false })
-    : { data: [] }
+    : { data: [], error: null }
+
+  if (referralsError) {
+    console.error('[affiliate/stats] Failed to load referrals:', referralsError)
+  }
+
+  // Enrich with user names via separate query to avoid FK-hint issues
+  let referrals: any[] = referralsRaw ?? []
+  if (referrals.length > 0) {
+    const userIds = referrals.map(r => r.referred_user_id).filter(Boolean)
+    const { data: usersData } = await supabaseAdmin
+      .from('users')
+      .select('id, first_name, last_name, email')
+      .in('id', userIds)
+    const usersMap = Object.fromEntries((usersData ?? []).map(u => [u.id, u]))
+    referrals = referrals.map(r => ({
+      ...r,
+      users: usersMap[r.referred_user_id] ?? null,
+    }))
+  }
+
+  // Derive granular metrics from referrals
+  const totalRegistrations = referrals?.length ?? 0
+  const totalActive = referrals?.filter(r => r.status === 'credited').length ?? 0
+  const totalPending = referrals?.filter(r => r.status === 'pending').length ?? 0
+  const conversionRate = totalRegistrations > 0
+    ? Math.round((totalActive / totalRegistrations) * 100)
+    : 0
 
   // Load current credit balance
   const { data: credits } = await supabaseAdmin
@@ -88,6 +115,11 @@ export default defineEventHandler(async (event) => {
         total_referrals: affiliateCode?.total_referrals ?? 0,
         total_credited_rappen: affiliateCode?.total_credited_rappen ?? 0,
         current_balance_rappen: credits?.balance_rappen ?? 0,
+        // Granular metrics derived from live referral data
+        registrations: totalRegistrations,
+        active: totalActive,
+        pending: totalPending,
+        conversion_rate: conversionRate,
       },
       referrals: referrals ?? [],
       payout_requests: payoutRequests ?? [],

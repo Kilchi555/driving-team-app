@@ -113,46 +113,18 @@
                 <div 
                   v-for="(evaluation, index) in lessonGroup.evaluations" 
                   :key="`exam-${index}`"
-                  class="bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-300 shadow-lg"
+                  class="rounded-xl p-5 border-2 flex flex-col gap-3"
+                  :class="evaluation.exam_passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'"
                 >
-                  <!-- Exam Pass/Fail Status -->
-                  <div class="flex items-center justify-between mb-6">
-                    <h5 class="text-xl font-bold text-gray-900">
-                      🎓 Prüfungsergebnis
-                    </h5>
-                    <div :class="[
-                      'px-6 py-2 rounded-full text-lg font-bold border-2 transition-all duration-200',
-                      evaluation.exam_passed 
-                        ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white border-green-600 shadow-lg' 
-                        : 'bg-gradient-to-r from-red-400 to-rose-500 text-white border-red-600 shadow-lg'
-                    ]">
-                      {{ evaluation.exam_passed ? '✅ BESTANDEN' : '❌ NICHT BESTANDEN' }}
-                    </div>
-                  </div>
-
-                  <!-- Examiner Behavior Rating -->
-                  <div v-if="evaluation.examiner_behavior_rating" class="bg-white rounded-xl p-4 border-2 border-blue-200 mb-4 hover:shadow-md transition-all duration-200">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm font-bold text-gray-800">👤 Verhalten während Prüfung:</span>
-                      <div :class="[
-                        'px-4 py-2 rounded-lg text-sm font-bold border-2 transition-all duration-200',
-                        getRatingColor(evaluation.examiner_behavior_rating)
-                      ]">
-                        ⭐ {{ evaluation.examiner_behavior_rating }} - {{ getRatingText(evaluation.examiner_behavior_rating) }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Examiner Notes -->
-                  <div v-if="evaluation.examiner_behavior_notes" class="bg-white rounded-xl p-4 border-2 border-blue-200 shadow-md">
-                    <p class="text-sm font-bold text-gray-800 mb-2">📝 Notizen vom Experten:</p>
-                    <p class="text-sm text-gray-700 italic bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-lg">{{ evaluation.examiner_behavior_notes }}</p>
-                  </div>
-
-                  <!-- No notes/rating -->
-                  <div v-if="!evaluation.examiner_behavior_rating && !evaluation.examiner_behavior_notes" class="bg-white rounded-xl p-4 border-2 border-blue-200">
-                    <p class="text-sm text-gray-600 italic">ℹ️ Keine zusätzlichen Notizen vom Experten</p>
-                  </div>
+                  <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">🎓 Prüfungsergebnis</span>
+                  <span :class="[
+                    'self-start px-5 py-2 rounded-full text-base font-bold',
+                    evaluation.exam_passed
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                  ]">
+                    {{ evaluation.exam_passed ? '✅ Bestanden' : '❌ Nicht bestanden' }}
+                  </span>
                 </div>
               </template>
             </div>

@@ -348,6 +348,8 @@ const handler = defineEventHandler(async (event) => {
           customerEmail: finalEmail,
           customerName: `${customerData.firstname} ${customerData.lastname}`,
           tenantId: tenantId,
+          // Pass existing user_id so payment is linked from the start
+          ...(guestUserId ? { userId: guestUserId } : {}),
           metadata: {
             // ✅ CRITICAL: courseId needed by webhook to create registration
             courseId: courseId,
