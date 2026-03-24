@@ -1,5 +1,5 @@
 export default defineNuxtConfig({
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxt/content'],
   ssr: true,
 
   tailwindcss: {
@@ -153,17 +153,17 @@ export default defineNuxtConfig({
     '/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
     '/erste-hilfe-kurs/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
 
-    // Blog-Posts (alte WordPress-Artikel)
-    '/blog-minderung-pruefungsangst': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/fahrschueler-respekt-geduld': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/2023/09/26/fahrschueler-respekt-geduld': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/2023/09/26/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/', statusCode: 301 } },
+    // Blog-Posts (alte WordPress-Artikel → neue Nuxt Content Artikel-Seiten)
+    '/blog-minderung-pruefungsangst': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
+    '/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
+    '/fahrschueler-respekt-geduld': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+    '/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+    '/2023/09/26/fahrschueler-respekt-geduld': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+    '/2023/09/26/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
 
     // Englische Seiten
-    '/drivers-license-converting': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/drivers-license-converting/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/drivers-license-converting': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
+    '/drivers-license-converting/': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
     '/road-awareness-courses': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
     '/road-awareness-courses/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
     '/en': { redirect: { to: '/', statusCode: 301 } },
@@ -246,12 +246,11 @@ export default defineNuxtConfig({
     '/weg-zur-motorradpruefung/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
 
     // WordPress Blog-Post-URLs mit Datum
-    '/2023/09/25/drivers-license-converting': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/2023/09/25/drivers-license-converting/': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/25/drivers-license-converting': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
+    '/2023/09/25/drivers-license-converting/': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
     '/2023/09/27/verkehrskunde-vku-kurs/feed': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
-    '/2023/09/27/verkehrskunde-vku-kurs/feed/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
-    '/2023/09/20/blog-minderung-pruefungsangst': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/2023/09/20/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/2023/09/27/verkehrskunde-vku-kurs/feed/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },    '/2023/09/20/blog-minderung-pruefungsangst': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
+    '/2023/09/20/blog-minderung-pruefungsangst/': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
 
     // Italienische Seiten
     '/scuola-guida-italiano': { redirect: { to: '/', statusCode: 301 } },
@@ -349,8 +348,8 @@ export default defineNuxtConfig({
     '/danke-motorboot-theorie/': { redirect: { to: '/', statusCode: 301 } },
 
     // WordPress Blog-Post-URLs mit Datum (weitere)
-    '/2023/09/27/verkehrskunde-vku-kurs': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
-    '/2023/09/27/verkehrskunde-vku-kurs/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/2023/09/27/verkehrskunde-vku-kurs': { redirect: { to: '/blog/vku-kurs-verkehrskunde-sicherheit/', statusCode: 301 } },
+    '/2023/09/27/verkehrskunde-vku-kurs/': { redirect: { to: '/blog/vku-kurs-verkehrskunde-sicherheit/', statusCode: 301 } },
 
     // Lern-Pool Varianten
     '/lern-pool': { redirect: { to: '/faq/', statusCode: 301 } },
@@ -602,7 +601,7 @@ export default defineNuxtConfig({
     '/taxi-fahrschule-aargau': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
     '/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
     '/taxi-fahrschule-schwyz': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
-    '/drivers-license-convert': { redirect: { to: '/drivers-license-converting/', statusCode: 301 } },
+    '/drivers-license-convert': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
     '/anhänger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/weg-zur-anhaengerpruefung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
