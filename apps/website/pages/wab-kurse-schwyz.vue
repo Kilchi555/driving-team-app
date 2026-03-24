@@ -22,7 +22,7 @@
           <h1 class="heading-lg text-white mb-6">WAB Kurse Schwyz</h1>
           <p class="text-xl text-white mb-4">Die WAB Kurse im Kanton Schwyz werden in Tuggen SZ bei unserer Partnerfahrschule der Verkehrszentrum Tuggen AG durchgeführt. Die WAB Kurs Instruktor:innen zeigen euch mit viel Elan und Freude die wichtigsten Aspekte des sicheren Autofahrens.</p>
           <p class="text-white mb-8">Den WAB Kurs müsst ihr innerhalb der ersten 12 Monate nach bestandener Autofahrprüfung absolvieren, ansonsten verliert euer Führerausweis seine Gültigkeit.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="#anmelden" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>
         </div>
@@ -101,7 +101,7 @@
     </section>
 
     <!-- Kursbuchung Iframe -->
-    <section class="section-container py-12">
+    <section id="anmelden" class="section-container py-12">
       <h2 class="heading-md mb-8 text-center">Verfügbare Kursdaten & Buchung</h2>
       <div class="max-w-full bg-white rounded-lg shadow-lg overflow-hidden">
         <iframe 
@@ -117,9 +117,6 @@
 
     <!-- Standort Map -->
     <StandortMapSection locationKey="tuggen" />
-
-    <!-- Warum Section für Tuggen -->
-    <WarumSection category="wab-tuggen" />
 
     <!-- FAQ Section -->
     <section class="section-container py-16">
@@ -228,6 +225,9 @@
         <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
     </section>
+
+    <!-- Warum Driving Team -->
+    <WarumSection category="wab-tuggen" />
   </div>
 </template>
 
