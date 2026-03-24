@@ -74,10 +74,10 @@
 
 <script setup lang="ts">
 const { data: articles } = await useAsyncData('blog-list', () =>
-  queryContent('blog')
-    .only(['title', 'description', 'slug', 'date', 'category', 'readingTime'])
-    .sort({ date: -1 })
-    .find()
+  queryCollection('blog')
+    .select('title', 'description', 'slug', 'date', 'category', 'readingTime')
+    .order('date', 'DESC')
+    .all()
 )
 
 function formatDate(dateStr: string): string {
