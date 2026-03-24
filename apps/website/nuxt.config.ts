@@ -570,10 +570,8 @@ export default defineNuxtConfig({
     '/it/danke-auto-theorie/': { redirect: { to: '/', statusCode: 301 } },
 
     // Fehlerhafte URL-Varianten aus GSC
-    '/wab-kurse-zuerich': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
-    '/wab-kurse-zuerich/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
-    '/wab-kurse-schwyz': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
-    '/wab-kurse-schwyz/': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
+    // HINWEIS: /wab-kurse-zuerich und /wab-kurse-schwyz haben eigene .vue Seiten
+    // und dürfen NICHT weitergeleitet werden.
 
     // Mehrsprachige WAB Kurse
     '/en/wab-course-english': { redirect: { to: '/wab-kurse/', statusCode: 301 } },
