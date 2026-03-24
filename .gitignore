@@ -27,3 +27,4 @@ logs
 # Supabase Edge Function local secrets
 supabase/functions/**/.env.local
 .vercel
+.env*.local

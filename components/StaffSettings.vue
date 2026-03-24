@@ -446,21 +446,59 @@
 
     <!-- Affiliate Modal -->
     <div v-if="showAffiliateModal" class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center shrink-0">
           <h3 class="text-lg font-semibold text-gray-900">🎁 Freunde empfehlen</h3>
           <button @click="showAffiliateModal = false" class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold">×</button>
         </div>
-        <div class="p-6 space-y-5">
+        <div class="p-6 space-y-5 overflow-y-auto">
           <!-- Stats -->
-          <div v-if="affiliateStats" class="grid grid-cols-2 gap-3">
-            <div class="bg-purple-50 rounded-lg p-3 text-center">
-              <div class="text-2xl font-bold text-purple-700">{{ affiliateStats.total_referrals ?? 0 }}</div>
-              <div class="text-xs text-gray-500 mt-1">Empfehlungen</div>
+          <div v-if="affiliateStats">
+            <!-- Row 1: Registrierungen / Aktiv / Ausstehend -->
+            <div class="grid grid-cols-3 gap-2 mb-2">
+              <div
+                class="relative bg-purple-50 rounded-lg p-3 text-center cursor-pointer hover:bg-purple-100 transition"
+                @click="openReferralDetail('all')"
+              >
+                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-purple-300 text-purple-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+                <div class="text-2xl font-bold text-purple-700">{{ affiliateStats.registrations ?? 0 }}</div>
+                <div class="text-xs text-gray-500 mt-1">Registriert</div>
+              </div>
+              <div
+                class="relative bg-blue-50 rounded-lg p-3 text-center cursor-pointer hover:bg-blue-100 transition"
+                @click="openReferralDetail('credited')"
+              >
+                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-blue-300 text-blue-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+                <div class="text-2xl font-bold text-blue-700">{{ affiliateStats.active ?? 0 }}</div>
+                <div class="text-xs text-gray-500 mt-1">Aktiv</div>
+              </div>
+              <div
+                class="relative bg-orange-50 rounded-lg p-3 text-center cursor-pointer hover:bg-orange-100 transition"
+                @click="openReferralDetail('pending')"
+              >
+                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-orange-300 text-orange-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+                <div class="text-2xl font-bold text-orange-600">{{ affiliateStats.pending ?? 0 }}</div>
+                <div class="text-xs text-gray-500 mt-1">Ausstehend</div>
+              </div>
             </div>
-            <div class="bg-green-50 rounded-lg p-3 text-center">
-              <div class="text-2xl font-bold text-green-700">CHF {{ ((affiliateStats.current_balance_rappen || 0) / 100).toFixed(2) }}</div>
-              <div class="text-xs text-gray-500 mt-1">Guthaben</div>
+            <!-- Row 2: Konversionsrate / Guthaben -->
+            <div class="grid grid-cols-2 gap-2">
+              <div
+                class="relative bg-gray-50 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition"
+                @click="openReferralDetail('all')"
+              >
+                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+                <div class="text-2xl font-bold text-gray-700">{{ affiliateStats.conversion_rate ?? 0 }}%</div>
+                <div class="text-xs text-gray-500 mt-1">Konversion</div>
+              </div>
+              <div
+                class="relative bg-green-50 rounded-lg p-3 text-center cursor-pointer hover:bg-green-100 transition"
+                @click="openReferralDetail('earnings')"
+              >
+                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+                <div class="text-2xl font-bold text-green-700">CHF {{ ((affiliateStats.current_balance_rappen || 0) / 100).toFixed(2) }}</div>
+                <div class="text-xs text-gray-500 mt-1">Guthaben</div>
+              </div>
             </div>
           </div>
           <div v-else-if="affiliateLoading" class="flex justify-center py-4">
@@ -504,6 +542,65 @@
         </div>
       </div>
     </div>
+
+    <!-- Referral Detail Sub-Modal -->
+    <Teleport to="body">
+      <div v-if="showReferralDetail" class="fixed inset-0 z-[200] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showReferralDetail = false">
+      <div class="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[80vh] flex flex-col">
+        <div class="border-b px-5 py-4 flex justify-between items-center shrink-0">
+          <h3 class="font-semibold text-gray-900">{{ referralDetailTitle }}</h3>
+          <button @click="showReferralDetail = false" class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold">×</button>
+        </div>
+        <div class="overflow-y-auto p-4">
+          <div v-if="filteredReferralDetail.length === 0" class="text-sm text-gray-400 text-center py-6">
+            Keine Einträge
+          </div>
+          <div class="space-y-2">
+            <div
+              v-for="ref in filteredReferralDetail"
+              :key="ref.id"
+              class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
+            >
+              <div class="min-w-0">
+                <div class="text-sm font-medium text-gray-800 truncate">
+                  {{ ref.users?.first_name }} {{ ref.users?.last_name }}
+                </div>
+                <div class="text-xs text-gray-400 mt-0.5">
+                  Registriert {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}
+                  <span v-if="ref.credited_at"> · Aktiv seit {{ new Date(ref.credited_at).toLocaleDateString('de-CH') }}</span>
+                </div>
+              </div>
+              <div class="ml-3 shrink-0">
+                <template v-if="referralDetailFilter === 'earnings'">
+                  <span v-if="(ref.reward_rappen ?? 0) > 0" class="text-sm font-bold text-green-700">
+                    CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(2) }}
+                  </span>
+                  <span v-else class="text-xs text-gray-400 italic">noch nichts</span>
+                </template>
+                <template v-else>
+                  <span
+                    v-if="ref.status === 'credited'"
+                    class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1"
+                  >✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
+                  <span
+                    v-else
+                    class="inline-flex items-center text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2.5 py-1"
+                  >⏳ Ausstehend</span>
+                </template>
+              </div>
+            </div>
+          </div>
+          <!-- Total for earnings view -->
+          <div v-if="referralDetailFilter === 'earnings' && filteredReferralDetail.length > 0" class="mt-3 pt-3 border-t flex justify-between items-center">
+            <span class="text-sm font-semibold text-gray-600">Total verdient</span>
+            <span class="text-sm font-bold text-green-700">
+              CHF {{ (filteredReferralDetail.reduce((sum, r) => sum + (r.reward_rappen ?? 0), 0) / 100).toFixed(2) }}
+            </span>
+          </div>
+        </div>
+      </div>
+      </div>
+    </Teleport>
 
     <!-- Calendar Integration Modal -->
     <div v-if="showCalendarIntegration" class="fixed inset-0 z-100 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -827,6 +924,30 @@ const showAffiliateModal = ref(false)
 const affiliateCode = ref<string | null>(null)
 const affiliateShareLink = ref('')
 const affiliateStats = ref<any>(null)
+const affiliateReferrals = ref<any[]>([])
+const showReferralDetail = ref(false)
+const referralDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings'>('all')
+
+const referralDetailTitle = computed(() => ({
+  all: 'Alle Empfehlungen',
+  credited: 'Aktive Empfehlungen',
+  pending: 'Ausstehende Empfehlungen',
+  earnings: 'Einnahmen pro Empfehlung',
+}[referralDetailFilter.value]))
+
+const filteredReferralDetail = computed(() => {
+  const list = referralDetailFilter.value === 'all'
+    ? affiliateReferrals.value
+    : referralDetailFilter.value === 'earnings'
+      ? [...affiliateReferrals.value].sort((a, b) => (b.reward_rappen ?? 0) - (a.reward_rappen ?? 0))
+      : affiliateReferrals.value.filter(r => r.status === referralDetailFilter.value)
+  return list
+})
+
+const openReferralDetail = (filter: 'all' | 'credited' | 'pending' | 'earnings') => {
+  referralDetailFilter.value = filter
+  showReferralDetail.value = true
+}
 const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
@@ -2069,6 +2190,7 @@ const openAffiliateModal = async () => {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data?.enabled !== false
     affiliateStats.value = result.data?.summary ?? null
+    affiliateReferrals.value = result.data?.referrals ?? []
     if (result.data?.affiliate_code?.code) {
       affiliateCode.value = result.data.affiliate_code.code
       affiliateShareLink.value = result.data.share_link ?? ''

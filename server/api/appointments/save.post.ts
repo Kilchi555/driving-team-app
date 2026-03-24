@@ -393,6 +393,21 @@ export default defineEventHandler(async (event) => {
             } else {
               logger.debug('✅ Payment created:', paymentResult.id)
               result.payment_id = paymentResult.id
+
+              // ✅ AFFILIATE REWARD HOOK – fire when payment is immediately completed (e.g. cash or full credit)
+              if (paymentResult.payment_status === 'completed' && result.user_id) {
+                $fetch('/api/affiliate/process-reward', {
+                  method: 'POST',
+                  body: {
+                    appointment_id: result.id,
+                    user_id: result.user_id,
+                    tenant_id: appointmentData.tenant_id,
+                    driving_category: appointmentData.type ?? null,
+                  }
+                }).catch((err: any) =>
+                  logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+                )
+              }
             }
           } catch (paymentErr: any) {
             logger.warn('⚠️ Payment creation exception:', paymentErr.message)

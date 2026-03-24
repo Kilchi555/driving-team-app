@@ -173,6 +173,7 @@ export default defineEventHandler(async (event) => {
         id,
         payment_status,
         appointment_id,
+        course_registration_id,
         user_id,
         tenant_id,
         total_amount_rappen,
@@ -202,6 +203,7 @@ export default defineEventHandler(async (event) => {
               id,
               payment_status,
               appointment_id,
+              course_registration_id,
               user_id,
               tenant_id,
               total_amount_rappen,
@@ -292,6 +294,7 @@ export default defineEventHandler(async (event) => {
                 id,
                 payment_status,
                 appointment_id,
+                course_registration_id,
                 user_id,
                 tenant_id,
                 total_amount_rappen,
@@ -579,6 +582,9 @@ export default defineEventHandler(async (event) => {
                     logger.warn(`⚠️ Failed to update payment ${payment.id} with user_id and course_registration_id:`, updatePaymentError.message)
                   } else {
                     logger.debug(`✅ Updated payment ${payment.id} with user_id=${registration.user_id} and course_registration_id=${registration.id}`)
+                    // Also update in-memory so affiliate hook can use it
+                    payment.course_registration_id = registration.id
+                    payment.user_id = registration.user_id
                   }
                 }
               }

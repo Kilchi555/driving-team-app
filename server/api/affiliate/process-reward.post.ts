@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
   // Find the affiliate referral entry
   const { data: referral } = await supabaseAdmin
     .from('affiliate_referrals')
-    .select('id, status, affiliate_code_id, affiliate_user_id, first_appointment_id')
+    .select('id, status, affiliate_code_id, affiliate_user_id, first_appointment_id, reward_rappen, credited_at')
     .eq('referred_user_id', user_id)
     .eq('tenant_id', tenant_id)
     .maybeSingle()
@@ -238,12 +238,14 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('✅ [Affiliate] Transaction logged')
 
-  // Mark referral as processed (keep status as pending since we allow multiple rewards per referral)
+  // Mark referral as credited and record total reward amount
   const { error: refError } = await supabaseAdmin
     .from('affiliate_referrals')
     .update({
-      // Keep status as 'pending' to allow multiple category rewards per referral
+      status: 'credited',
       first_appointment_id: referral.first_appointment_id || appointment_id || null,
+      reward_rappen: (referral.reward_rappen ?? 0) + rewardRappen,
+      credited_at: referral.credited_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', referral.id)
@@ -261,7 +263,10 @@ export default defineEventHandler(async (event) => {
     referenceId 
   })
 
-  // Update affiliate_codes counters (single update with correct values)
+  // Update affiliate_codes counters
+  // total_referrals counts unique referred users → only increment on first reward for this referral
+  // total_credited_rappen tracks all money paid out → always increment
+  const isFirstReward = !referral.first_appointment_id
   const { data: codeRow } = await supabaseAdmin
     .from('affiliate_codes')
     .select('total_referrals, total_credited_rappen')
@@ -272,7 +277,7 @@ export default defineEventHandler(async (event) => {
     await supabaseAdmin
       .from('affiliate_codes')
       .update({
-        total_referrals: codeRow.total_referrals + 1,
+        ...(isFirstReward ? { total_referrals: codeRow.total_referrals + 1 } : {}),
         total_credited_rappen: codeRow.total_credited_rappen + rewardRappen,
         updated_at: new Date().toISOString(),
       })
