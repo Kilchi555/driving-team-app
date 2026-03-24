@@ -302,6 +302,45 @@
         <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
     </section>
+
+    <!-- Why Driving Team? -->
+    <section class="bg-gray-50 py-20">
+      <div class="section-container">
+        <h2 class="heading-md text-center mb-6">Why Choose Driving Team?</h2>
+        <p class="text-center text-gray-600 max-w-3xl mx-auto mb-16">Driving Team was founded to change the traditional image of driving instruction. We believe learning works best when driven by enthusiasm — which is why our team of dedicated, friendly instructors brings both expertise and genuine passion to every lesson.</p>
+
+        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
+            <p class="text-3xl mb-4">🚀</p>
+            <h3 class="font-bold text-lg text-gray-900 mb-3">Modern teaching, tailored to you</h3>
+            <p class="text-gray-600">Our innovative approach makes WAB training engaging and effective. We combine modern learning methods with hands-on experience and adapt the pace to your individual needs.</p>
+          </div>
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
+            <p class="text-3xl mb-4">🌍</p>
+            <h3 class="font-bold text-lg text-gray-900 mb-3">English — no language barrier</h3>
+            <p class="text-gray-600">Our English WAB courses are designed for expats, international professionals and anyone more comfortable learning in English. Full course content, fully in English.</p>
+          </div>
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
+            <p class="text-3xl mb-4">🎯</p>
+            <h3 class="font-bold text-lg text-gray-900 mb-3">Specialists in Swiss driving requirements</h3>
+            <p class="text-gray-600">With years of experience in Swiss driver training, we know exactly what the WAB course demands. Our instructors prepare you thoroughly for the requirements of Swiss road safety law.</p>
+          </div>
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition">
+            <p class="text-3xl mb-4">🛡️</p>
+            <h3 class="font-bold text-lg text-gray-900 mb-3">Safety & professionalism guaranteed</h3>
+            <p class="text-gray-600">The highest standards in safety and quality — that is our promise. Well-maintained vehicles, experienced instructors, and continuous quality assurance. You can trust us.</p>
+          </div>
+        </div>
+
+        <div class="bg-primary-600 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto text-center text-white">
+          <p class="text-2xl font-bold mb-4">Register for your English WAB course now!</p>
+          <p class="text-white mb-8">Complete your mandatory WAB refresher course in English — at Pfäffikon ZH or Tuggen SZ. Select your date and register directly online.</p>
+          <a href="#register" class="inline-block bg-white text-primary-600 font-bold px-8 py-4 rounded-lg hover:bg-gray-100 transition text-lg">
+            📅 Register Now ↑
+          </a>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
