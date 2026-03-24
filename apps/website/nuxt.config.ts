@@ -97,7 +97,7 @@ export default defineNuxtConfig({
 
     // ===== REDIRECTS VON ALTER WORDPRESS-SEITE (301) =====
     // Allgemein
-    '/uber-uns': { redirect: { to: '/team', statusCode: 301 } },
+    '/uber-uns': { redirect: { to: '/team/', statusCode: 301 } },
     '/ueber-uns': { redirect: { to: '/team/', statusCode: 301 } },
     '/ueber-uns/': { redirect: { to: '/team/', statusCode: 301 } },
     '/gtc': { redirect: { to: '/agb/', statusCode: 301 } },
@@ -529,13 +529,9 @@ export default defineNuxtConfig({
     '/fahrschule-frauenfeld': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
     '/fahrschule-frauenfeld/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
 
-    // Basis-Seiten ohne Slash
-    '/kontakt': { redirect: { to: '/kontakt/', statusCode: 301 } },
-    '/team': { redirect: { to: '/team/', statusCode: 301 } },
-    '/agb': { redirect: { to: '/agb/', statusCode: 301 } },
-    '/datenschutz': { redirect: { to: '/datenschutz/', statusCode: 301 } },
-    '/blog': { redirect: { to: '/blog/', statusCode: 301 } },
-    '/faq': { redirect: { to: '/faq/', statusCode: 301 } },
+    // Basis-Seiten ohne Slash (nur für Seiten die KEINE eigene .vue Datei haben)
+    // HINWEIS: /team, /blog, /kontakt, /agb, /datenschutz, /faq wurden entfernt,
+    // da eigene .vue Seiten existieren und die Redirects Endlosloops verursachen.
     '/weiterbildung': { redirect: { to: '/weiterbildungen/', statusCode: 301 } },
     '/nothelfer': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
     '/taxi': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
