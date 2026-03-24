@@ -183,8 +183,7 @@ export default defineNuxtConfig({
     // Standortspezifische Auto-Fahrschule
     '/auto-fahrschule-aargau': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
     '/auto-fahrschule-aargau/': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
-    '/auto-fahrschule-zürich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
-    '/auto-fahrschule-zürich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    // '/auto-fahrschule-zürich' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/en/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/en/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
 
@@ -281,8 +280,7 @@ export default defineNuxtConfig({
     '/it/der-weg-zur-autopruefung/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
     '/it/anhaenger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/it/anhaenger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
-    '/it/anhänger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
-    '/it/anhänger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    // '/it/anhänger-fahrschule-lachen' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/it/vku-lachen': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
     '/it/vku-lachen/': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
     '/it/auto-fahrschule-stgallen/„': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
@@ -299,8 +297,7 @@ export default defineNuxtConfig({
     '/maps/': { redirect: { to: '/', statusCode: 301 } },
 
     // Driving Team Zürich Varianten
-    '/driving-team-zürich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
-    '/driving-team-zürich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    // '/driving-team-zürich' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/fahrschule-zuerich-2': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
     '/fahrschule-zuerich-2/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
 
@@ -333,8 +330,7 @@ export default defineNuxtConfig({
     // Fahrstunden-Zürich Varianten (neue Keywords)
     '/fahrstunden-zurich': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
     '/fahrstunden-zurich/': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
-    '/fahrstunden-zürich': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
-    '/fahrstunden-zürich/': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
+    // '/fahrstunden-zürich' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
 
     // Englische Seiten (weitere)
     '/driving-lessons': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
@@ -603,7 +599,7 @@ export default defineNuxtConfig({
     '/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
     '/taxi-fahrschule-schwyz': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
     '/drivers-license-convert': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
-    '/anhänger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    // '/anhänger-fahrschule-lachen' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/weg-zur-anhaengerpruefung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
   },
