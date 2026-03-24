@@ -41,13 +41,12 @@
       </div>
     </div>
 
-    <!-- SEO: LocalBusiness Structured Data -->
-    <component :is="'script'" type="application/ld+json">{{ structuredData }}</component>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useHead } from '#app'
 
 const props = defineProps<{ locationKey: string }>()
 
@@ -215,4 +214,12 @@ const structuredData = computed(() => JSON.stringify({
     'reviewCount': '150',
   },
 }))
+
+useHead(computed(() => ({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: structuredData.value,
+    key: `standort-local-business-${props.locationKey}`,
+  }]
+})))
 </script>
