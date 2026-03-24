@@ -121,7 +121,7 @@ const route = useRoute()
 const slug = route.params.slug as string
 
 const { data: article } = await useAsyncData(`blog-${slug}`, () =>
-  queryContent('blog').where({ slug }).findOne()
+  queryCollection('blog').where('slug', '=', slug).first()
 )
 
 if (!article.value) {
@@ -129,7 +129,7 @@ if (!article.value) {
 }
 
 const { data: allArticles } = await useAsyncData('blog-all-for-related', () =>
-  queryContent('blog').only(['title', 'slug', 'date', 'category']).find()
+  queryCollection('blog').select('title', 'slug', 'date', 'category').all()
 )
 
 const relatedArticles = computed(() => {

@@ -1,4 +1,5 @@
 export default defineNuxtConfig({
+  compatibilityDate: '2026-03-24',
   modules: ['@nuxtjs/tailwindcss', '@nuxt/content'],
   ssr: true,
 
