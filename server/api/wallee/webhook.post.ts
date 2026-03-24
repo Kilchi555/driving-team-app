@@ -753,13 +753,37 @@ export default defineEventHandler(async (event) => {
             try {
               const { data: reg } = await supabase
                 .from('course_registrations')
-                .select('course_id, courses(category)')
+                .select('course_id')
                 .eq('id', payment.course_registration_id)
                 .maybeSingle()
-              if (!drivingCategory) {
-                drivingCategory = (reg as any)?.courses?.category ?? null
-              }
               courseId = (reg as any)?.course_id ?? null
+              if (!drivingCategory && courseId) {
+                const { data: courseData } = await supabase
+                  .from('courses')
+                  .select('category')
+                  .eq('id', courseId)
+                  .maybeSingle()
+                drivingCategory = courseData?.category ?? null
+              } else if (!drivingCategory) {
+                drivingCategory = null
+              }
+            } catch {
+              // non-fatal
+            }
+          }
+
+          // Fallback: use course_id from payment metadata
+          if (!courseId && payment.metadata?.course_id) {
+            courseId = payment.metadata.course_id
+          }
+          if (!drivingCategory && courseId) {
+            try {
+              const { data: courseData } = await supabase
+                .from('courses')
+                .select('category')
+                .eq('id', courseId)
+                .maybeSingle()
+              drivingCategory = courseData?.category ?? null
             } catch {
               // non-fatal
             }

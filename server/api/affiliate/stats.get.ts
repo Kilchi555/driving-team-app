@@ -56,6 +56,56 @@ export default defineEventHandler(async (event) => {
     }))
   }
 
+  // Load individual reward transactions enriched with referred user name
+  let rewardTransactions: any[] = []
+  if (affiliateCode) {
+    const { data: rewardTxs } = await supabaseAdmin
+      .from('credit_transactions')
+      .select('id, amount_rappen, reference_id, reference_type, created_at, notes')
+      .eq('user_id', userProfile.id)
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('transaction_type', 'affiliate_reward')
+      .order('created_at', { ascending: false })
+
+    if (rewardTxs && rewardTxs.length > 0) {
+      const appointmentIds = rewardTxs.filter(t => t.reference_type === 'appointment').map(t => t.reference_id)
+      const courseRegIds = rewardTxs.filter(t => t.reference_type === 'course_registration').map(t => t.reference_id)
+
+      const [appointmentsRes, courseRegsRes] = await Promise.all([
+        appointmentIds.length > 0
+          ? supabaseAdmin.from('appointments').select('id, user_id').in('id', appointmentIds)
+          : Promise.resolve({ data: [] }),
+        courseRegIds.length > 0
+          ? supabaseAdmin.from('course_registrations').select('id, user_id, first_name, last_name').in('id', courseRegIds)
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const apptUserIds = (appointmentsRes.data ?? []).map((a: any) => a.user_id).filter(Boolean)
+      const { data: apptUsers } = apptUserIds.length > 0
+        ? await supabaseAdmin.from('users').select('id, first_name, last_name').in('id', apptUserIds)
+        : { data: [] }
+
+      const apptMap = Object.fromEntries((appointmentsRes.data ?? []).map((a: any) => [a.id, a]))
+      const courseRegMap = Object.fromEntries((courseRegsRes.data ?? []).map((r: any) => [r.id, r]))
+      const apptUserMap = Object.fromEntries((apptUsers ?? []).map((u: any) => [u.id, u]))
+
+      rewardTransactions = rewardTxs.map(tx => {
+        let userName = 'Unbekannt'
+        if (tx.reference_type === 'appointment') {
+          const appt = apptMap[tx.reference_id]
+          if (appt?.user_id) {
+            const u = apptUserMap[appt.user_id]
+            if (u) userName = `${u.first_name} ${u.last_name}`
+          }
+        } else if (tx.reference_type === 'course_registration') {
+          const reg = courseRegMap[tx.reference_id]
+          if (reg) userName = `${reg.first_name} ${reg.last_name}`
+        }
+        return { ...tx, referred_user_name: userName }
+      })
+    }
+  }
+
   // Derive granular metrics from referrals
   const totalRegistrations = referrals?.length ?? 0
   const totalActive = referrals?.filter(r => r.status === 'credited').length ?? 0
@@ -122,6 +172,7 @@ export default defineEventHandler(async (event) => {
         conversion_rate: conversionRate,
       },
       referrals: referrals ?? [],
+      reward_transactions: rewardTransactions,
       payout_requests: payoutRequests ?? [],
     }
   }
