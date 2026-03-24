@@ -515,9 +515,7 @@ export default defineNuxtConfig({
     '/thank-you-theory/': { redirect: { to: '/', statusCode: 301 } },
 
     // ===== FEHLENDE REDIRECTS FÜR GSC COVERAGE VALIDATION =====
-    // Kontrollfahrt
-    '/kontrollfahrt': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
-    '/kontrollfahrt/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    // HINWEIS: /kontrollfahrt hat eine eigene .vue Seite → kein Redirect
     '/kontrollfahrt-2': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
     '/kontrollfahrt-2/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
 
@@ -588,8 +586,7 @@ export default defineNuxtConfig({
     '/vku-lachen/': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
 
     // CZV Kurse
-    '/czv-kurse': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
-    '/czv-kurse/': { redirect: { to: '/czv-weiterbildung/', statusCode: 301 } },
+    // HINWEIS: /czv-kurse hat eine eigene .vue Seite → kein Redirect
 
     // Bus-Theorie und weitere Theorie-Kurse
     '/bustheorie': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
@@ -598,8 +595,7 @@ export default defineNuxtConfig({
     '/carbustheorie/': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
 
     // Bootsfahrschule Varianten
-    '/bootsfahrschule': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
-    '/bootsfahrschule/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
+    // HINWEIS: /bootsfahrschule hat eine eigene .vue Seite → kein Redirect
 
     // Zusätzliche fehlende Redirects (aus GSC Coverage Drilldown)
     '/motorrad': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
