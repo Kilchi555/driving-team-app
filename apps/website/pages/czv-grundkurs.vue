@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>CZV Grundkurs | 140h Berufliche Qualifikation | Driving Team</Title>
-      <Meta name="description" content="CZV Grundkurs (140h) für Berufschauffeure Kategorien C/CE und D. Obligatorisch vor Berufsausübung. Qualifikationsnachweis (95). Kontaktiere uns für Firmenkurse." />
-      <Meta property="og:title" content="CZV Grundkurs – 140h Berufliche Qualifikation | Driving Team" />
-      <Meta property="og:description" content="Obligatorischer CZV Grundkurs (140h) für Berufschauffeure. Kategorien C/CE und D. Qualifikationsnachweis (95) inklusive." />
+      <Title>CZV Grundkurs | Berufliche Qualifikation | FahrschuleDriving Team</Title>
+      <Meta name="description" content="CZV Grundkurs für Berufschauffeure Kategorien C1/C/CE und D1/D. Obligatorisch vor Berufsausübung. Fähigkeitsausweis. Kontaktiere uns für Firmenkurse." />
+      <Meta property="og:title" content="CZV Grundkurs – Berufliche Qualifikation | Driving Team" />
+      <Meta property="og:description" content="Obligatorischer CZV Grundkurs für Berufschauffeure. Kategorien C1/C/CE und D1/D. Fähigkeitsausweis inklusive." />
       <Link rel="canonical" href="https://drivingteam.ch/czv-grundkurs/" />
       
       
@@ -21,7 +21,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Der obligatorische Grundkurs für Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus). Erhalte den Fähigkeitsausweis.</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Der obligatorische Grundkurs für Berufsfahrer:innen der Kategorien C1/C/CE (Lastwagen) und D1/D (Bus). Erhalte den Fähigkeitsausweis.</p>
           <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Kurs anfragen
           </button>
@@ -38,7 +38,7 @@
             <span class="text-primary-600 text-3xl">📋</span>
             <div>
               <h3 class="font-bold text-lg text-gray-900 mb-2">Anforderung</h3>
-              <p class="text-gray-600 text-sm">Obligatorisch für Berufschauffeure der Kategorien C/CE (Lastwagen) und D (Bus/Car) vor der ersten Berufsausübung.</p>
+              <p class="text-gray-600 text-sm">Obligatorisch für Berufsfahrer:innen der Kategorien C1/C/CE (Lastwagen) und D1/D (Bus/Car) zu Beginn ersten Berufsausübung.</p>
             </div>
           </div>
         </div>
@@ -48,7 +48,7 @@
             <span class="text-primary-600 text-3xl">⏱️</span>
             <div>
               <h3 class="font-bold text-lg text-gray-900 mb-2">Dauer</h3>
-              <p class="text-gray-600 text-sm"><strong>140 Stunden</strong> (beschleunigter Kurs) oder reguläre Berufsausbildung. Bei uns individuell planbar.</p>
+              <p class="text-gray-600 text-sm"><strong>5 Tage</strong> Bei uns individuell planbar.</p>
             </div>
           </div>
         </div>
@@ -58,7 +58,7 @@
             <span class="text-primary-600 text-3xl">🎓</span>
             <div>
               <h3 class="font-bold text-lg text-gray-900 mb-2">Abschluss</h3>
-              <p class="text-gray-600 text-sm"><strong>Qualifikationsnachweis (95)</strong> – schweizweit und EU-weit anerkannt. Gilt unbegrenzt, solange die Weiterbildung aktuell ist.</p>
+              <p class="text-gray-600 text-sm"><strong>Fähigkeitsausweis</strong> Gilt unbegrenzt, solange die Weiterbildung aktuell ist.</p>
             </div>
           </div>
         </div>
@@ -80,7 +80,7 @@
       <div class="section-container">
         <h2 class="heading-md mb-10 text-center">Was ist der CZV Grundkurs?</h2>
         <div class="max-w-3xl mx-auto space-y-6 text-gray-700">
-          <p>Die <strong>Chauffeurverordnung (CZV)</strong> ist eine europäische Verordnung, die professionelle Anforderungen an Fahrer von schweren Fahrzeugen (Lastwagen der Kategorie C/CE und Busse der Kategorie D) stellt. Der CZV Grundkurs ist ein obligatorischer Berufsqualifikationskurs, den jeder Chauffeur oder jede Chauffeuse vor der ersten Berufsausübung absolvieren muss.</p>
+          <p>Die <strong>Chauffeurzulassungsverordnung (CZV)</strong> ist eine schweizerische Verordnung, die professionelle Anforderungen an Berufsahrer:innen von schweren Fahrzeugen (Lastwagen der Kategorie C1/C/CE und Busse der Kategorie D1/D) stellt. Der CZV Grundkurs ist ein obligatorischer Berufsqualifikationskurs, den jeder Berufsfahrer:innnen vor der ersten Berufsausübung absolvieren müssen.</p>
 
           <div class="bg-primary-50 border-l-4 border-primary-600 p-6 rounded">
             <p class="font-semibold text-gray-900 mb-2">Ziel des Kurses:</p>
@@ -89,8 +89,8 @@
 
           <h3 class="font-bold text-lg text-gray-900 mt-8">Unterschied: CZV Grundkurs vs. CZV Weiterbildung</h3>
           <ul class="space-y-3 list-disc pl-6">
-            <li><strong>CZV Grundkurs (140h):</strong> Obligatorisch VOR Berufsausübung. Umfassende Grundausbildung.</li>
-            <li><strong>CZV Weiterbildung (5 Tage alle 5 Jahre):</strong> Pflicht zur Erhaltung der Berechtigung. Auffrischung und Aktualisierung.</li>
+            <li><strong>CZV Grundkurs:</strong> Obligatorisch zu Beginn der Berufsausübung. Umfassende Grundausbildung.</li>
+            <li><strong>CZV Weiterbildung (5 Tage alle 5 Jahre):</strong> Pflicht zur Erhaltung des Fähigkeitsausweises. Auffrischung und Aktualisierung.</li>
           </ul>
         </div>
       </div>
@@ -180,18 +180,10 @@
 
           <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-primary-600">
             <h3 class="font-bold text-gray-900 mb-2">Führerausweis</h3>
-            <p class="text-gray-600">Gültiger Führerausweis Kategorie C/CE oder D erforderlich (Theorieprüfung sollte bestanden sein)</p>
+            <p class="text-gray-600">Gültiger Lern-/Fahrausweis Kategorie C1/C/CE oder D1/D erforderlich (Theorieprüfung sollte bestanden sein)</p>
           </div>
 
-          <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-primary-600">
-            <h3 class="font-bold text-gray-900 mb-2">Gesundheitliches Attest</h3>
-            <p class="text-gray-600">Ärztliche Tauglichkeitserklärung gemäss Fahreignungsverordnung</p>
-          </div>
-
-          <div class="bg-white rounded-lg p-6 shadow-sm border-l-4 border-primary-600">
-            <h3 class="font-bold text-gray-900 mb-2">Notwendige Unterlagen</h3>
-            <p class="text-gray-600">Gültiger Pass/Personalausweis, Führerschein-Kopie, ärztliches Attest</p>
-          </div>
+         
         </div>
       </div>
     </section>
@@ -213,7 +205,7 @@
               Wann wird der CZV Grundkurs obligatorisch?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Der CZV Grundkurs ist obligatorisch für alle, die beruflich Lastwagen (C/CE) oder Busse (D) fahren möchten. Du musst ihn absolvieren, BEVOR du deinen Beruf als Fahrer/in aufnimmst. Nach dem Kurs erhältst du den Qualifikationsnachweis (95).</p>
+            <p class="text-gray-600 text-sm mt-3">Der CZV Grundkurs ist obligatorisch für alle, die beruflich Lastwagen (C1/C/CE) oder Busse (D1/D) fahren möchten. Du musst ihn inkl. aller CZV Prüfungen innerhalb der ersten 12 Monate nach Gültigkeitsbeginn der Ausbildungsbestätigung absolvieren.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -221,7 +213,7 @@
               Wie lange dauert der CZV Grundkurs?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Der beschleunigte CZV Grundkurs dauert <strong>140 Stunden</strong>. Das kann je nach Anbieter zwischen 3-6 Wochen in Vollzeit oder über mehrere Monate in Teilzeit absolviert werden. Bei uns ist es individuell planbar.</p>
+            <p class="text-gray-600 text-sm mt-3">Der CZV Grundkurs dauert <strong>5 Tage</strong>. Das kann innerhalb von 4-6 Wochen absolviert werden. Bei uns ist es individuell planbar.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -229,7 +221,7 @@
               Muss ich Voraussetzungen erfüllen?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Ja, du benötigst: Mindestalter 18 Jahre, einen gültigen Führerausweis (C/CE oder D), und ein ärztliches Attest zur Fahrtauglichkeit. Die Theorieprüfung für deinen Führerschein sollte bestanden sein.</p>
+            <p class="text-gray-600 text-sm mt-3">Ja, du benötigst: Mindestalter 18 Jahre, einen gültigen Führerausweis (C1/C/CE oder D1/D), und ein ärztliches Attest zur Fahrtauglichkeit. Die Theorieprüfung für deinen Führerausweis sollte bestanden sein.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -237,15 +229,15 @@
               Ist der CZV Grundkurs schweizweit gültig?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Ja! Der Qualifikationsnachweis (95) ist nicht nur in der Schweiz, sondern in der gesamten EU und vielen weiteren Ländern anerkannt. Du kannst damit europaweit als Berufschauffeur arbeiten.</p>
+            <p class="text-gray-600 text-sm mt-3">Ja! Die Ausbildungsbestätigung des CZV Grundkurses in der ganzen Schweiz gültig.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">
-              Wie lange ist der Qualifikationsnachweis (95) gültig?
+              Wie lange ist der Qualifikationsnachweis gültig?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Der Qualifikationsnachweis ist <strong>zeitlich unbegrenzt gültig</strong>, solange du die erforderliche <strong>Weiterbildung alle 5 Jahre (5 Tage)</strong> absolvierst. Ohne aktuelle Weiterbildung verliert der Nachweis seine Gültigkeit.</p>
+            <p class="text-gray-600 text-sm mt-3">Der Kursnachweis ist <strong>zeitlich unbegrenzt gültig</strong>, solange du die erforderliche <strong>Weiterbildung alle 5 Jahre (5 Tage)</strong> absolvierst. Ohne aktuelle Weiterbildung verliert der Nachweis seine Gültigkeit.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -273,7 +265,7 @@
               Gibt es eine Prüfung am Ende des Kurses?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Der CZV Grundkurs selbst wird durch regelmässige Leistungsüberprüfungen während des Kurses bewertet. Nach Kursabschluss musst du die <strong>5 Teilprüfungen bestehen</strong>, um den Qualifikationsnachweis (95) zu erhalten: 1x Theorieprüfung, 2x E-Prüfungen, 2x mündlich-praktische Prüfungen.</p>
+            <p class="text-gray-600 text-sm mt-3">Der CZV Grundkurs selbst wird durch regelmässige Leistungsüberprüfungen während des Kurses bewertet. Nach Kursabschluss musst du die <strong>5 Teilprüfungen bestehen</strong>, um den Fähigkeitsausweis zu erhalten: 1x Theorieprüfung, 2x E-Prüfungen, 2x mündlich-praktische Prüfungen.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -309,7 +301,7 @@
               Wie viel Selbststudium ist notwendig?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Der 140-Stunden-Kurs ist bereits sehr intensiv. Zusätzlich wird regelmässiges Selbststudium empfohlen, besonders für die Theorieprüfung. Mit fokussiertem Lernen (2-3 Stunden pro Woche) solltest du gut vorbereitet sein.</p>
+            <p class="text-gray-600 text-sm mt-3">Der CZV Grundkurs ist bereits sehr intensiv. Zusätzlich wird regelmässiges Selbststudium empfohlen, besonders für die Theorieprüfung. Mit fokussiertem Lernen (2-3 Stunden pro Woche) solltest du gut vorbereitet sein.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -317,7 +309,7 @@
               Wie lange dauert es, bis ich alle Prüfungen bestanden habe?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Nach Kursende dauert es typischerweise <strong>2-6 Monate</strong>, bis alle Prüfungen absolviert sind. Mit intensivem Lernen sind auch 2 Monate möglich. Empfohlen werden 3-6 Monate für gute Vorbereitung. Nach 9 Monaten solltest du fertig sein, da die Gültigkeit der Ausbildungsbestätigung nach 12 Monaten abläuft.</p>
+            <p class="text-gray-600 text-sm mt-3">Nach Kursende dauert es typischerweise <strong>2-6 Monate</strong>, bis alle Prüfungen absolviert sind. Mit intensivem Lernen sind auch weniger als 2 Monate möglich. Empfohlen werden 3-6 Monate für gute Vorbereitung. Nach 9 Monaten solltest du fertig sein, da die Gültigkeit der Ausbildungsbestätigung nach 12 Monaten abläuft.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -325,7 +317,7 @@
               Welche Ressourcen stellt ihr zur Verfügung?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Wir stellen dir umfassendes Kursmaterial, Prüfungssimulatoren, Lernunterlagen und Zusatzressourcen zur Verfügung. Nach Kursende unterstützen wir dich weiter bei Fragen zur Prüfungsvorbereitung – kontaktiere einfach unsere Kursleiter.</p>
+            <p class="text-gray-600 text-sm mt-3">Wir stellen dir umfassendes Kursmaterial, Lernunterlagen und Zusatzressourcen zur Verfügung. Nach Kursende unterstützen wir dich weiter bei Fragen zur Prüfungsvorbereitung – kontaktiere einfach unsere Kursleiter.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -345,7 +337,7 @@
               Bietet ihr auch Firmenkurse an?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Ja! Wir bieten speziell maßgeschneiderte Firmenkurse für Transportunternehmen, Busunternehmen und Speditionen an. Die Kurse können an eure Bedürfnisse und Zeitpläne angepasst werden. Kontaktiert uns für ein individuelles Angebot.</p>
+            <p class="text-gray-600 text-sm mt-3">Ja! Wir bieten speziell massgeschneiderte Firmenkurse für Transportunternehmen, Busunternehmen und Speditionen an. Die Kurse können an eure Bedürfnisse und Zeitpläne angepasst werden. Kontaktiert uns für ein individuelles Angebot.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -381,7 +373,7 @@
               Welche CZV Weiterbildungen bietet ihr an?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Wir bieten spezialisierte CZV Weiterbildungskurse an, darunter: Prävention & Unfallverhalten, Traffic Health, ARV1 & Rundumkontrolle, Radwechsel & Brandbekämpfung. Jeder Kurs zählt als Weiterbildungstag. <a href="/czv-weiterbildung" class="text-primary-600 hover:underline font-medium">Mehr zur CZV Weiterbildung →</a></p>
+            <p class="text-gray-600 text-sm mt-3">Wir bieten spezialisierte CZV Weiterbildungskurse an, darunter: Prävention & Unfallverhalten, Traffic Health, ARV1 & Rundumkontrolle, Radwechsel & Brandbekämpfung und Umweltbewusste Fahrweise. Jeder Kurs zählt als Weiterbildungstag. <a href="/czv-weiterbildung" class="text-primary-600 hover:underline font-medium">Mehr zur CZV Weiterbildung →</a></p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -389,7 +381,7 @@
               Was passiert, wenn ich die Weiterbildung nicht absolviere?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Wenn du die erforderliche Weiterbildung nicht innerhalb der 5-Jahres-Frist absolvierst, verliert dein Qualifikationsnachweis (95) seine Gültigkeit. Du darfst dann nicht mehr beruflich Lastwagen oder Busse fahren. Ein neuer Grundkurs wäre notwendig.</p>
+            <p class="text-gray-600 text-sm mt-3">Wenn du die erforderliche Weiterbildung nicht innerhalb der 5-Jahres-Frist absolvierst, verliert dein Fähigkeitsausweis seine Gültigkeit. Du darfst dann nicht mehr beruflich Lastwagen oder Busse fahren. Ein neuer Grundkurs bzw. 5 Weiterbildungskurse wäre notwendig.</p>
           </details>
         </div>
       </div>
@@ -456,7 +448,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Grundkurs – 140h Berufliche Qualifikation", "description": "Obligatorischer CZV Grundkurs (140 Stunden) für Berufschauffeure vor Berufsausübung.", "url": "https://drivingteam.ch/czv-grundkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "educationalCredentialAwarded": "Qualifikationsnachweis (95)" }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Grundkurs – Berufliche Qualifikation", "description": "Obligatorischer CZV Grundkurs für Berufschauffeure vor Berufsausübung.", "url": "https://drivingteam.ch/czv-grundkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "educationalCredentialAwarded": "Qualifikationsnachweis" }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Grundkurs", "item": "https://drivingteam.ch/czv-grundkurs/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
