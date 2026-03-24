@@ -496,7 +496,7 @@
                 @click="openReferralDetail('earnings')"
               >
                 <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-                <div class="text-2xl font-bold text-green-700">CHF {{ ((affiliateStats.current_balance_rappen || 0) / 100).toFixed(2) }}</div>
+                <div class="text-xl font-bold text-green-700 truncate">CHF {{ ((affiliateStats.current_balance_rappen || 0) / 100).toFixed(2) }}</div>
                 <div class="text-xs text-gray-500 mt-1">Guthaben</div>
               </div>
             </div>
@@ -556,45 +556,66 @@
             Keine Einträge
           </div>
           <div class="space-y-2">
-            <div
-              v-for="ref in filteredReferralDetail"
-              :key="ref.id"
-              class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
-            >
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-gray-800 truncate">
-                  {{ ref.users?.first_name }} {{ ref.users?.last_name }}
+            <!-- Earnings view: individual credit_transactions -->
+            <template v-if="referralDetailFilter === 'earnings'">
+              <div
+                v-for="tx in filteredReferralDetail"
+                :key="tx.id"
+                class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
+              >
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-gray-800 truncate">
+                    {{ tx.referred_user_name }}
+                  </div>
+                  <div class="text-xs text-gray-400 mt-0.5">
+                    {{ new Date(tx.created_at).toLocaleDateString('de-CH') }}
+                    <span class="capitalize"> · {{ tx.reference_type === 'course_registration' ? 'Kurs' : 'Fahrstunde' }}</span>
+                  </div>
                 </div>
-                <div class="text-xs text-gray-400 mt-0.5">
-                  Registriert {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}
-                  <span v-if="ref.credited_at"> · Aktiv seit {{ new Date(ref.credited_at).toLocaleDateString('de-CH') }}</span>
+                <div class="ml-3 shrink-0">
+                  <span class="text-sm font-bold text-green-700">
+                    +CHF {{ ((tx.amount_rappen || 0) / 100).toFixed(2) }}
+                  </span>
                 </div>
               </div>
-              <div class="ml-3 shrink-0">
-                <template v-if="referralDetailFilter === 'earnings'">
-                  <span v-if="(ref.reward_rappen ?? 0) > 0" class="text-sm font-bold text-green-700">
-                    CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(2) }}
-                  </span>
-                  <span v-else class="text-xs text-gray-400 italic">noch nichts</span>
-                </template>
-                <template v-else>
+            </template>
+            <!-- All / credited / pending: referral rows -->
+            <template v-else>
+              <div
+                v-for="ref in filteredReferralDetail"
+                :key="ref.id"
+                class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
+              >
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-gray-800 truncate">
+                    {{ ref.users?.first_name }} {{ ref.users?.last_name }}
+                  </div>
+                  <div class="text-xs text-gray-400 mt-0.5">
+                    <div>Registriert {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
+                    <div v-if="ref.credited_at">Aktiv seit {{ new Date(ref.credited_at).toLocaleDateString('de-CH') }}</div>
+                  </div>
+                </div>
+                <div class="ml-3 shrink-0">
                   <span
                     v-if="ref.status === 'credited'"
-                    class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1"
-                  >✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
+                    class="inline-flex flex-col items-end gap-0.5"
+                  >
+                    <span class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1">✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
+                    <span class="text-[10px] text-gray-400">Total verdient</span>
+                  </span>
                   <span
                     v-else
                     class="inline-flex items-center text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2.5 py-1"
                   >⏳ Ausstehend</span>
-                </template>
+                </div>
               </div>
-            </div>
+            </template>
           </div>
           <!-- Total for earnings view -->
           <div v-if="referralDetailFilter === 'earnings' && filteredReferralDetail.length > 0" class="mt-3 pt-3 border-t flex justify-between items-center">
             <span class="text-sm font-semibold text-gray-600">Total verdient</span>
             <span class="text-sm font-bold text-green-700">
-              CHF {{ (filteredReferralDetail.reduce((sum, r) => sum + (r.reward_rappen ?? 0), 0) / 100).toFixed(2) }}
+              CHF {{ (filteredReferralDetail.reduce((sum, t) => sum + (t.amount_rappen ?? 0), 0) / 100).toFixed(2) }}
             </span>
           </div>
         </div>
@@ -925,6 +946,7 @@ const affiliateCode = ref<string | null>(null)
 const affiliateShareLink = ref('')
 const affiliateStats = ref<any>(null)
 const affiliateReferrals = ref<any[]>([])
+const affiliateRewardTransactions = ref<any[]>([])
 const showReferralDetail = ref(false)
 const referralDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings'>('all')
 
@@ -936,11 +958,12 @@ const referralDetailTitle = computed(() => ({
 }[referralDetailFilter.value]))
 
 const filteredReferralDetail = computed(() => {
+  if (referralDetailFilter.value === 'earnings') {
+    return affiliateRewardTransactions.value
+  }
   const list = referralDetailFilter.value === 'all'
     ? affiliateReferrals.value
-    : referralDetailFilter.value === 'earnings'
-      ? [...affiliateReferrals.value].sort((a, b) => (b.reward_rappen ?? 0) - (a.reward_rappen ?? 0))
-      : affiliateReferrals.value.filter(r => r.status === referralDetailFilter.value)
+    : affiliateReferrals.value.filter(r => r.status === referralDetailFilter.value)
   return list
 })
 
@@ -2191,6 +2214,7 @@ const openAffiliateModal = async () => {
     affiliateEnabled.value = result.data?.enabled !== false
     affiliateStats.value = result.data?.summary ?? null
     affiliateReferrals.value = result.data?.referrals ?? []
+    affiliateRewardTransactions.value = result.data?.reward_transactions ?? []
     if (result.data?.affiliate_code?.code) {
       affiliateCode.value = result.data.affiliate_code.code
       affiliateShareLink.value = result.data.share_link ?? ''
