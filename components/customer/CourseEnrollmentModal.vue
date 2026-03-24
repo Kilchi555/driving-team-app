@@ -970,7 +970,9 @@ const submitEnrollment = async () => {
     
     if (response.success) {
       if (response.paymentUrl) {
+        // Keep loading state active until Wallee page loads
         window.location.href = response.paymentUrl
+        return
       } else {
         emit('enrolled')
       }
