@@ -8,8 +8,10 @@
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center space-x-4">
               <!-- Tenant Logo or Initials -->
-              <div v-if="currentTenantBranding?.logos?.square" class="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0" style="background: white">
-                <img :src="currentTenantBranding.logos.square" :alt="currentTenantBranding.name" class="w-full h-full object-cover">
+              <div v-if="currentTenantBranding?.logos?.square" class="w-12 h-12 rounded-xl flex-shrink-0" style="padding: 1px; background: linear-gradient(145deg, #ffffff, #d0d0d0); box-shadow: 4px 4px 8px rgba(0,0,0,0.25), -2px -2px 5px rgba(255,255,255,0.8), inset 0 0 0 1px rgba(255,255,255,0.5);">
+                <div class="w-full h-full rounded-xl overflow-hidden flex items-center justify-center p-1" style="background: radial-gradient(circle at 35% 35%, #ffffff, #f0f0f0 60%, #e0e0e0);">
+                  <img :src="currentTenantBranding.logos.square" :alt="currentTenantBranding.name" class="w-full h-full object-contain">
+                </div>
               </div>
               <div v-else-if="currentTenantBranding?.logos?.standard" class="h-12 flex items-center">
                 <img :src="currentTenantBranding.logos.standard" :alt="currentTenantBranding.name" class="h-full object-contain max-w-xs">
