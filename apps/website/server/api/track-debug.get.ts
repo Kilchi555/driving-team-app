@@ -1,0 +1,40 @@
+import { createClient } from '@supabase/supabase-js'
+
+export default defineEventHandler(async () => {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const vercelEnv = process.env.VERCEL_ENV
+
+  console.log('=== Track Debug ===')
+  console.log('VERCEL_ENV:', vercelEnv)
+  console.log('SUPABASE_URL:', supabaseUrl ? 'SET' : 'MISSING')
+  console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'MISSING')
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return {
+      ok: false,
+      error: 'Missing Supabase config',
+      vercelEnv,
+    }
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+  // Test RPC directly
+  const { data, error } = await supabase.rpc('increment_page_view', {
+    p_page: '/test-debug',
+    p_date: new Date().toISOString().split('T')[0],
+    p_referrer_type: 'direct',
+    p_device_type: 'desktop',
+    p_country: 'unknown',
+  })
+
+  console.log('RPC Result:', { data, error })
+
+  return {
+    ok: !error,
+    vercelEnv,
+    error: error?.message,
+    rpcResult: { data, error },
+  }
+})
