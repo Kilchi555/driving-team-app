@@ -637,7 +637,7 @@ const trackEvent = async (eventType: 'opened' | 'submitted', category: string) =
 
 const openCalculator = () => {
   showModal.value = true
-  trackEvent('opened', selectedCategory)
+  trackEvent('opened', selectedCategory.value)
 }
 
 const modalDescription = computed(() => {
@@ -689,7 +689,7 @@ const sendCalculationEmail = async () => {
     }
 
     // Track successful submission
-    trackEvent('submitted', selectedCategory)
+    trackEvent('submitted', selectedCategory.value)
 
     emailSendSuccess.value = true
     isSending.value = false
