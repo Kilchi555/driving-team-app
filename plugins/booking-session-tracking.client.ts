@@ -4,6 +4,15 @@
  * Allows complete funnel tracking: Views → Calculator → Booking → Payment
  */
 
+import { defineNuxtPlugin } from '#app'
+
+declare global {
+  interface Window {
+    __analyticsSessionId: string
+    __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned', data: Record<string, any>) => Promise<void>
+  }
+}
+
 export default defineNuxtPlugin(() => {
   if (process.server) return
 
