@@ -48,8 +48,12 @@ export default defineNuxtPlugin(() => {
 
   const sessionId = getSessionId()
 
-  // Track booking events
+  // Track booking events — only fire when on a valid booking/availability page
   const trackBookingEvent = async (eventType: 'viewed' | 'started' | 'completed' | 'abandoned', data: Record<string, any>) => {
+    const currentPath = window.location.pathname
+    const isValidBookingPath = currentPath.includes('/booking/') || currentPath.includes('/availability/')
+    if (!isValidBookingPath) return
+
     try {
       await fetch('/api/booking-events', {
         method: 'POST',
@@ -57,7 +61,7 @@ export default defineNuxtPlugin(() => {
         body: JSON.stringify({
           session_id: sessionId,
           event_type: eventType,
-          page: window.location.pathname,
+          page: currentPath,
           ...data,
         }),
       }).catch(() => {})

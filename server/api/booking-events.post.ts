@@ -19,6 +19,12 @@ export default defineEventHandler(async (event) => {
       return { ok: false }
     }
 
+    // Only accept events from booking/availability pages
+    const isValidPage = body.page?.includes('/booking/') || body.page?.includes('/availability/')
+    if (!isValidPage) {
+      return { ok: false, reason: 'not a booking page' }
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
