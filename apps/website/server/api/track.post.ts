@@ -1,7 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
-const SKIP_PATHS_CLIENT = ['/__nuxt_error', '/admin', '/administrator', '/login', '/register', '/user/login', '/user/register', '/wp-admin', '/wp-login']
+
+// Paths to skip - system pages, bots, scanners
+const SKIP_PATHS_CLIENT = [
+  '/__nuxt_error',
+  '/admin', '/administrator',
+  '/login', '/register', '/user/login', '/user/register',
+  '/wp-admin', '/wp-login', '/wp-content', '/wp-json', '/wp-includes',
+  '/cgi-bin',
+  '/.well-known',
+  '/xmlrpc', '/xmlrpc.php',
+  '/assets/',
+  '/en/', '/it/', '/fr/', '/de/', // Wrong language paths (drivingteam.ch is only german)
+]
+
+// Skip file extensions that should never be tracked
+const SKIP_EXTENSIONS = ['.php', '.asp', '.aspx', '.jsp', '.cgi', '.pl', '.py', '.rb', '.sh', '.env', '.git', '.sql', '.bak', '.log', '.conf', '.cfg']
 
 function getReferrerType(referrer: string): string {
   if (!referrer) return 'direct'
@@ -48,8 +63,13 @@ export default defineEventHandler(async (event) => {
   if (!body?.page) return { ok: false }
 
   // Skip unwanted paths
-  if (SKIP_PATHS_CLIENT.some(path => body.page.includes(path))) {
+  if (SKIP_PATHS_CLIENT.some(path => body.page.startsWith(path))) {
     return { ok: false, reason: 'skipped path' }
+  }
+  
+  // Skip file extensions (bot scanners)
+  if (SKIP_EXTENSIONS.some(ext => body.page.includes(ext))) {
+    return { ok: false, reason: 'skipped extension' }
   }
 
   const ua = getHeader(event, 'user-agent') || ''
