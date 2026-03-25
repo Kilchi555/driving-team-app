@@ -604,6 +604,8 @@ const sendCalculationEmail = async () => {
         lessonsCount: lessonsCount.value,
         totalCost: totalCost.value,
         calculationDetails: mailBody,
+        svaFees: svaFees.value,
+        externalCostsTotal: externalCostsTotal.value,
       }),
     })
 

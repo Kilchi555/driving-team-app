@@ -13,6 +13,8 @@ interface PriceCalculationPayload {
   lessonsCount: number
   totalCost: number
   calculationDetails: string
+  svaFees?: { label: string; amount: number }[]
+  externalCostsTotal?: number
 }
 
 export default defineEventHandler(async (event) => {
@@ -104,19 +106,37 @@ export default defineEventHandler(async (event) => {
 
 function buildCustomerEmail(body: PriceCalculationPayload, primaryColor: string, tenantName: string, teamEmail: string): string {
   const greeting = body.firstName ? `Hallo ${body.firstName}` : 'Hallo'
+
+  // Main cost rows (skip the "Externe Kosten" line – rendered separately below)
   const rows = body.calculationDetails
     .split('\n')
-    .filter(Boolean)
+    .filter(line => Boolean(line) && !line.startsWith('GESCHÄTZTE GESAMTKOSTEN') && !line.includes('Externe Kosten'))
     .map(line => {
-      if (line.startsWith('GESCHÄTZTE GESAMTKOSTEN')) {
-        return `<tr style="background:${primaryColor};"><td style="padding:12px 16px;font-size:14px;font-weight:700;color:white;">${line.replace('CHF', '').replace('GESCHÄTZTE GESAMTKOSTEN:', 'Geschätzte Gesamtkosten').trim()}</td><td style="padding:12px 16px;font-size:16px;font-weight:700;color:white;text-align:right;white-space:nowrap;">CHF ${body.totalCost}.–</td></tr>`
-      }
       const parts = line.split(':')
       const label = parts[0].trim()
       const value = parts.slice(1).join(':').trim()
       return `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:10px 16px;font-size:13px;color:#374151;">${label}</td><td style="padding:10px 16px;font-size:13px;color:#111827;font-weight:500;text-align:right;white-space:nowrap;">${value}</td></tr>`
     })
     .join('')
+
+  // Detailed external costs block (blue, matching website design)
+  const svaBlock = (body.svaFees && body.svaFees.length > 0) ? `
+    <tr style="background:#eff6ff;border-bottom:1px solid #dbeafe;">
+      <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#1e40af;">🏛️ Strassenverkehrsamt &amp; weitere Kosten</td>
+      <td style="padding:10px 16px;font-size:13px;font-weight:700;color:#1e40af;text-align:right;white-space:nowrap;">CHF ${body.externalCostsTotal}.–</td>
+    </tr>
+    ${body.svaFees.map(fee => `
+      <tr style="background:#f0f9ff;border-bottom:1px solid #e0f2fe;">
+        <td style="padding:6px 16px 6px 28px;font-size:12px;color:#374151;">↳ ${fee.label}</td>
+        <td style="padding:6px 16px;font-size:12px;color:#374151;text-align:right;white-space:nowrap;">CHF ${fee.amount}.–</td>
+      </tr>
+    `).join('')}
+    <tr style="background:#f0f9ff;border-bottom:1px solid #dbeafe;">
+      <td colspan="2" style="padding:4px 16px 8px 28px;font-size:11px;color:#6b7280;">* nicht für Inhaber:innen von anderen Kategorien</td>
+    </tr>
+  ` : ''
+
+  const totalRow = `<tr style="background:${primaryColor};"><td style="padding:12px 16px;font-size:14px;font-weight:700;color:white;">Geschätzte Gesamtkosten</td><td style="padding:12px 16px;font-size:16px;font-weight:700;color:white;text-align:right;white-space:nowrap;">CHF ${body.totalCost}.–</td></tr>`
 
   return `
     <!DOCTYPE html>
@@ -141,9 +161,11 @@ function buildCustomerEmail(body: PriceCalculationPayload, primaryColor: string,
                 <p style="margin:0 0 6px;font-size:16px;color:#111827;">${greeting},</p>
                 <p style="margin:0 0 24px;font-size:15px;color:#374151;">hier ist deine persönliche Kostenschätzung für die Kategorie <strong>${body.category}</strong>. Bitte beachte, dass es sich um eine unverbindliche Orientierungshilfe handelt.</p>
 
-                <!-- Table -->
+                <!-- Cost Table -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
                   ${rows}
+                  ${svaBlock}
+                  ${totalRow}
                 </table>
 
                 <!-- Disclaimer -->
