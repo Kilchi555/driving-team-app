@@ -575,7 +575,7 @@
             Wieso dauert die Fahrstunde 45 Minuten?
             <span class="transition group-open:rotate-180">▼</span>
           </summary>
-          <p class="mt-4 text-gray-700">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vorallem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte.</p>
+          <p class="mt-4 text-gray-700">Da die Konzentration bei den meisten Menschen nach dieser Zeit nachlässt, haben wir dies als Grundeinheit festgelegt und analog zu den meisten Schulen angepasst. Je nach Übungsgebiet, Ausbildungsstand des Fahrschülers und anstehendem Thema macht es Sinn eine 1.5 oder gar eine Doppellektion zu vereinbaren, vor allem dann, wenn jemand in der Fahrausbildung schnell vorwärts kommen möchte.</p>
         </details>
 
         <details class="group bg-white border border-gray-200 rounded-lg p-6">
@@ -675,7 +675,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", "name": "Fahrschule Preise Driving Team", "description": "Transparente Preisübersicht für alle Fahrschule-Leistungen.", "url": "https://drivingteam.ch/fahrschule-preise/" }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", "name": "Fahrschule Preise Driving Team", "description": "Transparente Preisübersicht für alle Fahrschule-Leistungen.", "url": "https://drivingteam.ch/fahrschule-preise/" }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Preise", "item": "https://drivingteam.ch/fahrschule-preise/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 

@@ -249,7 +249,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Fahrlehrer Weiterbildung", "description": "Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis.", "url": "https://drivingteam.ch/fahrlehrerweiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Fahrlehrer Weiterbildung", "description": "Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis.", "url": "https://drivingteam.ch/fahrlehrerweiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Weiterbildungen", "item": "https://drivingteam.ch/weiterbildungen/" }, { "@type": "ListItem", "position": 3, "name": "Fahrlehrer Weiterbildung", "item": "https://drivingteam.ch/fahrlehrerweiterbildung/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 

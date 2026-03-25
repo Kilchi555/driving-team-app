@@ -74,7 +74,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "LKW Fahrschule Kategorie C3", "description": "LKW Fahrausbildung Kategorie C3 mit CZV Grundkurs.", "url": "https://drivingteam.ch/lastwagen-fahrschule-3/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "LKW Fahrschule Kategorie C3", "description": "LKW Fahrausbildung Kategorie C3 mit CZV Grundkurs.", "url": "https://drivingteam.ch/lastwagen-fahrschule-3/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Lastwagen Fahrschule", "item": "https://drivingteam.ch/lastwagen-fahrschule/" }, { "@type": "ListItem", "position": 3, "name": "LKW Kategorie C3", "item": "https://drivingteam.ch/lastwagen-fahrschule-3/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 

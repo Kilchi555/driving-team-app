@@ -268,7 +268,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "ContactPage", "name": "Kontakt Driving Team Fahrschule", "url": "https://drivingteam.ch/kontakt/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "telephone": "+41444310033", "email": "info@drivingteam.ch", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "addressCountry": "CH" } } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "ContactPage", "name": "Kontakt Driving Team Fahrschule", "url": "https://drivingteam.ch/kontakt/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "telephone": "+41444310033", "email": "info@drivingteam.ch", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "addressCountry": "CH" } } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Kontakt", "item": "https://drivingteam.ch/kontakt/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 

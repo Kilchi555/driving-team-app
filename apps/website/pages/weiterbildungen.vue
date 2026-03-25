@@ -64,7 +64,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "CollectionPage", "name": "Weiterbildungen Driving Team", "description": "Übersicht aller Weiterbildungsangebote der Fahrschule Driving Team.", "url": "https://drivingteam.ch/weiterbildungen/" }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "CollectionPage", "name": "Weiterbildungen Driving Team", "description": "Übersicht aller Weiterbildungsangebote der Fahrschule Driving Team.", "url": "https://drivingteam.ch/weiterbildungen/" }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Weiterbildungen", "item": "https://drivingteam.ch/weiterbildungen/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 
