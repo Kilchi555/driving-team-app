@@ -354,6 +354,56 @@ export default defineEventHandler((event) => {
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <!-- ===== BLOG ARTIKEL ===== -->
+  <url>
+    <loc>https://drivingteam.ch/blog/fuehrerschein-kosten-schweiz/</loc>
+    <lastmod>2026-03-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/bf17-begleitetes-fahren-schweiz/</loc>
+    <lastmod>2026-03-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/fuehrerschein-kategorien-schweiz/</loc>
+    <lastmod>2026-03-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/</loc>
+    <lastmod>2026-03-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/theorieprufung-tipps-zuerich/</loc>
+    <lastmod>2026-03-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/vku-kurs-verkehrskunde-sicherheit/</loc>
+    <lastmod>2026-03-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/fahrschueler-respekt-strasse/</loc>
+    <lastmod>2026-03-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/drivers-license-convert/</loc>
+    <lastmod>2026-03-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://drivingteam.ch/agb/</loc>
     <lastmod>${today}</lastmod>
