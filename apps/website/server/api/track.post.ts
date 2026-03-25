@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
+const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
+
 function getReferrerType(referrer: string): string {
   if (!referrer) return 'direct'
   if (/google\.|bing\.|yahoo\.|duckduckgo\.|ecosia\./.test(referrer)) return 'search'
@@ -44,6 +46,9 @@ export default defineEventHandler(async (event) => {
 
   const ua = getHeader(event, 'user-agent') || ''
   const country = getHeader(event, 'x-vercel-ip-country') || 'unknown'
+
+  // Skip bots
+  if (!ua || BOT_PATTERNS.test(ua)) return { ok: false, reason: 'bot' }
 
   // Fire and forget - never delays response, but log errors
   trackView({

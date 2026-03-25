@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 
 const SKIP_PATHS = ['/_nuxt/', '/api/', '/__nuxt/', '/favicon', '.webp', '.png', '.jpg', '.svg', '.css', '.js', '.xml', '.txt']
 
+const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
+
 function getReferrerType(referrer: string): string {
   if (!referrer) return 'direct'
   if (/google\.|bing\.|yahoo\.|duckduckgo\.|ecosia\./.test(referrer)) return 'search'
@@ -47,6 +49,9 @@ export default defineEventHandler((event) => {
   const referrer = getHeader(event, 'referer') || ''
   const ua = getHeader(event, 'user-agent') || ''
   const country = getHeader(event, 'x-vercel-ip-country') || 'unknown'
+
+  // Skip bots and automated crawlers
+  if (!ua || BOT_PATTERNS.test(ua)) return
 
   // Fire and forget - response is NOT delayed
   trackView(path, referrer, ua, country).catch(() => {})
