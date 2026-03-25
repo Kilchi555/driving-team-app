@@ -325,6 +325,19 @@
     <CtaSection title="Jetzt mit der Auto Fahrschule starten!" />
     <StandorteSection />
     
+    <!-- Price Calculator Section -->
+    <section class="section-container py-16 bg-gradient-to-r from-primary-50 to-blue-50">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl font-bold mb-3">Deine Kosten kalkulieren</h2>
+        <p class="text-gray-600 mb-8">Berechne in wenigen Schritten, was deine Auto Fahrausbildung ungefähr kosten wird.</p>
+        <PriceCalculator 
+          preSelectCategory="auto"
+          title="💰 Auto Kostenrechner"
+          description="Schritt {{ currentStep }} von {{ totalSteps }} – Berechne deine Auto-Fahrschul-Kosten"
+        />
+      </div>
+    </section>
+
     <!-- Related/See Also Section -->
     <section class="section-container py-12 bg-gray-50">
       <div class="max-w-4xl mx-auto">

@@ -23,8 +23,8 @@
             <!-- Header -->
             <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-800 text-white p-4 flex justify-between items-center">
               <div>
-                <h2 class="text-2xl font-bold">💰 Kostenrechner</h2>
-                <p class="text-white text-sm mt-1">Schritt {{ currentStep }} von {{ totalSteps }}</p>
+                <h2 class="text-2xl font-bold">{{ props.title }}</h2>
+                <p class="text-white text-sm mt-1">{{ props.description.replace('{{ currentStep }}', currentStep).replace('{{ totalSteps }}', totalSteps) }}</p>
               </div>
               <button
                 @click="closeModal"
@@ -295,6 +295,18 @@ const props = defineProps({
   autoOpen: {
     type: Boolean,
     default: false
+  },
+  preSelectCategory: {
+    type: String,
+    default: null
+  },
+  title: {
+    type: String,
+    default: '💰 Kostenrechner'
+  },
+  description: {
+    type: String,
+    default: 'Schritt {{ currentStep }} von {{ totalSteps }}'
   }
 })
 
@@ -416,6 +428,11 @@ const totalSteps = ref(3)
 onMounted(() => {
   if (props.autoOpen) {
     showModal.value = true
+  }
+  // Pre-select category and jump to step 2 if provided
+  if (props.preSelectCategory) {
+    selectedCategory.value = props.preSelectCategory
+    currentStep.value = 2
   }
 })
 
@@ -596,7 +613,7 @@ const previousStep = () => {
 const closeModal = () => {
   showModal.value = false
   setTimeout(() => {
-    currentStep.value = 1
+    currentStep.value = props.preSelectCategory ? 2 : 1
     emailInput.value = ''
     firstNameInput.value = ''
     emailSendSuccess.value = false
@@ -607,7 +624,7 @@ const closeModal = () => {
 
 const closeSuccessModal = () => {
   emailSendSuccess.value = false
-  currentStep.value = 1
+  currentStep.value = props.preSelectCategory ? 2 : 1
   emailInput.value = ''
   firstNameInput.value = ''
   emailSendError.value = ''
