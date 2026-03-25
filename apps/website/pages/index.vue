@@ -220,9 +220,7 @@
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
                 <span>
-                  <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:text-primary-700 font-semibold underline">
-                    Online Buchung und Bezahlung
-                  </a>
+                  Online Buchung und Bezahlung
                 </span>
               </li>
             </ul>

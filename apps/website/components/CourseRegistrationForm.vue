@@ -117,7 +117,7 @@
         <!-- FaBer ID (Führerausweis Nummer) -->
         <div v-if="props.show_faber_birthdate !== false" class="space-y-3">
           <label class="block text-sm font-semibold text-gray-900">
-            Führerausweis-Nummer (FaBer) <span class="text-red-500">*</span>
+            Führerausweis-Nummer <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.faberid"
