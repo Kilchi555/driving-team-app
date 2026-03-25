@@ -247,7 +247,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "AboutPage", "name": "Team Driving Team Fahrschule", "url": "https://drivingteam.ch/team/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "employee": [{ "@type": "Person", "name": "Marc" }, { "@type": "Person", "name": "Nicole" }, { "@type": "Person", "name": "Pascal" }] } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AboutPage", "name": "Team Driving Team Fahrschule", "url": "https://drivingteam.ch/team/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "employee": [{ "@type": "Person", "name": "Marc" }, { "@type": "Person", "name": "Nicole" }, { "@type": "Person", "name": "Pascal" }] } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Team", "item": "https://drivingteam.ch/team/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 

@@ -104,7 +104,8 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Kurs Kategorie BE", "description": "Spezial-Gruppentraining für Kategorie BE. Sicher Anhänger fahren lernen.", "url": "https://drivingteam.ch/anhaenger-kurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Kurs Kategorie BE", "description": "Spezial-Gruppentraining für Kategorie BE. Sicher Anhänger fahren lernen.", "url": "https://drivingteam.ch/anhaenger-kurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/" }, { "@type": "ListItem", "position": 3, "name": "Anhänger Kurs", "item": "https://drivingteam.ch/anhaenger-kurs/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 
