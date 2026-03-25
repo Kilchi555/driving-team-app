@@ -2,7 +2,7 @@
   <div>
     <!-- Trigger Button -->
     <button
-      @click="() => { showModal = true; trackEvent('opened', selectedCategory) }"
+      @click="openCalculator"
       class="w-full md:w-auto px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition duration-200 text-lg shadow-lg"
     >
       💰 Kostenrechner
@@ -632,6 +632,11 @@ const trackEvent = async (eventType: 'opened' | 'submitted', category: string) =
   } catch (err) {
     // Silently fail
   }
+}
+
+const openCalculator = () => {
+  showModal.value = true
+  trackEvent('opened', selectedCategory)
 }
 
 const closeSuccessModal = () => {
