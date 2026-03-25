@@ -1,10 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Pfäffikon/SZ | Auto, Motorrad | Driving Team</Title>
+      <Title>Fahrschule Pfäffikon/SZ | Auto, Anhänger, Lastwagen, Bus, Motorboot</Title>
       <Meta name="description" content="Fahrschule Pfäffikon/SZ - Auto, Motorrad, Lastwagen & Kurse im Kanton Schwyz. Erfahrene Fahrlehrer, flexible Zeiten, ab CHF 100/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="Fahrschule Pfäffikon/SZ – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Pfäffikon SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 100/Lektion." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-pfaeffikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-pfaeffikon/" />
       
       

@@ -6,6 +6,7 @@
       <Meta name="keywords" content="Fahrschule Zürich-Altstetten, Auto Fahrschule Zürich Altstetten, Motorrad Fahrschule Zürich Altstetten, Anhänger Fahrschule Zürich Altstetten, Lastwagen Fahrschule Zürich Altstetten, Taxi Fahrschule Zürich Altstetten, Bus Fahrschule Zürich Altstetten, Motorboot Fahrschule Zürich Altstetten, Fahrschule Altstetten" />
       <Meta property="og:title" content="Fahrschule Zürich-Altstetten – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrschule in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 85% Erfolgsquote, flexible Zeiten." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />

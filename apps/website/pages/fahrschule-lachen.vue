@@ -5,6 +5,7 @@
       <Meta name="description" content="Fahrschule Lachen - Auto, Motorrad, Lastwagen & Kurse im Kanton Schwyz. Erfahrene Fahrlehrer, flexible Zeiten, ab CHF 100/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="Fahrschule Lachen – Auto, Motorrad & Kurse | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 100/Lektion, flexible Zeiten." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-lachen/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-lachen/" />
       
       

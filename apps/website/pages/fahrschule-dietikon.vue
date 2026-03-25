@@ -5,6 +5,7 @@
       <Meta name="description" content="Fahrschule Dietikon - Auto, Motorrad, Lastwagen Fahrstunden im Limmattal. Deutsch & Albanisch, 85% Erfolgsquote, ab CHF 100/Lektion. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Fahrschule Dietikon – Auto & Motorrad im Limmattal | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Dietikon im Limmattal. Deutsch & Albanisch, 85% Erfolgsquote, ab CHF 100/Lektion." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-dietikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-dietikon/" />
       
       

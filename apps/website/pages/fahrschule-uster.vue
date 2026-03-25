@@ -5,6 +5,7 @@
       <Meta name="description" content="Fahrschule Uster - Auto, Motorrad, Lastwagen Fahrstunden im Zürcher Oberland. 85% Erfolgsquote, erfahrene Fahrlehrer, flexible Zeiten. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Fahrschule Uster – Auto & Motorrad im Zürcher Oberland | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Uster ZH. 85% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-uster/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-uster/" />
       
       

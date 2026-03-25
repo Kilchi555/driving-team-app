@@ -5,6 +5,7 @@
       <Meta name="description" content="Taxi Fahrschule in Zürich. BPT Ausbildung (Code 121 | 122) in Zürich-Altstetten. Professionelle Fahrlehrer, faire Preise. Jetzt anmelden!" />
       <Meta property="og:title" content="Taxi Fahrschule Zürich – BPT Ausbildung | Driving Team" />
       <Meta property="og:description" content="BPT Ausbildung (Code 121/122) in Zürich-Altstetten. Professionelle Fahrlehrer, faire Preise." />
+      <Meta property="og:url" content="https://drivingteam.ch/taxi-fahrschule-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule-zuerich/" />
       
       
