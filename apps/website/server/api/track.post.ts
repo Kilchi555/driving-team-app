@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
+const SKIP_PATHS_CLIENT = ['/__nuxt_error', '/admin', '/administrator', '/login', '/register', '/user/login', '/user/register', '/wp-admin', '/wp-login']
 
 function getReferrerType(referrer: string): string {
   if (!referrer) return 'direct'
@@ -40,11 +41,16 @@ async function trackView(data: {
 }
 
 export default defineEventHandler(async (event) => {
-    // Only skip on local development (allow production & preview)
-    if (!process.env.VERCEL_ENV) return { ok: false, reason: 'local dev' }
+  // Only skip on local development (allow production & preview)
+  if (!process.env.VERCEL_ENV) return { ok: false, reason: 'local dev' }
 
   const body = await readBody(event).catch(() => null)
   if (!body?.page) return { ok: false }
+
+  // Skip unwanted paths
+  if (SKIP_PATHS_CLIENT.some(path => body.page.includes(path))) {
+    return { ok: false, reason: 'skipped path' }
+  }
 
   const ua = getHeader(event, 'user-agent') || ''
   const country = getHeader(event, 'x-vercel-ip-country') || 'unknown'
