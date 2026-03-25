@@ -427,6 +427,19 @@
       </div>
     </section>
     
+    <!-- Price Calculator Section -->
+    <section class="section-container py-16 bg-gradient-to-r from-red-50 to-pink-50">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl font-bold mb-3">Deine Kosten kalkulieren</h2>
+        <p class="text-gray-600 mb-8">Berechne in wenigen Schritten, was deine Motorrad Fahrausbildung ungefähr kosten wird.</p>
+        <PriceCalculator 
+          preSelectCategory="motorrad"
+          title="🏍️ Motorrad Kostenrechner"
+          description="Schritt {{ currentStep }} von {{ totalSteps }} – Berechne deine Motorrad-Fahrschul-Kosten"
+        />
+      </div>
+    </section>
+    
     <WarumSection category="motorrad" />
   </div>
 </template>

@@ -314,6 +314,19 @@
       </div>
     </section>
     
+    <!-- Price Calculator Section -->
+    <section class="section-container py-16 bg-gradient-to-r from-cyan-50 to-blue-50">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl font-bold mb-3">Deine Kosten kalkulieren</h2>
+        <p class="text-gray-600 mb-8">Berechne in wenigen Schritten, was deine Motorboot Fahrausbildung ungefähr kosten wird.</p>
+        <PriceCalculator 
+          preSelectCategory="motorboot"
+          title="🛥️ Motorboot Kostenrechner"
+          description="Schritt {{ currentStep }} von {{ totalSteps }} – Berechne deine Motorboot-Fahrschul-Kosten"
+        />
+      </div>
+    </section>
+    
     <WarumSection category="motorboot" />
   </div>
 </template>

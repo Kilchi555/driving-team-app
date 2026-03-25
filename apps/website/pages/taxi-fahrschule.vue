@@ -430,6 +430,19 @@
       </div>
     </section>
     
+    <!-- Price Calculator Section -->
+    <section class="section-container py-16 bg-gradient-to-r from-orange-50 to-red-50">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl font-bold mb-3">Deine Kosten kalkulieren</h2>
+        <p class="text-gray-600 mb-8">Berechne in wenigen Schritten, was deine Taxi Fahrausbildung ungefähr kosten wird.</p>
+        <PriceCalculator 
+          preSelectCategory="motorwagen"
+          title="🚕 Taxi Kostenrechner"
+          description="Schritt {{ currentStep }} von {{ totalSteps }} – Berechne deine Taxi-Fahrschul-Kosten"
+        />
+      </div>
+    </section>
+    
     <WarumSection category="taxi" />
   </div>
 </template>
