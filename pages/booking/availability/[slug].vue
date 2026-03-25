@@ -3018,6 +3018,15 @@ const confirmBooking = async () => {
 
     logger.debug('✅ Appointment created:', result.appointment_id)
     
+    // Track successful booking completion for conversion funnel
+    if (typeof window !== 'undefined' && (window as any).__trackBookingEvent) {
+      (window as any).__trackBookingEvent('completed', {
+        appointment_id: result.appointment_id,
+        category_code: selectedCategory.value.code,
+        slot_id: selectedSlot.value.id,
+      })
+    }
+    
     isCreatingBooking.value = false
     
     // Redirect to customer dashboard with success message
