@@ -33,8 +33,8 @@ async function trackView(page: string, referrer: string, ua: string, country: st
 }
 
 export default defineEventHandler((event) => {
-  // Only track in production (skip local dev to avoid polluting analytics)
-  if (process.env.NODE_ENV !== 'production') return
+  // Only track on live production (skip dev and Vercel preview deployments)
+  if (process.env.VERCEL_ENV !== 'production') return
 
   const url = getRequestURL(event)
   const path = url.pathname
