@@ -624,10 +624,11 @@ const closeModal = () => {
 
 const trackEvent = async (eventType: 'opened' | 'submitted', category: string) => {
   try {
+    const sessionId = window.__analyticsSessionId || 'unknown'
     await fetch('/api/calculator-events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_type: eventType, category }),
+      body: JSON.stringify({ event_type: eventType, category, sessionId }),
     }).catch(() => {}) // Fire and forget
   } catch (err) {
     // Silently fail
@@ -679,6 +680,7 @@ const sendCalculationEmail = async () => {
         svaFees: svaFees.value,
         externalCostsTotal: externalCostsTotal.value,
         newsletterOptIn: newsletterOptIn.value,
+        sessionId: window.__analyticsSessionId,
       }),
     })
 

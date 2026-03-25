@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 interface CalculatorEventPayload {
   event_type: 'opened' | 'submitted'
   category: string
+  sessionId: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -26,6 +27,7 @@ export default defineEventHandler(async (event) => {
     const { error } = await supabase.from('calculator_events').insert({
       event_type: body.event_type,
       category: body.category,
+      session_id: body.sessionId,
       date: new Date().toISOString().split('T')[0],
     })
 

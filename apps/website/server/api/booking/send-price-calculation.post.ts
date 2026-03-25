@@ -15,6 +15,8 @@ interface PriceCalculationPayload {
   calculationDetails: string
   svaFees?: { label: string; amount: number }[]
   externalCostsTotal?: number
+  newsletterOptIn?: boolean
+  sessionId?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -59,6 +61,8 @@ export default defineEventHandler(async (event) => {
         lessons_count: body.lessonsCount,
         total_cost: body.totalCost,
         calculation_details: body.calculationDetails,
+        newsletter_opt_in: body.newsletterOptIn ?? false,
+        session_id: body.sessionId || null,
       })
 
     if (dbError) {

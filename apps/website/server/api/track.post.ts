@@ -21,6 +21,7 @@ async function trackView(data: {
   referrer: string
   ua: string
   country: string
+  sessionId: string
 }) {
   const supabaseUrl = process.env.SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -34,6 +35,7 @@ async function trackView(data: {
     p_referrer_type: getReferrerType(data.referrer),
     p_device_type: getDeviceType(data.ua),
     p_country: data.country || 'unknown',
+    p_session_id: data.sessionId,
   })
 }
 
@@ -56,6 +58,7 @@ export default defineEventHandler(async (event) => {
     referrer: body.referrer || '',
     ua,
     country,
+    sessionId: body.sessionId || 'unknown',
   }).catch((err) => console.error('[analytics/track] Supabase error:', err))
 
   return { ok: true }
