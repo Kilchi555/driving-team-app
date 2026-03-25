@@ -36,23 +36,14 @@ export default defineNuxtPlugin(() => {
         referrer: document.referrer,
         sessionId,
       }
-      
-      console.log('[Analytics] Sending payload:', payload)
 
       await fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      }).then(r => {
-        console.log('[Analytics] Track response:', r.status)
-        return r.json()
-      }).then(d => {
-        console.log('[Analytics] Track data:', d)
-      }).catch((err) => {
-        console.error('[Analytics] Track error:', err)
-      })
+      }).catch(() => {})
     } catch (err) {
-      console.error('[Analytics] Plugin error:', err)
+      // Silently fail
     }
   }
 
@@ -62,8 +53,6 @@ export default defineNuxtPlugin(() => {
   } else {
     trackPage()
   }
-
-  console.log('[Analytics] Plugin loaded, sessionId:', sessionId)
 
   // Track SPA route changes
   const router = useRouter()

@@ -1,20 +1,32 @@
-import { defineEventHandler, createError, getQuery } from 'h3'
+import { defineEventHandler, getQuery } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+
+const EMPTY_RESPONSE = {
+  period: { startDate: '', endDate: '', days: 7 },
+  summary: { totalPageViews: 0, calculatorOpens: 0, calculatorSubmissions: 0, totalLeads: 0, avgLeadsPerSession: 0 },
+  dailyTrend: [],
+  topPages: [],
+  calculatorMetrics: { totalOpens: 0, totalSubmissions: 0, conversionRate: 0, byCategory: {} },
+  leads: { total: 0, byCategory: {} },
+  bookingRedirects: { total: 0, byCategory: {} },
+  bookingEvents: { viewed: 0, completed: 0, abandoned: 0 },
+  funnelSessions: [],
+}
 
 export default defineEventHandler(async (event) => {
   const supabaseUrl = process.env.SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+  // Return empty data if Supabase not configured (local dev)
   if (!supabaseUrl || !supabaseServiceKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Supabase not configured',
-    })
+    return EMPTY_RESPONSE
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const daysParam = getQuery(event).days || '7'
   const days = parseInt(daysParam as string, 10)
+
+  try {
 
   // Get date range
   const endDate = new Date()
@@ -46,6 +58,33 @@ export default defineEventHandler(async (event) => {
     .gte('date', startDateStr)
     .lte('date', endDateStr)
 
+  // 4. Leads
+  const { data: leads } = await supabase
+    .from('price_calculation_leads')
+    .select('category, created_at')
+    .gte('created_at', startDateStr + 'T00:00:00')
+    .lte('created_at', endDateStr + 'T23:59:59')
+
+  // 5. Conversion Funnel
+  const { data: funnelData } = await supabase.rpc('get_conversion_funnel', {
+    start_date: startDateStr,
+    end_date: endDateStr,
+  })
+
+  // 6. Booking Redirects
+  const { data: bookingRedirects } = await supabase
+    .from('booking_redirects')
+    .select('category, date')
+    .gte('date', startDateStr)
+    .lte('date', endDateStr)
+
+  // 7. Booking Events
+  const { data: bookingEvents } = await supabase
+    .from('booking_events')
+    .select('event_type, date')
+    .gte('date', startDateStr)
+    .lte('date', endDateStr)
+
   const calculatorOpens = calculatorEvents?.filter((e) => e.event_type === 'opened').length || 0
   const calculatorSubmissions = calculatorEvents?.filter((e) => e.event_type === 'submitted').length || 0
   const calcOpensByCategory = calculatorEvents?.reduce((acc: any, e) => {
@@ -55,35 +94,19 @@ export default defineEventHandler(async (event) => {
     return acc
   }, {}) || {}
 
-  // 4. Leads
-  const { data: leads } = await supabase
-    .from('price_calculation_leads')
-    .select('category, created_at')
-    .gte('created_at', startDateStr + 'T00:00:00')
-    .lte('created_at', endDateStr + 'T23:59:59')
-
   const leadsByCategory = leads?.reduce((acc: any, lead) => {
     acc[lead.category] = (acc[lead.category] || 0) + 1
     return acc
   }, {}) || {}
 
-  // 5. Conversion Funnel (Sessions with activity)
-  const { data: funnelData } = await supabase.rpc('get_conversion_funnel', {
-    start_date: startDateStr,
-    end_date: endDateStr,
-  }).catch(() => ({ data: [] }))
-
-  // 6. Booking Redirects
-  const { data: bookingRedirects } = await supabase
-    .from('booking_redirects')
-    .select('category, date')
-    .gte('date', startDateStr)
-    .lte('date', endDateStr)
-
   const bookingRedirectsByCategory = bookingRedirects?.reduce((acc: any, redirect) => {
     acc[redirect.category] = (acc[redirect.category] || 0) + 1
     return acc
   }, {}) || {}
+
+  const bookingViewed = bookingEvents?.filter((e) => e.event_type === 'viewed').length || 0
+  const bookingCompleted = bookingEvents?.filter((e) => e.event_type === 'completed').length || 0
+  const bookingAbandoned = bookingEvents?.filter((e) => e.event_type === 'abandoned').length || 0
 
   // Aggregate page views by day
   const viewsByDay: any = {}
@@ -119,6 +142,15 @@ export default defineEventHandler(async (event) => {
       total: bookingRedirects?.length || 0,
       byCategory: bookingRedirectsByCategory,
     },
+    bookingEvents: {
+      viewed: bookingViewed,
+      completed: bookingCompleted,
+      abandoned: bookingAbandoned,
+    },
     funnelSessions: funnelData || [],
+  }
+  } catch (err) {
+    console.error('[website-analytics-conversion] Error:', err)
+    return EMPTY_RESPONSE
   }
 })
