@@ -2,7 +2,7 @@
   <div>
     <!-- Trigger Button -->
     <button
-      @click="showModal = true"
+      @click="() => { showModal = true; trackEvent('opened', selectedCategory) }"
       class="w-full md:w-auto px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition duration-200 text-lg shadow-lg"
     >
       💰 Kostenrechner
@@ -622,6 +622,18 @@ const closeModal = () => {
   }, 300)
 }
 
+const trackEvent = async (eventType: 'opened' | 'submitted', category: string) => {
+  try {
+    await fetch('/api/calculator-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: eventType, category }),
+    }).catch(() => {}) // Fire and forget
+  } catch (err) {
+    // Silently fail
+  }
+}
+
 const closeSuccessModal = () => {
   emailSendSuccess.value = false
   currentStep.value = props.preSelectCategory ? 2 : 1
@@ -662,6 +674,9 @@ const sendCalculationEmail = async () => {
     if (!response.ok) {
       throw new Error('Fehler beim Versand')
     }
+
+    // Track successful submission
+    trackEvent('submitted', selectedCategory)
 
     emailSendSuccess.value = true
     isSending.value = false
