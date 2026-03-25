@@ -17,25 +17,23 @@
  * 10. ✅ Error Handling - Generic error messages to prevent info leakage
  */
 
-import { defineEventHandler, getHeader, createError, getQuery } from 'h3'
+import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { validateUUID } from '~/server/utils/validators'
+import { getAuthToken } from '~/server/utils/auth-helper'
 
 export default defineEventHandler(async (event) => {
   try {
-    // 1. AUTHENTICATION - Verify Bearer token
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    // 1. AUTHENTICATION - Supports Bearer header AND HTTP-Only cookies
+    const token = getAuthToken(event)
+    if (!token) {
       logger.warn('❌ No auth token provided')
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
       })
     }
-
-    const token = authHeader.substring(7)
-    
     // Create Supabase admin client
     const supabaseAdmin = getSupabaseAdmin()
 

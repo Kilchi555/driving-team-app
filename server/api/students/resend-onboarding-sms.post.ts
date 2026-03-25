@@ -3,7 +3,8 @@ import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
-import { getHeader, H3Event } from 'h3'
+import { getAuthToken } from '~/server/utils/auth-helper'
+import { H3Event } from 'h3'
 import { sendSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -25,8 +26,9 @@ export default defineEventHandler(async (event: H3Event) => {
     }
     
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    // Supports both Authorization Bearer header and HTTP-Only cookies
+    const token = getAuthToken(event)
+    if (!token) {
       await logAudit({
         action: 'resend_onboarding_sms',
         status: 'failed',
@@ -37,7 +39,6 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const token = authHeader.replace('Bearer ', '')
     const supabaseAdmin = getSupabaseAdmin()
 
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
