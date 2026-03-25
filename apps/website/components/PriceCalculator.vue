@@ -24,7 +24,7 @@
             <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-800 text-white p-4 flex justify-between items-center">
               <div>
                 <h2 class="text-2xl font-bold">{{ props.title }}</h2>
-                <p class="text-white text-sm mt-1">{{ props.description.replace('{{ currentStep }}', currentStep).replace('{{ totalSteps }}', totalSteps) }}</p>
+                <p class="text-white text-sm mt-1">{{ modalDescription }}</p>
               </div>
               <button
                 @click="closeModal"
@@ -638,6 +638,12 @@ const openCalculator = () => {
   showModal.value = true
   trackEvent('opened', selectedCategory)
 }
+
+const modalDescription = computed(() => {
+  return props.description
+    .replace('{{ currentStep }}', String(currentStep.value))
+    .replace('{{ totalSteps }}', String(totalSteps.value))
+})
 
 const closeSuccessModal = () => {
   emailSendSuccess.value = false
