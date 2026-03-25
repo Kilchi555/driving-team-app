@@ -5,7 +5,13 @@
  */
 
 export default defineNuxtPlugin(() => {
-  if (process.server) return // Nur client-side
+  if (process.server) return
+
+  // Only track on booking/availability pages
+  const isBookingPage = window.location.pathname.includes('/booking/') || 
+                        window.location.pathname.includes('/availability/')
+  
+  if (!isBookingPage) return // Nur client-side
 
   // Get or create session ID
   const getSessionId = (): string => {
