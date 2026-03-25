@@ -26,31 +26,32 @@ async function trackView(data: {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  const row = {
-    page: data.page,
-    date: new Date().toISOString().split('T')[0],
-    referrer_type: getReferrerType(data.referrer),
-    device_type: getDeviceType(data.ua),
-    country: data.country || 'unknown',
-  }
-
-  await supabase.rpc('increment_page_view', row)
+  await supabase.rpc('increment_page_view', {
+    p_page: data.page,
+    p_date: new Date().toISOString().split('T')[0],
+    p_referrer_type: getReferrerType(data.referrer),
+    p_device_type: getDeviceType(data.ua),
+    p_country: data.country || 'unknown',
+  })
 }
 
 export default defineEventHandler(async (event) => {
+  // Only track on live production
+  if (process.env.VERCEL_ENV !== 'production') return { ok: false, reason: 'not production' }
+
   const body = await readBody(event).catch(() => null)
   if (!body?.page) return { ok: false }
 
   const ua = getHeader(event, 'user-agent') || ''
   const country = getHeader(event, 'x-vercel-ip-country') || 'unknown'
 
-  // Fire and forget - never delays response
+  // Fire and forget - never delays response, but log errors
   trackView({
     page: body.page,
     referrer: body.referrer || '',
     ua,
     country,
-  }).catch(() => {})
+  }).catch((err) => console.error('[analytics/track] Supabase error:', err))
 
   return { ok: true }
 })
