@@ -1,30 +1,34 @@
 export default defineNuxtPlugin(() => {
-  const GA_ID = 'G-ZJX01VS6PN'
-  const STORAGE_KEY = 'dt_cookie_consent'
+  if (process.server) return // Nur client-side
 
-  // Only load GA4 if user has already accepted (returning visitors)
-  // New visitors see the CookieBanner which loads GA4 on accept
-  const consent = localStorage.getItem(STORAGE_KEY)
-  if (consent !== 'accepted') return
+  const trackPage = async () => {
+    try {
+      const url = new URL(window.location.href)
+      const path = url.pathname + url.search
 
-  window.addEventListener('load', () => {
-    const script = document.createElement('script')
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
-    script.async = true
-    document.head.appendChild(script)
+      await fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: path,
+          referrer: document.referrer,
+        }),
+      }).catch(() => {})
+    } catch (err) {
+      // Silently fail
+    }
+  }
 
-    window.dataLayer = window.dataLayer || []
-    function gtag(...args: any[]) { window.dataLayer.push(args) }
-    gtag('js', new Date())
-    gtag('config', GA_ID)
+  // Track initial page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', trackPage)
+  } else {
+    trackPage()
+  }
 
-    // Track SPA route changes
-    const router = useRouter()
-    router.afterEach((to) => {
-      gtag('event', 'page_view', {
-        page_path: to.fullPath,
-        page_title: document.title,
-      })
-    })
+  // Track SPA route changes
+  const router = useRouter()
+  router.afterEach(() => {
+    trackPage()
   })
 })
