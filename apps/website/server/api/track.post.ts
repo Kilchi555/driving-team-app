@@ -40,8 +40,8 @@ async function trackView(data: {
 }
 
 export default defineEventHandler(async (event) => {
-  // Only track on live production
-  if (process.env.VERCEL_ENV !== 'production') return { ok: false, reason: 'not production' }
+    // Only skip on local development (allow production & preview)
+    if (!process.env.VERCEL_ENV) return { ok: false, reason: 'local dev' }
 
   const body = await readBody(event).catch(() => null)
   if (!body?.page) return { ok: false }
