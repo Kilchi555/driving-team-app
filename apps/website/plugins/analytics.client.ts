@@ -1,10 +1,21 @@
 export default defineNuxtPlugin(() => {
   if (process.server) return // Nur client-side
 
+  let lastTrackedPath: string | null = null
+
   const trackPage = async () => {
     try {
       const url = new URL(window.location.href)
-      const path = url.pathname + url.search
+      let path = url.pathname + url.search
+
+      // Normalisiere: Immer mit Trailing Slash enden
+      if (path !== '/' && !path.endsWith('/')) {
+        path += '/'
+      }
+
+      // Verhindere Doppel-Tracking
+      if (path === lastTrackedPath) return
+      lastTrackedPath = path
 
       await fetch('/api/track', {
         method: 'POST',
