@@ -8,6 +8,7 @@ interface BookingParams {
   instructor?: string // z.B. 'pascal', 'marc'
   category?: string // z.B. 'auto', 'motorrad'
   service?: string // z.B. 'driving-lessons', 'courses'
+  sessionId?: string // Session ID für Tracking
 }
 
 /**
@@ -85,6 +86,13 @@ export const useBookingUrl = () => {
     // Service Parameter (falls nicht über category gesetzt)
     if (params.service && !params.category) {
       queryParams.append('service', params.service)
+    }
+
+    // Session ID for tracking (always add if available in browser)
+    if (typeof window !== 'undefined' && (window as any).__analyticsSessionId) {
+      queryParams.append('session_id', (window as any).__analyticsSessionId)
+    } else if (params.sessionId) {
+      queryParams.append('session_id', params.sessionId)
     }
 
     const queryString = queryParams.toString()

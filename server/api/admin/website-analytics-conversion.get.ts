@@ -73,6 +73,18 @@ export default defineEventHandler(async (event) => {
     end_date: endDateStr,
   }).catch(() => ({ data: [] }))
 
+  // 6. Booking Redirects
+  const { data: bookingRedirects } = await supabase
+    .from('booking_redirects')
+    .select('category, date')
+    .gte('date', startDateStr)
+    .lte('date', endDateStr)
+
+  const bookingRedirectsByCategory = bookingRedirects?.reduce((acc: any, redirect) => {
+    acc[redirect.category] = (acc[redirect.category] || 0) + 1
+    return acc
+  }, {}) || {}
+
   // Aggregate page views by day
   const viewsByDay: any = {}
   pageViewsByDay?.forEach((row: any) => {
@@ -102,6 +114,10 @@ export default defineEventHandler(async (event) => {
     leads: {
       total: leads?.length || 0,
       byCategory: leadsByCategory,
+    },
+    bookingRedirects: {
+      total: bookingRedirects?.length || 0,
+      byCategory: bookingRedirectsByCategory,
     },
     funnelSessions: funnelData || [],
   }
