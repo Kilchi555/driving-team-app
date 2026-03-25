@@ -5,6 +5,7 @@
       <Meta name="description" content="Lastwagen Fahrstunden Zürich für C1, C & CE. Professionelle LKW-Ausbildung, moderne Fahrzeuge, CZV Grundkurs. Jetzt anmelden!" />
       <Meta property="og:title" content="LKW Fahrschule Kategorie C1 | C | CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
+      <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
       
       

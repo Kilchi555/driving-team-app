@@ -5,6 +5,7 @@
       <Meta name="description" content="Fahrschule St.Gallen - Auto, Motorrad, Lastwagen & Kurse. 85% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten. Professionelle Fahrausbildung. Jetzt buchen!" />
       <Meta property="og:title" content="Fahrschule St. Gallen – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in St. Gallen. Auto, Motorrad, Lastwagen & Kurse. 85% Erfolgsquote, ab CHF 100/Lektion." />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-stgallen/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-stgallen/" />
       
       

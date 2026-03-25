@@ -6,6 +6,7 @@
       <Meta name="keywords" content="Fahrstunden Zürich, Fahrstunden Zürich Kosten, Auto Fahrstunden Zürich, Motorrad Fahrstunden Zürich, Anhänger Fahrstunden Zürich, Fahrstunden Zürich buchen, Fahrstunden Zürich Preis" />
       <Meta property="og:title" content="Fahrstunden Zürich ab CHF 95.- | Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrstunden in Zürich ab CHF 95.-/Lektion. Auto, Motorrad, Anhänger. Flexible Zeiten, 85% Erfolgsquote. Jetzt online buchen!" />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrstunden-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrstunden-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
