@@ -23,8 +23,8 @@ export default defineEventHandler(async (event) => {
       return { ok: true }
     }
 
-    // Only track in production
-    if (process.env.VERCEL_ENV !== 'production') {
+    // Only skip on local development (allow production & preview)
+    if (!process.env.VERCEL_ENV) {
       return { ok: true }
     }
 
