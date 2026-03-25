@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SKIP_PATHS = ['/_nuxt/', '/api/', '/__nuxt/', '/favicon', '.webp', '.png', '.jpg', '.svg', '.css', '.js', '.xml', '.txt']
+const SKIP_PATHS = ['/_nuxt/', '/api/', '/__nuxt/', '/favicon', '.webp', '.png', '.jpg', '.svg', '.css', '.js', '.xml', '.txt', '/.well-known/', '/assets/', '/wp-content/', '/test-debug', '/track-debug']
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
 
