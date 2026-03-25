@@ -79,7 +79,7 @@
                       type="number"
                       min="1"
                       max="200"
-                      class="w-24 px-4 py-4 text-center text-3xl font-bold border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-600"
+                      class="w-24 px-4 py-4 text-center text-3xl font-bold border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <button
                       @click="lessonsCount = Math.min(200, lessonsCount + 1)"
@@ -157,24 +157,39 @@
                   </div>
 
                   <!-- Email Input -->
-                  <label class="block text-sm font-semibold text-gray-900 mb-2">Kalkulation per E-Mail erhalten:</label>
-                  <div class="flex gap-2 mb-2">
-                    <input
-                      v-model="firstNameInput"
-                      type="text"
-                      placeholder="Vorname"
-                      autocomplete="given-name"
-                      class="w-1/3 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:outline-none"
-                    />
-                    <input
-                      v-model="emailInput"
-                      type="email"
-                      placeholder="deine@email.com"
-                      autocomplete="email"
-                      class="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:outline-none"
-                    />
+                  <div class="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-2">
+                    <p class="text-sm font-semibold text-primary-900 mb-1">📬 Kalkulation per E-Mail erhalten</p>
+                    <ul class="text-xs text-primary-700 space-y-0.5 mb-3">
+                      <li>✓ Zum Nachschlagen und Vergleichen gespeichert</li>
+                      <li>✓ Kein Spam – wir melden uns nur wenn du es willst</li>
+                    </ul>
+                    <div class="flex gap-2 mb-1">
+                      <input
+                        v-model="firstNameInput"
+                        type="text"
+                        placeholder="Vorname"
+                        autocomplete="given-name"
+                        class="w-1/3 px-3 py-2.5 rounded-lg border-2 border-primary-200 focus:border-primary-600 focus:outline-none bg-white text-sm"
+                      />
+                      <input
+                        v-model="emailInput"
+                        type="email"
+                        placeholder="deine@email.com"
+                        autocomplete="email"
+                        class="flex-1 px-3 py-2.5 rounded-lg border-2 border-primary-200 focus:border-primary-600 focus:outline-none bg-white text-sm"
+                      />
+                    </div>
+                    <p class="text-xs text-primary-600/70">Keine E-Mail? Einfach auf „Schliessen" klicken.</p>
+                    <!-- Newsletter opt-in -->
+                    <label class="flex items-start gap-2 mt-3 cursor-pointer">
+                      <input
+                        v-model="newsletterOptIn"
+                        type="checkbox"
+                        class="mt-0.5 w-4 h-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500 cursor-pointer flex-shrink-0"
+                      />
+                      <span class="text-xs text-primary-800">Ich will über Neuerungen und Aktionen informiert werden</span>
+                    </label>
                   </div>
-                  <p class="text-xs text-gray-400 mt-2">Optional – du kannst den Schritt auch überspringen</p>
 
                   <!-- Error Message -->
                   <div
@@ -188,21 +203,36 @@
             </div>
 
             <!-- Footer with Actions -->
-            <div class="sticky bottom-0 bg-gray-100 border-t-2 border-gray-200 p-6 flex gap-4">
+            <div class="sticky bottom-0 bg-gray-100 border-t-2 border-gray-200 p-4 flex gap-3">
               <button
                 @click="previousStep"
                 v-if="currentStep > 1"
-                class="flex-1 px-4 py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-bold rounded-lg transition"
+                class="px-4 py-3 bg-gray-300 hover:bg-gray-400 text-gray-900 font-bold rounded-lg transition"
               >
                 ← Zurück
               </button>
               <button
-                @click="currentStep === totalSteps ? sendCalculationEmail() : nextStep()"
-                :disabled="!canProceed || (currentStep === totalSteps && isSending)"
-                v-if="currentStep > 1"
+                v-if="currentStep === totalSteps && (!emailInput || !isValidEmail)"
+                @click="closeModal"
+                class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-600 font-semibold rounded-lg transition text-sm"
+              >
+                Schliessen
+              </button>
+              <button
+                v-if="currentStep < totalSteps"
+                @click="nextStep"
+                :disabled="!canProceed"
                 class="flex-1 px-4 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-bold rounded-lg transition"
               >
-                {{ currentStep === totalSteps ? (emailInput && isValidEmail ? '📧 Versenden' : 'Fertig') : 'Weiter →' }}
+                Weiter →
+              </button>
+              <button
+                v-if="currentStep === totalSteps && emailInput && isValidEmail"
+                @click="sendCalculationEmail"
+                :disabled="isSending"
+                class="flex-1 px-4 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-bold rounded-lg transition"
+              >
+                {{ isSending ? 'Wird gesendet...' : '📧 Kalkulation erhalten' }}
               </button>
             </div>
           </div>
@@ -397,6 +427,7 @@ const firstNameInput = ref('')
 const emailSendSuccess = ref(false)
 const emailSendError = ref('')
 const isSending = ref(false)
+const newsletterOptIn = ref(false)
 
 interface SvaFee {
   label: string
@@ -570,6 +601,7 @@ const closeModal = () => {
     firstNameInput.value = ''
     emailSendSuccess.value = false
     emailSendError.value = ''
+    newsletterOptIn.value = false
   }, 300)
 }
 
@@ -606,6 +638,7 @@ const sendCalculationEmail = async () => {
         calculationDetails: mailBody,
         svaFees: svaFees.value,
         externalCostsTotal: externalCostsTotal.value,
+        newsletterOptIn: newsletterOptIn.value,
       }),
     })
 
