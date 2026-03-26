@@ -351,6 +351,65 @@ export default defineEventHandler(async (event) => {
           })
         }
       }
+
+      // 🎯 AFFILIATE LEAD: convert any matching lead for this phone + tenant
+      try {
+        const normalisePhone = (raw: string) => {
+          let p = raw.replace(/\s+/g, '').replace(/-/g, '')
+          if (p.startsWith('00')) p = '+' + p.slice(2)
+          if (p.startsWith('0') && !p.startsWith('00')) p = '+41' + p.slice(1)
+          if (!p.startsWith('+')) p = '+41' + p
+          return p
+        }
+        const normPhone = sanitizedPhone ? normalisePhone(sanitizedPhone) : null
+        if (normPhone) {
+          const { data: pendingLead } = await serviceSupabase
+            .from('affiliate_leads')
+            .select('id, affiliate_code_id, affiliate_user_id')
+            .eq('tenant_id', tenantId)
+            .eq('phone', normPhone)
+            .neq('status', 'converted')
+            .maybeSingle()
+
+          if (pendingLead) {
+            // Mark lead as converted
+            await serviceSupabase
+              .from('affiliate_leads')
+              .update({
+                status: 'converted',
+                converted_user_id: userProfile.id,
+                converted_at: new Date().toISOString(),
+              })
+              .eq('id', pendingLead.id)
+
+            // Create affiliate_referral from lead if not already created via refCode
+            if (!referredByCode && pendingLead.affiliate_code_id && pendingLead.affiliate_user_id
+                && pendingLead.affiliate_user_id !== userProfile.id) {
+              const { data: existingReferral } = await serviceSupabase
+                .from('affiliate_referrals')
+                .select('id')
+                .eq('referred_user_id', userProfile.id)
+                .eq('tenant_id', tenantId)
+                .maybeSingle()
+
+              if (!existingReferral) {
+                await serviceSupabase.from('affiliate_referrals').insert({
+                  tenant_id: tenantId,
+                  affiliate_code_id: pendingLead.affiliate_code_id,
+                  affiliate_user_id: pendingLead.affiliate_user_id,
+                  referred_user_id: userProfile.id,
+                  status: 'pending',
+                })
+              }
+            }
+
+            logger.debug('Register', '✅ Affiliate lead converted:', pendingLead.id)
+          }
+        }
+      } catch (leadErr: any) {
+        // Non-critical — log but don't fail registration
+        logger.warn('Register', '⚠️ Affiliate lead conversion failed (non-critical):', leadErr.message)
+      }
     }
 
     // 3. Create student_credits record for new client
