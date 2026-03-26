@@ -184,20 +184,35 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Benutzer konnte nicht erstellt werden.' })
   }
 
+  // If existing users row has no authUserId, try to create the missing Supabase auth user now
+  if (!authUserId) {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: emailLower,
+        email_confirm: true,
+      })
+      if (!authError && authData?.user) {
+        authUserId = authData.user.id
+        await supabase
+          .from('users')
+          .update({ auth_user_id: authUserId })
+          .eq('id', userId)
+      }
+    } catch {
+      // Non-critical — continue and attempt magic link with what we have
+    }
+  }
+
   const affiliateCodeResult = await ensureAffiliateCode(tenant.id, userId)
   const affiliateShareLink = `https://simy.ch/ref/${tenant.slug}?ref=${affiliateCodeResult.codeRow.code}`
 
   if (!authUserId) {
+    // Still no auth user — cannot send magic link
     return {
-      success: true,
+      success: false,
       emailSent: false,
-      message: 'Partner ist bereits vorhanden. Affiliate-Code wurde geprüft/erstellt. Bitte mit bestehendem Konto einloggen.',
-      status: affiliateCodeResult.created ? 'existing_user_code_created' : 'existing_user_code_exists',
-      affiliateCode: {
-        code: affiliateCodeResult.codeRow.code,
-        link: affiliateShareLink,
-        createdNow: affiliateCodeResult.created,
-      },
+      message: 'Zugang konnte nicht erstellt werden. Bitte versuche es mit einer anderen E-Mail-Adresse.',
+      status: 'error_no_auth_user',
     }
   }
 

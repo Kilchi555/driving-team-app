@@ -106,16 +106,30 @@
               ✕
             </button>
 
-            <!-- Existing User State (edge case: no auth_user_id) -->
+            <!-- Existing User State (edge case: auth user creation failed) -->
             <div v-if="existingUser" class="p-10 pt-12 text-center">
-              <div class="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-200 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6">
-                📬
+              <div class="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-50 border border-orange-200 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6">
+                ⚠️
               </div>
-              <h2 class="text-3xl font-black text-gray-900 mb-2">Zugang anfordern</h2>
+              <h2 class="text-2xl font-black text-gray-900 mb-2">Konto bereits vorhanden</h2>
               <p class="text-gray-500 text-sm leading-relaxed mb-8">
-                Du bist bereits als <span class="font-semibold text-gray-700">{{ submittedEmail }}</span> registriert.<br>
-                Bitte kontaktiere uns direkt damit wir dir einen Zugangslink zusenden können.
+                Für <span class="font-semibold text-gray-700">{{ submittedEmail }}</span> existiert bereits ein Konto. Klicke unten um einen neuen Zugangslink anzufordern.
               </p>
+              <button
+                @click="existingUser = false; handleSubmit()"
+                :disabled="loading"
+                class="w-full text-white rounded-xl px-6 py-3.5 text-sm font-bold transition-all hover:scale-105 active:scale-95 shadow-lg disabled:opacity-50 mb-3"
+                :style="{ backgroundColor: tenant.primaryColor }"
+              >
+                <span v-if="loading" class="flex items-center justify-center gap-2">
+                  <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Wird gesendet…
+                </span>
+                <span v-else>Neuen Zugangslink anfordern →</span>
+              </button>
               <button
                 @click="closeModal"
                 class="w-full border-2 border-gray-200 rounded-xl px-6 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
@@ -324,9 +338,13 @@ async function handleSubmit() {
         emailSent.value = true
         return
       }
-      // emailSent = false means authUserId was missing (edge case) — show fallback state
+      // emailSent = false AND status = error_no_auth_user — show error in form
+      if (response?.status === 'error_no_auth_user') {
+        errorMessage.value = response?.message || 'Zugang konnte nicht erstellt werden.'
+        return
+      }
+      // Other existing_user edge case — show fallback state with retry button
       existingUser.value = true
-      // Do NOT expose affiliate link here for security
       existingCodeInfo.value = null
       return
     }
