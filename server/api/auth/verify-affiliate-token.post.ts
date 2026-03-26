@@ -4,12 +4,13 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 /**
  * POST /api/auth/verify-affiliate-token
  *
- * Validates our custom one-time token, then generates a Supabase OTP via
- * admin.generateLink. Returns { email, otp } so the client can call
- * supabase.auth.verifyOtp() directly — no redirect hop, no hash race condition.
+ * Validates our custom one-time token, then sets a random temp password on the
+ * auth user and returns { email, tempPassword } so the client can call
+ * supabase.auth.signInWithPassword() — which always returns a full session
+ * including a refresh_token (unlike generateLink + verifyOtp which may not).
  *
  * Body: { token: string }
- * Returns: { email, otp }
+ * Returns: { email, tempPassword }
  */
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -53,18 +54,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Fehler beim Laden des Benutzers.' })
   }
 
-  // Generate a Supabase magic link OTP — the client uses verifyOtp() to exchange
-  // it for a session directly (no redirect, no hash race condition)
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: 'magiclink',
-    email: authUser.user.email,
-  })
+  // Generate a strong random one-time password for signInWithPassword.
+  // This guarantees a full Supabase session with refresh_token (unlike verifyOtp).
+  const tempPassword = `${crypto.randomUUID()}-${crypto.randomUUID()}`
 
-  if (linkError || !linkData?.properties?.email_otp) {
-    throw createError({ statusCode: 500, message: `Fehler beim Erstellen des Zugangs: ${linkError?.message ?? 'unbekannt'}` })
+  const { error: updateError } = await supabase.auth.admin.updateUserById(
+    userRow.auth_user_id,
+    { password: tempPassword }
+  )
+
+  if (updateError) {
+    throw createError({ statusCode: 500, message: `Fehler beim Erstellen des Zugangs: ${updateError.message}` })
   }
 
-  // Mark our custom token as used only after Supabase OTP was successfully generated
+  // Mark our custom token as used only after temp password was set successfully
   await supabase
     .from('password_reset_tokens')
     .update({ used_at: new Date().toISOString() })
@@ -73,6 +76,6 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     email: authUser.user.email,
-    otp: linkData.properties.email_otp,
+    tempPassword,
   }
 })
