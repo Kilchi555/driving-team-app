@@ -147,7 +147,6 @@
 </template>
 
 <script setup lang="ts">
-<script setup lang="ts">
 const route = useRoute()
 const tenantSlug = route.params.tenant as string
 const refCode = (route.query.ref as string | undefined)?.trim().toUpperCase() || ''
