@@ -4,6 +4,7 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { getBrandingCache, setBrandingCache } from '~/server/utils/branding-cache'
 
 /**
  * GET /api/tenants/branding
@@ -131,6 +132,17 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
         statusCode: 400,
         statusMessage: 'Invalid ID format'
       })
+    }
+
+    // ============ CACHE: Return early for anonymous public requests ============
+    // Authenticated requests (admins) bypass cache so they get custom CSS/JS fresh.
+    if (!isAuthenticated) {
+      const cacheKey = slug ? `slug:${slug}` : `id:${id}`
+      const cached = getBrandingCache(cacheKey)
+      if (cached) {
+        logger.debug(`🚀 Branding cache HIT for ${cacheKey}`)
+        return { success: true, data: cached }
+      }
     }
 
     logger.debug('🎨 Fetching tenant branding:', {
@@ -294,6 +306,12 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
       logo_dark_url: tenant.logo_dark_url,
       favicon_url: tenant.favicon_url
     })
+
+    // Store in cache for anonymous requests (authenticated responses may differ)
+    if (!isAuthenticated) {
+      const cacheKey = slug ? `slug:${slug}` : `id:${id}`
+      setBrandingCache(cacheKey, tenant)
+    }
 
     return {
       success: true,

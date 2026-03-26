@@ -1,6 +1,7 @@
 // API route for updating tenant branding with service role permissions
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { invalidateBrandingCache } from '~/server/utils/branding-cache'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -61,6 +62,10 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Service role update successful:', data.name)
+
+    // Invalidate branding cache so the next request gets fresh data
+    invalidateBrandingCache(data.slug, data.id)
+
     return data
 
   } catch (error) {
