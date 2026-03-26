@@ -4,13 +4,12 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 /**
  * POST /api/auth/verify-affiliate-token
  *
- * Validates a one-time affiliate magic-link token and creates a Supabase
- * session via admin.createSession. The frontend receives access_token +
- * refresh_token and calls supabase.auth.setSession() directly — no
- * redirect hop through Supabase needed, no hash/timing race conditions.
+ * Validates our custom one-time token, then generates a Supabase OTP via
+ * admin.generateLink. Returns { email, otp } so the client can call
+ * supabase.auth.verifyOtp() directly — no redirect hop, no hash race condition.
  *
  * Body: { token: string }
- * Returns: { access_token, refresh_token }
+ * Returns: { email, otp }
  */
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -32,7 +31,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (tokenData.used_at) {
-    throw createError({ statusCode: 400, message: 'Dieser Link wurde bereits verwendet.' })
+    throw createError({ statusCode: 400, message: 'Dieser Link wurde bereits verwendet. Bitte fordere einen neuen an.' })
   }
 
   if (new Date() > new Date(tokenData.expires_at)) {
@@ -49,16 +48,23 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Benutzer nicht gefunden.' })
   }
 
-  // Mark token as used AFTER successfully creating the session (not before)
-  const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
-    user_id: userRow.auth_user_id,
-  })
-
-  if (sessionError || !sessionData?.session) {
-    throw createError({ statusCode: 500, message: `Fehler beim Erstellen der Sitzung: ${sessionError?.message ?? 'unbekannt'}` })
+  const { data: authUser } = await supabase.auth.admin.getUserById(userRow.auth_user_id)
+  if (!authUser?.user?.email) {
+    throw createError({ statusCode: 500, message: 'Fehler beim Laden des Benutzers.' })
   }
 
-  // Only mark as used once session is confirmed
+  // Generate a Supabase magic link OTP — the client uses verifyOtp() to exchange
+  // it for a session directly (no redirect, no hash race condition)
+  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    type: 'magiclink',
+    email: authUser.user.email,
+  })
+
+  if (linkError || !linkData?.properties?.email_otp) {
+    throw createError({ statusCode: 500, message: `Fehler beim Erstellen des Zugangs: ${linkError?.message ?? 'unbekannt'}` })
+  }
+
+  // Mark our custom token as used only after Supabase OTP was successfully generated
   await supabase
     .from('password_reset_tokens')
     .update({ used_at: new Date().toISOString() })
@@ -66,7 +72,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    access_token: sessionData.session.access_token,
-    refresh_token: sessionData.session.refresh_token,
+    email: authUser.user.email,
+    otp: linkData.properties.email_otp,
   }
 })
