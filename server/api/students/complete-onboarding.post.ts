@@ -229,6 +229,56 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ User profile updated successfully')
 
+    // ✅ LAYER 7b: Convert affiliate lead if this user came via an affiliate link
+    try {
+      // Match by pending_user_id (set in submit-lead) — more reliable than phone matching
+      const { data: pendingLead } = await supabaseAdmin
+        .from('affiliate_leads')
+        .select('id, affiliate_code_id, affiliate_user_id')
+        .eq('pending_user_id', user.id)
+        .neq('status', 'converted')
+        .maybeSingle()
+
+      if (pendingLead) {
+        // Mark lead as converted
+        await supabaseAdmin
+          .from('affiliate_leads')
+          .update({
+            status: 'converted',
+            converted_user_id: user.id,
+            converted_at: new Date().toISOString(),
+          })
+          .eq('id', pendingLead.id)
+
+        // Create affiliate_referral if not already existing
+        if (pendingLead.affiliate_code_id && pendingLead.affiliate_user_id
+            && pendingLead.affiliate_user_id !== user.id) {
+          const { data: existingReferral } = await supabaseAdmin
+            .from('affiliate_referrals')
+            .select('id')
+            .eq('referred_user_id', user.id)
+            .eq('tenant_id', user.tenant_id)
+            .maybeSingle()
+
+          if (!existingReferral) {
+            await supabaseAdmin.from('affiliate_referrals').insert({
+              tenant_id: user.tenant_id,
+              affiliate_code_id: pendingLead.affiliate_code_id,
+              affiliate_user_id: pendingLead.affiliate_user_id,
+              referred_user_id: user.id,
+              status: 'pending',
+            })
+            logger.debug('✅ Affiliate referral created for lead:', pendingLead.id)
+          }
+        }
+
+        logger.debug('✅ Affiliate lead converted:', pendingLead.id)
+      }
+    } catch (leadErr: any) {
+      // Non-critical — log but don't fail onboarding
+      logger.warn('⚠️ Affiliate lead conversion failed (non-critical):', leadErr.message)
+    }
+
     // ✅ LAYER 8: Update auth user display name
     logger.debug('🔐 Updating auth user display name...')
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
