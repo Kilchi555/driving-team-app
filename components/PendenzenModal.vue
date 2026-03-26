@@ -330,6 +330,7 @@ import { usePendingTasks } from '~/composables/usePendingTasks'
 import { usePendencies } from '~/composables/usePendencies'
 import { useCategoryData } from '~/composables/useCategoryData'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useCalendarCache } from '~/composables/useCalendarCache'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
@@ -368,6 +369,7 @@ const {
 
 // Category Data Composable
 const { allCategories, loadCategories } = useCategoryData()
+const { invalidate: invalidateCache } = useCalendarCache()
 
 // Get current user
 const { currentUser } = useCurrentUser()
@@ -633,6 +635,9 @@ const closeExamResultModal = () => {
 const onExamResultSaved = async (appointmentId: string) => {
   logger.debug('🎉 PendenzenModal - exam result saved for:', appointmentId)
   
+  // Invalidate cache so fetchPendingTasks gets fresh data
+  invalidateCache('/api/admin/get-pending-appointments')
+  
   // Lade Pendenzen neu um die aktualisierten Daten zu sehen
   await refreshData()
   logger.debug('✅ New pending count after exam result:', pendingCount.value)
@@ -766,6 +771,9 @@ const onEvaluationSaved = async (appointmentId: string) => {
     logger.debug('🔄 Updating appointment status from pending_confirmation to confirmed')
     await updateAppointmentStatus(appointmentId, 'confirmed')
   }
+  
+  // Invalidate cache so fetchPendingTasks gets fresh data
+  invalidateCache('/api/admin/get-pending-appointments')
   
   // Lade Pendenzen neu um die aktualisierten Daten zu sehen
   await refreshData()
