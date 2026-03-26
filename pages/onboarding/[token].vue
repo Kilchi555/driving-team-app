@@ -24,14 +24,40 @@
     <div v-else-if="error" class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-red-50 py-8 px-4 shadow sm:rounded-lg sm:px-10">
         <div class="text-center">
-          <p class="text-red-600">{{ error }}</p>
-          <div class="mt-4">
-            <button
-              @click="navigateTo(userData?.tenant_slug ? `/${userData.tenant_slug}` : '/login')"
-              class="block w-full text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Zum Login
-            </button>
+          <div class="flex justify-center mb-4">
+            <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.538-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-red-800 mb-2">Link ungültig oder abgelaufen</h3>
+          <p class="text-sm text-red-600 mb-6">{{ error }}</p>
+
+          <div class="space-y-3">
+            <p class="text-sm text-gray-600 font-medium">Was können Sie tun?</p>
+
+            <!-- Option 1: Kontakt Fahrschule -->
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-left">
+              <p class="text-sm font-medium text-gray-800 mb-1">📱 Neuen Link anfordern</p>
+              <p class="text-xs text-gray-500 mb-3">Bitten Sie Ihre Fahrschule, den Onboarding-Link erneut per SMS zu senden.</p>
+              <a
+                :href="`mailto:${userData?.email || ''}`"
+                class="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Fahrschule kontaktieren
+              </a>
+            </div>
+
+            <!-- Option 2: Login (falls bereits registriert) -->
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-left">
+              <p class="text-sm font-medium text-gray-800 mb-1">🔑 Bereits registriert?</p>
+              <p class="text-xs text-gray-500 mb-3">Falls Sie Ihr Konto bereits aktiviert haben, melden Sie sich direkt an.</p>
+              <button
+                @click="navigateTo(userData?.tenant_slug ? `/${userData.tenant_slug}` : '/login')"
+                class="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md transition-colors"
+              >
+                Zum Login
+              </button>
+            </div>
           </div>
         </div>
       </div>

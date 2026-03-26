@@ -249,6 +249,12 @@
             <p v-if="mfaFlow.state.value.remainingAttempts > 0 && mfaFlow.state.value.remainingAttempts < 3" class="text-xs text-red-600 mt-1">
               Noch {{ mfaFlow.state.value.remainingAttempts }} Versuche
             </p>
+            <p v-if="mfaFlow.state.value.remainingAttempts === 0" class="text-xs text-red-600 mt-2">
+              Passwort vergessen? Bitte nutzen Sie die
+              <button type="button" @click="showForgotPasswordModal = true" class="underline font-medium hover:text-red-800">
+                Passwort-zurücksetzen Funktion
+              </button>.
+            </p>
           </div>
 
           <!-- Buttons -->
@@ -1054,6 +1060,11 @@ onMounted(async () => {
     logger.debug('🔓 Skipping login page for sub-route:', currentPath)
     return
   }
+
+  // Auto-open forgot password modal if redirected from registration with duplicate email
+  if (route.query.action === 'forgot') {
+    showForgotPasswordModal.value = true
+  }
   
   // Lade Tenant-Branding – nur wenn noch nicht vom Plugin geladen
   try {
@@ -1115,6 +1126,7 @@ onMounted(async () => {
       
       if (!user) {
         console.error('❌ Session exists but no user profile! Clearing broken session...')
+        loginError.value = 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.'
         await logout()
         return
       }

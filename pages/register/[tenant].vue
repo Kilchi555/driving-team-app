@@ -442,6 +442,24 @@
                 </div>
               </div>
               <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
+              <!-- Inline help when email already exists -->
+              <div v-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-sm text-blue-800 font-medium mb-2">Sie haben bereits ein Konto?</p>
+                <div class="flex gap-2 flex-wrap">
+                  <NuxtLink
+                    :to="tenantSlug ? `/${tenantSlug}` : '/login'"
+                    class="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md transition-colors"
+                  >
+                    Jetzt anmelden
+                  </NuxtLink>
+                  <NuxtLink
+                    :to="tenantSlug ? `/${tenantSlug}?action=forgot` : '/login?action=forgot'"
+                    class="text-sm font-medium text-blue-700 hover:text-blue-900 px-3 py-1.5 border border-blue-300 rounded-md bg-white transition-colors"
+                  >
+                    Passwort vergessen?
+                  </NuxtLink>
+                </div>
+              </div>
             </div>
 
             <!-- Passwort -->
