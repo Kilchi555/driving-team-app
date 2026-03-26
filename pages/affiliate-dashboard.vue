@@ -211,6 +211,42 @@
             </button>
           </div>
 
+          <!-- Step 2: SMS OTP confirmation -->
+          <div v-else-if="payoutType === 'bank' && pendingPayoutId" class="space-y-4">
+            <div class="text-center">
+              <div class="text-3xl mb-3">📱</div>
+              <h4 class="font-semibold mb-1" :style="{ color: brandConfig.text_color }">SMS-Bestätigung erforderlich</h4>
+              <p class="text-sm" :style="{ color: brandConfig.text_secondary_color }">
+                Wir haben dir einen 6-stelligen Code per SMS gesendet. Bitte gib ihn ein um die Auszahlung zu bestätigen.
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2" :style="{ color: brandConfig.text_color }">Bestätigungscode</label>
+              <input
+                v-model="payoutOtp"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                placeholder="000000"
+                autofocus
+                class="w-full rounded-lg px-4 py-3 text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2 transition border"
+                :style="{ borderColor: `${brandConfig.primary_color}50`, backgroundColor: `${brandConfig.primary_color}08`, color: brandConfig.text_color }"
+              />
+            </div>
+            <p v-if="payoutError" class="text-sm p-4 rounded-lg" :style="{ backgroundColor: '#ef444415', color: '#ef4444' }">{{ payoutError }}</p>
+            <div class="flex gap-3">
+              <button type="button" @click="cancelPayout" class="flex-1 rounded-lg py-3 text-sm font-semibold transition hover:scale-105"
+                :style="{ color: brandConfig.text_color, backgroundColor: `${brandConfig.primary_color}15` }">
+                Abbrechen
+              </button>
+              <button type="button" :disabled="payoutLoading || payoutOtp.length !== 6" @click="confirmPayout"
+                class="flex-1 rounded-lg py-3 text-sm font-semibold text-white transition hover:scale-105 disabled:opacity-50"
+                :style="{ backgroundColor: brandConfig.primary_color }">
+                {{ payoutLoading ? '⏳ Wird geprüft…' : '✓ Bestätigen' }}
+              </button>
+            </div>
+          </div>
+
           <form v-else-if="payoutType === 'bank'" @submit.prevent="submitPayout" class="space-y-4">
             <div>
               <label class="block text-sm font-medium mb-2" :style="{ color: brandConfig.text_color }">Betrag (CHF)</label>
@@ -302,6 +338,8 @@ const payoutType = ref<'bank' | 'credit'>('bank')
 const payoutForm = ref({ amountChf: 0, iban: '', accountHolder: '' })
 const payoutLoading = ref(false)
 const payoutError = ref('')
+const pendingPayoutId = ref<string | null>(null)
+const payoutOtp = ref('')
 
 const brandConfig = ref<any>({
   name: 'Driving Team',
@@ -446,7 +484,7 @@ async function submitPayout() {
   payoutError.value = ''
   payoutLoading.value = true
   try {
-    await $fetch('/api/affiliate/request-payout', {
+    const result = await $fetch<any>('/api/affiliate/request-payout', {
       method: 'POST',
       body: {
         type: 'bank',
@@ -455,13 +493,47 @@ async function submitPayout() {
         account_holder: payoutForm.value.accountHolder,
       },
     })
-    showPayoutForm.value = false
-    await loadStats()
+    if (result?.requiresSmsConfirmation) {
+      pendingPayoutId.value = result.data.payout_request_id
+      payoutOtp.value = ''
+    } else {
+      showPayoutForm.value = false
+      await loadStats()
+    }
   } catch (err: any) {
     payoutError.value = err?.data?.message || 'Fehler beim Einreichen des Antrags.'
   } finally {
     payoutLoading.value = false
   }
+}
+
+async function confirmPayout() {
+  payoutError.value = ''
+  payoutLoading.value = true
+  try {
+    await $fetch('/api/affiliate/confirm-payout', {
+      method: 'POST',
+      body: {
+        payoutRequestId: pendingPayoutId.value,
+        otp: payoutOtp.value,
+      },
+    })
+    pendingPayoutId.value = null
+    payoutOtp.value = ''
+    showPayoutForm.value = false
+    await loadStats()
+  } catch (err: any) {
+    payoutError.value = err?.data?.message || 'Ungültiger Code. Bitte versuche es erneut.'
+  } finally {
+    payoutLoading.value = false
+  }
+}
+
+function cancelPayout() {
+  pendingPayoutId.value = null
+  payoutOtp.value = ''
+  payoutError.value = ''
+  showPayoutForm.value = false
 }
 
 function generateWhatsAppMessage() {
