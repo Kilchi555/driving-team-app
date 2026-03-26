@@ -1,11 +1,16 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { sendSMS } from '~/server/utils/sms'
 
 /**
  * POST /api/affiliate/request-payout
+ *
+ * Creates a payout request with status 'pending_sms' and sends a 6-digit OTP
+ * to the partner's registered phone number. The partner must confirm via
+ * POST /api/affiliate/confirm-payout before the request becomes visible to admins.
  */
 export default defineEventHandler(async (event) => {
   const supabaseAdmin = getSupabaseAdmin()
@@ -21,11 +26,14 @@ export default defineEventHandler(async (event) => {
 
   const { data: userProfile } = await supabaseAdmin
     .from('users')
-    .select('id, tenant_id')
+    .select('id, tenant_id, phone, first_name')
     .eq('auth_user_id', authUser.id)
     .single()
 
   if (!userProfile) throw createError({ statusCode: 403, message: 'User not found' })
+  if (!userProfile.phone) {
+    throw createError({ statusCode: 400, message: 'Keine Telefonnummer hinterlegt. Bitte wende dich an den Support.' })
+  }
 
   const body = await readBody(event)
   const { type, amount_rappen, iban, account_holder } = body
@@ -68,7 +76,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // type === 'bank': create payout request and deduct from balance (put in "pending" hold)
+  // type === 'bank': generate OTP, deduct balance into hold, create pending_sms request
+  const otp = String(Math.floor(100000 + Math.random() * 900000)) // 6-digit
+  const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+
   // Deduct balance immediately so the user can't request twice
   const newBalance = currentBalance - amount_rappen
   const { error: deductError } = await supabaseAdmin
@@ -91,11 +102,11 @@ export default defineEventHandler(async (event) => {
     balance_after_rappen: newBalance,
     payment_method: 'bank_transfer',
     reference_type: 'payout_request',
-    notes: 'Affiliate-Auszahlung per Banküberweisung',
+    notes: 'Affiliate-Auszahlung per Banküberweisung (ausstehende SMS-Bestätigung)',
     created_at: new Date().toISOString(),
   })
 
-  // Create payout request for admin
+  // Create payout request — status 'pending_sms' until SMS code is confirmed
   const { data: payoutRequest, error: payoutError } = await supabaseAdmin
     .from('affiliate_payout_requests')
     .insert({
@@ -104,7 +115,9 @@ export default defineEventHandler(async (event) => {
       amount_rappen,
       iban: iban.replace(/\s/g, '').toUpperCase(),
       account_holder,
-      status: 'pending',
+      status: 'pending_sms',
+      sms_otp: otp,
+      sms_otp_expires_at: otpExpiresAt,
     })
     .select('id')
     .single()
@@ -113,9 +126,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Failed to create payout request' })
   }
 
+  // Send OTP via SMS
+  const amountChf = (amount_rappen / 100).toFixed(2)
+  await sendSMS({
+    to: userProfile.phone,
+    message: `Simy: Dein Bestätigungscode für die Auszahlung von CHF ${amountChf}: ${otp}\n\nGültig 10 Minuten. Falls du keinen Antrag gestellt hast, ignoriere diese SMS.`,
+  })
+
   return {
     success: true,
-    message: 'Auszahlungsantrag erfolgreich eingereicht. Du wirst per E-Mail benachrichtigt sobald die Überweisung durchgeführt wurde.',
+    requiresSmsConfirmation: true,
+    message: `Bestätigungscode per SMS an dein Telefon gesendet. Bitte gib ihn ein um fortzufahren.`,
     data: {
       payout_request_id: payoutRequest.id,
       amount_rappen,
