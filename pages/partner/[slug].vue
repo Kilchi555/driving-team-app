@@ -10,15 +10,14 @@
           :alt="tenant.name"
           class="h-6 w-auto object-contain"
         />
-        <div v-else class="w-9 h-9 rounded-xl text-white flex items-center justify-center text-base font-bold" :style="{ backgroundColor: tenant.primaryColor }">
-          🤝
+        <div v-else class="w-9 h-9 rounded-xl text-white flex items-center justify-center text-base font-bold" :style="{ backgroundColor: tenant.primaryColor }">          🤝
         </div>
         <span class="text-gray-400 text-sm font-medium tracking-wide uppercase">Affiliate Partner</span>
       </div>
     </nav>
 
     <!-- Loading -->
-    <div v-if="loadingTenant" class="flex-1 flex items-center justify-center">
+    <div v-if="!brandingData && !brandingFetchError" class="flex-1 flex items-center justify-center">
       <div class="text-gray-400 text-sm animate-pulse">Lade Partner-Seite…</div>
     </div>
 
@@ -234,7 +233,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 definePageMeta({ 
@@ -244,24 +243,53 @@ definePageMeta({
 
 const route = useRoute()
 const { setFavicon } = useFavicon()
+const slug = computed(() => String(route.params.slug || '').trim().toLowerCase())
+
+// Single SSR-aware fetch — Nuxt deduplicates between server render and client hydration
+const { data: brandingData, error: brandingFetchError } = await useFetch(
+  () => `/api/tenants/branding`,
+  {
+    query: computed(() => ({ slug: slug.value })),
+    key: computed(() => `partner-branding-${slug.value}`),
+  }
+) as any
+
 const form = ref({ firstName: '', lastName: '', email: '' })
 const loading = ref(false)
 const emailSent = ref(false)
 const submittedEmail = ref('')
 const errorMessage = ref('')
-const loadingTenant = ref(true)
-const tenantError = ref('')
 const existingCodeInfo = ref<{ code: string; link: string } | null>(null)
 const showModal = ref(false)
 const existingUser = ref(false)
 
-const tenant = reactive({
-  id: '',
-  name: 'Driving Team',
-  slug: 'driving-team',
-  primaryColor: '#6366f1',
-  logo: '',
-  affiliateEnabled: false,
+// Derive tenant data directly from useFetch result — no extra loading state needed
+const tenantError = computed(() => {
+  if (brandingFetchError.value) return brandingFetchError.value?.data?.message || 'Tenant konnte nicht geladen werden.'
+  if (!brandingData.value?.data?.id) return 'Tenant nicht gefunden.'
+  if (brandingData.value?.data?.features?.affiliate_enabled !== true) return 'Das Affiliate-Programm ist derzeit nicht aktiviert.'
+  return ''
+})
+
+const tenant = computed(() => {
+  const d = brandingData.value?.data
+  if (!d) return { id: '', name: 'Driving Team', slug: slug.value, primaryColor: '#6366f1', logo: '', affiliateEnabled: false }
+  return {
+    id: d.id,
+    name: d.brand_name || d.name || 'Driving Team',
+    slug: d.slug || slug.value,
+    primaryColor: d.primary_color || '#6366f1',
+    logo: d.logo_square_url || d.logo_url || '',
+    affiliateEnabled: d.features?.affiliate_enabled === true,
+  }
+})
+
+// Set favicon once data is available (client-side only)
+if (process.client && tenant.value.logo) {
+  setFavicon(tenant.value.logo, '🤝')
+}
+watchEffect(() => {
+  if (process.client && tenant.value.logo) setFavicon(tenant.value.logo, '🤝')
 })
 
 const benefits = [
@@ -272,42 +300,6 @@ const benefits = [
 
 function closeModal() {
   showModal.value = false
-}
-
-async function loadTenant() {
-  loadingTenant.value = true
-  tenantError.value = ''
-  try {
-    const slug = String(route.params.slug || '').trim().toLowerCase()
-    if (!slug) throw new Error('Tenant-Slug fehlt.')
-
-    const response = await $fetch('/api/tenants/branding', {
-      method: 'GET',
-      query: { slug },
-    }) as any
-
-    if (!response?.data?.id) throw new Error('Tenant nicht gefunden.')
-
-    tenant.id = response.data.id
-    tenant.name = response.data.brand_name || response.data.name || 'Driving Team'
-    tenant.slug = response.data.slug || slug
-    tenant.primaryColor = response.data.primary_color || '#6366f1'
-    tenant.logo = response.data.logo_square_url || response.data.logo_url || ''
-
-    // Set favicon from tenant logo
-    setFavicon(tenant.logo, '🤝')
-
-    // Check if affiliate system is enabled
-    tenant.affiliateEnabled = response.data.features?.affiliate_enabled === true
-
-    if (!tenant.affiliateEnabled) {
-      tenantError.value = 'Das Affiliate-Programm ist derzeit nicht aktiviert.'
-    }
-  } catch (error: any) {
-    tenantError.value = error?.data?.message || error?.message || 'Tenant konnte nicht geladen werden.'
-  } finally {
-    loadingTenant.value = false
-  }
 }
 
 async function handleSubmit() {
@@ -322,7 +314,7 @@ async function handleSubmit() {
         firstName: form.value.firstName.trim(),
         lastName: form.value.lastName.trim(),
         email: form.value.email.trim().toLowerCase(),
-        tenantSlug: tenant.slug,
+        tenantSlug: tenant.value.slug,
       }
     }) as any
 
@@ -331,19 +323,15 @@ async function handleSubmit() {
       response?.affiliateCode?.link &&
       String(response?.status || '').startsWith('existing_user_code')
     ) {
-      // Existing user — if the magic link was successfully sent, show the email-sent screen
       submittedEmail.value = form.value.email
       if (response?.emailSent === true) {
-        // Magic link sent → show same success screen as new users
         emailSent.value = true
         return
       }
-      // emailSent = false AND status = error_no_auth_user — show error in form
       if (response?.status === 'error_no_auth_user') {
         errorMessage.value = response?.message || 'Zugang konnte nicht erstellt werden.'
         return
       }
-      // Other existing_user edge case — show fallback state with retry button
       existingUser.value = true
       existingCodeInfo.value = null
       return
@@ -370,17 +358,15 @@ function copyLink(link: string) {
 }
 
 function shareWhatsapp(link: string) {
-  const text = encodeURIComponent(`Schau dir das mal an – mein Affiliate-Link für ${tenant.name}: ${link}`)
+  const text = encodeURIComponent(`Schau dir das mal an – mein Affiliate-Link für ${tenant.value.name}: ${link}`)
   window.open(`https://wa.me/?text=${text}`, '_blank')
 }
 
 function shareMail(link: string) {
-  const subject = encodeURIComponent(`Mein Affiliate-Link – ${tenant.name}`)
-  const body = encodeURIComponent(`Hallo,\n\nhier ist mein persönlicher Affiliate-Link für ${tenant.name}:\n${link}\n\nViele Grüsse`)
+  const subject = encodeURIComponent(`Mein Affiliate-Link – ${tenant.value.name}`)
+  const body = encodeURIComponent(`Hallo,\n\nhier ist mein persönlicher Affiliate-Link für ${tenant.value.name}:\n${link}\n\nViele Grüsse`)
   window.open(`mailto:?subject=${subject}&body=${body}`)
 }
-
-await loadTenant()
 </script>
 
 <style scoped>
