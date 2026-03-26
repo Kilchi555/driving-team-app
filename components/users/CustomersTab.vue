@@ -215,6 +215,7 @@
       @create-appointment="handleCreateAppointment"
       @evaluate-lesson="handleEvaluateLesson"
       @student-updated="handleCustomerUpdated"
+      @open-reminder-modal="handleOpenReminderModal"
     />
 
     <!-- Add Customer Modal -->
@@ -516,6 +517,11 @@ const handleNoUpcomingToggle = async () => {
 
 const showPendingActions = (customer: any) => {
   pendingCustomer.value = customer
+  showPendingModal.value = true
+}
+
+const handleOpenReminderModal = (student: any) => {
+  pendingCustomer.value = student
   showPendingModal.value = true
 }
 
