@@ -4,11 +4,13 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 /**
  * POST /api/auth/verify-affiliate-token
  *
- * Validates a one-time affiliate magic-link token and creates a persistent
- * Supabase session directly via admin.createSession (no redirect hop needed).
+ * Validates a one-time affiliate magic-link token and returns a Supabase
+ * action_link. The frontend redirects to it — Supabase processes the magic link,
+ * creates the session, and redirects back to /affiliate-dashboard with
+ * #access_token=... in the URL hash (picked up automatically by the Supabase client).
  *
  * Body: { token: string }
- * Returns: { access_token, refresh_token } — frontend calls supabase.auth.setSession()
+ * Returns: { action_link: string }
  */
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -49,25 +51,34 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Benutzer nicht gefunden.' })
   }
 
-  // Mark token as used immediately
+  // Get user email for generateLink
+  const { data: authUser } = await supabase.auth.admin.getUserById(userRow.auth_user_id)
+  if (!authUser?.user?.email) {
+    throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Sitzung.' })
+  }
+
+  // Mark token as used before issuing the Supabase magic link
   await supabase
     .from('password_reset_tokens')
     .update({ used_at: new Date().toISOString() })
     .eq('id', tokenData.id)
 
-  // Create a Supabase session directly — no extra redirect hop needed.
-  // The session duration follows the project's refresh token expiry setting.
-  const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
-    user_id: userRow.auth_user_id,
+  // Generate a Supabase magic link — Supabase creates the session and redirects back
+  // to /affiliate-dashboard with #access_token=... in the hash.
+  // detectSessionInUrl: true on the client picks this up automatically.
+  const appUrl = process.env.NUXT_PUBLIC_APP_URL ?? 'https://simy.ch'
+  const { data: magicLinkData, error: magicError } = await supabase.auth.admin.generateLink({
+    type: 'magiclink',
+    email: authUser.user.email,
+    options: { redirectTo: `${appUrl}/affiliate-dashboard` },
   })
 
-  if (sessionError || !sessionData?.session) {
-    throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Sitzung.' })
+  if (magicError || !magicLinkData?.properties?.action_link) {
+    throw createError({ statusCode: 500, message: 'Fehler beim Erstellen des Zugangs.' })
   }
 
   return {
     success: true,
-    access_token: sessionData.session.access_token,
-    refresh_token: sessionData.session.refresh_token,
+    action_link: magicLinkData.properties.action_link,
   }
 })
