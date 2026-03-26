@@ -360,30 +360,48 @@ definePageMeta({
 
 onMounted(async () => {
   const token = route.query.token as string | undefined
+
   if (token) {
     try {
       const result = await $fetch<any>('/api/auth/verify-affiliate-token', {
         method: 'POST',
         body: { token },
       })
-      if (result?.action_link) {
-        // Supabase processes the magic link and redirects back to /affiliate-dashboard
-        // with #access_token=... in the hash — picked up automatically by the Supabase client
-        window.location.href = result.action_link
-        return
+
+      if (result?.access_token && result?.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+        })
+
+        if (!sessionError) {
+          // Session is set — fetch user directly from Supabase client (no store dependency)
+          const { data: { user: supaUser } } = await supabase.auth.getUser()
+          if (supaUser) {
+            authStore.user = supaUser as any
+            await authStore.fetchUserProfile(supaUser.id)
+            isAuthenticated.value = true
+            userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || supaUser.email || 'Partner'
+            await router.replace({ path: '/affiliate-dashboard' })
+            await loadBranding()
+            await loadStats()
+          }
+        }
       }
     } catch {
-      // Token invalid/expired — fall through to unauthenticated state
+      // Token invalid/expired — fall through to show unauthenticated state
     }
+    authLoading.value = false
+    return
   }
 
-  // Check authStore first (cookie-based session), then fall back to Supabase localStorage session
+  // No token — check existing session (cookie-based store or Supabase localStorage)
   let user = authStore.user
   if (!user) {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
-      user = session.user
-      authStore.user = session.user
+      user = session.user as any
+      authStore.user = session.user as any
       if (!authStore.userProfile) {
         await authStore.fetchUserProfile(session.user.id)
       }
@@ -392,46 +410,38 @@ onMounted(async () => {
 
   if (user) {
     isAuthenticated.value = true
-    const u = authStore.userProfile
-    userName.value = `${u?.first_name ?? ''} ${u?.last_name ?? ''}`.trim() || user.email || 'Partner'
-    
-    // Load tenant branding
-    try {
-      const branding = await $fetch<any>('/api/tenants/branding', { query: { slug: 'driving-team' } })
-      if (branding?.data) {
-        brandConfig.value = {
-          name: branding.data.brand_name || branding.data.name,
-          primary_color: branding.data.primary_color || '#1f2937',
-          secondary_color: branding.data.secondary_color || '#6366f1',
-          success_color: branding.data.success_color || '#10b981',
-          error_color: branding.data.error_color || '#ef4444',
-          background_color: branding.data.background_color || '#f9fafb',
-          surface_color: branding.data.surface_color || '#ffffff',
-          text_color: branding.data.text_color || '#111827',
-          text_secondary_color: branding.data.text_secondary_color || '#6b7280',
-          logo_url: branding.data.logo_url || '',
-          logo_square_url: branding.data.logo_square_url || '',
-          logo_wide_url: branding.data.logo_wide_url || '',
-        }
-        // Set favicon from tenant logo
-        setFavicon(branding.data.logo_square_url, '🤝')
-        console.log('🎨 Branding loaded with logos:', {
-          logo_square_url: branding.data.logo_square_url ? 'Yes' : 'No',
-          logo_url: branding.data.logo_url ? 'Yes' : 'No'
-        })
-        console.log('📝 brandConfig.value set to:', {
-          logo_square_url_exists: !!brandConfig.value.logo_square_url
-        })
-      }
-    } catch (e) {
-      console.warn('Failed to load tenant branding', e)
-    }
-    
+    userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || (user as any).email || 'Partner'
+    await loadBranding()
     await loadStats()
   }
 
   authLoading.value = false
 })
+
+async function loadBranding() {
+  try {
+    const branding = await $fetch<any>('/api/tenants/branding', { query: { slug: 'driving-team' } })
+    if (branding?.data) {
+      brandConfig.value = {
+        name: branding.data.brand_name || branding.data.name,
+        primary_color: branding.data.primary_color || '#1f2937',
+        secondary_color: branding.data.secondary_color || '#6366f1',
+        success_color: branding.data.success_color || '#10b981',
+        error_color: branding.data.error_color || '#ef4444',
+        background_color: branding.data.background_color || '#f9fafb',
+        surface_color: branding.data.surface_color || '#ffffff',
+        text_color: branding.data.text_color || '#111827',
+        text_secondary_color: branding.data.text_secondary_color || '#6b7280',
+        logo_url: branding.data.logo_url || '',
+        logo_square_url: branding.data.logo_square_url || '',
+        logo_wide_url: branding.data.logo_wide_url || '',
+      }
+      setFavicon(branding.data.logo_square_url, '🤝')
+    }
+  } catch (e) {
+    console.warn('Failed to load tenant branding', e)
+  }
+}
 
 async function loadStats() {
   try {
