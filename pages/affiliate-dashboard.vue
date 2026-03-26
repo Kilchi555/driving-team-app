@@ -13,7 +13,8 @@
       <div class="rounded-2xl shadow-lg p-8 max-w-sm w-full text-center" :style="{ backgroundColor: brandConfig.surface_color }">
         <div class="text-4xl mb-4">🔒</div>
         <h2 class="text-xl font-bold mb-2" :style="{ color: brandConfig.text_color }">Zugang erforderlich</h2>
-        <p class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">Bitte melde dich an oder fordere einen neuen Zugangslink an.</p>
+        <p v-if="tokenError" class="text-sm mb-4 p-3 rounded-lg bg-red-50 text-red-600">{{ tokenError }}</p>
+        <p v-else class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">Bitte melde dich an oder fordere einen neuen Zugangslink an.</p>
         <NuxtLink to="/partner" class="block rounded-lg px-5 py-2.5 font-semibold text-sm text-white transition hover:opacity-90" :style="{ backgroundColor: brandConfig.primary_color }">
           Neuen Link anfordern
         </NuxtLink>
@@ -323,6 +324,7 @@ const { setFavicon } = useFavicon()
 
 const authLoading = ref(true)
 const isAuthenticated = ref(false)
+const tokenError = ref('')
 const userName = ref('')
 const logoLoadError = ref(false)
 
@@ -388,8 +390,8 @@ onMounted(async () => {
           }
         }
       }
-    } catch {
-      // Token invalid/expired — fall through to show unauthenticated state
+    } catch (err: any) {
+      tokenError.value = err?.data?.message || err?.message || 'Link ungültig oder abgelaufen.'
     }
     authLoading.value = false
     return

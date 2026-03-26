@@ -49,20 +49,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Benutzer nicht gefunden.' })
   }
 
-  // Mark token as used before creating the session
-  await supabase
-    .from('password_reset_tokens')
-    .update({ used_at: new Date().toISOString() })
-    .eq('id', tokenData.id)
-
-  // Create a Supabase session server-side — client calls setSession() with these tokens
+  // Mark token as used AFTER successfully creating the session (not before)
   const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
     user_id: userRow.auth_user_id,
   })
 
   if (sessionError || !sessionData?.session) {
-    throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Sitzung.' })
+    throw createError({ statusCode: 500, message: `Fehler beim Erstellen der Sitzung: ${sessionError?.message ?? 'unbekannt'}` })
   }
+
+  // Only mark as used once session is confirmed
+  await supabase
+    .from('password_reset_tokens')
+    .update({ used_at: new Date().toISOString() })
+    .eq('id', tokenData.id)
 
   return {
     success: true,
