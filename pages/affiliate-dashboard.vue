@@ -370,24 +370,25 @@ onMounted(async () => {
         body: { token },
       })
 
-      if (result?.access_token && result?.refresh_token) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
+      if (result?.email && result?.otp) {
+        // Exchange the OTP for a real session — no redirect, no hash race condition
+        const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
+          email: result.email,
+          token: result.otp,
+          type: 'email',
         })
 
-        if (!sessionError) {
-          // Session is set — fetch user directly from Supabase client (no store dependency)
-          const { data: { user: supaUser } } = await supabase.auth.getUser()
-          if (supaUser) {
-            authStore.user = supaUser as any
-            await authStore.fetchUserProfile(supaUser.id)
-            isAuthenticated.value = true
-            userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || supaUser.email || 'Partner'
-            await router.replace({ path: '/affiliate-dashboard' })
-            await loadBranding()
-            await loadStats()
-          }
+        if (!otpError && otpData?.session?.user) {
+          const supaUser = otpData.session.user
+          authStore.user = supaUser as any
+          await authStore.fetchUserProfile(supaUser.id)
+          isAuthenticated.value = true
+          userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || supaUser.email || 'Partner'
+          await router.replace({ path: '/affiliate-dashboard' })
+          await loadBranding()
+          await loadStats()
+        } else {
+          tokenError.value = otpError?.message || 'Session konnte nicht erstellt werden.'
         }
       }
     } catch (err: any) {
