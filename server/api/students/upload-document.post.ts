@@ -8,7 +8,6 @@ import { logAudit } from '~/server/utils/audit'
 // Configuration
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf']
-const ALLOWED_CATEGORIES = ['B', 'A', 'A1', 'A2', 'BE', 'C', 'CE', 'D', 'DE', 'BPT', 'Boot', 'M', 'Motorboot']
 
 export default defineEventHandler(async (event) => {
   try {
@@ -66,12 +65,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 4: Validate category
-    if (!ALLOWED_CATEGORIES.includes(fileType)) {
-      logger.warn('⚠️ Document upload: Invalid category', { category: fileType })
+    // ✅ LAYER 4: Validate category is not empty
+    if (!fileType.trim()) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid category. Please select a valid driving license category.'
+        statusMessage: 'Category is required.'
       })
     }
 
