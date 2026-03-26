@@ -1577,6 +1577,13 @@ const openRegulationModal = async (type: string) => {
 
 // Initialize
 onMounted(async () => {
+  // Redirect affiliate links to the new lightweight landing page
+  const refCode = route.query.ref as string | undefined
+  if (refCode && route.params.tenant) {
+    await navigateTo(`/ref/${route.params.tenant}?ref=${refCode}`, { replace: true })
+    return
+  }
+
   // ✅ NEW: Redirect if already logged in
   const authStore = useAuthStore()
   if (authStore.isLoggedIn) {
