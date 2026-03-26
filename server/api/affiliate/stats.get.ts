@@ -150,7 +150,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
     const tenantSlug = tenant?.slug ?? 'driving-team'
-    shareLink = `https://simy.ch/register/${tenantSlug}?ref=${affiliateCode.code}`
+    shareLink = `https://simy.ch/ref/${tenantSlug}?ref=${affiliateCode.code}`
   }
 
   // Load tenant affiliate enabled setting

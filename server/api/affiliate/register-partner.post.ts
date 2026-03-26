@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const affiliateCodeResult = await ensureAffiliateCode(tenant.id, userId)
-  const affiliateShareLink = `https://simy.ch/register/${tenant.slug}?ref=${affiliateCodeResult.codeRow.code}`
+  const affiliateShareLink = `https://simy.ch/ref/${tenant.slug}?ref=${affiliateCodeResult.codeRow.code}`
 
   if (!authUserId) {
     return {

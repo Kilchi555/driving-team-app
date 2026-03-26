@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
   const tenantSlug = tenant?.slug ?? 'driving-team'
 
   if (existing) {
-    const shareLink = `https://simy.ch/register/${tenantSlug}?ref=${existing.code}`
+    const shareLink = `https://simy.ch/ref/${tenantSlug}?ref=${existing.code}`
     return {
       success: true,
       data: {
@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Failed to create affiliate code' })
   }
 
-  const shareLink = `https://simy.ch/register/${tenantSlug}?ref=${newCode.code}`
+  const shareLink = `https://simy.ch/ref/${tenantSlug}?ref=${newCode.code}`
 
   return {
     success: true,
