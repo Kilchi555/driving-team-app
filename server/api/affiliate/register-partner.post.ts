@@ -234,7 +234,7 @@ export default defineEventHandler(async (event) => {
   // Build dashboard link
   // Keep tenant URL construction aligned with app conventions (simy.ch).
   // Affiliate dashboard is always on simy.ch — not on the tenant's custom domain
-  const dashboardLink = `https://simy.ch/affiliate-dashboard?token=${token}`
+  const dashboardLink = `https://simy.ch/affiliate-dashboard?token=${token}&tenant=${tenant.slug}`
 
   // Send email via central sendEmail utility (uses RESEND_FROM_EMAIL env var)
   let emailSent = false

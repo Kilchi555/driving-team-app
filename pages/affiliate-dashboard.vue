@@ -11,11 +11,15 @@
     <!-- Not authenticated -->
     <div v-else-if="!isAuthenticated" class="flex items-center justify-center min-h-screen p-4">
       <div class="rounded-2xl shadow-lg p-8 max-w-sm w-full text-center" :style="{ backgroundColor: brandConfig.surface_color }">
-        <div class="text-4xl mb-4">🔒</div>
-        <h2 class="text-xl font-bold mb-2" :style="{ color: brandConfig.text_color }">Zugang erforderlich</h2>
+        <div class="text-4xl mb-4">{{ sessionExpired ? '⏰' : '🔒' }}</div>
+        <h2 class="text-xl font-bold mb-2" :style="{ color: brandConfig.text_color }">
+          {{ sessionExpired ? 'Sitzung abgelaufen' : 'Zugang erforderlich' }}
+        </h2>
         <p v-if="tokenError" class="text-sm mb-4 p-3 rounded-lg bg-red-50 text-red-600">{{ tokenError }}</p>
-        <p v-else class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">Bitte melde dich an oder fordere einen neuen Zugangslink an.</p>
-        <NuxtLink to="/partner" class="block rounded-lg px-5 py-2.5 font-semibold text-sm text-white transition hover:opacity-90" :style="{ backgroundColor: brandConfig.primary_color }">
+        <p v-else class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">
+          {{ sessionExpired ? 'Deine Sitzung ist abgelaufen. Bitte fordere einen neuen Zugangslink an.' : 'Bitte melde dich an oder fordere einen neuen Zugangslink an.' }}
+        </p>
+        <NuxtLink :to="tenantSlug ? `/partner/${tenantSlug}` : '/partner'" class="block rounded-lg px-5 py-2.5 font-semibold text-sm text-white transition hover:opacity-90" :style="{ backgroundColor: brandConfig.primary_color }">
           Neuen Link anfordern
         </NuxtLink>
       </div>
@@ -322,9 +326,49 @@ const authStore = useAuthStore()
 const supabase = getSupabase()
 const { setFavicon } = useFavicon()
 
+const tenantSlug = computed(() => route.query.tenant as string | undefined)
+
 const authLoading = ref(true)
 const isAuthenticated = ref(false)
 const tokenError = ref('')
+const accessToken = ref<string | null>(null)
+const sessionExpired = ref(false)
+
+// Always fetch the current (possibly refreshed) token from Supabase — never use a stale cache
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    accessToken.value = session.access_token
+    return { Authorization: `Bearer ${session.access_token}` }
+  }
+  // Fallback: try to refresh manually
+  const { data: refreshData } = await supabase.auth.refreshSession()
+  if (refreshData?.session?.access_token) {
+    accessToken.value = refreshData.session.access_token
+    return { Authorization: `Bearer ${refreshData.session.access_token}` }
+  }
+  return {}
+}
+
+// Keep access token in sync with Supabase's automatic refresh cycle
+let authStateUnsubscribe: (() => void) | null = null
+function setupAuthListener() {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+      accessToken.value = session.access_token
+    } else if (event === 'SIGNED_OUT') {
+      if (isAuthenticated.value) {
+        isAuthenticated.value = false
+        sessionExpired.value = true
+      }
+    }
+  })
+  authStateUnsubscribe = () => subscription.unsubscribe()
+}
+
+onUnmounted(() => {
+  authStateUnsubscribe?.()
+})
 const userName = ref('')
 const logoLoadError = ref(false)
 
@@ -380,11 +424,14 @@ onMounted(async () => {
 
         if (!otpError && otpData?.session?.user) {
           const supaUser = otpData.session.user
+          accessToken.value = otpData.session.access_token ?? null
           authStore.user = supaUser as any
           await authStore.fetchUserProfile(supaUser.id)
           isAuthenticated.value = true
+          sessionExpired.value = false
+          setupAuthListener()
           userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || supaUser.email || 'Partner'
-          await router.replace({ path: '/affiliate-dashboard' })
+          await router.replace({ path: '/affiliate-dashboard', query: tenantSlug.value ? { tenant: tenantSlug.value } : {} })
           await loadBranding()
           await loadStats()
         } else {
@@ -405,6 +452,7 @@ onMounted(async () => {
     if (session?.user) {
       user = session.user as any
       authStore.user = session.user as any
+      accessToken.value = session.access_token ?? null
       if (!authStore.userProfile) {
         await authStore.fetchUserProfile(session.user.id)
       }
@@ -413,6 +461,8 @@ onMounted(async () => {
 
   if (user) {
     isAuthenticated.value = true
+    sessionExpired.value = false
+    setupAuthListener()
     userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || (user as any).email || 'Partner'
     await loadBranding()
     await loadStats()
@@ -448,7 +498,8 @@ async function loadBranding() {
 
 async function loadStats() {
   try {
-    const result = await $fetch<any>('/api/affiliate/stats')
+    const headers = await getAuthHeaders()
+    const result = await $fetch<any>('/api/affiliate/stats', { headers })
     stats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     shareLink.value = result.data.share_link ?? ''
@@ -460,8 +511,10 @@ async function loadStats() {
 async function generateCode() {
   generatingCode.value = true
   try {
+    const headers = await getAuthHeaders()
     const result = await $fetch<any>('/api/affiliate/generate-code', {
       method: 'POST',
+      headers,
     })
     affiliateCode.value = result.data.code
     shareLink.value = result.data.link
@@ -486,8 +539,10 @@ async function submitPayout() {
   payoutError.value = ''
   payoutLoading.value = true
   try {
+    const headers = await getAuthHeaders()
     const result = await $fetch<any>('/api/affiliate/request-payout', {
       method: 'POST',
+      headers,
       body: {
         type: 'bank',
         amount_rappen: payoutForm.value.amountChf * 100,
@@ -513,8 +568,10 @@ async function confirmPayout() {
   payoutError.value = ''
   payoutLoading.value = true
   try {
+    const headers = await getAuthHeaders()
     await $fetch('/api/affiliate/confirm-payout', {
       method: 'POST',
+      headers,
       body: {
         payoutRequestId: pendingPayoutId.value,
         otp: payoutOtp.value,
