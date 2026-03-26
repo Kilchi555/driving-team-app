@@ -246,13 +246,18 @@ export default defineEventHandler(async (event) => {
 
     // Handle specific errors
     if (error.message === 'DUPLICATE_PHONE') {
-      const customError: any = new Error(error.message)
-      customError.code = '23505'
-      customError.existingUser = error.existingUser
       throw createError({ 
         statusCode: 409, 
         message: error.message,
-        data: customError
+        data: { existingUser: error.existingUser ?? null }
+      })
+    }
+
+    if (error.message === 'DUPLICATE_EMAIL') {
+      throw createError({ 
+        statusCode: 409, 
+        message: error.message,
+        data: { existingUser: null }
       })
     }
 

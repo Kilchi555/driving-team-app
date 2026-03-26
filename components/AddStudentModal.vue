@@ -509,21 +509,28 @@ const submitForm = async () => {
     emit('close')
 
   } catch (error: any) {
-    console.error('❌❌❌ Fehler beim Hinzufügen des Schülers:', error)
-    console.error('Error details:', error)
+    console.error('❌ Fehler beim Hinzufügen des Schülers:', error)
     
+    // ofetch/$fetch wraps H3 errors as:
+    //   error.message/statusMessage = 'DUPLICATE_PHONE'
+    //   error.data = { existingUser: {...} }
+    const errorMessage = error.message || error.statusMessage || error.data?.statusMessage || ''
+    const existingUserData = error.existingUser || error.data?.existingUser || error.data?.data?.existingUser || null
+    const isDuplicatePhone = errorMessage.includes('DUPLICATE_PHONE') || error.statusMessage === 'DUPLICATE_PHONE' || error.data?.statusMessage === 'DUPLICATE_PHONE'
+    const isDuplicateEmail = errorMessage.includes('DUPLICATE_EMAIL') || error.statusMessage === 'DUPLICATE_EMAIL' || error.data?.statusMessage === 'DUPLICATE_EMAIL'
+
     // ✅ Verständliche Fehlermeldungen mit schönem Modal
     // Prüfe auch auf Datenbank-Constraint-Fehler (code: 23505)
     const isDatabaseDuplicatePhone = error.code === '23505' && 
-      (error.message?.includes('users_phone_tenant_unique') || 
-       error.message?.includes('phone'))
+      (errorMessage?.includes('users_phone_tenant_unique') || 
+       errorMessage?.includes('phone'))
     
     const isDatabaseDuplicateEmail = error.code === '23505' && 
-      (error.message?.includes('users_email_tenant_unique') || 
-       error.message?.includes('email'))
+      (errorMessage?.includes('users_email_tenant_unique') || 
+       errorMessage?.includes('email'))
     
-    if (error.message === 'DUPLICATE_PHONE' || isDatabaseDuplicatePhone) {
-      const existing = error.existingUser
+    if (isDuplicatePhone || isDatabaseDuplicatePhone) {
+      const existing = existingUserData
       const hasAccount = existing?.auth_user_id !== null
       const isActive = existing?.is_active
       const onboardingStatus = existing?.onboarding_status
@@ -552,7 +559,7 @@ const submitForm = async () => {
         actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
         actions = [
           'Schüler:in kann den Link in der Onboarding-SMS/E-Mail noch verwenden',
-          'Falls dieser nicht mehr gültig ist, kannst du ein neues SMS/E-Mail senden. Geh dafür in sein Profil und klick auf "Onboarding-Link erneut senden"',
+          'Falls dieser nicht mehr gültig ist, kannst du ein neues SMS/E-Mail senden."',
         ]
       } else if (onboardingStatus === 'completed' && !hasAccount) {
         // Completed aber kein Account - ungewöhnlich
@@ -596,8 +603,8 @@ const submitForm = async () => {
         message: message
       })
       
-    } else if (error.message === 'DUPLICATE_EMAIL' || isDatabaseDuplicateEmail) {
-      const existing = error.existingUser
+    } else if (isDuplicateEmail || isDatabaseDuplicateEmail) {
+      const existing = existingUserData
       const hasAccount = existing?.auth_user_id !== null
       const isActive = existing?.is_active
       const onboardingStatus = existing?.onboarding_status
@@ -671,7 +678,7 @@ const submitForm = async () => {
         message: message
       })
       
-    } else if (error.message?.includes('duplicate')) {
+    } else if (errorMessage?.toLowerCase().includes('duplicate')) {
       errors.value.email = 'Diese E-Mail-Adresse oder Telefonnummer ist bereits registriert'
       uiStore.addNotification({
         type: 'error',
@@ -683,7 +690,7 @@ const submitForm = async () => {
       uiStore.addNotification({
         type: 'error',
         title: 'Fehler',
-        message: 'Fehler beim Hinzufügen des Schülers: ' + error.message
+        message: 'Fehler beim Hinzufügen des Schülers: ' + errorMessage
       })
     }
   } finally {

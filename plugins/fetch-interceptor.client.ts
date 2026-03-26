@@ -31,10 +31,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       
       if (status === 401 && isAnyAuthEndpoint) {
         console.debug('ℹ️ Auth endpoint returned 401 - credential error, let component handle it')
-        throw createError({
-          statusCode: status,
-          statusMessage: response?.statusText || 'Request failed'
-        })
+        const d = (response as any)?._data
+        throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
 
       // Check if this is a booking flow request (should show modal instead of redirecting)
@@ -46,10 +44,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       const isOnLoginPage = !currentPath.includes('/customer') && !currentPath.includes('/staff') && !currentPath.includes('/admin') && !currentPath.includes('/booking')
       if (status === 401 && isOnLoginPage) {
         console.debug('ℹ️ 401 on login page - wrong credentials, let component handle it')
-        throw createError({
-          statusCode: status,
-          statusMessage: response?.statusText || 'Request failed'
-        })
+        const d = (response as any)?._data
+        throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
       const isBookingAvailabilityPage = currentPath.includes('/booking/availability/')
       const isBookingFlow = isBookingAvailabilityPage || url.includes('/api/booking/create-appointment') || url.includes('x-booking-flow=true') || (request as any)?.headers?.['X-Booking-Flow'] === 'true'
@@ -57,10 +53,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       // 🚨 If this is a booking flow request, don't redirect - let component handle it
       if (isBookingFlow && status === 401) {
         console.debug('ℹ️ Booking flow 401 - component will show login modal')
-        throw createError({
-          statusCode: status,
-          statusMessage: response?.statusText || 'Request failed'
-        })
+        const d = (response as any)?._data
+        throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
 
       // 🛒 Shop page / shop API requests — guest checkout, never redirect to login
@@ -68,10 +62,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       const isShopRequest = url.includes('/api/shop/') || url.includes('/api/wallee/') || url.includes('/api/tenants/branding') || url.includes('/api/auth/current-user')
       if ((isShopPage || isShopRequest) && status === 401) {
         console.debug('ℹ️ Shop 401 - guest checkout allowed, no redirect')
-        throw createError({
-          statusCode: status,
-          statusMessage: response?.statusText || 'Request failed'
-        })
+        const d = (response as any)?._data
+        throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
 
       // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
@@ -89,10 +81,8 @@ export default defineNuxtPlugin((nuxtApp) => {
           if (currentSlug && (currentPath === `/${currentSlug}` || currentPath.startsWith(`/${currentSlug}/`))) {
             console.log('ℹ️ Already on tenant login page - no redirect needed')
             isRedirecting = false
-            throw createError({
-              statusCode: status,
-              statusMessage: response?.statusText || 'Request failed'
-            })
+            const d = (response as any)?._data
+            throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
           }
           
           // IMMER zu tenant-specific login redirecten, NIEMALS zu /login!
@@ -191,9 +181,13 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
 
       // Re-throw other errors so callers can handle them
+      // NOTE: `error` is undefined here — ofetch creates FetchError AFTER onResponseError.
+      // Read the parsed response body from response._data instead to preserve all error data.
+      const responseData = (response as any)?._data
       throw createError({
         statusCode: status,
-        statusMessage: response?.statusText || 'Request failed'
+        statusMessage: responseData?.message || responseData?.statusMessage || response?.statusText || 'Request failed',
+        data: responseData?.data ?? responseData ?? undefined
       })
     }
   })
