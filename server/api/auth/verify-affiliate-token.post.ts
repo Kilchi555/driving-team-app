@@ -56,7 +56,8 @@ export default defineEventHandler(async (event) => {
 
   // Generate a strong random one-time password for signInWithPassword.
   // This guarantees a full Supabase session with refresh_token (unlike verifyOtp).
-  const tempPassword = `${crypto.randomUUID()}-${crypto.randomUUID()}`
+  // Keep under 72 chars (bcrypt limit) — one UUID is 36 chars, well within limit.
+  const tempPassword = crypto.randomUUID()
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(
     userRow.auth_user_id,
