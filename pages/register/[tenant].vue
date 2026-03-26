@@ -181,6 +181,7 @@
                 v-model="formData.phone"
                 type="tel"
                 required
+                @input="phoneExistsBlocked = false"
                 @blur="normalizePhone"
                 :class="[
                   'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
@@ -189,6 +190,10 @@
                 placeholder="079 123 45 67"
               />
               <p v-if="fieldErrors.phone" class="mt-1 text-sm text-red-600">{{ fieldErrors.phone }}</p>
+              <p v-else-if="phoneExistsBlocked" class="mt-1 text-sm text-red-600 flex items-center gap-1">
+                ⚠ Diese Nummer ist bereits registriert.
+                <button type="button" @click="showPendingPhoneModal = true" class="underline font-medium">Details anzeigen</button>
+              </p>
               <p v-else-if="isCheckingPhone" class="text-xs text-blue-500 mt-1 flex items-center gap-1">
                 <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                 Wird geprüft...
@@ -682,7 +687,7 @@
               {{ pendingPhoneIsActive ? 'Nummer bereits registriert' : 'Konto bereits angelegt' }}
             </h3>
             <p class="text-sm text-gray-600 mt-1">
-              <span v-if="pendingPhoneFirstName">Hallo {{ pendingPhoneFirstName }}, Ihr</span>
+              <span v-if="pendingPhoneFirstName">Hallo <strong>{{ pendingPhoneFirstName }}</strong>, Ihr</span>
               <span v-else>Ihr</span>
               <span v-if="pendingPhoneIsActive">
                 Konto ist bereits aktiv. Bitte melden Sie sich direkt an.
@@ -937,6 +942,9 @@ const maxSteps = computed(() => {
 })
 
 const canProceed = computed(() => {
+  // Block if phone number already exists in system
+  if (phoneExistsBlocked.value) return false
+
   if (currentStep.value === 1) {
     if (isAdminRegistration.value) {
       // Admin registration: basic info + address required
@@ -993,6 +1001,7 @@ const isCheckingEmail = ref(false)
 
 // Phone pending check state
 const isCheckingPhone = ref(false)
+const phoneExistsBlocked = ref(false)
 const showPendingPhoneModal = ref(false)
 const pendingPhoneFirstName = ref<string | null>(null)
 const pendingPhoneIsActive = ref(false)
@@ -1139,17 +1148,21 @@ const normalizePhone = async () => {
     }) as any
 
     if (res.isPending) {
+      phoneExistsBlocked.value = true
       pendingPhoneFirstName.value = res.firstName || null
       pendingPhoneSmsSent.value = false
       pendingPhoneSmsError.value = ''
       pendingPhoneIsActive.value = false
       showPendingPhoneModal.value = true
     } else if (res.isActive || res.isStaffOrAdmin) {
+      phoneExistsBlocked.value = true
       pendingPhoneFirstName.value = res.firstName || null
       pendingPhoneSmsSent.value = false
       pendingPhoneSmsError.value = ''
       pendingPhoneIsActive.value = true
       showPendingPhoneModal.value = true
+    } else {
+      phoneExistsBlocked.value = false
     }
     // Silent fail — don't block registration on check errors
   } finally {
