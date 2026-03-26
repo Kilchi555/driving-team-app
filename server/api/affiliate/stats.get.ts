@@ -130,6 +130,17 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', userProfile.tenant_id)
     .order('created_at', { ascending: false })
 
+  // Load affiliate leads for this code
+  let leads: any[] = []
+  if (affiliateCode) {
+    const { data: leadsData } = await supabaseAdmin
+      .from('affiliate_leads')
+      .select('id, first_name, last_name, phone, status, created_at, converted_at')
+      .eq('affiliate_code_id', affiliateCode.id)
+      .order('created_at', { ascending: false })
+    leads = leadsData ?? []
+  }
+
   // Build share link
   let shareLink: string | null = null
   if (affiliateCode) {
@@ -174,6 +185,7 @@ export default defineEventHandler(async (event) => {
       referrals: referrals ?? [],
       reward_transactions: rewardTransactions,
       payout_requests: payoutRequests ?? [],
+      leads: leads,
     }
   }
 })

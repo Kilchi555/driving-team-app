@@ -505,6 +505,42 @@
             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
           </div>
 
+          <!-- Leads section -->
+          <div v-if="affiliateLeads.length > 0" class="border-t pt-4">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-semibold text-gray-700">Neue Anfragen</h4>
+              <span class="text-xs bg-yellow-100 text-yellow-700 font-semibold px-2 py-0.5 rounded-full">
+                {{ affiliateLeads.filter(l => l.status !== 'converted').length }} offen
+              </span>
+            </div>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              <div
+                v-for="lead in affiliateLeads"
+                :key="lead.id"
+                class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+              >
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-gray-800 truncate">
+                    {{ lead.first_name }} {{ lead.last_name }}
+                  </div>
+                  <div class="text-xs text-gray-400 mt-0.5">
+                    {{ new Date(lead.created_at).toLocaleDateString('de-CH') }}
+                  </div>
+                </div>
+                <span
+                  class="ml-3 shrink-0 inline-flex items-center text-xs font-semibold rounded-full px-2.5 py-1"
+                  :class="{
+                    'bg-green-100 text-green-700': lead.status === 'converted',
+                    'bg-yellow-100 text-yellow-700': lead.status === 'sms_sent',
+                    'bg-blue-100 text-blue-700': lead.status === 'onboarding_started',
+                  }"
+                >
+                  {{ lead.status === 'converted' ? '✓ Registriert' : lead.status === 'onboarding_started' ? 'Onboarding' : '📱 SMS gesendet' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- Link generieren -->
           <div v-if="!affiliateCode">
             <p class="text-sm text-gray-600 mb-3">Generiere deinen persönlichen Empfehlungslink und teile ihn mit Bekannten. Du erhältst eine Gutschrift, wenn jemand seine erste Lektion absolviert.</p>
@@ -947,6 +983,7 @@ const affiliateShareLink = ref('')
 const affiliateStats = ref<any>(null)
 const affiliateReferrals = ref<any[]>([])
 const affiliateRewardTransactions = ref<any[]>([])
+const affiliateLeads = ref<any[]>([])
 const showReferralDetail = ref(false)
 const referralDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings'>('all')
 
@@ -2215,6 +2252,7 @@ const openAffiliateModal = async () => {
     affiliateStats.value = result.data?.summary ?? null
     affiliateReferrals.value = result.data?.referrals ?? []
     affiliateRewardTransactions.value = result.data?.reward_transactions ?? []
+    affiliateLeads.value = result.data?.leads ?? []
     if (result.data?.affiliate_code?.code) {
       affiliateCode.value = result.data.affiliate_code.code
       affiliateShareLink.value = result.data.share_link ?? ''
