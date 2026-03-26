@@ -278,12 +278,12 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useFavicon } from '~/composables/useFavicon'
-import { useSupabaseClient } from '#imports'
+import { getSupabase } from '~/utils/supabase'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const supabase = useSupabaseClient()
+const supabase = getSupabase()
 const { setFavicon } = useFavicon()
 
 const authLoading = ref(true)
@@ -350,7 +350,19 @@ onMounted(async () => {
     }
   }
 
-  const user = authStore.user
+  // Check authStore first (cookie-based session), then fall back to Supabase localStorage session
+  let user = authStore.user
+  if (!user) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      user = session.user
+      authStore.user = session.user
+      if (!authStore.userProfile) {
+        await authStore.fetchUserProfile(session.user.id)
+      }
+    }
+  }
+
   if (user) {
     isAuthenticated.value = true
     const u = authStore.userProfile
