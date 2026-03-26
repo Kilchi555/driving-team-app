@@ -200,12 +200,14 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
 
 const uiStore = useUIStore()
+const router = useRouter()
 
 // ✅ NEU: Toast State
 const showToast = ref(false)
@@ -254,7 +256,7 @@ const openStudentProfile = () => {
   if (studentId) {
     emit('close')
     showDuplicateWarning.value = false
-    navigateTo(`/customers?student=${studentId}`)
+    router.push(`/customers?student=${studentId}`)
   }
 }
 

@@ -1,6 +1,6 @@
 <template>
-  <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 pb-16">
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[calc(100vh-120px)] overflow-hidden flex flex-col">
+  <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+    <div class="bg-white rounded-lg max-w-5xl w-full max-h-[calc(100vh-24px)] overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="text-white p-4" :style="{ backgroundColor: primaryColor }">
         <div class="flex items-center justify-between">
@@ -200,64 +200,6 @@
 
             <div v-else class="space-y-4">
             
-            <!-- Filter und Sortierung auf separater Zeile -->
-            <div 
-              class="flex items-center justify-between gap-2 py-2 px-4 rounded-lg"
-              :style="{ backgroundColor: primaryColor + '20' }"
-            >
-              <!-- Kategorie Filter -->
-              <div class="flex items-center gap-2">
-                <select
-                  v-model="selectedCategoryFilter"
-                  class="h-8 text-xs border border-gray-300 rounded px-2 py-0 text-white focus:outline-none focus:ring-2 focus:ring-offset-1 leading-8"
-                  :style="{ 
-                    backgroundColor: primaryColor,
-                    '--tw-ring-color': primaryColor
-                  }"
-                >
-                  <option v-for="category in availableCategories" :key="category" :value="category">
-                    {{ category === 'alle' ? 'Alle' : category }}
-                  </option>
-                </select>
-              </div>
-              
-              <!-- Sortier-Toggle -->
-              <div class="flex items-center gap-3">
-                <span 
-                  :class="['text-sm font-medium transition-colors']"
-                  :style="{ color: sortMode === 'newest' ? primaryColor : '#6B7280' }"
-                >
-                  Neueste
-                </span>
-                
-                <!-- Schieberegler -->
-                <button
-                  @click="sortMode = sortMode === 'newest' ? 'worst' : 'newest'"
-                  :class="[
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
-                  ]"
-                  :style="{ 
-                    backgroundColor: sortMode === 'worst' ? primaryColor : '#D1D5DB',
-                    '--tw-ring-color': primaryColor
-                  }"
-                >
-                  <span
-                    :class="[
-                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                      sortMode === 'worst' ? 'translate-x-6' : 'translate-x-1'
-                    ]"
-                  />
-                </button>
-                
-                <span 
-                  :class="['text-sm font-medium transition-colors']"
-                  :style="{ color: sortMode === 'worst' ? primaryColor : '#6B7280' }"
-                >
-                  Schlechteste
-                </span>
-              </div>
-            </div>
-            
             <!-- Lektionen Liste -->
             <div class="space-y-3">
               <div 
@@ -401,8 +343,14 @@
               <div 
                 v-for="result in examResults" 
                 :key="result.id"
-                class="rounded-lg p-4 border-2"
-                :class="result.passed ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'"
+                class="rounded-lg p-4 border-2 transition-all"
+                :class="result.isPlanned
+                  ? 'border-blue-300 bg-blue-50'
+                  : result.isUnrated
+                    ? 'border-orange-300 bg-orange-50'
+                    : (result.passed ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50')"
+                :style="result.appointments && canEvaluateLesson(result.appointments) ? { cursor: 'pointer' } : { cursor: 'default' }"
+                @click="result.appointments && canEvaluateLesson(result.appointments) ? openExamResultModalFromProgress(result) : null"
               >
                 <div class="flex justify-between items-start mb-3">
                   <div>
@@ -413,14 +361,18 @@
                       </span>
                     </h5>
                     <p class="text-sm text-gray-600">
-                      {{ formatLocalDate(result.exam_date) }}
+                      {{ formatLocalDate(result.exam_date) }} um {{ formatLocalTime(result.exam_date) }}
                     </p>
                   </div>
                   <span :class="[
                     'px-3 py-1 text-sm font-bold rounded-full',
-                    result.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                    result.isPlanned
+                      ? 'bg-blue-500 text-white'
+                      : result.isUnrated
+                        ? 'bg-orange-500 text-white'
+                        : (result.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
                   ]">
-                    {{ result.passed ? 'BESTANDEN' : 'NICHT BESTANDEN' }}
+                    {{ result.isPlanned ? 'GEPLANT' : (result.isUnrated ? 'UNBEWERTET' : (result.passed ? 'BESTANDEN' : 'NICHT BESTANDEN')) }}
                   </span>
                 </div>
                 
@@ -621,64 +573,10 @@
               </div>
             </div>
             
-            <!-- Filter auf separater Zeile -->
-            <div 
-              class="flex items-center justify-between gap-3 py-3 px-4 rounded-lg"
-              :style="{ backgroundColor: primaryColor + '20' }"
-            >
-              <div class="flex items-center gap-3">
-                <span 
-                  :class="['text-sm font-medium transition-colors']"
-                  :style="{ color: paymentsFilterMode === 'alle' ? primaryColor : '#6B7280' }"
-                >
-                  Alle
-                </span>
-                
-                <!-- Schieberegler -->
-                <button
-                  @click="paymentsFilterMode = paymentsFilterMode === 'alle' ? 'ausstehend' : 'alle'"
-                  :class="[
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
-                  ]"
-                  :style="{ 
-                    backgroundColor: paymentsFilterMode === 'ausstehend' ? primaryColor : '#D1D5DB',
-                    '--tw-ring-color': primaryColor
-                  }"
-                >
-                  <span
-                    :class="[
-                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                      paymentsFilterMode === 'ausstehend' ? 'translate-x-6' : 'translate-x-1'
-                    ]"
-                  />
-                </button>
-                
-                <span 
-                  :class="['text-sm font-medium transition-colors']"
-                  :style="{ color: paymentsFilterMode === 'ausstehend' ? primaryColor : '#6B7280' }"
-                >
-                  Unbezahlt
-                </span>
-              </div>
-              
-              <!-- Select All Button -->
-              <button
-                @click="toggleAllPayments"
-                :class="['text-sm font-medium px-3 py-1 rounded transition-colors']"
-                :style="{ 
-                  backgroundColor: selectedPayments.length === filteredPayments.length ? primaryColor : 'transparent',
-                  color: selectedPayments.length === filteredPayments.length ? 'white' : primaryColor,
-                  border: `1px solid ${primaryColor}`
-                }"
-              >
-                {{ selectedPayments.length === filteredPayments.length ? 'Alle abwählen' : 'Alle auswählen' }}
-              </button>
-            </div>
-            
             <!-- Zahlungen Liste -->
             <div class="space-y-3">
               <div 
-                v-for="payment in filteredPayments" 
+                v-for="payment in payments" 
                 :key="payment.id"
                 @click="handlePaymentCardClick(payment)"
                 :class="[
@@ -1160,9 +1058,27 @@
       :is-open="showEvaluationModal"
       :appointment="selectedAppointmentForEvaluation"
       :student-category="selectedAppointmentForEvaluation.type || selectedStudent?.category?.[0] || 'B'"
-      :current-user="currentUser"
+      :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
+      @cancel="onCancelAppointment"
+    />
+
+    <ExamResultModal
+      v-if="showExamResultModal && selectedAppointmentForExamResult"
+      :is-visible="showExamResultModal"
+      :appointment="selectedAppointmentForExamResult"
+      :current-user="props.currentUser"
+      @close="closeExamResultModal"
+      @exam-result-saved="onExamResultSaved"
+    />
+
+    <CancellationReasonModal
+      :is-open="showCancellationReasonModal"
+      :appointment="cancellationAppointment"
+      :current-user="props.currentUser"
+      @close="closeCancellationReasonModal"
+      @cancelled="onCancellationCompleted"
     />
     
     <!-- Confirmation Dialog -->
@@ -1315,8 +1231,11 @@ import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useCalendarCache } from '~/composables/useCalendarCache'
 import EvaluationModal from '~/components/EvaluationModal.vue'
+import ExamResultModal from '~/components/ExamResultModal.vue'
 import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
+import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import StudentDetailsEditModal from '~/components/StudentDetailsEditModal.vue'
 import BillingAddressEditModal from '~/components/BillingAddressEditModal.vue'
@@ -1370,6 +1289,7 @@ const { selectedStudent } = toRefs(props)
 
 // Tenant Branding
 const { primaryColor, secondaryColor } = useTenantBranding()
+const { invalidate: invalidateCache } = useCalendarCache()
 
 // Reactive state
 const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>(props.initialTab || 'details')
@@ -1616,7 +1536,6 @@ const studentAvailableBalance = computed(() => {
 const userBillingAddresses = ref<any[]>([]) // ✅ NEU: Firmen-Rechnungsadressen für diesen User
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
-const sortMode = ref<'newest' | 'worst'>('newest') // Toggle zwischen neueste und schlechteste Bewertungen
 
 // ── Cash Deposit ──────────────────────────────────────────
 const showCashDepositModal = ref(false)
@@ -1637,10 +1556,8 @@ const isLoadingCreditTransactions = ref(false)
 
 // ── Receipt Download ───────────────────────────────────────
 const isProcessingReceipt = ref(false)
-const selectedCategoryFilter = ref<string>('alle') // Filter nach Kategorie
 const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt
 const isLoadingPayments = ref(false)
-const paymentsFilterMode = ref<'alle' | 'ausstehend'>('alle') // Filter für Zahlungen
 const selectedPaymentIds = ref<Set<string>>(new Set()) // Selected payments for bulk payment
 const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
@@ -1650,6 +1567,10 @@ const ratingPointsMap = ref<Record<number, { color: string; label: string }>>({}
 // Evaluation Modal State
 const showEvaluationModal = ref(false)
 const selectedAppointmentForEvaluation = ref<any>(null)
+const showExamResultModal = ref(false)
+const selectedAppointmentForExamResult = ref<any>(null)
+const showCancellationReasonModal = ref(false)
+const cancellationAppointment = ref<any>(null)
 
 // Confirmation Dialog State
 const showConfirmDialog = ref(false)
@@ -1769,13 +1690,6 @@ const calculateCancelledPayment = (payment: any) => {
   }
 }
 
-// Verfügbare Kategorien aus den Lektionen (nur von echten Lektionen, ohne Prüfungen)
-const availableCategories = computed(() => {
-  const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
-  const categories = new Set(lessonsOnly.map(lesson => lesson.type).filter(Boolean))
-  return ['alle', ...Array.from(categories).sort()]
-})
-
 // Kategorien für das Edit-Modal (ohne 'alle')
 const availableCategoriesForEdit = computed(() => {
   const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
@@ -1783,36 +1697,9 @@ const availableCategoriesForEdit = computed(() => {
   return Array.from(categories).sort()
 })
 
-// Gefilterte und sortierte Lektionen
+// Lektionen für den Tab (ohne Prüfungen)
 const sortedLessons = computed(() => {
-  // 0. Filtere Prüfungen aus (nur normale Lektionen anzeigen)
-  const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
-  
-  // 1. Nach Kategorie filtern
-  let filtered = lessonsOnly
-  if (selectedCategoryFilter.value !== 'alle') {
-    filtered = lessonsOnly.filter(lesson => lesson.type === selectedCategoryFilter.value)
-  }
-  
-  // 2. Sortieren
-  if (sortMode.value === 'newest') {
-    // Standard: Neueste zuerst (bereits sortiert beim Laden)
-    return filtered
-  } else {
-    // Schlechteste Bewertungen zuerst
-    return [...filtered].sort((a, b) => {
-      // Berechne Durchschnittsbewertung für jede Lektion
-      const avgA = a.evaluations.length > 0 
-        ? a.evaluations.reduce((sum: number, e: any) => sum + e.criteria_rating, 0) / a.evaluations.length 
-        : 999 // Keine Bewertung = ans Ende
-      
-      const avgB = b.evaluations.length > 0 
-        ? b.evaluations.reduce((sum: number, e: any) => sum + e.criteria_rating, 0) / b.evaluations.length 
-        : 999
-      
-      return avgA - avgB // Niedrigste Bewertung zuerst
-    })
-  }
+  return lessons.value.filter(lesson => !isExam(lesson))
 })
 
 // Selected payments summary
@@ -1822,14 +1709,6 @@ const selectedPaymentsSummary = computed(() => {
     return sum + ((p.total_amount_rappen || 0) / 100)
   }, 0)
   return { count: selected.length, total }
-})
-
-// Gefilterte Zahlungen
-const filteredPayments = computed(() => {
-  if (paymentsFilterMode.value === 'ausstehend') {
-    return payments.value.filter(payment => payment.payment_status === 'pending')
-  }
-  return payments.value
 })
 
 // Helper functions für lokale Zeit-Formatierung
@@ -1898,34 +1777,6 @@ const togglePaymentSelection = (paymentId: string) => {
     selectedPayments.value = selectedPayments.value.filter(id => id !== paymentId)
   } else {
     selectedPayments.value.push(paymentId)
-  }
-}
-
-// Toggle all payments
-const toggleAllPayments = () => {
-  // Nur auswählbar: offene Zahlungen (nicht bezahlt und nicht gelöscht)
-  // Für abgesagte Termine: nur wenn Gebühr verrechnet wird (chargePercentage > 0)
-  const selectablePayments = filteredPayments.value.filter(p => {
-    // Skip deleted payments
-    if (p.deleted_at) return false
-    
-    // Skip already completed payments
-    if (p.payment_status === 'completed') return false
-    
-    // For cancelled appointments: only if there's a charge to collect
-    if (p.appointments?.status === 'cancelled') {
-      const chargePercentage = p.appointments.cancellation_charge_percentage ?? 100
-      return chargePercentage > 0
-    }
-    
-    // For non-cancelled appointments: always selectable if pending
-    return true
-  })
-  
-  if (selectedPayments.value.length === selectablePayments.length) {
-    selectedPayments.value = []
-  } else {
-    selectedPayments.value = selectablePayments.map(p => p.id)
   }
 }
 
@@ -2101,10 +1952,46 @@ const openEvaluationModal = (lesson: any) => {
   showEvaluationModal.value = true
 }
 
+const openExamResultModalFromProgress = (result: any) => {
+  const appointment = result?.appointments
+  if (!appointment) return
+  if (!canEvaluateLesson(appointment)) return
+  if (appointment.status === 'cancelled') return
+
+  logger.debug('🎓 Opening exam result modal from progress tab for:', appointment.id)
+  selectedAppointmentForExamResult.value = appointment
+  showExamResultModal.value = true
+}
+
 const closeEvaluationModal = () => {
   logger.debug('📝 Closing evaluation modal')
   showEvaluationModal.value = false
   selectedAppointmentForEvaluation.value = null
+}
+
+const onCancelAppointment = async (appointment: any) => {
+  logger.debug('🚫 Cancel requested from EvaluationModal for appointment:', appointment?.id)
+  closeEvaluationModal()
+  cancellationAppointment.value = appointment
+  showCancellationReasonModal.value = true
+}
+
+const closeCancellationReasonModal = () => {
+  showCancellationReasonModal.value = false
+  cancellationAppointment.value = null
+}
+
+const onCancellationCompleted = async () => {
+  closeCancellationReasonModal()
+  await loadLessons()
+  await loadExamResults()
+  await loadPayments()
+}
+
+const closeExamResultModal = () => {
+  logger.debug('🎓 Closing exam result modal')
+  showExamResultModal.value = false
+  selectedAppointmentForExamResult.value = null
 }
 
 const onEvaluationSaved = async () => {
@@ -2117,11 +2004,11 @@ const onEvaluationSaved = async () => {
     if (aptIndex >= 0) {
       logger.debug('Reloading evaluations for appointment:', selectedAppointmentForEvaluation.value.id)
       
-      // Reload notes/evaluations for just this appointment
+      // Reload notes/evaluations for just this appointment — include criteria join for names
       const supabase = getSupabase()
       const { data: notesData } = await supabase
         .from('notes')
-        .select('*')
+        .select('*, evaluation_criteria(id, name)')
         .eq('appointment_id', selectedAppointmentForEvaluation.value.id)
       
       if (notesData) {
@@ -2147,8 +2034,22 @@ const onEvaluationSaved = async () => {
       }
     }
   }
+
+  // Ensure pending/exam related views fetch fresh data after save
+  invalidateCache('/api/admin/get-pending-appointments')
+  invalidateCache('/api/calendar/get-appointments')
   
   closeEvaluationModal()
+}
+
+const onExamResultSaved = async () => {
+  // Ensure pending/exam related views fetch fresh data after save
+  invalidateCache('/api/admin/get-pending-appointments')
+  invalidateCache('/api/calendar/get-appointments')
+
+  await loadExamResults()
+  await loadLessons()
+  closeExamResultModal()
 }
 
 // Confirmation Dialog Handlers
@@ -2398,6 +2299,7 @@ const loadExamResults = async () => {
         start_time, 
         title, 
         user_id, 
+        status,
         event_type_code,
         staff_id,
         event_types (
@@ -2458,11 +2360,41 @@ const loadExamResults = async () => {
       ...apt,
       instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
     }]))
-    
-    examResults.value = (examResultsData || []).map((result: any) => ({
+
+    const completedExamResults = (examResultsData || []).map((result: any) => ({
       ...result,
-      appointments: appointmentsMap.get(result.appointment_id)
+      appointments: appointmentsMap.get(result.appointment_id),
+      isPlanned: false
     }))
+
+    // Also include upcoming planned exams that don't have an exam_result yet
+    const appointmentIdsWithResult = new Set(
+      (examResultsData || []).map((result: any) => result.appointment_id)
+    )
+    const now = new Date()
+    const examsWithoutResult = (studentAppointments || [])
+      .filter((apt: any) =>
+        isExam(apt)
+        && !appointmentIdsWithResult.has(apt.id)
+        && apt.status !== 'cancelled'
+      )
+      .map((apt: any) => ({
+        id: `planned-${apt.id}`,
+        appointment_id: apt.id,
+        exam_date: apt.start_time,
+        passed: null,
+        examiner_behavior_rating: null,
+        examiner_behavior_notes: null,
+        appointments: {
+          ...apt,
+          instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
+        },
+        isPlanned: new Date(apt.start_time) >= now,
+        isUnrated: new Date(apt.start_time) < now
+      }))
+
+    examResults.value = [...examsWithoutResult, ...completedExamResults]
+      .sort((a: any, b: any) => new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime())
     
     logger.debug('✅ Loaded', examResults.value.length, 'exam results')
     

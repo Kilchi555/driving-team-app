@@ -357,6 +357,65 @@ const clearSelectedExaminer = () => {
   showExaminerDropdown.value = false
 }
 
+const resetForm = () => {
+  examResult.value = {
+    examiner_id: '',
+    passed: null,
+    examiner_behavior_rating: null,
+    examiner_behavior_notes: ''
+  }
+  selectedExaminerName.value = ''
+  validationErrors.value = []
+}
+
+const loadExistingExamResult = async (appointmentId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('exam_results')
+      .select(`
+        examiner_id,
+        passed,
+        examiner_behavior_rating,
+        examiner_behavior_notes,
+        examiners (
+          first_name,
+          last_name
+        )
+      `)
+      .eq('appointment_id', appointmentId)
+      .maybeSingle()
+
+    if (error) {
+      logger.error('❌ Error loading existing exam result:', error.message)
+      return
+    }
+
+    if (!data) {
+      return
+    }
+
+    examResult.value = {
+      examiner_id: data.examiner_id || '',
+      passed: data.passed,
+      examiner_behavior_rating: data.examiner_behavior_rating,
+      examiner_behavior_notes: data.examiner_behavior_notes || ''
+    }
+
+    const examiner = (data as any).examiners
+    if (examiner) {
+      selectedExaminerName.value = `${examiner.first_name || ''} ${examiner.last_name || ''}`.trim()
+    } else if (data.examiner_id) {
+      const match = availableExaminers.value.find(e => e.id === data.examiner_id)
+      if (match) {
+        selectedExaminerName.value = `${match.first_name || ''} ${match.last_name || ''}`.trim()
+      }
+    }
+  } catch (err: any) {
+    logger.error('❌ Failed to prefill exam result:', err?.message || err)
+  }
+}
+
 const addExaminer = async () => {
   try {
     if (!newExaminer.value.last_name) {
@@ -518,16 +577,10 @@ onMounted(() => {
 })
 
 // Watch for appointment changes
-watch(() => props.appointment, (newAppointment) => {
-  if (newAppointment) {
-    // Reset form
-    examResult.value = {
-      examiner_id: '',
-      passed: null,
-      examiner_behavior_rating: null,
-      examiner_behavior_notes: ''
-    }
-    validationErrors.value = []
+watch(() => props.appointment, async (newAppointment) => {
+  resetForm()
+  if (newAppointment?.id) {
+    await loadExistingExamResult(newAppointment.id)
   }
 }, { immediate: true })
 </script>
