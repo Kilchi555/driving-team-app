@@ -20,30 +20,45 @@ export default defineEventHandler(async (event) => {
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, auth_user_id, first_name, onboarding_token')
-      .eq('phone', phone.trim())
-      .eq('tenant_id', tenantId)
-      .eq('role', 'client')
-      .single()
+    // Normalize phone to multiple possible formats for flexible matching
+    const normalized = phone.trim()
+    const withoutPlus = normalized.startsWith('+') ? normalized.slice(1) : normalized
+    const withLeadingZero = normalized.startsWith('+41')
+      ? '0' + normalized.slice(3)
+      : normalized.startsWith('41')
+        ? '0' + normalized.slice(2)
+        : normalized
 
-    if (error && error.code !== 'PGRST116') {
+    // Check ALL roles (client, staff, admin, tenant_admin) — no role filter
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, auth_user_id, first_name, onboarding_token, role')
+      .eq('tenant_id', tenantId)
+      .or(`phone.eq.${normalized},phone.eq.+${withoutPlus},phone.eq.${withLeadingZero}`)
+
+    if (error) {
       logger.warn('check-phone-exists DB error:', error)
       return { exists: false, isPending: false }
     }
 
-    if (!user) {
+    if (!users || users.length === 0) {
       return { exists: false, isPending: false }
     }
 
-    // Pending = no auth_user_id yet AND has onboarding token
-    const isPending = !user.auth_user_id && !!user.onboarding_token
+    const user = users[0]
+
+    // Pending = client role, no auth_user_id, has onboarding token
+    const isPending = user.role === 'client' && !user.auth_user_id && !!user.onboarding_token
+    // Active = has auth_user_id (any role)
+    const isActive = !!user.auth_user_id
+    // Staff/admin = non-client role
+    const isStaffOrAdmin = ['staff', 'admin', 'tenant_admin', 'superadmin'].includes(user.role)
 
     return {
       exists: true,
       isPending,
-      isActive: !!user.auth_user_id,
+      isActive,
+      isStaffOrAdmin,
       firstName: user.first_name || null,
     }
   } catch (err: any) {
