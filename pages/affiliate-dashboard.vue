@@ -278,10 +278,12 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useFavicon } from '~/composables/useFavicon'
+import { useSupabaseClient } from '#imports'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const supabase = useSupabaseClient()
 const { setFavicon } = useFavicon()
 
 const authLoading = ref(true)
@@ -327,12 +329,24 @@ onMounted(async () => {
         method: 'POST',
         body: { token },
       })
-      if (result?.action_link) {
-        window.location.href = result.action_link
-        return
+      if (result?.access_token && result?.refresh_token) {
+        // Set session directly — no redirect hop needed, session persists via refresh token
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+        })
+        if (!sessionError) {
+          const { data: { user: supaUser } } = await supabase.auth.getUser()
+          if (supaUser) {
+            authStore.user = supaUser
+            await authStore.fetchUserProfile(supaUser.id)
+          }
+          // Remove token from URL without reloading
+          await router.replace({ path: '/affiliate-dashboard' })
+        }
       }
     } catch {
-      // Token invalid/expired
+      // Token invalid/expired — fall through to unauthenticated state
     }
   }
 
