@@ -16,8 +16,8 @@
         Bitte prüfe dein Handy.
       </p>
       <p class="text-xs text-gray-400 mt-2">Der Link ist 30 Tage gültig.</p>
-      <div v-if="branding?.logo_url" class="pt-2">
-        <img :src="branding.logo_url" :alt="branding.name" class="h-8 mx-auto object-contain opacity-60" />
+      <div v-if="logoUrl" class="pt-2">
+        <img :src="logoUrl" :alt="branding?.name" class="h-8 mx-auto object-contain opacity-60" />
       </div>
     </div>
 
@@ -44,8 +44,8 @@
     <div v-else class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
       <!-- Header with branding -->
       <div class="px-6 pt-8 pb-6 text-center bg-gray-50 border-b">
-        <div v-if="branding?.logo_url" class="mb-4">
-          <img :src="branding.logo_url" :alt="branding?.name" class="h-12 mx-auto object-contain" />
+        <div v-if="logoUrl" class="mb-4">
+          <img :src="logoUrl" :alt="branding?.name" class="h-12 mx-auto object-contain" />
         </div>
         <div v-else class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-xl font-bold"
              :style="brandColor ? `background-color: ${brandColor}` : 'background-color: #10b981'">
@@ -147,24 +147,23 @@
 </template>
 
 <script setup lang="ts">
+<script setup lang="ts">
 const route = useRoute()
 const tenantSlug = route.params.tenant as string
 const refCode = (route.query.ref as string | undefined)?.trim().toUpperCase() || ''
 
-// ---- Branding ----
-const branding = ref<any>(null)
+// ---- Branding via useFetch (SSR + client dedup, no flash) ----
+const { data: brandingResult } = await useFetch<any>(`/api/tenants/branding`, {
+  query: { slug: tenantSlug },
+  key: `ref-branding-${tenantSlug}`,
+})
+const branding = computed(() => brandingResult.value?.data ?? null)
 const brandColor = computed(() => branding.value?.primary_color || null)
+const logoUrl = computed(() => branding.value?.logo_square_url || branding.value?.logo_url || null)
+
 const referrerName = ref<string | null>(null)
 
 onMounted(async () => {
-  try {
-    const result = await $fetch<any>(`/api/tenants/branding?slug=${tenantSlug}`)
-    branding.value = result?.data ?? null
-  } catch {
-    // Branding not critical — page still works without it
-  }
-
-  // Load referrer name if code present
   if (refCode) {
     try {
       const result = await $fetch<any>(`/api/affiliate/referrer-name?slug=${tenantSlug}&ref=${refCode}`)
