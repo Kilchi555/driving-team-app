@@ -272,9 +272,13 @@ const isAdmin = computed(() => {
     try {
       logger.debug('🚪 Logging out')
       
-      // Save tenant_id and get slug BEFORE clearing auth state
-      let tenantSlug: string | null = null
-      if (userProfile.value?.tenant_id) {
+      // Get tenant slug from localStorage first (set on login) — avoids a DB call during logout
+      let tenantSlug: string | null = process.client
+        ? localStorage.getItem('last_tenant_slug')
+        : null
+
+      // Fallback: query DB if not in localStorage
+      if (!tenantSlug && userProfile.value?.tenant_id) {
         try {
           const supabaseClient = getSupabase()
           if (supabaseClient) {

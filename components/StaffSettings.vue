@@ -2348,19 +2348,9 @@ const closeToast = () => {
 const handleLogout = async () => {
   try {
     const authStore = useAuthStore()
-    
-    // Erfolgreiche Abmeldung vorbereiten
-    showSuccessToast('Erfolgreich abgemeldet', 'Sie werden zur Anmeldeseite weitergeleitet.')
-    
-    // Schließe das Modal
     emit('close')
-    
-    // Kurze Verzögerung für Toast-Anzeige, dann Logout
-    setTimeout(async () => {
-      // ✅ Korrekt: authStore.logout() räumt HTTP-Only Cookies, localStorage und Supabase Session auf
-      await authStore.logout()
-    }, 500)
-    
+    // authStore.logout() handles cookie clearing, localStorage, Supabase signOut and redirect
+    await authStore.logout()
   } catch (err: any) {
     console.error('❌ Logout error:', err)
     showErrorToast('Abmeldung fehlgeschlagen', 'Ein unerwarteter Fehler ist aufgetreten.')
