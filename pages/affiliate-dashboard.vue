@@ -414,17 +414,16 @@ onMounted(async () => {
         body: { token },
       })
 
-      if (result?.email && result?.otp) {
-        // Exchange the OTP for a real session — no redirect, no hash race condition
-        const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
+      if (result?.email && result?.tempPassword) {
+        // Sign in with the one-time temp password — guarantees a full session with refresh_token
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: result.email,
-          token: result.otp,
-          type: 'email',
+          password: result.tempPassword,
         })
 
-        if (!otpError && otpData?.session?.user) {
-          const supaUser = otpData.session.user
-          accessToken.value = otpData.session.access_token ?? null
+        if (!signInError && signInData?.session?.user) {
+          const supaUser = signInData.session.user
+          accessToken.value = signInData.session.access_token ?? null
           authStore.user = supaUser as any
           await authStore.fetchUserProfile(supaUser.id)
           isAuthenticated.value = true
@@ -435,7 +434,7 @@ onMounted(async () => {
           await loadBranding()
           await loadStats()
         } else {
-          tokenError.value = otpError?.message || 'Session konnte nicht erstellt werden.'
+          tokenError.value = signInError?.message || 'Session konnte nicht erstellt werden.'
         }
       }
     } catch (err: any) {
