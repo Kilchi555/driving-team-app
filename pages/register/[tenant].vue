@@ -189,6 +189,10 @@
                 placeholder="079 123 45 67"
               />
               <p v-if="fieldErrors.phone" class="mt-1 text-sm text-red-600">{{ fieldErrors.phone }}</p>
+              <p v-else-if="isCheckingPhone" class="text-xs text-blue-500 mt-1 flex items-center gap-1">
+                <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Wird geprüft...
+              </p>
               <p v-else class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
             </div>
 
@@ -661,6 +665,84 @@
       </div>
     </div>
   </div>
+
+  <!-- Pending Account Modal -->
+  <div v-if="showPendingPhoneModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black bg-opacity-50" @click="showPendingPhoneModal = false" />
+    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
+      <div class="p-6">
+        <div class="flex items-start gap-4 mb-4">
+          <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Konto bereits angelegt</h3>
+            <p class="text-sm text-gray-600 mt-1">
+              <span v-if="pendingPhoneFirstName">Hallo {{ pendingPhoneFirstName }}, Ihr</span>
+              <span v-else>Ihr</span>
+              Konto wurde bereits von Ihrer Fahrschule angelegt und wartet auf Aktivierung.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+          <p class="text-sm text-blue-800">
+            📱 Wir senden Ihnen den Aktivierungslink erneut per SMS an Ihre hinterlegte Nummer.
+          </p>
+        </div>
+
+        <div v-if="pendingPhoneSmsError" class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <p class="text-sm text-red-700">{{ pendingPhoneSmsError }}</p>
+        </div>
+
+        <div v-if="pendingPhoneSmsSent" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+          <p class="text-sm text-green-700">✅ SMS wurde gesendet! Bitte prüfen Sie Ihr Handy.</p>
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            type="button"
+            @click="showPendingPhoneModal = false"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Abbrechen
+          </button>
+          <button
+            v-if="!pendingPhoneSmsSent"
+            type="button"
+            @click="resendOnboardingByPhone"
+            :disabled="isSendingPendingPhoneSms"
+            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            <svg v-if="isSendingPendingPhoneSms" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span>{{ isSendingPendingPhoneSms ? 'Wird gesendet...' : '📱 SMS senden' }}</span>
+          </button>
+          <button
+            v-else
+            type="button"
+            @click="showPendingPhoneModal = false"
+            class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            OK, verstanden
+          </button>
+        </div>
+      </div>
+
+      <button
+        @click="showPendingPhoneModal = false"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -883,6 +965,14 @@ const fieldErrors = ref<Record<string, string>>({
 
 const isCheckingEmail = ref(false)
 
+// Phone pending check state
+const isCheckingPhone = ref(false)
+const showPendingPhoneModal = ref(false)
+const pendingPhoneFirstName = ref<string | null>(null)
+const isSendingPendingPhoneSms = ref(false)
+const pendingPhoneSmsSent = ref(false)
+const pendingPhoneSmsError = ref('')
+
 // Validation functions
 let emailCheckTimeout: ReturnType<typeof setTimeout>
 
@@ -995,7 +1085,7 @@ const validateZip = () => {
 }
 
 // Methods
-const normalizePhone = () => {
+const normalizePhone = async () => {
   let phone = formData.value.phone.replace(/[^0-9+]/g, '')
   
   if (phone.startsWith('0') && phone.length === 10) {
@@ -1006,6 +1096,49 @@ const normalizePhone = () => {
   
   formData.value.phone = phone
   validatePhone()
+
+  // Only check if format is valid
+  const phoneRegex = /^\+41[0-9]{9}$/
+  if (!phoneRegex.test(phone)) return
+
+  const tid = activeTenantId.value || tenantId.value
+  if (!tid) return
+
+  isCheckingPhone.value = true
+  try {
+    const res = await $fetch('/api/auth/check-phone-exists', {
+      method: 'POST',
+      body: { phone, tenantId: tid },
+    }) as any
+
+    if (res.isPending) {
+      pendingPhoneFirstName.value = res.firstName || null
+      pendingPhoneSmsSent.value = false
+      pendingPhoneSmsError.value = ''
+      showPendingPhoneModal.value = true
+    }
+  } catch (err) {
+    // Silent fail — don't block registration on check errors
+  } finally {
+    isCheckingPhone.value = false
+  }
+}
+
+const resendOnboardingByPhone = async () => {
+  isSendingPendingPhoneSms.value = true
+  pendingPhoneSmsError.value = ''
+  try {
+    const tid = activeTenantId.value || tenantId.value
+    await $fetch('/api/auth/resend-onboarding-by-phone', {
+      method: 'POST',
+      body: { phone: formData.value.phone, tenantId: tid },
+    })
+    pendingPhoneSmsSent.value = true
+  } catch (err: any) {
+    pendingPhoneSmsError.value = err?.data?.statusMessage || 'SMS konnte nicht gesendet werden. Bitte kontaktieren Sie Ihre Fahrschule.'
+  } finally {
+    isSendingPendingPhoneSms.value = false
+  }
 }
 
 const nextStep = () => {
