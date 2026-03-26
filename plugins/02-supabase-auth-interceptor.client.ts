@@ -130,28 +130,55 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
           isRefreshing = true
           try {
-            // Call refresh endpoint to get new tokens
-            const response = await $fetch('/api/auth/refresh', {
-              method: 'POST'
-            }) as any
+            // Affiliates log in via signInWithPassword (Supabase localStorage session, no HTTP-Only cookie).
+            // For them, use supabase.auth.refreshSession() directly.
+            // For staff/clients, use the cookie-based /api/auth/refresh endpoint.
+            const { useRoute } = await import('#app')
+            const route = useRoute()
+            const isAffiliateDashboard = route.path.startsWith('/affiliate-dashboard')
 
-            if (response?.session?.access_token && response?.session?.refresh_token) {
+            let newAccessToken: string | null = null
+            let newRefreshToken: string | null = null
+
+            if (isAffiliateDashboard) {
+              // Affiliate: refresh via Supabase client directly (no HTTP-Only cookie)
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+              if (!refreshError && refreshData?.session) {
+                newAccessToken = refreshData.session.access_token
+                newRefreshToken = refreshData.session.refresh_token
+                logger.debug('✅ Affiliate token refreshed via supabase.auth.refreshSession()')
+              } else {
+                logger.warn('⚠️ Affiliate token refresh failed:', refreshError?.message)
+              }
+            } else {
+              // Staff/Client: refresh via HTTP-Only cookie endpoint
+              const response = await $fetch('/api/auth/refresh', {
+                method: 'POST'
+              }) as any
+              if (response?.session?.access_token && response?.session?.refresh_token) {
+                newAccessToken = response.session.access_token
+                newRefreshToken = response.session.refresh_token
+              }
+            }
+
+            if (newAccessToken && newRefreshToken) {
               logger.debug('✅ Token refreshed successfully')
               
               // Save to localStorage and record refresh time
-              await saveSessionToStorage(response.session.access_token, response.session.refresh_token)
+              await saveSessionToStorage(newAccessToken, newRefreshToken)
               localStorage.setItem('last_token_refresh_time', Date.now().toString())
               
-              // Update Supabase session with new tokens
-              const { error } = await supabase.auth.setSession({
-                access_token: response.session.access_token,
-                refresh_token: response.session.refresh_token
-              })
-
-              if (error) {
-                logger.error('❌ Failed to set refreshed session:', error)
-              } else {
-                logger.debug('✅ Supabase session updated with new tokens')
+              // Update Supabase session with new tokens (skip for affiliate — already done by refreshSession)
+              if (!isAffiliateDashboard) {
+                const { error } = await supabase.auth.setSession({
+                  access_token: newAccessToken,
+                  refresh_token: newRefreshToken
+                })
+                if (error) {
+                  logger.error('❌ Failed to set refreshed session:', error)
+                } else {
+                  logger.debug('✅ Supabase session updated with new tokens')
+                }
               }
             } else {
               logger.warn('⚠️ Refresh response missing tokens')
@@ -160,12 +187,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             logger.warn('⚠️ Token refresh failed:', err.message)
             
             // 🛒 Don't redirect for shop page - guest checkout doesn't need auth
+            // 🤝 Don't redirect for affiliate dashboard - affiliates use localStorage sessions
             const { useRoute } = await import('#app')
             const route = useRoute()
             const isShopPage = route.path.startsWith('/shop')
+            const isAffiliateDashboard = route.path.startsWith('/affiliate-dashboard')
             
             // If refresh fails due to invalid/expired refresh token, redirect to tenant login
-            if ((err?.response?.status === 401 || err?.statusCode === 401) && !isShopPage) {
+            if ((err?.response?.status === 401 || err?.statusCode === 401) && !isShopPage && !isAffiliateDashboard) {
               logger.warn('🚪 Refresh token invalid/expired, redirecting to tenant login')
               
               try {
