@@ -12,9 +12,9 @@
               Pendenzen
               <span :class="[
                 'ml-2 px-2 py-1 rounded-full text-sm font-medium',
-                (pendingCount + unconfirmedNext24hCount) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                (pendingCount + unconfirmedNext24hCount + bookingProposalsCount) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
               ]">
-                {{ pendingCount + unconfirmedNext24hCount }}
+                {{ pendingCount + unconfirmedNext24hCount + bookingProposalsCount }}
               </span>
             </h1>
           </div>
@@ -54,6 +54,16 @@
           >
             Bewertungen
           </button>
+          <button
+            :class="[
+              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'anfragen' ? 'border-b-2 font-bold' : 'border-transparent',
+              activeTab === 'anfragen' && bookingProposalsCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'anfragen' ? 'border-green-600 text-green-700' : bookingProposalsCount > 0 ? 'text-red-600' : 'text-green-600'
+            ]"
+            @click="activeTab = 'anfragen'"
+          >
+            Anfragen
+          </button>
         </div>
       </div>
 
@@ -79,7 +89,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="pendingCount === 0 && unconfirmedNext24hCount === 0" class="flex items-center justify-center py-8">
+        <div v-else-if="pendingCount === 0 && unconfirmedNext24hCount === 0 && bookingProposalsCount === 0" class="flex items-center justify-center py-8">
           <div class="text-center px-4">
             <div class="text-6xl mb-4">🎉</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
@@ -275,6 +285,65 @@
           </div>
         </div>
 
+        <!-- Booking Proposals List (Anfragen) -->
+        <div v-else-if="activeTab === 'anfragen'" class="p-3">
+          <div v-if="bookingProposals.length === 0" class="flex items-center justify-center py-8">
+            <div class="text-center px-4">
+              <div class="text-6xl mb-4">📭</div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Anfragen offen</h3>
+              <p class="text-gray-600 mb-4">Aktuell sind keine offenen Booking-Anfragen vorhanden.</p>
+            </div>
+          </div>
+
+          <div v-else class="space-y-2">
+            <button
+              v-for="proposal in bookingProposals"
+              :key="proposal.id"
+              type="button"
+              class="w-full text-left rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-white p-4 hover:shadow-md hover:border-orange-300 transition-all"
+              @click="openProposalDetailModal(proposal)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Name</p>
+                      <p class="text-sm font-semibold text-gray-900 leading-tight">
+                        {{ proposal.first_name || '-' }} {{ proposal.last_name || '' }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Kategorie</p>
+                      <p class="text-sm text-gray-700">{{ proposal.category_code || 'Allgemeine Anfrage' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Dauer</p>
+                      <p class="text-sm text-gray-700">{{ proposal.duration_minutes || '-' }} Min</p>
+                    </div>
+                    <div>
+                      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Standort</p>
+                      <p class="text-sm text-gray-700 truncate">{{ proposal.location?.name || 'Kein Standort' }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <span class="text-xs px-2 py-1 rounded-full font-medium bg-orange-100 text-orange-800 whitespace-nowrap">
+                  {{ getProposalStatusLabel(proposal.status) }}
+                </span>
+              </div>
+              <div class="mt-3 pt-2 border-t border-orange-200 flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Eingegangen</p>
+                  <p class="text-xs text-gray-600">
+                    {{ formatLocalDate(proposal.created_at) }} {{ formatLocalTime(proposal.created_at) }}
+                  </p>
+                </div>
+                <span class="text-xs font-medium text-green-700">Ansehen →</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -319,6 +388,94 @@
     @close="closeCancellationReasonModal"
     @cancelled="onCancellationCompleted"
   />
+
+  <!-- Booking Proposal Detail Modal -->
+  <div v-if="showProposalDetailModal && selectedProposal" class="fixed inset-0 bg-black bg-opacity-50 z-[110] flex items-center justify-center p-3">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-4 py-3 border-b bg-gradient-to-r from-orange-50 to-amber-50 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Anfrage-Details</h3>
+          <p class="text-xs text-gray-600">
+            Eingegangen: {{ formatLocalDate(selectedProposal.created_at) }} {{ formatLocalTime(selectedProposal.created_at) }}
+          </p>
+        </div>
+        <button @click="closeProposalDetailModal" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-gray-200 p-3">
+            <h4 class="text-sm font-semibold text-gray-900 mb-2">Kontakt</h4>
+            <p class="text-sm text-gray-700">{{ selectedProposal.first_name || '-' }} {{ selectedProposal.last_name || '' }}</p>
+            <p class="text-xs text-gray-500 mt-1">Kontakt via Buttons unten</p>
+          </div>
+          <div class="rounded-lg border border-gray-200 p-3">
+            <h4 class="text-sm font-semibold text-gray-900 mb-2">Anfrage</h4>
+            <p class="text-sm text-gray-700">{{ selectedProposal.category_code || 'Allgemeine Anfrage' }}</p>
+            <p class="text-sm text-gray-600">{{ selectedProposal.duration_minutes || '-' }} Minuten</p>
+            <p class="text-sm text-gray-600">{{ selectedProposal.location?.name || 'Kein Standort' }}</p>
+            <p v-if="selectedProposal.staff" class="text-xs text-gray-500 mt-1">{{ selectedProposal.staff.first_name || '' }} {{ selectedProposal.staff.last_name || '' }}</p>
+          </div>
+        </div>
+
+        <div v-if="selectedProposal.street || selectedProposal.house_number || selectedProposal.postal_code || selectedProposal.city" class="rounded-lg border border-gray-200 p-3">
+          <h4 class="text-sm font-semibold text-gray-900 mb-2">Adresse</h4>
+          <p class="text-sm text-gray-700">
+            {{ [selectedProposal.street, selectedProposal.house_number].filter(Boolean).join(' ') }}
+            <span v-if="selectedProposal.postal_code || selectedProposal.city">, {{ [selectedProposal.postal_code, selectedProposal.city].filter(Boolean).join(' ') }}</span>
+          </p>
+        </div>
+
+        <div v-if="getPreferredSlotsLabel(selectedProposal).length > 0" class="rounded-lg border border-gray-200 p-3">
+          <h4 class="text-sm font-semibold text-gray-900 mb-2">Bevorzugte Zeitfenster</h4>
+          <div class="flex flex-wrap gap-1.5">
+            <span
+              v-for="(slotLabel, idx) in getPreferredSlotsLabel(selectedProposal)"
+              :key="`${selectedProposal.id}-${idx}`"
+              class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700"
+            >
+              {{ slotLabel }}
+            </span>
+          </div>
+        </div>
+
+        <div v-if="selectedProposal.notes" class="rounded-lg border border-gray-200 p-3">
+          <h4 class="text-sm font-semibold text-gray-900 mb-2">Bemerkungen</h4>
+          <p class="text-sm text-gray-700 whitespace-pre-line">{{ selectedProposal.notes }}</p>
+        </div>
+
+      </div>
+
+      <div class="px-4 py-3 border-t bg-gray-50 flex flex-wrap items-center gap-2">
+        <a
+          v-if="selectedProposal.phone"
+          :href="`tel:${selectedProposal.phone}`"
+          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+        >
+          📞 Anrufen
+        </a>
+        <a
+          v-if="selectedProposal.email"
+          :href="`mailto:${selectedProposal.email}`"
+          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+        >
+          ✉️ E-Mail
+        </a>
+
+        <button
+          @click="completeSelectedProposal"
+          :disabled="!selectedProposal?.id || isProposalCompleting(selectedProposal.id)"
+          class="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg v-if="selectedProposal?.id && isProposalCompleting(selectedProposal.id)" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          {{ selectedProposal?.id && isProposalCompleting(selectedProposal.id) ? 'Speichere...' : 'Als erledigt markieren' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -341,7 +498,7 @@ import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 interface Props {
   isOpen: boolean
   currentUser: any
-  defaultTab?: 'pendenzen' | 'bewertungen'
+  defaultTab?: 'pendenzen' | 'bewertungen' | 'anfragen' | 'unconfirmed'
 }
 
 const props = defineProps<Props>()
@@ -385,7 +542,12 @@ const {
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'pendenzen' | 'bewertungen'>(props.defaultTab === 'unconfirmed' ? 'bewertungen' : (props.defaultTab || 'bewertungen'))
+const activeTab = ref<'pendenzen' | 'bewertungen' | 'anfragen'>(props.defaultTab === 'unconfirmed' ? 'bewertungen' : ((props.defaultTab as any) || 'bewertungen'))
+const bookingProposals = ref<any[]>([])
+const completingProposalIds = ref<Set<string>>(new Set())
+const proposalActionError = ref('')
+const showProposalDetailModal = ref(false)
+const selectedProposal = ref<any>(null)
 
 
 // Cash Payment Confirmation Modal
@@ -452,6 +614,39 @@ watch(
 const pendenciesCount = computed(() => {
   return userPendencies.value.filter((p: any) => p.status !== 'abgeschlossen').length
 })
+
+const bookingProposalsCount = computed(() => bookingProposals.value.length)
+
+const getProposalStatusLabel = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'Offen'
+    case 'contacted':
+      return 'Kontaktiert'
+    case 'accepted':
+      return 'Erledigt'
+    case 'rejected':
+      return 'Abgelehnt'
+    case 'expired':
+      return 'Abgelaufen'
+    default:
+      return status || 'Offen'
+  }
+}
+
+const isProposalCompleting = (proposalId: string) => {
+  return completingProposalIds.value.has(proposalId)
+}
+
+const openProposalDetailModal = (proposal: any) => {
+  selectedProposal.value = proposal
+  showProposalDetailModal.value = true
+}
+
+const closeProposalDetailModal = () => {
+  showProposalDetailModal.value = false
+  selectedProposal.value = null
+}
 
 // Debug log für pendenciesCount
 watch(pendenciesCount, (newCount) => {
@@ -544,6 +739,77 @@ const formatLocalTime = (dateTimeStr: string) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+const weekdayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+const getPreferredSlotsLabel = (proposal: any): string[] => {
+  const raw = proposal?.preferred_time_slots
+  if (!raw) return []
+
+  let slots: any[] = []
+  if (Array.isArray(raw)) {
+    slots = raw
+  } else if (typeof raw === 'string') {
+    try {
+      slots = JSON.parse(raw)
+    } catch {
+      slots = []
+    }
+  }
+
+  return slots
+    .filter((s: any) => typeof s?.day_of_week === 'number' && s?.start_time && s?.end_time)
+    .map((s: any) => `${weekdayNames[s.day_of_week] || s.day_of_week}: ${s.start_time}-${s.end_time}`)
+}
+
+const loadBookingProposals = async () => {
+  if (!props.currentUser?.id) return
+
+  try {
+    proposalActionError.value = ''
+    const response = await $fetch('/api/admin/get-booking-proposals') as any
+    bookingProposals.value = response?.data || []
+  } catch (err: any) {
+    logger.warn('⚠️ Failed to load booking proposals:', err?.message || err)
+    proposalActionError.value = 'Anfragen konnten nicht geladen werden.'
+    bookingProposals.value = []
+  }
+}
+
+const markProposalAsCompleted = async (proposalId: string) => {
+  if (!proposalId || isProposalCompleting(proposalId)) return
+
+  proposalActionError.value = ''
+  completingProposalIds.value = new Set(completingProposalIds.value).add(proposalId)
+  try {
+    await $fetch('/api/admin/update-booking-proposal-status', {
+      method: 'POST',
+      body: {
+        proposalId,
+        status: 'accepted',
+        adminNotes: 'Marked completed from PendenzenModal'
+      }
+    })
+
+    bookingProposals.value = bookingProposals.value.filter((p: any) => p.id !== proposalId)
+  } catch (err: any) {
+    logger.warn('⚠️ Failed to complete booking proposal:', err?.message || err)
+    proposalActionError.value = 'Status konnte nicht aktualisiert werden. Bitte erneut versuchen.'
+  } finally {
+    const next = new Set(completingProposalIds.value)
+    next.delete(proposalId)
+    completingProposalIds.value = next
+  }
+}
+
+const completeSelectedProposal = async () => {
+  if (!selectedProposal.value?.id) return
+  const proposalId = selectedProposal.value.id
+  await markProposalAsCompleted(proposalId)
+
+  if (!bookingProposals.value.some((p: any) => p.id === proposalId)) {
+    closeProposalDetailModal()
+  }
 }
 
 const getAppointmentFormattedDate = (appointment: any) => {
@@ -800,6 +1066,9 @@ const refreshData = async () => {
   
   // Lade Pending Tasks (Bewertungen + Unbestätigte)
   await fetchPendingTasks(props.currentUser.id, props.currentUser.role)
+  
+  // Lade offene Booking-Anfragen
+  await loadBookingProposals()
   
   // Lade Pendenzen für diesen User
   // Nutze tenant_id vom currentUser
@@ -1111,8 +1380,8 @@ watch(() => props.isOpen, async (newIsOpen) => {
     
     // Setze Tab anhand defaultTab, falls übergeben
     if (props.defaultTab) {
-      activeTab.value = props.defaultTab
-      logger.debug('📌 Using defaultTab:', props.defaultTab)
+      activeTab.value = props.defaultTab === 'unconfirmed' ? 'bewertungen' : props.defaultTab
+      logger.debug('📌 Using defaultTab:', activeTab.value)
     } else {
       activeTab.value = 'bewertungen'
       logger.debug('📌 Default: Switching to Bewertungen tab')

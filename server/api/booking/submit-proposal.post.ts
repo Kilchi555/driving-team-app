@@ -18,6 +18,10 @@ export default defineEventHandler(async (event) => {
       last_name,
       email,
       phone,
+      street,
+      house_number,
+      postal_code,
+      city,
       notes,
       created_by_user_id
     } = body
@@ -67,6 +71,14 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: 400,
           statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
+        })
+      }
+
+      // Address is required for anonymous users as well
+      if (!street?.trim() || !house_number?.trim() || !postal_code?.trim() || !city?.trim()) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Missing required address information: street, house_number, postal_code, city'
         })
       }
 
@@ -163,6 +175,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Basic Swiss postal code validation (4 digits)
+    if (postal_code && !/^\d{4}$/.test(postal_code.trim())) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid postal code format (expected 4 digits)'
+      })
+    }
+
     // Create the proposal using Anon Key (respects RLS policies for the booking_proposals table)
     const { data: proposal, error: proposalError } = await supabase
       .from('booking_proposals')
@@ -177,6 +197,10 @@ export default defineEventHandler(async (event) => {
         last_name: last_name?.trim() || null,
         email: email?.trim() || null,
         phone: phone?.trim() || null,
+        street: street?.trim() || null,
+        house_number: house_number?.trim() || null,
+        postal_code: postal_code?.trim() || null,
+        city: city?.trim() || null,
         notes: notes?.trim() || null,
         created_by_user_id: created_by_user_id || null,
         status: 'pending'
