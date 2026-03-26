@@ -54,10 +54,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Fehler beim Laden des Benutzers.' })
   }
 
-  // Generate a strong random one-time password for signInWithPassword.
-  // This guarantees a full Supabase session with refresh_token (unlike verifyOtp).
-  // Keep under 72 chars (bcrypt limit) — one UUID is 36 chars, well within limit.
-  const tempPassword = crypto.randomUUID()
+  // Generate a strong random one-time password satisfying Supabase password policy
+  // (requires lowercase, uppercase, and digits). UUID covers lowercase + digits;
+  // we uppercase the first 8 chars to satisfy the uppercase requirement.
+  // Result is 36 chars — well under bcrypt's 72-char limit.
+  const uuid = crypto.randomUUID()
+  const tempPassword = uuid.slice(0, 8).toUpperCase() + uuid.slice(8)
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(
     userRow.auth_user_id,
