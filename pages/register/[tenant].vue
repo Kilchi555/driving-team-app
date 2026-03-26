@@ -678,16 +678,31 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">Konto bereits angelegt</h3>
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ pendingPhoneIsActive ? 'Nummer bereits registriert' : 'Konto bereits angelegt' }}
+            </h3>
             <p class="text-sm text-gray-600 mt-1">
               <span v-if="pendingPhoneFirstName">Hallo {{ pendingPhoneFirstName }}, Ihr</span>
               <span v-else>Ihr</span>
-              Konto wurde bereits von Ihrer Fahrschule angelegt und wartet auf Aktivierung.
+              <span v-if="pendingPhoneIsActive">
+                Konto ist bereits aktiv. Bitte melden Sie sich direkt an.
+              </span>
+              <span v-else>
+                Konto wurde bereits von Ihrer Fahrschule angelegt und wartet auf Aktivierung.
+              </span>
             </p>
           </div>
         </div>
 
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+        <!-- Active account: show login link -->
+        <div v-if="pendingPhoneIsActive" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+          <p class="text-sm text-blue-800">
+            🔑 Melden Sie sich mit Ihren bestehenden Zugangsdaten an oder setzen Sie das Passwort zurück.
+          </p>
+        </div>
+
+        <!-- Pending account: offer SMS resend -->
+        <div v-else class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
           <p class="text-sm text-blue-800">
             📱 Wir senden Ihnen den Aktivierungslink erneut per SMS an Ihre hinterlegte Nummer.
           </p>
@@ -709,8 +724,19 @@
           >
             Abbrechen
           </button>
+
+          <!-- Active account: go to login -->
+          <NuxtLink
+            v-if="pendingPhoneIsActive"
+            :to="tenantSlug ? `/${tenantSlug}` : '/login'"
+            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium text-center transition-colors"
+          >
+            Zum Login
+          </NuxtLink>
+
+          <!-- Pending account: resend SMS -->
           <button
-            v-if="!pendingPhoneSmsSent"
+            v-else-if="!pendingPhoneSmsSent"
             type="button"
             @click="resendOnboardingByPhone"
             :disabled="isSendingPendingPhoneSms"
@@ -969,6 +995,7 @@ const isCheckingEmail = ref(false)
 const isCheckingPhone = ref(false)
 const showPendingPhoneModal = ref(false)
 const pendingPhoneFirstName = ref<string | null>(null)
+const pendingPhoneIsActive = ref(false)
 const isSendingPendingPhoneSms = ref(false)
 const pendingPhoneSmsSent = ref(false)
 const pendingPhoneSmsError = ref('')
@@ -1115,9 +1142,15 @@ const normalizePhone = async () => {
       pendingPhoneFirstName.value = res.firstName || null
       pendingPhoneSmsSent.value = false
       pendingPhoneSmsError.value = ''
+      pendingPhoneIsActive.value = false
+      showPendingPhoneModal.value = true
+    } else if (res.isActive || res.isStaffOrAdmin) {
+      pendingPhoneFirstName.value = res.firstName || null
+      pendingPhoneSmsSent.value = false
+      pendingPhoneSmsError.value = ''
+      pendingPhoneIsActive.value = true
       showPendingPhoneModal.value = true
     }
-  } catch (err) {
     // Silent fail — don't block registration on check errors
   } finally {
     isCheckingPhone.value = false
