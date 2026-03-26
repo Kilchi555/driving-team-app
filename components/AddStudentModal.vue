@@ -52,6 +52,29 @@
         >
           Verstanden
         </button>
+
+        <!-- Pending: resend SMS button -->
+        <button
+          v-if="duplicateInfo.duplicateStatus === 'pending'"
+          @click="resendOnboardingSmsFromModal"
+          :disabled="isSendingResendSms"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          <svg v-if="isSendingResendSms" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          {{ isSendingResendSms ? 'Wird gesendet...' : '📱 Onboarding-SMS senden' }}
+        </button>
+
+        <!-- Active / inactive: open profile button -->
+        <button
+          v-if="duplicateInfo.existingUser?.id && duplicateInfo.duplicateStatus !== 'pending'"
+          @click="openStudentProfile"
+          class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          👤 Profil öffnen
+        </button>
       </div>
     </div>
   </div>
@@ -224,6 +247,43 @@ const props = defineProps<Props>()
 
 // State
 const isSubmitting = ref(false)
+const isSendingResendSms = ref(false)
+
+const openStudentProfile = () => {
+  const studentId = duplicateInfo.value.existingUser?.id
+  if (studentId) {
+    emit('close')
+    showDuplicateWarning.value = false
+    navigateTo(`/customers?student=${studentId}`)
+  }
+}
+
+const resendOnboardingSmsFromModal = async () => {
+  const student = duplicateInfo.value.existingUser
+  if (!student?.id) return
+
+  isSendingResendSms.value = true
+  try {
+    await $fetch('/api/students/resend-onboarding-sms', {
+      method: 'POST',
+      body: { studentId: student.id }
+    })
+    uiStore.addNotification({
+      type: 'success',
+      title: 'SMS gesendet',
+      message: `Onboarding-SMS wurde erneut an ${student.first_name} gesendet.`
+    })
+    showDuplicateWarning.value = false
+  } catch (err: any) {
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: err?.data?.statusMessage || 'SMS konnte nicht gesendet werden.'
+    })
+  } finally {
+    isSendingResendSms.value = false
+  }
+}
 const staffMembers = ref<any[]>([])
 const availableCategories = ref<any[]>([])
 const isLoadingCategories = ref(false)
@@ -233,7 +293,8 @@ const duplicateInfo = ref({
   message: '',
   existingUser: null as any,
   actionTitle: '',
-  actions: [] as string[]
+  actions: [] as string[],
+  duplicateStatus: '' as 'active' | 'pending' | 'completed_no_account' | 'inactive' | ''
 })
 
 // Form Data
@@ -518,7 +579,11 @@ const submitForm = async () => {
         message: message,
         existingUser: existing || null,
         actionTitle: actionTitle,
-        actions: actions
+        actions: actions,
+        duplicateStatus: isActive && hasAccount ? 'active'
+          : onboardingStatus === 'pending' && !hasAccount ? 'pending'
+          : onboardingStatus === 'completed' && !hasAccount ? 'completed_no_account'
+          : !isActive && !hasAccount ? 'inactive' : ''
       }
       
       errors.value.phone = 'Diese Telefonnummer ist bereits registriert'
@@ -589,7 +654,11 @@ const submitForm = async () => {
         message: message,
         existingUser: existing || null,
         actionTitle: actionTitle,
-        actions: actions
+        actions: actions,
+        duplicateStatus: isActive && hasAccount ? 'active'
+          : onboardingStatus === 'pending' && !hasAccount ? 'pending'
+          : onboardingStatus === 'completed' && !hasAccount ? 'completed_no_account'
+          : !isActive && !hasAccount ? 'inactive' : ''
       }
       
       errors.value.email = 'Diese E-Mail-Adresse ist bereits registriert'
