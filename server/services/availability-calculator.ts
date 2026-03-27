@@ -18,6 +18,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { zurichWallTimeToUtc, parseWorkingTimeParts } from '~/server/utils/zurich-wall-time'
 
 // Types
 interface Staff {
@@ -571,10 +572,31 @@ export class AvailabilityCalculator {
       const minLeadHours = staff.minimum_booking_lead_time_hours || 24
       const minBookableTime = new Date(Date.now() + minLeadHours * 60 * 60 * 1000)
 
-      // For each day in the range
-      const currentDate = new Date(params.startDate)
-      while (currentDate <= params.endDate) {
-        const dayOfWeek = this.getDayOfWeek(currentDate) // 1=Monday, 7=Sunday
+      // For each day in the range (UTC calendar days — matches slot dates in DB)
+      const currentDate = new Date(
+        Date.UTC(
+          params.startDate.getUTCFullYear(),
+          params.startDate.getUTCMonth(),
+          params.startDate.getUTCDate(),
+          0,
+          0,
+          0,
+          0
+        )
+      )
+      const rangeEnd = new Date(
+        Date.UTC(
+          params.endDate.getUTCFullYear(),
+          params.endDate.getUTCMonth(),
+          params.endDate.getUTCDate(),
+          0,
+          0,
+          0,
+          0
+        )
+      )
+      while (currentDate.getTime() <= rangeEnd.getTime()) {
+        const dayOfWeek = this.getDayOfWeek(currentDate) // 1=Monday, 7=Sunday (UTC weekday)
 
         // Get working hours for this day
         let dayHours = staffHours.filter(wh => wh.day_of_week === dayOfWeek)
@@ -593,7 +615,7 @@ export class AvailabilityCalculator {
 
         if (dayHours.length === 0) {
           // No working hours for this day
-          currentDate.setDate(currentDate.getDate() + 1)
+          currentDate.setUTCDate(currentDate.getUTCDate() + 1)
           continue
         }
 
@@ -632,7 +654,7 @@ export class AvailabilityCalculator {
           }
         }
 
-        currentDate.setDate(currentDate.getDate() + 1)
+        currentDate.setUTCDate(currentDate.getUTCDate() + 1)
       }
     }
 
@@ -671,27 +693,16 @@ export class AvailabilityCalculator {
   }): Promise<AvailabilitySlot[]> {
     const slots: AvailabilitySlot[] = []
 
-    // Parse start and end time - handle both HH:MM and HH:MM:SS+tz formats
-    const parseTimeString = (timeStr: string): { hours: number; minutes: number } => {
-      // Remove timezone info if present (e.g., "06:00:00+00" -> "06:00:00")
-      const timeWithoutTz = timeStr.split('+')[0].split('-')[0]
-      const parts = timeWithoutTz.split(':').map(Number)
-      return {
-        hours: parts[0] || 0,
-        minutes: parts[1] || 0
-      }
-    }
+    // Working hours in DB = Europe/Zurich wall clock (HH:MM), not a fixed UTC offset.
+    const startParsed = parseWorkingTimeParts(params.startTime)
+    const endParsed = parseWorkingTimeParts(params.endTime)
 
-    const startParsed = parseTimeString(params.startTime)
-    const endParsed = parseTimeString(params.endTime)
+    const y = params.date.getUTCFullYear()
+    const m0 = params.date.getUTCMonth()
+    const d = params.date.getUTCDate()
 
-    // Create start datetime using UTC (since all data is UTC-based)
-    const slotStart = new Date(params.date)
-    slotStart.setUTCHours(startParsed.hours, startParsed.minutes, 0, 0)
-
-    // Create end datetime using UTC
-    const workingEnd = new Date(params.date)
-    workingEnd.setUTCHours(endParsed.hours, endParsed.minutes, 0, 0)
+    const slotStart = zurichWallTimeToUtc(y, m0, d, startParsed.hours, startParsed.minutes)
+    const workingEnd = zurichWallTimeToUtc(y, m0, d, endParsed.hours, endParsed.minutes)
 
     // Generate slots in 15-minute increments
     const currentSlot = new Date(slotStart)
@@ -701,7 +712,7 @@ export class AvailabilityCalculator {
 
       // Check if slot is in the future (respecting minimum lead time)
       if (slotEnd <= params.minBookableTime) {
-        currentSlot.setMinutes(currentSlot.getMinutes() + 15)
+        currentSlot.setUTCMinutes(currentSlot.getUTCMinutes() + 15)
         continue
       }
 
@@ -718,7 +729,7 @@ export class AvailabilityCalculator {
 
       // Skip slots that conflict with appointments or busy times
       if (hasConflict) {
-        currentSlot.setMinutes(currentSlot.getMinutes() + 15)
+        currentSlot.setUTCMinutes(currentSlot.getUTCMinutes() + 15)
         continue
       }
 
@@ -733,8 +744,8 @@ export class AvailabilityCalculator {
         category_code: params.category.code
       })
 
-      // Move to next slot (15-minute increment)
-      currentSlot.setMinutes(currentSlot.getMinutes() + 15)
+      // Move to next slot (15-minute increment, UTC-safe)
+      currentSlot.setUTCMinutes(currentSlot.getUTCMinutes() + 15)
     }
 
     return slots

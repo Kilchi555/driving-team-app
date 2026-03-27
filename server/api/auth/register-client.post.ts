@@ -175,18 +175,24 @@ export default defineEventHandler(async (event) => {
     // Check for existing email in this tenant
     const { data: existingEmailUser } = await serviceSupabase
       .from('users')
-      .select('id, first_name, last_name, is_active, onboarding_status')
+      .select('id, first_name, last_name, is_active, onboarding_status, auth_user_id')
       .eq('email', email.toLowerCase().trim())
       .eq('tenant_id', tenantId)
       .single()
     
     if (existingEmailUser) {
-      logger.warn('⚠️ Duplicate email detected:', email.toLowerCase().trim())
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere E-Mail.',
-        data: { code: 'DUPLICATE_EMAIL' }
-      })
+      if (existingEmailUser.auth_user_id) {
+        // Fully registered user — block duplicate registration
+        logger.warn('⚠️ Duplicate email detected (already has auth account):', email.toLowerCase().trim())
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere E-Mail.',
+          data: { code: 'DUPLICATE_EMAIL' }
+        })
+      }
+      // User was manually added by admin (no auth account yet) — allow registration to continue
+      // The code below will update this user with the new auth_user_id
+      logger.debug('Register', '👤 Found manually-added user without auth account — proceeding to link:', existingEmailUser.id)
     }
     
     // Check for existing phone in this tenant (if phone provided)

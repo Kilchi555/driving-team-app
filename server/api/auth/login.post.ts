@@ -289,6 +289,32 @@ export default defineEventHandler(async (event) => {
         console.warn('⚠️ Failed to log login attempt:', logError.message)
       }
 
+      // Check if this email belongs to a manually-added user who hasn't completed onboarding yet
+      if (error.message?.includes('Invalid login credentials') || error.message?.includes('invalid_credentials')) {
+        try {
+          const { data: pendingUser } = await adminSupabase
+            .from('users')
+            .select('id, phone')
+            .eq('email', email.toLowerCase().trim())
+            .is('auth_user_id', null)
+            .single()
+
+          if (pendingUser) {
+            throw createError({
+              statusCode: 403,
+              statusMessage: 'Ihr Account ist noch nicht aktiviert.',
+              data: {
+                code: 'ACCOUNT_PENDING',
+                hasPhone: !!pendingUser.phone
+              }
+            })
+          }
+        } catch (pendingCheckError: any) {
+          if (pendingCheckError.statusCode === 403) throw pendingCheckError
+          // Ignore other errors from the check (e.g. "no rows found")
+        }
+      }
+
       throw createError({
         statusCode: 401,
         statusMessage: error.message?.includes('Invalid login credentials') || error.message?.includes('invalid_credentials')
