@@ -1,54 +1,16 @@
 // composables/useStaffWorkingHours.ts
-import { ref, computed } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import { logger } from '~/utils/logger'
 
-// ===== TIMEZONE CONVERSION HELPERS =====
-// Arbeitszeiten werden in UTC gespeichert, aber in Lokalzeit (Europe/Zurich) angezeigt
-
 /**
- * Konvertiert eine lokale Zeit (z.B. "07:00") zu UTC
- * Europe/Zurich ist UTC+1 (Winter) oder UTC+2 (Sommer)
+ * API/DB liefert TIMETZ-Strings; für die UI und den Server sind das Zürcher Wandzeiten (HH:MM).
+ * Keine Browser-TZ-Konvertierung — der Availability-Calculator mappt mit Europe/Zurich pro Kalendertag.
  */
-function localTimeToUtc(localTime: string): string {
-  if (!localTime) return localTime
-  
-  // Parse die Zeit
-  const [hours, minutes] = localTime.split(':').map(Number)
-  
-  // Erstelle ein Datum für heute mit dieser Zeit in der lokalen Timezone
-  const now = new Date()
-  const localDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0)
-  
-  // Hole die UTC-Stunden und -Minuten
-  const utcHours = localDate.getUTCHours()
-  const utcMinutes = localDate.getUTCMinutes()
-  
-  const result = `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`
-  logger.debug(`🕐 Local→UTC: ${localTime} → ${result}`)
-  return result
-}
-
-/**
- * Konvertiert eine UTC-Zeit (z.B. "06:00") zu lokaler Zeit (Europe/Zurich)
- */
-function utcTimeToLocal(utcTime: string): string {
-  if (!utcTime) return utcTime
-  
-  // Parse die Zeit (entferne Sekunden falls vorhanden)
-  const timePart = utcTime.split(':').slice(0, 2).join(':')
-  const [hours, minutes] = timePart.split(':').map(Number)
-  
-  // Erstelle ein UTC-Datum für heute mit dieser Zeit
-  const now = new Date()
-  const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0))
-  
-  // Konvertiere zu lokaler Zeit
-  const localHours = utcDate.getHours()
-  const localMinutes = utcDate.getMinutes()
-  
-  const result = `${localHours.toString().padStart(2, '0')}:${localMinutes.toString().padStart(2, '0')}`
-  logger.debug(`🕐 UTC→Local: ${utcTime} → ${result}`)
-  return result
+function normalizeDbTimeToHHMM(raw: string): string {
+  if (!raw || typeof raw !== 'string') return '00:00'
+  const m = raw.match(/^(\d{1,2}):(\d{2})/)
+  if (!m) return '00:00'
+  return `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}`
 }
 
 export interface WorkingHour {
@@ -148,11 +110,10 @@ export const useStaffWorkingHours = () => {
 
       if (!data?.success) throw new Error('Failed to load working hours')
       
-      // Konvertiere UTC-Zeiten zu Lokalzeit für die Anzeige
       workingHours.value = (data.data || []).map((wh: any) => ({
         ...wh,
-        start_time: utcTimeToLocal(wh.start_time),
-        end_time: utcTimeToLocal(wh.end_time)
+        start_time: normalizeDbTimeToHHMM(String(wh.start_time)),
+        end_time: normalizeDbTimeToHHMM(String(wh.end_time))
       }))
       logger.debug('✅ Working hours loaded:', workingHours.value.length)
       
@@ -169,19 +130,15 @@ export const useStaffWorkingHours = () => {
     try {
       logger.debug('💾 Saving working hour:', { staffId, workingHour })
       
-      // Convert to UTC for storage
-      const utcStartTime = localTimeToUtc(workingHour.start_time)
-      const utcEndTime = localTimeToUtc(workingHour.end_time)
-      
-      // Save via API
+      // Save via API (Zürcher Wandzeit HH:MM — Server/Slot-Berechnung nutzt Europe/Zurich)
       const response = await $fetch('/api/staff/working-hours', {
         method: 'POST',
         body: {
           action: 'save',
           staffId,
           dayOfWeek: workingHour.day_of_week,
-          startTime: workingHour.is_active ? utcStartTime : null,
-          endTime: workingHour.is_active ? utcEndTime : null,
+          startTime: workingHour.is_active ? workingHour.start_time : null,
+          endTime: workingHour.is_active ? workingHour.end_time : null,
           isActive: workingHour.is_active
         }
       }) as any
@@ -201,13 +158,6 @@ export const useStaffWorkingHours = () => {
     try {
       logger.debug('💾 Saving working day with multiple blocks:', { staffId, workingDay })
       
-      // Convert to UTC for storage
-      const utcBlocks = (workingDay.blocks || []).map(block => ({
-        ...block,
-        start_time: localTimeToUtc(block.start_time),
-        end_time: localTimeToUtc(block.end_time)
-      }))
-      
       // Save via API
       const response = await $fetch('/api/staff/working-hours', {
         method: 'POST',
@@ -215,7 +165,7 @@ export const useStaffWorkingHours = () => {
           action: 'save_day',
           staffId,
           dayOfWeek: workingDay.day_of_week,
-          blocks: utcBlocks
+          blocks: workingDay.blocks || []
         }
       }) as any
 

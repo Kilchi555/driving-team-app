@@ -271,6 +271,38 @@ const modalMode = ref<'view' | 'edit' | 'create'>('create')
 // EnhancedStudentModal State
 const showEnhancedStudentModal = ref(false)
 const selectedStudentForProgress = ref<any>(null)
+
+// Pending Onboarding Reminder
+const showPendingReminderModal = ref(false)
+const pendingReminderStudent = ref<any>(null)
+const isResendingPendingSms = ref(false)
+const pendingReminderResult = ref<{ type: 'success' | 'error'; message: string } | null>(null)
+
+const handleOpenReminderModal = (student: any) => {
+  pendingReminderStudent.value = student
+  pendingReminderResult.value = null
+  showPendingReminderModal.value = true
+}
+
+const resendPendingOnboardingSms = async () => {
+  if (!pendingReminderStudent.value?.id) return
+  isResendingPendingSms.value = true
+  pendingReminderResult.value = null
+  try {
+    const response = await $fetch('/api/students/resend-onboarding-sms', {
+      method: 'POST',
+      body: { studentId: pendingReminderStudent.value.id }
+    }) as any
+    if (!response?.success) throw new Error(response?.message || 'Fehler beim Senden')
+    pendingReminderResult.value = { type: 'success', message: `SMS erfolgreich gesendet an ${response.phone}` }
+    setTimeout(() => { showPendingReminderModal.value = false }, 2500)
+  } catch (err: any) {
+    const msg = err?.data?.statusMessage || err?.message || 'SMS konnte nicht gesendet werden'
+    pendingReminderResult.value = { type: 'error', message: msg }
+  } finally {
+    isResendingPendingSms.value = false
+  }
+}
 const studentProgressActiveTab = ref<'details' | 'progress' | 'payments' | 'documents'>('progress')
 
 const handleAppointmentMoved = async (moveData: MoveData) => {
@@ -2807,7 +2839,44 @@ defineExpose({
     :initial-tab="studentProgressActiveTab"
     :current-user="props.currentUser"
     @close="() => { showEnhancedStudentModal = false; selectedStudentForProgress = null }"
+    @open-reminder-modal="handleOpenReminderModal"
   />
+
+  <!-- Pending Onboarding Reminder Modal -->
+  <div v-if="showPendingReminderModal" class="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div class="absolute inset-0 bg-black bg-opacity-50" @click="showPendingReminderModal = false" />
+    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
+      <h3 class="text-lg font-semibold text-gray-900">Onboarding-Erinnerung senden</h3>
+      <p class="text-sm text-gray-600">
+        SMS mit neuem Onboarding-Link an
+        <strong>{{ pendingReminderStudent?.first_name }} {{ pendingReminderStudent?.last_name }}</strong>
+        ({{ pendingReminderStudent?.phone }}) senden?
+      </p>
+      <div v-if="pendingReminderResult" :class="[
+        'p-3 rounded-lg text-sm font-medium',
+        pendingReminderResult.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+      ]">
+        {{ pendingReminderResult.message }}
+      </div>
+      <div class="flex gap-3">
+        <button
+          @click="showPendingReminderModal = false"
+          class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+          :disabled="isResendingPendingSms"
+        >
+          Abbrechen
+        </button>
+        <button
+          @click="resendPendingOnboardingSms"
+          :disabled="isResendingPendingSms || pendingReminderResult?.type === 'success'"
+          class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50"
+        >
+          <span v-if="isResendingPendingSms">Wird gesendet…</span>
+          <span v-else>SMS senden</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
 </template>
 

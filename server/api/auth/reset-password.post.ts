@@ -89,6 +89,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!user.auth_user_id || !uuidRegex.test(user.auth_user_id)) {
+      console.error('❌ auth_user_id is not a valid UUID:', user.auth_user_id)
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Passwort-Reset nicht möglich — bitte kontaktiere den Support'
+      })
+    }
+
     logger.debug('🔐 Updating password for user:', user.auth_user_id)
 
     // Update auth user password

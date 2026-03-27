@@ -113,6 +113,46 @@
             <p class="text-sm text-red-700">{{ loginError }}</p>
           </div>
 
+          <!-- Pending Account Banner -->
+          <div v-if="pendingAccount.show" class="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <div class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
+                <p class="text-sm text-amber-700 mt-1">
+                  Sie wurden von Ihrer Fahrschule erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                  Geben Sie Ihre Telefonnummer ein, um einen neuen Onboarding-Link per SMS zu erhalten.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <input
+                v-model="pendingAccount.phone"
+                type="tel"
+                placeholder="+41 79 123 45 67"
+                class="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:border-transparent bg-white"
+                :style="{ '--tw-ring-color': '#d97706' }"
+                :disabled="pendingAccount.isLoading"
+              >
+              <button
+                type="button"
+                @click="handleResendOnboarding"
+                :disabled="pendingAccount.isLoading || !pendingAccount.phone"
+                class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ background: '#d97706' }"
+              >
+                <span v-if="pendingAccount.isLoading">Wird gesendet...</span>
+                <span v-else>SMS senden</span>
+              </button>
+            </div>
+
+            <p v-if="pendingAccount.error" class="text-sm text-red-600">{{ pendingAccount.error }}</p>
+            <p v-if="pendingAccount.success" class="text-sm text-green-700 font-medium">{{ pendingAccount.success }}</p>
+          </div>
+
           <!-- hCaptcha - only show after 3 failed attempts -->
           <div v-if="requiresCaptcha" class="flex flex-col items-center">
             <div
@@ -453,6 +493,15 @@ const resetIsLoading = ref(false)
 const resetError = ref<string | null>(null)
 const resetSuccess = ref<string | null>(null)
 
+// Pending Account State
+const pendingAccount = ref({
+  show: false,
+  phone: '',
+  isLoading: false,
+  error: null as string | null,
+  success: null as string | null
+})
+
 const resetForm = ref({
   email: '',
   phone: ''
@@ -728,6 +777,12 @@ const handleLogin = async () => {
       loginError.value = errorMsg
     } else if (errorMsg?.includes('Email not confirmed')) {
       loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst.'
+    } else if (error?.data?.data?.code === 'ACCOUNT_PENDING' || error?.data?.code === 'ACCOUNT_PENDING') {
+      loginError.value = null
+      pendingAccount.value.show = true
+      pendingAccount.value.phone = ''
+      pendingAccount.value.error = null
+      pendingAccount.value.success = null
     } else if (errorMsg?.includes('User not found')) {
       loginError.value = 'Benutzername und/oder Passwort ist falsch.'
     } else if (errorMsg?.includes('disabled')) {
@@ -791,6 +846,43 @@ const handleMFAVerify = async () => {
     // Keine Toast-Meldung nötig - Benutzer wird weitergeleitet
     logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
+  }
+}
+
+const handleResendOnboarding = async () => {
+  pendingAccount.value.error = null
+  pendingAccount.value.success = null
+
+  let phone = pendingAccount.value.phone.replace(/\s/g, '')
+  if (phone.startsWith('00')) {
+    phone = '+' + phone.slice(2)
+  } else if (phone.startsWith('0')) {
+    phone = '+41' + phone.slice(1)
+  } else if (!phone.startsWith('+')) {
+    phone = '+41' + phone
+  }
+
+  pendingAccount.value.isLoading = true
+  try {
+    const response = await $fetch('/api/auth/resend-onboarding-by-phone', {
+      method: 'POST',
+      body: {
+        phone,
+        tenantId: currentTenant.value?.id || null
+      }
+    }) as any
+
+    if (response?.alreadyActive) {
+      pendingAccount.value.error = 'Dieser Account ist bereits aktiv. Bitte melden Sie sich mit Ihrem Passwort an oder nutzen Sie "Passwort vergessen".'
+      pendingAccount.value.show = false
+    } else {
+      pendingAccount.value.success = 'SMS wurde gesendet! Bitte prüfen Sie Ihr Handy und folgen Sie dem Link zur Registrierung.'
+    }
+  } catch (error: any) {
+    const msg = error?.data?.statusMessage || error?.message || 'Fehler beim Senden der SMS.'
+    pendingAccount.value.error = msg
+  } finally {
+    pendingAccount.value.isLoading = false
   }
 }
 
