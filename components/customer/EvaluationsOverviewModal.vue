@@ -77,6 +77,14 @@
 
             <!-- Bewertungen für diesen Termin -->
             <div class="p-4 space-y-2">
+              <!-- Staff lesson note -->
+              <div
+                v-if="lessonGroup.staff_lesson_note"
+                class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-3"
+              >
+                <span class="text-base flex-shrink-0">📝</span>
+                <p class="text-sm text-amber-900 italic break-words">{{ lessonGroup.staff_lesson_note }}</p>
+              </div>
               <!-- Regular Evaluations -->
               <template v-if="!lessonGroup.is_exam">
                 <div 
@@ -359,6 +367,7 @@ const groupedByLesson = computed(() => {
     sort_date: number
     is_exam: boolean
     staff?: any
+    staff_lesson_note?: string | null
     evaluations: any[]
   }> = {}
 
@@ -379,6 +388,7 @@ const groupedByLesson = computed(() => {
         sort_date: evaluation.sort_date,
         is_exam: evaluation.is_exam || false,
         staff: evaluation.staff || lesson?.staff,
+        staff_lesson_note: lesson?.staff_lesson_note || null,
         evaluations: []
       }
     }
