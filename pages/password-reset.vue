@@ -90,22 +90,57 @@
                 </svg>
               </button>
             </div>
+          <!-- Password Requirements + Strength -->
             <div class="mt-2 space-y-1">
-              <p :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-500'" class="text-xs">
-                {{ form.password.length >= 12 ? '✓' : '' }} Mindestens 12 Zeichen
+              <p :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-400'" class="text-xs">
+                {{ form.password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
               </p>
-              <p :class="hasUpperCase ? 'text-green-600' : 'text-gray-500'" class="text-xs">
-                {{ hasUpperCase ? '✓' : '' }} Mindestens ein Großbuchstabe
+              <p :class="hasUpperCase ? 'text-green-600' : 'text-gray-400'" class="text-xs">
+                {{ hasUpperCase ? '✓' : '○' }} Mindestens ein Großbuchstabe
               </p>
-              <p :class="hasLowerCase ? 'text-green-600' : 'text-gray-500'" class="text-xs">
-                {{ hasLowerCase ? '✓' : '' }} Mindestens ein Kleinbuchstabe
+              <p :class="hasLowerCase ? 'text-green-600' : 'text-gray-400'" class="text-xs">
+                {{ hasLowerCase ? '✓' : '○' }} Mindestens ein Kleinbuchstabe
               </p>
-              <p :class="hasNumber ? 'text-green-600' : 'text-gray-500'" class="text-xs">
-                {{ hasNumber ? '✓' : '' }} Mindestens eine Ziffer
+              <p :class="hasNumber ? 'text-green-600' : 'text-gray-400'" class="text-xs">
+                {{ hasNumber ? '✓' : '○' }} Mindestens eine Ziffer
               </p>
-              <p :class="hasSpecial ? 'text-green-600' : 'text-gray-500'" class="text-xs">
-                {{ hasSpecial ? '✓' : '' }} Mindestens ein Sonderzeichen (!@#$%^&*)
+              <p :class="hasSpecial ? 'text-green-600' : 'text-gray-400'" class="text-xs">
+                {{ hasSpecial ? '✓' : '○' }} Mindestens ein Sonderzeichen (!@#$%^&*)
               </p>
+
+              <!-- zxcvbn strength bar (shown once password entered) -->
+              <div v-if="zxcvbnScore !== null" class="mt-2">
+                <div class="flex gap-1 h-1.5">
+                  <div
+                    v-for="i in 4" :key="i"
+                    class="flex-1 rounded-full transition-colors duration-300"
+                    :class="i <= zxcvbnScore ? [
+                      zxcvbnScore <= 1 ? 'bg-red-500' :
+                      zxcvbnScore === 2 ? 'bg-yellow-400' :
+                      zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                    ] : 'bg-gray-200'"
+                  />
+                </div>
+                <p class="text-xs mt-1" :class="
+                  zxcvbnScore <= 1 ? 'text-red-500' :
+                  zxcvbnScore === 2 ? 'text-yellow-600' :
+                  zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+                ">
+                  {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
+                  <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                </p>
+              </div>
+
+              <!-- HIBP check -->
+              <div v-if="hibpStatus !== 'idle'" class="text-xs mt-1">
+                <span v-if="hibpStatus === 'checking'" class="text-gray-400">⏳ Sicherheitsprüfung läuft...</span>
+                <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
+                  ✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden – bitte ein anderes wählen
+                </span>
+                <span v-else-if="hibpStatus === 'safe'" class="text-green-600">
+                  ✓ Passwort nicht in bekannten Datenlecks gefunden
+                </span>
+              </div>
             </div>
           </div>
 
@@ -220,7 +255,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useRoute, definePageMeta, navigateTo } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -266,13 +301,55 @@ const hasLowerCase = computed(() => /[a-z]/.test(form.value.password))
 const hasNumber = computed(() => /\d/.test(form.value.password))
 const hasSpecial = computed(() => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.value.password))
 const passwordsMatch = computed(() => form.value.password === form.value.confirmPassword && form.value.password.length > 0)
-const isFormValid = computed(() => 
-  form.value.password.length >= 12 && 
-  hasUpperCase.value && 
-  hasLowerCase.value && 
-  hasNumber.value && 
+
+// zxcvbn + HIBP
+const zxcvbnScore = ref<0 | 1 | 2 | 3 | 4 | null>(null)
+const hibpStatus = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
+const hibpCount = ref(0)
+let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const checkPasswordStrength = async (password: string) => {
+  if (!password) {
+    zxcvbnScore.value = null
+    hibpStatus.value = 'idle'
+    return
+  }
+  const { default: zxcvbn } = await import('zxcvbn')
+  const result = zxcvbn(password)
+  zxcvbnScore.value = result.score as 0 | 1 | 2 | 3 | 4
+
+  if (result.score < 2) {
+    hibpStatus.value = 'idle'
+    return
+  }
+
+  if (hibpDebounceTimer) clearTimeout(hibpDebounceTimer)
+  hibpDebounceTimer = setTimeout(async () => {
+    hibpStatus.value = 'checking'
+    try {
+      const hibp = await $fetch<{ isPwned: boolean; count: number }>('/api/auth/check-password-pwned', {
+        method: 'POST',
+        body: { password }
+      })
+      hibpCount.value = hibp.count
+      hibpStatus.value = hibp.isPwned ? 'pwned' : 'safe'
+    } catch {
+      hibpStatus.value = 'idle'
+    }
+  }, 600)
+}
+
+watch(() => form.value.password, (pw) => checkPasswordStrength(pw))
+
+const isFormValid = computed(() =>
+  form.value.password.length >= 12 &&
+  hasUpperCase.value &&
+  hasLowerCase.value &&
+  hasNumber.value &&
   hasSpecial.value &&
-  passwordsMatch.value
+  passwordsMatch.value &&
+  hibpStatus.value !== 'pwned' &&
+  (zxcvbnScore.value === null || zxcvbnScore.value >= 2)
 )
 
 // Methods
