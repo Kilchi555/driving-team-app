@@ -533,7 +533,7 @@ export default defineEventHandler(async (event) => {
           `\n` +
           `Bitte sperren Sie meinen Account sofort.`
         )
-        const reportEmail = tenantContactEmail || 'info@simy.ch'
+        const reportEmail = 'info@simy.ch'
         const mailtoLink = `mailto:${reportEmail}?subject=VERDÄCHTIGE ANMELDUNG&body=${reportBody}`
 
         const logoImgTag = tenantLogoUrl
