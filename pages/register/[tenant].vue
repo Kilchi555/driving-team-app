@@ -451,8 +451,30 @@
                 </div>
               </div>
               <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
-              <!-- Inline help when email already exists -->
-              <div v-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <!-- Pending user: has been added manually but hasn't registered yet -->
+              <div v-if="emailIsPending" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
+                <p class="text-sm text-amber-700">
+                  Sie wurden von Ihrer Fahrschule bereits erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                  Geben Sie Ihre Telefonnummer unten ein und klicken Sie auf "SMS senden", um Ihren Registrierungslink zu erhalten.
+                </p>
+                <div v-if="!pendingEmailSmsSent">
+                  <button
+                    type="button"
+                    :disabled="isResendingPendingEmailSms || !formData.phone"
+                    @click="resendOnboardingByEmailUser"
+                    class="text-sm font-medium text-white px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                    style="background:#d97706"
+                  >
+                    <span v-if="isResendingPendingEmailSms">Wird gesendet...</span>
+                    <span v-else>Registrierungslink per SMS anfordern</span>
+                  </button>
+                  <p v-if="!formData.phone" class="text-xs text-amber-600 mt-1">Bitte zuerst Telefonnummer eingeben.</p>
+                </div>
+                <p v-else class="text-sm text-green-700 font-medium">SMS wurde gesendet! Bitte prüfen Sie Ihr Handy.</p>
+              </div>
+              <!-- Active user: already fully registered -->
+              <div v-else-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p class="text-sm text-blue-800 font-medium mb-2">Sie haben bereits ein Konto?</p>
                 <div class="flex gap-2 flex-wrap">
                   <NuxtLink
@@ -944,6 +966,8 @@ const maxSteps = computed(() => {
 const canProceed = computed(() => {
   // Block if phone number already exists in system
   if (phoneExistsBlocked.value) return false
+  // Block if email belongs to a pending (not yet registered) user
+  if (emailIsPending.value) return false
 
   if (currentStep.value === 1) {
     if (isAdminRegistration.value) {
@@ -998,6 +1022,9 @@ const fieldErrors = ref<Record<string, string>>({
 })
 
 const isCheckingEmail = ref(false)
+const emailIsPending = ref(false)
+const isResendingPendingEmailSms = ref(false)
+const pendingEmailSmsSent = ref(false)
 
 // Phone pending check state
 const isCheckingPhone = ref(false)
@@ -1013,6 +1040,8 @@ const pendingPhoneSmsError = ref('')
 let emailCheckTimeout: ReturnType<typeof setTimeout>
 
 const validateEmail = async () => {
+  emailIsPending.value = false
+  pendingEmailSmsSent.value = false
   if (!formData.value.email) {
     fieldErrors.value.email = ''
     isCheckingEmail.value = false
@@ -1052,10 +1081,17 @@ const validateEmail = async () => {
         return
       }
       
-      if (data.exists) {
+      if (data.exists && data.isPending) {
+        // Manually-added user who hasn't completed registration yet
+        fieldErrors.value.email = ''
+        emailIsPending.value = true
+        pendingEmailSmsSent.value = false
+      } else if (data.exists) {
         fieldErrors.value.email = '✗ Diese E-Mail-Adresse ist bereits registriert'
+        emailIsPending.value = false
       } else {
         fieldErrors.value.email = ''
+        emailIsPending.value = false
       }
     } catch (err: any) {
       console.warn('⚠️ Email check failed:', err)
@@ -1184,6 +1220,34 @@ const resendOnboardingByPhone = async () => {
     pendingPhoneSmsError.value = err?.data?.statusMessage || 'SMS konnte nicht gesendet werden. Bitte kontaktieren Sie Ihre Fahrschule.'
   } finally {
     isSendingPendingPhoneSms.value = false
+  }
+}
+
+// Resend onboarding SMS when email belongs to a pending (manually-added) user.
+// The API looks up the user by phone; staff always receive a phone number when added.
+const resendOnboardingByEmailUser = async () => {
+  if (!formData.value.phone) {
+    return
+  }
+  let phone = formData.value.phone.replace(/\s/g, '')
+  if (phone.startsWith('0') && !phone.startsWith('00')) {
+    phone = '+41' + phone.substring(1)
+  } else if (!phone.startsWith('+')) {
+    phone = '+41' + phone
+  }
+  isResendingPendingEmailSms.value = true
+  try {
+    const tid = activeTenantId.value || tenantId.value
+    await $fetch('/api/auth/resend-onboarding-by-phone', {
+      method: 'POST',
+      body: { phone, tenantId: tid },
+    })
+    pendingEmailSmsSent.value = true
+  } catch (err: any) {
+    console.warn('Could not send onboarding SMS:', err)
+    pendingEmailSmsSent.value = true // show success anyway (security — don't reveal if phone exists)
+  } finally {
+    isResendingPendingEmailSms.value = false
   }
 }
 

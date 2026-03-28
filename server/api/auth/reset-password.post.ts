@@ -94,7 +94,8 @@ export default defineEventHandler(async (event) => {
       console.error('❌ auth_user_id is not a valid UUID:', user.auth_user_id)
       throw createError({
         statusCode: 400,
-        statusMessage: 'Passwort-Reset nicht möglich — bitte kontaktiere den Support'
+        statusMessage: 'Passwort-Reset nicht möglich — bitte kontaktiere den Support',
+        data: { code: 'ACCOUNT_PENDING' }
       })
     }
 
