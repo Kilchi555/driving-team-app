@@ -1462,8 +1462,8 @@ const groupedTimeSlots = computed(() => {
     // Get day info
     const firstSlot = slots[0]
     const slotDate = new Date(firstSlot.start_time)
-    const dayName = slotDate.toLocaleDateString('de-DE', { weekday: 'long' })
-    const dateFormatted = slotDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const dayName = slotDate.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' })
+    const dateFormatted = slotDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich' })
     
     return {
       dayKey,
@@ -2601,9 +2601,9 @@ const generateTimeSlotsForSpecificCombination = async () => {
         duration_minutes: slot.duration_minutes,
         is_available: true, // Already filtered by API
         week_number: Math.max(1, Math.min(4, weeksDiff + 1)),
-        day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long' }),
-        date_formatted: slotStartDate.toLocaleDateString('de-DE'),
-        time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+        day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' }),
+        date_formatted: slotStartDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich' }),
+        time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }),
         category_code: slot.category_code,
         has_conflict: false, // Will be set below
         is_primary_reservation: slot.is_primary_reservation // Preserve for debugging
@@ -3667,9 +3667,9 @@ const generateFreeDaySlots = async (staff: any, location: any, targetDate: Date,
       duration_minutes: duration,
       is_available: true,
       week_number: Math.ceil((targetDate.getTime() - new Date().getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
-      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long' }),
-      date_formatted: slotTimeLocal.toLocaleDateString('de-DE'),
-      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' }),
+      date_formatted: slotTimeLocal.toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich' }),
+      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     })
   }
   
@@ -3832,9 +3832,9 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
       duration_minutes: duration,
       is_available: true,
       week_number: Math.ceil((targetDate.getTime() - new Date().getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
-      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long' }),
-      date_formatted: slotTimeLocal.toLocaleDateString('de-DE'),
-      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' }),
+      date_formatted: slotTimeLocal.toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich' }),
+      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     })
   }
   
