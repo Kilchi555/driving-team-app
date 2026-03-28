@@ -334,7 +334,7 @@
           <!-- Contact Method Selector -->
           <div class="flex gap-2">
             <button
-              @click="resetContactMethod = 'email'"
+              @click="resetContactMethod = 'email'; resetNotFound = null"
               :class="[
                 'flex-1 py-2 px-4 rounded-lg font-medium transition-colors text-sm',
                 resetContactMethod === 'email'
@@ -346,7 +346,7 @@
               E-Mail
             </button>
             <button
-              @click="resetContactMethod = 'phone'"
+              @click="resetContactMethod = 'phone'; resetNotFound = null"
               :class="[
                 'flex-1 py-2 px-4 rounded-lg font-medium transition-colors text-sm',
                 resetContactMethod === 'phone'
@@ -394,6 +394,33 @@
             <p class="text-sm text-red-700">{{ resetError }}</p>
           </div>
 
+          <!-- Not Found: email — suggest phone -->
+          <div v-if="resetNotFound === 'email'" class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+            <p class="text-sm text-amber-800 font-medium">Diese E-Mail-Adresse ist bei uns nicht hinterlegt.</p>
+            <p class="text-sm text-amber-700">Wurden Sie vielleicht mit einer Telefonnummer registriert?</p>
+            <button
+              @click="resetNotFound = null; resetContactMethod = 'phone'; resetForm.email = ''"
+              class="w-full py-2 px-4 rounded-lg font-medium text-sm text-white transition-colors"
+              style="background: #7C3AED"
+            >
+              Mit Telefonnummer versuchen
+            </button>
+          </div>
+
+          <!-- Not Found: phone — suggest register -->
+          <div v-if="resetNotFound === 'phone'" class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+            <p class="text-sm text-amber-800 font-medium">Diese Telefonnummer ist bei uns nicht hinterlegt.</p>
+            <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
+            <NuxtLink
+              to="/register"
+              @click="showForgotPasswordModal = false"
+              class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
+              style="background: #7C3AED"
+            >
+              Jetzt registrieren
+            </NuxtLink>
+          </div>
+
           <!-- Success Message -->
           <div v-if="resetSuccess" class="p-3 bg-green-50 border border-green-200 rounded-lg">
             <p class="text-sm text-green-700">{{ resetSuccess }}</p>
@@ -402,7 +429,7 @@
           <!-- Action Buttons -->
           <div class="flex gap-3 pt-4">
             <button
-              @click="showForgotPasswordModal = false"
+              @click="showForgotPasswordModal = false; resetNotFound = null"
               class="flex-1 py-2 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
               :disabled="resetIsLoading"
             >
@@ -492,6 +519,7 @@ const resetContactMethod = ref<'email' | 'phone'>('email')
 const resetIsLoading = ref(false)
 const resetError = ref<string | null>(null)
 const resetSuccess = ref<string | null>(null)
+const resetNotFound = ref<'email' | 'phone' | null>(null)
 
 // Pending Account State
 const pendingAccount = ref({
@@ -889,6 +917,7 @@ const handleResendOnboarding = async () => {
 const handlePasswordReset = async () => {
   resetError.value = null
   resetSuccess.value = null
+  resetNotFound.value = null
 
   let contact = resetContactMethod.value === 'email' ? resetForm.value.email : resetForm.value.phone
 
@@ -932,20 +961,21 @@ const handlePasswordReset = async () => {
         resetError.value = response.message
       } else {
         resetSuccess.value = resetContactMethod.value === 'email'
-          ? `Wenn ein Benutzer mit ${contact} vorhanden ist, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihren Posteingang.`
-          : `Wenn ein Benutzer mit ${contact} vorhanden ist, wird ihm ein Magic Link gesendet. Bitte überprüfen Sie Ihre SMS.`
+          ? `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihren Posteingang.`
+          : `Ein Magic Link wurde an ${contact} gesendet. Bitte überprüfen Sie Ihre SMS.`
         
         resetForm.value.email = ''
         resetForm.value.phone = ''
         
         logger.debug('✅ Password reset email/SMS sent, closing modal in 3 seconds...')
         
-        // Schließe Modal nach 3 Sekunden
         setTimeout(() => {
           showForgotPasswordModal.value = false
           resetSuccess.value = null
         }, 3000)
       }
+    } else if (response?.code === 'NOT_FOUND') {
+      resetNotFound.value = resetContactMethod.value
     } else {
       resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
     }
