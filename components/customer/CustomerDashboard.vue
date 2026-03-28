@@ -1683,9 +1683,11 @@ const processPendingPayments = async () => {
 const getInitials = () => {
   if (!currentUser.value) return '??'
   
-  const firstName = currentUser.value.user_metadata?.first_name || 
+  const firstName = userData.value?.first_name ||
+                   currentUser.value.user_metadata?.first_name || 
                    currentUser.value.user_metadata?.firstName || ''
-  const lastName = currentUser.value.user_metadata?.last_name || 
+  const lastName = userData.value?.last_name ||
+                  currentUser.value.user_metadata?.last_name || 
                   currentUser.value.user_metadata?.lastName || ''
   
   const first = firstName.charAt(0)?.toUpperCase() || ''
@@ -1696,7 +1698,8 @@ const getInitials = () => {
 const getFirstName = () => {
   if (!currentUser.value) return 'Unbekannt'
   
-  const firstName = currentUser.value.user_metadata?.first_name || 
+  const firstName = userData.value?.first_name ||
+                   currentUser.value.user_metadata?.first_name || 
                    currentUser.value.user_metadata?.firstName
   
   return firstName || currentUser.value.email?.split('@')[0] || 'Unbekannt'
