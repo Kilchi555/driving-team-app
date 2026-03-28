@@ -50,7 +50,7 @@
             <span class="text-emerald-600 text-2xl">✨</span>
           </div>
           <h2 class="text-lg font-semibold">Hier erscheinen deine Lerninhalte</h2>
-          <p class="text-sm text-gray-500 mt-1">Sobald ein Thema in deinen Fahrstunden bewertet wurde und Lerntext oder Bilder hinterlegt sind, findest du es hier.</p>
+          <p class="text-sm text-gray-500 mt-1">Sobald ein Thema in deinen Fahrstunden bewertet wurde, findest du es hier.</p>
           <div class="mt-4">
           </div>
         </div>
@@ -78,22 +78,32 @@
                 tabindex="0"
               >
                 <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <h3 class="font-semibold truncate">{{ criterion.name }}</h3>
+                  <div class="min-w-0 flex-1">
+                    <h3 class="font-semibold text-sm leading-snug break-words">{{ criterion.name }}</h3>
                   </div>
-                  <div class="shrink-0 inline-flex items-center gap-1 text-sm text-emerald-700 group-hover:text-emerald-900">
-                    Ansehen
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
+                  <div
+                    v-if="criterion.highestRating"
+                    class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                    :class="{
+                      'bg-red-100 text-red-700': criterion.highestRating <= 2,
+                      'bg-yellow-100 text-yellow-700': criterion.highestRating === 3,
+                      'bg-emerald-100 text-emerald-700': criterion.highestRating >= 4
+                    }"
+                  >
+                    {{ criterion.highestRating }}
                   </div>
                 </div>
+                <div class="mt-3 flex items-center justify-between">
+                  <span v-if="hasText(criterion) || hasImages(criterion)" class="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    Lerninhalt vorhanden
+                  </span>
+                  <span v-else class="text-xs text-gray-400">Noch kein Lerninhalt</span>
+                  <svg class="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </div>
               </div>
-            </div>
-            
-            <!-- Empty state for category -->
-            <div v-else class="ml-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <p class="text-sm text-gray-500">Noch keine Lerninhalte in diesem Bereich</p>
             </div>
           </div>
         </div>
@@ -148,19 +158,19 @@ const allCategoriesWithProgress = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const router = useRouter()
 
-// Group items by evaluation category, showing ALL categories (even with 0 items)
+// Group items by evaluation category, showing only categories that have evaluated items
 const groupedItems = computed(() => {
-  return allCategoriesWithProgress.value.map(category => {
-    // Find items for this category
-    const categoryItems = items.value.filter(item => 
-      item.evaluation_categories?.id === category.id
-    )
-    
-    return {
-      ...category,
-      items: categoryItems
-    }
-  })
+  return allCategoriesWithProgress.value
+    .map(category => {
+      const categoryItems = items.value.filter(item => 
+        item.evaluation_categories?.id === category.id
+      )
+      return {
+        ...category,
+        items: categoryItems
+      }
+    })
+    .filter(category => category.items.length > 0)
 })
 
 // Helper: Parse educational_content if it's a string
@@ -252,7 +262,6 @@ const goToLessonBooking = async () => {
 
 onMounted(async () => {
   try {
-    const supabase = getSupabase()
     const auth = useAuthStore()
     const { user } = storeToRefs(auth)
     if (!user.value?.id) throw new Error('Nicht eingeloggt')
@@ -304,20 +313,15 @@ onMounted(async () => {
     
     console.log('📊 Criteria with ratings:', criteriaRatingsMap.size)
 
-    // 8) Filter: Only criteria WITH content AND for student's categories
-    const criteriaWithContent = (allCriteria || []).filter(c => {
-      // Has text or images?
-      const hasContent = hasText(c) || hasImages(c)
-      if (!hasContent) return false
-      
+    // 8) Filter criteria for student's driving categories (no content requirement)
+    const criteriaForStudent = (allCriteria || []).filter(c => {
       // If no driving_categories set, show for all
       if (!c.driving_categories || c.driving_categories.length === 0) return true
-      
       // Check if at least one student category is in driving_categories
       return c.driving_categories.some(dc => studentCategoryCodes.includes(dc))
     })
     
-    console.log('✅ Criteria with content for student categories:', criteriaWithContent.length, 'of', allCriteria?.length || 0)
+    console.log('✅ Criteria for student categories:', criteriaForStudent.length, 'of', allCriteria?.length || 0)
     
     // 9) Calculate progress per category (for ALL categories, even with 0%)
     const categoryProgressMap = new Map()
@@ -369,13 +373,18 @@ onMounted(async () => {
         : '0%'
     })))
     
-    // 10) Attach progress and category info to criteria, filter to only show evaluated ones
-    const sorted = criteriaWithContent
+    // 10) Build items: all criteria for student that have been evaluated
+    const sorted = criteriaForStudent
       .filter(c => criteriaRatingsMap.has(c.id)) // Only show if evaluated
       .map(c => {
         const categoryId = c.evaluation_categories?.id
+        const ratings = criteriaRatingsMap.get(c.id) || []
+        const latestRating = ratings[ratings.length - 1] ?? null
+        const highestRating = ratings.length > 0 ? Math.max(...ratings) : null
         return {
           ...c,
+          latestRating,
+          highestRating,
           categoryProgress: categoryProgressMap.get(categoryId)
         }
       })
