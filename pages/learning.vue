@@ -101,9 +101,10 @@
                 <div
                   class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold mt-0.5"
                   :class="{
-                    'bg-red-100 text-red-700': (criterion.highestRating ?? 0) <= 2,
-                    'bg-yellow-100 text-yellow-700': criterion.highestRating === 3,
-                    'bg-emerald-100 text-emerald-700': (criterion.highestRating ?? 0) >= 4
+                    'bg-gray-100 text-gray-400': criterion.highestRating === null,
+                    'bg-red-100 text-red-700': criterion.highestRating !== null && (criterion.highestRating ?? 0) <= 2,
+                    'bg-yellow-100 text-yellow-700': criterion.highestRating !== null && criterion.highestRating === 3,
+                    'bg-emerald-100 text-emerald-700': criterion.highestRating !== null && (criterion.highestRating ?? 0) >= 4
                   }"
                 >
                   {{ criterion.highestRating ?? '–' }}
@@ -311,21 +312,21 @@ onMounted(async () => {
       }
     })
 
-    // Build evaluated items
+    // Build evaluated items — include criteria that are evaluated OR always_visible
     const criteriaForStudent = (allCriteria || []).filter((c: any) =>
       !c.driving_categories?.length ||
       c.driving_categories.some((dc: string) => studentCategoryCodes.includes(dc))
     )
 
     const sorted = criteriaForStudent
-      .filter((c: any) => criteriaDataMap.has(c.id))
+      .filter((c: any) => criteriaDataMap.has(c.id) || c.always_visible)
       .map((c: any) => {
-        const entry = criteriaDataMap.get(c.id)!
+        const entry = criteriaDataMap.get(c.id)
         return {
           ...c,
-          highestRating: Math.max(...entry.ratings),
-          latestRating: entry.ratings[entry.ratings.length - 1] ?? null,
-          evaluatedInCategories: Array.from(entry.cats),
+          highestRating: entry ? Math.max(...entry.ratings) : null,
+          latestRating: entry ? (entry.ratings[entry.ratings.length - 1] ?? null) : null,
+          evaluatedInCategories: entry ? Array.from(entry.cats) : [],
           categoryProgress: categoryProgressMap.get(c.evaluation_categories?.id)
         }
       })
