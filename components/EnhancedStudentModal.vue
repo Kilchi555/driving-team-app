@@ -813,7 +813,7 @@
         
         <!-- Details Tab -->
         <div v-if="activeTab === 'details'" class="space-y-6 p-2">
-          <!-- Pending Student Actions - MOVED TO TOP -->
+          <!-- Pending Student Actions -->
           <div v-if="!selectedStudent.auth_user_id" class="bg-orange-50 rounded-lg border border-orange-200 p-6">
             <h4 class="text-lg font-semibold text-orange-900 mb-4 flex items-center">
               <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -831,7 +831,21 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
               </svg>
-              Erinnerung versenden
+              Onboarding-Erinnerung senden
+            </button>
+          </div>
+
+          <!-- Login-Link SMS for completed students -->
+          <div v-else class="bg-gray-50 rounded-lg border border-gray-200 p-4 flex items-center justify-between gap-4">
+            <p class="text-sm text-gray-600">Login-Link per SMS senden</p>
+            <button
+              @click="openReminderModal"
+              class="shrink-0 px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+              SMS senden
             </button>
           </div>
 

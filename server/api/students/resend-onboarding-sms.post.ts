@@ -158,7 +158,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     const { data: student, error: studentError } = await supabaseAdmin
       .from('users')
-      .select('id, email, phone, first_name, last_name, onboarding_token, onboarding_token_expires, tenant_id, role')
+      .select('id, email, phone, first_name, last_name, auth_user_id, onboarding_token, onboarding_token_expires, tenant_id, role')
       .eq('id', studentId)
       .eq('tenant_id', tenantId) // Ownership check - must be in same tenant
       .eq('role', 'client') // Only for client users (students)
@@ -194,77 +194,17 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({ statusCode: 400, statusMessage: 'Student has no phone number on file' })
     }
 
-    // Check if onboarding is still pending
-    if (!student.onboarding_token) {
-      logger.error('❌ NO TOKEN:', { 
-        studentId, 
-        hasToken: !!student.onboarding_token
-      })
-      await logAudit({
-        user_id: requestingUserId,
-        action: 'resend_onboarding_sms',
-        status: 'failed',
-        error_message: 'Student onboarding already completed',
-        ip_address: ipAddress,
-        details: auditDetails
-      })
-      throw createError({ statusCode: 400, statusMessage: 'Student onboarding already completed' })
-    }
+    // Get tenant data for SMS sender name and slug (needed for both flows)
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('name, slug, twilio_from_sender')
+      .eq('id', tenantId)
+      .single()
 
-    // If token has no expiry, set one now (30 days from now)
-    let tokenExpires = student.onboarding_token_expires
-    if (!tokenExpires) {
-      logger.warn('⚠️ TOKEN HAS NO EXPIRY - Setting 30 day expiry:', { studentId })
-      const newExpires = new Date()
-      newExpires.setDate(newExpires.getDate() + 30)
-      tokenExpires = newExpires.toISOString()
-      
-      // Update student with expiry
-      const { error: updateError } = await supabaseAdmin
-        .from('users')
-        .update({ onboarding_token_expires: tokenExpires })
-        .eq('id', studentId)
-      
-      if (updateError) {
-        logger.warn('⚠️ Failed to set token expiry:', updateError)
-      }
-    }
-
-    // Check if token has expired
-    const expiresAt = new Date(tokenExpires)
-    const now = new Date()
-    if (expiresAt < now) {
-      logger.warn('⚠️ TOKEN EXPIRED - Generating new one:', { 
-        studentId, 
-        expiresAt: expiresAt.toISOString(), 
-        now: now.toISOString()
-      })
-      
-      // Generate new token since old one expired
-      const newToken = uuidv4()
-      const newExpires = new Date()
-      newExpires.setDate(newExpires.getDate() + 30) // 30 days valid
-      
-      logger.debug('✅ Generated new token, updating DB...')
-      
-      // Update student with new token
-      const { error: updateError } = await supabaseAdmin
-        .from('users')
-        .update({
-          onboarding_token: newToken,
-          onboarding_token_expires: newExpires.toISOString()
-        })
-        .eq('id', studentId)
-      
-      if (updateError) {
-        logger.error('❌ Failed to generate new token:', updateError)
-        throw createError({ statusCode: 500, statusMessage: 'Failed to generate new onboarding token' })
-      }
-      
-      // Use new token for SMS
-      student.onboarding_token = newToken
-      logger.debug('✅ Token renewed - will use new token for SMS')
-    }
+    const senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+    const tenantName = tenant?.name || 'Driving Team'
+    const tenantSlug = tenant?.slug || ''
+    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
 
     // ============ LAYER 5: AUDIT LOGGING ============
     await logAudit({
@@ -277,26 +217,61 @@ export default defineEventHandler(async (event: H3Event) => {
       details: auditDetails
     })
 
-    // ============ LAYER 6: SEND SMS ============
-    logger.debug('📱 Sending onboarding SMS to:', student.phone)
-
+    // ============ LAYER 6: DETERMINE SMS TYPE & CONTENT ============
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
-    const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
+    let smsMessage: string
 
-    // Get tenant data for SMS sender name and slug
-    const { data: tenant } = await supabaseAdmin
-      .from('tenants')
-      .select('name, slug, twilio_from_sender')
-      .eq('id', tenantId)
-      .single()
+    if (!student.onboarding_token) {
+      // Student has already completed onboarding — send a login link SMS instead
+      logger.debug('📱 Student has no onboarding token (completed) — sending login link SMS to:', student.phone)
 
-    let senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
-    let tenantName = tenant?.name || 'Driving Team'
-    let tenantSlug = tenant?.slug || ''
-    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
+      smsMessage = `Hallo ${student.first_name},
 
-    // Format professional SMS message with line breaks
-    const smsMessage = `Hallo ${student.first_name},
+hier ist dein Anmelde-Link für die Fahrschule:
+
+${loginLink}
+
+Falls du dein Passwort vergessen hast, kannst du es über den Login-Link zurücksetzen.
+
+Freundliche Grüsse,
+${tenantName}`
+    } else {
+      // Student is pending — check/refresh token and send onboarding link
+      let tokenExpires = student.onboarding_token_expires
+      if (!tokenExpires) {
+        logger.warn('⚠️ TOKEN HAS NO EXPIRY - Setting 30 day expiry:', { studentId })
+        const newExpires = new Date()
+        newExpires.setDate(newExpires.getDate() + 30)
+        tokenExpires = newExpires.toISOString()
+        await supabaseAdmin
+          .from('users')
+          .update({ onboarding_token_expires: tokenExpires })
+          .eq('id', studentId)
+      }
+
+      const expiresAt = new Date(tokenExpires)
+      const now = new Date()
+      if (expiresAt < now) {
+        logger.warn('⚠️ TOKEN EXPIRED - Generating new one:', { studentId })
+        const newToken = uuidv4()
+        const newExpires = new Date()
+        newExpires.setDate(newExpires.getDate() + 30)
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({ onboarding_token: newToken, onboarding_token_expires: newExpires.toISOString() })
+          .eq('id', studentId)
+        if (updateError) {
+          logger.error('❌ Failed to generate new token:', updateError)
+          throw createError({ statusCode: 500, statusMessage: 'Failed to generate new onboarding token' })
+        }
+        student.onboarding_token = newToken
+        logger.debug('✅ Token renewed')
+      }
+
+      const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
+      logger.debug('📱 Sending onboarding SMS to:', student.phone)
+
+      smsMessage = `Hallo ${student.first_name},
 
 bitte vervollständige deine Registrierung innerhalb der nächsten 30 Tage:
 
@@ -308,6 +283,7 @@ ${loginLink}
 
 Freundliche Grüsse,
 ${tenantName}`
+    }
 
     // Send SMS via Twilio
     const smsResult = await sendSMS({
