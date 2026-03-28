@@ -2418,9 +2418,9 @@ const handleOpenStudentProgress = async (student: any) => {
   // Schließe EventModal
   isModalVisible.value = false
   
-  // Öffne EnhancedStudentModal mit Fortschritt-Tab
+  // Öffne EnhancedStudentModal — pending users land on details tab (reminder button)
   selectedStudentForProgress.value = student
-  studentProgressActiveTab.value = 'progress'
+  studentProgressActiveTab.value = !student?.auth_user_id ? 'details' : 'progress'
   showEnhancedStudentModal.value = true
 }
 
