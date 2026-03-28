@@ -23,6 +23,14 @@
     {
       "path": "/api/cron/process-affiliate-rewards",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/process-outbound-messages",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/send-onboarding-reminders",
+      "schedule": "0 8 * * *"
     }
   ],
   "rewrites": [
