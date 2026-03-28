@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Validate password strength
-    if (newPassword.length < 8) {
+    if (newPassword.length < 12) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Passwort muss mindestens 12 Zeichen lang sein'
