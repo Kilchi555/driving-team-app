@@ -487,16 +487,22 @@ export default defineEventHandler(async (event) => {
 
         const firstName = userData?.first_name || 'dort'
 
-        // Get tenant name
+        // Get tenant branding
         let tenantName = 'Simy'
-        if (userData.tenant_id) {
+        let tenantPrimaryColor = '#2563eb'
+        let tenantLogoUrl: string | null = null
+        let tenantContactEmail: string | null = null
+        if (userData?.tenant_id) {
           const { data: tenantData } = await adminSupabase
             .from('tenants')
-            .select('name')
+            .select('name, primary_color, logo_wide_url, logo_url, logo_square_url, contact_email')
             .eq('id', userData.tenant_id)
             .single()
-          if (tenantData?.name) {
-            tenantName = tenantData.name
+          if (tenantData) {
+            tenantName = tenantData.name || tenantName
+            tenantPrimaryColor = tenantData.primary_color || tenantPrimaryColor
+            tenantLogoUrl = tenantData.logo_wide_url || tenantData.logo_url || tenantData.logo_square_url || null
+            tenantContactEmail = tenantData.contact_email || null
           }
         }
 
@@ -513,9 +519,7 @@ export default defineEventHandler(async (event) => {
           timeStyle: 'short'
         })
         
-        const location = geoData 
-          ? `${geoData.region || ''}, ${geoData.country || 'Unbekannt'}`.replace(/^, /, '')
-          : 'Unbekannt'
+        const location = geoData?.country || 'Unbekannt'
 
         // Create mailto link with pre-filled content for suspicious login report
         const reportBody = encodeURIComponent(
@@ -529,67 +533,136 @@ export default defineEventHandler(async (event) => {
           `\n` +
           `Bitte sperren Sie meinen Account sofort.`
         )
-        const mailtoLink = `mailto:info@simy.ch?subject=VERDÄCHTIGE ANMELDUNG&body=${reportBody}`
+        const reportEmail = tenantContactEmail || 'info@simy.ch'
+        const mailtoLink = `mailto:${reportEmail}?subject=VERDÄCHTIGE ANMELDUNG&body=${reportBody}`
 
-        const emailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1f2937;">Neues Gerät erkannt</h2>
-            <p>Hallo ${firstName},</p>
-            <p>Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in Ihrem Account erkannt.</p>
-            
-            <div style="background-color: #f3f4f6; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0 0 10px 0;"><strong>Anmeldungsdetails:</strong></p>
-              <p style="margin: 5px 0;"><strong>Gerät:</strong> ${deviceName}</p>
-              <p style="margin: 5px 0;"><strong>Zeit:</strong> ${loginTime}</p>
-              <p style="margin: 5px 0;"><strong>Standort:</strong> ${location}</p>
-              <p style="margin: 5px 0;"><strong>IP-Adresse:</strong> ${clientIp}</p>
-              ${geoData?.isp ? `<p style="margin: 5px 0;"><strong>Internet Anbieter:</strong> ${geoData.isp}</p>` : ''}
+        const logoImgTag = tenantLogoUrl
+          ? `<img src="${tenantLogoUrl}" alt="${tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto;">`
+          : `<div style="width:40px;height:40px;border-radius:10px;background:${tenantPrimaryColor};color:white;font-size:20px;font-weight:700;line-height:40px;text-align:center;margin:0 auto;">${tenantName.charAt(0).toUpperCase()}</div>`
+
+        const emailHtml = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f4f6;">
+    <tr><td align="center" style="padding:32px 10px;">
+
+      <!-- Logo above card -->
+      <div style="margin-bottom:20px;text-align:center;">
+        ${logoImgTag}
+      </div>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);">
+
+        <!-- Colored header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,${tenantPrimaryColor} 0%,${tenantPrimaryColor}cc 100%);padding:32px 32px 28px;text-align:center;">
+            <div style="width:56px;height:56px;background:rgba(255,255,255,0.2);border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
             </div>
-            
-            <p style="color: #27ae60; font-weight: bold;">✓ Falls Sie das waren:</p>
-            <p style="margin: 10px 0;">Sie können diese E-Mail einfach ignorieren. Das Gerät ist jetzt gespeichert.</p>
-            
-            <p style="color: #e74c3c; font-weight: bold;">✗ Falls Sie das NICHT waren:</p>
-            <p style="margin: 10px 0;">Ihr Account könnte kompromittiert sein. Bitte kontaktieren Sie uns sofort:</p>
-            <p style="margin: 15px 0;">
-              <a href="${mailtoLink}" style="background-color: #e74c3c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">
-                Verdächtige Anmeldung melden
-              </a>
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:white;">Neues Gerät erkannt</h1>
+            <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85);">${tenantName}</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 8px;font-size:16px;color:#111827;">Hallo ${firstName},</p>
+            <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+              Wir haben eine erfolgreiche Anmeldung von einem <strong>neuen Gerät</strong> in deinem Account festgestellt.
             </p>
-            <p style="color: #6b7280; font-size: 13px;">
-              Oder direkt an: <a href="${mailtoLink}" style="color: #2563eb;">info@simy.ch</a>
+
+            <!-- Details box -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;border-left:4px solid ${tenantPrimaryColor};">
+              <tr><td style="padding:16px 20px;">
+                <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;">Anmeldungsdetails</p>
+                <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
+                  <tr>
+                    <td style="padding:4px 0;font-size:13px;color:#6b7280;width:110px;">Gerät</td>
+                    <td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${deviceName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;font-size:13px;color:#6b7280;">Zeit</td>
+                    <td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${loginTime}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;font-size:13px;color:#6b7280;">Standort</td>
+                    <td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${location}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0;font-size:13px;color:#6b7280;">IP-Adresse</td>
+                    <td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${clientIp}</td>
+                  </tr>
+                  ${geoData?.isp ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Anbieter</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${geoData.isp}</td></tr>` : ''}
+                </table>
+              </td></tr>
+            </table>
+
+            <!-- Was it you? -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0fdf4;border-radius:8px;margin-bottom:16px;">
+              <tr><td style="padding:14px 16px;">
+                <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#15803d;">✓ Das warst du?</p>
+                <p style="margin:0;font-size:13px;color:#166534;">Du kannst diese E-Mail ignorieren. Das Gerät ist jetzt gespeichert.</p>
+              </td></tr>
+            </table>
+
+            <!-- Was it NOT you? -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff7ed;border-radius:8px;margin-bottom:24px;">
+              <tr><td style="padding:14px 16px;">
+                <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#c2410c;">✗ Das warst du NICHT?</p>
+                <p style="margin:0 0 12px;font-size:13px;color:#9a3412;">Dein Account könnte kompromittiert sein. Kontaktiere uns sofort.</p>
+                <a href="${mailtoLink}" style="display:inline-block;padding:10px 20px;background:#dc2626;color:white;text-decoration:none;border-radius:6px;font-size:13px;font-weight:700;">
+                  Verdächtige Anmeldung melden
+                </a>
+              </td></tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f3f4f6;padding:16px 32px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">
+              ${tenantName}${tenantContactEmail ? ` · <a href="mailto:${tenantContactEmail}" style="color:#9ca3af;">${tenantContactEmail}</a>` : ''}
             </p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
-            
-            <p style="color: #6b7280; font-size: 12px; margin: 0;">
-              Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}. Bitte antworten Sie nicht auf diese E-Mail.
-            </p>
-          </div>
-        `
+            <p style="margin:4px 0 0;font-size:11px;color:#d1d5db;">Diese E-Mail ist eine automatische Sicherheitsmitteilung.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
         const emailText = `
 Neues Gerät erkannt
 
-Hallo ${userData.first_name},
+Hallo ${firstName},
 
-Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in Ihrem Account erkannt.
+Wir haben eine erfolgreiche Anmeldung von einem neuen Gerät in deinem Account festgestellt.
 
 ANMELDUNGSDETAILS:
 - Gerät: ${deviceName}
 - Zeit: ${loginTime}
 - Standort: ${location}
-- IP-Adresse: ${clientIp}${geoData?.isp ? `\n- Internet Anbieter: ${geoData.isp}` : ''}
+- IP-Adresse: ${clientIp}${geoData?.isp ? `\n- Anbieter: ${geoData.isp}` : ''}
 
-FALLS SIE DAS WAREN:
-Sie können diese E-Mail einfach ignorieren. Das Gerät ist jetzt gespeichert.
+FALLS DAS DU WARST:
+Du kannst diese E-Mail ignorieren. Das Gerät ist jetzt gespeichert.
 
-FALLS SIE DAS NICHT WAREN:
-Ihr Account könnte kompromittiert sein. Bitte kontaktieren Sie uns sofort:
-Email: info@simy.ch
+FALLS DAS NICHT DU WARST:
+Dein Account könnte kompromittiert sein. Kontaktiere uns sofort:
+Email: ${reportEmail}
 
 ---
-Dies ist eine automatische Sicherheitsmitteilung von ${tenantName}.
+Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
         `
 
         await sendEmail({
