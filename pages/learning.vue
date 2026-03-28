@@ -189,6 +189,8 @@ const drivingCategoryTabs = computed(() => {
 const groupedItems = computed(() => {
   const filtered = activeTab.value
     ? items.value.filter(item =>
+        // always_visible criteria show in every tab regardless of evaluated category
+        item.always_visible ||
         (item.evaluatedInCategories as string[]).includes(activeTab.value)
       )
     : items.value

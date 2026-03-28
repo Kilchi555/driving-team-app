@@ -242,7 +242,7 @@ async function saveCriterion(body: AdminRequest, userId: string) {
         display_order,
         is_theory,
         driving_categories,
-        always_visible: always_visible ?? false
+        always_visible: Boolean(always_visible ?? false)
       })
       .eq('id', id)
       .eq('tenant_id', tenantId)
@@ -264,7 +264,7 @@ async function saveCriterion(body: AdminRequest, userId: string) {
         display_order,
         is_theory: is_theory || false,
         driving_categories,
-        always_visible: always_visible ?? false,
+        always_visible: Boolean(always_visible ?? false),
         is_active: true
       })
       .select()

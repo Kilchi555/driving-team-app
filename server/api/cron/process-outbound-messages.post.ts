@@ -11,6 +11,14 @@ export default defineEventHandler(async (event) => {
   try {
     console.log('[OutboundMessageProcessor] 🔄 Starting outbound message processor cron job...')
 
+    // ── Security: verify CRON_SECRET (fail closed) ──────────────
+    const authHeader = getHeader(event, 'authorization')
+    const cronSecret = process.env.CRON_SECRET
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      console.warn('[OutboundMessageProcessor] ⚠️ Unauthorized attempt')
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+
     // Create service role client
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -51,7 +59,7 @@ export default defineEventHandler(async (event) => {
 
     if (!resendApiKey) {
       console.error('[OutboundMessageProcessor] ❌ RESEND_API_KEY not configured. Cannot send emails.')
-      return createError({
+      throw createError({
         statusCode: 500,
         statusMessage: 'RESEND_API_KEY not configured'
       })
