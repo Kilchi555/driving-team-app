@@ -1,22 +1,27 @@
 /**
- * Convert a calendar date + wall-clock time in Europe/Zurich to a UTC Date (instant).
- * Used for staff working hours → availability slots so CET/CEST is applied per day.
+ * Convert a calendar date + wall-clock time in a given IANA timezone to a UTC Date.
+ * Used for staff working hours → availability slots so DST is applied per calendar day.
+ *
+ * The iterative approach starts with a UTC guess and adjusts until the target
+ * timezone shows the requested wall-clock time — no npm dependency needed.
  */
-const ZURICH = 'Europe/Zurich'
 
-export function zurichWallTimeToUtc(
+export const DEFAULT_TIMEZONE = 'Europe/Zurich'
+
+export function wallTimeToUtc(
   year: number,
   monthIndex0: number,
   dayOfMonth: number,
   hour: number,
-  minute: number
+  minute: number,
+  timezone: string = DEFAULT_TIMEZONE
 ): Date {
   let guessMs = Date.UTC(year, monthIndex0, dayOfMonth, hour, minute, 0)
 
   for (let i = 0; i < 48; i++) {
     const d = new Date(guessMs)
     const s = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: ZURICH,
+      timeZone: timezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -41,10 +46,22 @@ export function zurichWallTimeToUtc(
     guessMs += diffMin * 60 * 1000
   }
 
+  // Fallback: UTC (should never be reached for valid IANA timezones)
   return new Date(Date.UTC(year, monthIndex0, dayOfMonth, hour, minute, 0))
 }
 
-/** Parse DB/API time strings like "07:00", "07:00:00", "07:00:00+00" → hours, minutes */
+/** Backwards-compatible alias — always uses Europe/Zurich */
+export const zurichWallTimeToUtc = (
+  year: number,
+  monthIndex0: number,
+  dayOfMonth: number,
+  hour: number,
+  minute: number
+): Date => wallTimeToUtc(year, monthIndex0, dayOfMonth, hour, minute, DEFAULT_TIMEZONE)
+
+/**
+ * Parse DB/API time strings like "07:00", "07:00:00", "07:00:00+00" → hours, minutes
+ */
 export function parseWorkingTimeParts(timeStr: string): { hours: number; minutes: number } {
   if (!timeStr || typeof timeStr !== 'string') {
     return { hours: 0, minutes: 0 }

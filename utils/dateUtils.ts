@@ -248,17 +248,16 @@ export const formatMonthYear = (dateString: string | null | undefined): string =
   if (!dateString) return 'Kein Datum'
   
   try {
-    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
-    // Prüfe ob das Datum gültig ist
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum'
     }
     
     return date.toLocaleDateString('de-CH', { 
       month: 'long', 
-      year: 'numeric' 
+      year: 'numeric',
+      timeZone: 'Europe/Zurich'
     })
   } catch (error) {
     console.warn('Error formatting monthYear:', dateString, error)
@@ -274,17 +273,16 @@ export const formatMonthDayYear = (dateString: string | null | undefined): strin
   if (!dateString) return 'Kein Datum'
   
   try {
-    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
-    // Prüfe ob das Datum gültig ist
     if (isNaN(date.getTime())) {
       return 'Ungültiges Datum'
     }
     return date.toLocaleDateString('de-CH', { 
       month: 'long', 
       day: 'numeric',
-      year: 'numeric' 
+      year: 'numeric',
+      timeZone: 'Europe/Zurich'
     })
   } catch (error) {
     console.warn('Error formatting monthDayYear:', dateString, error)
@@ -300,7 +298,6 @@ export const formatDateShort = (dateString: string | null | undefined): string =
   if (!dateString) return 'Kein Datum'
   
   try {
-    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     if (isNaN(date.getTime())) {
@@ -310,7 +307,8 @@ export const formatDateShort = (dateString: string | null | undefined): string =
     return date.toLocaleDateString('de-CH', {
       day: '2-digit',
       month: '2-digit',
-      year: '2-digit'
+      year: '2-digit',
+      timeZone: 'Europe/Zurich'
     })
   } catch (error) {
     console.warn('Error formatting dateShort:', dateString, error)
@@ -326,7 +324,6 @@ export const formatTimeShort = (dateString: string | null | undefined): string =
   if (!dateString) return 'Keine Zeit'
   
   try {
-    // PostgreSQL speichert Zeiten als UTC, konvertiere zu lokaler Zeit
     const date = new Date(dateString)
     
     if (isNaN(date.getTime())) {
@@ -336,7 +333,8 @@ export const formatTimeShort = (dateString: string | null | undefined): string =
     return date.toLocaleTimeString('de-CH', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
+      timeZone: 'Europe/Zurich'
     })
   } catch (error) {
     console.warn('Error formatting timeShort:', dateString, error)

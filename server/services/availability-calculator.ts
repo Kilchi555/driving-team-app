@@ -18,7 +18,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { zurichWallTimeToUtc, parseWorkingTimeParts } from '~/server/utils/zurich-wall-time'
+import { wallTimeToUtc, parseWorkingTimeParts, DEFAULT_TIMEZONE } from '~/server/utils/zurich-wall-time'
 
 // Types
 interface Staff {
@@ -58,8 +58,9 @@ interface StaffWorkingHours {
   id: string
   staff_id: string
   day_of_week: number // 1=Monday, 7=Sunday
-  start_time: string // HH:MM
-  end_time: string // HH:MM
+  start_time: string // HH:MM wall-clock in `timezone`
+  end_time: string   // HH:MM wall-clock in `timezone`
+  timezone: string   // IANA timezone, e.g. 'Europe/Zurich'
   is_active: boolean
 }
 
@@ -379,7 +380,7 @@ export class AvailabilityCalculator {
 
     const { data, error } = await this.supabase
       .from('staff_working_hours')
-      .select('id, staff_id, day_of_week, start_time, end_time, is_active')
+      .select('id, staff_id, day_of_week, start_time, end_time, timezone, is_active')
       .in('staff_id', staffIds)
 
     if (error) throw error
@@ -402,6 +403,7 @@ export class AvailabilityCalculator {
             day_of_week: day,
             start_time: '08:00',
             end_time: '18:00',
+            timezone: DEFAULT_TIMEZONE,
             is_active: true
           })
         }
@@ -638,6 +640,7 @@ export class AvailabilityCalculator {
                   date: currentDate,
                   startTime: hours.start_time,
                   endTime: hours.end_time,
+                  timezone: hours.timezone || DEFAULT_TIMEZONE,
                   durationMinutes,
                   bufferMinutes: params.bufferMinutes,
                   minBookableTime,
@@ -680,8 +683,9 @@ export class AvailabilityCalculator {
    */
   private async generateDaySlots(params: {
     date: Date
-    startTime: string // HH:MM or HH:MM:SS+tz (TIMETZ)
-    endTime: string // HH:MM or HH:MM:SS+tz (TIMETZ)
+    startTime: string // HH:MM wall-clock
+    endTime: string   // HH:MM wall-clock
+    timezone: string  // IANA timezone for startTime/endTime
     durationMinutes: number
     bufferMinutes: number
     minBookableTime: Date
@@ -693,7 +697,7 @@ export class AvailabilityCalculator {
   }): Promise<AvailabilitySlot[]> {
     const slots: AvailabilitySlot[] = []
 
-    // Working hours in DB = Europe/Zurich wall clock (HH:MM), not a fixed UTC offset.
+    // Working hours in DB = wall-clock time in the given timezone.
     const startParsed = parseWorkingTimeParts(params.startTime)
     const endParsed = parseWorkingTimeParts(params.endTime)
 
@@ -701,8 +705,8 @@ export class AvailabilityCalculator {
     const m0 = params.date.getUTCMonth()
     const d = params.date.getUTCDate()
 
-    const slotStart = zurichWallTimeToUtc(y, m0, d, startParsed.hours, startParsed.minutes)
-    const workingEnd = zurichWallTimeToUtc(y, m0, d, endParsed.hours, endParsed.minutes)
+    const slotStart = wallTimeToUtc(y, m0, d, startParsed.hours, startParsed.minutes, params.timezone)
+    const workingEnd = wallTimeToUtc(y, m0, d, endParsed.hours, endParsed.minutes, params.timezone)
 
     // Generate slots in 15-minute increments
     const currentSlot = new Date(slotStart)
