@@ -91,12 +91,58 @@ export default defineEventHandler(async (event) => {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!user.auth_user_id || !uuidRegex.test(user.auth_user_id)) {
-      console.error('❌ auth_user_id is not a valid UUID:', user.auth_user_id)
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Passwort-Reset nicht möglich — bitte kontaktiere den Support',
-        data: { code: 'ACCOUNT_PENDING' }
+      // Pending user: no auth account exists yet.
+      // Instead of failing, create one now and set the chosen password immediately.
+      if (!user.email) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Passwort-Reset nicht möglich — keine E-Mail-Adresse hinterlegt',
+          data: { code: 'ACCOUNT_PENDING' }
+        })
+      }
+
+      logger.debug('🆕 Pending user — creating auth account and setting password:', user.email)
+
+      const { data: newAuthData, error: createAuthError } = await serviceSupabase.auth.admin.createUser({
+        email: user.email,
+        password: newPassword,
+        email_confirm: true,
       })
+
+      if (createAuthError || !newAuthData?.user?.id) {
+        console.error('❌ Failed to create auth user for pending account:', createAuthError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Fehler beim Anlegen des Accounts — bitte versuche es erneut',
+          data: { code: 'ACCOUNT_PENDING' }
+        })
+      }
+
+      const newAuthUserId = newAuthData.user.id
+
+      // Link the new auth user to the existing users table row
+      const { error: linkError } = await serviceSupabase
+        .from('users')
+        .update({ auth_user_id: newAuthUserId })
+        .eq('id', tokenData.user_id)
+
+      if (linkError) {
+        console.error('❌ Failed to link new auth user to users row:', linkError)
+        // Auth user was created but linking failed — still mark token as used
+      }
+
+      // Mark token as used
+      await serviceSupabase
+        .from('password_reset_tokens')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', tokenData.id)
+
+      logger.debug('✅ Pending user activated — auth account created and password set:', newAuthUserId)
+
+      return {
+        success: true,
+        message: 'Account aktiviert und Passwort gesetzt — du kannst dich jetzt anmelden'
+      }
     }
 
     logger.debug('🔐 Updating password for user:', user.auth_user_id)
