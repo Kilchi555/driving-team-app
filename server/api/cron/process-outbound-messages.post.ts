@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
       .eq('status', 'pending')
       .lte('send_at', new Date().toISOString()) // Ready to send now or in the past
       .order('send_at', { ascending: true }) // Process oldest first
-      .limit(10) // Process in batches to avoid overwhelming Resend / server
+      .limit(50) // Pro plan: 60s timeout → 50 messages at 1/s fits comfortably
 
     if (fetchError) {
       console.error('[OutboundMessageProcessor] ❌ Error fetching outbound messages:', fetchError)
@@ -151,8 +151,8 @@ export default defineEventHandler(async (event) => {
           failedCount++
         }
 
-        // Add a small delay to respect API rate limits
-        await delay(300); // 300ms delay between each email (adjust as needed for Resend limits)
+        // 1 message per second to respect Resend/Twilio rate limits
+        await delay(1000)
 
       } catch (error: any) {
         console.error(`[OutboundMessageProcessor] ❌ Unhandled error processing message ${message.id}:`, error)
