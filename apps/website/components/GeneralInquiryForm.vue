@@ -455,10 +455,9 @@ const onPhoneInput = (event: Event) => {
 // Load categories and locations
 const loadData = async () => {
   try {
-    const baseUrl = 'https://simy.ch'
     const [categoriesRes, locationsRes] = await Promise.all([
-      $fetch<{ categories: Category[] }>(`${baseUrl}/api/booking/get-categories`, { query: { tenant_id: props.tenant_id } }),
-      $fetch<{ locations: Location[] }>(`${baseUrl}/api/booking/get-locations`, { query: { tenant_id: props.tenant_id } })
+      $fetch<{ categories: Category[] }>('/api/booking/get-categories', { query: { tenant_id: props.tenant_id } }),
+      $fetch<{ locations: Location[] }>('/api/booking/get-locations', { query: { tenant_id: props.tenant_id } })
     ])
 
     if (categoriesRes?.categories) {
@@ -516,8 +515,7 @@ const submitInquiry = async () => {
       payload.preferred_time_slots = []
     }
 
-    const baseUrl = 'https://simy.ch'
-    const response = await $fetch<{ success: boolean; proposal_id: string }>(`${baseUrl}/api/booking/submit-general-inquiry`, {
+    const response = await $fetch<{ success: boolean; proposal_id: string }>('/api/contact', {
       method: 'POST',
       body: payload
     })
@@ -562,7 +560,9 @@ watch(message, (val) => {
 
 // Load data on mount
 onMounted(() => {
-  loadData()
+  if (props.mode === 'booking') {
+    loadData()
+  }
 })
 </script>
 
