@@ -137,11 +137,9 @@ export default defineEventHandler(async (event) => {
     }
 
     if (userError || !user) {
-      // Don't reveal if user exists (security) - but log it server-side
-      console.log(`[PasswordReset] No active user found for ${method} — returning generic success (security)`)
+      console.log(`[PasswordReset] No active user found for ${method}`)
       console.log('[PasswordReset] DB error if any:', userError?.code || userError?.message || 'none')
-      // Still return success to prevent user enumeration
-      return { success: true, message: 'Falls ein Account mit diesen Angaben existiert, erhalten Sie einen Magic Link.' }
+      return { success: false, code: 'NOT_FOUND', method }
     }
 
     console.log('[PasswordReset] ✅ User found:', { userId: user.id, hasTenantId: !!user.tenant_id })
