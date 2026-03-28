@@ -134,11 +134,20 @@ export default defineEventHandler(async (event) => {
 
       if (notesError) throw notesError
 
+      // Also fetch the lesson-level staff note (no criteria)
+      const { data: lessonNoteRow } = await supabase
+        .from('notes')
+        .select('staff_note')
+        .eq('appointment_id', appointment_id)
+        .is('evaluation_criteria_id', null)
+        .maybeSingle()
+
       result = {
         success: true,
         data: {
           evaluations: currentNotes || [],
-          hasEvaluations: (currentNotes?.length || 0) > 0
+          hasEvaluations: (currentNotes?.length || 0) > 0,
+          lesson_note: lessonNoteRow?.staff_note || ''
         }
       }
     } else if (action === 'get-previous') {

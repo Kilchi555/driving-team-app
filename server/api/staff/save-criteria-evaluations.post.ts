@@ -87,6 +87,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ 4. PREPARE NOTES FOR UPSERT
+    const { lesson_note } = body
+    const lessonNoteText = lesson_note ? String(lesson_note).substring(0, 2000).trim() : ''
+
     const notesToInsert = evaluations
       .filter((e: any) => {
         // Must have criteria_id
@@ -133,11 +136,44 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ 5b. SAVE LESSON NOTE (staff_note for student) — delete old + insert new
+    if (lessonNoteText) {
+      // Delete existing lesson-level note for this appointment (no criteria)
+      await supabase
+        .from('notes')
+        .delete()
+        .eq('appointment_id', appointment_id)
+        .is('evaluation_criteria_id', null)
+
+      const { error: lessonNoteError } = await supabase
+        .from('notes')
+        .insert({
+          appointment_id,
+          staff_note: lessonNoteText,
+          last_updated_by_user_id: user.id,
+          tenant_id: tenantId
+        })
+
+      if (lessonNoteError) {
+        logger.warn('⚠️ Error saving lesson note:', lessonNoteError)
+      } else {
+        logger.debug('✅ Lesson note saved for appointment:', appointment_id)
+      }
+    } else {
+      // If lesson_note is empty, remove any existing lesson-level note
+      await supabase
+        .from('notes')
+        .delete()
+        .eq('appointment_id', appointment_id)
+        .is('evaluation_criteria_id', null)
+    }
+
     // ✅ 6. AUDIT LOGGING
     logger.debug('✅ Criteria evaluations saved:', {
       userId: user.id,
       appointmentId: appointment_id,
-      evaluationCount: savedNotes?.length || 0
+      evaluationCount: savedNotes?.length || 0,
+      hasLessonNote: !!lessonNoteText
     })
 
     return {

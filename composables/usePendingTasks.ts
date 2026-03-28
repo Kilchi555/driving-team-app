@@ -285,7 +285,8 @@ const fetchPendingTasks = async (userId: string, userRole?: string) => {
 const saveCriteriaEvaluations = async (
   appointmentId: string,
   evaluations: CriteriaEvaluationData[], // Array von Kriterien-Bewertungen
-  currentUserId?: string
+  currentUserId?: string,
+  lessonNote?: string
 ) => {
   try {
     // Validierung der übergebenen Daten
@@ -320,7 +321,8 @@ const saveCriteriaEvaluations = async (
       method: 'POST',
       body: {
         appointment_id: appointmentId,
-        evaluations: notesToInsert
+        evaluations: notesToInsert,
+        lesson_note: lessonNote ?? ''
       }
     }) as any
 

@@ -2323,10 +2323,13 @@ const loadAppointments = async (skipCache = false) => {
 
     // ✅ Extract notes from API response (already loaded with appointments)
     const notes: any[] = []
+    // Also extract lesson-level staff notes (no criteria) per appointment
+    const lessonNotesMap: Record<string, string> = {}
+
     appointmentsData.forEach((apt: any) => {
       if (apt.notes && Array.isArray(apt.notes)) {
         apt.notes.forEach((note: any) => {
-          // Only include evaluations (notes with criteria + rating)
+          // Include structured evaluations (criteria + rating)
           if (note.evaluation_criteria_id && note.criteria_rating !== null) {
             notes.push({
               appointment_id: apt.id,
@@ -2336,11 +2339,15 @@ const loadAppointments = async (skipCache = false) => {
               created_at: note.created_at
             })
           }
+          // Also capture lesson-level staff notes (no criteria)
+          if (!note.evaluation_criteria_id && note.staff_note) {
+            lessonNotesMap[apt.id] = note.staff_note
+          }
         })
       }
     })
 
-    logger.debug('✅ Evaluations extracted from API:', notes.length)
+    logger.debug('✅ Evaluations extracted from API:', notes.length, '| Lesson notes:', Object.keys(lessonNotesMap).length)
 
     const criteriaIds = [...new Set(notes?.map(n => n.evaluation_criteria_id).filter(Boolean))]
     let criteriaMap: Record<string, any> = {}
@@ -2401,7 +2408,7 @@ const loadAppointments = async (skipCache = false) => {
     })
 
     // ✅ Group notes by appointment and keep only LATEST evaluation per criteria
-    // This ensures we show "new/changed" evaluations by appointment
+    // (in case the same criteria was evaluated multiple times for the same appointment)
     const latestEvaluationsMap: Record<string, Record<string, any>> = {}
 
     sortedNotes.forEach(note => {
@@ -2418,83 +2425,34 @@ const loadAppointments = async (skipCache = false) => {
       }
     })
 
-    // ✅ Now build the evaluations by appointment, filtering to new/changed ones
+    // ✅ Build evaluations per appointment — show ALL criteria for each lesson
     const notesByAppointment: Record<string, any[]> = {}
-    const appointmentIds_sorted = (appointmentsData || []).map((a: any) => a.id)
 
-    appointmentIds_sorted.forEach((aptId: any, index: any) => {
+    Object.entries(latestEvaluationsMap).forEach(([aptId, aptEvaluations]) => {
       notesByAppointment[aptId] = []
-      
-      const aptEvaluations = latestEvaluationsMap[aptId]
-      if (!aptEvaluations) return
-
-      // Get evaluations for this appointment
-      const currentEvals = Object.values(aptEvaluations)
-
-      // If not the first appointment, filter to show only new/changed evaluations
-      if (index > 0) {
-        const previousAptId = appointmentIds_sorted[index - 1]
-        const previousEvals = latestEvaluationsMap[previousAptId] || {}
-        const previousEvalsMap: Record<string, any> = {}
-
-        Object.entries(previousEvals).forEach(([criteriaId, evaluation]) => {
-          previousEvalsMap[criteriaId] = {
-            rating: (evaluation as any).criteria_rating,
-            note: (evaluation as any).criteria_note || ''
-          }
-        })
-
-        // Filter to show only evaluations that are new or have changed rating/note
-        const displayEvaluations = currentEvals.filter((currentEval: any) => {
-          const previousEval = previousEvalsMap[currentEval.evaluation_criteria_id]
-          // Show if: no previous eval (new) OR rating changed OR note changed
-          if (!previousEval) return true // NEW evaluation
-          
-          const ratingChanged = previousEval.rating !== currentEval.criteria_rating
-          const noteChanged = previousEval.note !== (currentEval.criteria_note || '')
-          
-          return ratingChanged || noteChanged // CHANGED evaluation
-        })
-
-        // Build the final evaluations list with only new/changed ones
-        displayEvaluations.forEach((note: any) => {
-          const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
-          if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
-            notesByAppointment[aptId].push({
-              criteria_id: note.evaluation_criteria_id,
-              criteria_name: criteriaDetails.name || 'Unbekannt',
-              criteria_short_code: null,
-              criteria_rating: note.criteria_rating,
-              criteria_note: note.criteria_note || '',
-              criteria_category_name: criteriaDetails.category_name || null
-            })
-          }
-        })
-      } else {
-        // First appointment: show all evaluations
-        currentEvals.forEach((note: any) => {
-          const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
-          if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
-            notesByAppointment[aptId].push({
-              criteria_id: note.evaluation_criteria_id,
-              criteria_name: criteriaDetails.name || 'Unbekannt',
-              criteria_short_code: null,
-              criteria_rating: note.criteria_rating,
-              criteria_note: note.criteria_note || '',
-              criteria_category_name: criteriaDetails.category_name || null
-            })
-          }
-        })
-      }
+      Object.values(aptEvaluations).forEach((note: any) => {
+        const criteriaDetails = criteriaMap[note.evaluation_criteria_id]
+        if (note.evaluation_criteria_id && note.criteria_rating !== null && criteriaDetails) {
+          notesByAppointment[aptId].push({
+            criteria_id: note.evaluation_criteria_id,
+            criteria_name: criteriaDetails.name || 'Unbekannt',
+            criteria_short_code: null,
+            criteria_rating: note.criteria_rating,
+            criteria_note: note.criteria_note || '',
+            criteria_category_name: criteriaDetails.category_name || null
+          })
+        }
+      })
     })
 
-    logger.debug('✅ Evaluations grouped by appointment with new/changed filter applied')
+    logger.debug('✅ Evaluations grouped by appointment')
 
     const lessonsWithEvaluations = (appointmentsData || []).map((appointment: any) => ({
       ...appointment,
       location_name: appointment.location?.name || null,
       location_details: appointment.location || null,
-      criteria_evaluations: notesByAppointment[appointment.id] || []
+      criteria_evaluations: notesByAppointment[appointment.id] || [],
+      staff_lesson_note: lessonNotesMap[appointment.id] || null
     }))
 
     // Debug: Zeige location_details für die ersten paar Termine
