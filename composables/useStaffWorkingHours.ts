@@ -17,8 +17,9 @@ export interface WorkingHour {
   id: string
   staff_id: string
   day_of_week: number // 1=Montag, 7=Sonntag
-  start_time: string // Format: "07:00"
-  end_time: string // Format: "18:00"
+  start_time: string  // Format: "07:00" — Zurich wall-clock
+  end_time: string    // Format: "18:00" — Zurich wall-clock
+  timezone: string    // IANA, e.g. 'Europe/Zurich'
   is_active: boolean
   created_at: string
   updated_at: string
@@ -113,7 +114,8 @@ export const useStaffWorkingHours = () => {
       workingHours.value = (data.data || []).map((wh: any) => ({
         ...wh,
         start_time: normalizeDbTimeToHHMM(String(wh.start_time)),
-        end_time: normalizeDbTimeToHHMM(String(wh.end_time))
+        end_time: normalizeDbTimeToHHMM(String(wh.end_time)),
+        timezone: wh.timezone || 'Europe/Zurich'
       }))
       logger.debug('✅ Working hours loaded:', workingHours.value.length)
       

@@ -109,7 +109,8 @@ export default defineEventHandler(async (event) => {
             start_time: body.startTime,
             end_time: body.endTime,
             is_active: true,
-            tenant_id: userData.tenant_id
+            tenant_id: userData.tenant_id,
+            timezone: 'Europe/Zurich'
           })
           .select()
 
@@ -192,7 +193,8 @@ export default defineEventHandler(async (event) => {
           start_time: block.start_time,
           end_time: block.end_time,
           is_active: true,
-          tenant_id: userData.tenant_id
+          tenant_id: userData.tenant_id,
+          timezone: 'Europe/Zurich'
         }))
 
       if (blocksToInsert.length > 0) {
