@@ -6,21 +6,8 @@
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <h3 class="text-lg font-bold">{{ selectedStudent.first_name }} {{ selectedStudent.last_name }}</h3>
-            <span v-if="!selectedStudent.auth_user_id" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-              Onboarding ausstehend
-            </span>
           </div>
           <div class="flex items-center gap-3">
-            <button
-              v-if="!selectedStudent.auth_user_id"
-              @click="openReminderModal"
-              class="flex items-center gap-1.5 px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-sm font-medium rounded-lg transition-colors"
-              title="Onboarding-Erinnerung per SMS senden"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              Erinnerung senden
-            </button>
             <button @click="closeModal" class="text-white hover:opacity-80 transition-opacity">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
