@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
     // Get the auth user id from the reset token user
     const { data: user, error: userError } = await serviceSupabase
       .from('users')
-      .select('auth_user_id, email')
+      .select('auth_user_id, email, first_name, last_name')
       .eq('id', tokenData.user_id)
       .single()
 
@@ -107,6 +107,11 @@ export default defineEventHandler(async (event) => {
         email: user.email,
         password: newPassword,
         email_confirm: true,
+        user_metadata: {
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          full_name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+        },
       })
 
       if (createAuthError || !newAuthData?.user?.id) {
@@ -167,6 +172,11 @@ export default defineEventHandler(async (event) => {
           email: user.email,
           password: newPassword,
           email_confirm: true,
+          user_metadata: {
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            full_name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+          },
         })
 
         if (createErr || !newAuthData?.user?.id) {
