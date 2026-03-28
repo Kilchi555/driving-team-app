@@ -167,6 +167,44 @@
             <p class="text-sm text-red-700">{{ loginError }}</p>
           </div>
 
+          <!-- Pending Account Banner -->
+          <div v-if="pendingAccount.show" class="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <div class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
+                <p class="text-sm text-amber-700 mt-1">
+                  Sie wurden von Ihrer Fahrschule erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                  Geben Sie Ihre Telefonnummer ein, um einen neuen Registrierungslink per SMS zu erhalten.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <input
+                v-model="pendingAccount.phone"
+                type="tel"
+                placeholder="+41 79 123 45 67"
+                class="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:border-transparent bg-white"
+                :style="{ '--tw-ring-color': '#d97706' }"
+                :disabled="pendingAccount.isLoading"
+              >
+              <button
+                type="button"
+                @click="handleResendOnboarding"
+                :disabled="pendingAccount.isLoading || !pendingAccount.phone"
+                class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ background: '#d97706' }"
+              >
+                <span v-if="pendingAccount.isLoading">Wird gesendet...</span>
+                <span v-else>SMS senden</span>
+              </button>
+            </div>
+            <p v-if="pendingAccount.error" class="text-sm text-red-600">{{ pendingAccount.error }}</p>
+            <p v-if="pendingAccount.success" class="text-sm text-green-700 font-medium">{{ pendingAccount.success }}</p>
+          </div>
+
           <!-- Login Button -->
           <button
             type="submit"
@@ -545,6 +583,15 @@ const showPassword = ref(false)
 const rateLimitCountdown = ref<number>(0)
 const rateLimitInterval = ref<NodeJS.Timeout | null>(null)
 
+// Pending-account state (user exists in users table but has no auth account yet)
+const pendingAccount = ref({
+  show: false,
+  phone: '',
+  isLoading: false,
+  error: null as string | null,
+  success: null as string | null
+})
+
 // Password Reset State
 const showForgotPasswordModal = ref(false)
 const showPasswordStrengthModal = ref(false)
@@ -783,6 +830,16 @@ const handleLogin = async () => {
     } else if (errorMsg?.includes('Account wurde temporär gesperrt') || errorMsg?.includes('temporarily locked')) {
       loginError.value = errorMsg
     } else if (
+      error?.data?.code === 'ACCOUNT_PENDING' ||
+      error?.statusCode === 403 ||
+      error?.data?.statusCode === 403
+    ) {
+      loginError.value = null
+      pendingAccount.value.show = true
+      pendingAccount.value.phone = ''
+      pendingAccount.value.error = null
+      pendingAccount.value.success = null
+    } else if (
       errorMsg?.includes('Invalid login credentials') || 
       errorMsg?.includes('falsch') || 
       errorMsg?.includes('invalid_credentials') ||
@@ -939,6 +996,19 @@ const handlePasswordReset = async () => {
     logger.debug('📧 Password reset response:', response)
 
     if (response?.success) {
+      // Pending user: no auth account — onboarding SMS was sent instead of reset link
+      if (response?.code === 'ACCOUNT_PENDING') {
+        resetSuccess.value = response.hasSms
+          ? 'Ihr Account ist noch nicht aktiviert. Wir haben Ihnen einen Registrierungslink per SMS gesendet.'
+          : 'Ihr Account ist noch nicht aktiviert. Bitte kontaktieren Sie Ihre Fahrschule für einen Registrierungslink.'
+        resetForm.value.email = ''
+        resetForm.value.phone = ''
+        setTimeout(() => {
+          showForgotPasswordModal.value = false
+          resetSuccess.value = null
+        }, 5000)
+        return
+      }
       // Check if there was a warning (sending failed)
       if (response?.warning) {
         resetError.value = response.message
@@ -978,6 +1048,35 @@ const handlePasswordReset = async () => {
     }
   } finally {
     resetIsLoading.value = false
+  }
+}
+
+const handleResendOnboarding = async () => {
+  let phone = pendingAccount.value.phone.replace(/\s/g, '')
+  if (!phone) {
+    pendingAccount.value.error = 'Bitte geben Sie Ihre Telefonnummer ein.'
+    return
+  }
+  if (phone.startsWith('0') && !phone.startsWith('00')) {
+    phone = '+41' + phone.substring(1)
+  } else if (!phone.startsWith('+')) {
+    phone = '+41' + phone
+  }
+
+  pendingAccount.value.isLoading = true
+  pendingAccount.value.error = null
+  pendingAccount.value.success = null
+
+  try {
+    await $fetch('/api/auth/resend-onboarding-by-phone', {
+      method: 'POST',
+      body: { phone, tenantId: currentTenant.value?.id || null }
+    })
+    pendingAccount.value.success = 'Registrierungslink wurde per SMS gesendet. Bitte prüfen Sie Ihre Nachrichten.'
+  } catch (err: any) {
+    pendingAccount.value.error = err?.data?.statusMessage || err?.message || 'Fehler beim Senden der SMS.'
+  } finally {
+    pendingAccount.value.isLoading = false
   }
 }
 

@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     // Check if email exists in this tenant
     const { data: existingUser, error } = await serviceSupabase
       .from('users')
-      .select('id, first_name, last_name')
+      .select('id, first_name, last_name, auth_user_id')
       .eq('email', email.toLowerCase().trim())
       .eq('tenant_id', tenantId)
       .single()
@@ -55,11 +55,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('Check email exists', 'Email:', email, 'Exists:', !!existingUser)
+    const isPending = !!(existingUser && !existingUser.auth_user_id)
+    logger.debug('Check email exists', 'Email:', email, 'Exists:', !!existingUser, 'Pending:', isPending)
 
     return {
       exists: !!existingUser,
-      message: existingUser ? 'E-Mail existiert bereits' : 'E-Mail ist verfügbar'
+      isPending,
+      message: isPending
+        ? 'E-Mail existiert, Account noch nicht aktiviert'
+        : existingUser
+          ? 'E-Mail existiert bereits'
+          : 'E-Mail ist verfügbar'
     }
   } catch (error: any) {
     console.error('❌ Check email error:', error)

@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
     if (method === 'email') {
       const { data, error } = await serviceSupabase
         .from('users')
-        .select('id, auth_user_id, email, phone, tenant_id')
+        .select('id, auth_user_id, email, phone, tenant_id, first_name, onboarding_token, onboarding_token_expires')
         .eq('email', contact.toLowerCase().trim())
         .eq('is_active', true)
         .single()
@@ -97,19 +97,19 @@ export default defineEventHandler(async (event) => {
     } else {
       const { data, error } = await serviceSupabase
         .from('users')
-        .select('id, auth_user_id, email, phone, tenant_id')
+        .select('id, auth_user_id, email, phone, tenant_id, first_name, onboarding_token, onboarding_token_expires')
         .eq('phone', contact)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1)
       
-      if (!error && data && data.length > 0) {
+      if (!phoneError && data && data.length > 0) {
         user = data[0]
         userError = null
         console.log('[PasswordReset] Phone lookup result: found', data.length, 'user(s)')
       } else {
-        userError = error
-        console.log('[PasswordReset] Phone lookup result:', { found: false, error: error?.code || error?.message || null })
+        userError = phoneError
+        console.log('[PasswordReset] Phone lookup result:', { found: false, error: phoneError?.code || phoneError?.message || null })
       }
     }
 
@@ -122,7 +122,7 @@ export default defineEventHandler(async (event) => {
       
       const { data: phoneUsers, error: phoneError } = await serviceSupabase
         .from('users')
-        .select('id, auth_user_id, email, phone, tenant_id')
+        .select('id, auth_user_id, email, phone, tenant_id, first_name, onboarding_token, onboarding_token_expires')
         .eq('phone', normalizedPhone)
         .eq('is_active', true)
         .limit(1)
@@ -145,6 +145,66 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('[PasswordReset] ✅ User found:', { userId: user.id, hasTenantId: !!user.tenant_id })
+    
+    // Pending user: no auth account exists — password reset is impossible.
+    // Instead: re-send the onboarding SMS so they can complete registration.
+    if (!user.auth_user_id) {
+      console.log('[PasswordReset] User has no auth_user_id (pending) — sending onboarding SMS instead of reset link')
+
+      if (user.phone && user.onboarding_token) {
+        try {
+          // Refresh token if expired
+          let token = user.onboarding_token
+          const expires = user.onboarding_token_expires ? new Date(user.onboarding_token_expires) : null
+          if (!expires || expires < new Date()) {
+            const { v4: uuidv4 } = await import('uuid')
+            token = uuidv4()
+            const newExpires = new Date()
+            newExpires.setDate(newExpires.getDate() + 30)
+            await serviceSupabase
+              .from('users')
+              .update({ onboarding_token: token, onboarding_token_expires: newExpires.toISOString() })
+              .eq('id', user.id)
+          }
+
+          // Resolve tenant for SMS
+          const resolvedTenantIdForSms = tenantId || user.tenant_id
+          let tenantNameForSms = 'Ihre Fahrschule'
+          let senderNameForSms = tenantNameForSms
+          let tenantSlugForSms = ''
+          if (resolvedTenantIdForSms) {
+            const { data: t } = await serviceSupabase
+              .from('tenants')
+              .select('name, slug, twilio_from_sender')
+              .eq('id', resolvedTenantIdForSms)
+              .single()
+            if (t) {
+              tenantNameForSms = t.name || tenantNameForSms
+              senderNameForSms = t.twilio_from_sender || t.name || tenantNameForSms
+              tenantSlugForSms = t.slug || ''
+            }
+          }
+
+          const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
+          const onboardingUrl = `${baseUrl}/onboarding/${token}`
+          const loginLink = tenantSlugForSms ? `https://simy.ch/${tenantSlugForSms}` : 'https://simy.ch/login'
+
+          const smsMessage = `Hallo ${user.first_name || ''},\n\nbitte vervollständige deine Registrierung:\n\n${onboardingUrl}\n\nNach der Registrierung kannst du dich hier anmelden:\n${loginLink}\n\nFreundliche Grüsse,\n${tenantNameForSms}`
+
+          await sendSMS({ to: user.phone, message: smsMessage, senderName: senderNameForSms })
+          console.log('[PasswordReset] ✅ Onboarding SMS sent to pending user')
+        } catch (smsErr: any) {
+          console.warn('[PasswordReset] ⚠️ Could not send onboarding SMS to pending user:', smsErr.message)
+        }
+      }
+
+      return {
+        success: true,
+        code: 'ACCOUNT_PENDING',
+        hasSms: !!(user.phone && user.onboarding_token),
+        message: 'Ihr Account ist noch nicht vollständig aktiviert.'
+      }
+    }
     
     // Load tenant info
     let tenantSlug: string | null = null
