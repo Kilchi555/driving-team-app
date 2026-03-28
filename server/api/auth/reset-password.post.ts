@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
     // Get the auth user id from the reset token user
     const { data: user, error: userError } = await serviceSupabase
       .from('users')
-      .select('auth_user_id')
+      .select('auth_user_id, email')
       .eq('id', tokenData.user_id)
       .single()
 
@@ -154,11 +154,40 @@ export default defineEventHandler(async (event) => {
     )
 
     if (updateError) {
-      console.error('❌ Password update error:', updateError)
-      throw createError({
-        statusCode: 400,
-        statusMessage: updateError.message || 'Fehler beim Aktualisieren des Passworts'
-      })
+      // Auth user was deleted from Supabase Auth but UUID still in users table.
+      // Re-create the auth user so the reset succeeds.
+      if ((updateError as any).code === 'user_not_found' || (updateError as any).status === 404) {
+        if (!user.email) {
+          throw createError({ statusCode: 400, statusMessage: 'Benutzer nicht gefunden — keine E-Mail hinterlegt' })
+        }
+
+        logger.debug('⚠️ auth_user_id exists but not in Supabase Auth — re-creating:', user.auth_user_id)
+
+        const { data: newAuthData, error: createErr } = await serviceSupabase.auth.admin.createUser({
+          email: user.email,
+          password: newPassword,
+          email_confirm: true,
+        })
+
+        if (createErr || !newAuthData?.user?.id) {
+          console.error('❌ Failed to re-create auth user:', createErr)
+          throw createError({ statusCode: 500, statusMessage: 'Fehler beim Zurücksetzen — bitte nochmals versuchen' })
+        }
+
+        // Update users table with the fresh auth_user_id
+        await serviceSupabase
+          .from('users')
+          .update({ auth_user_id: newAuthData.user.id })
+          .eq('id', tokenData.user_id)
+
+        logger.debug('✅ Auth user re-created and linked:', newAuthData.user.id)
+      } else {
+        console.error('❌ Password update error:', updateError)
+        throw createError({
+          statusCode: 400,
+          statusMessage: updateError.message || 'Fehler beim Aktualisieren des Passworts'
+        })
+      }
     }
 
     logger.debug('✅ Password updated successfully')
