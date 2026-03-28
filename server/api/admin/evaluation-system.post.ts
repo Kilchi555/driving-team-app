@@ -218,7 +218,7 @@ async function deleteCategory(body: AdminRequest, userId: string) {
 }
 
 async function saveCriterion(body: AdminRequest, userId: string) {
-  const { tenantId, id, name, description, max_points, category_id, display_order, is_theory, driving_categories } = body
+  const { tenantId, id, name, description, max_points, category_id, display_order, is_theory, driving_categories, always_visible } = body
 
   const { data: userProfile } = await supabase
     .from('users')
@@ -241,7 +241,8 @@ async function saveCriterion(body: AdminRequest, userId: string) {
         category_id,
         display_order,
         is_theory,
-        driving_categories
+        driving_categories,
+        always_visible: always_visible ?? false
       })
       .eq('id', id)
       .eq('tenant_id', tenantId)
@@ -263,6 +264,7 @@ async function saveCriterion(body: AdminRequest, userId: string) {
         display_order,
         is_theory: is_theory || false,
         driving_categories,
+        always_visible: always_visible ?? false,
         is_active: true
       })
       .select()

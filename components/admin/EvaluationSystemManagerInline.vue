@@ -517,6 +517,21 @@
                 </p>
               </div>
 
+              <!-- Immer im Lernbereich anzeigen -->
+              <div class="flex items-start gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="always_visible"
+                  v-model="criteriaForm.always_visible"
+                  class="mt-0.5 w-4 h-4 rounded border-2 border-emerald-300 focus:ring-emerald-500"
+                  style="accent-color: #10b981;"
+                />
+                <label for="always_visible" class="cursor-pointer">
+                  <span class="text-sm font-medium text-emerald-800">Immer im Lernbereich anzeigen</span>
+                  <p class="text-xs text-emerald-600 mt-0.5">Dieses Thema wird Schülern im Lernbereich angezeigt, auch wenn noch keine Bewertung vorhanden ist.</p>
+                </label>
+              </div>
+
             </div>
 
             <div class="flex justify-end space-x-3 mt-6">
@@ -1149,7 +1164,8 @@ const criteriaForm = ref({
   name: '',
   description: '',
   display_order: 0,
-  driving_categories: [] as string[]
+  driving_categories: [] as string[],
+  always_visible: false
 })
 
 const scaleForm = ref({
@@ -2131,7 +2147,8 @@ const editCriteria = (criteria: Criteria) => {
     name: criteria.name,
     description: criteria.description || '',
     display_order: criteria.display_order,
-    driving_categories: criteria.driving_categories || []
+    driving_categories: criteria.driving_categories || [],
+    always_visible: (criteria as any).always_visible ?? false
   }
 }
 
@@ -2143,7 +2160,8 @@ const closeCriteriaModal = () => {
     name: '',
     description: '',
     display_order: 0,
-    driving_categories: []
+    driving_categories: [],
+    always_visible: false
   }
 }
 
@@ -2168,6 +2186,7 @@ const saveCriteria = async () => {
       description: criteriaForm.value.description,
       display_order: criteriaForm.value.display_order,
       driving_categories: criteriaForm.value.driving_categories || [],
+      always_visible: criteriaForm.value.always_visible ?? false,
       tenant_id: userProfile.tenant_id
     }
 

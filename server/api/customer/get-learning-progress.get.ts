@@ -199,6 +199,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
         driving_categories,
         category_id,
         display_order,
+        always_visible,
         evaluation_categories!inner(id, name, display_order, color, tenant_id)
       `)
       .eq('evaluation_categories.tenant_id', tenantId)
