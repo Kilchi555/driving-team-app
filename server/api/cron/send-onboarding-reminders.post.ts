@@ -21,10 +21,10 @@ const REMINDER_DAYS = [3, 7, 14]
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
-  // ── Security: verify CRON_SECRET ────────────────────────────
+  // ── Security: verify CRON_SECRET (fail closed) ────────────────────────────
   const authHeader = getHeader(event, 'authorization')
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     logger.warn('⚠️ Unauthorized cron attempt on send-onboarding-reminders')
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
