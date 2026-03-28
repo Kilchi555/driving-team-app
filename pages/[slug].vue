@@ -476,7 +476,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
-import { useTenant } from '~/composables/useTenant'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
@@ -566,7 +565,7 @@ const {
 const authStore = useAuthStore()
 const { login, logout, isLoggedIn, loading } = authStore
 const { showError, showSuccess } = useUIStore()
-const { currentTenant, loadTenant: loadTenantComposable } = useTenant()
+
 const mfaFlow = useMFAFlow()
 const supabase = getSupabase()
 
@@ -655,7 +654,7 @@ const handleLogin = async () => {
       body: {
         email: loginForm.value.email.toLowerCase().trim(),
         password: loginForm.value.password,
-        tenantId: currentTenant.value?.id,  // ← Backend validates tenant membership
+        tenantId: currentTenantBranding.value?.id,  // ← Backend validates tenant membership
         rememberMe: loginForm.value.rememberMe
       }
     }) as any
@@ -944,8 +943,8 @@ const handleLogout = async () => {
     const slug = route.params.slug
     if (slug) {
       router.push(`/${slug}`)
-    } else if (currentTenant.value?.slug) {
-      router.push(`/${currentTenant.value.slug}`)
+    } else if (currentTenantBranding.value?.slug) {
+      router.push(`/${currentTenantBranding.value.slug}`)
     } else {
       router.push('/')
     }
@@ -989,7 +988,7 @@ const handlePasswordReset = async () => {
       body: {
         contact,
         method: resetContactMethod.value,
-        tenantId: currentTenant.value?.id || null
+        tenantId: currentTenantBranding.value?.id || null
       }
     }) as any
 
@@ -1070,7 +1069,7 @@ const handleResendOnboarding = async () => {
   try {
     await $fetch('/api/auth/resend-onboarding-by-phone', {
       method: 'POST',
-      body: { phone, tenantId: currentTenant.value?.id || null }
+      body: { phone, tenantId: currentTenantBranding.value?.id || null }
     })
     pendingAccount.value.success = 'Registrierungslink wurde per SMS gesendet. Bitte prüfen Sie Ihre Nachrichten.'
   } catch (err: any) {
@@ -1179,14 +1178,7 @@ onMounted(async () => {
     console.error('Failed to load tenant branding:', error)
   }
   
-  // Load currentTenant from URL slug so it's available for login
-  try {
-    await loadTenantComposable(tenantSlug.value)
-    logger.debug('✅ Loaded currentTenant from URL slug:', tenantSlug.value)
-  } catch (err: any) {
-    logger.debug('⚠️ Failed to load currentTenant:', err.message)
-    // Continue anyway - login will fail with proper error message
-  }
+  // Load currentTenant from URL slug so it's available for login is handled by useTenantBranding above.
   
   // Session-Check läuft still im Hintergrund - Formular ist bereits sichtbar
   try {
