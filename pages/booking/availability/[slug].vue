@@ -3842,6 +3842,45 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
 }
 
 // Lifecycle
+// Combined booking-page initializer: resolves tenant + categories in ONE API roundtrip.
+// Caches the result in Nuxt's useState so navigating back within the same session skips the fetch.
+const loadBookingInit = async (slug: string) => {
+  const cacheKey = `booking-init-${slug}`
+  const cached = useState<any>(cacheKey)
+
+  if (cached.value) {
+    // Reuse data from a previous fetch (e.g. navigated back to this page)
+    currentTenant.value = cached.value.tenant
+    categories.value = cached.value.categories || []
+    locationsCount.value = cached.value.locationsCount ?? 0
+    logger.debug('📦 Booking init from cache:', slug)
+    return
+  }
+
+  try {
+    const response = await $fetch<{ success: boolean; data: any }>('/api/booking/get-booking-init', {
+      query: { slug },
+    })
+
+    if (!response?.success) {
+      console.error('❌ Booking init failed for slug:', slug)
+      return
+    }
+
+    const { tenant, categories: cats, locationsCount: locCount } = response.data
+    currentTenant.value = tenant
+    categories.value = cats || []
+    locationsCount.value = locCount ?? 0
+
+    // Persist in Nuxt state so revisiting the page skips the fetch
+    cached.value = response.data
+
+    logger.debug('✅ Booking init loaded:', tenant?.name, '| categories:', cats?.length)
+  } catch (err) {
+    console.error('❌ Error loading booking init:', err)
+  }
+}
+
 onMounted(async () => {
   logger.debug('🎯 onMounted called!')
   try {
@@ -3875,20 +3914,20 @@ onMounted(async () => {
       logger.debug('⚠️ No referrer parameter found')
     }
     
-    // Lade Features und Tenant parallel (unabhängig voneinander)
     const slug = route.params.slug as string
-    await Promise.all([
-      loadFeatures(),
-      slug ? setTenantFromSlug(slug) : Promise.resolve()
-    ])
-    
+
+    // Fire-and-forget: features always default to true for guests, no need to block render
+    loadFeatures().catch(() => {})
+
+    // Single combined call: tenant + categories + locationsCount (no sequential waterfall)
+    if (slug) {
+      await loadBookingInit(slug)
+    }
+
     // Nur Tenant laden wenn Online-Buchung aktiviert ist
     if (isOnlineBookingEnabled.value) {
       if (slug) {
-        logger.debug('✅ Tenant set from slug:', slug)
-        
-        // Load categories for all visitors (not just prefill)
-        await loadCategories()
+        logger.debug('✅ Tenant and categories loaded from init:', slug)
         logger.debug('✅ Categories loaded:', categories.value.length)
         
         // Check for pre-fill parameters (from returning customer)
