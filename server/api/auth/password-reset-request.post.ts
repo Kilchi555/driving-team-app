@@ -103,13 +103,13 @@ export default defineEventHandler(async (event) => {
         .order('created_at', { ascending: false })
         .limit(1)
       
-      if (!phoneError && data && data.length > 0) {
+      if (!error && data && data.length > 0) {
         user = data[0]
         userError = null
         console.log('[PasswordReset] Phone lookup result: found', data.length, 'user(s)')
       } else {
-        userError = phoneError
-        console.log('[PasswordReset] Phone lookup result:', { found: false, error: phoneError?.code || phoneError?.message || null })
+        userError = error
+        console.log('[PasswordReset] Phone lookup result:', { found: false, error: error?.code || error?.message || null })
       }
     }
 
@@ -206,10 +206,12 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Load tenant info
     let tenantSlug: string | null = null
     let tenantName: string | null = null
     let tenantFromSender: string | null = null
+    let tenantPrimaryColor = '#2563eb'
+    let tenantLogoUrl: string | null = null
+    let tenantContactEmail: string | null = null
 
     // Use tenantId from request if provided, otherwise fall back to user's tenant_id
     const resolvedTenantId = tenantId || user.tenant_id
@@ -217,7 +219,7 @@ export default defineEventHandler(async (event) => {
     if (resolvedTenantId) {
       const { data: tenant, error: tenantError } = await serviceSupabase
         .from('tenants')
-        .select('slug, name, twilio_from_sender, contact_email')
+        .select('slug, name, twilio_from_sender, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url')
         .eq('id', resolvedTenantId)
         .single()
       
@@ -225,6 +227,9 @@ export default defineEventHandler(async (event) => {
         tenantSlug = tenant.slug
         tenantName = tenant.name
         tenantFromSender = tenant.twilio_from_sender || tenant.name
+        tenantPrimaryColor = tenant.primary_color || tenantPrimaryColor
+        tenantLogoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
+        tenantContactEmail = tenant.contact_email || null
         console.log('[PasswordReset] Tenant resolved:', { slug: tenantSlug, name: tenantName })
       } else {
         console.warn('[PasswordReset] ⚠️ Could not load tenant:', tenantError?.message || 'Not found', 'tenantId:', resolvedTenantId)
@@ -302,28 +307,98 @@ export default defineEventHandler(async (event) => {
         const resend = new Resend(resendApiKey)
 
         const displayName = tenantName || 'Driving Team'
+        const greeting = user.first_name ? `Hallo ${user.first_name}` : `Hallo`
+        const logoImgTag = tenantLogoUrl
+          ? `<img src="${tenantLogoUrl}" alt="${displayName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto;">`
+          : `<div style="width:40px;height:40px;border-radius:10px;background:${tenantPrimaryColor};color:white;font-size:20px;font-weight:700;line-height:40px;text-align:center;margin:0 auto;">${displayName.charAt(0).toUpperCase()}</div>`
 
-        const emailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1f2937;">Passwort zurücksetzen</h2>
-            <p>Hallo ${user.email?.split('@')[0]},</p>
-            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts bei <strong>${displayName}</strong> gestellt.</p>
-            <p>Klicken Sie auf den Button unten, um Ihr Passwort zu ändern:</p>
-            <p style="margin: 24px 0;">
-              <a href="${resetLink}" 
-                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-                Passwort zurücksetzen
-              </a>
+        const emailHtml = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f4f6;">
+    <tr><td align="center" style="padding:32px 10px;">
+
+      <!-- Logo above card -->
+      <div style="margin-bottom:20px;text-align:center;">
+        ${logoImgTag}
+      </div>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);">
+
+        <!-- Colored header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,${tenantPrimaryColor} 0%,${tenantPrimaryColor}cc 100%);padding:32px 32px 28px;text-align:center;">
+            <div style="width:56px;height:56px;background:rgba(255,255,255,0.2);border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
+              <!-- Lock icon -->
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:white;">Passwort zurücksetzen</h1>
+            <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85);">${displayName}</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 8px;font-size:16px;color:#111827;">${greeting},</p>
+            <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+              du hast eine Anfrage zum Zurücksetzen deines Passworts gestellt. Klicke auf den Button unten, um ein neues Passwort zu wählen.
             </p>
-            <p style="color: #6b7280; font-size: 14px;">Dieser Link ist 1 Stunde lang gültig.</p>
-            <p style="color: #6b7280; font-size: 14px;">Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail.</p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-            <p style="color: #9ca3af; font-size: 12px;">
-              Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br>
-              <a href="${resetLink}" style="color: #2563eb; word-break: break-all;">${resetLink}</a>
+
+            <!-- CTA Button -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;">
+              <tr>
+                <td align="center">
+                  <a href="${resetLink}"
+                     style="display:inline-block;padding:14px 36px;background:${tenantPrimaryColor};color:white;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.2px;">
+                    🔐 Passwort zurücksetzen
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Info box -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;border-left:4px solid ${tenantPrimaryColor};">
+              <tr><td style="padding:14px 16px;">
+                <p style="margin:0;font-size:13px;color:#374151;">
+                  ⏱ Dieser Link ist <strong>1 Stunde gültig</strong>. Danach musst du einen neuen Link anfordern.
+                </p>
+              </td></tr>
+            </table>
+
+            <!-- Security note -->
+            <p style="margin:0 0 24px;font-size:13px;color:#6b7280;">
+              Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren. Dein Passwort bleibt unverändert.
             </p>
-          </div>
-        `
+
+            <!-- Fallback link -->
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">
+              Button funktioniert nicht? Kopiere diesen Link in deinen Browser:<br>
+              <a href="${resetLink}" style="color:${tenantPrimaryColor};word-break:break-all;font-size:12px;">${resetLink}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f3f4f6;padding:16px 32px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">
+              ${displayName}${tenantContactEmail ? ` · <a href="mailto:${tenantContactEmail}" style="color:#9ca3af;">${tenantContactEmail}</a>` : ''}
+            </p>
+            <p style="margin:4px 0 0;font-size:11px;color:#d1d5db;">Diese E-Mail wurde automatisch generiert.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
         
         const { data: emailResult, error: emailError } = await resend.emails.send({
           from: `${displayName} <${fromEmail}>`,
