@@ -246,47 +246,6 @@ export default defineEventHandler(async (event) => {
       send_at:         now.toISOString(),
       context_data:    contextData,
     })
-
-    // ── Admin notification ────────────────────────────────────
-    if (tenant?.contact_email) {
-      const oldestDays = Math.round((now.getTime() - Math.min(...userPayments.map((p: any) => new Date(appointmentMap.get(p.appointment_id)?.start_time || now).getTime()))) / (1000 * 60 * 60 * 24))
-
-      toInsert.push({
-        tenant_id:       userPayments[0].tenant_id,
-        channel:         'email',
-        recipient_email: tenant.contact_email,
-        subject:         `⚠️ Überfällig seit ${oldestDays} Tagen: ${user.first_name} ${user.last_name} — CHF ${totalCHF}`,
-        body:            `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6;padding:32px 16px">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto">
-    <tr><td style="background:#fff;border-radius:12px;padding:28px 32px;box-shadow:0 4px 16px rgba(0,0,0,0.10)">
-      <h2 style="margin:0 0 16px;color:#dc2626">⚠️ Zahlung seit ${oldestDays} Tagen überfällig</h2>
-      <p style="color:#374151;font-size:15px">
-        <strong>${user.first_name} ${user.last_name}</strong><br>
-        ${user.email}${user.phone ? '<br>' + user.phone : ''}<br><br>
-        Offener Betrag: <strong style="color:#dc2626">CHF ${totalCHF}</strong>
-      </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fecaca;border-radius:8px;overflow:hidden;margin:16px 0">
-        <thead><tr style="background:#fef2f2">
-          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Termin</th>
-          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Überfällig</th>
-          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Betrag</th>
-        </tr></thead>
-        <tbody>${paymentRows}</tbody>
-        <tfoot><tr style="background:#fef2f2">
-          <td colspan="2" style="padding:10px 12px;font-weight:700;color:#111827">Total</td>
-          <td style="padding:10px 12px;font-weight:700;color:#dc2626">CHF ${totalCHF}</td>
-        </tr></tfoot>
-      </table>
-      <p style="color:#6b7280;font-size:13px">Diese Benachrichtigung wird wöchentlich wiederholt solange die Zahlung offen ist.</p>
-    </td></tr>
-  </table>
-</body></html>`,
-        status:       'pending',
-        send_at:      now.toISOString(),
-        context_data: { ...contextData, stage: 'payment_overdue_reminder_admin' },
-      })
-    }
   }
 
   if (toInsert.length === 0) {
@@ -304,17 +263,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Failed to queue overdue reminders' })
   }
 
-  const studentEmails = toInsert.filter((m: any) => m.context_data.stage === 'payment_overdue_reminder').length
-  const adminEmails   = toInsert.filter((m: any) => m.context_data.stage === 'payment_overdue_reminder_admin').length
-
-  logger.debug(`✅ send-overdue-payment-reminders: ${studentEmails} student + ${adminEmails} admin in ${Date.now() - startTime}ms`)
+  logger.debug(`✅ send-overdue-payment-reminders: ${toInsert.length} emails queued in ${Date.now() - startTime}ms`)
 
   return {
     success:        true,
     queued:         toInsert.length,
-    student_emails: studentEmails,
-    admin_emails:   adminEmails,
-    skipped:        paymentsByUser.size - studentEmails,
+    skipped:        paymentsByUser.size - toInsert.length,
     duration_ms:    Date.now() - startTime,
   }
 })
