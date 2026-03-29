@@ -16,6 +16,11 @@ import { getHeader, getQuery } from 'h3'
 const OVERDUE_DAYS   = 15   // appointment must be at least this many days in the past
 const RESEND_DAYS    = 7    // re-send at most once per week
 
+// Swiss rounding: round to nearest 0.05 CHF
+function chf(rappen: number): string {
+  return (Math.round(Math.round(rappen) / 5) * 5 / 100).toFixed(2)
+}
+
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
@@ -144,7 +149,7 @@ export default defineEventHandler(async (event) => {
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 
     const totalRappen = userPayments.reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)
-    const totalCHF    = (totalRappen / 100).toFixed(2)
+    const totalCHF    = chf(totalRappen)
 
     const paymentRows = userPayments.map((p: any) => {
       const apt = appointmentMap.get(p.appointment_id)
@@ -152,7 +157,7 @@ export default defineEventHandler(async (event) => {
       const d       = new Date(apt.start_time)
       const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })
       const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-      const amtCHF  = ((p.total_amount_rappen || 0) / 100).toFixed(2)
+      const amtCHF  = chf(p.total_amount_rappen || 0)
       const daysAgo = Math.round((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
       return `
         <tr>
