@@ -140,7 +140,7 @@ export default defineEventHandler(async (event) => {
   }
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
@@ -177,9 +177,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenant = tenantMap.get(apt.tenant_id)
-    const tenantName  = tenant?.name || 'Ihre Fahrschule'
+    const tenantName   = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
-    const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const loginLink    = tenant?.slug ? `https://simy.ch/${tenant.slug}` : 'https://simy.ch'
 
     // Date/time formatting
     const aptDate = new Date(apt.start_time)
@@ -206,7 +207,7 @@ export default defineEventHandler(async (event) => {
 
     // Payment section — always shown if a payment exists
     const payment = paymentMap.get(apt.id) || null
-    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor) : ''
+    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink) : ''
 
     const html = buildEmailHtml({
       firstName:    user.first_name || 'Hallo',
@@ -268,10 +269,9 @@ export default defineEventHandler(async (event) => {
 
 // ── Email builders ─────────────────────────────────────────────
 
-function buildPaymentSection(payment: any, primaryColor: string): string {
+function buildPaymentSection(payment: any, primaryColor: string, loginLink: string): string {
   const amountCHF = (payment.total_amount_rappen / 100).toFixed(2)
   const methodLabel = PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method
-  const loginLink = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
 
   const isPending = ['pending', 'failed'].includes(payment.payment_status)
   const isPaid    = ['completed', 'paid'].includes(payment.payment_status)
