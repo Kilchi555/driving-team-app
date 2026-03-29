@@ -1,27 +1,27 @@
-// server/api/cron/send-onboarding-reminders.post.ts
+// server/api/cron/send-onboarding-reminders.get.ts
 // ============================================================
-// Queues onboarding reminder SMS for pending students.
+// Queues onboarding reminder EMAILS for pending students.
 //
-// Schedule: daily (e.g. 09:00 Zurich time)
-// Reminders sent at day 3, 7, and 14 after student creation.
+// Schedule: daily at 08:00 UTC
+// Reminders sent at day 3, 7, and 14 after creation.
 //
-// Only applies to students created on or after CUTOFF_DATE —
-// existing pending students before this date are excluded.
+// Strategy:
+//  - Primary channel: EMAIL (free, branded)
+//  - Fallback: SMS if no email on record
+//
+// Only applies to students created on or after CUTOFF_DATE.
 // ============================================================
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { getHeader } from 'h3'
 
-// Only send reminders to students onboarded on or after this date
 const CUTOFF_DATE = '2026-03-27T00:00:00.000Z'
-
-// Reminder schedule: days after creation
 const REMINDER_DAYS = [3, 7, 14]
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
-  // ── Security: verify CRON_SECRET (fail closed) ────────────────────────────
   const authHeader = getHeader(event, 'authorization')
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
@@ -34,13 +34,13 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('📅 send-onboarding-reminders: starting run at', now.toISOString())
 
-  // ── 1. Load all pending students created after CUTOFF_DATE ──
+  // ── 1. Load all pending students ────────────────────────────
   const { data: students, error: studentsError } = await supabase
     .from('users')
-    .select('id, first_name, phone, created_at, onboarding_token, onboarding_token_expires, tenant_id')
+    .select('id, first_name, email, phone, created_at, onboarding_token, onboarding_token_expires, tenant_id')
     .eq('role', 'client')
-    .is('auth_user_id', null)          // pending only
-    .not('onboarding_token', 'is', null) // must have a token
+    .is('auth_user_id', null)
+    .not('onboarding_token', 'is', null)
     .gte('created_at', CUTOFF_DATE)
     .eq('is_active', true)
 
@@ -56,18 +56,17 @@ export default defineEventHandler(async (event) => {
 
   logger.debug(`📋 Found ${students.length} eligible pending student(s)`)
 
-  // ── 2. Load tenant data in one query ────────────────────────
-  const tenantIds = [...new Set(students.map(s => s.tenant_id))]
+  // ── 2. Load tenant data ──────────────────────────────────────
+  const tenantIds = [...new Set(students.map((s: any) => s.tenant_id))]
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, twilio_from_sender')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, twilio_from_sender')
     .in('id', tenantIds)
 
-  const tenantMap = new Map((tenants || []).map(t => [t.id, t]))
+  const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
 
-  // ── 3. Check which reminders are already queued ──────────────
-  // Fetch all existing onboarding_reminder entries for these students
-  const studentIds = students.map(s => s.id)
+  // ── 3. Check which reminders are already queued ─────────────
+  const studentIds = students.map((s: any) => s.id)
   const { data: existingQueue } = await supabase
     .from('outbound_messages_queue')
     .select('context_data')
@@ -75,7 +74,6 @@ export default defineEventHandler(async (event) => {
     .in('context_data->>student_id' as any, studentIds)
     .in('status', ['pending', 'sending', 'sent'])
 
-  // Build a set of "studentId:reminderDay" already queued
   const alreadyQueued = new Set<string>()
   ;(existingQueue || []).forEach((row: any) => {
     const ctx = row.context_data
@@ -84,14 +82,10 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  // ── 4. Determine which reminders to queue today ──────────────
+  // ── 4. Build queue entries ───────────────────────────────────
   const toInsert: any[] = []
 
-  for (const student of students) {
-    // Skip students without a phone number
-    if (!student.phone) continue
-
-    // Skip students whose token has already expired
+  for (const student of students as any[]) {
     if (student.onboarding_token_expires) {
       const expires = new Date(student.onboarding_token_expires)
       if (expires < now) continue
@@ -103,12 +97,12 @@ export default defineEventHandler(async (event) => {
     const tenant = tenantMap.get(student.tenant_id)
     const tenantName = tenant?.name || 'Ihre Fahrschule'
     const tenantSlug = tenant?.slug || ''
-    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
-    const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
-    const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
+    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch'
+    const onboardingUrl = `https://simy.ch/onboarding/${student.onboarding_token}`
+    const primaryColor = tenant?.primary_color || '#2563eb'
+    const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 
     for (const reminderDay of REMINDER_DAYS) {
-      // Window: [reminderDay, reminderDay + 1) — exactly one day window per reminder
       if (daysSinceCreation < reminderDay || daysSinceCreation >= reminderDay + 1) continue
 
       const key = `${student.id}:${reminderDay}`
@@ -118,39 +112,101 @@ export default defineEventHandler(async (event) => {
       }
 
       const reminderNumber = REMINDER_DAYS.indexOf(reminderDay) + 1
-      const smsBody = reminderNumber === 1
-        ? `Hallo ${student.first_name}, bitte vervollständige deine Registrierung bei ${tenantName}:\n\n${onboardingUrl}\n\nNach der Registrierung: ${loginLink}`
-        : reminderNumber === 2
-          ? `Hallo ${student.first_name}, du hast deine Registrierung bei ${tenantName} noch nicht abgeschlossen. Bitte registriere dich noch heute:\n\n${onboardingUrl}`
-          : `Hallo ${student.first_name}, letzte Erinnerung: dein Registrierungslink für ${tenantName} läuft bald ab:\n\n${onboardingUrl}`
+      const contextData = {
+        stage: 'onboarding_reminder',
+        student_id: student.id,
+        reminder_day: reminderDay,
+        reminder_number: reminderNumber,
+        tenant_name: tenant?.twilio_from_sender || tenantName,
+      }
 
-      toInsert.push({
-        tenant_id: student.tenant_id,
-        channel: 'sms',
-        recipient_phone: student.phone,
-        body: smsBody,
-        status: 'pending',
-        send_at: now.toISOString(),
-        context_data: {
-          stage: 'onboarding_reminder',
-          student_id: student.id,
-          reminder_day: reminderDay,
-          reminder_number: reminderNumber,
-          tenant_name: tenant?.twilio_from_sender || tenantName
-        }
-      })
+      if (student.email) {
+        // ── EMAIL (primary) ──────────────────────────────────
+        const subject = reminderNumber === 1
+          ? `Deine Registrierung bei ${tenantName} wartet auf dich`
+          : reminderNumber === 2
+            ? `Noch nicht registriert? Dein Link ist noch aktiv`
+            : `Letzte Erinnerung: Dein Registrierungslink läuft bald ab`
+
+        const bodyText = reminderNumber === 1
+          ? `Hallo ${student.first_name},<br><br>du hast dich für die <strong>${tenantName}</strong> interessiert — aber deine Registrierung ist noch nicht abgeschlossen.<br><br>Klicke auf den Button um fortzufahren:`
+          : reminderNumber === 2
+            ? `Hallo ${student.first_name},<br><br>dein Registrierungslink ist noch aktiv. Schliesse deine Anmeldung jetzt ab — es dauert nur 2 Minuten:`
+            : `Hallo ${student.first_name},<br><br>das ist deine letzte Erinnerung. Dein persönlicher Registrierungslink läuft bald ab:`
+
+        const logoHtml = logoUrl
+          ? `<div style="margin-bottom:20px;text-align:center"><img src="${logoUrl}" alt="${tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
+          : `<div style="margin-bottom:20px;text-align:center"><div style="display:inline-block;width:40px;height:40px;border-radius:10px;background:${primaryColor};color:white;font-size:20px;font-weight:700;line-height:40px;text-align:center;margin:0 auto">${tenantName.charAt(0).toUpperCase()}</div></div>`
+
+        const emailBody = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px">
+        <tr><td>${logoHtml}</td></tr>
+        <tr><td style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10)">
+          <div style="background:${primaryColor};padding:28px 32px;text-align:center">
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff">Registrierung abschliessen</h1>
+            <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${tenantName}</p>
+          </div>
+          <div style="padding:28px 32px">
+            <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6">${bodyText}</p>
+            <div style="text-align:center;margin:24px 0">
+              <a href="${onboardingUrl}" style="display:inline-block;padding:14px 32px;background:${primaryColor};color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
+                Jetzt registrieren →
+              </a>
+            </div>
+            <p style="margin:24px 0 0;font-size:13px;color:#9ca3af">
+              Nach der Registrierung kannst du dich unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> anmelden.<br>
+              Der Link ist noch ${30 - (reminderDay - 1)} Tage gültig.
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="margin:0;font-size:12px;color:#9ca3af">${tenantName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></p>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+
+        toInsert.push({
+          tenant_id:       student.tenant_id,
+          channel:         'email',
+          recipient_email: student.email,
+          subject,
+          body:            emailBody,
+          status:          'pending',
+          send_at:         now.toISOString(),
+          context_data:    contextData,
+        })
+      } else if (student.phone) {
+        // ── SMS fallback (no email) ──────────────────────────
+        const smsBody = reminderNumber === 1
+          ? `Hallo ${student.first_name}, bitte vervollständige deine Registrierung bei ${tenantName}:\n\n${onboardingUrl}\n\nNach der Registrierung: ${loginLink}`
+          : reminderNumber === 2
+            ? `Hallo ${student.first_name}, du hast deine Registrierung bei ${tenantName} noch nicht abgeschlossen:\n\n${onboardingUrl}`
+            : `Hallo ${student.first_name}, letzte Erinnerung – dein Link läuft bald ab:\n\n${onboardingUrl}`
+
+        toInsert.push({
+          tenant_id:       student.tenant_id,
+          channel:         'sms',
+          recipient_phone: student.phone,
+          body:            smsBody,
+          status:          'pending',
+          send_at:         now.toISOString(),
+          context_data:    contextData,
+        })
+      }
     }
   }
 
   if (toInsert.length === 0) {
     logger.debug('ℹ️ No new reminders to queue today')
-    return {
-      success: true,
-      queued: 0,
-      skipped: students.length,
-      duration_ms: Date.now() - startTime,
-      message: 'No reminders due today'
-    }
+    return { success: true, queued: 0, skipped: students.length, duration_ms: Date.now() - startTime, message: 'No reminders due today' }
   }
 
   // ── 5. Insert into queue ─────────────────────────────────────
@@ -163,13 +219,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Failed to queue reminder messages' })
   }
 
-  logger.debug(`✅ send-onboarding-reminders: queued ${toInsert.length} SMS in ${Date.now() - startTime}ms`)
+  const emailCount = toInsert.filter((m: any) => m.channel === 'email').length
+  const smsCount   = toInsert.filter((m: any) => m.channel === 'sms').length
+
+  logger.debug(`✅ send-onboarding-reminders: queued ${emailCount} emails + ${smsCount} SMS in ${Date.now() - startTime}ms`)
 
   return {
-    success: true,
-    queued: toInsert.length,
-    skipped: students.length - toInsert.length,
-    duration_ms: Date.now() - startTime,
-    message: `Queued ${toInsert.length} onboarding reminder SMS`
+    success:      true,
+    queued:       toInsert.length,
+    email_count:  emailCount,
+    sms_count:    smsCount,
+    skipped:      students.length - toInsert.length,
+    duration_ms:  Date.now() - startTime,
   }
 })
