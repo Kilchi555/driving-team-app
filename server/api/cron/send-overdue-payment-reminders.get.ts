@@ -182,7 +182,7 @@ export default defineEventHandler(async (event) => {
           <div style="padding:28px 32px">
             <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6">
               Hallo ${user.first_name},<br><br>
-              trotz mehrerer Erinnerungen sind folgende Zahlungen bei <strong>${tenantName}</strong> noch ausstehend.
+              folgende Zahlungen bei <strong>${tenantName}</strong> sind noch ausstehend.
               Bitte begleiche den offenen Betrag so bald wie möglich:
             </p>
 
