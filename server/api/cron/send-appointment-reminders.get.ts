@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
     aptQuery = aptQuery
       .gte('start_time', windowStart.toISOString())
       .lt('start_time', windowEnd.toISOString())
-      .eq('status', 'scheduled')
+      .neq('status', 'cancelled')
   }
 
   const { data: appointments, error: aptsError } = await aptQuery
