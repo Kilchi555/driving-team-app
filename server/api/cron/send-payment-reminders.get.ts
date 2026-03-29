@@ -275,55 +275,6 @@ export default defineEventHandler(async (event) => {
           tenant_name:    tenantName,
         },
       })
-
-      // ── Day 14: also notify tenant admin ──────────────────
-      if (reminderDay === 14 && tenant?.contact_email) {
-        const adminBody = `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6;padding:32px 16px">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto">
-    <tr><td style="background:#fff;border-radius:12px;padding:28px 32px;box-shadow:0 4px 16px rgba(0,0,0,0.10)">
-      <h2 style="margin:0 0 16px;color:#dc2626">⚠️ Unbezahlte Rechnung nach 14 Tagen</h2>
-      <p style="color:#374151;font-size:15px">
-        <strong>${user.first_name} ${user.last_name}</strong> (${user.email}${user.phone ? ', ' + user.phone : ''})<br>
-        hat nach 14 Tagen noch <strong>CHF ${totalCHF}</strong> nicht bezahlt.
-      </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:16px 0">
-        <thead><tr style="background:#f9fafb">
-          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Termin</th>
-          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Betrag</th>
-        </tr></thead>
-        <tbody>${paymentRows}</tbody>
-        <tfoot><tr style="background:#f9fafb">
-          <td style="padding:10px 12px;font-weight:700;color:#111827">Total</td>
-          <td style="padding:10px 12px;font-weight:700;color:#dc2626">CHF ${totalCHF}</td>
-        </tr></tfoot>
-      </table>
-      <p style="color:#6b7280;font-size:13px">Bitte kontaktiere den Schüler direkt für weitere Schritte.</p>
-    </td></tr>
-  </table>
-</body>
-</html>`
-
-        toInsert.push({
-          tenant_id:       userPayments[0].tenant_id,
-          channel:         'email',
-          recipient_email: tenant.contact_email,
-          subject:         `⚠️ Unbezahlt nach 14 Tagen: ${user.first_name} ${user.last_name} — CHF ${totalCHF}`,
-          body:            adminBody,
-          status:          'pending',
-          send_at:         now.toISOString(),
-          context_data: {
-            stage:        'payment_reminder_admin',
-            user_id:      userId,
-            reminder_day: 14,
-            payment_ids:  userPayments.map((p: any) => p.id),
-            total_chf:    totalCHF,
-            tenant_name:  tenantName,
-          },
-        })
-      }
     }
   }
 
@@ -342,17 +293,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Failed to queue payment reminders' })
   }
 
-  const studentEmails = toInsert.filter((m: any) => m.context_data.stage === 'payment_reminder').length
-  const adminEmails   = toInsert.filter((m: any) => m.context_data.stage === 'payment_reminder_admin').length
+  const studentEmails = toInsert.length
 
-  logger.debug(`✅ send-payment-reminders: ${studentEmails} student + ${adminEmails} admin emails queued in ${Date.now() - startTime}ms`)
+  logger.debug(`✅ send-payment-reminders: ${studentEmails} emails queued in ${Date.now() - startTime}ms`)
 
   return {
     success:        true,
     queued:         toInsert.length,
-    student_emails: studentEmails,
-    admin_emails:   adminEmails,
-    skipped:        paymentsByUser.size - studentEmails,
+    skipped:        paymentsByUser.size - toInsert.length,
     duration_ms:    Date.now() - startTime,
   }
 })
