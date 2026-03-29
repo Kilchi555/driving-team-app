@@ -19,6 +19,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { getQuery } from 'h3'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   lesson:  'Fahrstunde',
@@ -83,7 +84,8 @@ export default defineEventHandler(async (event) => {
       ),
       staff:users!appointments_staff_id_fkey (
         first_name,
-        last_name
+        last_name,
+        phone
       )
     `)
     .not('user_id', 'is', null)
@@ -145,7 +147,8 @@ export default defineEventHandler(async (event) => {
 
   // ── 3. Check which appointments already have a queued reminder
   // Use a broader time window (past 48h) to catch any already-queued entries
-  const { data: existingQueue } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existingQueue } = await (supabase as any)
     .from('outbound_messages_queue')
     .select('context_data')
     .eq('context_data->>stage' as any, 'appointment_reminder')
@@ -186,14 +189,16 @@ export default defineEventHandler(async (event) => {
     const eventLabel  = EVENT_TYPE_LABELS[apt.event_type_code || 'lesson']
     const categoryStr = apt.type || ''
     const staffName   = apt.staff ? `${apt.staff.first_name} ${apt.staff.last_name}` : null
+    const staffPhone  = apt.staff?.phone || null
 
-    // Meeting point
+    // Meeting point — avoid duplicating city if already part of address
     let meetingPoint = ''
     const loc = apt.location_id ? locationMap.get(apt.location_id) : null
     if (loc?.name) {
       meetingPoint = loc.name
       if (loc.address) meetingPoint += `, ${loc.address}`
-      if (loc.city)    meetingPoint += ` ${loc.city}`
+      // Only append city if not already contained in name or address
+      if (loc.city && !meetingPoint.includes(loc.city)) meetingPoint += ` ${loc.city}`
     } else if (apt.custom_location_name) {
       meetingPoint = apt.custom_location_name
       if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
@@ -211,6 +216,7 @@ export default defineEventHandler(async (event) => {
       eventLabel,
       categoryStr,
       staffName,
+      staffPhone,
       meetingPoint,
       tenantName,
       primaryColor,
@@ -304,6 +310,7 @@ interface EmailData {
   eventLabel: string
   categoryStr: string
   staffName: string | null
+  staffPhone: string | null
   meetingPoint: string
   tenantName: string
   primaryColor: string
@@ -317,10 +324,10 @@ function buildEmailHtml(d: EmailData): string {
     : `<div style="margin-bottom:20px;text-align:center"><div style="width:40px;height:40px;border-radius:10px;background:${d.primaryColor};color:white;font-size:20px;font-weight:700;line-height:40px;text-align:center;margin:0 auto">${d.tenantName.charAt(0).toUpperCase()}</div></div>`
 
   const rows = [
-    ['Datum',      d.dateStr],
-    ['Zeit',       `${d.timeStr} Uhr${d.durationStr ? ` (${d.durationStr})` : ''}`],
-    ['Art',        [d.eventLabel, d.categoryStr].filter(Boolean).join(' · ')],
-    d.staffName   ? ['Fahrlehrer',  d.staffName]   : null,
+    ['Datum',       d.dateStr],
+    ['Zeit',        `${d.timeStr} Uhr${d.durationStr ? ` (${d.durationStr})` : ''}`],
+    ['Art',         [d.eventLabel, d.categoryStr].filter(Boolean).join(' · ')],
+    d.staffName   ? ['Fahrlehrer',  d.staffName + (d.staffPhone ? ` · ${d.staffPhone}` : '')] : null,
     d.meetingPoint ? ['Treffpunkt', d.meetingPoint] : null,
   ].filter(Boolean) as [string, string][]
 
@@ -373,7 +380,7 @@ function buildEmailHtml(d: EmailData): string {
 
           <!-- Footer -->
           <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
-            <p style="margin:0;font-size:12px;color:#9ca3af">${d.tenantName} · Powered by Simy</p>
+            <p style="margin:0;font-size:12px;color:#9ca3af">${d.tenantName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></p>
           </div>
 
         </td></tr>
