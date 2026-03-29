@@ -19,6 +19,11 @@ import { getHeader, getQuery } from 'h3'
 
 const REMINDER_DAYS = [3, 7, 14]
 
+// Swiss rounding: round to nearest 0.05 CHF
+function chf(rappen: number): string {
+  return (Math.round(Math.round(rappen) / 5) * 5 / 100).toFixed(2)
+}
+
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
@@ -165,7 +170,7 @@ export default defineEventHandler(async (event) => {
 
       const reminderNumber = REMINDER_DAYS.indexOf(reminderDay) + 1
       const totalRappen    = userPayments.reduce((sum: number, p: any) => sum + (p.total_amount_rappen || 0), 0)
-      const totalCHF       = (totalRappen / 100).toFixed(2)
+      const totalCHF       = chf(totalRappen)
 
       // ── Build payment rows for email ──────────────────────
 
@@ -175,7 +180,7 @@ export default defineEventHandler(async (event) => {
         const d = new Date(apt.start_time)
         const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })
         const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-        const amtCHF  = ((p.total_amount_rappen || 0) / 100).toFixed(2)
+        const amtCHF  = chf(p.total_amount_rappen || 0)
         return `
           <tr>
             <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151">${dateStr}, ${timeStr}</td>

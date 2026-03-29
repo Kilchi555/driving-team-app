@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/send-overdue-payment-reminders",
       "schedule": "5 7 * * *"
+    },
+    {
+      "path": "/api/cron/send-admin-payment-report",
+      "schedule": "0 6 * * 1"
     }
   ],
   "rewrites": [
