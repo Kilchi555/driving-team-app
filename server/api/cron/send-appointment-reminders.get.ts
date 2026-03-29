@@ -176,9 +176,7 @@ export default defineEventHandler(async (event) => {
     const tenant = tenantMap.get(apt.tenant_id)
     const tenantName  = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
-    // Use only HTTPS logo URLs — never base64 data URIs (blocked by most email clients)
-    const rawLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
-    const logoUrl = rawLogoUrl && rawLogoUrl.startsWith('https://') ? rawLogoUrl : null
+    const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 
     // Date/time formatting
     const aptDate = new Date(apt.start_time)
@@ -315,8 +313,8 @@ interface EmailData {
 
 function buildEmailHtml(d: EmailData): string {
   const logoHtml = d.logoUrl
-    ? `<div style="text-align:center;margin-bottom:20px"><img src="${d.logoUrl}" alt="${d.tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:inline-block"></div>`
-    : `<div style="text-align:center;margin-bottom:20px"><div style="display:inline-block;width:40px;height:40px;border-radius:10px;background:${d.primaryColor};color:#fff;font-size:20px;font-weight:700;line-height:40px;text-align:center">${d.tenantName.charAt(0).toUpperCase()}</div></div>`
+    ? `<div style="margin-bottom:20px;text-align:center"><img src="${d.logoUrl}" alt="${d.tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
+    : `<div style="margin-bottom:20px;text-align:center"><div style="width:40px;height:40px;border-radius:10px;background:${d.primaryColor};color:white;font-size:20px;font-weight:700;line-height:40px;text-align:center;margin:0 auto">${d.tenantName.charAt(0).toUpperCase()}</div></div>`
 
   const rows = [
     ['Datum',      d.dateStr],
