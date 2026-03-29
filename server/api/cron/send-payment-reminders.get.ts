@@ -168,7 +168,6 @@ export default defineEventHandler(async (event) => {
       const totalCHF       = (totalRappen / 100).toFixed(2)
 
       // ── Build payment rows for email ──────────────────────
-      const EVENT_LABELS: Record<string, string> = { lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorie', other: 'Termin' }
 
       const paymentRows = userPayments.map((p: any) => {
         const apt = appointmentMap.get(p.appointment_id)
@@ -176,12 +175,10 @@ export default defineEventHandler(async (event) => {
         const d = new Date(apt.start_time)
         const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })
         const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-        const label   = EVENT_LABELS[apt.event_type_code] || EVENT_LABELS[apt.type] || 'Fahrstunde'
         const amtCHF  = ((p.total_amount_rappen || 0) / 100).toFixed(2)
         return `
           <tr>
             <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151">${dateStr}, ${timeStr}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151">${label}</td>
             <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;font-weight:600">CHF ${amtCHF}</td>
           </tr>`
       }).join('')
@@ -223,14 +220,13 @@ export default defineEventHandler(async (event) => {
               <thead>
                 <tr style="background:#f9fafb">
                   <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Termin</th>
-                  <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Art</th>
                   <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Betrag</th>
                 </tr>
               </thead>
               <tbody>${paymentRows}</tbody>
               <tfoot>
                 <tr style="background:#f9fafb">
-                  <td colspan="2" style="padding:12px;font-size:14px;font-weight:700;color:#111827">Total</td>
+                  <td style="padding:12px;font-size:14px;font-weight:700;color:#111827">Total</td>
                   <td style="padding:12px;font-size:16px;font-weight:700;color:${primaryColor}">CHF ${totalCHF}</td>
                 </tr>
               </tfoot>
@@ -291,12 +287,11 @@ export default defineEventHandler(async (event) => {
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:16px 0">
         <thead><tr style="background:#f9fafb">
           <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Termin</th>
-          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Art</th>
           <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Betrag</th>
         </tr></thead>
         <tbody>${paymentRows}</tbody>
         <tfoot><tr style="background:#f9fafb">
-          <td colspan="2" style="padding:10px 12px;font-weight:700;color:#111827">Total</td>
+          <td style="padding:10px 12px;font-weight:700;color:#111827">Total</td>
           <td style="padding:10px 12px;font-weight:700;color:#dc2626">CHF ${totalCHF}</td>
         </tr></tfoot>
       </table>
