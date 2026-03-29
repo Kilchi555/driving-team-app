@@ -16,7 +16,6 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 
-const CUTOFF_DATE = '2026-03-27T00:00:00.000Z'
 const REMINDER_DAYS = [3, 7, 14]
 
 export default defineEventHandler(async (event) => {
@@ -53,8 +52,6 @@ export default defineEventHandler(async (event) => {
 
   if (testStudentId) {
     studentsQuery = studentsQuery.eq('id', testStudentId)
-  } else {
-    studentsQuery = studentsQuery.gte('created_at', CUTOFF_DATE)
   }
 
   const { data: students, error: studentsError } = await studentsQuery
