@@ -135,7 +135,7 @@ export default defineEventHandler(async (event) => {
         student_id: student.id,
         reminder_day: reminderDay,
         reminder_number: reminderNumber,
-        tenant_name: tenant?.twilio_from_sender || tenantName,
+        tenant_name: tenantName,
       }
 
       if (student.email) {
@@ -147,10 +147,10 @@ export default defineEventHandler(async (event) => {
             : `Letzte Erinnerung: Dein Registrierungslink läuft bald ab`
 
         const bodyText = reminderNumber === 1
-          ? `Hallo ${student.first_name},<br><br>du hast dich für die <strong>${tenantName}</strong> interessiert — aber deine Registrierung ist noch nicht abgeschlossen.<br><br>Klicke auf den Button um fortzufahren:`
+          ? `Hallo ${student.first_name},<br><br>du hast dich für die <strong>${tenantName}</strong> interessiert — aber deine Registrierung ist noch nicht abgeschlossen.<br><br>Die Registrierung ist <strong>kostenlos und unverbindlich</strong>. Klicke auf den Button um fortzufahren:`
           : reminderNumber === 2
-            ? `Hallo ${student.first_name},<br><br>dein Registrierungslink ist noch aktiv. Schliesse deine Anmeldung jetzt ab — es dauert nur 2 Minuten:`
-            : `Hallo ${student.first_name},<br><br>das ist deine letzte Erinnerung. Dein persönlicher Registrierungslink läuft bald ab:`
+            ? `Hallo ${student.first_name},<br><br>dein Registrierungslink ist noch aktiv. Die Anmeldung ist <strong>kostenlos und unverbindlich</strong> — schliesse sie jetzt ab, es dauert nur 2 Minuten:`
+            : `Hallo ${student.first_name},<br><br>das ist deine letzte Erinnerung. Dein persönlicher Registrierungslink läuft bald ab. Die Anmeldung ist <strong>kostenlos und unverbindlich</strong>:`
 
         const logoHtml = logoUrl
           ? `<div style="margin-bottom:20px;text-align:center"><img src="${logoUrl}" alt="${tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
