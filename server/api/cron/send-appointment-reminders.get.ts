@@ -283,7 +283,7 @@ function buildPaymentSection(payment: any, primaryColor: string, loginLink: stri
       : { bg: '#fef2f2', border: '#fca5a5', labelColor: '#991b1b', dot: '#ef4444', text: 'Fehlgeschlagen' }
 
   const actionHtml = isPending && payment.payment_method === 'wallee'
-    ? `<div style="margin-top:12px"><a href="${loginLink}/dashboard" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Jetzt online zahlen →</a></div>`
+    ? `<div style="margin-top:12px"><a href="${loginLink}" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Jetzt online zahlen →</a></div>`
     : isPending && payment.payment_method === 'cash'
       ? `<p style="margin:8px 0 0;font-size:13px;color:#92400e">Bitte bringen Sie den Betrag in bar mit.</p>`
       : isPending && payment.payment_method === 'invoice'
