@@ -123,18 +123,17 @@ export default defineEventHandler(async (event) => {
     locationMap = new Map((locations || []).map((l: any) => [l.id, l]))
   }
 
-  // ── 2b. Load pending payments separately (FK: payments.appointment_id → appointments.id) ──
+  // ── 2b. Load payments separately (FK: payments.appointment_id → appointments.id) ──
   const { data: payments } = await supabase
     .from('payments')
     .select('id, appointment_id, payment_status, payment_method, total_amount_rappen')
     .in('appointment_id', (appointments as any[]).map((a: any) => a.id))
-    .in('payment_status', ['pending', 'failed'])
 
-  // Map: appointment_id → first pending payment
-  const pendingPaymentMap = new Map<string, any>()
+  // Map: appointment_id → first payment (any status)
+  const paymentMap = new Map<string, any>()
   for (const p of (payments || []) as any[]) {
-    if (!pendingPaymentMap.has(p.appointment_id)) {
-      pendingPaymentMap.set(p.appointment_id, p)
+    if (!paymentMap.has(p.appointment_id)) {
+      paymentMap.set(p.appointment_id, p)
     }
   }
   const { data: tenants } = await supabase
@@ -202,9 +201,9 @@ export default defineEventHandler(async (event) => {
       if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
     }
 
-    // Payment section — only for pending/failed payments
-    const pendingPayment = pendingPaymentMap.get(apt.id) || null
-    const paymentHtml = pendingPayment ? buildPaymentSection(pendingPayment, primaryColor) : ''
+    // Payment section — always shown if a payment exists
+    const payment = paymentMap.get(apt.id) || null
+    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor) : ''
 
     const html = buildEmailHtml({
       firstName:    user.first_name || 'Hallo',
@@ -270,20 +269,32 @@ function buildPaymentSection(payment: any, primaryColor: string): string {
   const methodLabel = PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method
   const loginLink = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
 
-  const actionByMethod: Record<string, string> = {
-    wallee:  `<a href="${loginLink}/dashboard" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Jetzt online zahlen →</a>`,
-    cash:    `<p style="margin:8px 0 0;color:#92400e;font-size:14px">Bitte bringen Sie den Betrag in bar mit.</p>`,
-    invoice: `<p style="margin:8px 0 0;color:#1e40af;font-size:14px">Die Rechnung wird Ihnen zugestellt.</p>`,
-  }
+  const isPending = ['pending', 'failed'].includes(payment.payment_status)
+  const isPaid    = ['completed', 'paid'].includes(payment.payment_status)
 
-  const action = actionByMethod[payment.payment_method] || ''
+  const statusConfig = isPaid
+    ? { bg: '#f0fdf4', border: '#86efac', labelColor: '#166534', dot: '#22c55e', text: 'Bezahlt ✓' }
+    : isPending
+      ? { bg: '#fffbeb', border: '#fde68a', labelColor: '#92400e', dot: '#f59e0b', text: 'Ausstehend' }
+      : { bg: '#fef2f2', border: '#fca5a5', labelColor: '#991b1b', dot: '#ef4444', text: 'Fehlgeschlagen' }
+
+  const actionHtml = isPending && payment.payment_method === 'wallee'
+    ? `<div style="margin-top:12px"><a href="${loginLink}/dashboard" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Jetzt online zahlen →</a></div>`
+    : isPending && payment.payment_method === 'cash'
+      ? `<p style="margin:8px 0 0;font-size:13px;color:#92400e">Bitte bringen Sie den Betrag in bar mit.</p>`
+      : isPending && payment.payment_method === 'invoice'
+        ? `<p style="margin:8px 0 0;font-size:13px;color:#1e40af">Die Rechnung wird Ihnen zugestellt.</p>`
+        : ''
 
   return `
-    <div style="margin:24px 0;padding:16px 20px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px">
-      <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:.05em">Ausstehende Zahlung</p>
-      <p style="margin:0;font-size:22px;font-weight:700;color:#78350f">CHF ${amountCHF}</p>
-      <p style="margin:4px 0 0;font-size:13px;color:#b45309">Zahlungsart: ${methodLabel}</p>
-      ${action}
+    <div style="margin:24px 0;padding:16px 20px;background:${statusConfig.bg};border:1px solid ${statusConfig.border};border-radius:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${statusConfig.dot}"></span>
+        <span style="font-size:12px;font-weight:600;color:${statusConfig.labelColor};text-transform:uppercase;letter-spacing:.05em">Zahlung · ${statusConfig.text}</span>
+      </div>
+      <p style="margin:0;font-size:22px;font-weight:700;color:#111827">CHF ${amountCHF}</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Zahlungsart: ${methodLabel}</p>
+      ${actionHtml}
     </div>`
 }
 
