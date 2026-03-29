@@ -158,6 +158,10 @@ export default defineEventHandler(async (event) => {
     })
 
     if (insertError) {
+      // Duplicate email or phone → existing active account
+      if (insertError.code === '23505') {
+        return { ok: true, alreadyActive: true }
+      }
       logger.error('[submit-lead] Error creating pending user:', insertError)
       throw createError({ statusCode: 500, message: 'Registrierung fehlgeschlagen.' })
     }

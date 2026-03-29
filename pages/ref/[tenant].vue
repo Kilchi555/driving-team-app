@@ -106,12 +106,13 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">E-Mail (optional)</label>
+          <label class="block text-xs font-medium text-gray-700 mb-1">E-Mail *</label>
           <input
             v-model="form.email"
             type="email"
             autocomplete="email"
             placeholder="max@beispiel.ch"
+            required
             class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
           />
         </div>
@@ -186,7 +187,7 @@ const alreadyActive = ref(false)
 const formError = ref('')
 
 const canSubmit = computed(() =>
-  form.firstName.trim() && form.lastName.trim() && form.phone.trim().length >= 9
+  form.firstName.trim() && form.lastName.trim() && form.phone.trim().length >= 9 && form.email.trim().includes('@')
 )
 
 async function submit() {
