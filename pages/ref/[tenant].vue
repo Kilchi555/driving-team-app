@@ -158,7 +158,7 @@ const { data: brandingResult } = await useFetch<any>(`/api/tenants/branding`, {
 })
 const branding = computed(() => brandingResult.value?.data ?? null)
 const brandColor = computed(() => branding.value?.primary_color || null)
-const logoUrl = computed(() => branding.value?.logo_square_url || branding.value?.logo_url || null)
+const logoUrl = computed(() => branding.value?.logo_wide_url || branding.value?.logo_square_url || branding.value?.logo_url || null)
 
 const referrerName = ref<string | null>(null)
 
