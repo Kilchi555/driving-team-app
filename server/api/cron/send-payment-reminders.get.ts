@@ -41,27 +41,38 @@ export default defineEventHandler(async (event) => {
     logger.debug(`🧪 TEST MODE: user=${testUserId}, reminder_day=${testReminderDay}`)
   }
 
-  // ── 1. Fetch all pending wallee payments with appointment data ─
-  // We only care about appointments that are in the past
-  let paymentsQuery = supabase
-    .from('payments')
-    .select(`
-      id,
-      appointment_id,
-      user_id,
-      tenant_id,
-      total_amount_rappen,
-      payment_status,
-      payment_method
-    `)
-    .eq('payment_method', 'wallee')
-    .in('payment_status', ['pending', 'failed'])
+  // ── 1. Fetch past appointments (linked to the test user or all) ─
+  let aptQuery = supabase
+    .from('appointments')
+    .select('id, user_id, start_time, event_type, driving_category, location_id, tenant_id')
+    .lt('start_time', now.toISOString())
+    .neq('status', 'cancelled')
 
   if (testUserId) {
-    paymentsQuery = paymentsQuery.eq('user_id', testUserId)
+    aptQuery = aptQuery.eq('user_id', testUserId)
   }
 
-  const { data: payments, error: paymentsError } = await paymentsQuery
+  const { data: appointments, error: aptError } = await aptQuery
+
+  if (aptError) {
+    logger.error('❌ Failed to fetch appointments:', aptError)
+    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch appointments' })
+  }
+
+  if (!appointments || appointments.length === 0) {
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No past appointments' }
+  }
+
+  const appointmentMap = new Map((appointments as any[]).map((a: any) => [a.id, a]))
+  const appointmentIds = [...appointmentMap.keys()]
+
+  // ── 2. Fetch pending wallee payments for those appointments ──
+  const { data: payments, error: paymentsError } = await supabase
+    .from('payments')
+    .select('id, appointment_id, total_amount_rappen, payment_status, payment_method')
+    .in('appointment_id', appointmentIds)
+    .eq('payment_method', 'wallee')
+    .in('payment_status', ['pending', 'failed'])
 
   if (paymentsError) {
     logger.error('❌ Failed to fetch payments:', paymentsError)
@@ -69,30 +80,14 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!payments || payments.length === 0) {
-    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending payments' }
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending wallee payments for past appointments' }
   }
 
-  // ── 2. Fetch appointments (past only) ───────────────────────
-  const appointmentIds = [...new Set((payments as any[]).map((p: any) => p.appointment_id).filter(Boolean))]
-  const { data: appointments } = await supabase
-    .from('appointments')
-    .select('id, start_time, event_type, driving_category, location_id')
-    .in('id', appointmentIds)
-    .lt('start_time', now.toISOString())  // past only
-    .neq('status', 'cancelled')
-
-  if (!appointments || appointments.length === 0) {
-    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No past appointments with open payments' }
-  }
-
-  const appointmentMap = new Map((appointments as any[]).map((a: any) => [a.id, a]))
-
-  // Filter payments to only those with a past appointment
-  const eligiblePayments = (payments as any[]).filter((p: any) => appointmentMap.has(p.appointment_id))
-
-  if (eligiblePayments.length === 0) {
-    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No eligible payments' }
-  }
+  // Enrich each payment with user_id + tenant_id from its appointment
+  const eligiblePayments = (payments as any[]).map((p: any) => {
+    const apt = appointmentMap.get(p.appointment_id)
+    return { ...p, user_id: apt?.user_id, tenant_id: apt?.tenant_id }
+  }).filter((p: any) => p.user_id)
 
   // ── 3. Group payments by user ────────────────────────────────
   const paymentsByUser = new Map<string, any[]>()
@@ -104,7 +99,7 @@ export default defineEventHandler(async (event) => {
 
   // ── 4. Fetch users and tenants ───────────────────────────────
   const userIds    = [...paymentsByUser.keys()]
-  const tenantIds  = [...new Set(eligiblePayments.map((p: any) => p.tenant_id).filter(Boolean))]
+  const tenantIds  = [...new Set((appointments as any[]).map((a: any) => a.tenant_id).filter(Boolean))]
 
   const { data: users }   = await supabase
     .from('users')
