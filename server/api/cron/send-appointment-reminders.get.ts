@@ -84,12 +84,6 @@ export default defineEventHandler(async (event) => {
       staff:users!appointments_staff_id_fkey (
         first_name,
         last_name
-      ),
-      payments (
-        id,
-        payment_status,
-        payment_method,
-        total_amount_rappen
       )
     `)
     .not('user_id', 'is', null)
@@ -128,9 +122,24 @@ export default defineEventHandler(async (event) => {
       .in('id', locationIds)
     locationMap = new Map((locations || []).map((l: any) => [l.id, l]))
   }
+
+  // ── 2b. Load pending payments separately (FK: payments.appointment_id → appointments.id) ──
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('id, appointment_id, payment_status, payment_method, total_amount_rappen')
+    .in('appointment_id', (appointments as any[]).map((a: any) => a.id))
+    .in('payment_status', ['pending', 'failed'])
+
+  // Map: appointment_id → first pending payment
+  const pendingPaymentMap = new Map<string, any>()
+  for (const p of (payments || []) as any[]) {
+    if (!pendingPaymentMap.has(p.appointment_id)) {
+      pendingPaymentMap.set(p.appointment_id, p)
+    }
+  }
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, primary_color, logo_url')
+    .select('id, name, primary_color, logo_wide_url, logo_url, logo_square_url')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
@@ -168,7 +177,9 @@ export default defineEventHandler(async (event) => {
     const tenant = tenantMap.get(apt.tenant_id)
     const tenantName  = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
-    const logoUrl     = tenant?.logo_url || null
+    // Use only HTTPS logo URLs — never base64 data URIs (blocked by most email clients)
+    const rawLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const logoUrl = rawLogoUrl && rawLogoUrl.startsWith('https://') ? rawLogoUrl : null
 
     // Date/time formatting
     const aptDate = new Date(apt.start_time)
@@ -191,8 +202,8 @@ export default defineEventHandler(async (event) => {
       if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
     }
 
-    // Payment section — only for pending payments
-    const pendingPayment = (apt.payments || []).find((p: any) => p.payment_status === 'pending')
+    // Payment section — only for pending/failed payments
+    const pendingPayment = pendingPaymentMap.get(apt.id) || null
     const paymentHtml = pendingPayment ? buildPaymentSection(pendingPayment, primaryColor) : ''
 
     const html = buildEmailHtml({
@@ -293,8 +304,8 @@ interface EmailData {
 
 function buildEmailHtml(d: EmailData): string {
   const logoHtml = d.logoUrl
-    ? `<img src="${d.logoUrl}" alt="${d.tenantName}" style="height:40px;width:auto;margin-bottom:16px">`
-    : `<div style="font-size:20px;font-weight:700;color:${d.primaryColor};margin-bottom:16px">${d.tenantName}</div>`
+    ? `<div style="text-align:center;margin-bottom:20px"><img src="${d.logoUrl}" alt="${d.tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:inline-block"></div>`
+    : `<div style="text-align:center;margin-bottom:20px"><div style="display:inline-block;width:40px;height:40px;border-radius:10px;background:${d.primaryColor};color:#fff;font-size:20px;font-weight:700;line-height:40px;text-align:center">${d.tenantName.charAt(0).toUpperCase()}</div></div>`
 
   const rows = [
     ['Datum',      d.dateStr],
@@ -318,39 +329,45 @@ function buildEmailHtml(d: EmailData): string {
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px">
 
-        <!-- Header -->
-        <tr><td style="background:${d.primaryColor};border-radius:12px 12px 0 0;padding:28px 32px;text-align:center">
-          ${logoHtml}
-          <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff">Erinnerung an Ihren Termin</h1>
-          <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${d.tenantName}</p>
-        </td></tr>
+        <!-- Logo above card -->
+        <tr><td>${logoHtml}</td></tr>
 
-        <!-- Body -->
-        <tr><td style="background:#fff;padding:28px 32px">
-          <p style="margin:0 0 20px;font-size:15px;color:#374151">Hallo ${d.firstName},</p>
-          <p style="margin:0 0 24px;font-size:15px;color:#374151">
-            wir möchten Sie an Ihren bevorstehenden Termin erinnern:
-          </p>
+        <!-- Card -->
+        <tr><td style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10)">
 
-          <!-- Details table -->
-          <div style="background:#f9fafb;border-radius:10px;padding:16px 20px;margin-bottom:8px">
-            <table cellpadding="0" cellspacing="0" width="100%">
-              <tbody>${rowsHtml}</tbody>
-            </table>
+          <!-- Colored header -->
+          <div style="background:${d.primaryColor};padding:28px 32px;text-align:center">
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff">Erinnerung an Ihren Termin</h1>
+            <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${d.tenantName}</p>
           </div>
 
-          ${d.paymentHtml}
+          <!-- Body -->
+          <div style="padding:28px 32px">
+            <p style="margin:0 0 20px;font-size:15px;color:#374151">Hallo ${d.firstName},</p>
+            <p style="margin:0 0 24px;font-size:15px;color:#374151">
+              wir möchten Sie an Ihren bevorstehenden Termin erinnern:
+            </p>
 
-          <p style="margin:24px 0 0;font-size:13px;color:#9ca3af">
-            Bei Fragen wenden Sie sich bitte an ${d.tenantName}. Bitte antworten Sie nicht auf diese automatische E-Mail.
-          </p>
+            <!-- Details table -->
+            <div style="background:#f9fafb;border-radius:10px;padding:16px 20px;margin-bottom:8px">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+
+            ${d.paymentHtml}
+
+            <p style="margin:24px 0 0;font-size:13px;color:#9ca3af">
+              Bei Fragen wenden Sie sich bitte an ${d.tenantName}. Bitte antworten Sie nicht auf diese automatische E-Mail.
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="margin:0;font-size:12px;color:#9ca3af">${d.tenantName} · Powered by Simy</p>
+          </div>
+
         </td></tr>
-
-        <!-- Footer -->
-        <tr><td style="background:#f9fafb;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
-          <p style="margin:0;font-size:12px;color:#9ca3af">${d.tenantName} · Powered by Simy</p>
-        </td></tr>
-
       </table>
     </td></tr>
   </table>

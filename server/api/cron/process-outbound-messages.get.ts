@@ -89,7 +89,9 @@ export default defineEventHandler(async (event) => {
           }
 
           const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: fromEmail,
+            from: message.context_data?.tenant_name
+              ? `${message.context_data.tenant_name} <${fromEmail}>`
+              : fromEmail,
             to: message.recipient_email,
             subject: message.subject,
             html: message.body,
