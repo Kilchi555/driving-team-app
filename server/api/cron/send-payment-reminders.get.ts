@@ -41,18 +41,36 @@ export default defineEventHandler(async (event) => {
     logger.debug(`🧪 TEST MODE: user=${testUserId}, reminder_day=${testReminderDay}`)
   }
 
-  // ── 1. Fetch past appointments (linked to the test user or all) ─
-  let aptQuery = supabase
-    .from('appointments')
-    .select('id, user_id, start_time, event_type, driving_category, location_id, tenant_id')
-    .lt('start_time', now.toISOString())
-    .neq('status', 'cancelled')
+  // ── 1. Fetch pending wallee payments ───────────────────────
+  let paymentsQuery = supabase
+    .from('payments')
+    .select('id, appointment_id, user_id, tenant_id, total_amount_rappen, payment_status, payment_method')
+    .eq('payment_method', 'wallee')
+    .in('payment_status', ['pending', 'failed'])
 
   if (testUserId) {
-    aptQuery = aptQuery.eq('user_id', testUserId)
+    paymentsQuery = paymentsQuery.eq('user_id', testUserId)
   }
 
-  const { data: appointments, error: aptError } = await aptQuery
+  const { data: allPayments, error: paymentsError } = await paymentsQuery
+
+  if (paymentsError) {
+    logger.error('❌ Failed to fetch payments:', paymentsError)
+    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
+  }
+
+  if (!allPayments || allPayments.length === 0) {
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending wallee payments' }
+  }
+
+  // ── 2. Fetch the corresponding appointments (past only) ─────
+  const appointmentIds = [...new Set((allPayments as any[]).map((p: any) => p.appointment_id).filter(Boolean))]
+  const { data: appointments, error: aptError } = await supabase
+    .from('appointments')
+    .select('id, start_time, type, event_type_code')
+    .in('id', appointmentIds)
+    .lt('start_time', now.toISOString())
+    .neq('status', 'cancelled')
 
   if (aptError) {
     logger.error('❌ Failed to fetch appointments:', aptError)
@@ -60,34 +78,13 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!appointments || appointments.length === 0) {
-    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No past appointments' }
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No past appointments with open payments' }
   }
 
   const appointmentMap = new Map((appointments as any[]).map((a: any) => [a.id, a]))
-  const appointmentIds = [...appointmentMap.keys()]
 
-  // ── 2. Fetch pending wallee payments for those appointments ──
-  const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
-    .select('id, appointment_id, total_amount_rappen, payment_status, payment_method')
-    .in('appointment_id', appointmentIds)
-    .eq('payment_method', 'wallee')
-    .in('payment_status', ['pending', 'failed'])
-
-  if (paymentsError) {
-    logger.error('❌ Failed to fetch payments:', paymentsError)
-    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
-  }
-
-  if (!payments || payments.length === 0) {
-    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending wallee payments for past appointments' }
-  }
-
-  // Enrich each payment with user_id + tenant_id from its appointment
-  const eligiblePayments = (payments as any[]).map((p: any) => {
-    const apt = appointmentMap.get(p.appointment_id)
-    return { ...p, user_id: apt?.user_id, tenant_id: apt?.tenant_id }
-  }).filter((p: any) => p.user_id)
+  // Keep only payments whose appointment is in the past
+  const eligiblePayments = (allPayments as any[]).filter((p: any) => appointmentMap.has(p.appointment_id))
 
   // ── 3. Group payments by user ────────────────────────────────
   const paymentsByUser = new Map<string, any[]>()
@@ -99,7 +96,7 @@ export default defineEventHandler(async (event) => {
 
   // ── 4. Fetch users and tenants ───────────────────────────────
   const userIds    = [...paymentsByUser.keys()]
-  const tenantIds  = [...new Set((appointments as any[]).map((a: any) => a.tenant_id).filter(Boolean))]
+  const tenantIds  = [...new Set(eligiblePayments.map((p: any) => p.tenant_id).filter(Boolean))]
 
   const { data: users }   = await supabase
     .from('users')
@@ -179,7 +176,7 @@ export default defineEventHandler(async (event) => {
         const d = new Date(apt.start_time)
         const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })
         const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-        const label   = EVENT_LABELS[apt.event_type] || 'Termin'
+        const label   = EVENT_LABELS[apt.event_type_code] || EVENT_LABELS[apt.type] || 'Fahrstunde'
         const amtCHF  = ((p.total_amount_rappen || 0) / 100).toFixed(2)
         return `
           <tr>
