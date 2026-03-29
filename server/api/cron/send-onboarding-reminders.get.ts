@@ -14,7 +14,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getHeader, getQuery } from 'h3'
 
 const CUTOFF_DATE = '2026-03-27T00:00:00.000Z'
 const REMINDER_DAYS = [3, 7, 14]
@@ -32,17 +32,32 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const now = new Date()
 
+  const query = getQuery(event)
+  const testStudentId = typeof query.test_student_id === 'string' ? query.test_student_id : null
+  const testReminderDay = testStudentId ? Number(query.reminder_day ?? 3) : null
+
+  if (testStudentId) {
+    logger.debug(`🧪 TEST MODE: student=${testStudentId}, reminder_day=${testReminderDay}`)
+  }
+
   logger.debug('📅 send-onboarding-reminders: starting run at', now.toISOString())
 
   // ── 1. Load all pending students ────────────────────────────
-  const { data: students, error: studentsError } = await supabase
+  let studentsQuery = supabase
     .from('users')
     .select('id, first_name, email, phone, created_at, onboarding_token, onboarding_token_expires, tenant_id')
     .eq('role', 'client')
     .is('auth_user_id', null)
     .not('onboarding_token', 'is', null)
-    .gte('created_at', CUTOFF_DATE)
     .eq('is_active', true)
+
+  if (testStudentId) {
+    studentsQuery = studentsQuery.eq('id', testStudentId)
+  } else {
+    studentsQuery = studentsQuery.gte('created_at', CUTOFF_DATE)
+  }
+
+  const { data: students, error: studentsError } = await studentsQuery
 
   if (studentsError) {
     logger.error('❌ Failed to fetch pending students:', studentsError)
@@ -67,20 +82,23 @@ export default defineEventHandler(async (event) => {
 
   // ── 3. Check which reminders are already queued ─────────────
   const studentIds = students.map((s: any) => s.id)
-  const { data: existingQueue } = await supabase
-    .from('outbound_messages_queue')
-    .select('context_data')
-    .eq('context_data->>stage' as any, 'onboarding_reminder')
-    .in('context_data->>student_id' as any, studentIds)
-    .in('status', ['pending', 'sending', 'sent'])
+  let alreadyQueued = new Set<string>()
 
-  const alreadyQueued = new Set<string>()
-  ;(existingQueue || []).forEach((row: any) => {
-    const ctx = row.context_data
-    if (ctx?.student_id && ctx?.reminder_day) {
-      alreadyQueued.add(`${ctx.student_id}:${ctx.reminder_day}`)
-    }
-  })
+  if (!testStudentId) {
+    const { data: existingQueue } = await supabase
+      .from('outbound_messages_queue')
+      .select('context_data')
+      .eq('context_data->>stage' as any, 'onboarding_reminder')
+      .in('context_data->>student_id' as any, studentIds)
+      .in('status', ['pending', 'sending', 'sent'])
+
+    ;(existingQueue || []).forEach((row: any) => {
+      const ctx = row.context_data
+      if (ctx?.student_id && ctx?.reminder_day) {
+        alreadyQueued.add(`${ctx.student_id}:${ctx.reminder_day}`)
+      }
+    })
+  }
 
   // ── 4. Build queue entries ───────────────────────────────────
   const toInsert: any[] = []
@@ -103,7 +121,10 @@ export default defineEventHandler(async (event) => {
     const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 
     for (const reminderDay of REMINDER_DAYS) {
-      if (daysSinceCreation < reminderDay || daysSinceCreation >= reminderDay + 1) continue
+      // In test mode: use the specified reminder_day (default 3); skip window check
+      const effectiveDay = testStudentId ? testReminderDay! : reminderDay
+      if (!testStudentId && (daysSinceCreation < reminderDay || daysSinceCreation >= reminderDay + 1)) continue
+      if (testStudentId && reminderDay !== effectiveDay) continue
 
       const key = `${student.id}:${reminderDay}`
       if (alreadyQueued.has(key)) {
