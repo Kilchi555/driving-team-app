@@ -144,63 +144,61 @@ export default defineEventHandler(async (event) => {
 
     console.log('[PasswordReset] ✅ User found:', { userId: user.id, hasTenantId: !!user.tenant_id })
     
-    // Pending user: no auth account exists — password reset is impossible.
-    // Instead: re-send the onboarding SMS so they can complete registration.
+    // Pending user: no auth account exists — create one automatically, then proceed with reset
     if (!user.auth_user_id) {
-      console.log('[PasswordReset] User has no auth_user_id (pending) — sending onboarding SMS instead of reset link')
+      console.log('[PasswordReset] User has no auth_user_id (pending) — creating auth user automatically')
 
-      if (user.phone && user.onboarding_token) {
-        try {
-          // Refresh token if expired
-          let token = user.onboarding_token
-          const expires = user.onboarding_token_expires ? new Date(user.onboarding_token_expires) : null
-          if (!expires || expires < new Date()) {
-            const { v4: uuidv4 } = await import('uuid')
-            token = uuidv4()
-            const newExpires = new Date()
-            newExpires.setDate(newExpires.getDate() + 30)
-            await serviceSupabase
-              .from('users')
-              .update({ onboarding_token: token, onboarding_token_expires: newExpires.toISOString() })
-              .eq('id', user.id)
-          }
-
-          // Resolve tenant for SMS
-          const resolvedTenantIdForSms = tenantId || user.tenant_id
-          let tenantNameForSms = 'Ihre Fahrschule'
-          let senderNameForSms = tenantNameForSms
-          let tenantSlugForSms = ''
-          if (resolvedTenantIdForSms) {
-            const { data: t } = await serviceSupabase
-              .from('tenants')
-              .select('name, slug, twilio_from_sender')
-              .eq('id', resolvedTenantIdForSms)
-              .single()
-            if (t) {
-              tenantNameForSms = t.name || tenantNameForSms
-              senderNameForSms = t.twilio_from_sender || t.name || tenantNameForSms
-              tenantSlugForSms = t.slug || ''
-            }
-          }
-
-          const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
-          const onboardingUrl = `${baseUrl}/onboarding/${token}`
-          const loginLink = tenantSlugForSms ? `https://simy.ch/${tenantSlugForSms}` : 'https://simy.ch/login'
-
-          const smsMessage = `Hallo ${user.first_name || ''},\n\nbitte vervollständige deine Registrierung:\n\n${onboardingUrl}\n\nNach der Registrierung kannst du dich hier anmelden:\n${loginLink}\n\nFreundliche Grüsse,\n${tenantNameForSms}`
-
-          await sendSMS({ to: user.phone, message: smsMessage, senderName: senderNameForSms })
-          console.log('[PasswordReset] ✅ Onboarding SMS sent to pending user')
-        } catch (smsErr: any) {
-          console.warn('[PasswordReset] ⚠️ Could not send onboarding SMS to pending user:', smsErr.message)
-        }
+      if (!user.email) {
+        console.warn('[PasswordReset] ⚠️ Cannot create auth user: no email on record')
+        return { success: false, code: 'NO_EMAIL', method }
       }
 
-      return {
-        success: true,
-        code: 'ACCOUNT_PENDING',
-        hasSms: !!(user.phone && user.onboarding_token),
-        message: 'Ihr Account ist noch nicht vollständig aktiviert.'
+      try {
+        const { data: newAuthUser, error: createError } = await serviceSupabase.auth.admin.createUser({
+          email: user.email,
+          email_confirm: true,
+        })
+
+        if (createError || !newAuthUser?.user?.id) {
+          console.error('[PasswordReset] ❌ Failed to create auth user:', createError?.message)
+          // Fallback: re-send onboarding SMS if possible
+          if (user.phone && user.onboarding_token) {
+            let token = user.onboarding_token
+            const expires = user.onboarding_token_expires ? new Date(user.onboarding_token_expires) : null
+            if (!expires || expires < new Date()) {
+              const { v4: uuidv4 } = await import('uuid')
+              token = uuidv4()
+              const newExpires = new Date()
+              newExpires.setDate(newExpires.getDate() + 30)
+              await serviceSupabase.from('users').update({ onboarding_token: token, onboarding_token_expires: newExpires.toISOString() }).eq('id', user.id)
+            }
+            const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
+            const tenantSlugFallback = tenantId ? (await serviceSupabase.from('tenants').select('slug').eq('id', tenantId).single()).data?.slug : ''
+            const onboardingUrl = `${baseUrl}/onboarding/${token}`
+            const loginLink = tenantSlugFallback ? `https://simy.ch/${tenantSlugFallback}` : 'https://simy.ch/login'
+            const smsMessage = `Bitte vervollständige zuerst deine Registrierung:\n\n${onboardingUrl}\n\nDanach kannst du dich hier anmelden:\n${loginLink}`
+            try { await sendSMS({ to: user.phone, message: smsMessage }) } catch { /* ignore */ }
+          }
+          return { success: true, code: 'ACCOUNT_PENDING', hasSms: !!(user.phone && user.onboarding_token) }
+        }
+
+        // Link the new auth user to the existing public.users record
+        const { error: updateError } = await serviceSupabase
+          .from('users')
+          .update({ auth_user_id: newAuthUser.user.id })
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error('[PasswordReset] ❌ Failed to link auth user to public.users:', updateError.message)
+          return { success: true, code: 'ACCOUNT_PENDING', hasSms: false }
+        }
+
+        // Patch the user object so the rest of the flow proceeds normally
+        user = { ...user, auth_user_id: newAuthUser.user.id }
+        console.log('[PasswordReset] ✅ Auth user created and linked:', newAuthUser.user.id)
+      } catch (err: any) {
+        console.error('[PasswordReset] ❌ Unexpected error creating auth user:', err.message)
+        return { success: true, code: 'ACCOUNT_PENDING', hasSms: false }
       }
     }
     

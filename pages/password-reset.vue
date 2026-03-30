@@ -207,17 +207,19 @@
       <div class="w-full max-w-md">
         <!-- Logo -->
         <div class="text-center mb-6">
-          <img 
-            v-if="getLogo('header')" 
-            :src="getLogo('header') || ''" 
-            class="h-10 w-auto mx-auto drop-shadow-lg" 
-            :alt="`${brandName || 'Simy'} Logo`"
-          >
-          <div 
-            v-else 
-            class="w-10 h-10 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
-          >
-            <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ (brandName || 'S').charAt(0).toUpperCase() }}</span>
+          <div class="inline-flex items-center justify-center bg-white rounded-xl shadow-lg p-2">
+            <img 
+              v-if="getLogo('header')" 
+              :src="getLogo('header') || ''" 
+              class="h-10 w-auto drop-shadow-sm" 
+              :alt="`${brandName || 'Simy'} Logo`"
+            >
+            <div 
+              v-else 
+              class="w-10 h-10 flex items-center justify-center"
+            >
+              <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ (brandName || 'S').charAt(0).toUpperCase() }}</span>
+            </div>
           </div>
         </div>
 
