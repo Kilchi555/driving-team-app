@@ -69,6 +69,12 @@
 
       <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
+        <!-- Info Link -->
+        <button @click="showInfoModal = true" class="w-full flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 rounded-xl px-4 py-3 transition text-left shadow-sm">
+          <span class="w-5 h-5 rounded-full border border-green-500 text-green-600 text-[10px] font-bold flex items-center justify-center shrink-0">i</span>
+          <span>Wie funktioniert das Empfehlungs- programm? <span class="underline font-medium">Mehr erfahren →</span></span>
+        </button>
+
         <!-- Hero Stats Section -->
         <div class="rounded-2xl shadow-lg p-5" :style="{ backgroundColor: brandConfig.surface_color }">
           <div class="grid grid-cols-2 gap-3 text-center mb-3">
@@ -98,8 +104,6 @@
             <span class="text-lg font-bold text-green-700">CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</span>
           </div>
         </div>
-
-        <!-- Share Link Section -->
         <div class="rounded-2xl shadow-lg p-8" :style="{ backgroundColor: brandConfig.surface_color }">
           <div class="flex items-center gap-3 mb-2">
             <span class="text-2xl">🔗</span>
@@ -293,18 +297,26 @@
                 <div class="text-sm font-medium text-gray-800 mt-0.5">{{ lead.first_name }} {{ lead.last_name }}</div>
               </div>
             </template>
+            <template v-else-if="detailFilter === 'credited'">
+              <div v-for="tx in filteredDetail" :key="tx.id" class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5">
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-gray-800 truncate">{{ tx.referred_user_name }}</div>
+                  <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                    <span>{{ new Date(tx.created_at).toLocaleDateString('de-CH') }}</span>
+                    <span v-if="tx.category" class="inline-block bg-gray-200 text-gray-600 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none">{{ tx.category }}</span>
+                  </div>
+                </div>
+                <span class="ml-3 shrink-0 text-sm font-bold text-green-700">+CHF {{ ((tx.amount_rappen || 0) / 100).toFixed(2) }}</span>
+              </div>
+              <div v-if="filteredDetail.length > 0" class="mt-3 pt-3 border-t flex justify-between items-center">
+                <span class="text-sm font-semibold text-gray-600">Total verdient</span>
+                <span class="text-sm font-bold text-green-700">CHF {{ (filteredDetail.reduce((sum: number, t: any) => sum + (t.amount_rappen ?? 0), 0) / 100).toFixed(2) }}</span>
+              </div>
+            </template>
             <template v-else>
               <div v-for="ref in filteredDetail" :key="ref.id" class="bg-gray-50 rounded-lg px-3 py-2.5">
-                <template v-if="detailFilter === 'credited'">
-                  <div class="text-xs text-gray-400">1. Fahrstunde bezahlt am {{ ref.credited_at ? new Date(ref.credited_at).toLocaleDateString('de-CH') : '–' }}</div>
-                </template>
-                <template v-else>
-                  <div class="text-xs text-gray-400">Registriert am {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
-                </template>
-                <div class="text-sm font-medium text-gray-800 mt-0.5 flex items-center justify-between">
-                  <span>{{ ref.users?.first_name }} {{ ref.users?.last_name }}</span>
-                  <span v-if="detailFilter === 'credited'" class="text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1">✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
-                </div>
+                <div class="text-xs text-gray-400">Registriert am {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
+                <div class="text-sm font-medium text-gray-800 mt-0.5">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</div>
               </div>
             </template>
           </div>
@@ -312,10 +324,72 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- Info Modal -->
+  <Teleport to="body">
+    <div v-if="showInfoModal" class="fixed inset-0 z-[200] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showInfoModal = false">
+      <div class="bg-white rounded-xl shadow-xl max-w-sm w-full max-h-[85vh] flex flex-col">
+        <div class="border-b px-5 py-4 flex justify-between items-center shrink-0">
+          <h3 class="font-semibold text-gray-900">Wie funktioniert's?</h3>
+          <button @click="showInfoModal = false" class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold">×</button>
+        </div>
+        <div class="overflow-y-auto p-5 space-y-5">
+          <!-- Steps -->
+          <div class="space-y-3">
+            <div class="flex gap-3">
+              <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">1</div>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Link aktivieren & teilen</p>
+                <p class="text-xs text-gray-500 mt-0.5">Aktiviere zuerst deinen persönlichen Empfehlungslink und teile ihn dann mit Freunden, Familie oder Kollegen.</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">2</div>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Person registriert sich</p>
+                <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei der Fahrschule an.</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">3</div>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Erste Fahrstunde bezahlt</p>
+                <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste Fahrstunde bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Important note -->
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1.5">
+            <p class="text-sm font-bold text-amber-800">⚠️ Wichtig: Bitte zuerst teilen und dann anmelden!</p>
+            <p class="text-xs text-amber-700 leading-relaxed">Schick deinen Link <span class="font-semibold">zuerst</span> – und bitte die Person, sich direkt darüber anzumelden. Danach können wir den Affiliate-Link leider nicht mehr aktivieren.</p>
+          </div>
+
+          <!-- Rewards -->
+          <div>
+            <p class="text-sm font-semibold text-gray-800 mb-2">Prämien pro Kategorie</p>
+            <div v-if="affiliateRewards.length" class="space-y-1.5">
+              <div
+                v-for="r in affiliateRewards"
+                :key="r.driving_category"
+                class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+              >
+                <span class="text-sm font-medium text-gray-700">Kategorie {{ r.driving_category }}</span>
+                <span class="text-sm font-bold text-green-700">CHF {{ (r.reward_rappen / 100).toFixed(0) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Note -->
+          <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useFavicon } from '~/composables/useFavicon'
@@ -382,6 +456,11 @@ const generatingCode = ref(false)
 const showDetailModal = ref(false)
 const detailFilter = ref<'leads' | 'pending' | 'credited'>('leads')
 
+// Info modal
+const showInfoModal = ref(false)
+
+const affiliateRewards = computed(() => (stats.value?.category_rewards ?? []))
+
 const detailTitle = computed(() => ({
   leads: 'Interessenten',
   pending: 'Registrierungen',
@@ -391,6 +470,9 @@ const detailTitle = computed(() => ({
 const filteredDetail = computed(() => {
   if (detailFilter.value === 'leads') {
     return (stats.value?.leads ?? []).filter((l: any) => l.status !== 'converted')
+  }
+  if (detailFilter.value === 'credited') {
+    return stats.value?.reward_transactions ?? []
   }
   const referrals: any[] = stats.value?.referrals ?? []
   return referrals.filter((r: any) => r.status === detailFilter.value)

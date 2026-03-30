@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
 
       const [appointmentsRes, courseRegsRes] = await Promise.all([
         appointmentIds.length > 0
-          ? supabaseAdmin.from('appointments').select('id, user_id').in('id', appointmentIds)
+          ? supabaseAdmin.from('appointments').select('id, user_id, type').in('id', appointmentIds)
           : Promise.resolve({ data: [] }),
         courseRegIds.length > 0
           ? supabaseAdmin.from('course_registrations').select('id, user_id, first_name, last_name').in('id', courseRegIds)
@@ -91,17 +91,22 @@ export default defineEventHandler(async (event) => {
 
       rewardTransactions = rewardTxs.map(tx => {
         let userName = 'Unbekannt'
+        let category: string | null = null
         if (tx.reference_type === 'appointment') {
           const appt = apptMap[tx.reference_id]
           if (appt?.user_id) {
             const u = apptUserMap[appt.user_id]
             if (u) userName = `${u.first_name} ${u.last_name}`
           }
+          if (appt?.type) category = appt.type
         } else if (tx.reference_type === 'course_registration') {
           const reg = courseRegMap[tx.reference_id]
-          if (reg) userName = `${reg.first_name} ${reg.last_name}`
+          if (reg) {
+            userName = `${reg.first_name} ${reg.last_name}`
+            if (reg.category) category = reg.category
+          }
         }
-        return { ...tx, referred_user_name: userName }
+        return { ...tx, referred_user_name: userName, category }
       })
     }
   }
@@ -164,6 +169,23 @@ export default defineEventHandler(async (event) => {
 
   const affiliateSystemEnabled = enabledSetting?.setting_value !== 'false'
 
+  // Load category-specific rewards for info modal
+  const { data: categoryRewards } = await supabaseAdmin
+    .from('affiliate_category_rewards')
+    .select('driving_category, reward_rappen')
+    .eq('tenant_id', userProfile.tenant_id)
+    .eq('is_active', true)
+    .gt('reward_rappen', 0)
+    .order('driving_category', { ascending: true })
+
+  const { data: globalRewardSetting } = await supabaseAdmin
+    .from('tenant_settings')
+    .select('setting_value')
+    .eq('tenant_id', userProfile.tenant_id)
+    .eq('category', 'affiliate')
+    .eq('setting_key', 'reward_rappen')
+    .maybeSingle()
+
   return {
     success: true,
     data: {
@@ -176,7 +198,6 @@ export default defineEventHandler(async (event) => {
         total_referrals: affiliateCode?.total_referrals ?? 0,
         total_credited_rappen: affiliateCode?.total_credited_rappen ?? 0,
         current_balance_rappen: credits?.balance_rappen ?? 0,
-        // Granular metrics derived from live referral data
         registrations: totalRegistrations,
         active: totalActive,
         pending: totalPending,
@@ -186,6 +207,8 @@ export default defineEventHandler(async (event) => {
       reward_transactions: rewardTransactions,
       payout_requests: payoutRequests ?? [],
       leads: leads,
+      category_rewards: categoryRewards ?? [],
+      fallback_rappen: globalRewardSetting?.setting_value ? parseInt(globalRewardSetting.setting_value, 10) : 0,
     }
   }
 })

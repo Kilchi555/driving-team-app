@@ -148,9 +148,8 @@ export default defineEventHandler(async (event) => {
       .from('affiliate_category_rewards')
       .select('reward_rappen')
       .eq('tenant_id', tenant_id)
-      .eq('driving_category', resolvedCategory)
+      .ilike('driving_category', resolvedCategory)
       .eq('is_active', true)
-      .is('course_id', null)
       .maybeSingle()
 
     if (categoryReward) {
@@ -181,9 +180,8 @@ export default defineEventHandler(async (event) => {
             .from('affiliate_category_rewards')
             .select('reward_rappen')
             .eq('tenant_id', tenant_id)
-            .eq('driving_category', parentCat.code)
+            .ilike('driving_category', parentCat.code)
             .eq('is_active', true)
-            .is('course_id', null)
             .maybeSingle()
 
           if (parentReward) {

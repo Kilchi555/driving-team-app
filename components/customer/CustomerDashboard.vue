@@ -255,7 +255,7 @@
         
         <!-- Affiliate / Empfehlen Card -->
         <div
-          v-if="appEnv !== 'production' && affiliateEnabled"
+          v-if="affiliateEnabled"
           @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
@@ -274,16 +274,8 @@
                   <p class="text-sm text-green-600 font-semibold">Link teilen und Geld verdienen</p>
                 </div>
               </div>
-              <!-- Balance badge if any credits earned -->
-              <div v-if="(affiliateStats?.summary?.current_balance_rappen ?? 0) > 0" class="bg-green-50 border border-green-200 rounded-lg px-2 py-1 text-right">
-                <p class="text-xs text-green-600 font-medium">Guthaben</p>
-                <p class="text-sm font-bold text-green-700">CHF {{ ((affiliateStats.summary.current_balance_rappen) / 100).toFixed(0) }}</p>
-              </div>
-              <div v-else-if="(affiliateStats?.summary?.total_referrals ?? 0) > 0" class="bg-green-50 border border-green-200 rounded-lg px-2 py-1 text-right">
-                <p class="text-xs text-green-600 font-medium">Empfohlen</p>
-                <p class="text-sm font-bold text-green-700">{{ affiliateStats.summary.total_referrals }}×</p>
-              </div>
-              <div v-else class="text-green-600">
+              <!-- Arrow -->
+              <div class="text-green-600">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
@@ -463,6 +455,15 @@
             </button>
           </div>
 
+          <!-- Info Link -->
+          <button
+            @click="showAffiliateInfoModal = true"
+            class="w-full mb-5 flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 rounded-lg px-3 py-2 transition text-left"
+          >
+            <span class="w-5 h-5 rounded-full border border-green-500 text-green-600 text-[10px] font-bold flex items-center justify-center shrink-0">i</span>
+            <span>Wie funktioniert das Empfehlungs- programm? <span class="underline">Mehr erfahren →</span></span>
+          </button>
+
           <div v-if="affiliateLoading" class="text-center py-8 text-gray-400">Wird geladen…</div>
           <div v-else class="space-y-5">
             <!-- Stats -->
@@ -537,41 +538,6 @@
               </div>
             </div>
 
-            <!-- Recent reward transactions -->
-            <div v-if="affiliateStats?.reward_transactions?.length">
-              <p class="text-sm font-medium text-gray-700 mb-2">Letzte Einnahmen</p>
-              <div class="space-y-1.5">
-                <div
-                  v-for="tx in affiliateStats.reward_transactions.slice(0, 5)"
-                  :key="tx.id"
-                  class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
-                >
-                  <div class="min-w-0">
-                    <div class="text-sm font-medium text-gray-800 truncate">{{ tx.referred_user_name }}</div>
-                    <div class="text-xs text-gray-400">
-                      {{ new Date(tx.created_at).toLocaleDateString('de-CH') }} · {{ tx.reference_type === 'course_registration' ? 'Kurs' : 'Fahrstunde' }}
-                    </div>
-                  </div>
-                  <span class="ml-3 shrink-0 text-sm font-bold text-green-700">+CHF {{ ((tx.amount_rappen || 0) / 100).toFixed(2) }}</span>
-                </div>
-              </div>
-            </div>
-            <!-- Referrals without earnings yet -->
-            <div v-else-if="affiliateStats?.referrals?.length">
-              <p class="text-sm font-medium text-gray-700 mb-2">Letzte Empfehlungen</p>
-              <div class="space-y-1.5">
-                <div v-for="ref in affiliateStats.referrals.slice(0, 5)" :key="ref.id" class="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                  <div>
-                    <div class="text-sm text-gray-700">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</div>
-                    <div class="text-xs text-gray-400">Registriert {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
-                  </div>
-                  <span class="text-xs px-2 py-0.5 rounded-full font-semibold" :class="ref.status === 'credited' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
-                    {{ ref.status === 'credited' ? '✓ Aktiv' : 'Ausstehend' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             <div class="pt-2 border-t border-gray-100 text-center">
               <NuxtLink to="/affiliate-dashboard" class="text-sm text-gray-600 underline hover:text-gray-900">
                 Vollständiges Dashboard öffnen →
@@ -595,8 +561,8 @@
               Keine Einträge
             </div>
             <div class="space-y-2">
-              <!-- Earnings: individual transactions -->
-              <template v-if="affiliateDetailFilter === 'earnings'">
+              <!-- Earnings / credited: individual transactions -->
+              <template v-if="affiliateDetailFilter === 'earnings' || affiliateDetailFilter === 'credited'">
                 <div
                   v-for="tx in filteredAffiliateDetail"
                   :key="tx.id"
@@ -604,32 +570,23 @@
                 >
                   <div class="min-w-0">
                     <div class="text-sm font-medium text-gray-800 truncate">{{ tx.referred_user_name }}</div>
-                    <div class="text-xs text-gray-400 mt-0.5">
-                      {{ new Date(tx.created_at).toLocaleDateString('de-CH') }} · {{ tx.reference_type === 'course_registration' ? 'Kurs' : 'Fahrstunde' }}
+                    <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                      <span>{{ new Date(tx.created_at).toLocaleDateString('de-CH') }}</span>
+                      <span v-if="tx.category" class="inline-block bg-gray-200 text-gray-600 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none">{{ tx.category }}</span>
                     </div>
                   </div>
                   <span class="ml-3 shrink-0 text-sm font-bold text-green-700">+CHF {{ ((tx.amount_rappen || 0) / 100).toFixed(2) }}</span>
                 </div>
               </template>
-              <!-- All / credited / pending: referral rows -->
+              <!-- pending / all: referral rows -->
               <template v-else-if="affiliateDetailFilter !== 'leads'">
                 <div
                   v-for="ref in filteredAffiliateDetail"
                   :key="ref.id"
-                  class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
+                  class="bg-gray-50 rounded-lg px-3 py-2.5"
                 >
-                  <div class="min-w-0">
-                    <template v-if="affiliateDetailFilter === 'credited'">
-                      <div class="text-xs text-gray-400">1. Fahrstunde bezahlt am {{ ref.credited_at ? new Date(ref.credited_at).toLocaleDateString('de-CH') : '–' }}</div>
-                    </template>
-                    <template v-else>
-                      <div class="text-xs text-gray-400">Registriert am {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
-                    </template>
-                    <div class="text-sm font-medium text-gray-800 truncate mt-0.5">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</div>
-                  </div>
-                  <div v-if="affiliateDetailFilter === 'credited'" class="ml-3 shrink-0">
-                    <span class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1">✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
-                  </div>
+                  <div class="text-xs text-gray-400">Registriert am {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
+                  <div class="text-sm font-medium text-gray-800 truncate mt-0.5">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</div>
                 </div>
               </template>
               <!-- Leads: Interessenten -->
@@ -645,12 +602,75 @@
               </template>
             </div>
             <!-- Total for earnings view -->
-            <div v-if="affiliateDetailFilter === 'earnings' && filteredAffiliateDetail.length > 0" class="mt-3 pt-3 border-t flex justify-between items-center">
+            <div v-if="(affiliateDetailFilter === 'earnings' || affiliateDetailFilter === 'credited') && filteredAffiliateDetail.length > 0" class="mt-3 pt-3 border-t flex justify-between items-center">
               <span class="text-sm font-semibold text-gray-600">Total verdient</span>
               <span class="text-sm font-bold text-green-700">
                 CHF {{ (filteredAffiliateDetail.reduce((sum: number, t: any) => sum + (t.amount_rappen ?? 0), 0) / 100).toFixed(2) }}
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Affiliate Info Modal -->
+    <Teleport to="body">
+      <div v-if="showAffiliateInfoModal" class="fixed inset-0 z-[200] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showAffiliateInfoModal = false">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full max-h-[85vh] flex flex-col">
+          <div class="border-b px-5 py-4 flex justify-between items-center shrink-0">
+            <h3 class="font-semibold text-gray-900">Wie funktioniert's?</h3>
+            <button @click="showAffiliateInfoModal = false" class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold">×</button>
+          </div>
+          <div class="overflow-y-auto p-5 space-y-5">
+            <!-- Steps -->
+            <div class="space-y-3">
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">1</div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Link aktivieren & teilen</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Aktiviere zuerst deinen persönlichen Empfehlungslink und teile ihn dann mit Freunden, Familie oder Kollegen.</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">2</div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Person registriert sich</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei der Fahrschule an.</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">3</div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Erste Fahrstunde bezahlt</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste Fahrstunde bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Important note -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1.5">
+              <p class="text-sm font-bold text-amber-800">⚠️ Wichtig: Bitte zuerst teilen und dann anmelden!</p>
+              <p class="text-xs text-amber-700 leading-relaxed">Schick deinen Link <span class="font-semibold">zuerst</span> – und bitte die Person, sich direkt darüber anzumelden. Danach können wir den Affiliate-Link leider nicht mehr aktivieren.</p>
+            </div>
+
+            <!-- Rewards -->
+            <div>
+              <p class="text-sm font-semibold text-gray-800 mb-2">Prämien pro Kategorie</p>
+              <div v-if="affiliateLoading" class="text-xs text-gray-400 text-center py-3">Wird geladen…</div>
+              <div v-else-if="affiliateRewards?.length" class="space-y-1.5">
+                <div
+                  v-for="r in affiliateRewards"
+                  :key="r.driving_category"
+                  class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+                >
+                  <span class="text-sm font-medium text-gray-700">Kategorie {{ r.driving_category }}</span>
+                  <span class="text-sm font-bold text-green-700">CHF {{ (r.reward_rappen / 100).toFixed(0) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Note -->
+            <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
           </div>
         </div>
       </div>
@@ -1315,6 +1335,14 @@ const affiliateEnabled = ref(false)
 const showAffiliateDetailModal = ref(false)
 const affiliateDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings' | 'leads'>('all')
 
+// Affiliate Info Modal
+const showAffiliateInfoModal = ref(false)
+
+const affiliateRewards = computed(() => {
+  if (!affiliateStats.value) return null
+  return (affiliateStats.value as any).category_rewards ?? []
+})
+
 const affiliateDetailTitle = computed(() => ({
   all: 'Alle Registrierungen',
   pending: 'Registrierungen',
@@ -1324,7 +1352,7 @@ const affiliateDetailTitle = computed(() => ({
 }[affiliateDetailFilter.value]))
 
 const filteredAffiliateDetail = computed(() => {
-  if (affiliateDetailFilter.value === 'earnings') {
+  if (affiliateDetailFilter.value === 'earnings' || affiliateDetailFilter.value === 'credited') {
     return affiliateStats.value?.reward_transactions ?? []
   }
   if (affiliateDetailFilter.value === 'leads') {
