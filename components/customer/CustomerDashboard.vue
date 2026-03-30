@@ -143,7 +143,7 @@
         <!-- Zahlungsübersicht -->
         <div 
           @click="handleClickWithDelay('payments', navigateToPayments)"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-100" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-200" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'payments' }"
         >
           <div class="p-4 h-full flex flex-col">
@@ -179,7 +179,7 @@
         <!-- Kommende Termine - Uses Secondary Color -->
         <div 
           @click="handleClickWithDelay('upcoming', () => { showUpcomingLessonsModal = true; loadAppointments(true) })"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-100" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-200" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'upcoming' }"
         >
           <div class="p-4 h-full flex flex-col">
@@ -215,7 +215,7 @@
         <!-- Absolvierte Lektionen - Uses Accent Color -->
         <div 
           @click="handleClickWithDelay('evaluations', () => { showEvaluationsModal = true; loadAppointments(true) })"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-100" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-200" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'evaluations' }"
         >
           <div class="p-4 h-full flex flex-col">
@@ -612,7 +612,7 @@
                 </div>
               </template>
               <!-- All / credited / pending: referral rows -->
-              <template v-else>
+              <template v-else-if="affiliateDetailFilter !== 'leads'">
                 <div
                   v-for="ref in filteredAffiliateDetail"
                   :key="ref.id"
@@ -632,6 +632,19 @@
                     </span>
                     <span v-else class="inline-flex items-center text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2.5 py-1">⏳ Ausstehend</span>
                   </div>
+                </div>
+              </template>
+              <!-- Leads: Interessenten -->
+              <template v-else>
+                <div
+                  v-for="lead in filteredAffiliateDetail"
+                  :key="lead.id"
+                  class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
+                >
+                  <div class="min-w-0">
+                    <div class="text-xs text-gray-400">Angemeldet am {{ new Date(lead.created_at).toLocaleDateString('de-CH') }}</div>
+                  </div>
+                  <div class="ml-3 shrink-0 text-sm font-medium text-gray-800">{{ lead.first_name }} {{ lead.last_name }}</div>
                 </div>
               </template>
             </div>

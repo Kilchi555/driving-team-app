@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: token, password, and email are required'
+        message: 'Missing required fields: token, password, and email are required'
       })
     }
 
@@ -31,49 +31,49 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: Invalid email format', { email })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid email format'
+        message: 'Invalid email format'
       })
     }
 
     if (password && password.length < 12) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Passwort muss mindestens 12 Zeichen lang sein'
+        message: 'Passwort muss mindestens 12 Zeichen lang sein'
       })
     }
     
     if (password && !/[A-Z]/.test(password)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Passwort muss mindestens einen Großbuchstaben enthalten'
+        message: 'Passwort muss mindestens einen Großbuchstaben enthalten'
       })
     }
     
     if (password && !/[a-z]/.test(password)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Passwort muss mindestens einen Kleinbuchstaben enthalten'
+        message: 'Passwort muss mindestens einen Kleinbuchstaben enthalten'
       })
     }
     
     if (password && !/[0-9]/.test(password)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Passwort muss mindestens eine Zahl enthalten'
+        message: 'Passwort muss mindestens eine Zahl enthalten'
       })
     }
 
     if (firstName && firstName.length > 100) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'First name is too long'
+        message: 'First name is too long'
       })
     }
 
     if (lastName && lastName.length > 100) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Last name is too long'
+        message: 'Last name is too long'
       })
     }
 
@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
       })
       throw createError({
         statusCode: 429,
-        statusMessage: `Too many attempts. Please try again in ${rateLimitResult.retryAfter} seconds.`,
+        message: `Too many attempts. Please try again in ${rateLimitResult.retryAfter} seconds.`,
         data: { retryAfter: rateLimitResult.retryAfter * 1000 }
       })
     }
@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: User lookup error', { error: userError.message })
       throw createError({
         statusCode: 400,
-        statusMessage: `User lookup failed: ${userError.message}`
+        message: `User lookup failed: ${userError.message}`
       })
     }
 
@@ -124,7 +124,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: User not found with token')
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid or expired token'
+        message: 'Invalid or expired token'
       })
     }
 
@@ -136,11 +136,34 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: Token expired', { userId: user.id })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Token has expired'
+        message: 'Token has expired'
       })
     }
 
-    // ✅ LAYER 6: Create Auth User
+    // ✅ LAYER 6: Check if email is already linked to an active account
+    const { data: existingPublicUser } = await supabaseAdmin
+      .from('users')
+      .select('id, auth_user_id, first_name, last_name')
+      .eq('email', email.toLowerCase().trim())
+      .not('auth_user_id', 'is', null)
+      .maybeSingle()
+
+    if (existingPublicUser && existingPublicUser.id !== user.id) {
+      throw createError({
+        statusCode: 409,
+        message: 'Diese E-Mail-Adresse ist bereits mit einem anderen Konto verknüpft. Bitte verwende eine andere E-Mail-Adresse oder melde dich direkt an.'
+      })
+    }
+
+    if (existingPublicUser && existingPublicUser.id === user.id && existingPublicUser.auth_user_id) {
+      // This user already completed onboarding
+      throw createError({
+        statusCode: 409,
+        message: 'Du hast bereits ein Konto. Bitte melde dich direkt an.'
+      })
+    }
+
+    // ✅ LAYER 7: Create Auth User
     logger.debug('👤 Creating auth user for email:', email)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
@@ -155,19 +178,16 @@ export default defineEventHandler(async (event) => {
     if (authError) {
       logger.warn('⚠️ Complete onboarding: Auth user creation error', { error: authError.message })
       
-      // Provide user-friendly error messages
       let userMessage = 'Fehler beim Erstellen des Benutzerkontos'
-      if (authError.message.includes('already registered')) {
+      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registered')) {
         userMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.'
       } else if (authError.message.includes('password')) {
         userMessage = 'Das Passwort entspricht nicht den Anforderungen. Bitte wähle ein stärkeres Passwort.'
-      } else if (authError.message.includes('email')) {
-        userMessage = 'Die E-Mail-Adresse ist ungültig. Bitte überprüfe deine Eingabe.'
       }
       
       throw createError({
-        statusCode: 400,
-        statusMessage: userMessage
+        statusCode: 409,
+        message: userMessage
       })
     }
 
@@ -223,7 +243,7 @@ export default defineEventHandler(async (event) => {
       
       throw createError({
         statusCode: 400,
-        statusMessage: userMessage
+        message: userMessage
       })
     }
 

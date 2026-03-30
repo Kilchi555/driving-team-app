@@ -110,6 +110,10 @@ export default defineEventHandler(async (event) => {
     return { ok: true, alreadyActive: true }
   }
 
+  // Lead already exists and not yet converted — inform the user
+  if (existingLead) {
+    return { ok: false, alreadySubmitted: true }
+  }
   const tenantName = tenant.twilio_from_sender || tenant.name || 'Fahrschule'
   const tenantSlugResolved = tenant.slug
   const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
