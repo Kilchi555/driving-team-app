@@ -316,7 +316,7 @@
         <div v-if="!registrationComplete && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center mb-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">Ausweis hochladen</h2>
-            <p class="text-gray-600 text-sm">Bitte laden Sie für jede Kategorie einen Ausweis hoch</p>
+            <p class="text-gray-600 text-sm">Lade deinen Lernfahrausweis hoch – du kannst diesen Schritt auch überspringen und den Ausweis später in deinem Profil nachholen.</p>
           </div>
 
           <!-- Upload per Category -->
@@ -985,8 +985,8 @@ const canProceed = computed(() => {
            formData.value.categories.length > 0
   }
   if (currentStep.value === 2 && requiresLernfahrausweis.value) {
-    // All selected categories must have an uploaded document
-    return formData.value.categories.every(cat => uploadedDocuments.value[cat])
+    // Upload is optional – always allow proceeding
+    return true
   }
   return true
 })

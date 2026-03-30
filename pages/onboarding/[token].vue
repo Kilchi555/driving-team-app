@@ -298,9 +298,10 @@
                   required
                   @blur="validateBirthdate"
                   :class="[
-                    'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
+                    'w-full max-w-full min-w-0 border rounded-md px-3 py-2 focus:outline-none focus:ring-2 box-border appearance-none',
                     fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
                   ]"
+                  style="-webkit-appearance: none; width: 100%; box-sizing: border-box;"
                 >
                 <p v-if="fieldErrors.birthdate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthdate }}</p>
               </div>
@@ -431,9 +432,9 @@
 
           <!-- Step 3: Upload Documents -->
           <div v-if="step === 2">
-            <h2 class="text-xl font-bold mb-4">Dokumente hochladen</h2>
+            <h2 class="text-xl font-bold mb-4">Dokumente hochladen <span class="text-sm font-normal text-gray-500">(optional)</span></h2>
             <p class="text-sm text-gray-600 mb-6">
-              Bitte lade für jede Kategorie einen Ausweis hoch.
+              Du kannst deinen Lernfahrausweis jetzt hochladen oder diesen Schritt überspringen und den Ausweis später in deinem Profil nachholen.
             </p>
 
             <div class="space-y-6">
@@ -489,7 +490,6 @@
                         accept="image/*,.pdf"
                         @change="handleFileUpload($event, category)"
                         class="sr-only"
-                        required
                       >
                     </div>
                   </div>
@@ -1312,12 +1312,7 @@ const handleNextStep = async () => {
     categoryError.value = ''
     step.value++
   } else if (step.value === 2) {
-    // Step 3 validation: Check that all categories have uploaded documents
-    const allCategoriesHaveDocuments = form.categories.every(cat => uploadedFiles[cat])
-    if (!allCategoriesHaveDocuments) {
-      showErrorMessage('Bitte lade für jede Kategorie einen Ausweis hoch')
-      return
-    }
+    // Upload is optional – always allow proceeding to next step
     step.value++
   } else if (step.value < 3) {
     step.value++
