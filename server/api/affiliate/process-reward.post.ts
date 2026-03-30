@@ -40,6 +40,40 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'user_id, tenant_id and either appointment_id or course_registration_id are required' })
   }
 
+  // Resolve driving_category from DB if not passed – prevents fallback to global when type is missing
+  let resolvedCategory = driving_category ?? null
+  if (!resolvedCategory && appointment_id) {
+    try {
+      const { data: appt } = await supabaseAdmin
+        .from('appointments')
+        .select('type')
+        .eq('id', appointment_id)
+        .maybeSingle()
+      resolvedCategory = appt?.type ?? null
+      if (resolvedCategory) {
+        logger.debug('✅ [Affiliate] Resolved driving_category from DB:', resolvedCategory)
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+  if (!resolvedCategory && course_registration_id) {
+    try {
+      const { data: reg } = await supabaseAdmin
+        .from('course_registrations')
+        .select('courses(category)')
+        .eq('id', course_registration_id)
+        .maybeSingle()
+      resolvedCategory = (reg as any)?.courses?.category ?? null
+      if (resolvedCategory) {
+        logger.debug('✅ [Affiliate] Resolved driving_category from course:', resolvedCategory)
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+  logger.debug('📋 [Affiliate] Resolved category:', { passed: driving_category, resolved: resolvedCategory })
+
   // Look up the user's referred_by_code
   const { data: referredUser } = await supabaseAdmin
     .from('users')
@@ -109,19 +143,19 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  if (rewardRappen <= 0 && driving_category) {
+  if (rewardRappen <= 0 && resolvedCategory) {
     const { data: categoryReward } = await supabaseAdmin
       .from('affiliate_category_rewards')
       .select('reward_rappen')
       .eq('tenant_id', tenant_id)
-      .eq('driving_category', driving_category)
+      .eq('driving_category', resolvedCategory)
       .eq('is_active', true)
       .is('course_id', null)
       .maybeSingle()
 
     if (categoryReward) {
       rewardRappen = categoryReward.reward_rappen
-      logger.debug('✅ [Affiliate] Found category-specific reward:', { driving_category, rewardRappen })
+      logger.debug('✅ [Affiliate] Found category-specific reward:', { driving_category: resolvedCategory, rewardRappen })
     }
 
     // Fallback: try parent category if no reward found for exact code
@@ -129,7 +163,7 @@ export default defineEventHandler(async (event) => {
       const { data: catRow } = await supabaseAdmin
         .from('categories')
         .select('parent_category_id')
-        .eq('code', driving_category)
+        .eq('code', resolvedCategory)
         .eq('tenant_id', tenant_id)
         .eq('is_active', true)
         .limit(1)
@@ -154,7 +188,7 @@ export default defineEventHandler(async (event) => {
 
           if (parentReward) {
             rewardRappen = parentReward.reward_rappen
-            logger.debug('✅ [Affiliate] Found parent category reward:', { driving_category, parentCode: parentCat.code, rewardRappen })
+            logger.debug('✅ [Affiliate] Found parent category reward:', { driving_category: resolvedCategory, parentCode: parentCat.code, rewardRappen })
           }
         }
       }
