@@ -67,35 +67,35 @@
         </nav>
       </div>
 
-      <div class="max-w-6xl mx-auto px-4 py-12 space-y-8">
+      <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
         <!-- Hero Stats Section -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="group rounded-2xl shadow-lg hover:shadow-xl transition overflow-hidden" :style="{ backgroundColor: brandConfig.surface_color }">
-            <div class="h-1" :style="{ backgroundColor: brandConfig.primary_color }"></div>
-            <div class="p-6">
-              <p class="text-sm font-medium mb-2" :style="{ color: brandConfig.text_secondary_color }"><span>📊</span> Empfehlungen</p>
-              <div class="text-4xl font-bold mb-1" :style="{ color: brandConfig.text_color }">{{ stats?.summary.total_referrals ?? 0 }}</div>
-              <p class="text-xs" :style="{ color: brandConfig.text_secondary_color }">Neue Kunden</p>
+        <div class="rounded-2xl shadow-lg p-5" :style="{ backgroundColor: brandConfig.surface_color }">
+          <div class="grid grid-cols-2 gap-3 text-center mb-3">
+            <div class="relative bg-gray-50 rounded-xl p-3 cursor-pointer hover:bg-gray-100 transition" @click="openDetail('leads')">
+              <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+              <div class="text-xl font-bold text-gray-800">{{ stats?.leads?.filter((l: any) => l.status !== 'converted')?.length ?? 0 }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">Interessenten</div>
+            </div>
+            <div class="relative bg-blue-50 rounded-xl p-3 cursor-pointer hover:bg-blue-100 transition" @click="openDetail('pending')">
+              <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-blue-300 text-blue-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+              <div class="text-xl font-bold text-blue-700">{{ stats?.referrals?.filter((r: any) => r.status === 'pending')?.length ?? 0 }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">Registrierungen</div>
             </div>
           </div>
-
-          <div class="group rounded-2xl shadow-lg hover:shadow-xl transition overflow-hidden" :style="{ backgroundColor: brandConfig.surface_color }">
-            <div class="h-1" :style="{ backgroundColor: brandConfig.secondary_color }"></div>
-            <div class="p-6">
-              <p class="text-sm font-medium mb-2" :style="{ color: brandConfig.text_secondary_color }"><span>💰</span> Verdient</p>
-              <div class="text-4xl font-bold mb-1" :style="{ color: brandConfig.text_color }">{{ formatChf(stats?.summary.total_credited_rappen ?? 0) }}</div>
-              <p class="text-xs" :style="{ color: brandConfig.text_secondary_color }">Insgesamt</p>
-            </div>
+          <div class="relative bg-green-50 rounded-xl p-3 text-center mb-3 cursor-pointer hover:bg-green-100 transition" @click="openDetail('credited')">
+            <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+            <div class="text-xl font-bold text-green-700">{{ stats?.referrals?.filter((r: any) => r.status === 'credited')?.length ?? 0 }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">1. Fahrstunde bezahlt</div>
           </div>
-
-          <div class="group rounded-2xl shadow-lg hover:shadow-xl transition overflow-hidden" :style="{ backgroundColor: brandConfig.surface_color }">
-            <div class="h-1" :style="{ backgroundColor: brandConfig.success_color }"></div>
-            <div class="p-6">
-              <p class="text-sm font-medium mb-2" :style="{ color: brandConfig.text_secondary_color }"><span>✨</span> Guthaben</p>
-              <div class="text-4xl font-bold mb-1" :style="{ color: brandConfig.text_color }">{{ formatChf(stats?.summary.current_balance_rappen ?? 0) }}</div>
-              <p class="text-xs" :style="{ color: brandConfig.text_secondary_color }">Verfügbar</p>
+          <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+            <div class="flex items-center gap-2">
+              <svg class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span class="text-sm font-semibold text-green-800">Dein Guthaben</span>
             </div>
+            <span class="text-lg font-bold text-green-700">CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</span>
           </div>
         </div>
 
@@ -120,14 +120,16 @@
           </div>
 
           <div v-else class="space-y-4">
-            <div class="flex items-center gap-2 rounded-xl border-2 p-4" :style="{ borderColor: brandConfig.primary_color, backgroundColor: `${brandConfig.primary_color}08` }">
-              <input type="text" :value="shareLink" readonly class="flex-1 bg-transparent text-sm font-mono focus:outline-none" :style="{ color: brandConfig.text_color }">
+            <div class="rounded-xl border-2 overflow-hidden" :style="{ borderColor: brandConfig.primary_color }">
+              <div class="px-3 py-2.5" :style="{ backgroundColor: `${brandConfig.primary_color}08` }">
+                <p class="text-xs font-mono truncate" :style="{ color: brandConfig.text_color }">{{ shareLink }}</p>
+              </div>
               <button
                 @click="copyLink"
-                class="shrink-0 text-xs font-bold px-4 py-2 rounded-lg transition hover:scale-105"
-                :style="{ color: brandConfig.primary_color, backgroundColor: `${brandConfig.primary_color}15` }"
+                class="w-full text-sm font-bold py-2.5 transition hover:opacity-90 active:opacity-75 text-white"
+                :style="{ backgroundColor: brandConfig.primary_color }"
               >
-                {{ copied ? '✓ Kopiert' : '📋 Kopieren' }}
+                {{ copied ? '✓ Kopiert' : '📋 Link kopieren' }}
               </button>
             </div>
 
@@ -147,45 +149,6 @@
               >
                 ✉️ E-Mail
               </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Referrals Section -->
-        <div class="rounded-2xl shadow-lg p-8" :style="{ backgroundColor: brandConfig.surface_color }">
-          <div class="flex items-center gap-3 mb-6">
-            <span class="text-2xl">👥</span>
-            <h2 class="text-2xl font-bold" :style="{ color: brandConfig.text_color }">Deine Empfehlungen</h2>
-          </div>
-
-          <div v-if="!stats?.referrals?.length" class="text-center py-12">
-            <p class="text-lg" :style="{ color: brandConfig.text_secondary_color }">🎯 Noch keine Empfehlungen</p>
-            <p class="text-sm mt-2" :style="{ color: brandConfig.text_secondary_color }">Teile deinen Link oben und starten Sie zu verdienen!</p>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div
-              v-for="ref in stats.referrals.slice(0, 10)"
-              :key="ref.id"
-              class="flex items-center justify-between p-4 rounded-xl transition"
-              :style="{ backgroundColor: `${brandConfig.primary_color}08` }"
-            >
-              <div class="flex-1">
-                <p class="font-medium" :style="{ color: brandConfig.text_color }">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</p>
-                <p class="text-xs mt-1" :style="{ color: brandConfig.text_secondary_color }">{{ formatDate(ref.created_at) }}</p>
-              </div>
-              <div class="flex items-center gap-3">
-                <span
-                  class="text-xs px-3 py-1 rounded-full font-bold"
-                  :class="ref.status === 'credited' ? 'bg-green-100' : 'bg-gray-100'"
-                  :style="{ color: ref.status === 'credited' ? '#10b981' : brandConfig.text_secondary_color }"
-                >
-                  {{ ref.status === 'credited' ? '✓ Gutgeschrieben' : '⏳ Ausstehend' }}
-                </span>
-                <span v-if="ref.reward_rappen > 0" class="font-bold text-lg" :style="{ color: brandConfig.primary_color }">
-                  {{ formatChf(ref.reward_rappen) }}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -312,10 +275,47 @@
       </div>
     </div>
   </div>
+
+  <!-- Detail Modal -->
+  <Teleport to="body">
+    <div v-if="showDetailModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showDetailModal = false">
+      <div class="bg-white rounded-xl shadow-xl max-w-sm w-full max-h-[80vh] flex flex-col">
+        <div class="border-b px-5 py-4 flex justify-between items-center shrink-0">
+          <h3 class="font-semibold text-gray-900">{{ detailTitle }}</h3>
+          <button @click="showDetailModal = false" class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold">×</button>
+        </div>
+        <div class="overflow-y-auto p-4">
+          <div v-if="filteredDetail.length === 0" class="text-sm text-gray-400 text-center py-6">Keine Einträge</div>
+          <div class="space-y-2">
+            <template v-if="detailFilter === 'leads'">
+              <div v-for="lead in filteredDetail" :key="lead.id" class="bg-gray-50 rounded-lg px-3 py-2.5">
+                <div class="text-xs text-gray-400">Angemeldet am {{ new Date(lead.created_at).toLocaleDateString('de-CH') }}</div>
+                <div class="text-sm font-medium text-gray-800 mt-0.5">{{ lead.first_name }} {{ lead.last_name }}</div>
+              </div>
+            </template>
+            <template v-else>
+              <div v-for="ref in filteredDetail" :key="ref.id" class="bg-gray-50 rounded-lg px-3 py-2.5">
+                <template v-if="detailFilter === 'credited'">
+                  <div class="text-xs text-gray-400">1. Fahrstunde bezahlt am {{ ref.credited_at ? new Date(ref.credited_at).toLocaleDateString('de-CH') : '–' }}</div>
+                </template>
+                <template v-else>
+                  <div class="text-xs text-gray-400">Registriert am {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
+                </template>
+                <div class="text-sm font-medium text-gray-800 mt-0.5 flex items-center justify-between">
+                  <span>{{ ref.users?.first_name }} {{ ref.users?.last_name }}</span>
+                  <span v-if="detailFilter === 'credited'" class="text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1">✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useFavicon } from '~/composables/useFavicon'
@@ -377,6 +377,29 @@ const affiliateCode = ref<string | null>(null)
 const shareLink = ref('')
 const copied = ref(false)
 const generatingCode = ref(false)
+
+// Detail modal
+const showDetailModal = ref(false)
+const detailFilter = ref<'leads' | 'pending' | 'credited'>('leads')
+
+const detailTitle = computed(() => ({
+  leads: 'Interessenten',
+  pending: 'Registrierungen',
+  credited: '1. Fahrstunde bezahlt',
+}[detailFilter.value]))
+
+const filteredDetail = computed(() => {
+  if (detailFilter.value === 'leads') {
+    return (stats.value?.leads ?? []).filter((l: any) => l.status !== 'converted')
+  }
+  const referrals: any[] = stats.value?.referrals ?? []
+  return referrals.filter((r: any) => r.status === detailFilter.value)
+})
+
+function openDetail(filter: 'leads' | 'pending' | 'credited') {
+  detailFilter.value = filter
+  showDetailModal.value = true
+}
 
 const showPayoutForm = ref(false)
 const payoutType = ref<'bank' | 'credit'>('bank')
