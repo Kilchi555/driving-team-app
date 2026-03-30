@@ -472,15 +472,15 @@
                 @click="openAffiliateDetail('leads')"
               >
                 <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-                <div class="text-xl font-bold text-gray-800">{{ affiliateStats?.leads?.length ?? 0 }}</div>
+                <div class="text-xl font-bold text-gray-800">{{ affiliateStats?.leads?.filter((l: any) => l.status !== 'converted')?.length ?? 0 }}</div>
                 <div class="text-xs text-gray-500 mt-0.5">Interessenten</div>
               </div>
               <div
                 class="relative bg-blue-50 rounded-xl p-3 cursor-pointer hover:bg-blue-100 transition"
-                @click="openAffiliateDetail('all')"
+                @click="openAffiliateDetail('pending')"
               >
                 <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-blue-300 text-blue-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-                <div class="text-xl font-bold text-blue-700">{{ affiliateStats?.referrals?.length ?? 0 }}</div>
+                <div class="text-xl font-bold text-blue-700">{{ affiliateStats?.referrals?.filter((r: any) => r.status === 'pending')?.length ?? 0 }}</div>
                 <div class="text-xs text-gray-500 mt-0.5">Registrierungen</div>
               </div>
             </div>
@@ -489,7 +489,7 @@
               @click="openAffiliateDetail('credited')"
             >
               <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-              <div class="text-xl font-bold text-green-700">{{ affiliateStats?.summary?.total_referrals ?? 0 }}</div>
+              <div class="text-xl font-bold text-green-700">{{ affiliateStats?.referrals?.filter((r: any) => r.status === 'credited')?.length ?? 0 }}</div>
               <div class="text-xs text-gray-500 mt-0.5">1. Fahrstunde bezahlt</div>
             </div>
 
@@ -619,18 +619,16 @@
                   class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
                 >
                   <div class="min-w-0">
-                    <div class="text-sm font-medium text-gray-800 truncate">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</div>
-                    <div class="text-xs text-gray-400 mt-0.5">
-                      <div>Registriert {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
-                      <div v-if="ref.credited_at">Aktiv seit {{ new Date(ref.credited_at).toLocaleDateString('de-CH') }}</div>
-                    </div>
+                    <template v-if="affiliateDetailFilter === 'credited'">
+                      <div class="text-xs text-gray-400">1. Fahrstunde bezahlt am {{ ref.credited_at ? new Date(ref.credited_at).toLocaleDateString('de-CH') : '–' }}</div>
+                    </template>
+                    <template v-else>
+                      <div class="text-xs text-gray-400">Registriert am {{ new Date(ref.created_at).toLocaleDateString('de-CH') }}</div>
+                    </template>
+                    <div class="text-sm font-medium text-gray-800 truncate mt-0.5">{{ ref.users?.first_name }} {{ ref.users?.last_name }}</div>
                   </div>
-                  <div class="ml-3 shrink-0">
-                    <span v-if="ref.status === 'credited'" class="inline-flex flex-col items-end gap-0.5">
-                      <span class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1">✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
-                      <span class="text-[10px] text-gray-400">Total verdient</span>
-                    </span>
-                    <span v-else class="inline-flex items-center text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2.5 py-1">⏳ Ausstehend</span>
+                  <div v-if="affiliateDetailFilter === 'credited'" class="ml-3 shrink-0">
+                    <span class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-100 rounded-full px-2.5 py-1">✓ CHF {{ ((ref.reward_rappen || 0) / 100).toFixed(0) }}</span>
                   </div>
                 </div>
               </template>
@@ -639,12 +637,10 @@
                 <div
                   v-for="lead in filteredAffiliateDetail"
                   :key="lead.id"
-                  class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5"
+                  class="bg-gray-50 rounded-lg px-3 py-2.5"
                 >
-                  <div class="min-w-0">
-                    <div class="text-xs text-gray-400">Angemeldet am {{ new Date(lead.created_at).toLocaleDateString('de-CH') }}</div>
-                  </div>
-                  <div class="ml-3 shrink-0 text-sm font-medium text-gray-800">{{ lead.first_name }} {{ lead.last_name }}</div>
+                  <div class="text-xs text-gray-400">Angemeldet am {{ new Date(lead.created_at).toLocaleDateString('de-CH') }}</div>
+                  <div class="text-sm font-medium text-gray-800 mt-0.5">{{ lead.first_name }} {{ lead.last_name }}</div>
                 </div>
               </template>
             </div>
@@ -1320,10 +1316,10 @@ const showAffiliateDetailModal = ref(false)
 const affiliateDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings' | 'leads'>('all')
 
 const affiliateDetailTitle = computed(() => ({
-  all: 'Alle Empfehlungen',
+  all: 'Alle Registrierungen',
+  pending: 'Registrierungen',
   credited: '1. Fahrstunde bezahlt',
-  pending: 'Ausstehende Empfehlungen',
-  earnings: 'Einnahmen pro Empfehlung',
+  earnings: 'Einnahmen',
   leads: 'Interessenten',
 }[affiliateDetailFilter.value]))
 
@@ -1332,7 +1328,7 @@ const filteredAffiliateDetail = computed(() => {
     return affiliateStats.value?.reward_transactions ?? []
   }
   if (affiliateDetailFilter.value === 'leads') {
-    return affiliateStats.value?.leads ?? []
+    return (affiliateStats.value?.leads ?? []).filter((l: any) => l.status !== 'converted')
   }
   const referrals: any[] = affiliateStats.value?.referrals ?? []
   if (affiliateDetailFilter.value === 'all') return referrals
