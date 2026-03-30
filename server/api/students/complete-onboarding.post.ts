@@ -163,12 +163,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 7: Create Auth User
+    // ✅ LAYER 7: Create Auth User (or recover existing orphaned auth user)
     logger.debug('👤 Creating auth user for email:', email)
+    let resolvedAuthUserId: string
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: password,
-      email_confirm: true, // Mark email as confirmed
+      email_confirm: true,
       user_metadata: {
         first_name: firstName,
         last_name: lastName
@@ -177,21 +179,57 @@ export default defineEventHandler(async (event) => {
 
     if (authError) {
       logger.warn('⚠️ Complete onboarding: Auth user creation error', { error: authError.message })
-      
-      let userMessage = 'Fehler beim Erstellen des Benutzerkontos'
-      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registered')) {
-        userMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.'
-      } else if (authError.message.includes('password')) {
-        userMessage = 'Das Passwort entspricht nicht den Anforderungen. Bitte wähle ein stärkeres Passwort.'
-      }
-      
-      throw createError({
-        statusCode: 409,
-        message: userMessage
-      })
-    }
 
-    logger.debug('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
+      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registered')) {
+        // Auth user exists but public.users.auth_user_id is null (orphaned auth record).
+        // Recover: find the existing auth user, update their password, then link them.
+        logger.debug('🔍 Auth user already exists - attempting recovery for orphaned record...')
+
+        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+
+        if (listError) {
+          logger.error('❌ Could not list auth users for recovery:', listError.message)
+          throw createError({ statusCode: 500, message: 'Fehler bei der Kontosuche. Bitte versuche es später erneut.' })
+        }
+
+        const orphanedAuthUser = listData?.users?.find(
+          u => u.email?.toLowerCase() === email.toLowerCase().trim()
+        )
+
+        if (!orphanedAuthUser) {
+          throw createError({ statusCode: 409, message: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.' })
+        }
+
+        // Update password and metadata for the recovered auth user
+        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(orphanedAuthUser.id, {
+          password: password,
+          email_confirm: true,
+          user_metadata: { first_name: firstName, last_name: lastName }
+        })
+
+        if (updateAuthError) {
+          logger.error('❌ Could not update orphaned auth user:', updateAuthError.message)
+          throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Benutzerkontos.' })
+        }
+
+        resolvedAuthUserId = orphanedAuthUser.id
+        logger.debug('✅ Orphaned auth user recovered and password updated:', orphanedAuthUser.id)
+
+      } else if (authError.message.includes('password')) {
+        throw createError({
+          statusCode: 400,
+          message: 'Das Passwort entspricht nicht den Anforderungen. Bitte wähle ein stärkeres Passwort.'
+        })
+      } else {
+        throw createError({
+          statusCode: 409,
+          message: 'Fehler beim Erstellen des Benutzerkontos'
+        })
+      }
+    } else {
+      resolvedAuthUserId = authData.user.id
+      logger.debug('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
+    }
 
     // ✅ LAYER 7: Update user record with all data
     // Ensure category stored as array - support both old (category) and new (categories) format
@@ -210,7 +248,7 @@ export default defineEventHandler(async (event) => {
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
-        auth_user_id: authData.user.id,
+        auth_user_id: resolvedAuthUserId,
         first_name: sanitizedFirstName,
         last_name: sanitizedLastName,
         phone: sanitizedPhone,
@@ -301,7 +339,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 8: Update auth user display name
     logger.debug('🔐 Updating auth user display name...')
-    const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
+    const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(resolvedAuthUserId, {
       user_metadata: {
         first_name: sanitizedFirstName,
         last_name: sanitizedLastName
@@ -399,7 +437,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       message: 'Onboarding completed successfully',
       userId: user.id,
-      authUserId: authData.user.id,
+      authUserId: resolvedAuthUserId,
       tenant_slug: (await supabaseAdmin
         .from('tenants')
         .select('slug')
