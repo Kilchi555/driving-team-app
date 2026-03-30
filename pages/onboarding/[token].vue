@@ -1020,8 +1020,8 @@ onMounted(async () => {
     
     // ✅ FIX: Pre-fill ALL known data from the database
     if (userData.value.email) form.email = userData.value.email
-    if (userData.value.first_name) form.firstName = userData.value.first_name
-    if (userData.value.last_name) form.lastName = userData.value.last_name
+    if (userData.value.firstName || userData.value.first_name) form.firstName = userData.value.firstName || userData.value.first_name
+    if (userData.value.lastName || userData.value.last_name) form.lastName = userData.value.lastName || userData.value.last_name
     if (userData.value.phone) form.phone = userData.value.phone
     if (userData.value.birthdate) form.birthdate = userData.value.birthdate?.split('T')[0] // Format as YYYY-MM-DD
     if (userData.value.street) form.street = userData.value.street
@@ -1477,8 +1477,8 @@ const completeOnboarding = async () => {
 
   } catch (err: any) {
     console.error('❌ Onboarding completion error:', err)
-    console.error('❌ Error details:', err.stack)
-    showErrorMessage(err.message || 'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere die Fahrschule.')
+    const message = err?.data?.message || err?.data?.statusMessage || err?.statusMessage || err?.message || 'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere die Fahrschule.'
+    showErrorMessage(message)
   } finally {
     isSubmitting.value = false
   }

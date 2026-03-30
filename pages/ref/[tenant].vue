@@ -207,6 +207,8 @@ async function submit() {
     })
     if (result?.alreadyActive) {
       alreadyActive.value = true
+    } else if (result?.alreadySubmitted) {
+      formError.value = 'Diese Telefonnummer oder E-Mail wurde bereits angemeldet. Bitte prüfe dein Postfach oder deine SMS.'
     } else {
       submitted.value = true
     }
