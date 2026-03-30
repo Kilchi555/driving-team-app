@@ -1,7 +1,7 @@
 <!-- components/CustomerDashboard.vue -->
 <!-- In CustomerDashboard.vue Template - im Header Bereich -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+  <div class="min-h-screen" :style="{ background: `linear-gradient(160deg, ${primaryColor}12 0%, #f9fafb 25%, #f3f4f6 100%)` }">
       <!-- Header -->
       <div class="shadow-lg border-b" :style="{ background: primaryColor }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -143,9 +143,8 @@
         <!-- Zahlungsübersicht -->
         <div 
           @click="handleClickWithDelay('payments', navigateToPayments)"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-100" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'payments' }"
-          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 h-full flex flex-col">
             <div class="flex items-center justify-between mb-2">
@@ -180,9 +179,8 @@
         <!-- Kommende Termine - Uses Secondary Color -->
         <div 
           @click="handleClickWithDelay('upcoming', () => { showUpcomingLessonsModal = true; loadAppointments(true) })"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-100" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'upcoming' }"
-          :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 h-full flex flex-col">
             <div class="flex items-center justify-between mb-2">
@@ -201,9 +199,11 @@
             
             <div class="flex-1 flex items-center justify-center">
               <div class="text-center">
-                <p v-if="upcomingLessonsCount > 0" class="text-gray-600 text-sm">
-                  Du hast {{ upcomingLessonsCount }} {{ upcomingLessonsCount === 1 ? 'Termin' : 'Termine' }} geplant
-                </p>
+                <template v-if="nextAppointment">
+                  <p class="text-gray-800 text-sm font-medium">
+                    {{ formatNextAppointmentDate(nextAppointment.start_time) }} · {{ formatNextAppointmentTime(nextAppointment.start_time) }} Uhr<template v-if="formatNextAppointmentDuration(nextAppointment.start_time, nextAppointment.end_time)"> · {{ formatNextAppointmentDuration(nextAppointment.start_time, nextAppointment.end_time) }}</template>
+                  </p>
+                </template>
                 <p v-else class="text-gray-600 text-sm">
                   Keine Termine geplant
                 </p>
@@ -215,9 +215,8 @@
         <!-- Absolvierte Lektionen - Uses Accent Color -->
         <div 
           @click="handleClickWithDelay('evaluations', () => { showEvaluationsModal = true; loadAppointments(true) })"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border border-gray-100" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'evaluations' }"
-          :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 h-full flex flex-col">
             <div class="flex items-center justify-between mb-2">
@@ -251,26 +250,76 @@
         </div>
       </div>
 
+      <!-- Weitere Sektionen in Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        
+        <!-- Affiliate / Empfehlen Card -->
+        <div
+          v-if="appEnv !== 'production' && affiliateEnabled"
+          @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4"
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
+          style="border-top-color: #16a34a"
+        >
+          <div class="p-4 h-full flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center bg-green-50">
+                  <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">Freunde empfehlen</h3>
+                  <p class="text-sm text-green-600 font-semibold">Link teilen und Geld verdienen</p>
+                </div>
+              </div>
+              <!-- Balance badge if any credits earned -->
+              <div v-if="(affiliateStats?.summary?.current_balance_rappen ?? 0) > 0" class="bg-green-50 border border-green-200 rounded-lg px-2 py-1 text-right">
+                <p class="text-xs text-green-600 font-medium">Guthaben</p>
+                <p class="text-sm font-bold text-green-700">CHF {{ ((affiliateStats.summary.current_balance_rappen) / 100).toFixed(0) }}</p>
+              </div>
+              <div v-else-if="(affiliateStats?.summary?.total_referrals ?? 0) > 0" class="bg-green-50 border border-green-200 rounded-lg px-2 py-1 text-right">
+                <p class="text-xs text-green-600 font-medium">Empfohlen</p>
+                <p class="text-sm font-bold text-green-700">{{ affiliateStats.summary.total_referrals }}×</p>
+              </div>
+              <div v-else class="text-green-600">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
       <!-- Booking Sections -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         
         <!-- Fahrstunden buchen -->
         <div 
           @click="handleClickWithDelay('lesson', navigateToLessonBooking)"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'lesson' }"
-          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
+          :style="{ borderTopColor: buttonColor }"
         >
-          <div class="p-4 flex items-center">
-            <div class="flex items-center">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          <div class="p-4 h-full flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">Fahrstunden buchen</h3>
+                  <p class="text-sm font-medium" :style="{ color: buttonColor }">Direkt online buchen</p>
+                </div>
               </div>
-              <h3 class="text-lg font-semibold text-gray-900">
-                Fahrstunden buchen
-              </h3>
+              <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </div>
         </div>
@@ -278,20 +327,26 @@
         <!-- Kurs buchen - Uses Secondary Color -->
         <div 
           @click="handleClickWithDelay('course', navigateToCourseBooking)"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'course' }"
-          :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
+          :style="{ borderTopColor: secondaryButtonColor }"
         >
-          <div class="p-4 flex items-center">
-            <div class="flex items-center">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+          <div class="p-4 h-full flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">Kurse buchen</h3>
+                  <p class="text-sm font-medium" :style="{ color: secondaryButtonColor }">Verfügbare Kurse ansehen</p>
+                </div>
               </div>
-              <h3 class="text-lg font-semibold text-gray-900">
-                Kurse buchen
-              </h3>
+              <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </div>
         </div>
@@ -305,9 +360,8 @@
         <div
           v-if="appEnv !== 'production' && shopEnabled"
           @click="handleClickWithDelay('shop', navigateToShop)"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'shop' }"
-          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 flex items-center">
             <div class="flex items-center">
@@ -324,9 +378,8 @@
         <!-- Lernbereich - Uses Accent Color -->
         <div 
           @click="handleClickWithDelay('learning', () => navigateTo('/learning'))"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'learning' }"
-          :style="{ borderColor: accentButtonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 flex items-center">
             <div class="flex items-center">
@@ -342,45 +395,14 @@
 
       </div>
 
-      <!-- Weitere Sektionen in Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        
-        <!-- Affiliate / Empfehlen Card -->
-        <div
-          v-if="appEnv !== 'production' && affiliateEnabled"
-          @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform"
-          :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
-          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
-        >
-          <div class="p-4 h-full flex flex-col">
-            <div class="flex items-center mb-2">
-              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h3 class="text-lg font-semibold text-gray-900">Freunde empfehlen</h3>
-            </div>
-            <div class="flex-1 flex items-center justify-center">
-              <div class="text-center">
-                <p class="text-gray-600 text-sm">Teile deinen Link und erhalte Guthaben</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
       <!-- Mein Profil + Kontakt: halbe Breite, nebeneinander -->
       <div class="grid grid-cols-2 gap-4 mb-4">
 
         <!-- Mein Profil Card -->
         <div
           @click="handleClickWithDelay('profile', () => { showProfileModal = true })"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'profile' }"
-          :style="{ borderColor: buttonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 flex items-center">
             <div class="flex items-center">
@@ -399,9 +421,8 @@
         <!-- Fahrlehrer Card - Uses Secondary Color -->
         <div 
           @click="handleClickWithDelay('instructors', () => { showInstructorModal = true })"
-          class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer transform" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'instructors' }"
-          :style="{ borderColor: secondaryButtonBorderColor, borderWidth: '4.5px' }"
         >
           <div class="p-4 flex items-center">
             <div class="flex items-center">
@@ -445,31 +466,42 @@
           <div v-if="affiliateLoading" class="text-center py-8 text-gray-400">Wird geladen…</div>
           <div v-else class="space-y-5">
             <!-- Stats -->
-            <div class="grid grid-cols-3 gap-3 text-center">
+            <div class="grid grid-cols-2 gap-3 text-center">
               <div
-                class="relative bg-purple-50 rounded-xl p-3 cursor-pointer hover:bg-purple-100 transition"
-                @click="openAffiliateDetail('all')"
+                class="relative bg-gray-50 rounded-xl p-3 cursor-pointer hover:bg-gray-100 transition"
+                @click="openAffiliateDetail('leads')"
               >
-                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-purple-300 text-purple-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-                <div class="text-xl font-bold text-purple-700">{{ affiliateStats?.summary?.total_referrals ?? 0 }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">Empfehlungen</div>
+                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+                <div class="text-xl font-bold text-gray-800">{{ affiliateStats?.leads?.length ?? 0 }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">Interessenten</div>
               </div>
               <div
                 class="relative bg-blue-50 rounded-xl p-3 cursor-pointer hover:bg-blue-100 transition"
-                @click="openAffiliateDetail('credited')"
+                @click="openAffiliateDetail('all')"
               >
                 <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-blue-300 text-blue-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-                <div class="text-xl font-bold text-blue-700">{{ affiliateStats?.summary?.active ?? affiliateStats?.referrals?.filter((r: any) => r.status === 'credited').length ?? 0 }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">Aktiv</div>
+                <div class="text-xl font-bold text-blue-700">{{ affiliateStats?.referrals?.length ?? 0 }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">Registrierungen</div>
               </div>
-              <div
-                class="relative bg-green-50 rounded-xl p-3 cursor-pointer hover:bg-green-100 transition"
-                @click="openAffiliateDetail('earnings')"
-              >
-                <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-                <div class="text-xl font-bold text-green-600 truncate">CHF {{ ((affiliateStats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">Guthaben</div>
+            </div>
+            <div
+              class="relative bg-green-50 rounded-xl p-3 text-center cursor-pointer hover:bg-green-100 transition"
+              @click="openAffiliateDetail('credited')"
+            >
+              <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
+              <div class="text-xl font-bold text-green-700">{{ affiliateStats?.summary?.total_referrals ?? 0 }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">1. Fahrstunde bezahlt</div>
+            </div>
+
+            <!-- Guthaben -->
+            <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+              <div class="flex items-center gap-2">
+                <svg class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-sm font-semibold text-green-800">Dein Guthaben</span>
               </div>
+              <span class="text-lg font-bold text-green-700">CHF {{ ((affiliateStats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</span>
             </div>
 
             <!-- Share link -->
@@ -1272,25 +1304,29 @@ const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
 const affiliateEnabled = ref(false)
 const showAffiliateDetailModal = ref(false)
-const affiliateDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings'>('all')
+const affiliateDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings' | 'leads'>('all')
 
 const affiliateDetailTitle = computed(() => ({
   all: 'Alle Empfehlungen',
-  credited: 'Aktive Empfehlungen',
+  credited: '1. Fahrstunde bezahlt',
   pending: 'Ausstehende Empfehlungen',
   earnings: 'Einnahmen pro Empfehlung',
+  leads: 'Interessenten',
 }[affiliateDetailFilter.value]))
 
 const filteredAffiliateDetail = computed(() => {
   if (affiliateDetailFilter.value === 'earnings') {
     return affiliateStats.value?.reward_transactions ?? []
   }
+  if (affiliateDetailFilter.value === 'leads') {
+    return affiliateStats.value?.leads ?? []
+  }
   const referrals: any[] = affiliateStats.value?.referrals ?? []
   if (affiliateDetailFilter.value === 'all') return referrals
   return referrals.filter((r: any) => r.status === affiliateDetailFilter.value)
 })
 
-const openAffiliateDetail = (filter: 'all' | 'credited' | 'pending' | 'earnings') => {
+const openAffiliateDetail = (filter: 'all' | 'credited' | 'pending' | 'earnings' | 'leads') => {
   affiliateDetailFilter.value = filter
   showAffiliateDetailModal.value = true
 }
@@ -1506,6 +1542,29 @@ const upcomingAppointments = computed(() => {
     new Date(apt.start_time) > now
   ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 })
+
+const nextAppointment = computed(() => upcomingAppointments.value[0] || null)
+
+function formatNextAppointmentDate(isoString: string): string {
+  const date = new Date(isoString)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  if (date.toDateString() === today.toDateString()) return 'Heute'
+  if (date.toDateString() === tomorrow.toDateString()) return 'Morgen'
+  return date.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '')
+}
+
+function formatNextAppointmentTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatNextAppointmentDuration(startIso: string, endIso: string | undefined): string {
+  if (!endIso) return ''
+  const mins = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000)
+  if (mins <= 0) return ''
+  return `${mins} Min`
+}
 
 // Count of all upcoming lessons (appointments + course sessions)
 // Groups course sessions on the same day as ONE appointment

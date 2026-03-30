@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
     const userIds = referrals.map(r => r.referred_user_id).filter(Boolean)
     const { data: usersData } = await supabaseAdmin
       .from('users')
-      .select('id, first_name, last_name, email')
+      .select('id, first_name, last_name')
       .in('id', userIds)
     const usersMap = Object.fromEntries((usersData ?? []).map(u => [u.id, u]))
     referrals = referrals.map(r => ({
