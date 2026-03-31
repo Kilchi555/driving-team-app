@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
     <div class="bg-white rounded-lg max-w-4xl w-full flex flex-col evaluation-modal-container" style="height: calc(100svh - 1rem - env(safe-area-inset-bottom)); max-height: calc(100svh - 1rem - env(safe-area-inset-bottom));">
       <div class="bg-green-600 text-white p-4 flex-shrink-0">
@@ -179,20 +180,6 @@
       
 
 
-      <div class="bg-blue-50 border-t border-blue-100 px-4 py-3 flex-shrink-0">
-        <label class="block text-xs font-semibold text-blue-700 mb-1">
-          Notiz für Schüler
-          <span class="font-normal text-blue-500">(optional, sichtbar im Lernbereich)</span>
-        </label>
-        <textarea
-          v-model="lessonNote"
-          placeholder="Allgemeine Notiz zur Lektion für den Schüler..."
-          class="w-full p-2 text-sm border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none bg-white"
-          rows="2"
-          maxlength="2000"
-        ></textarea>
-        <p class="text-xs text-blue-400 mt-0.5 text-right">{{ lessonNote.length }}/2000</p>
-      </div>
 
       <div class="bg-gray-50 px-4 py-3 border-t flex-shrink-0 evaluation-modal-footer">
         <div class="flex gap-3">
@@ -226,6 +213,7 @@
     
 
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
