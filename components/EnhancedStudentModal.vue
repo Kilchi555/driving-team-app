@@ -1180,7 +1180,11 @@
                   ></span>
                   <span class="text-sm font-medium text-gray-800">{{ getCreditTransactionLabel(tx) }}</span>
                 </div>
-                <div v-if="tx.notes" class="text-xs text-gray-400 mt-0.5 ml-4">{{ tx.notes }}</div>
+                <div v-if="tx.affiliate_category" class="mt-0.5 ml-4">
+                  <span class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Kat. {{ tx.affiliate_category }}</span>
+                </div>
+                <div v-if="tx.affiliate_referred_name" class="text-xs text-gray-500 mt-0.5 ml-4">{{ tx.affiliate_referred_name }}</div>
+                <div v-if="tx.notes && tx.transaction_type !== 'voucher'" class="text-xs text-gray-400 mt-0.5 ml-4">{{ cleanTxNote(tx.notes) }}</div>
                 <div class="text-xs text-gray-400 mt-0.5 ml-4">{{ formatTxDate(tx.created_at) }}</div>
               </div>
               <div class="text-right ml-4 flex-shrink-0">
@@ -1201,6 +1205,7 @@
     <RedeemVoucherModal
       v-if="showRedeemVoucherModal && selectedStudent"
       :current-balance="studentAvailableBalance ?? 0"
+      :student-id="selectedStudent.id"
       @close="showRedeemVoucherModal = false"
       @success="handleVoucherRedeemed"
     />
@@ -2853,6 +2858,10 @@ function handleVoucherRedeemed(newBalance: number) {
   studentBalance.value = newBalance
   showRedeemVoucherModal.value = false
   emit('studentUpdated', { id: props.selectedStudent?.id ?? '' })
+  // Reload credit transactions if the history modal is open
+  if (showCreditTransactionsModal.value) {
+    openCreditTransactionsModal()
+  }
 }
 
 // ── Credit Transaction History ─────────────────────────────
@@ -2888,6 +2897,7 @@ function getCreditTransactionLabel(tx: any): string {
     withdrawal: 'Auszahlung',
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',
+    affiliate_reward: 'Weiterempfehlung',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }
@@ -2896,6 +2906,15 @@ function formatTxDate(dateStr: string): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function cleanTxNote(note: string): string {
+  if (!note) return ''
+  // Remove UUIDs and their surrounding parenthetical context, e.g. "(Termin abc-123...)" or "(Kursanmeldung abc-123...)"
+  let cleaned = note.replace(/\s*\([^)]*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[^)]*\)/gi, '').trim()
+  // Remove voucher code from "Gutschein eingelöst: CODE" or "Gutschein eingelöst: CODE - Description"
+  cleaned = cleaned.replace(/^Gutschein eingelöst:\s*[A-Z0-9_-]+\s*(-\s*)?/i, '').trim()
+  return cleaned
 }
 
 // ── Receipts Download ─────────────────────────────────────
