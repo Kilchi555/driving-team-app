@@ -146,6 +146,7 @@ import { ref } from 'vue'
 // Props
 interface Props {
   currentBalance: number
+  studentId?: string
 }
 
 const props = defineProps<Props>()
@@ -179,6 +180,11 @@ const redeemVoucher = async () => {
     // For authenticated users: API will resolve from auth
     const body: any = {
       code: voucherCode.value.trim().toUpperCase()
+    }
+    
+    // If staff is redeeming on behalf of a student, pass target_user_id
+    if (props.studentId) {
+      body.target_user_id = props.studentId
     }
     
     // Try to include user_id if available (for guest checkout)

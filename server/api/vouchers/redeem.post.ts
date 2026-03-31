@@ -30,11 +30,16 @@ export default defineEventHandler(async (event) => {
     
     const authUser = await getAuthenticatedUser(event)
     const guestUserId = body.user_id // For guest checkout (passed from shop)
+    const targetUserId = body.target_user_id // For staff redeeming on behalf of a student
     
     let userId: string
 
-    if (authUser) {
-      // Authenticated user
+    if (authUser && targetUserId && typeof targetUserId === 'string') {
+      // Staff redeeming on behalf of a student
+      userId = targetUserId
+      logger.debug('🎫 [redeem] Staff redeeming for student:', targetUserId)
+    } else if (authUser) {
+      // Authenticated user (student or staff for self)
       userId = authUser.db_user_id || authUser.id
       logger.debug('🎫 [redeem] Authenticated user:', userId)
     } else if (guestUserId && typeof guestUserId === 'string') {
