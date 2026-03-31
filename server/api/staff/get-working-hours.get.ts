@@ -41,30 +41,20 @@ export default defineEventHandler(async (event) => {
     
     console.log(`[${new Date().toLocaleTimeString()}] ✅ Working hours loaded:`, workingHours?.length || 0)
     
-    // Convert UTC times to local time using the timezone stored per record
-    // Uses Intl.DateTimeFormat to correctly handle DST (summer/winter time)
-    const convertedHours = (workingHours || []).map((wh: any) => {
-      const tz = wh.timezone || 'Europe/Zurich'
+    // Times in DB are Zurich wall-clock values (e.g. "07:00:00") — no timezone
+    // conversion needed. Just normalize to HH:MM:SS format.
+    const normalizeTime = (timeStr: string): string => {
+      if (!timeStr) return timeStr
+      const m = timeStr.match(/^(\d{1,2}):(\d{2})/)
+      if (!m) return timeStr
+      return `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}:00`
+    }
 
-      const convertTime = (utcTime: string): string => {
-        if (!utcTime) return utcTime
-        // TIMETZ format: "06:00:00+00" → remove timezone offset
-        const timeWithoutTz = utcTime.split('+')[0].split('-')[0]
-        const [hours, minutes] = timeWithoutTz.split(':').map(Number)
-        const now = new Date()
-        const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0))
-        // Use Intl to correctly convert UTC to the record's timezone (handles DST)
-        const localStr = utcDate.toLocaleString('sv-SE', { timeZone: tz })
-        const timePart = localStr.split(' ')[1] // "HH:MM:SS"
-        return timePart || utcTime
-      }
-
-      return {
-        ...wh,
-        start_time: convertTime(wh.start_time),
-        end_time: convertTime(wh.end_time)
-      }
-    })
+    const convertedHours = (workingHours || []).map((wh: any) => ({
+      ...wh,
+      start_time: normalizeTime(wh.start_time),
+      end_time: normalizeTime(wh.end_time)
+    }))
 
     return {
       success: true,
