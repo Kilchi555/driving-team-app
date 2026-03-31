@@ -1331,7 +1331,9 @@ const affiliateStats = ref<any>(null)
 const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
-const affiliateEnabled = ref(false)
+const affiliateEnabled = ref(
+  import.meta.client ? localStorage.getItem('customer_affiliate_enabled') === 'true' : false
+)
 const showAffiliateDetailModal = ref(false)
 const affiliateDetailFilter = ref<'all' | 'credited' | 'pending' | 'earnings' | 'leads'>('all')
 
@@ -1368,7 +1370,9 @@ const openAffiliateDetail = (filter: 'all' | 'credited' | 'pending' | 'earnings'
   showAffiliateDetailModal.value = true
 }
 /** Shop-Karte: tenant_settings features.product_sales_enabled (wie Admin „Produktverkauf“) */
-const shopEnabled = ref(false)
+const shopEnabled = ref(
+  import.meta.client ? localStorage.getItem('customer_shop_enabled') === 'true' : false
+)
 
 // Environment check for preview-only features
 const appEnv = useRuntimeConfig().public.appEnv as string | undefined
@@ -1382,6 +1386,7 @@ async function loadShopFeatureEnabled() {
   try {
     const res = await checkFeatureFlag(tenantId, 'product_sales_enabled')
     shopEnabled.value = !!res?.enabled
+    if (import.meta.client) localStorage.setItem('customer_shop_enabled', String(shopEnabled.value))
   } catch (e) {
     logger.warn('⚠️ loadShopFeatureEnabled failed:', e)
     shopEnabled.value = false
@@ -1924,6 +1929,7 @@ async function loadAffiliateStats() {
   try {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data.enabled !== false
+    if (import.meta.client) localStorage.setItem('customer_affiliate_enabled', String(affiliateEnabled.value))
     affiliateStats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     affiliateShareLink.value = result.data.share_link ?? ''
