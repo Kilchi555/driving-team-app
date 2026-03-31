@@ -835,20 +835,6 @@
             </button>
           </div>
 
-          <!-- Login-Link SMS for completed students -->
-          <div v-else class="bg-gray-50 rounded-lg border border-gray-200 p-4 flex items-center justify-between gap-4">
-            <p class="text-sm text-gray-600">Login-Link per SMS senden</p>
-            <button
-              @click="openReminderModal"
-              class="shrink-0 px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
-              SMS senden
-            </button>
-          </div>
-
           <!-- Persönliche Informationen -->
           <div class="bg-white rounded-lg border p-6">
             <div class="flex items-center justify-between mb-4">
@@ -2009,50 +1995,14 @@ const closeExamResultModal = () => {
 }
 
 const onEvaluationSaved = async () => {
-  logger.debug('✅ Evaluation saved, updating lesson')
-  
-  if (selectedAppointmentForEvaluation.value && lessons.value) {
-    // Find the updated appointment in the list
-    const aptIndex = lessons.value.findIndex(l => l.id === selectedAppointmentForEvaluation.value.id)
-    
-    if (aptIndex >= 0) {
-      logger.debug('Reloading evaluations for appointment:', selectedAppointmentForEvaluation.value.id)
-      
-      // Reload notes/evaluations for just this appointment — include criteria join for names
-      const supabase = getSupabase()
-      const { data: notesData } = await supabase
-        .from('notes')
-        .select('*, evaluation_criteria(id, name)')
-        .eq('appointment_id', selectedAppointmentForEvaluation.value.id)
-      
-      if (notesData) {
-        // Get all evaluations (with criteria_rating)
-        const allEvaluations = notesData.filter((n: any) => n.evaluation_criteria_id && n.criteria_rating)
-        
-        // ✅ CREATE A NEW OBJECT to trigger Vue's reactivity
-        const updatedLesson = {
-          ...lessons.value[aptIndex],
-          notes: notesData,
-          evaluations: allEvaluations,
-          allEvaluations: allEvaluations
-        }
-        
-        // ✅ Replace the entire lessons array to trigger reactivity
-        lessons.value = [
-          ...lessons.value.slice(0, aptIndex),
-          updatedLesson,
-          ...lessons.value.slice(aptIndex + 1)
-        ]
-        
-        logger.debug('✅ Updated lesson with', allEvaluations.length, 'evaluations')
-      }
-    }
-  }
+  logger.debug('✅ Evaluation saved, refreshing lessons')
 
-  // Ensure pending/exam related views fetch fresh data after save
   invalidateCache('/api/admin/get-pending-appointments')
   invalidateCache('/api/calendar/get-appointments')
-  
+
+  // Reload via secure backend API (admin client bypasses RLS on notes table)
+  await loadLessons()
+
   closeEvaluationModal()
 }
 
