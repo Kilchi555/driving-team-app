@@ -1330,31 +1330,32 @@ const activeExamLocations = computed(() => {
 
 // computed properties:
 const currentMonthName = computed(() => {
-  const date = new Date()
+  const now = new Date()
+  const date = new Date(now.getFullYear(), now.getMonth(), 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
 
 const previousMonthName = computed(() => {
-  const date = new Date()
-  date.setMonth(date.getMonth() - 1)
+  const now = new Date()
+  const date = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
 
 const twoMonthsAgoName = computed(() => {
-  const date = new Date()
-  date.setMonth(date.getMonth() - 2)
+  const now = new Date()
+  const date = new Date(now.getFullYear(), now.getMonth() - 2, 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
 
 const threeMonthsAgoName = computed(() => {
-  const date = new Date()
-  date.setMonth(date.getMonth() - 3)
+  const now = new Date()
+  const date = new Date(now.getFullYear(), now.getMonth() - 3, 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
 
 const nextMonthName = computed(() => {
-  const date = new Date()
-  date.setMonth(date.getMonth() + 1)
+  const now = new Date()
+  const date = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
 })
 
