@@ -101,9 +101,8 @@ export default defineEventHandler(async (event) => {
 
       // Insert new entry if active
       if (body.isActive) {
-        const { data: insertedData, error: insertError } = await supabase
-          .from('staff_working_hours')
-          .insert({
+        const rowsToInsert: any[] = [
+          {
             staff_id: body.staffId,
             day_of_week: body.dayOfWeek,
             start_time: body.startTime,
@@ -111,7 +110,36 @@ export default defineEventHandler(async (event) => {
             is_active: true,
             tenant_id: userData.tenant_id,
             timezone: 'Europe/Zurich'
+          }
+        ]
+
+        // Add inactive blocks for times outside working hours (needed for calendar grey-out)
+        if (body.startTime && body.startTime > '00:00') {
+          rowsToInsert.push({
+            staff_id: body.staffId,
+            day_of_week: body.dayOfWeek,
+            start_time: '00:00',
+            end_time: body.startTime,
+            is_active: false,
+            tenant_id: userData.tenant_id,
+            timezone: 'Europe/Zurich'
           })
+        }
+        if (body.endTime && body.endTime < '23:59') {
+          rowsToInsert.push({
+            staff_id: body.staffId,
+            day_of_week: body.dayOfWeek,
+            start_time: body.endTime,
+            end_time: '23:59',
+            is_active: false,
+            tenant_id: userData.tenant_id,
+            timezone: 'Europe/Zurich'
+          })
+        }
+
+        const { data: insertedData, error: insertError } = await supabase
+          .from('staff_working_hours')
+          .insert(rowsToInsert)
           .select()
 
         if (insertError) throw insertError
