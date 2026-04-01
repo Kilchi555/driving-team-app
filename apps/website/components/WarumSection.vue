@@ -76,6 +76,8 @@ const categoryTitles: Record<string, string> = {
   dietikon: 'Warum die Fahrschule Driving Team Dietikon?',
   aargau: 'Warum die Fahrschule Driving Team Aargau?',
   reichenburg: 'Warum die Fahrschule Driving Team Reichenburg?',
+  pfaeffikon: 'Warum die Fahrschule Driving Team Pfäffikon SZ?',
+  'wab-pfaffikon': 'Warum WAB-Kurse beim Driving Team?',
 }
 
 const locationLabels: Record<string, string> = {
@@ -86,6 +88,7 @@ const locationLabels: Record<string, string> = {
   dietikon: 'in Dietikon',
   aargau: 'in Aargau',
   reichenburg: 'in Reichenburg',
+  pfaeffikon: 'in Pfäffikon SZ',
   auto: 'der Auto Fahrschule',
   motorrad: 'der Motorrad Fahrschule',
   lastwagen: 'der Lastwagen Fahrschule',
