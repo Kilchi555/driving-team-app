@@ -7,13 +7,16 @@
       <Meta property="og:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Fahrschul-Motorrad verfügbar. Obligatorisch für alle A-Kategorien." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
+      <Meta property="og:type" content="website" />
+      <Meta property="og:locale" content="de_CH" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
-      
-      
-          <Meta property="og:image" content="https://drivingteam.ch/images/categories/motorrad-fahrschule-hero.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/categories/motorrad-grundkurs-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
-          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="twitter:card" content="summary_large_image" />
+      <Meta name="twitter:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />
+      <Meta name="twitter:description" content="Obligatorischer Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12h (3×4h). Max. 5 Teilnehmer. Fahrschul-Motorrad auf Anfrage. Jetzt buchen!" />
+      <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- Hero Section -->

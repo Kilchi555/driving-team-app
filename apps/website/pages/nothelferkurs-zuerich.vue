@@ -424,7 +424,7 @@ const jsonLdScripts = [
       "@context": "https://schema.org",
       "@type": "Course",
       "name": "Nothelferkurs Zürich",
-      "description": "Obligatorischer Nothelferkurs für den Führerschein in Zürich-Altstetten. 10 Stunden, CHF 99.-, Nothelferausweis inklusive. 6 Jahre gültig. Ab 11 Jahren.",
+      "description": "Obligatorischer Nothelferkurs für den Führerschein in Zürich-Altstetten. 10 Stunden, CHF 120.-, Nothelferausweis inklusive. 6 Jahre gültig. Ab 14 Jahren.",
       "url": "https://drivingteam.ch/nothelferkurs-zuerich/",
       "image": "https://drivingteam.ch/images/courses/nothelfer-hero.webp",
       "provider": {
@@ -442,7 +442,7 @@ const jsonLdScripts = [
       },
       "offers": {
         "@type": "Offer",
-        "price": "99",
+        "price": "120",
         "priceCurrency": "CHF",
         "availability": "https://schema.org/InStock",
         "url": "https://drivingteam.ch/nothelferkurs-buchen/nothelfer/"
@@ -485,8 +485,8 @@ const jsonLdScripts = [
       "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Was kostet der Nothelferkurs in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Der Nothelferkurs in Zürich kostet CHF 99.- inkl. Nothelferausweis. Barzahlung am ersten Kurstag." } },
-        { "@type": "Question", "name": "Wo findet der Nothelferkurs in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "In Zürich-Altstetten beim Bahnhof Altstetten, direkt bei der Fahrschule Driving Team." } },
+        { "@type": "Question", "name": "Was kostet der Nothelferkurs in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Der Nothelferkurs in Zürich kostet CHF 120.- inkl. Nothelferausweis. Barzahlung am ersten Kurstag." } },
+        { "@type": "Question", "name": "Wo findet der Nothelferkurs in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "Bei Nothelfer am Bahnhof Altstetten, hinter dem Bahnhof Zürich-Altstetten. Wird durch Driving Team organisiert und gebucht." } },
         { "@type": "Question", "name": "Wie lange dauert der Nothelferkurs?", "acceptedAnswer": { "@type": "Answer", "text": "10 Stunden total, aufgeteilt in zwei Teile: Teil 1 (ca. 3h abends) und Teil 2 (ca. 7h tagsüber)." } },
         { "@type": "Question", "name": "Wie lange ist der Nothelferausweis gültig?", "acceptedAnswer": { "@type": "Answer", "text": "6 Jahre ab Ausstellungsdatum." } },
         { "@type": "Question", "name": "Muss ich den Nothelferkurs für jede Führerschein-Kategorie neu machen?", "acceptedAnswer": { "@type": "Answer", "text": "Nein. Ein gültiger Nothelferausweis gilt für alle Fahrzeugkategorien (Auto, Motorrad, LKW, etc.)." } }

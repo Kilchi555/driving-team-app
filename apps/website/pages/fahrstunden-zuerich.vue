@@ -7,10 +7,15 @@
       <Meta property="og:title" content="Fahrstunden Zürich ab CHF 95.- | Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrstunden in Zürich ab CHF 95.-/Lektion. Auto, Motorrad, Anhänger. Flexible Zeiten, 85% Erfolgsquote. Jetzt online buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrstunden-zuerich/" />
+      <Meta property="og:type" content="website" />
+      <Meta property="og:locale" content="de_CH" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrstunden-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
+      <Meta name="twitter:card" content="summary_large_image" />
+      <Meta name="twitter:title" content="Fahrstunden Zürich ab CHF 95.- | Auto, Motorrad, Anhänger | Driving Team" />
+      <Meta name="twitter:description" content="Professionelle Fahrstunden in Zürich ab CHF 95.-/Lektion. Auto, Motorrad, Anhänger. Flexible Zeiten, 85% Erfolgsquote. Jetzt buchen!" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       <Meta name="date" :content="new Date().toISOString()" />
     </Head>
@@ -153,7 +158,7 @@
           <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
             <p class="text-3xl mb-2">💚</p>
             <p class="font-bold text-gray-900 mb-2">Empfehlungs-Rabatte</p>
-            <p class="text-sm text-gray-600">Empfehle einen Freund und erhalte 50.- Rabatt auf deine nächste Fahrstunde.</p>
+            <p class="text-sm text-gray-600">Empfehle einen Freund und du bekommst bares Geld auf deine nächste Fahrstunde.</p>
           </div>
           <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6">
             <p class="text-3xl mb-2">💳</p>
@@ -507,7 +512,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wie viel kosten Fahrstunden in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Auto Fahrstunden kosten ab CHF 95.-/45min. Motorrad ab CHF 120.- und Anhänger ab CHF 140.-. Pauschale CHF 150.- einmalig." } },
+      { "@type": "Question", "name": "Wie viel kosten Fahrstunden in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Auto Fahrstunden kosten CHF 95.-/45min. Motorrad CHF 95.-/45min (Doppellektion CHF 190.-). Anhänger CHF 120.-/45min (Doppellektion CHF 240.-). Einmalige Pauschale CHF 120.- für Auto/Anhänger-Ausbildung." } },
       { "@type": "Question", "name": "Kann ich Fahrstunden in Zürich flexibel buchen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, 7 Tage die Woche. Buche online Morgen, Mittag oder Abend." } },
       { "@type": "Question", "name": "Wie buche ich meine erste Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Klick auf 'Jetzt buchen', registriere Dich, wähle Datum/Uhrzeit, bestätige. Sofort Bestätigung per Email." } },
       { "@type": "Question", "name": "Wie viele Fahrstunden brauche ich in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Durchschnittlich 15-30 Fahrstunden. Mit regelmässigen Übungen erreichst du dein Ziel schneller." } },
