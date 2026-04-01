@@ -609,7 +609,7 @@ const jsonLdScripts = [
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
       "@context": "https://schema.org",
-      "@type": "DrivingSchool",
+      "@type": ["DrivingSchool", "LocalBusiness"],
       "@id": "https://drivingteam.ch/auto-fahrschule-zuerich/#driving-school",
       "name": "Auto Fahrschule Zürich – Driving Team",
       "description": "Professionelle Auto Fahrschule in Zürich-Altstetten. Kategorie B Fahrstunden ab CHF 95.-. Prüfungsgebiet Albisgütli. 85% Erfolgsquote.",
