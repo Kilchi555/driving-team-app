@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Pfäffikon SZ | ab CHF 100.- | Auto, Motorrad, Lastwagen | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Pfäffikon SZ ✓ ab CHF 100.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ Flexible Zeiten & Treffpunkte ✓ Kanton Schwyz ✓ Prüfung Pfäffikon. Jetzt anmelden!" />
+      <Title>Fahrschule Pfäffikon SZ | ab CHF 95.- | Auto, Motorrad, Lastwagen | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Pfäffikon SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ Flexible Zeiten & Treffpunkte ✓ Kanton Schwyz ✓ Prüfung Pfäffikon. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Pfäffikon, Fahrschule Pfäffikon SZ, Fahrstunden Pfäffikon, Führerschein Pfäffikon, Auto Fahrschule Pfäffikon, Motorrad Fahrschule Pfäffikon, Fahrlehrer Pfäffikon SZ" />
-      <Meta property="og:title" content="Fahrschule Pfäffikon SZ | ab CHF 100.- | Auto, Motorrad & mehr | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Pfäffikon SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 100.-/Lektion. Flexible Zeiten & Treffpunkte. Prüfung am Prüfungszentrum Pfäffikon." />
+      <Meta property="og:title" content="Fahrschule Pfäffikon SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in Pfäffikon SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte. Prüfung am Prüfungszentrum Pfäffikon." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-pfaeffikon/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -14,8 +14,8 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Pfäffikon SZ | ab CHF 100.- | Driving Team" />
-      <Meta name="twitter:description" content="Fahrschule Pfäffikon SZ. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 100.-/Lektion. Flexible Zeiten. Prüfung Pfäffikon SZ. Jetzt anmelden!" />
+      <Meta name="twitter:title" content="Fahrschule Pfäffikon SZ | ab CHF 95.- | Driving Team" />
+      <Meta name="twitter:description" content="Fahrschule Pfäffikon SZ. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 95.-/Lektion. Flexible Zeiten. Prüfung Pfäffikon SZ. Jetzt anmelden!" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
@@ -190,7 +190,7 @@ const jsonLdScripts = [
     "@type": "DrivingSchool",
     "@id": "https://drivingteam.ch/fahrschule-pfaeffikon/#driving-school",
     "name": "Driving Team Fahrschule Pfäffikon SZ",
-    "description": "Professionelle Fahrausbildung in Pfäffikon SZ für alle Fahrzeugkategorien. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 100.-/Lektion, flexible Treffpunkte.",
+    "description": "Professionelle Fahrausbildung in Pfäffikon SZ für alle Fahrzeugkategorien. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 95.-/Lektion, flexible Treffpunkte.",
     "url": "https://drivingteam.ch/fahrschule-pfaeffikon/",
     "telephone": "+41444310033",
     "image": "https://drivingteam.ch/images/locations/pfaeffikon-hero.webp",
@@ -210,7 +210,7 @@ const jsonLdScripts = [
       { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "20:00" },
       { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "17:00" }
     ],
-    "priceRange": "CHF 100.-–200.-",
+    "priceRange": "CHF 95.-–200.-",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.9",
@@ -243,7 +243,7 @@ const jsonLdScripts = [
     "mainEntity": [
       { "@type": "Question", "name": "Wie viele Fahrstunden benötige ich in Pfäffikon?", "acceptedAnswer": { "@type": "Answer", "text": "Das hängt von deiner Vorerfahrung und deinem Lerntempo ab. Bei regelmässigem Üben (2-4 Mal pro Woche inkl. privaten Lernfahrten) erreichst du dein Ziel am schnellsten." } },
       { "@type": "Question", "name": "Wo bietet Driving Team Pfäffikon Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Treffpunkte sind flexibel – wir holen euch wenn möglich zu Hause oder bei der Arbeit ab." } },
-      { "@type": "Question", "name": "Was kosten Fahrstunden in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Fahrstunden starten ab CHF 100.-/45min. Hinzu kommt eine einmalige Admin- und Versicherungspauschale für die gesamte Fahrausbildung." } },
+      { "@type": "Question", "name": "Was kosten Fahrstunden in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Fahrstunden starten ab CHF 95.-/45min. Hinzu kommt eine einmalige Admin- und Versicherungspauschale für die gesamte Fahrausbildung." } },
       { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Pfäffikon/SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Die häufigsten Prüfungsrouten ab Pfäffikon/SZ führen nach Altendorf/Lachen, Feusisberg/Schindellegi, Wollerau/Samstagern, Freienbach/Richterswil und Rapperswil/Jona." } },
       { "@type": "Question", "name": "Was sind die Voraussetzungen für private Lernfahrten?", "acceptedAnswer": { "@type": "Answer", "text": "Die Begleitperson muss einen gültigen Führerausweis haben, nüchtern sein (0,0 Promille), mindestens 23 Jahre alt sein und die Prüfung vor mindestens 3 Jahren bestanden haben." } },
       { "@type": "Question", "name": "Was ist die Admin- und Versicherungspauschale?", "acceptedAnswer": { "@type": "Answer", "text": "Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet die Aufwände ausserhalb der Fahrlektionen (z.B. Anmeldung zur Führerprüfung) sowie die spezielle Vollkaskoversicherung." } },
