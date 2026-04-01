@@ -152,7 +152,7 @@
     </section>
 
     <!-- Reviews -->
-    <ReviewsSection category="lachen" />
+    <ReviewsSection category="en-lachen" title="What our students say" link-text="→ Read on Google" />
 
     <!-- Pricing -->
     <section class="section-container py-20">

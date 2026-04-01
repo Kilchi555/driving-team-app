@@ -160,7 +160,7 @@
     </section>
 
     <!-- Reviews -->
-    <ReviewsSection category="zuerich" />
+    <ReviewsSection category="en-zurich" title="What our students say" link-text="→ Read on Google" />
 
     <!-- Pricing -->
     <section class="bg-gray-50 py-20">
