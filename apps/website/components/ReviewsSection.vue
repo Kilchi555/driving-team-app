@@ -1,7 +1,7 @@
 <template>
   <section class="bg-gray-50 py-16">
     <div class="section-container">
-      <h2 class="heading-md mb-10 text-center">Das sagen unsere Kunden</h2>
+      <h2 class="heading-md mb-10 text-center">{{ title }}</h2>
 
       <div class="relative">
         <div
@@ -21,7 +21,7 @@
             <p class="text-yellow-500 text-sm mb-2">⭐⭐⭐⭐⭐</p>
             <p class="font-bold text-gray-900 text-base mb-1">{{ review.author }}</p>
             <p class="text-gray-800 text-sm italic leading-relaxed [-webkit-line-clamp:4] [line-clamp:4] [-webkit-box-orient:vertical] [display:-webkit-box] overflow-hidden [max-height:6em] transition-[max-height] duration-400">{{ review.text }}</p>
-            <p class="text-xs text-gray-700 mt-3 font-semibold">→ Auf Google lesen</p>
+            <p class="text-xs text-gray-700 mt-3 font-semibold">{{ linkText }}</p>
           </a>
         </div>
 
@@ -47,6 +47,14 @@ const props = defineProps({
   category: {
     type: String,
     default: ''
+  },
+  title: {
+    type: String,
+    default: 'Das sagen unsere Kunden'
+  },
+  linkText: {
+    type: String,
+    default: '→ Auf Google lesen'
   }
 })
 
@@ -140,6 +148,20 @@ const allReviews: Record<string, { text: string; author?: string; link: string }
     { text: '„Kompetent, geduldig und sehr erfahren. Bei allen Fahrlehrer/innen beim Driving Team wird man super zum Ziel kommen. Einfach eine Fahrschule mit Herz."', author: 'Jasmin N.', link: 'https://maps.app.goo.gl/jRcaSSX97TVACftn7' },
     { text: '„Junges, dynamisches, sympathisches und sehr geduldiges Team. Es lohnt sich, beim Driving Team das Fahren zu lernen!"', author: 'Valentina R.', link: 'https://maps.app.goo.gl/THUZ4DUz235JwtKH9' },
     { text: '„Sehr empfehlenswert. Ich habe meinen Grundkurs und einige Prüfungsvorbereitungen bei Pascal gemacht. Er war geduldig, konstruktiv und sachkundig – ein grossartiger Unterrichtsstil."', author: 'Jenny', link: 'https://maps.app.goo.gl/b1rGtT11bwXp1gCp6' },
+  ],
+  'en-zurich': [
+    { text: '"Thanks to Driving Team Zurich I passed my driving test on the first attempt. My instructor was always punctual, patient and gave excellent advice. Highly recommended!"', author: 'Safar Q.', link: 'https://maps.app.goo.gl/1DzmZwQxihN1pPHt7' },
+    { text: '"Driving Team is world class. Professional and incredibly friendly. You can learn every category here – motorcycle, car, motorboat. All instructors are top quality."', author: 'Stefan A.', link: 'https://maps.app.goo.gl/nswkQxexj1UxH3QA8' },
+    { text: '"Great team spirit! My lessons with Vito were always very enjoyable. With humour, empathy, patience and expertise, he supported me brilliantly throughout my training."', author: 'Nadine T.', link: 'https://maps.app.goo.gl/gXaCYEBhuBojYEc48' },
+    { text: '"Excellent driving school and a cool team. Very highly recommended! Pascal is a very competent and entertaining instructor. He prepared me perfectly for my motorcycle test."', author: 'Terry T.', link: 'https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6' },
+    { text: '"The driving school was outstanding, and my instructor Vito was extremely helpful in preparing me for my driving test. I am very grateful for his support."', author: 'Kiran J.', link: 'https://maps.app.goo.gl/FLY2pkfazDEW3iwu8' },
+  ],
+  'en-lachen': [
+    { text: '"Thanks to Driving Team Lachen I passed my driving test on the first attempt. My instructor Marc prepared me brilliantly. I had a great experience from start to finish."', author: 'Manaf B.', link: 'https://maps.app.goo.gl/sukR1Qii5qqiTKkm6' },
+    { text: '"I can really recommend Driving Team. I received great feedback from Marc, Sybille, Peter and André. Thanks to them, I passed my driving test first time!"', author: 'Fabian', link: 'https://maps.app.goo.gl/MQaLcV7MVnVXR1C38' },
+    { text: '"Top driving school with competent and helpful instructors. Everyone was punctual, understanding and guided me perfectly on my way to getting my licence."', author: 'Nicolas S.', link: 'https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A' },
+    { text: '"André was always on time, very patient and always gave good advice for my driving. This helped me prepare perfectly for the exam. Highly recommended!"', author: 'Benjamin H.', link: 'https://maps.app.goo.gl/i91qeND8kHSnGyx86' },
+    { text: '"Driving Team gives you the tools you need to pass your driving test. Thank you to the whole team and especially my instructor Marc – you are the BEST!"', author: 'Cyrill P.', link: 'https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5' },
   ],
 }
 
