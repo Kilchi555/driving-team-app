@@ -111,6 +111,12 @@ const allReviews: Record<string, { text: string; author?: string; link: string }
     { text: '„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle davon waren pünktlich, verständnisvoll und konnten mich auf meinem Weg zum Führerschein top begleiten."', author: 'Nicolas S.', link: 'https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A' },
     { text: '„Das Driving Team Lachen gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Ich danke dem ganzen Driving Team und speziell meinem Fahrlehrer Marc. Danke, you are the BEST!!!"', author: 'Cyrill P.', link: 'https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5' },
   ],
+  pfaeffikon: [
+    { text: '„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet."', author: 'Manaf B.', link: 'https://maps.app.goo.gl/sukR1Qii5qqiTKkm6' },
+    { text: '„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle waren pünktlich, verständnisvoll und haben mich auf meinem Weg zum Führerschein top begleitet."', author: 'Nicolas S.', link: 'https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A' },
+    { text: '„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren. Dadurch konnte man sich bestens auf die Prüfung vorbereiten."', author: 'Benjamin H.', link: 'https://maps.app.goo.gl/i91qeND8kHSnGyx86' },
+    { text: '„Das Driving Team gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Ich danke dem ganzen Driving Team und speziell meinem Fahrlehrer Marc. Danke, you are the BEST!!!"', author: 'Cyrill P.', link: 'https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5' },
+  ],
   reichenburg: [
     { text: '„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet."', author: 'Manaf B.', link: 'https://maps.app.goo.gl/sukR1Qii5qqiTKkm6' },
     { text: '„Kann das Driving Team wirklich weiterempfehlen. Durch Marc, Sybille, Peter und André habe ich meine Autoprüfung beim ersten Mal bestanden!"', author: 'Fabian', link: 'https://maps.app.goo.gl/MQaLcV7MVnVXR1C38' },
