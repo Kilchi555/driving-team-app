@@ -427,8 +427,8 @@ export default defineNuxtConfig({
     '/wp-content/uploads/2022/12/Gesuch-Lernfahrausweis-bzw-Umtausch-Auslandischer-Fuhrerausweis-1.pdf': { redirect: { to: '/kontakt/', statusCode: 301 } },
 
     // Englische Driving School Seiten
-    '/driving-school': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/driving-school/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/driving-school': { redirect: { to: '/driving-school-zurich/', statusCode: 301 } },
+    '/driving-school/': { redirect: { to: '/driving-school-zurich/', statusCode: 301 } },
 
     // Fehlerhafte URL mit Anführungszeichen (Copy-Paste Fehler im alten CMS)
     '/fahrschule-reichenburg/„': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
@@ -588,6 +588,16 @@ export default defineNuxtConfig({
     '/carbustheorie': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
     '/carbustheorie/': { redirect: { to: '/bus-theorie/', statusCode: 301 } },
 
+    // 404-Fixes aus Google Search Console (März 2026)
+    '/motorrad-fahrstunden': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/motorrad-fahrstunden/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/anhaenger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/anhaenger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/fahrlehrer-weiterbildung': { redirect: { to: '/fahrlehrerweiterbildung/', statusCode: 301 } },
+    '/fahrlehrer-weiterbildung/': { redirect: { to: '/fahrlehrerweiterbildung/', statusCode: 301 } },
+    '/en/wab-kurse-zuerich': { redirect: { to: '/wab-kurse-zuerich/', statusCode: 301 } },
+    '/en/wab-kurse-zuerich/': { redirect: { to: '/wab-kurse-zuerich/', statusCode: 301 } },
+
     // Bootsfahrschule Varianten
     // HINWEIS: /bootsfahrschule hat eine eigene .vue Seite → kein Redirect
 
@@ -595,11 +605,29 @@ export default defineNuxtConfig({
     '/motorrad': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
     '/taxi-fahrschule-aargau': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
     '/fahrlehrer-reichenburg': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
+    '/fahrlehrer-reichenburg/': { redirect: { to: '/fahrschule-reichenburg/', statusCode: 301 } },
     '/taxi-fahrschule-schwyz': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/taxi-fahrschule-schwyz/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
     '/drivers-license-convert': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
+    '/drivers-license-convert/': { redirect: { to: '/blog/drivers-license-convert/', statusCode: 301 } },
     // '/anhänger-fahrschule-lachen' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
+    '/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/weg-zur-anhaengerpruefung': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/weg-zur-anhaengerpruefung/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+
+    // 404-Fixes aus Google Search Console (2. Batch März 2026)
+    '/nothelfer/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+    '/pruefungsangst-fahrpruefung': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
+    '/pruefungsangst-fahrpruefung/': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
+    '/wie-man-sich-auf-die-theoriepruefung-in-zuerich-vorbereitet': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/wie-man-sich-auf-die-theoriepruefung-in-zuerich-vorbereitet/': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/fahrschueler-und-der-respekt': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+    '/fahrschueler-und-der-respekt/': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+    '/en/anhaenger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/en/anhaenger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/en/fahrschule-dietikon': { redirect: { to: '/fahrschule-dietikon/', statusCode: 301 } },
+    '/en/fahrschule-dietikon/': { redirect: { to: '/fahrschule-dietikon/', statusCode: 301 } },
   },
 
   // Sitemap wird als static file serviert: /public/sitemap.xml
