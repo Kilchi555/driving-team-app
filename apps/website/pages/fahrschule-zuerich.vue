@@ -215,6 +215,27 @@
     <!-- WarumSection -->
     <WarumSection category="zuerich" />
 
+    <!-- Kategorien in Zürich – interne Verlinkung -->
+    <section class="py-10 bg-gray-50">
+      <div class="section-container">
+        <h2 class="text-xl font-bold text-gray-900 mb-5">Kategorien-spezifische Seiten für Zürich</h2>
+        <div class="flex flex-wrap gap-3">
+          <a href="/auto-fahrschule-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-primary-200 text-primary-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Auto Fahrschule Zürich – Kategorie B im Prüfungsgebiet Albisgütli">
+            🚗 Auto Fahrschule Zürich
+          </a>
+          <a href="/fahrstunden-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Alle Fahrstunden in Zürich – Preise und Kategorien">
+            🎯 Alle Fahrstunden Zürich
+          </a>
+          <a href="/vku-kurs-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="VKU Verkehrskundekurs Zürich buchen">
+            📋 VKU Kurs Zürich
+          </a>
+          <a href="/wab-kurse-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="WAB Weiterbildungskurs Zürich">
+            🎓 WAB Kurs Zürich
+          </a>
+        </div>
+      </div>
+    </section>
+
     <!-- 9. Finale CTA (primary) -->
     <CtaSection title="Bereit? Jetzt Termin in Zürich-Altstetten buchen!" />
 

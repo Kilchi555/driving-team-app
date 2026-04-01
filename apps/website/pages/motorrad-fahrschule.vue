@@ -423,6 +423,9 @@
           <a href="/auto-fahrschule/" class="inline-block border-2 border-primary-600 text-primary-600 px-6 py-2 rounded hover:bg-primary-50 transition" aria-label="Auto Fahrschule ansehen">
             🚗 Auto Fahrschule
           </a>
+          <a href="/motorrad-fahrschule-zuerich/" class="inline-block border-2 border-red-600 text-red-600 px-6 py-2 rounded hover:bg-red-50 transition" aria-label="Motorrad Fahrschule Zürich – A1, A35kW, A">
+            📍 Motorrad Fahrschule Zürich
+          </a>
         </div>
       </div>
     </section>
