@@ -355,6 +355,9 @@
           <a href="/motorrad-fahrschule/" class="inline-block border-2 border-primary-600 text-primary-600 px-6 py-2 rounded hover:bg-primary-50 transition" aria-label="Motorrad Fahrschule ansehen">
             🏍️ Motorrad Fahrschule
           </a>
+          <a href="/auto-fahrschule-zuerich/" class="inline-block border-2 border-green-600 text-green-600 px-6 py-2 rounded hover:bg-green-50 transition" aria-label="Auto Fahrschule Zürich – Prüfungsgebiet Albisgütli">
+            📍 Auto Fahrschule Zürich
+          </a>
         </div>
       </div>
     </section>

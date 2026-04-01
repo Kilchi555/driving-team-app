@@ -127,8 +127,7 @@ export default defineNuxtConfig({
     '/autoshkolle-shqipe/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
 
     // Standortspezifische Anhänger-Seite
-    '/anhaenger-fahrschule-zuerich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
-    '/anhaenger-fahrschule-zuerich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    // Redirect entfernt – /anhaenger-fahrschule-zuerich/ hat jetzt eine eigene Seite
 
     // Standorte
     '/fahrlehrer-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
@@ -222,8 +221,7 @@ export default defineNuxtConfig({
     '/author/drivingteam/': { redirect: { to: '/team/', statusCode: 301 } },
 
     // Weitere standortspezifische Auto-Fahrschule URLs
-    '/auto-fahrschule-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
-    '/auto-fahrschule-zuerich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
+    // Redirect für /auto-fahrschule-zuerich/ entfernt – hat jetzt eine eigene Seite
     '/auto-fahrschule-stgallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/auto-fahrschule-stgallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/auto-fahrschule-stgallen/„': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },

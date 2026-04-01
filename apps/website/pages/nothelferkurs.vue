@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Nothelferkurs | First Aid Course | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs (First Aid) - Obligatorisch für Führerschein. CHF 99.-. Flexible Kurse in Zürich, Lachen. Jetzt buchen!" />
-      <Meta property="og:title" content="Nothelferkurs – Obligatorisch für den Führerschein | Driving Team" />
-      <Meta property="og:description" content="Nothelferkurs in Zürich & Lachen. CHF 99.-, 10 Stunden, obligatorisch für den Führerschein. Jetzt anmelden!" />
+      <Title>Nothelferkurs Zürich | CHF 99.- inkl. Ausweis | Obligatorisch für Führerschein | Driving Team</Title>
+      <Meta name="description" content="Nothelferkurs Zürich ✓ CHF 99.- inkl. Nothelferausweis ✓ 10 Stunden ✓ Zürich-Altstetten & Lachen ✓ Obligatorisch für den Führerschein. Flexible Termine. Jetzt buchen!" />
+      <Meta property="og:title" content="Nothelferkurs Zürich – CHF 99.- | Obligatorisch für Führerschein | Driving Team" />
+      <Meta property="og:description" content="Nothelferkurs in Zürich-Altstetten & Lachen. CHF 99.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Fahrzeugkategorien. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/nothelferkurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs/" />
       
@@ -21,7 +21,7 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Nothelferkurs</h1>
+          <h1 class="heading-lg text-white mb-6">Nothelferkurs Zürich</h1>
           <p class=" mb-8">Helfen ist wichtig, DU bist wichtig. Jeder Mensch ist dazu in der Lage ein Leben zu retten – sei es auf der Strasse bei einem Autounfall oder im privaten Umfeld. In 10 Stunden zum Nothelferausweis!</p>
         
         </div>
@@ -223,6 +223,12 @@
 
     <!-- Unsere Gebiete -->
     <section class="section-container">
+      <h3 class="text-xl font-bold mb-4 text-center text-gray-900">Nothelferkurs spezifisch für Zürich</h3>
+      <div class="flex justify-center mb-8">
+        <a href="/nothelferkurs-zuerich/" class="inline-flex items-center gap-3 bg-red-600 text-white hover:bg-red-700 font-bold py-3 px-6 rounded-xl transition shadow-lg">
+          📍 Nothelferkurs Zürich – Alle Infos & Termine
+        </a>
+      </div>
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
         <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
@@ -254,7 +260,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Nothelferkurs – First Aid", "description": "Obligatorischer Nothelferkurs für den Führerschein. 10 Stunden, Nothelferausweis inklusive.", "url": "https://drivingteam.ch/nothelferkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "99", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich" } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen" } }] }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Nothelferkurs Zürich", "description": "Obligatorischer Nothelferkurs für den Führerschein in Zürich-Altstetten und Lachen. 10 Stunden, CHF 99.-, Nothelferausweis inklusive. 6 Jahre gültig.", "url": "https://drivingteam.ch/nothelferkurs/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "99", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zürich-Altstetten", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" } } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Lachen/SZ" } }] }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Nothelferkurs", "item": "https://drivingteam.ch/nothelferkurs/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

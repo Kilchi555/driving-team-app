@@ -368,6 +368,9 @@
           <a href="/auto-fahrschule/" class="inline-block border-2 border-primary-600 text-primary-600 px-6 py-2 rounded hover:bg-primary-50 transition" aria-label="Auto Fahrschule ansehen">
             🚗 Auto Fahrschule
           </a>
+          <a href="/anhaenger-fahrschule-zuerich/" class="inline-block border-2 border-orange-600 text-orange-600 px-6 py-2 rounded hover:bg-orange-50 transition" aria-label="Anhänger Fahrschule Zürich – Kategorie BE Zürich">
+            📍 Anhänger Fahrschule Zürich
+          </a>
         </div>
       </div>
     </section>
