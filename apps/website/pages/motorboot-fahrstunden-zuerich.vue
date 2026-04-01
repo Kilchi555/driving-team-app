@@ -1,18 +1,22 @@
 <template>
   <div>
     <Head>
-      <Title>Bootsfahrschule Zürich | Motorboot Fahrstunden am Zürichsee | Driving Team</Title>
-      <Meta name="description" content="Bootsfahrschule am unteren Zürichsee mit flexiblen Treffpunkten. Erfahrener Fahrlehrer Marc, Fahrstunden auch abends und samstags. Jetzt anmelden!" />
+      <Title>Bootsfahrschule Zürich | Motorboot ab CHF 120.- | Zürichsee | Driving Team</Title>
+      <Meta name="description" content="Bootsfahrschule am Zürichsee ✓ ab CHF 120.-/Lektion ✓ Fahrstunden auch abends & samstags ✓ Erfahrener Fahrlehrer Marc ✓ Flexible Treffpunkte. Jetzt anmelden!" />
+      <Meta name="keywords" content="Bootsfahrschule Zürich, Motorboot Fahrstunden Zürich, Bootsführerschein Zürich, Motorboot Zürichsee, Bootsfahrlehrer Zürich, Motorbootführerschein Zürichsee" />
       <Meta property="og:title" content="Bootsfahrschule Zürich – Motorboot am Zürichsee | Driving Team" />
-      <Meta property="og:description" content="Motorboot-Fahrstunden am unteren Zürichsee. Flexibel auch abends & samstags. Jetzt anmelden!" />
+      <Meta property="og:description" content="Motorboot-Fahrstunden am Zürichsee ab CHF 120.-/Lektion. Flexibel auch abends & samstags. Erfahrener Fahrlehrer Marc. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
+      <Meta property="og:type" content="website" />
+      <Meta property="og:locale" content="de_CH" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
-      
-      
-          <Meta property="og:image" content="https://drivingteam.ch/images/categories/motorboot-hero.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/categories/motorboot-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
-          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="twitter:card" content="summary_large_image" />
+      <Meta name="twitter:title" content="Bootsfahrschule Zürich | Motorboot am Zürichsee ab CHF 120.- | Driving Team" />
+      <Meta name="twitter:description" content="Motorboot-Fahrstunden am Zürichsee. Ab CHF 120.-/Lektion. Auch abends & samstags. Fahrlehrer Marc. Jetzt buchen!" />
+      <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- Hero Section -->

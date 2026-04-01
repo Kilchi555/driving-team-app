@@ -1,53 +1,45 @@
 /**
  * Auto-enrich booking links with session ID
  * Modifies all simy.ch booking links to include session_id parameter
+ * Runs after Vue hydration to avoid SSR/client mismatch warnings
  */
 
-export default defineNuxtPlugin(() => {
-  if (process.server) return
-
+export default defineNuxtPlugin((nuxtApp) => {
   const enrichBookingLinks = () => {
     const sessionId = (window as any).__analyticsSessionId || ''
     if (!sessionId) return
 
-    // Find all simy.ch booking links
     const bookingLinks = document.querySelectorAll('a[href*="simy.ch"][href*="booking"]')
 
     bookingLinks.forEach((link) => {
       const href = link.getAttribute('href')
       if (!href) return
 
-      // Check if session_id already in URL
       if (href.includes('session_id=')) return
 
-      // Add session_id parameter
       const separator = href.includes('?') ? '&' : '?'
-      const enrichedUrl = `${href}${separator}session_id=${sessionId}`
-
-      link.setAttribute('href', enrichedUrl)
+      link.setAttribute('href', `${href}${separator}session_id=${sessionId}`)
     })
   }
 
-  // Enrich on initial load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', enrichBookingLinks)
-  } else {
+  // Run AFTER hydration is complete to avoid SSR/client mismatch
+  nuxtApp.hook('app:mounted', () => {
     enrichBookingLinks()
-  }
 
-  // Enrich on Vue updates (for dynamically added links)
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'childList' || mutation.type === 'attributes') {
-        enrichBookingLinks()
-      }
+    // Enrich on Vue updates (for dynamically added links)
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' || mutation.type === 'attributes') {
+          enrichBookingLinks()
+        }
+      })
     })
-  })
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['href'],
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['href'],
+    })
   })
 })

@@ -7,13 +7,16 @@
       <Meta property="og:title" content="VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Obligatorisch | Driving Team" />
       <Meta property="og:description" content="VKU Kurs in Zürich-Altstetten. CHF 190.- inkl. Dokumentation & Kursbestätigung. 8 Stunden (2×4h). Obligatorisch für Auto & Motorrad Führerschein. Flexible Termine." />
       <Meta property="og:url" content="https://drivingteam.ch/vku-kurs-zuerich/" />
+      <Meta property="og:type" content="website" />
+      <Meta property="og:locale" content="de_CH" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurs-zuerich/" />
-      
-      
-          <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
-          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="twitter:card" content="summary_large_image" />
+      <Meta name="twitter:title" content="VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Driving Team" />
+      <Meta name="twitter:description" content="VKU Kurs in Zürich-Altstetten. CHF 190.- inkl. Dokumentation. 8 Stunden (2×4h). Obligatorisch für Auto & Motorrad Führerschein. Jetzt online anmelden!" />
+      <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- 1. Hero Section -->
