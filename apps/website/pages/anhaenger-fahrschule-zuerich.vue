@@ -443,7 +443,7 @@ const jsonLdScripts = [
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
       "@context": "https://schema.org",
-      "@type": "DrivingSchool",
+      "@type": ["DrivingSchool", "LocalBusiness"],
       "@id": "https://drivingteam.ch/anhaenger-fahrschule-zuerich/#driving-school",
       "name": "Anhänger Fahrschule Zürich – Driving Team",
       "description": "Professionelle Anhänger Fahrschule in Zürich-Altstetten. Kategorie BE ab CHF 120.-/Lektion. Keine Theorieprüfung. Prüfung Regensdorf. 5–8 Fahrstunden genügen.",

@@ -188,7 +188,7 @@
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "DrivingSchool",
+    "@type": ["DrivingSchool", "LocalBusiness"],
     "@id": "https://drivingteam.ch/fahrschule-lachen/#driving-school",
     "name": "Driving Team Fahrschule Lachen",
     "description": "Professionelle Fahrausbildung in Lachen SZ für alle Fahrzeugkategorien. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 95.-/Lektion, flexible Treffpunkte.",

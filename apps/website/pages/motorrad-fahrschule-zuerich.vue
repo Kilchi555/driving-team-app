@@ -695,7 +695,7 @@ const jsonLdScripts = [
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
       "@context": "https://schema.org",
-      "@type": "DrivingSchool",
+      "@type": ["DrivingSchool", "LocalBusiness"],
       "@id": "https://drivingteam.ch/motorrad-fahrschule-zuerich/#driving-school",
       "name": "Motorrad Fahrschule Zürich – Driving Team",
       "description": "Professionelle Motorrad Fahrschule in Zürich-Altstetten. Kategorien A1, A35kW und A. Fahrschul-Motorrad verfügbar. Grundkurs in Zürich. 85% Erfolgsquote.",
