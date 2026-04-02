@@ -2,7 +2,7 @@
 // Submit a booking proposal when no slots are available
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -101,10 +101,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_ANON_KEY || '' // Use ANON key for public endpoint only!
-    )
+    const supabase = getSupabaseAdmin()
 
     // ⚠️ TODO: Implement robust rate limiting here to prevent spamming
     // (e.g., based on IP address, email, or a captcha)
@@ -183,7 +180,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create the proposal using Anon Key (respects RLS policies for the booking_proposals table)
+    // Create the proposal via service_role – this is a server-side endpoint, input is
+    // already validated above. Admin client bypasses RLS safely.
     const { data: proposal, error: proposalError } = await supabase
       .from('booking_proposals')
       .insert({
