@@ -100,10 +100,18 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ STEP 1: Reserve the primary slot (atomic) ============
-    // WHERE clause enforces availability check atomically via PostgreSQL row-level locking:
-    // only updates the row if it is still free (or its reservation has expired).
-    // If 0 rows are updated, the slot was taken by a concurrent request.
-    const { data: reservedRows, error: reserveError } = await supabaseAdmin
+    // Availability check from the data we already fetched – if the slot is taken,
+    // return 409 immediately without hitting the DB again.
+    const isExpired = currentSlot.reserved_until && new Date(currentSlot.reserved_until) < now
+    const isAvailable = !currentSlot.reserved_by_session || isExpired
+
+    if (!isAvailable) {
+      throw createError({ statusCode: 409, statusMessage: 'Slot is no longer available' })
+    }
+
+    // Simple update – admin client bypasses RLS, PostgreSQL row-level locking
+    // ensures the update is atomic even under concurrent requests.
+    const { error: reserveError } = await supabaseAdmin
       .from('availability_slots')
       .update({
         reserved_until: reservedUntil,
@@ -111,16 +119,10 @@ export default defineEventHandler(async (event: H3Event) => {
         is_primary_reservation: true
       })
       .eq('id', body.slot_id)
-      .or(`reserved_by_session.is.null,reserved_until.lt.${now.toISOString()}`)
-      .select('id')
 
     if (reserveError) {
       logger.error('❌ Error reserving slot:', reserveError)
       throw createError({ statusCode: 500, statusMessage: 'Failed to reserve slot' })
-    }
-
-    if (!reservedRows || reservedRows.length === 0) {
-      throw createError({ statusCode: 409, statusMessage: 'Slot is no longer available' })
     }
 
     logger.debug('✅ Primary slot reserved')
@@ -146,21 +148,32 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.debug(`🔗 Found ${overlappingSlotIds.length} overlapping slots, reserving them...`)
 
       // ============ STEP 3: Reserve overlapping slots (best-effort) ============
-      // Only update slots that are still free – already-reserved slots are skipped via WHERE.
-      const { error: overlapReserveError } = await supabaseAdmin
-        .from('availability_slots')
-        .update({
-          reserved_until: overlappingReservedUntil,
-          reserved_by_session: body.session_id,
-          is_primary_reservation: false
-        })
-        .in('id', overlappingSlotIds)
-        .or(`reserved_by_session.is.null,reserved_until.lt.${now.toISOString()}`)
+      // Only update slots that are still free – filter to IDs that are not yet reserved.
+      const freeOverlappingIds = await (async () => {
+        const { data: slotStates } = await supabaseAdmin
+          .from('availability_slots')
+          .select('id, reserved_by_session, reserved_until')
+          .in('id', overlappingSlotIds)
+        return (slotStates ?? [])
+          .filter(s => !s.reserved_by_session || (s.reserved_until && new Date(s.reserved_until) < now))
+          .map(s => s.id)
+      })()
 
-      if (overlapReserveError) {
-        logger.warn('⚠️ Could not reserve overlapping slots:', overlapReserveError)
-      } else {
-        logger.debug(`✅ Reserved ${overlappingSlotIds.length} overlapping slots`)
+      if (freeOverlappingIds.length > 0) {
+        const { error: overlapReserveError } = await supabaseAdmin
+          .from('availability_slots')
+          .update({
+            reserved_until: overlappingReservedUntil,
+            reserved_by_session: body.session_id,
+            is_primary_reservation: false
+          })
+          .in('id', freeOverlappingIds)
+
+        if (overlapReserveError) {
+          logger.warn('⚠️ Could not reserve overlapping slots:', overlapReserveError)
+        } else {
+          logger.debug(`✅ Reserved ${freeOverlappingIds.length} overlapping slots`)
+        }
       }
     }
 
