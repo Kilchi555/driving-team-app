@@ -214,6 +214,7 @@
 definePageMeta({ layout: 'tenant-admin' })
 import { ref, onMounted } from 'vue'
 
+const API = '/api/admin/tenants-manage'
 
 // State
 const tenants = ref([])
@@ -255,54 +256,28 @@ const statusOptions = [
 
 // Functions
 const loadTenants = async () => {
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) {
+  try {
+    const result = await $fetch(API)
+    tenants.value = result.data ?? []
+  } catch (error) {
     console.error('Error loading tenants:', error)
-    return
   }
-
-  // Get user counts for each tenant
-  const tenantsWithCounts = await Promise.all(
-    data.map(async (tenant) => {
-      const { count: userCount } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tenant.id)
-
-      return {
-        ...tenant,
-        user_count: userCount || 0
-      }
-    })
-  )
-
-  tenants.value = tenantsWithCounts
 }
 
 const saveTenant = async () => {
   isSaving.value = true
   try {
     if (editingTenant.value) {
-      // Update existing tenant
-      const { error } = await supabase
-        .from('tenants')
-        .update(tenantForm.value)
-        .eq('id', editingTenant.value.id)
-      
-      if (error) throw error
+      await $fetch(API, {
+        method: 'PATCH',
+        body: { id: editingTenant.value.id, ...tenantForm.value }
+      })
     } else {
-      // Create new tenant
-      const { error } = await supabase
-        .from('tenants')
-        .insert([tenantForm.value])
-      
-      if (error) throw error
+      await $fetch(API, {
+        method: 'POST',
+        body: tenantForm.value
+      })
     }
-    
     await loadTenants()
     closeModal()
   } catch (error) {
@@ -320,8 +295,7 @@ const editTenant = (tenant) => {
 }
 
 const viewTenant = (tenant) => {
-  // TODO: Navigate to tenant detail page
-  logger.debug('View tenant:', tenant)
+  console.debug('View tenant:', tenant)
 }
 
 const closeModal = () => {

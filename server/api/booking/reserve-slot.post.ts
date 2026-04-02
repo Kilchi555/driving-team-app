@@ -69,10 +69,13 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 3: ATOMIC RESERVATION ============
-    // Use anon key so RLS policies are enforced
+    // Use anon key for WRITES so RLS policies enforce atomic reservation logic.
+    // Use admin key for READS so we can find slots regardless of reservation status
+    // (previously required "select_any_slot_by_id_for_reservation" anon policy with condition: true).
     const supabase = getSupabase()
-    
-    logger.debug('🔍 About to attempt UPDATE with anon key', {
+    const supabaseAdmin = getSupabaseAdmin()
+
+    logger.debug('🔍 About to attempt reservation', {
       slot_id: body.slot_id,
       session_id: body.session_id
     })
@@ -83,8 +86,8 @@ export default defineEventHandler(async (event: H3Event) => {
     // Overlapping slots get the same 5 minutes expiry
     const overlappingReservedUntil = reservedUntil
 
-    // First, READ the current slot to verify it exists
-    const { data: currentSlot, error: readError } = await supabase
+    // First, READ the current slot to verify it exists (admin client: sees any slot, even reserved ones)
+    const { data: currentSlot, error: readError } = await supabaseAdmin
       .from('availability_slots')
       .select('id, tenant_id, reserved_by_session, reserved_until, staff_id, location_id, start_time, end_time, duration_minutes')
       .eq('id', body.slot_id)
@@ -118,11 +121,11 @@ export default defineEventHandler(async (event: H3Event) => {
     logger.debug('✅ Primary slot reserved')
 
     // ============ STEP 2: Find and reserve all overlapping slots ============
-    // Find slots that overlap with this one and belong to the same staff
-    // Location doesn't matter - if staff is busy, they're busy everywhere
-    // IMPORTANT: Include already-reserved slots too (even if from old sessions)
-    // We want to update ALL overlapping slots for this staff member
-    const { data: overlappingSlots, error: findOverlapError } = await supabase
+    // Find slots that overlap with this one and belong to the same staff.
+    // Location doesn't matter - if staff is busy, they're busy everywhere.
+    // IMPORTANT: Include already-reserved slots too (even if from old sessions).
+    // Admin client is used so we can find all slots regardless of reservation status.
+    const { data: overlappingSlots, error: findOverlapError } = await supabaseAdmin
       .from('availability_slots')
       .select('id')
       .eq('staff_id', currentSlot.staff_id)
