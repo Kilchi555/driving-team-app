@@ -85,7 +85,7 @@ export default defineEventHandler(async (event) => {
     } else {
       // Booking proposal templates (with category/location/staff)
       const formattedTimeSlots = formatTimeSlots(proposal.preferred_time_slots)
-      const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+      const dayNames = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
       customerEmail = buildCustomerEmail(proposal, location, staff, tenant, formattedTimeSlots, dayNames)
       staffEmail = buildStaffEmail(proposal, location, staff, tenant, formattedTimeSlots, dayNames)
       tenantEmail = buildTenantEmail(proposal, location, staff, tenant, formattedTimeSlots, dayNames)
@@ -166,7 +166,8 @@ export default defineEventHandler(async (event) => {
 function formatTimeSlots(slots: any[]): string {
   if (!slots || slots.length === 0) return '<li>Keine Zeitfenster angegeben</li>'
 
-  const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+  // Matches BookingProposalForm.vue: index 0 = Montag, ..., 5 = Samstag (no Sunday)
+  const dayNames = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
 
   // Group by day of week
   const slotsByDay: Record<number, string[]> = {}
