@@ -215,7 +215,9 @@ const jsonLdScripts = [
       "@type": "AggregateRating",
       "ratingValue": "4.9",
       "reviewCount": "368",
-      "bestRating": "5"
+      "ratingCount": "368",
+      "bestRating": "5",
+      "worstRating": "1"
     },
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
