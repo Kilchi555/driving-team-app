@@ -103,8 +103,12 @@ export const getSupabaseAdmin = (): SupabaseClient => {
     throw new Error('getSupabaseAdmin can only be used on the server')
   }
   if (!supabaseAdminInstance) {
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+    const supabaseUrl = process.env.SUPABASE_URL
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl) {
+      console.error('❌ Missing SUPABASE_URL for admin client')
+      throw new Error('Missing SUPABASE_URL')
+    }
     if (!serviceKey) {
       console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY for admin client')
       throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
@@ -126,7 +130,7 @@ export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
     throw new Error('getSupabaseServerWithSession can only be used on the server')
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+  const supabaseUrl = process.env.SUPABASE_URL
   const supabaseKey = process.env.SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey) {
