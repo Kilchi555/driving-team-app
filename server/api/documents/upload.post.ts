@@ -51,11 +51,30 @@ async function uploadDocument(body: UploadRequest, userId: string) {
     throw new Error('Missing required fields')
   }
 
+  // Validate document_type and side to prevent path traversal
+  const allowedDocTypes = ['lernfahrausweis', 'ausweis', 'pass', 'fuehrerschein']
+  const allowedSides = ['front', 'back']
+  if (!allowedDocTypes.includes(document_type) || !allowedSides.includes(side)) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid document_type or side' })
+  }
+
+  // Validate file extension
+  const ext = file_name.split('.').pop()?.toLowerCase()
+  const allowedExts = ['jpg', 'jpeg', 'png', 'pdf']
+  if (!ext || !allowedExts.includes(ext)) {
+    throw createError({ statusCode: 400, statusMessage: 'Only JPG, PNG, and PDF files are allowed' })
+  }
+
   // Decode base64 file data
   const buffer = Buffer.from(file_data, 'base64')
 
-  // Generate storage path
-  const ext = file_name.split('.').pop()
+  // Validate file size (5 MB max)
+  const maxSize = 5 * 1024 * 1024
+  if (buffer.length > maxSize) {
+    throw createError({ statusCode: 413, statusMessage: 'File too large (max 5 MB)' })
+  }
+
+  // Generate storage path (sanitised – no user-supplied path segments)
   const timestamp = Date.now()
   const path = `${userId}/${document_type}/${document_type}_${side}_${timestamp}.${ext}`
 

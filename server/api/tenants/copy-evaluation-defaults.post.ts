@@ -1,9 +1,9 @@
 import { defineEventHandler, createError } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Get current user's tenant
     const { data: { user } } = await supabase.auth.getUser()

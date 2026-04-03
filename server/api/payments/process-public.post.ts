@@ -21,10 +21,29 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { z } from 'zod'
+
+const ProcessPublicPaymentSchema = z.object({
+  enrollmentId:  z.string().uuid().optional(),
+  amount:        z.number().positive().max(100000),
+  currency:      z.enum(['CHF', 'EUR', 'USD']),
+  customerEmail: z.string().email().max(254),
+  customerName:  z.string().min(1).max(200).trim(),
+  courseId:      z.string().uuid(),
+  tenantId:      z.string().uuid(),
+  metadata:      z.record(z.unknown()).optional(),
+})
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event)
+    const rawBody = await readBody(event)
+    const parseResult = ProcessPublicPaymentSchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      })
+    }
     const { 
       enrollmentId, 
       amount, 
@@ -34,7 +53,7 @@ export default defineEventHandler(async (event) => {
       courseId,
       tenantId,
       metadata = {}
-    } = body
+    } = parseResult.data
 
     logger.debug('💳 Public payment process request:', {
       enrollmentId,
@@ -54,23 +73,6 @@ export default defineEventHandler(async (event) => {
     
     logger.info(`Payment redirect: host=${host}, forwardedHost=${forwardedHost}, regularHost=${regularHost}, baseUrl=${baseUrl}`)
     let tenantSlug = 'driving-team' // Default
-
-    // 1. Validate inputs
-    // ✅ CHANGED: enrollmentId is now optional (will be created in webhook)
-    // For backward compatibility, we still accept enrollmentId
-    if (!amount || !currency || !customerEmail || !customerName || !tenantId || !courseId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Missing required fields: amount, currency, customerEmail, customerName, tenantId, courseId'
-      })
-    }
-
-    if (amount <= 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Amount must be greater than 0'
-      })
-    }
 
     const supabase = getSupabaseAdmin()
 

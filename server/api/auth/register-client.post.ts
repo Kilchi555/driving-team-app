@@ -1,4 +1,4 @@
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // ✅ Sanitize all string inputs to prevent XSS
     const sanitizedFirstName = sanitizeString(firstName, 100)

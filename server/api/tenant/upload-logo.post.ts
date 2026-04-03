@@ -14,16 +14,31 @@ interface UploadLogoRequest {
 
 // Configuration
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const ALLOWED_FORMATS = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif']
+// SVG excluded: can contain <script> tags (XSS risk when served from public URL)
+const ALLOWED_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif']
 const MIME_TYPES: Record<string, string> = {
   'png': 'image/png',
   'jpg': 'image/jpeg',
   'jpeg': 'image/jpeg',
-  'svg': 'image/svg+xml',
   'webp': 'image/webp',
   'gif': 'image/gif'
 }
 const STORAGE_BUCKET = 'tenant-assets'
+
+// Magic bytes map for binary file type verification
+const MAGIC_BYTES: Record<string, number[][]> = {
+  'png':  [[0x89, 0x50, 0x4E, 0x47]],
+  'jpg':  [[0xFF, 0xD8, 0xFF]],
+  'jpeg': [[0xFF, 0xD8, 0xFF]],
+  'webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF....WEBP — first 4 bytes RIFF
+  'gif':  [[0x47, 0x49, 0x46, 0x38]], // GIF8
+}
+
+function validateMagicBytes(data: Buffer, ext: string): boolean {
+  const signatures = MAGIC_BYTES[ext]
+  if (!signatures) return true // no known signature, skip
+  return signatures.some(sig => sig.every((byte, i) => data[i] === byte))
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -102,6 +117,14 @@ export default defineEventHandler(async (event) => {
     }
 
     const mimeType = MIME_TYPES[ext] || 'image/png'
+
+    // Verify the actual file content matches the claimed extension (prevents renamed exploits)
+    if (!validateMagicBytes(fileData, ext)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'File content does not match its extension'
+      })
+    }
 
     // Construct storage path
     // Format: tenant-assets/{tenant_id}/{asset_type}.{ext}

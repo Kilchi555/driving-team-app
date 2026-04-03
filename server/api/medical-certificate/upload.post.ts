@@ -1,13 +1,13 @@
 // server/api/medical-certificate/upload.post.ts
 import { createClient } from '@supabase/supabase-js'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
     // Get current user from Authorization header
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const authHeader = getHeader(event, 'authorization')
     
     if (!authHeader) {

@@ -43,6 +43,7 @@
     "stripe": "^18.5.0",
     "twilio": "^5.10.4",
     "wallee": "^4.7.0",
+    "zod": "^3.25.23",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {

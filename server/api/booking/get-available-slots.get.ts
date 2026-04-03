@@ -95,7 +95,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // ============ LAYER 3: FETCH SLOTS ============
     // Use anon key so RLS policies are enforced
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const now = new Date().toISOString()
 
     let slotsQuery = supabase

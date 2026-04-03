@@ -1,12 +1,12 @@
 // server/api/appointments/adjust-duration.post.ts
 // Handles appointment duration adjustments with automatic payment reconciliation
 
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { appointmentId, newDurationMinutes, oldDurationMinutes, pricePerMinute } = await readBody(event)
 
     logger.debug('⏱️ Adjusting appointment duration:', {

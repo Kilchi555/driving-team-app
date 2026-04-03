@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // 1. Prüfen ob der Tenant existiert
     const { data: tenant, error: tenantError } = await supabase

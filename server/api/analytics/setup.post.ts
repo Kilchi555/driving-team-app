@@ -1,9 +1,9 @@
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Read and execute the simple analytics migration SQL
     const fs = await import('fs/promises')
