@@ -1,5 +1,6 @@
-import { defineEventHandler, getQuery } from 'h3'
+import { defineEventHandler, getQuery, getHeader, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 const EMPTY_RESPONSE = {
   period: { startDate: '', endDate: '', days: 7 },
@@ -20,6 +21,30 @@ export default defineEventHandler(async (event) => {
   // Return empty data if Supabase not configured (local dev)
   if (!supabaseUrl || !supabaseServiceKey) {
     return EMPTY_RESPONSE
+  }
+
+  // ✅ SECURITY: Only super_admin can access analytics across all tenants
+  const authHeader = getHeader(event, 'authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  const token = authHeader.substring(7)
+  const adminClient = getSupabaseAdmin()
+  const { data: { user }, error: authError } = await adminClient.auth.getUser(token)
+
+  if (authError || !user) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  const { data: userData } = await adminClient
+    .from('users')
+    .select('role')
+    .eq('auth_user_id', user.id)
+    .single()
+
+  if (userData?.role !== 'super_admin') {
+    throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)

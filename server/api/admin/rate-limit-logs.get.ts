@@ -1,8 +1,32 @@
-import { defineEventHandler, getQuery } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, getQuery, getHeader, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
+    // ✅ SECURITY: Only super_admin can access rate limit logs (contains IP addresses)
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+
+    const token = authHeader.substring(7)
+    const adminClient = getSupabaseAdmin()
+    const { data: { user }, error: authError } = await adminClient.auth.getUser(token)
+
+    if (authError || !user) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+
+    const { data: userData } = await adminClient
+      .from('users')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (userData?.role !== 'super_admin') {
+      throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
+    }
+
     // Get query parameters
     const query = getQuery(event)
     const operation = query.operation as string || ''
@@ -11,18 +35,8 @@ export default defineEventHandler(async (event) => {
     const page = parseInt(query.page as string) || 1
     const pageSize = parseInt(query.pageSize as string) || 50
 
-    // Get Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey)
+    // Reuse the already-authenticated admin client
+    const supabase = adminClient
 
     // Calculate time range start
     const now = new Date()
