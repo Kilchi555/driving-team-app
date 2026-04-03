@@ -189,27 +189,22 @@ const setPassword = async () => {
       throw new Error(updateError.message)
     }
 
-    // Create business user record if not exists
-    const user = authStore.user // ✅ MIGRATED
+    // Create business user record via secure API
+    const user = authStore.user
     if (user && userInfo.value) {
-      const { error: insertError } = await supabase
-        .from('users')
-        .upsert({
-          auth_user_id: user.id,
-          first_name: userInfo.value.first_name,
-          last_name: userInfo.value.last_name,
-          email: user.email,
-          phone: userInfo.value.phone || null,
-          role: userInfo.value.role === 'sub_admin' ? 'admin' : userInfo.value.role,
-          admin_level: userInfo.value.role === 'sub_admin' ? 'sub_admin' : null,
-          is_primary_admin: false,
-          is_active: true,
-          tenant_id: userInfo.value.tenant_id,
-          created_at: new Date().toISOString()
+      try {
+        await $fetch('/api/auth/complete-registration', {
+          method: 'POST',
+          body: {
+            first_name: userInfo.value.first_name,
+            last_name: userInfo.value.last_name,
+            phone: userInfo.value.phone || null,
+            role: userInfo.value.role,
+            tenant_id: userInfo.value.tenant_id
+          }
         })
-
-      if (insertError) {
-        console.warn('Warning creating business user:', insertError)
+      } catch (registrationError: any) {
+        console.warn('Warning completing registration:', registrationError.message)
         // Don't fail the whole process if business user creation fails
       }
     }
@@ -245,15 +240,14 @@ onMounted(async () => {
       tenant_id: user.user_metadata?.tenant_id
     }
 
-    // Get tenant slug for redirect
+    // Get tenant slug for redirect via public branding API
     if (userInfo.value.tenant_id) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('slug')
-        .eq('id', userInfo.value.tenant_id)
-        .single()
-      
-      tenantSlug.value = tenant?.slug || 'default'
+      try {
+        const brandingData = await $fetch(`/api/tenants/branding?tenantId=${userInfo.value.tenant_id}`) as any
+        tenantSlug.value = brandingData?.tenant?.slug || 'default'
+      } catch {
+        tenantSlug.value = 'default'
+      }
     }
 
     logger.debug('👤 User info loaded from invitation:', userInfo.value)

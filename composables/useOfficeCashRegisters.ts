@@ -149,37 +149,23 @@ export const useOfficeCashRegisters = () => {
     registerType: 'office' | 'reception' | 'exam' | 'emergency'
   ): Promise<string | null> => {
     try {
-      const tenantId = await getCurrentTenantId()
-      if (!tenantId) throw new Error('No tenant_id found')
+      const response = await $fetch('/api/admin/cash-management', {
+        method: 'POST',
+        body: {
+          action: 'create_office_register',
+          name,
+          description,
+          location,
+          register_type: registerType
+        }
+      }) as any
 
-      const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile) throw new Error('User profile not found')
-
-      const { data, error } = await supabase
-        .rpc('create_office_cash_register', {
-          p_tenant_id: tenantId,
-          p_name: name,
-          p_description: description,
-          p_location: location,
-          p_register_type: registerType,
-          p_created_by: userProfile.id
-        })
-
-      if (error) throw error
+      if (!response?.success) throw new Error(response?.error || 'Failed to create register')
       
-      logger.debug('✅ Office cash register created:', data)
-      await loadOfficeRegisters() // Reload list
+      logger.debug('✅ Office cash register created:', response.data)
+      await loadOfficeRegisters()
       
-      return data
+      return response.data
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to create office register'
       console.error('❌ Error creating office register:', err)
@@ -195,31 +181,21 @@ export const useOfficeCashRegisters = () => {
     timeRestrictions?: any
   ): Promise<boolean> => {
     try {
-      const authStore = useAuthStore()
-      const user = authStore.user
-      if (!user) throw new Error('Not authenticated')
+      const response = await $fetch('/api/admin/cash-management', {
+        method: 'POST',
+        body: {
+          action: 'assign_staff_to_register',
+          register_id: registerId,
+          staff_id: staffId,
+          access_level: accessLevel,
+          time_restrictions: timeRestrictions || null
+        }
+      }) as any
 
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile) throw new Error('User profile not found')
-
-      const { error } = await supabase
-        .rpc('assign_staff_to_office_cash', {
-          p_cash_register_id: registerId,
-          p_staff_id: staffId,
-          p_access_level: accessLevel,
-          p_assigned_by: userProfile.id,
-          p_time_restrictions: timeRestrictions
-        })
-
-      if (error) throw error
+      if (!response?.success) throw new Error(response?.error || 'Failed to assign staff')
       
       logger.debug('✅ Staff assigned to office cash register')
-      await loadOfficeRegisters() // Reload to show new assignment
+      await loadOfficeRegisters()
       
       return true
     } catch (err) {

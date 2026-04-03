@@ -471,14 +471,10 @@ const disputeTransaction = async (transaction: any) => {
   isDisputing.value = true
 
   try {
-    const { error: updateError } = await supabase
-      .from('cash_transactions')
-      .update({ 
-        status: 'disputed'
-      })
-      .eq('id', transaction.id)
-
-    if (updateError) throw updateError
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'dispute_transaction', transaction_id: transaction.id }
+    })
 
     // Update local transaction data immediately
     const transactionIndex = cashTransactions.value.findIndex(t => t.id === transaction.id)
@@ -511,17 +507,15 @@ const submitConfirmation = async () => {
   try {
     const amountRappen = Math.round(parseFloat(confirmationAmount.value) * 100)
 
-    // Update transaction
-    const { error: updateError } = await supabase
-      .from('cash_transactions')
-      .update({ 
-        status: 'confirmed',
-        confirmed_by: props.currentUser?.id,
-        confirmed_at: new Date().toISOString()
-      })
-      .eq('id', selectedTransaction.value.id)
-
-    if (updateError) throw updateError
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: {
+        action: 'confirm_transaction',
+        transaction_id: selectedTransaction.value.id,
+        confirmation_amount: amountRappen,
+        confirmation_notes: confirmationNotes.value
+      }
+    })
 
     // Update local transaction data immediately
     const transactionIndex = cashTransactions.value.findIndex(t => t.id === selectedTransaction.value.id)
@@ -530,18 +524,6 @@ const submitConfirmation = async () => {
       cashTransactions.value[transactionIndex].confirmed_by = props.currentUser?.id
       cashTransactions.value[transactionIndex].confirmed_at = new Date().toISOString()
     }
-
-    // Create confirmation record
-    const { error: confirmationError } = await supabase
-      .from('cash_confirmations')
-      .insert({
-        transaction_id: selectedTransaction.value.id,
-        confirmed_by: props.currentUser?.id,
-        amount_confirmed: amountRappen,
-        notes: confirmationNotes.value
-      })
-
-    if (confirmationError) throw confirmationError
 
     // Also refresh from database to ensure consistency
     await loadCashTransactions()
@@ -564,14 +546,14 @@ const submitEdit = async () => {
     logger.debug('🔧 Submitting edit for transaction:', selectedTransaction.value.id)
     logger.debug('🔧 New notes:', editNotes.value)
 
-    const { error: updateError } = await supabase
-      .from('cash_transactions')
-      .update({ 
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: {
+        action: 'edit_transaction_notes',
+        transaction_id: selectedTransaction.value.id,
         notes: editNotes.value
-      })
-      .eq('id', selectedTransaction.value.id)
-
-    if (updateError) throw updateError
+      }
+    })
 
     logger.debug('✅ Database update successful')
 

@@ -107,7 +107,7 @@ export const useUserDocuments = () => {
   }
 
   /**
-   * Speichert ein neues Dokument
+   * Speichert ein neues Dokument via sicherem Server-API
    */
   const saveDocument = async (documentData: {
     user_id: string
@@ -126,64 +126,15 @@ export const useUserDocuments = () => {
     error.value = null
 
     try {
-      // Prüfe ob bereits ein Dokument dieses Typs existiert
-      let query = supabase
-        .from('user_documents')
-        .select('id')
-        .eq('user_id', documentData.user_id)
-        .eq('document_type', documentData.document_type)
-        .eq('side', documentData.side || 'front')
-        .is('deleted_at', null)
+      const response = await $fetch('/api/documents/manage', {
+        method: 'POST',
+        body: { action: 'save', user_id: documentData.user_id, document_data: documentData }
+      }) as any
 
-      // category_code korrekt vergleichen (NULL mit .is, sonst .eq)
-      if (documentData.category_code) {
-        query = query.eq('category_code', documentData.category_code)
-      } else {
-        query = query.is('category_code', null)
-      }
+      if (!response?.success) throw new Error(response?.error || 'Failed to save document')
 
-      const existing = await query.maybeSingle()
-
-      let result
-
-      if (existing.data) {
-        // Update existierendes Dokument
-        const { data, error: updateError } = await supabase
-          .from('user_documents')
-          .update({
-            file_name: documentData.file_name,
-            file_size: documentData.file_size,
-            file_type: documentData.file_type,
-            storage_path: documentData.storage_path,
-            title: documentData.title,
-            description: documentData.description,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existing.data.id)
-          .select()
-          .single()
-
-        if (updateError) throw updateError
-        result = data
-      } else {
-        // Erstelle neues Dokument
-        const { data, error: insertError } = await supabase
-          .from('user_documents')
-          .insert({
-            ...documentData,
-            side: documentData.side || 'front'
-          })
-          .select()
-          .single()
-
-        if (insertError) throw insertError
-        result = data
-      }
-
-      // Aktualisiere lokale Liste
       await loadDocuments(documentData.user_id)
-      
-      return result
+      return response.data
     } catch (err: any) {
       console.error('Error saving document:', err)
       error.value = err.message
@@ -194,25 +145,21 @@ export const useUserDocuments = () => {
   }
 
   /**
-   * Löscht ein Dokument (Soft Delete)
+   * Löscht ein Dokument (Soft Delete) via Server-API
    */
-  const deleteDocument = async (documentId: string): Promise<boolean> => {
+  const deleteDocument = async (documentId: string, userId: string): Promise<boolean> => {
     loading.value = true
     error.value = null
 
     try {
-      const { error: deleteError } = await supabase
-        .from('user_documents')
-        .update({
-          deleted_at: new Date().toISOString()
-        })
-        .eq('id', documentId)
+      const response = await $fetch('/api/documents/manage', {
+        method: 'POST',
+        body: { action: 'delete', user_id: userId, document_id: documentId }
+      }) as any
 
-      if (deleteError) throw deleteError
+      if (!response?.success) throw new Error(response?.error || 'Failed to delete document')
 
-      // Entferne aus lokaler Liste
       documents.value = documents.value.filter(doc => doc.id !== documentId)
-      
       return true
     } catch (err: any) {
       console.error('Error deleting document:', err)
@@ -224,30 +171,25 @@ export const useUserDocuments = () => {
   }
 
   /**
-   * Markiert ein Dokument als verifiziert
+   * Markiert ein Dokument als verifiziert via Server-API
    */
-  const verifyDocument = async (documentId: string): Promise<boolean> => {
+  const verifyDocument = async (documentId: string, userId: string): Promise<boolean> => {
     loading.value = true
     error.value = null
 
     try {
-      const { error: updateError } = await supabase
-        .from('user_documents')
-        .update({
-          is_verified: true,
-          verification_date: new Date().toISOString()
-        })
-        .eq('id', documentId)
+      const response = await $fetch('/api/documents/manage', {
+        method: 'POST',
+        body: { action: 'verify', user_id: userId, document_id: documentId }
+      }) as any
 
-      if (updateError) throw updateError
+      if (!response?.success) throw new Error(response?.error || 'Failed to verify document')
 
-      // Aktualisiere lokales Dokument
       const docIndex = documents.value.findIndex(doc => doc.id === documentId)
       if (docIndex !== -1) {
         documents.value[docIndex].is_verified = true
         documents.value[docIndex].verification_date = new Date().toISOString()
       }
-      
       return true
     } catch (err: any) {
       console.error('Error verifying document:', err)
