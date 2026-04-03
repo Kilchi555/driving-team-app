@@ -1,16 +1,26 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get Supabase admin client
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // ✅ SECURITY: Requires authenticated staff/admin user
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
-    // Parse request body
+    const supabase = getSupabaseAdmin()
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role, tenant_id, id')
+      .eq('auth_user_id', authUser.id)
+      .single()
+
+    if (!profile || !['staff', 'admin', 'super_admin'].includes(profile.role)) {
+      throw createError({ statusCode: 403, statusMessage: 'Staff/Admin access required' })
+    }
+
     const body = await readBody<{
       action: 'upload-evaluation-content' | 'get-current-user-id'
       file?: {
@@ -33,7 +43,6 @@ export default defineEventHandler(async (event) => {
     let result
 
     if (action === 'upload-evaluation-content') {
-      // Upload evaluation content images to storage
       try {
         if (!body.file || !body.fileName) {
           throw new Error('Missing required fields: file, fileName')
@@ -42,10 +51,8 @@ export default defineEventHandler(async (event) => {
         const { data: file, name: fileName } = body.file
         const filePath = `evaluation-content/${fileName}`
 
-        // Decode base64 file data
         const buffer = Buffer.from(file, 'base64')
 
-        // Upload to storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('evaluation-content')
           .upload(filePath, buffer, {
@@ -56,7 +63,6 @@ export default defineEventHandler(async (event) => {
 
         if (uploadError) throw uploadError
 
-        // Get public URL
         const { data: urlData } = supabase.storage
           .from('evaluation-content')
           .getPublicUrl(filePath)
@@ -73,23 +79,13 @@ export default defineEventHandler(async (event) => {
         throw new Error(`Failed to upload evaluation content: ${err.message}`)
       }
     } else if (action === 'get-current-user-id') {
-      // Get current authenticated user ID (from session)
-      try {
-        const userId = session?.user?.id
-
-        if (!userId) {
-          throw new Error('No authenticated user found in session')
+      // Returns the DB user ID of the authenticated caller
+      result = {
+        success: true,
+        data: {
+          userId: profile.id,
+          authUserId: authUser.id
         }
-
-        result = {
-          success: true,
-          data: {
-            userId,
-            email: session?.user?.email
-          }
-        }
-      } catch (err: any) {
-        throw new Error(`Failed to get user ID: ${err.message}`)
       }
     } else {
       throw new Error(`Invalid action: ${action}`)

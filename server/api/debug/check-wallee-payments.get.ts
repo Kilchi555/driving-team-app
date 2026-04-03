@@ -5,12 +5,30 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabaseAdmin()
+    // ✅ SECURITY: Only super_admin can access this debug endpoint
+    const authHeader = getHeader(event, 'authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
 
-    // Find payments that are:
-    // 1. payment_status = 'completed'
-    // 2. payment_method = 'wallee'
-    // 3. wallee_transaction_id is NULL or empty
+    const token = authHeader.substring(7)
+    const supabase = getSupabaseAdmin()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (userData?.role !== 'super_admin') {
+      throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
+    }
+
     const { data: payments, error } = await supabase
       .from('payments')
       .select(`
@@ -49,6 +67,7 @@ export default defineEventHandler(async (event) => {
       }))
     }
   } catch (error: any) {
+    if (error.statusCode) throw error
     return {
       success: false,
       error: error.message

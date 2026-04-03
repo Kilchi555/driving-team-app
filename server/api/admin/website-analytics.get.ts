@@ -1,6 +1,31 @@
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
+  // ✅ SECURITY: Only super_admin can access analytics across all tenants
+  const authHeader = getHeader(event, 'authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  const token = authHeader.substring(7)
+  const adminClient = getSupabaseAdmin()
+  const { data: { user }, error: authError } = await adminClient.auth.getUser(token)
+
+  if (authError || !user) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  const { data: userData } = await adminClient
+    .from('users')
+    .select('role')
+    .eq('auth_user_id', user.id)
+    .single()
+
+  if (userData?.role !== 'super_admin') {
+    throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
+  }
+
   const supabaseUrl = process.env.SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !supabaseServiceKey) throw createError({ statusCode: 500, message: 'Supabase not configured' })
