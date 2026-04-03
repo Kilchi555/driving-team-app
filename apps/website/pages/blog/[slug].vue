@@ -242,7 +242,7 @@ const route = useRoute()
 const slug = route.params.slug as string
 
 const { data: article } = await useAsyncData(`blog-${slug}`, () =>
-  queryCollection('blog').where('slug', '=', slug).first()
+  queryCollection('blog').path(`/blog/${slug}`).first()
 )
 
 if (!article.value) {
