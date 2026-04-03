@@ -1,5 +1,5 @@
 import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabase()
@@ -18,8 +18,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
+  // Use admin client to bypass RLS for the users table lookup
+  const adminSupabase = getSupabaseAdmin()
+
   // Get current user's profile for tenant context
-  const { data: currentUserProfile } = await supabase
+  const { data: currentUserProfile } = await adminSupabase
     .from('users')
     .select('tenant_id')
     .eq('auth_user_id', authUser.id)
@@ -41,7 +44,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get target user's tenant (ensure same tenant access)
-  const { data: targetUser, error: targetError } = await supabase
+  const { data: targetUser, error: targetError } = await adminSupabase
     .from('users')
     .select('id, tenant_id, first_name, last_name, email, role')
     .eq('id', user_id)
