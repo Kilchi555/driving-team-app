@@ -207,6 +207,7 @@ const aggregateRatingSchema = computed(() => {
     'ratingValue': 4.9,
     'bestRating': 5,
     'worstRating': 1,
+    'ratingCount': reviewCount,
     'reviewCount': reviewCount
   }
 })
