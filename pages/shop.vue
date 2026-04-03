@@ -2348,26 +2348,34 @@ onMounted(async () => {
         if (!user) return
         isLoggedIn.value = true
         customerType.value = 'existing'
-        const { data: userData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('auth_user_id', user.id)
-          .single()
-        if (userData) {
-          customerData.value = userData
-          logger.debug('✅ Customer data loaded:', userData.email)
-          formData.value = {
-            firstName: userData.first_name || '',
-            lastName: userData.last_name || '',
-            email: userData.email || user.email || '',
-            phone: userData.phone || '',
-            street: userData.street || '',
-            streetNumber: userData.street_number || '',
-            zip: userData.zip || '',
-            city: userData.city || '',
-            notes: ''
+        try {
+          // Use the session token to call the server API (avoids direct DB access + RLS issues)
+          const { data: { session } } = await supabase.auth.getSession()
+          const token = session?.access_token
+          if (!token) return
+          const userInfo = await $fetch('/api/users/current', {
+            method: 'GET',
+            headers: { authorization: `Bearer ${token}` }
+          }) as any
+          const userData = userInfo?.data
+          if (userData) {
+            customerData.value = userData
+            logger.debug('✅ Customer data loaded:', userData.email)
+            formData.value = {
+              firstName: userData.first_name || '',
+              lastName: userData.last_name || '',
+              email: userData.email || user.email || '',
+              phone: userData.phone || '',
+              street: userData.street || '',
+              streetNumber: userData.street_number || '',
+              zip: userData.zip || '',
+              city: userData.city || '',
+              notes: ''
+            }
+            logger.debug('✅ Form data pre-filled with customer info')
           }
-          logger.debug('✅ Form data pre-filled with customer info')
+        } catch (e) {
+          logger.debug('ℹ️ Could not pre-fill user data (guest flow continues)')
         }
       })()
     ])

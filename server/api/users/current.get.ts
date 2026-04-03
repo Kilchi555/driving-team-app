@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabase()
@@ -18,10 +18,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
-  // Get user profile
-  const { data: userProfile, error: profileError } = await supabase
+  // Use admin client to bypass RLS for the users table lookup
+  const adminSupabase = getSupabaseAdmin()
+  const { data: userProfile, error: profileError } = await adminSupabase
     .from('users')
-    .select('id, auth_user_id, tenant_id, first_name, last_name, email, role')
+    .select('id, auth_user_id, tenant_id, first_name, last_name, email, role, phone, street, street_number, zip, city')
     .eq('auth_user_id', authUser.id)
     .single()
 
