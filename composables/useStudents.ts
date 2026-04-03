@@ -171,14 +171,12 @@ export const useStudents = () => {
   // Schüler aktivieren/deaktivieren
   const toggleStudentStatus = async (studentId: string, isActive: boolean) => {
     try {
-      const supabase = getSupabase()
-      
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ is_active: isActive })
-        .eq('id', studentId)
+      const response = await $fetch('/api/admin/update-student', {
+        method: 'POST',
+        body: { action: 'toggle_status', student_id: studentId, is_active: isActive }
+      }) as any
 
-      if (updateError) throw updateError
+      if (!response?.success) throw new Error(response?.error || 'Failed to update status')
 
       // Lokale Liste aktualisieren
       const student = students.value.find(s => s.id === studentId)
@@ -339,16 +337,14 @@ export const useStudents = () => {
   // Schüler bearbeiten
   const updateStudent = async (studentId: string, updates: Partial<User>) => {
     try {
-      const supabase = getSupabase()
-      
-      const { data, error: updateError } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', studentId)
-        .select()
-        .single()
+      const response = await $fetch('/api/admin/update-student', {
+        method: 'POST',
+        body: { action: 'update', student_id: studentId, updates }
+      }) as any
 
-      if (updateError) throw updateError
+      if (!response?.success) throw new Error(response?.error || 'Failed to update student')
+
+      const data = response.data
 
       // Lokale Liste aktualisieren
       const index = students.value.findIndex(s => s.id === studentId)

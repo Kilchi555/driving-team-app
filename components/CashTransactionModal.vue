@@ -218,20 +218,19 @@ const submitTransaction = async () => {
   try {
     const amountRappen = Math.round(parseFloat(formData.value.amount) * 100)
 
-    // Verwende die Datenbankfunktion für bessere Sicherheit
-    const { data, error: insertError } = await supabase
-      .rpc('create_cash_transaction', {
-        p_instructor_id: props.currentUser.id,
-        p_student_id: formData.value.student_id,
-        p_appointment_id: formData.value.appointment_id,
-        p_amount_rappen: amountRappen,
-        p_notes: formData.value.notes || null
-      })
-
-    if (insertError) throw insertError
+    const response = await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: {
+        action: 'create_cash_transaction',
+        student_id: formData.value.student_id,
+        appointment_id: formData.value.appointment_id,
+        amount_rappen: amountRappen,
+        notes: formData.value.notes || null
+      }
+    }) as any
 
     // Erfolg
-    emit('transaction-created', data)
+    emit('transaction-created', response.data)
     closeModal()
 
   } catch (err: any) {

@@ -1348,6 +1348,22 @@ import { useRoute } from '#app'
 import { useAccounto } from '~/composables/useAccounto'
 import { useInvoices } from '~/composables/useInvoices'
 import Toast from '~/components/Toast.vue'
+import { logger } from '~/utils/logger'
+import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
+
+const authStore = useAuthStore()
+const supabase = getSupabase()
+
+// Secure helper: all payment/appointment write operations go through server API
+const paymentOp = async (action: string, params: Record<string, any> = {}) => {
+  const response = await $fetch('/api/admin/payment-operations', {
+    method: 'POST',
+    body: { action, ...params }
+  }) as any
+  if (!response?.success) throw new Error(response?.statusMessage || 'Operation failed')
+  return response
+}
 
 // Generisches Logo für PDFs - wird durch Tenant-Logo ersetzt
 const GENERIC_LOGO_BASE64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iMTIiIGZpbGw9IiM2NDlFRkYiLz4KPHRleHQgeD0iNTAiIHk9IjYwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXdlaWdodD0iYm9sZCI+TG9nbzwvdGV4dD4KPC9zdmc+Cg=='
@@ -2120,36 +2136,10 @@ const _markAsPaid = async (appointment: Appointment) => {
     logger.debug('🔍 Found payment:', payment)
     
     if (payment) {
-      // Aktualisiere den Zahlungsstatus
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ payment_status: 'completed' })
-        .eq('id', payment.id)
-      
-      if (updateError) throw updateError
-      
-      // Cache invalidieren für diese spezifische Zahlung
-      await supabase
-        .from('payments')
-        .select('*')
-        .eq('id', payment.id)
-        .single()
-      
+      await paymentOp('mark_paid', { appointment_id: appointment.id, user_id: userId, amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100) })
       logger.debug('✅ Payment updated to completed:', payment.id)
     } else {
-      // Erstelle eine neue Zahlung
-      const { error: createError } = await supabase
-        .from('payments')
-        .insert({
-          appointment_id: appointment.id,
-          user_id: userId,
-          payment_status: 'completed',
-          payment_method: 'cash',
-          total_amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100)
-        })
-      
-      if (createError) throw createError
-      
+      await paymentOp('mark_paid', { appointment_id: appointment.id, user_id: userId, amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100) })
       logger.debug('✅ New payment created and marked as completed:', appointment.id)
     }
     
@@ -2193,14 +2183,7 @@ const _markAsUnpaid = async (appointment: Appointment) => {
     const payment = await findPaymentForAppointment(appointment.id)
     
     if (payment) {
-      // Aktualisiere den Zahlungsstatus
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ payment_status: 'pending' })
-        .eq('id', payment.id)
-        
-      if (updateError) throw updateError
-      
+      await paymentOp('mark_unpaid', { appointment_id: appointment.id })
       logger.debug('✅ Payment marked as unpaid:', appointment.id)
     }
     
@@ -2234,29 +2217,10 @@ const _editPaymentMethod = async (appointment: Appointment) => {
     const payment = await findPaymentForAppointment(appointment.id)
     
     if (payment) {
-      // Aktualisiere die Zahlungsmethode
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ payment_method: newMethod })
-        .eq('id', payment.id)
-      
-      if (updateError) throw updateError
-      
+      await paymentOp('update_payment_method', { appointment_id: appointment.id, payment_method: newMethod })
       logger.debug('✅ Payment method updated:', appointment.id, newMethod)
     } else {
-      // Erstelle eine neue Zahlung
-      const { error: createError } = await supabase
-        .from('payments')
-        .insert({
-          appointment_id: appointment.id,
-          user_id: userId,
-          payment_status: 'pending',
-          payment_method: newMethod,
-          total_amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100)
-        })
-      
-      if (createError) throw createError
-      
+      await paymentOp('update_payment_method', { appointment_id: appointment.id, payment_method: newMethod, user_id: userId, amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100) })
       logger.debug('✅ New payment created with method:', appointment.id, newMethod)
     }
     
@@ -2291,29 +2255,10 @@ const resetPaymentStatusAction = async (appointment: Appointment) => {
     const payment = await findPaymentForAppointment(appointment.id)
     
     if (payment) {
-      // Setze den Zahlungsstatus auf "pending" zurück
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ payment_status: 'pending' })
-        .eq('id', payment.id)
-      
-      if (updateError) throw updateError
-      
+      await paymentOp('mark_unpaid', { appointment_id: appointment.id })
       logger.debug('✅ Payment status reset to pending:', appointment.id)
     } else {
-      // Erstelle eine neue Zahlung mit Status "pending"
-      const { error: createError } = await supabase
-        .from('payments')
-        .insert({
-          appointment_id: appointment.id,
-          user_id: userId,
-          payment_status: 'pending',
-          payment_method: 'cash',
-          total_amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100)
-        })
-      
-      if (createError) throw createError
-      
+      await paymentOp('mark_unpaid', { appointment_id: appointment.id })
       logger.debug('✅ New payment created with pending status:', appointment.id)
     }
     
@@ -2456,61 +2401,22 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    // Get current user
-    const authUser = authStore.user // ✅ MIGRATED
-    const { data: businessUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    
-    // Soft-Delete: Markiere die zugehörige Zahlung als gelöscht
-    // Hinweis: Die Rechnung bleibt bestehen, wird aber aktualisiert (stornierte Payments anzeigen, Total neu berechnen)
-    const { error: deletePaymentsError } = await supabase
-      .from('payments')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: businessUser?.id,
-        deletion_reason: 'Appointment deleted from admin panel'
-      })
-      .eq('appointment_id', appointment.id)
-    
-    if (deletePaymentsError) throw deletePaymentsError
-    
-    // Soft-Delete: Markiere den Termin als gelöscht
-    const { error: softDeleteError } = await supabase
-      .from('appointments')
-      .update({ 
-        deleted_at: new Date().toISOString(),
-        deleted_by: businessUser?.id,
-        deletion_reason: 'Manual deletion from admin panel'
-      })
-      .eq('id', appointment.id)
-    
-    if (softDeleteError) throw softDeleteError
+    // Soft-Delete appointment + associated payments via secure API
+    await paymentOp('soft_delete_appointment', { appointment_id: appointment.id })
     
     // Send deletion notification (SMS/Email) to customer
     try {
-      const { data: appointmentWithUser } = await supabase
-        .from('appointments')
-        .select('id, user_id, tenant_id')
-        .eq('id', appointment.id)
-        .single()
-      
-      if (appointmentWithUser?.user_id && appointmentWithUser?.tenant_id) {
-        await $fetch('/api/reminders/send-deletion-notification', {
-          method: 'POST',
-          body: {
-            appointmentId: appointment.id,
-            userId: appointmentWithUser.user_id,
-            tenantId: appointmentWithUser.tenant_id,
-            type: 'customer'
-          }
-        })
-      }
+      await $fetch('/api/reminders/send-deletion-notification', {
+        method: 'POST',
+        body: {
+          appointmentId: appointment.id,
+          userId: appointment.user_id,
+          tenantId: appointment.tenant_id,
+          type: 'customer'
+        }
+      })
     } catch (smsError) {
       console.warn('⚠️ Could not send deletion notification SMS/Email:', smsError)
-      // Don't throw - the appointment is already deleted
     }
     
     // Aktualisiere den lokalen Termin-Status
@@ -2544,13 +2450,8 @@ const restoreAppointment = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    // Wiederherstellen: Entferne deleted_at Markierung
-    const { error: restoreError } = await supabase
-      .from('appointments')
-      .update({ deleted_at: null })
-      .eq('id', appointment.id)
-    
-    if (restoreError) throw restoreError
+    // Restore appointment via secure API
+    await paymentOp('restore_appointment', { appointment_id: appointment.id })
     
     // Aktualisiere den lokalen Termin-Status
     const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointment.id)
@@ -2742,17 +2643,7 @@ const switchToCash = async (appointment: Appointment) => {
     async () => {
       isUpdatingPayment.value = true
       try {
-        const { error } = await supabase
-          .from('payments')
-          .update({ 
-            payment_method: 'cash',
-            payment_status: 'completed',
-            paid_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('appointment_id', appointment.id)
-        
-        if (error) throw error
+        await paymentOp('switch_to_cash', { appointment_id: appointment.id })
         
         showSuccessToast(
           '✅ Zahlungsmethode geändert',
@@ -2791,37 +2682,8 @@ const executeHardDelete = async (appointment: Appointment) => {
   
   isUpdatingPayment.value = true
   try {
-    // Get current user
-    const authUser = authStore.user // ✅ MIGRATED
-    const { data: businessUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    
-    // Soft-Delete payments associated with this appointment
-    const { error: deletePaymentsError } = await supabase
-      .from('payments')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: businessUser?.id,
-        deletion_reason: 'Appointment permanently deleted from admin panel'
-      })
-      .eq('appointment_id', appointment.id)
-    
-    if (deletePaymentsError) throw deletePaymentsError
-    
-    // Soft-Delete the appointment itself
-    const { error: deleteAppointmentError } = await supabase
-      .from('appointments')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: businessUser?.id,
-        deletion_reason: 'Permanent deletion from admin panel'
-      })
-      .eq('id', appointment.id)
-    
-    if (deleteAppointmentError) throw deleteAppointmentError
+    // Hard-delete appointment + payments via secure API
+    await paymentOp('hard_delete_appointment', { appointment_id: appointment.id })
     
     // Entferne den Termin aus der lokalen Liste
     const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointment.id)
@@ -3800,20 +3662,7 @@ const restoreAllSelectedAppointments = async () => {
   try {
     logger.debug('🔄 Restoring all selected deleted appointments:', selectedAppointments.value.length)
     
-    for (const appointmentId of selectedAppointments.value) {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) continue
-      
-      // Wiederherstellen: Entferne deleted_at Markierung
-      const { error: restoreError } = await supabase
-        .from('appointments')
-        .update({ deleted_at: null })
-        .eq('id', appointmentId)
-      
-      if (restoreError) throw restoreError
-      
-      logger.debug('✅ Appointment restored:', appointmentId)
-    }
+    await paymentOp('restore_appointments_bulk', { appointment_ids: [...selectedAppointments.value] })
     
     // Aktualisiere alle ausgewählten Termine lokal
     for (const appointmentId of selectedAppointments.value) {
@@ -3860,28 +3709,7 @@ const executeHardDeleteAllSelected = async () => {
   try {
     logger.debug('🗑️ Hard deleting all selected appointments:', selectedAppointments.value.length)
     
-    for (const appointmentId of selectedAppointments.value) {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) continue
-      
-      // Lösche zuerst alle zugehörigen Zahlungen
-      const { error: deletePaymentsError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('appointment_id', appointmentId)
-      
-      if (deletePaymentsError) throw deletePaymentsError
-      
-      // Lösche dann den Termin selbst
-      const { error: deleteAppointmentError } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', appointmentId)
-      
-      if (deleteAppointmentError) throw deleteAppointmentError
-      
-      logger.debug('✅ Appointment hard deleted:', appointmentId)
-    }
+    await paymentOp('hard_delete_appointments_bulk', { appointment_ids: [...selectedAppointments.value] })
     
     // Entferne alle gelöschten Termine aus der lokalen Liste
     appointments.value = appointments.value.filter(apt => !selectedAppointments.value.includes(apt.id))
@@ -3914,40 +3742,7 @@ const markAllSelectedAsPaid = async () => {
   try {
     logger.debug('🔄 Marking all selected appointments as paid:', selectedAppointments.value.length)
     
-    for (const appointmentId of selectedAppointments.value) {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) continue
-      
-      // Finde die Zahlung für diesen Termin
-      const payment = await findPaymentForAppointment(appointmentId)
-      
-      if (payment) {
-        // Aktualisiere den Zahlungsstatus
-        const { error: updateError } = await supabase
-          .from('payments')
-          .update({ payment_status: 'completed' })
-          .eq('id', payment.id)
-        
-        if (updateError) throw updateError
-        
-        logger.debug('✅ Payment updated to completed:', payment.id)
-      } else {
-        // Erstelle eine neue Zahlung
-        const { error: createError } = await supabase
-          .from('payments')
-          .insert({
-            appointment_id: appointmentId,
-            user_id: userId,
-            payment_status: 'completed',
-            payment_method: 'cash',
-            total_amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100)
-          })
-        
-        if (createError) throw createError
-        
-        logger.debug('✅ New payment created and marked as completed:', appointmentId)
-      }
-    }
+    await paymentOp('mark_paid_bulk', { appointment_ids: [...selectedAppointments.value] })
     
     // Aktualisiere alle ausgewählten Termine lokal
     for (const appointmentId of selectedAppointments.value) {

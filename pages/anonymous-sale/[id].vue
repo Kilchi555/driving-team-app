@@ -260,76 +260,28 @@ const proceedToPayment = async () => {
   isProcessing.value = true
   
   try {
-    const supabase = getSupabase()
-    
-    // Aktualisiere den Verkauf mit den Produkten
-    const { error: updateError } = await supabase
-      .from('product_sales')
-      .update({
-        total_amount_rappen: totalAmount.value,
-        metadata: {
-          ...sale.value.metadata,
-          cart_items: cartItems.value,
-          updated_at: new Date().toISOString()
-        }
-      })
-      .eq('id', saleId)
-    
-    if (updateError) throw updateError
-    
-    // Füge die Produkte zur product_sale_items hinzu
-    const itemsToInsert = cartItems.value.map(item => ({
-      product_sale_id: saleId,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      price_rappen: item.price_rappen
-    }))
-    
-    const { error: itemsError } = await supabase
-      .from('product_sale_items')
-      .insert(itemsToInsert)
-    
-    if (itemsError) throw itemsError
-    
-    // Erstelle Wallee-Transaktion
-    logger.debug('🔄 Erstelle Wallee-Transaktion...')
-    
-    const response = await fetch('/api/wallee/create-anonymous-transaction', {
+    const response = await $fetch('/api/anonymous-sale/checkout', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: totalAmount.value,
-        currency: 'CHF',
-        customer_name: sale.value.metadata?.customer_name || 'Anonymer Kunde',
-        customer_email: sale.value.metadata?.customer_email || null,
+      body: {
         sale_id: saleId,
         items: cartItems.value.map(item => ({
-          name: item.product_name,
-          quantity: item.quantity,
-          price_rappen: item.price_rappen
+          product_id: item.product_id,
+          quantity: item.quantity
+          // price_rappen is intentionally NOT sent — server reads it from DB
         }))
-      })
-    })
-    
-    if (!response.ok) {
-      throw new Error('Fehler bei der Wallee-Transaktion')
-    }
-    
-    const transactionData = await response.json()
-    
-    if (transactionData.success && transactionData.payment_url) {
-      // Weiterleitung zur Wallee-Zahlungsseite
-      logger.debug('✅ Wallee-Transaktion erstellt, leite weiter...')
-      window.location.href = transactionData.payment_url
+      }
+    }) as any
+
+    if (response.success && response.payment_url) {
+      logger.debug('✅ Checkout successful, redirecting to payment...')
+      window.location.href = response.payment_url
     } else {
       throw new Error('Keine Zahlungs-URL erhalten')
     }
     
   } catch (error: any) {
-    console.error('❌ Fehler beim Aktualisieren des Verkaufs:', error)
-    alert(`Fehler: ${error.message}`)
+    console.error('❌ Fehler beim Checkout:', error)
+    alert(`Fehler: ${error.data?.statusMessage || error.message}`)
   } finally {
     isProcessing.value = false
   }

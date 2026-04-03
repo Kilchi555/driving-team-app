@@ -856,7 +856,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRuntimeConfig, navigateTo } from '#app'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useRouter } from '#app'
-import { createClient } from '@supabase/supabase-js'
 import { useAuthStore } from '~/stores/auth'
 import StaffTab from '~/components/users/StaffTab.vue'
 import AdminsTab from '~/components/users/AdminsTab.vue'
@@ -1452,25 +1451,6 @@ const handleDrop = (event: DragEvent, type: 'front' | 'back') => {
   createUserError.value = '' // Clear any previous error
 }
 
-// Create Admin Supabase Client with Service Role Key
-const getAdminSupabase = () => {
-  const config = useRuntimeConfig()
-  const supabaseUrl = config.public.supabaseUrl as string
-  const serviceRoleKey = config.supabaseServiceRoleKey as string
-  
-  if (!serviceRoleKey) {
-    console.warn('⚠️ No service role key available, using regular client')
-    return supabase
-  }
-  
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-}
-
 // Staff Invitation Functions
 const sendStaffInvitation = async () => {
   inviteStaffError.value = ''
@@ -1560,15 +1540,9 @@ const createUser = async () => {
   try {
     logger.debug(`👨‍🏫 [CLIENT-${clientRequestId}] Creating new user:`, newUser.value.email)
 
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-
-    const tenantId = userProfile?.tenant_id
+    // Get current user's tenant_id from auth store profile (loaded at login)
+    const currentUser = authStore.user
+    const tenantId = authStore.userProfile?.tenant_id
     if (!tenantId) {
       throw new Error('Kein Tenant zugewiesen')
     }

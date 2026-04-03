@@ -173,21 +173,16 @@ export const useBillingAddresses = () => {
 
   const updateBillingAddress = async (id: string, updates: Partial<CompanyBillingAddress>) => {
     try {
-      const supabase = getSupabase()
-      const { data, error: updateError } = await supabase
-        .from('company_billing_addresses')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+      const response = await $fetch('/api/billing-address/update', {
+        method: 'POST',
+        body: { id, updates }
+      }) as any
 
-      if (updateError) throw updateError
+      if (!response?.success) throw new Error(response?.error || 'Failed to update billing address')
 
-      // Aktualisiere die lokale Liste
       await loadBillingAddresses()
-      
-      logger.debug('✅ Billing address updated:', data)
-      return { success: true, data }
+      logger.debug('✅ Billing address updated:', id)
+      return { success: true, data: response.data }
     } catch (err: any) {
       console.error('❌ Error updating billing address:', err)
       error.value = err.message
@@ -197,17 +192,14 @@ export const useBillingAddresses = () => {
 
   const deleteBillingAddress = async (id: string) => {
     try {
-      const supabase = getSupabase()
-      const { error: deleteError } = await supabase
-        .from('company_billing_addresses')
-        .delete()
-        .eq('id', id)
+      const response = await $fetch('/api/billing-address/delete', {
+        method: 'POST',
+        body: { id }
+      }) as any
 
-      if (deleteError) throw deleteError
+      if (!response?.success) throw new Error(response?.error || 'Failed to delete billing address')
 
-      // Aktualisiere die lokale Liste
       await loadBillingAddresses()
-      
       logger.debug('✅ Billing address deleted:', id)
       return { success: true }
     } catch (err: any) {
