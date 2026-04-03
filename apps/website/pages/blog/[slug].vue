@@ -241,13 +241,13 @@
 const route = useRoute()
 const slug = route.params.slug as string
 
-const { data: article } = await useAsyncData(`blog-${slug}`, () =>
-  queryCollection('blog').where('path', '=', `/blog/${slug}`).first()
-)
+const { data: article } = await useAsyncData(`blog-${slug}`, async () => {
+  // .where() fails during Vercel prerendering – use .all() + client filter (same as blog index)
+  const all = await queryCollection('blog').all()
+  return all.find(a => a.path === `/blog/${slug}`) ?? null
+})
 
 if (!article.value) {
-  // During prerendering this throw is caught by failOnError:false
-  // In SSR/CSR it shows the 404 template below
   if (import.meta.server && !import.meta.prerender) {
     throw createError({ statusCode: 404, message: 'Artikel nicht gefunden' })
   }
