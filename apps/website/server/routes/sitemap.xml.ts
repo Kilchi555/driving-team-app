@@ -416,12 +416,6 @@ export default defineEventHandler((event) => {
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
-  <url>
-    <loc>https://drivingteam.ch/partner/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
 
 </urlset>`
 
