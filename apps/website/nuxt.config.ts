@@ -70,9 +70,22 @@ export default defineNuxtConfig({
   nitro: {
     compressPublicAssets: false,
     minify: true,
+    experimental: {
+      wasm: true,
+    },
     prerender: {
       crawlLinks: true,
       failOnError: false,
+      routes: [
+        '/blog/fuehrerschein-kosten-schweiz/',
+        '/blog/bf17-begleitetes-fahren-schweiz/',
+        '/blog/fuehrerschein-kategorien-schweiz/',
+        '/blog/pruefungsangst-fahrpruefung/',
+        '/blog/theorieprufung-tipps-zuerich/',
+        '/blog/vku-kurs-verkehrskunde-sicherheit/',
+        '/blog/fahrschueler-respekt-strasse/',
+        '/blog/drivers-license-convert/',
+      ],
     },
   },
 
