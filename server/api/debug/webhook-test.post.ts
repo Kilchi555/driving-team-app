@@ -1,20 +1,30 @@
 /**
  * Temporary Debug API: Simulate Wallee webhook for testing
  * 
- * Usage:
- * POST http://localhost:3000/api/debug/webhook-test
- * Body: {
- *   "entityId": 481840844,
- *   "state": "FULFILL",
- *   "spaceId": 88489,
- *   "timestamp": "2026-02-13T05:55:28+0000"
- * }
+ * ⚠️  ONLY accessible by super_admin – never expose to public.
  */
 
-import { defineEventHandler, readBody } from 'h3'
+import { defineEventHandler, readBody, getHeader, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
+  // ✅ SECURITY: Only super_admin may trigger test webhooks
+  const authHeader = getHeader(event, 'authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+  const token = authHeader.substring(7)
+  const supabase = getSupabaseAdmin()
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+
+  const { data: userData } = await supabase
+    .from('users').select('role').eq('auth_user_id', user.id).single()
+  if (userData?.role !== 'super_admin') {
+    throw createError({ statusCode: 403, statusMessage: 'Only super_admin can trigger test webhooks' })
+  }
+
   try {
     const body = await readBody(event)
     

@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Use regular supabase client (will use service role if configured)
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Get the current user to determine tenant_id
     const authHeader = getHeader(event, 'authorization')

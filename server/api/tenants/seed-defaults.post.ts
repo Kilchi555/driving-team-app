@@ -1,4 +1,4 @@
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'tenant_id is required' })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // 1) Load tenant and determine business_type
     const { data: tenant, error: tenantErr } = await supabase

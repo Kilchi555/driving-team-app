@@ -7,31 +7,47 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
+import { z } from 'zod'
+
+const CreateTransactionSchema = z.object({
+  orderId:       z.string().uuid(),
+  amount:        z.number().positive().max(100000),
+  currency:      z.enum(['CHF', 'EUR', 'USD']).default('CHF'),
+  customerEmail: z.string().email().max(254),
+  customerName:  z.string().min(1).max(200).trim(),
+  description:   z.string().max(500).default('Produktkauf'),
+  tenantId:      z.string().uuid().optional(),
+  userId:        z.string().uuid().optional(),
+  successUrl:    z.string().url().max(2000).optional(),
+  failedUrl:     z.string().url().max(2000).optional(),
+})
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   try {
-    const body = await readBody(event)
+    const rawBody = await readBody(event)
+    const parseResult = CreateTransactionSchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      throw createError({
+        statusCode: 400,
+        message: parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      })
+    }
     const {
-      orderId,        // existing payment record ID
-      amount,         // in CHF (not rappen)
-      currency = 'CHF',
+      orderId,
+      amount,
+      currency,
       customerEmail,
       customerName,
-      description = 'Produktkauf',
+      description,
       tenantId,
       userId,
       successUrl,
       failedUrl
-    } = body
+    } = parseResult.data
 
-    if (!orderId || !amount || !customerEmail || !customerName) {
-      throw createError({ statusCode: 400, message: 'Pflichtfelder fehlen: orderId, amount, customerEmail, customerName' })
-    }
-    if (typeof amount !== 'number' || amount <= 0) {
-      throw createError({ statusCode: 400, message: 'amount muss eine positive Zahl sein' })
-    }
+    // (manual basic checks removed – Zod handles them above)
 
     // Keep endpoint resilient for public callers:
     // if tenantId is missing in client payload, derive it from the payment record.

@@ -1,11 +1,11 @@
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const query = getQuery(event)
     const timeRange = query.timeRange || '30d'
     

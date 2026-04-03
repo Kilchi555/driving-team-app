@@ -1,6 +1,6 @@
 // server/api/appointments/cancel-customer.post.ts
 // SECURED: Customer appointment cancellation with full security layers
-import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {

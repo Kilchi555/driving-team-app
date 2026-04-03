@@ -1,4 +1,4 @@
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get current user and tenant
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Get auth token from header
     const authHeader = getHeader(event, 'authorization')

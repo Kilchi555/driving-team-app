@@ -97,31 +97,43 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Whitelist allowed tables (security: prevent arbitrary table access)
-    const allowedTables = [
-      'locations',
-      'categories',
-      'staff_working_hours',
-      'calendar_tokens',
-      'appointments',
-      'users',
-      'tenants',
-      'products',
-      'payments',
-      'discounts',
-      'exam_results',
-      'user_devices',
-      'login_attempts',
-      'blocked_ip_addresses'
-    ]
+    // Whitelist: table → allowed columns for select/filter/order
+    // ⚠️  Never expose auth, secrets, keys, or PII columns via this generic endpoint.
+    const TABLE_COLUMN_WHITELIST: Record<string, string[]> = {
+      locations: ['id', 'name', 'address', 'city', 'zip', 'tenant_id', 'is_active', 'latitude', 'longitude', 'created_at'],
+      categories: ['id', 'name', 'code', 'parent_category_id', 'tenant_id', 'is_active', 'sort_order'],
+      staff_working_hours: ['id', 'staff_id', 'tenant_id', 'day_of_week', 'start_time', 'end_time', 'is_active'],
+      calendar_tokens: ['id', 'staff_id', 'tenant_id', 'token', 'expires_at', 'created_at'],
+      appointments: ['id', 'tenant_id', 'staff_id', 'user_id', 'start_time', 'end_time', 'status', 'type', 'created_at'],
+      products: ['id', 'name', 'price_rappen', 'tenant_id', 'is_active', 'category', 'description'],
+      discounts: ['id', 'code', 'discount_amount_rappen', 'tenant_id', 'is_active', 'valid_until'],
+      exam_results: ['id', 'user_id', 'tenant_id', 'category', 'passed', 'exam_date', 'examiner_id'],
+      user_devices: ['id', 'user_id', 'tenant_id', 'device_name', 'last_seen', 'is_active'],
+    }
 
-    if (!allowedTables.includes(body.table)) {
+    const allowedColumns = TABLE_COLUMN_WHITELIST[body.table]
+    if (!allowedColumns) {
       logger.warn('🚫 Attempted access to non-whitelisted table:', body.table)
       throw createError({
         statusCode: 403,
         statusMessage: 'Access to this table is not allowed'
       })
     }
+
+    // Validate all column references in filters and order
+    const allRequestedColumns = [
+      ...(body.filters?.map(f => f.column) ?? []),
+      ...(body.order ? [body.order.column] : []),
+    ]
+    for (const col of allRequestedColumns) {
+      if (!allowedColumns.includes(col)) {
+        logger.warn('🚫 Disallowed column access attempt:', { table: body.table, column: col })
+        throw createError({ statusCode: 403, statusMessage: `Column '${col}' is not accessible` })
+      }
+    }
+
+    // Restrict select to whitelisted columns only — never allow '*' or arbitrary expressions
+    const safeSelect = allowedColumns.join(', ')
 
     // ✅ Create a user-scoped Supabase client using the user's JWT
     // This respects RLS policies - the user can only access what they're allowed to
@@ -183,7 +195,7 @@ export default defineEventHandler(async (event) => {
     if (body.action === 'select') {
       query = supabase
         .from(body.table)
-        .select(body.select || '*')
+        .select(safeSelect)
 
       // Apply filters
       if (body.filters && body.filters.length > 0) {
@@ -255,17 +267,16 @@ export default defineEventHandler(async (event) => {
     // HANDLE INSERT
     else if (body.action === 'insert') {
       if (!body.data) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Data required for insert'
-        })
+        throw createError({ statusCode: 400, statusMessage: 'Data required for insert' })
       }
-
-      const result = await supabase
-        .from(body.table)
-        .insert(body.data)
-        .select()
-
+      // Strip any fields not in the whitelist
+      const safeData = Object.fromEntries(
+        Object.entries(body.data).filter(([k]) => allowedColumns.includes(k))
+      )
+      if (Object.keys(safeData).length === 0) {
+        throw createError({ statusCode: 400, statusMessage: 'No valid columns provided for insert' })
+      }
+      const result = await supabase.from(body.table).insert(safeData).select(safeSelect)
       data = result.data
       error = result.error
     }
@@ -273,35 +284,26 @@ export default defineEventHandler(async (event) => {
     // HANDLE UPDATE
     else if (body.action === 'update') {
       if (!body.data) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Data required for update'
-        })
+        throw createError({ statusCode: 400, statusMessage: 'Data required for update' })
       }
-
       if (!body.filters || body.filters.length === 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Filters required for update'
-        })
+        throw createError({ statusCode: 400, statusMessage: 'Filters required for update' })
       }
-
-      query = supabase.from(body.table).update(body.data)
-
-      // Apply filters
+      // Strip any fields not in the whitelist
+      const safeData = Object.fromEntries(
+        Object.entries(body.data).filter(([k]) => allowedColumns.includes(k))
+      )
+      if (Object.keys(safeData).length === 0) {
+        throw createError({ statusCode: 400, statusMessage: 'No valid columns provided for update' })
+      }
+      query = supabase.from(body.table).update(safeData)
       for (const filter of body.filters) {
         switch (filter.operator) {
-          case 'eq':
-            query = query.eq(filter.column, filter.value)
-            break
-          case 'neq':
-            query = query.neq(filter.column, filter.value)
-            break
-          // ... other operators
+          case 'eq': query = query.eq(filter.column, filter.value); break
+          case 'neq': query = query.neq(filter.column, filter.value); break
         }
       }
-
-      const result = await query.select()
+      const result = await query.select(safeSelect)
       data = result.data
       error = result.error
     }

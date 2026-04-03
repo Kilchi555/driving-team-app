@@ -1,8 +1,8 @@
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Insert default templates
     const templates = [

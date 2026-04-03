@@ -74,17 +74,24 @@ export default defineNuxtConfig({
       external: ['puppeteer-core', '@sparticuz/chromium']
     },
     headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self), payment=()',
+      'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+      'X-XSS-Protection': '1; mode=block',
       'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' https://maps.googleapis.com https://js.hcaptcha.com",
+        "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://js.hcaptcha.com https://app-wallee.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src 'self' data: https:",
-        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://hcaptcha.com https://api.resend.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "frame-src 'self' https://js.hcaptcha.com",
+        "img-src 'self' data: https: blob:",
+        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://hcaptcha.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        "frame-src 'self' https://js.hcaptcha.com https://app-wallee.com",
+        "media-src 'self' blob:",
         "object-src 'none'",
         "base-uri 'self'",
-        "form-action 'self'"
+        "form-action 'self' https://app-wallee.com"
       ].join('; ')
     }
   },

@@ -1,8 +1,8 @@
 import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
+  const supabase = getSupabaseAdmin()
 
   const authHeader = getHeader(event, 'authorization')
   if (!authHeader?.startsWith('Bearer ')) {

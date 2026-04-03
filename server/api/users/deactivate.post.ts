@@ -1,9 +1,9 @@
 import { defineEventHandler, createError, getHeader } from 'h3'
-import { getSupabase } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
+  const supabase = getSupabaseAdmin()
 
   // Get auth token from headers
   const authHeader = getHeader(event, 'authorization')

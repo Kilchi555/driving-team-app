@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     
     // Get the current user to determine tenant_id
     const { data: { user } } = await supabase.auth.getUser()

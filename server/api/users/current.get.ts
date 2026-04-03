@@ -1,8 +1,8 @@
 import { defineEventHandler, createError, getHeader } from 'h3'
-import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabase()
+  const supabase = getSupabaseAdmin()
 
   // Get auth token from headers
   const authHeader = getHeader(event, 'authorization')

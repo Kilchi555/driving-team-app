@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     const component = query.component as string
     const limit = parseInt(query.limit as string) || 100
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // Calculate date range
     const sinceDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
