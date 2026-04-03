@@ -109,6 +109,17 @@ export default defineNuxtConfig({
     },
     '/': { prerender: true },
 
+    // ===== BLOG ARTIKEL – explizit prerendered =====
+    '/blog/': { prerender: true },
+    '/blog/fuehrerschein-kosten-schweiz/': { prerender: true },
+    '/blog/bf17-begleitetes-fahren-schweiz/': { prerender: true },
+    '/blog/fuehrerschein-kategorien-schweiz/': { prerender: true },
+    '/blog/pruefungsangst-fahrpruefung/': { prerender: true },
+    '/blog/theorieprufung-tipps-zuerich/': { prerender: true },
+    '/blog/vku-kurs-verkehrskunde-sicherheit/': { prerender: true },
+    '/blog/fahrschueler-respekt-strasse/': { prerender: true },
+    '/blog/drivers-license-convert/': { prerender: true },
+
     // ===== REDIRECTS VON ALTER WORDPRESS-SEITE (301) =====
     // Allgemein
     '/uber-uns': { redirect: { to: '/team/', statusCode: 301 } },
