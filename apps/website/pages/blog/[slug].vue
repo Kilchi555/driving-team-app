@@ -242,11 +242,15 @@ const route = useRoute()
 const slug = route.params.slug as string
 
 const { data: article } = await useAsyncData(`blog-${slug}`, () =>
-  queryCollection('blog').path(`/blog/${slug}`).first()
+  queryCollection('blog').where('path', '=', `/blog/${slug}`).first()
 )
 
 if (!article.value) {
-  throw createError({ statusCode: 404, message: 'Artikel nicht gefunden' })
+  // During prerendering this throw is caught by failOnError:false
+  // In SSR/CSR it shows the 404 template below
+  if (import.meta.server && !import.meta.prerender) {
+    throw createError({ statusCode: 404, message: 'Artikel nicht gefunden' })
+  }
 }
 
 const { data: allArticles } = await useAsyncData('blog-all-for-related', () =>
