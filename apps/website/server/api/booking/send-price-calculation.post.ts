@@ -183,7 +183,7 @@ function buildCustomerEmail(body: PriceCalculationPayload, primaryColor: string,
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;">
                   <tr><td style="padding:20px;text-align:center;">
                     <p style="margin:0 0 12px;font-size:14px;color:#374151;">Bereit, mit deiner Ausbildung zu starten?</p>
-                    <a href="https://simy.ch/booking/availability/driving-team" style="display:inline-block;padding:12px 28px;background:${primaryColor};color:white;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Jetzt Termin buchen →</a>
+                    <a href="https://www.simy.ch/booking/availability/driving-team" style="display:inline-block;padding:12px 28px;background:${primaryColor};color:white;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Jetzt Termin buchen →</a>
                   </td></tr>
                 </table>
 

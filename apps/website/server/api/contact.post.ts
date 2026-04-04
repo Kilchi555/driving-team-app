@@ -190,7 +190,7 @@ function buildCustomerEmail(firstName: string, notes: string): string {
             </table>
             <table width="100%" cellspacing="0" cellpadding="0" style="background:#eff6ff;border-radius:8px;margin-bottom:24px;border-left:4px solid ${PRIMARY_COLOR};">
               <tr><td style="padding:14px 16px;">
-                <p style="margin:0;font-size:13px;color:#1e40af;">Möchtest du direkt einen Termin buchen? <a href="https://simy.ch/booking/availability/driving-team" style="color:${PRIMARY_COLOR};font-weight:600;">Hier geht's zur Online-Buchung →</a></p>
+                <p style="margin:0;font-size:13px;color:#1e40af;">Möchtest du direkt einen Termin buchen? <a href="https://www.simy.ch/booking/availability/driving-team" style="color:${PRIMARY_COLOR};font-weight:600;">Hier geht's zur Online-Buchung →</a></p>
               </td></tr>
             </table>
             <p style="margin:20px 0 4px;font-size:15px;color:#111827;">Freundliche Grüsse</p>

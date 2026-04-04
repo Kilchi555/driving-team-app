@@ -20,7 +20,7 @@
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Bootsfahrschule Lachen</h1>
         <p class="text-xl text-white max-w-3xl mx-auto mb-8">Bootsfahrschule am oberen Zürichsee – flexible Treffpunkte</p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>
       </div>
@@ -146,7 +146,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt mit der Bootsfahrschule starten</h2>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>
       </div>

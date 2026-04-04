@@ -188,7 +188,7 @@ const getBookingUrl = (name: string): string => {
   const firstName = name.split(' ')[0].toLowerCase()
   return location
     ? getInstructorBookingUrl(location, firstName)
-    : 'https://simy.ch/booking/availability/driving-team'
+    : 'https://www.simy.ch/booking/availability/driving-team'
 }
 </script>
 

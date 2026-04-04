@@ -23,7 +23,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule Kategorie BE</h1>
           <p class="hidden xs:block text-xl text-white mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
-          <a href="https://simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -337,7 +337,7 @@
         <h2 class="heading-md mb-6 text-white">Sicher fahren mit Anhänger!</h2>
         <p class="hidden xs:block text-xl text-white mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -394,7 +394,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Fahrschule Kategorie BE", "description": "Praxisnahe Anhänger Fahrausbildung für Kategorie BE. Erfahrene Fahrlehrer, flexible Zeiten in Zürich und Lachen", "url": "https://drivingteam.ch/anhaenger-fahrschule/", "provider": { "@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team" }, "educationLevel": "Intermediate", "keywords": "Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung" }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Fahrschule Kategorie BE", "description": "Praxisnahe Anhänger Fahrausbildung für Kategorie BE. Erfahrene Fahrlehrer, flexible Zeiten in Zürich und Lachen", "url": "https://drivingteam.ch/anhaenger-fahrschule/", "provider": { "@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "priceCurrency": "CHF", "url": "https://www.simy.ch/booking/availability/driving-team" }, "educationLevel": "Intermediate", "keywords": "Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung" }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/" }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Brauche ich bereits einen Auto-Führerschein?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, für die Anhänger Ausbildung (Kategorie BE) brauchst du bereits einen gültigen Führerausweis der Kategorie B." } }, { "@type": "Question", "name": "Gibt es eine Theorieprüfung für den BE?", "acceptedAnswer": { "@type": "Answer", "text": "Nein! Um den Anhängerführerausweis der Kategorie BE zu erlangen, brauchst du lediglich den Lernfahrausweis der Kategorie BE und musst dann erfolgreich die praktische Fahrprüfung bestehen." } }, { "@type": "Question", "name": "Darf ich mit dem Lernfahrausweis alleine Anhänger fahren?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, das darfst du sogar alleine. Wir empfehlen allerdings immer eine Begleitperson dabei zu haben, besonders für das Rückwärtsfahren. Wenn du unter 18 Jahre alt bist, ist eine Begleitperson Pflicht." } }, { "@type": "Question", "name": "Wie viele Fahrstunden brauche ich für Anhänger?", "acceptedAnswer": { "@type": "Answer", "text": "Für die Anhänger Ausbildung benötigst du durchschnittlich 10-15 Fahrstunden, abhängig von deiner Auto-Fahrerfahrung. Mit guter Vorausbildung geht es schneller." } }, { "@type": "Question", "name": "Was kostet die Anhänger Fahrschule?", "acceptedAnswer": { "@type": "Answer", "text": "Die Gesamtkosten liegen zwischen CHF 1'500–2'500, abhängig von Fahrstunden und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 110–120." } }] }) },
 ]

@@ -51,7 +51,7 @@ export const useBookingUrl = () => {
    * @returns Vollständige URL zum Simy Booking System
    */
   const generateBookingUrl = (params?: BookingParams): string => {
-    let url = 'https://simy.ch/booking/availability/driving-team'
+    let url = 'https://www.simy.ch/booking/availability/driving-team'
     
     if (!params) {
       return url

@@ -27,7 +27,7 @@
     <!-- CTA Section -->
     <div class="bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600 rounded-3xl p-8 md:p-12 text-center shadow-xl">
       <p class="text-white text-lg md:text-xl mb-6 font-semibold">Starte jetzt dein Abenteuer und wir begleiten dich auf deinem Weg!</p>
-      <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition shadow-lg hover:shadow-xl transform hover:scale-105">
+      <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition shadow-lg hover:shadow-xl transform hover:scale-105">
         Termin reservieren
       </a>
     </div>

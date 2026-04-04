@@ -72,7 +72,7 @@
 
             <div class="flex flex-col sm:flex-row gap-4">
               <a
-                href="https://simy.ch/booking/availability/driving-team?service=A"
+                href="https://www.simy.ch/booking/availability/driving-team?service=A"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-flex items-center justify-center gap-2 bg-white text-red-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg"
@@ -158,7 +158,7 @@
               <li class="flex items-start gap-2"><span class="text-red-500 font-bold mt-0.5">✓</span> Ideal als Einstieg in die Motorradwelt</li>
               <li class="flex items-start gap-2"><span class="text-red-500 font-bold mt-0.5">✓</span> Grundkurs obligatorisch</li>
             </ul>
-            <a href="https://simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-red-700 transition text-sm">
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-red-700 transition text-sm">
               A1 Fahrstunden buchen →
             </a>
           </div>
@@ -179,7 +179,7 @@
               <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Fahrschul-Motorrad verfügbar</li>
               <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Upgrade zu Kat. A nach 2 Jahren</li>
             </ul>
-            <a href="https://simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-white text-red-600 font-bold py-2.5 px-4 rounded-lg hover:bg-yellow-50 transition text-sm">
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-white text-red-600 font-bold py-2.5 px-4 rounded-lg hover:bg-yellow-50 transition text-sm">
               A35kW Fahrstunden buchen →
             </a>
           </div>
@@ -199,7 +199,7 @@
               <li class="flex items-start gap-2"><span class="text-red-500 font-bold mt-0.5">✓</span> Kein Direkteinstieg möglich</li>
               <li class="flex items-start gap-2"><span class="text-red-500 font-bold mt-0.5">✓</span> Soziusfahren möglich</li>
             </ul>
-            <a href="https://simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-red-700 transition text-sm">
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-red-700 transition text-sm">
               Kat. A Fahrstunden buchen →
             </a>
           </div>
@@ -490,7 +490,7 @@
           A1, A35kW oder A – wir begleiten dich durch die gesamte Ausbildung in Zürich. Fahrschul-Motorrad verfügbar, Grundkurs vor Ort.
         </p>
         <a
-          href="https://simy.ch/booking/availability/driving-team?service=A"
+          href="https://www.simy.ch/booking/availability/driving-team?service=A"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-block bg-white text-red-600 hover:bg-red-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl"
@@ -737,7 +737,7 @@ const jsonLdScripts = [
             "price": "190",
             "priceCurrency": "CHF",
             "availability": "https://schema.org/InStock",
-            "url": "https://simy.ch/booking/availability/driving-team?service=A"
+            "url": "https://www.simy.ch/booking/availability/driving-team?service=A"
           }
         ]
       },

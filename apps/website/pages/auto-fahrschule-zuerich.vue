@@ -72,7 +72,7 @@
 
             <div class="flex flex-col sm:flex-row gap-4">
               <a
-                href="https://simy.ch/booking/availability/driving-team?service=B"
+                href="https://www.simy.ch/booking/availability/driving-team?service=B"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg"
@@ -420,7 +420,7 @@
           Professionelle Kategorie-B-Ausbildung. Direkt im Prüfungsgebiet Albisgütli. Online buchbar, flexibel und mit 85% Erfolgsquote.
         </p>
         <a
-          href="https://simy.ch/booking/availability/driving-team?service=B"
+          href="https://www.simy.ch/booking/availability/driving-team?service=B"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-block bg-white text-primary-600 hover:bg-primary-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl"
@@ -651,7 +651,7 @@ const jsonLdScripts = [
             "price": "95",
             "priceCurrency": "CHF",
             "availability": "https://schema.org/InStock",
-            "url": "https://simy.ch/booking/availability/driving-team?service=B"
+            "url": "https://www.simy.ch/booking/availability/driving-team?service=B"
           }
         ]
       },
