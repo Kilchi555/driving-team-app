@@ -94,7 +94,7 @@
     <section class="section-container py-20">
       <div class="max-w-4xl mx-auto">
         <h2 class="heading-md mb-8">CZV Grundausbildung</h2>
-        <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
+        <div class="max-w-none text-gray-700 space-y-4 text-sm leading-relaxed [&_a]:text-primary-600 [&_a]:hover:underline [&_p]:mb-3">
           <p>
             Unsere CZV Kurse bereiten dich vollumfänglich auf deine CZV-Prüfungen vor. Nach diesen 5 Kurstagen bist du bereit, um dich selbständig auf die Berufsprüfungen vorzubereiten. Ein(e) aufgestellte(r) und kompetente(r) Kursleiter:in führt dich durch die CZV Kurse und beantwortet alle deine Fragen. Moderne Räumlichkeiten und eine feine Verpflegung runden den lehrreichen Kurstag ab. Wir freuen uns dich in unseren CZV Kursen begrüssen zu dürfen.
           </p>
@@ -109,7 +109,7 @@
     <section class="section-container py-20 bg-gray-50">
       <div class="max-w-4xl mx-auto">
         <h2 class="heading-md mb-8">CZV Ausbildungsbestätigung</h2>
-        <div class="prose prose-sm max-w-none text-gray-700 space-y-4">
+        <div class="max-w-none text-gray-700 space-y-4 text-sm leading-relaxed [&_a]:text-primary-600 [&_a]:hover:underline [&_p]:mb-3">
           <p>
             Wenn du dich bei unseren CZV Kursen anmeldest, erhältst du von uns eine Ausbildungsbestätigung. Eine Ausbildungsbestätigung für den Personen- oder den Gütertransport erhältst du jedoch nur, wenn du noch nie einen Fähigkeitsausweis der entsprechenden Kategorie durch eine Prüfung erworben oder nach fünf Weiterbildungstagen verlängert hast.
           </p>
