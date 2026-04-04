@@ -406,7 +406,7 @@
 
     <!-- ====== MAP ====== -->
     <div class="bg-gray-50">
-      <StandortMapSection location-key="zuerich" />
+      <LazyStandortMapSection location-key="zuerich" />
     </div>
 
     <!-- ====== REVIEWS ====== -->

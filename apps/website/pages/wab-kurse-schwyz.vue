@@ -116,7 +116,7 @@
     </section>
 
     <!-- Standort Map -->
-    <StandortMapSection locationKey="tuggen" />
+    <LazyStandortMapSection locationKey="tuggen" />
 
     <!-- FAQ Section -->
     <section class="section-container py-16">

@@ -7,14 +7,28 @@
       <div class="grid lg:grid-cols-3 gap-0 max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-xl border border-gray-100">
 
         <!-- Google Maps Embed (nimmt 2/3 der Breite) -->
-        <div class="lg:col-span-2 h-72 lg:h-[380px]">
+        <div ref="mapContainer" class="lg:col-span-2 h-72 lg:h-[380px]">
           <iframe
+            v-if="mapLoaded"
             :src="`https://maps.google.com/maps?q=${encodeURIComponent(location.address)}&output=embed&hl=de&z=15`"
             class="w-full h-full border-0"
-            loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
             :title="`Fahrschule Driving Team ${location.city} – Karte`"
           />
+          <div
+            v-else
+            class="w-full h-full bg-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-200 transition-colors"
+            @click="mapLoaded = true"
+          >
+            <div class="text-5xl">🗺️</div>
+            <div class="text-center px-6">
+              <p class="font-semibold text-gray-700 text-sm">{{ location.name }}</p>
+              <p class="text-xs text-gray-500 mt-1">{{ location.street }}, {{ location.zip }} {{ location.city }}</p>
+            </div>
+            <button class="mt-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition">
+              Karte laden
+            </button>
+          </div>
         </div>
 
         <!-- Info Card -->
@@ -45,10 +59,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useHead } from '#app'
 
 const props = defineProps<{ locationKey: string }>()
+
+const mapContainer = ref<HTMLElement | null>(null)
+const mapLoaded = ref(false)
+
+onMounted(() => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        mapLoaded.value = true
+        observer.disconnect()
+      }
+    },
+    { rootMargin: '400px' }
+  )
+  if (mapContainer.value) {
+    observer.observe(mapContainer.value)
+  }
+})
 
 const locations: Record<string, { city: string; area: string; address: string; name: string; street: string; zip: string; lat: string; lng: string; region: string }> = {
   zuerich: {

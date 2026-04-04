@@ -56,7 +56,7 @@
     />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="einsiedeln" />
+    <LazyStandortMapSection location-key="einsiedeln" />
 
     <!-- Kategorien -->
     <ClientOnly>
@@ -159,7 +159,7 @@
     <WarumSection category="motorrad" />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="einsiedeln" />
+    <LazyStandortMapSection location-key="einsiedeln" />
 
     <!-- Andere Standorte -->
     <section class="section-container py-8">

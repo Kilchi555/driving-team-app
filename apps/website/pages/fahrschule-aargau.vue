@@ -7,6 +7,7 @@
       <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 85% Erfolgsquote, ab CHF 100/Lektion." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-aargau/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-aargau/" />
+      <Link rel="preload" as="image" href="/images/locations/aargau-hero.webp" fetchpriority="high" />
       
       
           <Meta property="og:image" content="https://drivingteam.ch/images/locations/aargau-hero.webp" />
@@ -17,7 +18,7 @@
 
     <!-- 1. Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <NuxtImg src="/images/locations/aargau-hero.webp" alt="Fahrstunden im Aargau – Auto und Anhänger Fahrschule mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" loading="eager" fetchpriority="high" sizes="100vw" width="1920" height="1080" />
+      <img src="/images/locations/aargau-hero.webp" alt="Fahrstunden im Aargau – Auto und Anhänger Fahrschule mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -43,7 +44,7 @@
 
     <!-- 3. Standort Map (grau-50) -->
     <div class="bg-gray-50">
-      <StandortMapSection location-key="spreitenbach" />
+      <LazyStandortMapSection location-key="spreitenbach" />
     </div>
 
     <!-- 4. Themen (weiß) -->

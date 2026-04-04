@@ -7,6 +7,7 @@
       <Meta property="og:description" content="Professionelle Fahrausbildung in Reichenburg SZ. Englisch & Deutsch, 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-reichenburg/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-reichenburg/" />
+      <Link rel="preload" as="image" href="/images/locations/reichenburg-hero.webp" fetchpriority="high" />
       
       
           <Meta property="og:image" content="https://drivingteam.ch/images/locations/reichenburg-hero.webp" />
@@ -17,7 +18,7 @@
 
     <!-- 1. Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <NuxtImg src="/images/locations/reichenburg-hero.webp" alt="Fahrstunden in Reichenburg/SZ – Auto, Motorrad und Anhänger Fahrschule mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" loading="eager" fetchpriority="high" sizes="100vw" width="1920" height="1080" />
+      <img src="/images/locations/reichenburg-hero.webp" alt="Fahrstunden in Reichenburg/SZ – Auto, Motorrad und Anhänger Fahrschule mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -43,7 +44,7 @@
 
     <!-- 3. Standort Map (grau-50) -->
     <div class="bg-gray-50">
-      <StandortMapSection location-key="reichenburg" />
+      <LazyStandortMapSection location-key="reichenburg" />
     </div>
 
     <!-- 4. Themen (weiß) -->

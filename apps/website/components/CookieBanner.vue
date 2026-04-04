@@ -22,7 +22,7 @@
           </button>
           <button
             @click="accept"
-            class="px-4 py-2 text-sm bg-primary-500 hover:bg-primary-400 text-white rounded-lg font-medium transition"
+            class="px-4 py-2 text-sm bg-primary-700 hover:bg-primary-600 text-white rounded-lg font-medium transition"
           >
             Akzeptieren
           </button>
