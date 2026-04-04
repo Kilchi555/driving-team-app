@@ -185,7 +185,12 @@ export default defineNuxtConfig({
   supabase: {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_ANON_KEY,
-    redirect: false  // DISABLE automatic redirects - we handle auth manually
+    redirect: false,  // DISABLE automatic redirects - we handle auth manually
+    cookieOptions: {
+      maxAge: 60 * 60 * 8, // 8h session lifetime
+      sameSite: 'lax',     // blocks cross-site request forgery (CSRF)
+      secure: true         // only sent over HTTPS, never plain HTTP
+    }
   },
 
   app: {
