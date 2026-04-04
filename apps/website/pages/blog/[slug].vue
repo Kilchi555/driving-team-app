@@ -77,26 +77,7 @@
 
             <!-- Main Content -->
             <article ref="articleRef">
-              <div class="prose prose-lg max-w-none
-                prose-headings:font-extrabold prose-headings:text-gray-900 prose-headings:tracking-tight
-                prose-h1:text-3xl prose-h1:mt-0
-                prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-3 prose-h2:border-b prose-h2:border-gray-100
-                prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-primary-700
-                prose-p:text-gray-700 prose-p:leading-[1.85] prose-p:text-[17px]
-                prose-a:text-primary-600 prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
-                prose-strong:text-gray-900 prose-strong:font-bold
-                prose-ul:my-6 prose-ul:space-y-2
-                prose-ol:my-6 prose-ol:space-y-2
-                prose-li:text-gray-700 prose-li:text-[17px] prose-li:leading-[1.75]
-                prose-blockquote:border-l-4 prose-blockquote:border-primary-400 prose-blockquote:bg-primary-50 prose-blockquote:rounded-r-xl prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:not-italic prose-blockquote:text-gray-700
-                prose-blockquote:before:content-none prose-blockquote:after:content-none
-                prose-table:text-sm prose-table:rounded-xl prose-table:overflow-hidden prose-table:shadow-sm
-                prose-th:bg-primary-600 prose-th:text-white prose-th:font-semibold prose-th:py-3 prose-th:px-4
-                prose-td:py-2.5 prose-td:px-4 prose-td:border-b prose-td:border-gray-100
-                prose-tr:even:bg-gray-50
-                prose-hr:border-gray-200 prose-hr:my-10
-                prose-code:bg-gray-100 prose-code:text-primary-700 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
-                ">
+              <div class="article-content">
                 <ContentRenderer :value="article" />
               </div>
 
@@ -374,3 +355,30 @@ const jsonLd = computed(() => {
 })
 useHead({ script: jsonLd })
 </script>
+
+<style>
+/* Article typography – scoped to this page only (replaces @tailwindcss/typography) */
+.article-content { max-width: none; }
+.article-content h1,.article-content h2,.article-content h3,.article-content h4 { font-weight: 800; color: #111827; letter-spacing: -0.025em; }
+.article-content h1 { font-size: 1.875rem; margin-top: 0; }
+.article-content h2 { font-size: 1.5rem; margin-top: 3rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #f3f4f6; }
+.article-content h3 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.75rem; color: #015a85; }
+.article-content p  { color: #374151; line-height: 1.85; font-size: 17px; margin-bottom: 1.25rem; }
+.article-content a  { color: #017cb3; font-weight: 600; text-decoration: none; }
+.article-content a:hover { text-decoration: underline; }
+.article-content strong { color: #111827; font-weight: 700; }
+.article-content ul,.article-content ol { margin-top: 1.5rem; margin-bottom: 1.5rem; padding-left: 1.5rem; }
+.article-content ul { list-style-type: disc; }
+.article-content ol { list-style-type: decimal; }
+.article-content li { color: #374151; font-size: 17px; line-height: 1.75; margin-bottom: 0.5rem; }
+.article-content blockquote { border-left: 4px solid #6dc3eb; background: #f0f9fd; border-radius: 0 0.75rem 0.75rem 0; padding: 1rem 1.5rem; font-style: normal; color: #374151; margin: 1.5rem 0; }
+.article-content blockquote p { margin-bottom: 0; }
+.article-content hr { border-color: #e5e7eb; margin: 2.5rem 0; }
+.article-content code { background: #f3f4f6; color: #015a85; border-radius: 0.25rem; padding: 0.125rem 0.375rem; font-size: 0.875rem; font-family: ui-monospace, monospace; }
+.article-content pre { background: #1e293b; color: #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; overflow-x: auto; margin: 1.5rem 0; }
+.article-content pre code { background: none; color: inherit; padding: 0; }
+.article-content table { font-size: 0.875rem; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 100%; }
+.article-content th { background: #017cb3; color: #fff; font-weight: 600; padding: 0.75rem 1rem; text-align: left; }
+.article-content td { padding: 0.625rem 1rem; border-bottom: 1px solid #f3f4f6; }
+.article-content tr:nth-child(even) td { background: #f9fafb; }
+</style>
