@@ -1,6 +1,20 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-03-24',
-  modules: ['@nuxtjs/tailwindcss', '@nuxt/content'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image'],
+
+  image: {
+    provider: 'vercel',
+    quality: 80,
+    formats: ['webp', 'avif'],
+    screens: {
+      xs: 320,
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+      xxl: 1920,
+    },
+  },
   ssr: true,
 
   tailwindcss: {
