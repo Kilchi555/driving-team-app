@@ -8,6 +8,7 @@
       <Meta property="og:description" content="Professionelle Fahrschule in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
+      <Link rel="preload" as="image" href="/images/locations/zuerich-hero.webp" fetchpriority="high" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -18,7 +19,7 @@
     <!-- Breadcrumb Navigation -->
     <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich' }]" />
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <NuxtImg src="/images/locations/zuerich-hero.webp" alt="Fahrschule in Zürich-Altstetten – Auto, Motorrad, Anhänger mit der Fahrschule Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" loading="eager" fetchpriority="high" sizes="100vw" width="1920" height="1080" />
+      <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule in Zürich-Altstetten – Auto, Motorrad, Anhänger mit der Fahrschule Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -61,7 +62,7 @@
 
     <!-- 3. Standort Map (grau-50) — Wo genau -->
     <div class="bg-gray-50">
-      <StandortMapSection location-key="zuerich" />
+      <LazyStandortMapSection location-key="zuerich" />
     </div>
 
     <!-- 4. Themen (weiß) — Was lernst du -->

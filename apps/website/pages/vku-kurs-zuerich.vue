@@ -110,7 +110,7 @@
     </section>
 
     <!-- 5. Map Section (Standort zeigen) -->
-    <StandortMapSection locationKey="zuerich" />
+    <LazyStandortMapSection locationKey="zuerich" />
 
     <!-- 6. Reviews Section (Soziale Beweis) -->
     <ReviewsSection category="zuerich" />

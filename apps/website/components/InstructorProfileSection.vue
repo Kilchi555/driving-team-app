@@ -22,11 +22,14 @@
               class="w-full px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
             >
               <div class="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary-100 to-blue-100 overflow-hidden flex-shrink-0">
-                <img
+                <NuxtImg
                   v-if="instructor.image"
                   :src="instructor.image"
                   :alt="`${instructor.name}, ${instructor.title} bei Driving Team`"
                   class="w-full h-full object-cover"
+                  width="128"
+                  height="128"
+                  loading="lazy"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center text-xl">👨‍🏫</div>
               </div>

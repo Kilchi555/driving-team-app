@@ -7,6 +7,7 @@
       <Meta property="og:description" content="Professionelle Fahrausbildung in Dietikon im Limmattal. Deutsch & Albanisch, 85% Erfolgsquote, ab CHF 100/Lektion." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-dietikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-dietikon/" />
+      <Link rel="preload" as="image" href="/images/locations/dietikon-hero.webp" fetchpriority="high" />
       
       
           <Meta property="og:image" content="https://drivingteam.ch/images/locations/dietikon-hero.webp" />
@@ -17,7 +18,7 @@
 
     <!-- 1. Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <NuxtImg src="/images/locations/dietikon-hero.webp" alt="Fahrstunden in Dietikon – Auto und Anhänger Fahrschule mit erfahrenen Fahrlehrern" class="absolute inset-0 w-full h-full object-cover opacity-100" loading="eager" fetchpriority="high" sizes="100vw" width="1920" height="1080" />
+      <img src="/images/locations/dietikon-hero.webp" alt="Fahrstunden in Dietikon – Auto und Anhänger Fahrschule mit erfahrenen Fahrlehrern" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -43,7 +44,7 @@
 
     <!-- 3. Standort Map (grau-50) -->
     <div class="bg-gray-50">
-      <StandortMapSection location-key="dietikon" />
+      <LazyStandortMapSection location-key="dietikon" />
     </div>
 
     <!-- 4. Themen (weiß) -->

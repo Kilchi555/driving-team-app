@@ -54,7 +54,7 @@
     />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="lachen" />
+    <LazyStandortMapSection location-key="lachen" />
 
     <!-- Kategorien -->
     <ClientOnly>
@@ -154,7 +154,7 @@
     <WarumSection category="motorrad" />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="lachen" />
+    <LazyStandortMapSection location-key="lachen" />
 
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">

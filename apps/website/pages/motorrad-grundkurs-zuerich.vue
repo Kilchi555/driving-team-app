@@ -59,7 +59,7 @@
     />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="zuerich" />
+    <LazyStandortMapSection location-key="zuerich" />
 
     <!-- Kategorien -->
     <ClientOnly>
@@ -164,7 +164,7 @@
     <WarumSection category="motorrad" />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="zuerich" />
+    <LazyStandortMapSection location-key="zuerich" />
 
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">

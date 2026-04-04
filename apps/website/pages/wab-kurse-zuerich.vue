@@ -110,7 +110,7 @@
     </section>
 
     <!-- Standort Map -->
-    <StandortMapSection locationKey="pfaeffikon_zh" />
+    <LazyStandortMapSection locationKey="pfaeffikon_zh" />
 
     <!-- Link zu Schwyz & English -->
     <section class="bg-gray-50 py-12">

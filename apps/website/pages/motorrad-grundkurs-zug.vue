@@ -57,7 +57,7 @@
     />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="zug" />
+    <LazyStandortMapSection location-key="zug" />
 
     <!-- Kategorien -->
     <ClientOnly>
@@ -168,7 +168,7 @@
     <WarumSection category="motorrad" />
 
     <!-- Standort & Map -->
-    <StandortMapSection location-key="zug" />
+    <LazyStandortMapSection location-key="zug" />
 
     <!-- Andere Standorte -->
     <section class="section-container py-8">

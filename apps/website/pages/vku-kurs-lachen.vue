@@ -101,7 +101,7 @@
     </section>
 
     <!-- 5. Map Section -->
-    <StandortMapSection locationKey="lachen" />
+    <LazyStandortMapSection locationKey="lachen" />
 
     <!-- 6. Reviews Section -->
     <ReviewsSection category="lachen" />
