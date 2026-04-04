@@ -20,7 +20,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">LKW Fahrschule & CZV Grundkurs</h1>
           <p class="text-xl text-white mb-8">Berufliche Ausbildung und Weiterbildung für Berufschauffeure in Zürich und Lachen/SZ. Kat. C, CZV Grundkurs und mehr.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -64,7 +64,7 @@
         <h2 class="heading-md mb-6 text-white">Lastwagen Ausbildung starten!</h2>
         <p class="text-xl text-white mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>

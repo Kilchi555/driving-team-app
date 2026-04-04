@@ -62,7 +62,7 @@
         <h2 class="heading-md text-white mb-4">Bereit loszulegen?</h2>
         <p class="text-primary-100 mb-8 text-lg">Buche jetzt deine erste Fahrstunde – ganz einfach online.</p>
         <a
-          href="https://simy.ch/booking/availability/driving-team"
+          href="https://www.simy.ch/booking/availability/driving-team"
           target="_blank"
           rel="noopener noreferrer"
           class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg"

@@ -23,7 +23,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">LKW Fahrschule Kategorie C1 | C | CE</h1>
           <p class="hidden xs:block text-xl text-white mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -199,7 +199,7 @@
         </div>
 
         <div class="text-center mt-12">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
             🚀 Jetzt anmelden!
           </a>
         </div>
@@ -412,7 +412,7 @@
         <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Starte deine Lastwagen-Karriere!</h2>
         <p class="hidden xs:block text-xl text-white mb-8">Professionelle LKW Ausbildung in Zürich und Lachen/SZ</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -467,7 +467,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Lastwagen Fahrschule - Kategorie C1, C, CE","description":"Professionelle Lastwagen Fahrausbildung für Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge, CZV Grundkurs in Zürich","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://simy.ch/booking/availability/driving-team"},"educationLevel":"Advanced","keywords":"Lastwagen Fahrschule, LKW Führerschein, Kategorie C, CZV Grundkurs"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Lastwagen Fahrschule - Kategorie C1, C, CE","description":"Professionelle Lastwagen Fahrausbildung für Kategorie C1, C, CE. Expert Training, moderne Fahrzeuge, CZV Grundkurs in Zürich","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://www.simy.ch/booking/availability/driving-team"},"educationLevel":"Advanced","keywords":"Lastwagen Fahrschule, LKW Führerschein, Kategorie C, CZV Grundkurs"}' },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "Course", "name": "Lastwagen Fahrschule - Kategorie C1, C, CE", "url": "https://drivingteam.ch/lastwagen-fahrschule/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 366, "reviewCount": 366 }) },
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Lastwagen Fahrschule","item":"https://drivingteam.ch/lastwagen-fahrschule/"}]}' },
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Was ist der Unterschied zwischen C1, C und CE?","acceptedAnswer":{"@type":"Answer","text":"C1: Lastwagen bis 7\'500kg (ab 18 J.). C: Lastwagen über 7\'500kg (ab 21 J.). CE: Lastzug mit Anhänger (ab 18 J. mit C). Jede Kategorie hat unterschiedliche Anforderungen und Fahrzeugbeschränkungen."}},{"@type":"Question","name":"Brauche ich den CZV Grundkurs?","acceptedAnswer":{"@type":"Answer","text":"Ja, für die Kategorien C1, C und CE ist der CZV Grundkurs (Grundkurs für Berufskraftfahrer) obligatorisch. Er dauert mehrere Tage und vermittelt wichtiges Wissen über Verkehrssicherheit und professionelles Fahren."}},{"@type":"Question","name":"Wie viele Fahrstunden brauche ich für LKW?","acceptedAnswer":{"@type":"Answer","text":"Für die Lastwagen Ausbildung benötigst du durchschnittlich 20-40 Fahrstunden, abhängig von deiner Vorfahrererfahrung und Lerngeschwindigkeit. Mit guter Vorausbildung geht es schneller."}},{"@type":"Question","name":"Was kostet die Lastwagen Fahrschule?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten liegen zwischen CHF 4\'000–8\'000, abhängig von Fahrstunden, CZV Kursen und Prüfungsvorbereitung. Jede Fahrstunde kostet etwa CHF 150–180."}},{"@type":"Question","name":"Welche Voraussetzungen brauche ich?","acceptedAnswer":{"@type":"Answer","text":"Du benötigst einen gültigen Auto-Führerschein (B) mit mindestens 2 Jahren Erfahrung für C1, und für C/CE mindestens 21 Jahre alt sein. Ein medizinisches Attest ist oft erforderlich."}}]}' },

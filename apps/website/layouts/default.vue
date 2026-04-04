@@ -178,7 +178,7 @@
         </div>
 
         <!-- CTA Button -->
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-3 px-6 lg:px-7 rounded-full transition shadow-lg hover:shadow-xl transform hover:scale-105 flex-shrink-0 ml-4 lg:ml-6">
+        <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-3 px-6 lg:px-7 rounded-full transition shadow-lg hover:shadow-xl transform hover:scale-105 flex-shrink-0 ml-4 lg:ml-6">
           <span>Termin Buchen</span>
         </a>
       </nav>
@@ -310,7 +310,7 @@
           <a href="/fahrschule-preise/" class="flex items-center justify-between py-3 border-b border-gray-200 font-semibold text-gray-800 hover:text-primary-600" @click="showDesktopMenu = false">Preise</a>
           <a href="/blog/" class="flex items-center justify-between py-3 border-b border-gray-200 font-semibold text-gray-800 hover:text-primary-600" @click="showDesktopMenu = false">Blog</a>
 
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="block bg-primary-600 text-white rounded-full py-3 px-4 text-center font-bold mt-6 hover:bg-primary-700" @click="showDesktopMenu = false">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="block bg-primary-600 text-white rounded-full py-3 px-4 text-center font-bold mt-6 hover:bg-primary-700" @click="showDesktopMenu = false">
             📅 Termin Buchen
           </a>
         </nav>

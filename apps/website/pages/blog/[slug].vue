@@ -223,16 +223,10 @@ const route = useRoute()
 const slug = route.params.slug as string
 
 const { data: article } = await useAsyncData(`blog-${slug}`, async () => {
-  // .where() fails during Vercel prerendering – use .all() + client filter (same as blog index)
   const all = await queryCollection('blog').all()
-  return all.find(a => a.path === `/blog/${slug}`) ?? null
+  // Match by frontmatter slug first, fall back to path suffix for reliability
+  return all.find(a => a.slug === slug || a.path === `/blog/${slug}`) ?? null
 })
-
-if (!article.value) {
-  if (import.meta.server && !import.meta.prerender) {
-    throw createError({ statusCode: 404, message: 'Artikel nicht gefunden' })
-  }
-}
 
 const { data: allArticles } = await useAsyncData('blog-all-for-related', () =>
   queryCollection('blog').select('title', 'slug', 'date', 'category').all()

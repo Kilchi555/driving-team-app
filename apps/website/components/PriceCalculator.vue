@@ -267,7 +267,7 @@
             </div>
             <div class="space-y-3">
               <a
-                href="https://simy.ch/booking/availability/driving-team"
+                href="https://www.simy.ch/booking/availability/driving-team"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="block w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition text-sm"

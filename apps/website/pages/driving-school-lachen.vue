@@ -69,7 +69,7 @@
 
           <div class="flex flex-col sm:flex-row gap-4">
             <a
-              href="https://simy.ch/booking/availability/driving-team?service=B"
+              href="https://www.simy.ch/booking/availability/driving-team?service=B"
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 shadow-lg text-lg"
@@ -169,7 +169,7 @@
             <li>✓ WarmUp + exam ride: CHF 285</li>
             <li>✓ Exam at Strassenverkehrsamt Pfäffikon SZ</li>
           </ul>
-          <a href="https://simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
+          <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
         </div>
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -181,7 +181,7 @@
             <li>✓ Basic course (Grundkurs) available in Lachen</li>
             <li>✓ School bike: CHF 210 extra for course</li>
           </ul>
-          <a href="https://simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
+          <a href="https://www.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
         </div>
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -193,7 +193,7 @@
             <li>✓ Insurance fee: CHF 120 (once)</li>
             <li>✓ WarmUp + exam ride: CHF 360</li>
           </ul>
-          <a href="https://simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
+          <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
         </div>
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -205,7 +205,7 @@
             <li>✓ Insurance fee: CHF 120 (once)</li>
             <li>✓ WarmUp + exam ride: CHF 285</li>
           </ul>
-          <a href="https://simy.ch/booking/availability/driving-team?service=boot" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
+          <a href="https://www.simy.ch/booking/availability/driving-team?service=boot" target="_blank" rel="noopener noreferrer" class="block text-center bg-primary-600 text-white font-semibold py-2.5 rounded-lg hover:bg-primary-700 transition text-sm">Book now</a>
         </div>
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">

@@ -23,7 +23,7 @@
           <h1 class="heading-lg text-white mb-6">Taxi Fahrschule Kategorie BPT</h1>
           <p class="hidden xs:block text-xl text-white mb-8">Träumst du davon, als Taxifahrer:in auf den Strassen unterwegs zu sein und Menschen sicher an ihr Ziel zu bringen? Dann bist du bei uns genau richtig! Wir bieten dir die massgeschneiderte Ausbildung für deinen Traumberuf als Taxifahrer:in.</p>
           <div class="flex flex-wrap gap-4">
-            <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Taxi Fahrstunden anmelden
             </a>
           </div>
@@ -177,7 +177,7 @@
         </div>
 
         <div class="text-center mt-12">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg" aria-label="Taxi Fahrschule BPT jetzt buchen - Professional Taxi Training">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg" aria-label="Taxi Fahrschule BPT jetzt buchen - Professional Taxi Training">
             Jetzt Taxi Fahrstunden buchen
           </a>
         </div>
@@ -393,7 +393,7 @@
         <h2 class="heading-md mb-6 text-white">Starte deine Taxi-Karriere!</h2>
         <p class="hidden xs:block text-xl text-white mb-8">Mit professioneller BPT Ausbildung von Driving Team</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Taxi Fahrstunden anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -449,7 +449,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Taxi Fahrschule Kategorie BPT", "description": "Zertifizierte Taxi Fahrausbildung BPT (121/122) mit professioneller Prüfungsvorbereitung", "url": "https://drivingteam.ch/taxi-fahrschule/", "provider": { "@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "priceCurrency": "CHF", "url": "https://simy.ch/booking/availability/driving-team" }, "educationLevel": "Advanced", "keywords": "Taxi Fahrschule, BPT Zertifizierung, Taxi Führerschein, professionelle Taxiausbildung" }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Taxi Fahrschule Kategorie BPT", "description": "Zertifizierte Taxi Fahrausbildung BPT (121/122) mit professioneller Prüfungsvorbereitung", "url": "https://drivingteam.ch/taxi-fahrschule/", "provider": { "@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "priceCurrency": "CHF", "url": "https://www.simy.ch/booking/availability/driving-team" }, "educationLevel": "Advanced", "keywords": "Taxi Fahrschule, BPT Zertifizierung, Taxi Führerschein, professionelle Taxiausbildung" }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/" }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Was ist eine Taxi Fahrschule?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Taxi Fahrschule bietet professionelle Ausbildung für den Beruf als Taxifahrer. Sie vermittelt nicht nur Fahrtechniken, sondern auch Kundenservice, Verkehrsregeln und die spezifischen Anforderungen im Taxibetrieb." } }, { "@type": "Question", "name": "Welche BPT Zertifikate gibt es?", "acceptedAnswer": { "@type": "Answer", "text": "Die wichtigsten sind BPT 121 (Basis-Zertifikat) und BPT 122 (erweitertes Zertifikat mit zusätzlichen Qualifikationen). Beide sind in der Schweiz anerkannt und erforderlich für professionelle Taxifahrer." } }, { "@type": "Question", "name": "Wie lange dauert die Taxi Ausbildung?", "acceptedAnswer": { "@type": "Answer", "text": "Die Ausbildung dauert typischerweise 3-6 Monate, abhängig von deinem Lernfortschritt, der Häufigkeit der Fahrstunden und deiner Erfahrung. Intensive Programme können kürzer sein." } }, { "@type": "Question", "name": "Was kostet die Taxi Fahrschule insgesamt?", "acceptedAnswer": { "@type": "Answer", "text": "Die Gesamtkosten liegen durchschnittlich zwischen CHF 2'000–4'000, abhängig von der Anzahl der Fahrstunden und Theorieinhalte. Dies beinhaltet Fahrstunden, Theorie, Prüfungsvorbereitung und BPT Zertifizierung." } }, { "@type": "Question", "name": "Kann ich als Anfänger Taxi fahren lernen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, du benötigst einen gültigen Auto-Führerschein (Kategorie B) mit mindestens 2-3 Jahren Fahrerfahrung. Vollständige Anfänger sollten zuerst Auto Fahrstunden nehmen, bevor sie eine Taxi Ausbildung beginnen." } }] }) },
 ]

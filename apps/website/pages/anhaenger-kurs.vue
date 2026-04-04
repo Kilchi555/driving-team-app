@@ -20,7 +20,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Kurs</h1>
           <p class="text-xl text-white mb-8">Sicher Anhänger fahren lernen – unser Spezial-Kurs für Gruppen bringt dich schnell und effizient ans Ziel. Du lernst nicht nur aktiv mit, sondern profitierst auch vom Zuhören und Zuschauen.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -94,7 +94,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Anhängerkurs buchen!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>

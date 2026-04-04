@@ -190,6 +190,8 @@ export default defineNuxtConfig({
     // Nothelferkurs
     '/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
     '/erste-hilfe-kurs/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+    '/nothelferkurse': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
+    '/nothelferkurse/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
 
     // Blog-Posts (alte WordPress-Artikel → neue Nuxt Content Artikel-Seiten)
     '/blog-minderung-pruefungsangst': { redirect: { to: '/blog/pruefungsangst-fahrpruefung/', statusCode: 301 } },
@@ -346,6 +348,8 @@ export default defineNuxtConfig({
     '/auto-fahrschule-uster/': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },
     '/auto-fahrschule-lachen': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
     '/auto-fahrschule-lachen/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/drivingteamlachen': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/drivingteamlachen/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
     '/anhaenger-fahrstunden-zurich': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/anhaenger-fahrstunden-zurich/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
 
@@ -362,6 +366,8 @@ export default defineNuxtConfig({
     // Motorrad Grundkurs Varianten
     '/grundkurs-zuerich': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
     '/grundkurs-zuerich/': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
+    '/grundkurs-lachen': { redirect: { to: '/motorrad-grundkurs-lachen/', statusCode: 301 } },
+    '/grundkurs-lachen/': { redirect: { to: '/motorrad-grundkurs-lachen/', statusCode: 301 } },
 
     // Fahrstunden-Zürich Varianten (neue Keywords)
     '/fahrstunden-zurich': { redirect: { to: '/fahrstunden-zuerich/', statusCode: 301 } },
@@ -680,6 +686,8 @@ export default defineNuxtConfig({
     '/en/wab-kurse-schwyz/': { redirect: { to: '/wab-kurse-schwyz/', statusCode: 301 } },
     '/en/motorrad-fahrschule': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
     '/en/motorrad-fahrschule/': { redirect: { to: '/motorrad-fahrschule/', statusCode: 301 } },
+    '/en/motorrad-grundkurs-zuerich': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
+    '/en/motorrad-grundkurs-zuerich/': { redirect: { to: '/motorrad-grundkurs-zuerich/', statusCode: 301 } },
     '/en/lastwagen-fahrschule': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
     '/en/lastwagen-fahrschule/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
     '/en/bus-fahrschule': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },

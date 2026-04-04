@@ -22,7 +22,7 @@
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule am Zürichsee</h1>
           <p class="text-xl text-white mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten das <span class="font-bold text-white text-2xl">ganze Jahr</span> über professionelle Bootsausbildung auf dem oberen Zürichsee.</p>
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
       </div>
@@ -153,7 +153,7 @@
           </details>
         </div>
         <div class="text-center mt-12">
-          <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
+          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
             🚀 Jetzt anmelden!
           </a>
         </div>

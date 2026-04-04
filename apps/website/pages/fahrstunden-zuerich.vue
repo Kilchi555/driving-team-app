@@ -71,7 +71,7 @@
             
             <!-- CTA Buttons -->
             <div class="flex flex-col sm:flex-row gap-4">
-              <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg">
+              <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg">
                 <span>✨</span> Jetzt buchen
               </a>
               <a href="#preise" class="inline-flex items-center justify-center gap-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 font-bold py-4 px-8 rounded-xl transition border border-white/30 text-lg">
@@ -439,7 +439,7 @@
         <p class="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
           Buche jetzt ganz einfach online. Flexible Zeiten, professionelle Instruktoren, 85% Erfolgsquote. Los geht's!
         </p>
-        <a href="https://simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 hover:bg-primary-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl">
+        <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="inline-block bg-white text-primary-600 hover:bg-primary-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl">
           → Fahrstunde buchen
         </a>
       </div>
