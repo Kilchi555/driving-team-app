@@ -130,6 +130,23 @@
       </div>
     </section>
 
+    <!-- Internal Links -->
+    <section class="py-12 bg-gray-50">
+      <div class="section-container">
+        <h2 class="text-xl font-semibold text-gray-900 mb-6">Passende Angebote in Uster</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <a href="/auto-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Auto Fahrschule</a>
+          <a href="/motorrad-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Motorrad Fahrschule</a>
+          <a href="/vku-kurse/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">VKU Kurs</a>
+          <a href="/nothelferkurs/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Nothelferkurs</a>
+          <a href="/fahrschule-preise/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Preise & Kosten</a>
+          <a href="/kostenrechner/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Kostenrechner</a>
+          <a href="/blog/fuehrerschein-kosten-schweiz/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Führerschein Kosten</a>
+          <a href="/fahrschule-standorte/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Alle Standorte</a>
+        </div>
+      </div>
+    </section>
+
     <!-- 8. Preise (grau-50) -->
     <div class="bg-gray-50">
       <GutscheinSection />
@@ -148,8 +165,9 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Uster", "description": "Professionelle Fahrausbildung in Uster im Zürcher Oberland.", "url": "https://drivingteam.ch/fahrschule-uster/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Uster", "postalCode": "8610", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/uster-hero.webp", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Uster", "item": "https://drivingteam.ch/fahrschule-uster/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "DrivingSchool", "name": "Driving Team Fahrschule Uster", "description": "Professionelle Fahrausbildung in Uster im Zürcher Oberland. Auto, Motorrad, flexible Zeiten.", "url": "https://drivingteam.ch/fahrschule-uster/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Uster", "postalCode": "8610", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/uster-hero.webp", "priceRange": "CHF 100-200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "ratingCount": "50", "reviewCount": "50" }, "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Uster", "item": "https://drivingteam.ch/fahrschule-uster/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [ { "@type": "Question", "name": "Wieviele Fahrstunden benötige ich?", "acceptedAnswer": { "@type": "Answer", "text": "Das ist individuell verschieden. Wenn Du das Projekt Fahrprüfung seriös angehst und regelmässig übst, wirst Du Dein Ziel in nützlicher Zeit erreichen. Wir empfehlen zu Beginn ca. 5-10 Fahrlektionen und anschliessend regelmässige private Lernfahrten." } }, { "@type": "Question", "name": "Wo bietet Driving Team Uster Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Unsere Fahrlehrer geben im Zürcher Oberland rundum Uster Auto- und Motorradfahrstunden. Das Tätigkeitsgebiet erstreckt sich von Zürich-Altstetten bis ins Zürcher Oberland." } }, { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Hinwil?", "acceptedAnswer": { "@type": "Answer", "text": "Typische Prüfungsrouten: Bubikon/Wetzikon, Hinwil/Dürnten, Gossau/Mönchaltdorf, Wetzikon/Kempten." } }, { "@type": "Question", "name": "Wieviel betragen die ungefähren Gesamtkosten?", "acceptedAnswer": { "@type": "Answer", "text": "Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–." } }, { "@type": "Question", "name": "Ab welchem Alter kann ich starten?", "acceptedAnswer": { "@type": "Answer", "text": "Für 50ccm Motorräder ab 15 Jahren, 125ccm ab 16 Jahren. Lernfahrten fürs Auto sind ab dem 17. Geburtstag erlaubt." } } ] }) },
 ]
 useHead({ script: jsonLdScripts })
 

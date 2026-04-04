@@ -1,12 +1,11 @@
 export default defineEventHandler((event) => {
-  const today = new Date().toISOString().split('T')[0]
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
   <!-- ===== HOMEPAGE ===== -->
   <url>
     <loc>https://drivingteam.ch/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -14,49 +13,49 @@ export default defineEventHandler((event) => {
   <!-- ===== HAUPTKATEGORIEN ===== -->
   <url>
     <loc>https://drivingteam.ch/auto-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/lastwagen-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/taxi-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/anhaenger-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/bus-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorboot-fahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-kategorien/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -64,75 +63,107 @@ export default defineEventHandler((event) => {
   <!-- ===== STANDORTSEITEN ===== -->
   <url>
     <loc>https://drivingteam.ch/fahrschule-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrstunden-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/auto-fahrschule-zuerich/</loc>
+    <lastmod>2026-04-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/motorrad-fahrschule-zuerich/</loc>
+    <lastmod>2026-04-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/anhaenger-fahrschule-zuerich/</loc>
+    <lastmod>2026-04-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/fahrschule-lachen/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-uster/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-stgallen/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-dietikon/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-aargau/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-reichenburg/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-pfaeffikon/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-standorte/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <!-- ===== ENGLISCHE SEITEN ===== -->
+  <url>
+    <loc>https://drivingteam.ch/driving-school-zurich/</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/driving-school-lachen/</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <!-- ===== PREISE ===== -->
   <url>
     <loc>https://drivingteam.ch/fahrschule-preise/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/kostenrechner/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -140,25 +171,25 @@ export default defineEventHandler((event) => {
   <!-- ===== THEORIESEITEN ===== -->
   <url>
     <loc>https://drivingteam.ch/auto-theorie/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/lastwagen-theorie/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/taxi-theorie/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorboot-theorie/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -166,37 +197,43 @@ export default defineEventHandler((event) => {
   <!-- ===== MOTORRAD ===== -->
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-lachen/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-zug/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-einsiedeln/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-weiterbildung/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/motorrad-fahrschule-zuerich/</loc>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -204,19 +241,19 @@ export default defineEventHandler((event) => {
   <!-- ===== VKU ===== -->
   <url>
     <loc>https://drivingteam.ch/vku-kurse/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/vku-kurs-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/vku-kurs-lachen/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -224,25 +261,25 @@ export default defineEventHandler((event) => {
   <!-- ===== WAB ===== -->
   <url>
     <loc>https://drivingteam.ch/wab-kurse/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/wab-kurse-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/wab-kurse-schwyz/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/wab-course-english/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -250,19 +287,19 @@ export default defineEventHandler((event) => {
   <!-- ===== CZV ===== -->
   <url>
     <loc>https://drivingteam.ch/czv-grundkurs/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/czv-weiterbildung/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/czv-kurse/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -270,13 +307,13 @@ export default defineEventHandler((event) => {
   <!-- ===== WEITERBILDUNGEN ===== -->
   <url>
     <loc>https://drivingteam.ch/weiterbildungen/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrlehrerweiterbildung/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -284,25 +321,31 @@ export default defineEventHandler((event) => {
   <!-- ===== SPEZIELLE KURSE ===== -->
   <url>
     <loc>https://drivingteam.ch/nothelferkurs/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/nothelferkurs-zuerich/</loc>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/kontrollfahrt/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/anhaenger-kurs/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/lastwagen-fahrschule-3/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -310,7 +353,7 @@ export default defineEventHandler((event) => {
   <!-- ===== TAXI ===== -->
   <url>
     <loc>https://drivingteam.ch/taxi-fahrschule-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -318,13 +361,13 @@ export default defineEventHandler((event) => {
   <!-- ===== MOTORBOOT ===== -->
   <url>
     <loc>https://drivingteam.ch/motorboot-fahrstunden-zuerich/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/bootsfahrschule/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -332,25 +375,25 @@ export default defineEventHandler((event) => {
   <!-- ===== INFO-SEITEN ===== -->
   <url>
     <loc>https://drivingteam.ch/kontakt/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/team/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/faq/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/blog/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-03-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -404,15 +447,17 @@ export default defineEventHandler((event) => {
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <!-- ===== RECHTLICHES ===== -->
   <url>
     <loc>https://drivingteam.ch/agb/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/datenschutz/</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

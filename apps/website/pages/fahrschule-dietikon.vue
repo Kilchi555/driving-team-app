@@ -130,6 +130,23 @@
       </div>
     </section>
 
+    <!-- Internal Links -->
+    <section class="py-12 bg-gray-50">
+      <div class="section-container">
+        <h2 class="text-xl font-semibold text-gray-900 mb-6">Passende Angebote in Dietikon</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <a href="/auto-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Auto Fahrschule</a>
+          <a href="/anhaenger-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Anhänger Fahrschule</a>
+          <a href="/vku-kurse/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">VKU Kurs</a>
+          <a href="/nothelferkurs/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Nothelferkurs</a>
+          <a href="/fahrschule-preise/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Preise & Kosten</a>
+          <a href="/kostenrechner/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Kostenrechner</a>
+          <a href="/blog/fuehrerschein-kosten-schweiz/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Führerschein Kosten</a>
+          <a href="/fahrschule-standorte/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Alle Standorte</a>
+        </div>
+      </div>
+    </section>
+
     <!-- 8. Preise (grau-50) -->
     <div class="bg-gray-50">
       <GutscheinSection />
@@ -148,8 +165,9 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Dietikon", "description": "Professionelle Fahrausbildung in Dietikon im Limmattal.", "url": "https://drivingteam.ch/fahrschule-dietikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Dietikon", "postalCode": "8953", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/dietikon-hero.webp", "priceRange": "CHF 100-200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5.0", "bestRating": "5", "worstRating": "1", "ratingCount": "4", "reviewCount": "4" }, "sameAs": ["https://drivingteam.ch"] }) },
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Dietikon", "item": "https://drivingteam.ch/fahrschule-dietikon/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "DrivingSchool", "name": "Driving Team Fahrschule Dietikon", "description": "Professionelle Fahrausbildung in Dietikon im Limmattal. Unterricht auf Deutsch und Albanisch.", "url": "https://drivingteam.ch/fahrschule-dietikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Dietikon", "postalCode": "8953", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/dietikon-hero.webp", "priceRange": "CHF 100-200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5.0", "bestRating": "5", "worstRating": "1", "ratingCount": "4", "reviewCount": "4" }, "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Dietikon", "item": "https://drivingteam.ch/fahrschule-dietikon/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [ { "@type": "Question", "name": "Wieviele Fahrstunden benötige ich?", "acceptedAnswer": { "@type": "Answer", "text": "Das ist individuell verschieden. Wir empfehlen zu Beginn ca. 5-10 Fahrlektionen und anschliessend regelmässige private Lernfahrten." } }, { "@type": "Question", "name": "Wo bietet Driving Team Dietikon Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet des Driving Team Dietikon erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/Bonstetten im Knonaueramt." } }, { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Regensdorf?", "acceptedAnswer": { "@type": "Answer", "text": "Typische Prüfungsrouten: Otelfingen, Rümlang, Affoltern-Zürich, Regensberg/Buchs, Hüttikon/Oetwil an der Limmat." } }, { "@type": "Question", "name": "Ist Unterricht auf Albanisch möglich?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, bei Driving Team Dietikon ist Fahrausbildung auch auf Albanisch möglich. Bitte bei der Buchung angeben." } }, { "@type": "Question", "name": "Wieviel betragen die ungefähren Gesamtkosten?", "acceptedAnswer": { "@type": "Answer", "text": "Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–." } } ] }) },
 ]
 useHead({ script: jsonLdScripts })
 

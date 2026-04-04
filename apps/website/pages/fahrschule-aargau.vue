@@ -129,6 +129,23 @@
       </div>
     </section>
 
+    <!-- Internal Links -->
+    <section class="py-12 bg-gray-50">
+      <div class="section-container">
+        <h2 class="text-xl font-semibold text-gray-900 mb-6">Passende Angebote im Aargau</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <a href="/auto-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Auto Fahrschule</a>
+          <a href="/anhaenger-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Anhänger Fahrschule</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Fahrschule Dietikon</a>
+          <a href="/vku-kurse/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">VKU Kurs</a>
+          <a href="/fahrschule-preise/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Preise & Kosten</a>
+          <a href="/kostenrechner/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Kostenrechner</a>
+          <a href="/blog/fuehrerschein-kosten-schweiz/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Führerschein Kosten</a>
+          <a href="/fahrschule-standorte/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Alle Standorte</a>
+        </div>
+      </div>
+    </section>
+
     <!-- 8. Preise (grau-50) -->
     <div class="bg-gray-50">
       <GutscheinSection />
@@ -147,8 +164,9 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Fahrschule Aargau", "description": "Professionelle Fahrausbildung im Kanton Aargau.", "url": "https://drivingteam.ch/fahrschule-aargau/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressRegion": "Aargau", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/aargau-hero.webp", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Aargau", "item": "https://drivingteam.ch/fahrschule-aargau/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "DrivingSchool", "name": "Driving Team Fahrschule Aargau", "description": "Professionelle Fahrausbildung im Kanton Aargau. Auto und Anhänger Fahrstunden in Spreitenbach und Umgebung.", "url": "https://drivingteam.ch/fahrschule-aargau/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Spreitenbach", "addressRegion": "Aargau", "addressCountry": "CH" }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/aargau-hero.webp", "priceRange": "CHF 100-200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "ratingCount": "25", "reviewCount": "25" }, "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Aargau", "item": "https://drivingteam.ch/fahrschule-aargau/" }] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [ { "@type": "Question", "name": "Wieviele Fahrstunden benötige ich?", "acceptedAnswer": { "@type": "Answer", "text": "Das ist individuell verschieden. Wir empfehlen zu Beginn ca. 5-10 Fahrlektionen und anschliessend regelmässige private Lernfahrten mit 2-4 Fahrten pro Woche." } }, { "@type": "Question", "name": "Wo bietet Driving Team Aargau Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet des Driving Team Aargau erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/Bonstetten. Treffpunkte im ganzen Kanton Aargau möglich." } }, { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten im Aargau?", "acceptedAnswer": { "@type": "Answer", "text": "Typische Prüfungsrouten: Spreitenbach/Killwangen, Dietikon/Oberengstringen, Baden/Ennetbaden, Neuenhof/Wettingen." } }, { "@type": "Question", "name": "Wieviel betragen die ungefähren Gesamtkosten?", "acceptedAnswer": { "@type": "Answer", "text": "Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–." } }, { "@type": "Question", "name": "Ab welchem Alter kann ich starten?", "acceptedAnswer": { "@type": "Answer", "text": "Für 50ccm Motorräder ab 15 Jahren, 125ccm ab 16 Jahren. Lernfahrten fürs Auto sind ab dem 17. Geburtstag erlaubt." } } ] }) },
 ]
 useHead({ script: jsonLdScripts })
 
