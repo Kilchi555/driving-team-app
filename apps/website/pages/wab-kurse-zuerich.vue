@@ -81,7 +81,7 @@
           <span class="text-primary-600 text-xl">❌</span>
           <div>
             <p class="font-semibold text-gray-900">Abmeldung/Umbuchungen</p>
-            <p class="text-gray-600">Gemäss <a href="https://www.transportschule.ch/wp-content/uploads/2026/02/AGB.pdf" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">AGB</a> – spätestens 5 Arbeitstage vor Kursstart an <a href="mailto:fahrtraining@transportschule.ch" class="text-primary-600 hover:underline">fahrtraining@transportschule.ch</a>.</p>
+            <p class="text-gray-600">Gemäss <a href="https://www.transportschule.ch/" target="_blank" rel="nofollow noopener noreferrer" class="text-primary-600 hover:underline">AGB Transportschule AG</a> – spätestens 5 Arbeitstage vor Kursstart an <a href="mailto:fahrtraining@transportschule.ch" class="text-primary-600 hover:underline">fahrtraining@transportschule.ch</a>.</p>
           </div>
         </div>
       </div>
