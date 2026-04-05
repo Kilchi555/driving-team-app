@@ -112,7 +112,7 @@
                 <div class="mt-3 flex flex-wrap gap-2">
                   <a href="https://www.zh.ch/de/mobilitaet/schifffahrt/schiffsfuehrerpruefung.html" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Zürich</a>
                   <a href="https://www.sz.ch/verwaltung/baudepartement/verkehrsamt/schifffahrt/schiffsfuehrer_in.html/8756-8758-8802-9276-9293-9327-9350" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Schwyz</a>
-                  <a href="https://www.sg.ch/content/dam/sgch/verkehr/schifffahrt/schiffsfuehrer/gesuch_schiffsfuehrerausweis.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung St.Gallen</a>
+                  <a href="https://www.sg.ch/content/dam/sgch/verkehr/strassenverkehr/formulare-und-merkblätter/verkehrszulassung-führer---formulare-und-gesuche/Gesuch%20um%20Erteilung%20eines%20Lernfahr-%20bzw.%20Führerausweises.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung St.Gallen</a>
                 </div>
             </div>
           </details>
