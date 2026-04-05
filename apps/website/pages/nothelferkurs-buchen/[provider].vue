@@ -68,7 +68,7 @@ useHead({
         ? 'Buchen Sie Ihren Nothelferkurs bei Nothelfer am Bahnhof'
         : 'Buchen Sie Ihren Nothelferkurs bei Flying-Instructor'
     },
-    { name: 'robots', content: 'noindex, nofollow' },
+    { name: 'robots', content: 'noindex' },
     {
       property: 'og:title',
       content: provider.value === 'nothelfer'
