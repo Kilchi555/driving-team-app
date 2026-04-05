@@ -415,8 +415,6 @@
           <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Driving School Lachen</p>
           <p class="text-xs text-gray-500 mt-1">English lessons · from CHF 95</p>
         </a>
-          <p class="text-xs text-gray-500 mt-1">Mandatory after exam · CHF 490</p>
-        </a>
       </div>
     </section>
 
