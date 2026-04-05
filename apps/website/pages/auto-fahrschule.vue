@@ -359,6 +359,15 @@
             📍 Auto Fahrschule Zürich
           </a>
         </div>
+        <div class="mt-8 pt-6 border-t border-gray-200">
+          <p class="text-sm text-gray-500 mb-3">Hilfreiche Blogartikel zur Fahrausbildung:</p>
+          <div class="flex flex-wrap gap-3">
+            <a href="/blog/theorieprufung-tipps-zuerich/" class="text-sm text-primary-600 hover:underline">📖 Theorieprüfung Zürich vorbereiten</a>
+            <a href="/blog/pruefungsangst-fahrpruefung/" class="text-sm text-primary-600 hover:underline">😰 Prüfungsangst überwinden</a>
+            <a href="/blog/fuehrerschein-kosten-schweiz/" class="text-sm text-primary-600 hover:underline">💰 Führerschein Kosten 2026</a>
+            <a href="/blog/bf17-begleitetes-fahren-schweiz/" class="text-sm text-primary-600 hover:underline">🚗 BF17 Begleitetes Fahren</a>
+          </div>
+        </div>
       </div>
     </section>
     

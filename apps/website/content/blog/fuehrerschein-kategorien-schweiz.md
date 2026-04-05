@@ -1,6 +1,6 @@
 ---
-title: "Alle Führerschein-Kategorien Schweiz erklärt – A, B, BE, C, D und mehr"
-description: "Übersicht aller Führerschein-Kategorien in der Schweiz: Was erlaubt welche Kategorie? Welche brauchst du für Motorrad, Anhänger, Lastwagen oder Boot? Alle Infos 2026."
+title: "Alle Führerausweis-Kategorien Schweiz erklärt – A, B, BE, C, D und mehr"
+description: "Übersicht aller Führerausweis-Kategorien in der Schweiz: Was erlaubt welche Kategorie? Welche brauchst du für Motorrad, Anhänger, Lastwagen oder Boot? Alle Infos 2026."
 slug: "fuehrerschein-kategorien-schweiz"
 date: "2026-04-08"
 dateModified: "2026-04-08"
@@ -8,7 +8,7 @@ author: "Driving Team Fahrschule"
 category: "Fahrausbildung"
 image: "/images/blog/fuehrerschein-kategorien.webp"
 ogImage: "/images/og-image.webp"
-keywords: "Führerschein Kategorien Schweiz, Kategorie B Schweiz, Kategorie A Motorrad, Kategorie BE Anhänger, Führerschein Übersicht Schweiz"
+keywords: "Führerausweis Kategorien Schweiz, Kategorie B Schweiz, Kategorie A Motorrad, Kategorie BE Anhänger, Führerausweis Übersicht Schweiz"
 readingTime: 10
 ---
 
@@ -24,7 +24,7 @@ Dieser Artikel gibt dir einen vollständigen Überblick – von der Fahrrad-ähn
 
 | Kategorie | Fahrzeug | Mindestalter |
 |-----------|----------|--------------|
-| AM | Motorfahrräder bis 45 km/h (Mofa, E-Scooter) | 15 Jahre |
+| A1 45km/h | Motorfahrräder bis 45 km/h (Mofa, E-Scooter) | 15 Jahre |
 | A1 | Leichtkrafträder bis 125 ccm / 11 kW | 16 Jahre |
 | A2 | Mittelschwere Motorräder bis 35 kW | 18 Jahre |
 | A | Alle Motorräder (unbeschränkt) | 20 Jahre (Direkteinstieg: 24) |
@@ -208,3 +208,11 @@ In der Regel ja – wenn du ihn korrekt auf einen Schweizer Ausweis umschreibst.
 ---
 
 Brauchst du eine bestimmte Kategorie und weisst nicht wo du anfangen sollst? [Kontaktiere uns](/kontakt/) – wir beraten dich kostenlos.
+
+---
+
+**Weitere hilfreiche Artikel:**
+- [BF17 Begleitetes Fahren Schweiz – der vollständige Guide](/blog/bf17-begleitetes-fahren-schweiz/)
+- [VKU Kurs: Alles zum obligatorischen Verkehrskundeunterricht](/blog/vku-kurs-verkehrskunde-sicherheit/)
+- [Prüfungsangst überwinden: 10 Tipps für die Fahrprüfung](/blog/pruefungsangst-fahrpruefung/)
+- [Drivers License Convert: Umschreiben in 7 Schritten](/blog/drivers-license-convert/)

@@ -420,6 +420,17 @@
       </div>
     </section>
 
+    <!-- Blog articles for English speakers -->
+    <section class="section-container py-8">
+      <div class="max-w-4xl mx-auto text-center">
+        <p class="text-sm text-gray-500 mb-3">Helpful reading:</p>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="/blog/drivers-license-convert/" class="text-sm text-primary-600 hover:underline">📖 Convert your foreign driving licence in 7 steps →</a>
+          <a href="/blog/fuehrerschein-kategorien-schweiz/" class="text-sm text-primary-600 hover:underline">🚗 All Swiss licence categories explained →</a>
+        </div>
+      </div>
+    </section>
+
     <!-- CTA -->
     <CtaSection title="Ready to Start? Book Your First Lesson in Zurich!" />
 

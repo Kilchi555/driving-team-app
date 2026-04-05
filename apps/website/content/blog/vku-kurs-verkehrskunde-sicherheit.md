@@ -86,3 +86,8 @@ Hast du Fragen zur Fahrausbildung oder zum VKU Kurs? [Kontaktiere uns direkt](/k
 - [Auto Fahrschule Zürich](/auto-fahrschule/)
 - [Fahrschule Preise](/fahrschule-preise/)
 - [Alle Kurse und Weiterbildungen](/weiterbildungen/)
+
+**Weitere hilfreiche Artikel:**
+- [Theorieprüfung Zürich: So bereitest du dich vor](/blog/theorieprufung-tipps-zuerich/)
+- [Prüfungsangst überwinden: 10 Tipps für die Fahrprüfung](/blog/pruefungsangst-fahrpruefung/)
+- [Alle Führerschein-Kategorien Schweiz erklärt](/blog/fuehrerschein-kategorien-schweiz/)

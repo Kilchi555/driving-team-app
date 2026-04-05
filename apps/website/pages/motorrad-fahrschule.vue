@@ -426,8 +426,10 @@
           <a href="/motorrad-fahrschule-zuerich/" class="inline-block border-2 border-red-600 text-red-600 px-6 py-2 rounded hover:bg-red-50 transition" aria-label="Motorrad Fahrschule Zürich – A1, A35kW, A">
             📍 Motorrad Fahrschule Zürich
           </a>
+          <a href="/motorrad-grundkurs/" class="inline-block border-2 border-gray-400 text-gray-700 px-6 py-2 rounded hover:bg-gray-50 transition" aria-label="Motorrad Grundkurs – Alle Standorte">
+            🏍️ Motorrad Grundkurse
+          </a>
         </div>
-      </div>
     </section>
     
     <!-- Price Calculator Section -->
