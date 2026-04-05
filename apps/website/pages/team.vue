@@ -204,6 +204,7 @@
           <a href="mailto:info@drivingteam.ch" class="btn-primary mt-6 inline-block">
             Jetzt bewerben
           </a>
+          <p class="text-xs text-gray-500 mt-3">Oder besuche unsere <a href="/fahrlehrerweiterbildung/" class="text-primary-600 hover:underline">Fahrlehrer-Weiterbildung</a></p>
         </div>
 
       </div>
@@ -230,6 +231,64 @@
             <p class="text-white">Google Bewertung</p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Unsere Angebote -->
+    <section class="section-container py-16">
+      <h2 class="heading-md text-center mb-4">Was wir anbieten</h2>
+      <p class="text-center text-gray-500 mb-12 max-w-2xl mx-auto">Unser Team begleitet dich durch alle Fahrzeugkategorien – vom Erstführerschein bis zur Profiausbildung.</p>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
+        <a href="/auto-fahrschule/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">🚗</span>
+          <p class="font-semibold text-gray-900 text-sm">Auto</p>
+          <p class="text-xs text-primary-600">Kat. B</p>
+        </a>
+        <a href="/motorrad-fahrschule/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">🏍️</span>
+          <p class="font-semibold text-gray-900 text-sm">Motorrad</p>
+          <p class="text-xs text-primary-600">Kat. A</p>
+        </a>
+        <a href="/motorboot-fahrschule/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">⚓</span>
+          <p class="font-semibold text-gray-900 text-sm">Motorboot</p>
+          <p class="text-xs text-primary-600">Zürichsee</p>
+        </a>
+        <a href="/lastwagen-fahrschule/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">🚛</span>
+          <p class="font-semibold text-gray-900 text-sm">Lastwagen</p>
+          <p class="text-xs text-primary-600">Kat. C/CE</p>
+        </a>
+        <a href="/taxi-fahrschule/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">🚕</span>
+          <p class="font-semibold text-gray-900 text-sm">Taxi</p>
+          <p class="text-xs text-primary-600">BPT 121/122</p>
+        </a>
+        <a href="/nothelferkurs/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">❤️</span>
+          <p class="font-semibold text-gray-900 text-sm">Nothelferkurs</p>
+          <p class="text-xs text-primary-600">CHF 99</p>
+        </a>
+        <a href="/vku-kurs-zuerich/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">📚</span>
+          <p class="font-semibold text-gray-900 text-sm">VKU Kurs</p>
+          <p class="text-xs text-primary-600">Zürich & Lachen</p>
+        </a>
+        <a href="/fahrschule-preise/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">💰</span>
+          <p class="font-semibold text-gray-900 text-sm">Preise</p>
+          <p class="text-xs text-primary-600">ab CHF 95/Lektion</p>
+        </a>
+        <a href="/fahrschule-standorte/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">📍</span>
+          <p class="font-semibold text-gray-900 text-sm">Standorte</p>
+          <p class="text-xs text-primary-600">Zürich & Lachen</p>
+        </a>
+        <a href="/kontakt/" class="flex flex-col items-center gap-2 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <span class="text-3xl">✉️</span>
+          <p class="font-semibold text-gray-900 text-sm">Kontakt</p>
+          <p class="text-xs text-primary-600">Jetzt anfragen</p>
+        </a>
       </div>
     </section>
 
