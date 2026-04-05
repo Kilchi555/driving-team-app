@@ -137,6 +137,7 @@ export default defineNuxtConfig({
     // ===== REDIRECTS VON ALTER WORDPRESS-SEITE (301) =====
     // Allgemein
     '/uber-uns': { redirect: { to: '/team/', statusCode: 301 } },
+    '/uber-uns/': { redirect: { to: '/team/', statusCode: 301 } },
     '/ueber-uns': { redirect: { to: '/team/', statusCode: 301 } },
     '/ueber-uns/': { redirect: { to: '/team/', statusCode: 301 } },
     '/gtc': { redirect: { to: '/agb/', statusCode: 301 } },
