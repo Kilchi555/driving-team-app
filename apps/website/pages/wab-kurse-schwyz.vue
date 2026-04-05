@@ -79,7 +79,7 @@
           <span class="text-primary-600 text-xl">❌</span>
           <div>
             <p class="font-semibold text-gray-900">Abmeldung/Umbuchungen</p>
-            <p class="text-gray-600">Gemäss <a href="https://verkehrszentrum.ch/wp-content/uploads/2023/05/23-0003_VZT_AllgemeineGeschaeftsbedingungen_A4_RZ.pdf" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">AGB</a> – spätestens 5 Arbeitstage vor Kursstart an <a href="mailto:info@verkehrszentrum.ch" class="text-primary-600 hover:underline">info@verkehrszentrum.ch</a>.</p>
+            <p class="text-gray-600">Gemäss <a href="https://verkehrszentrum.ch/" target="_blank" rel="nofollow noopener noreferrer" class="text-primary-600 hover:underline">AGB Verkehrszentrum Tuggen</a> – spätestens 5 Arbeitstage vor Kursstart an <a href="mailto:info@verkehrszentrum.ch" class="text-primary-600 hover:underline">info@verkehrszentrum.ch</a>.</p>
           </div>
         </div>
       </div>
