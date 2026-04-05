@@ -14,7 +14,7 @@
             :key="i"
             :href="review.link"
             target="_blank"
-            rel="noopener noreferrer"
+            rel="nofollow noopener noreferrer"
             class="snap-start shrink-0 w-[80vw] sm:w-[55vw] md:w-[38vw] lg:w-[28vw] max-w-sm block rounded-2xl p-6 no-underline shadow-[0_4px_16px_rgba(1,158,229,0.2)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(1,158,229,0.4)]"
             style="background: linear-gradient(315deg, #ffffff 65%, #019ee5 100%)"
           >
