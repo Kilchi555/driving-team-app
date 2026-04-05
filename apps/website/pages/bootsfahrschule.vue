@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Bootsfahrschule Lachen | Motorboot Prüfung am Zürichsee | Driving Team</Title>
+      <Title>Bootsfahrschule Lachen – Motorboot Prüfung am Zürichsee</Title>
       <Meta name="description" content="Bootsfahrschule am oberen Zürichsee in Lachen – flexible Treffpunkte, professionelle Motorboot-Fahrstunden für den Bootsfahrausweis. Lektion 90min CHF 190.-" />
       <Meta property="og:title" content="Bootsfahrschule Lachen – Motorboot am Zürichsee | Driving Team" />
       <Meta property="og:description" content="Motorboot-Fahrstunden am oberen Zürichsee. 90min CHF 190.-, flexible Treffpunkte. Jetzt anmelden!" />

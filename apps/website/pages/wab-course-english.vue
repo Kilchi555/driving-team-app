@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Course English Switzerland – Pfäffikon ZH & Tuggen SZ | Driving Team</Title>
+      <Title>WAB Course English – Zürich & Schwyz | Driving Team</Title>
       <Meta name="description" content="WAB refresher course in English for new drivers in Switzerland. Mandatory within 12 months of passing your category B driving test. Two locations: Pfäffikon ZH (CHF 490) and Tuggen SZ (CHF 490). Register directly online." />
       <Meta name="keywords" content="WAB course English, WAB Kurs English Switzerland, WAB refresher course English, advanced driving training English Switzerland, Pfäffikon ZH, Tuggen SZ" />
       <Meta property="og:title" content="WAB Course in English – Switzerland | Pfäffikon ZH & Tuggen SZ | Driving Team" />

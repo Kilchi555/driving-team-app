@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad, Lastwagen | Driving Team</Title>
+      <Title>Fahrschule Lachen SZ | Auto, Anhänger & Lastwagen</Title>
       <Meta name="description" content="Fahrschule Lachen SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ Flexible Zeiten & Treffpunkte ✓ Kanton Schwyz ✓ 85% Erfolgsquote. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
       <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
