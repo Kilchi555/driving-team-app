@@ -430,6 +430,7 @@
             🏍️ Motorrad Grundkurse
           </a>
         </div>
+      </div>
     </section>
     
     <!-- Price Calculator Section -->
