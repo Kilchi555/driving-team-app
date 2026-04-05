@@ -200,7 +200,7 @@
                 <li>Kategorie D1, D (Bus) ab Pfäffikon/SZ</li>
                 <li>Kategorie BE (Anhänger)</li>
                 <li>Kategorie A (Motorboot) ab Lachen/SZ</li>
-                <li>Kategorie T (Taxi) ab Zürich-Altstetten</li>
+                <li><a href="/taxi-fahrschule-zuerich/" class="text-primary-600 hover:underline">Kategorie T (Taxi) ab Zürich-Altstetten</a></li>
               </ul>
             </div>
           </details>

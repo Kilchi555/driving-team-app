@@ -443,6 +443,9 @@
           <a href="/auto-fahrschule/" class="inline-block border-2 border-primary-600 text-primary-600 px-6 py-2 rounded hover:bg-primary-50 transition" aria-label="Auto Fahrschule ansehen">
             🚗 Auto Fahrschule
           </a>
+          <a href="/lastwagen-fahrschule-3/" class="inline-block border-2 border-gray-400 text-gray-700 px-6 py-2 rounded hover:bg-gray-50 transition" aria-label="LKW Fahrschule CZV Grundkurs ansehen">
+            📖 LKW & CZV Grundkurs
+          </a>
         </div>
       </div>
     </section>

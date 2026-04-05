@@ -409,6 +409,12 @@
         <a href="/wab-course-english/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
           <div class="text-2xl mb-2">🌍</div>
           <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">WAB Course in English</p>
+        </a>
+        <a href="/driving-school-lachen/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+          <div class="text-2xl mb-2">📍</div>
+          <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Driving School Lachen</p>
+          <p class="text-xs text-gray-500 mt-1">English lessons · from CHF 95</p>
+        </a>
           <p class="text-xs text-gray-500 mt-1">Mandatory after exam · CHF 490</p>
         </a>
       </div>

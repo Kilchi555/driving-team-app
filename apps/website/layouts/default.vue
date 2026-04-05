@@ -168,6 +168,12 @@
                   <div class="font-medium">Motorrad-Weiterbildung</div>
                 </div>
               </a>
+              <a href="/weiterbildungen/" class="block px-5 py-3 text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 border-t border-gray-100 mt-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">→</span>
+                  <div class="font-medium text-sm">Alle Weiterbildungen</div>
+                </div>
+              </a>
             </div>
           </div>
 
@@ -426,7 +432,7 @@
               <li><a href="/motorrad-fahrschule/" class="hover:text-white transition">Motorrad</a></li>
               <li><a href="/lastwagen-fahrschule/" class="hover:text-white transition">Lastwagen</a></li>
               <li><a href="/bus-fahrschule/" class="hover:text-white transition">Bus</a></li>
-              <li><a href="#" @click.prevent="showWeiterbildungenModal = true" class="hover:text-white transition cursor-pointer">Weiterbildung</a></li>
+              <li><a href="/weiterbildungen/" class="hover:text-white transition">Weiterbildung</a></li>
             </ul>
           </div>
 
@@ -448,6 +454,7 @@
             <ul class="space-y-2 text-sm text-gray-300">
               <li><a href="/kontakt/" class="hover:text-white transition">Kontakt</a></li>
               <li><a href="/uber-uns/" class="hover:text-white transition">Team</a></li>
+              <li><a href="/faq/" class="hover:text-white transition">FAQ</a></li>
               <li><a href="/fahrschule-preise/" class="hover:text-white transition">Preise</a></li>
               <li><a href="/agb/" class="hover:text-white transition">AGB</a></li>
               <li><a href="/datenschutz/" class="hover:text-white transition">Datenschutz</a></li>
