@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Aargau | 6 Schritte zur Fahrprüfung | Driving Team</Title>
+      <Title>Fahrschule Aargau | Auto, Anhänger & Lastwagen</Title>
       <Meta name="description" content="Fahrschule Aargau - Auto, Motorrad, Lastwagen Fahrstunden. 85% Erfolgsquote, ab CHF 100/Lektion, Deutsch & Albanisch. Flexible Zeiten. Jetzt anmelden!" />
       <Meta property="og:title" content="Fahrschule Aargau – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 85% Erfolgsquote, ab CHF 100/Lektion." />

@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>CZV Weiterbildungskurse | 5 Kurse in 5 Jahren | Driving Team</Title>
+      <Title>CZV Weiterbildung – 5 Kurse in 5 Jahren | Driving Team</Title>
       <Meta name="description" content="CZV Weiterbildungskurse beim Driving Team. Prävention, Traffic Health, ARV1, Radwechsel & Brandbekämpfung. CHF 190.- pro Kurs inkl. SARI-Bestätigung." />
       <Meta property="og:title" content="CZV Weiterbildungskurse – 5 Kurse in 5 Jahren | Driving Team" />
       <Meta property="og:description" content="Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren, CHF 190.- pro Kurs inkl. SARI-Bestätigung." />

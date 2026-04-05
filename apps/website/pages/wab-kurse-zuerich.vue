@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Kurse Zürich Oberland | Driving Team</Title>
+      <Title>WAB Kurs Zürich Oberland – Weiterausbildung Autofahren</Title>
       <Meta name="description" content="WAB Kurse im Kanton Zürich bei unserer Partnerfahrschule Transportschule AG in Pfäffikon ZH. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
       <Meta property="og:title" content="WAB Kurse Zürich Oberland – Pfäffikon ZH | Driving Team" />
       <Meta property="og:description" content="WAB Kurse in Pfäffikon ZH. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker." />

@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Fahrstunden A1/A35kW/A - Sicher fahren | Driving Team</Title>
+      <Title>Motorrad Fahrschule | A1, A35kW & A | Zürich & Lachen</Title>
       <Meta name="description" content="Motorrad Fahrstunden Zürich für A1, A35kW & A. Expert Training mit modernen Bikes, flexible Zeiten. Fahrstunden & Grundkurse. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Fahrschule | Driving Team | Zürich & Lachen/SZ" />
       <Meta property="og:description" content="Motorrad Fahrschule für alle Kategorien in Zürich und Umgebung" />

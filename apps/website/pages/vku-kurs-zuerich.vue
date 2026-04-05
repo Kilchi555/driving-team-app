@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Obligatorisch | Driving Team</Title>
+      <Title>VKU Kurs Zürich – Obligatorischer Verkehrskundeunterricht</Title>
       <Meta name="description" content="VKU Kurs Zürich ✓ CHF 190.- inkl. Dokumentation ✓ 8 Stunden (2×4h) ✓ Obligatorisch vor Fahrprüfung ✓ Zürich-Altstetten Baslerstrasse ✓ Flexible Termine. Jetzt online anmelden!" />
       <Meta name="keywords" content="VKU Kurs Zürich, Verkehrskundeunterricht Zürich, VKU Zürich, VKU Kurs buchen Zürich, Verkehrskunde Kurs Zürich, VKU Fahrschule Zürich" />
       <Meta property="og:title" content="VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Obligatorisch | Driving Team" />
