@@ -233,6 +233,12 @@
           <a href="/wab-kurse-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="WAB Weiterbildungskurs Zürich">
             🎓 WAB Kurs Zürich
           </a>
+          <a href="/nothelferkurs-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Nothelferkurs Zürich buchen">
+            ❤️ Nothelferkurs Zürich
+          </a>
+          <a href="/driving-school-zurich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Driving School Zurich – English lessons">
+            🌍 Driving School Zurich
+          </a>
         </div>
       </div>
     </section>

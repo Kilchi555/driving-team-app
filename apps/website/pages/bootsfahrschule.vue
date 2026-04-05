@@ -142,6 +142,24 @@
       </div>
     </section>
 
+    <!-- Verwandte Seiten -->
+    <section class="section-container py-10">
+      <div class="flex flex-wrap gap-3 justify-center">
+        <a href="/motorboot-fahrschule/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+          ⚓ Motorboot Fahrschule Zürich
+        </a>
+        <a href="/motorboot-fahrstunden-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+          📍 Fahrstunden am Zürichsee
+        </a>
+        <a href="/motorboot-theorie/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+          📚 Motorboot Theorie
+        </a>
+        <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+          📍 Fahrschule Lachen
+        </a>
+      </div>
+    </section>
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">

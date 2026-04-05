@@ -75,3 +75,10 @@ Wir bitten alle erfahrenen Fahrerinnen und Fahrer: Gebt unseren Fahrschülerinne
 ---
 
 *Hast du Interesse, die Fahrausbildung bei uns zu machen? [Jetzt Kontakt aufnehmen](/kontakt/) oder direkt zur [Auto Fahrschule Zürich](/auto-fahrschule/).*
+
+---
+
+**Weitere hilfreiche Artikel:**
+- [10 Tipps gegen Prüfungsangst bei der Fahrprüfung](/blog/pruefungsangst-fahrpruefung/)
+- [Theorieprüfung Zürich: So bereitest du dich vor](/blog/theorieprufung-tipps-zuerich/)
+- [Alle Führerschein-Kategorien Schweiz erklärt](/blog/fuehrerschein-kategorien-schweiz/)

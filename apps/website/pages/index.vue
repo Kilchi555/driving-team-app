@@ -548,6 +548,19 @@
     <GutscheinSection />
     <StandorteSection />
     <WarumSection />
+
+    <!-- Blog-Artikel Lesetipps -->
+    <section class="section-container py-10">
+      <div class="max-w-4xl mx-auto text-center">
+        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Ratgeber & Tipps</p>
+        <div class="flex flex-wrap gap-4 justify-center">
+          <a href="/blog/fuehrerschein-kategorien-schweiz/" class="text-sm text-primary-600 hover:underline">🚗 Alle Führerschein-Kategorien Schweiz erklärt</a>
+          <a href="/blog/fuehrerschein-kosten-schweiz/" class="text-sm text-primary-600 hover:underline">💰 Führerschein Kosten Schweiz 2026</a>
+          <a href="/blog/bf17-begleitetes-fahren-schweiz/" class="text-sm text-primary-600 hover:underline">🚗 BF17 Begleitetes Fahren</a>
+          <a href="/blog/theorieprufung-tipps-zuerich/" class="text-sm text-primary-600 hover:underline">📚 Theorieprüfung vorbereiten</a>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 

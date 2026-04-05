@@ -119,3 +119,5 @@ We're here to help. [Contact us](/kontakt/) or find out more about our [Auto Fah
 *Related articles:*
 - [WAB Course in English](/wab-course-english/) – Mandatory road awareness course for license holders
 - [Auto Fahrschule Zürich](/auto-fahrschule/) – Driving lessons in Zurich
+- [All Swiss License Categories Explained](/blog/fuehrerschein-kategorien-schweiz/) – A, B, BE, C, D and more
+- [Theory Exam Tips for Zurich](/blog/theorieprufung-tipps-zuerich/) – Prepare for the theory test

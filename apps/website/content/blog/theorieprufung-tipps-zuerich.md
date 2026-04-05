@@ -96,3 +96,10 @@ Die nächsten Schritte sind:
 ---
 
 Die Driving Team Fahrschule begleitet dich durch alle diese Schritte. [Kontaktiere uns](/kontakt/) oder melde dich direkt für Fahrstunden an.
+
+---
+
+**Weitere hilfreiche Artikel:**
+- [VKU Kurs: Der obligatorische Verkehrskundeunterricht](/blog/vku-kurs-verkehrskunde-sicherheit/)
+- [Prüfungsangst überwinden: 10 Tipps für die Fahrprüfung](/blog/pruefungsangst-fahrpruefung/)
+- [Alle Führerschein-Kategorien Schweiz erklärt](/blog/fuehrerschein-kategorien-schweiz/)

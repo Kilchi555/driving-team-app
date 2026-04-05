@@ -145,4 +145,11 @@ Timeline für eine typische Fahrausbildung mit BF17:
 
 Hast du Fragen zu BF17 oder zur Fahrausbildung bei Driving Team? [Kontaktiere uns direkt](/kontakt/) oder informiere dich über unsere [Auto Fahrschule](/auto-fahrschule/).
 
+---
+
+**Weitere hilfreiche Artikel:**
+- [Alle Führerschein-Kategorien Schweiz erklärt](/blog/fuehrerschein-kategorien-schweiz/)
+- [Theorieprüfung Zürich: So bereitest du dich vor](/blog/theorieprufung-tipps-zuerich/)
+- [10 Tipps gegen Prüfungsangst bei der Fahrprüfung](/blog/pruefungsangst-fahrpruefung/)
+
 *Hinweis: Alle Angaben basieren auf dem Stand März 2026. Gesetzliche Grundlage: Art. 15 SVG und Art. 44–46 VZV.*

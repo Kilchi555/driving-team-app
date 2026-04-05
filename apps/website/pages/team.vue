@@ -210,6 +210,14 @@
       </div>
     </section>
 
+    <!-- Lesetipp -->
+    <section class="section-container py-8">
+      <div class="max-w-3xl mx-auto text-center">
+        <p class="text-sm text-gray-500 mb-2">Einblick in unsere Fahrschule:</p>
+        <a href="/blog/fahrschueler-respekt-strasse/" class="text-primary-600 hover:underline text-sm font-medium">🤝 Fahrschüler & Respekt auf der Strasse – ein Appell von Driving Team →</a>
+      </div>
+    </section>
+
     <!-- Stats -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container">
