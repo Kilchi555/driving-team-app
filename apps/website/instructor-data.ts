@@ -7,6 +7,7 @@ export interface Diploma {
   category: string    // e.g. "B", "A", "BE", "C", "D", "Boot"
   year?: number       // Jahr des Diploms
   image?: string      // Pfad zum Diplom-Scan, z.B. '/images/diplome/pascal-kat-b.webp'
+  landscape?: boolean // true für Querformat-Diplome
 }
 
 export interface Instructor {

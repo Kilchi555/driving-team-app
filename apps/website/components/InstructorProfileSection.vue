@@ -122,11 +122,11 @@
                       :class="diploma.image ? 'cursor-pointer hover:shadow-md hover:border-amber-400 transition' : ''"
                       @click="diploma.image ? openLightbox(diploma) : null"
                     >
-                      <!-- Thumbnail wenn Bild vorhanden -->
-                      <div v-if="diploma.image" class="w-10 h-14 rounded overflow-hidden border border-amber-200 flex-shrink-0 bg-amber-50">
-                        <img :src="diploma.image" :alt="diploma.title" class="w-full h-full object-cover" />
+                      <!-- Thumbnail: quadratisch, passt sich Hoch- und Querformat an -->
+                      <div v-if="diploma.image" class="w-14 h-14 rounded-lg overflow-hidden border border-amber-200 flex-shrink-0 bg-amber-50 flex items-center justify-center">
+                        <img :src="diploma.image" :alt="diploma.title" class="max-w-full max-h-full object-contain" loading="lazy" />
                       </div>
-                      <div v-else class="w-10 h-14 rounded border border-amber-200 flex-shrink-0 bg-amber-50 flex items-center justify-center text-lg">
+                      <div v-else class="w-14 h-14 rounded-lg border border-amber-200 flex-shrink-0 bg-amber-50 flex items-center justify-center text-2xl">
                         📜
                       </div>
                       <div>
@@ -172,27 +172,30 @@
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
       >
-        <div
-          v-if="lightboxDiploma"
-          class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          @click.self="closeLightbox"
-        >
-          <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
-            <button
-              @click="closeLightbox"
-              class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
-            >✕</button>
-            <div class="text-center mb-4">
-              <p class="font-bold text-gray-900">{{ lightboxDiploma.title }}</p>
-              <p v-if="lightboxDiploma.year" class="text-sm text-gray-500">{{ lightboxDiploma.year }}</p>
+          <div
+            v-if="lightboxDiploma"
+            class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            @click.self="closeLightbox"
+          >
+            <div
+              class="relative bg-white rounded-2xl shadow-2xl p-6 w-full"
+              :class="lightboxDiploma.landscape ? 'max-w-2xl' : 'max-w-lg'"
+            >
+              <button
+                @click="closeLightbox"
+                class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
+              >✕</button>
+              <div class="text-center mb-4">
+                <p class="font-bold text-gray-900">{{ lightboxDiploma.title }}</p>
+                <p v-if="lightboxDiploma.year" class="text-sm text-gray-500">{{ lightboxDiploma.year }}</p>
+              </div>
+              <img
+                :src="lightboxDiploma.image"
+                :alt="lightboxDiploma.title"
+                class="w-full rounded-xl border border-gray-200 shadow"
+              />
             </div>
-            <img
-              :src="lightboxDiploma.image"
-              :alt="lightboxDiploma.title"
-              class="w-full rounded-xl border border-gray-200 shadow"
-            />
           </div>
-        </div>
       </Transition>
     </Teleport>
   </section>
