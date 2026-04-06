@@ -405,7 +405,7 @@ useHead({ script: jsonLdScripts })
 const team = [
   {
     name: 'Marc',
-    role: 'Fahrlehrer',
+    role: 'Auto & Motorboot Fahrlehrer',
     bio: 'Marc ist mit viel Elan, Begeisterung und vollem Einsatz bei der Arbeit und kann so seine Fahrschülerinnen und Fahrschüler zu Höchstleistungen anspornen.',
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Anhänger, Taxi, Motorboot',
@@ -414,7 +414,7 @@ const team = [
   },
   {
     name: 'Pascal',
-    role: 'Fahrlehrer',
+    role: 'Auto & Motorrad Fahrlehrer',
     bio: 'Pascal mag keinen Streit und probiert es allen recht zu machen. Probleme gibt es für ihn nicht, nur Lösungen. Seine positive, ausgeglichene und geduldige Art wird sehr geschätzt.',
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Motorrad, Motorboot, Anhänger',
@@ -423,7 +423,7 @@ const team = [
   },
   {
     name: 'Skender',
-    role: 'Fahrlehrer',
+    role: 'Auto & Anhänger Fahrlehrer',
     bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Kenis grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
     languages: 'Deutsch, Albanisch',
     categories: 'Auto Automat, Taxi, Anhänger',
@@ -432,7 +432,7 @@ const team = [
   },
   {
     name: 'Peter',
-    role: 'Fahrlehrer',
+    role: 'Auto & Lastwagen Fahrlehrer',
     bio: 'Peter ist ein Ruhepol. Durch seine jahrelange Erfahrung als Lastwagenchauffeur ist Geduld seine grosse Stärke. Es gibt keine Situation, die ihn ins Schwitzen bringt – Humor kommt nie zu kurz.',
     languages: 'Deutsch',
     categories: 'Lastwagen, Car/Bus, Anhänger, Auto Automatik',
@@ -441,7 +441,7 @@ const team = [
   },
   {
     name: 'Samir',
-    role: 'Fahrlehrer',
+    role: 'Auto Fahrlehrer',
     bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automatik',
@@ -450,7 +450,7 @@ const team = [
   },
   {
     name: 'Rahel',
-    role: 'Fahrlehrerin',
+    role: 'Auto Fahrlehrerin',
     bio: 'Als Fahrlehrerin und Mutter ist Rahel immer unterwegs. Mit ihrer ausgeglichenen Art bleibt sie dabei jedoch immer gelassen und souverän – diese Ruhe überträgt sie auf ihre Fahrschüler:innen.',
     languages: 'Deutsch',
     categories: 'Auto Automatik',
