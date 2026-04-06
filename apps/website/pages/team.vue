@@ -100,7 +100,10 @@
             class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
             @click.self="lightboxDiploma = null"
           >
-            <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <div
+              class="relative bg-white rounded-2xl shadow-2xl p-6 w-full"
+              :class="lightboxDiploma.landscape ? 'max-w-2xl' : 'max-w-lg'"
+            >
               <button
                 @click="lightboxDiploma = null"
                 class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
