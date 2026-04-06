@@ -415,7 +415,7 @@ const team = [
   {
     name: 'Pascal',
     role: 'Fahrlehrer',
-    bio: 'Kilchi mag keinen Streit und probiert es allen recht zu machen. Probleme gibt es für ihn nicht, nur Lösungen. Seine positive, ausgeglichene und geduldige Art wird sehr geschätzt.',
+    bio: 'Pascal mag keinen Streit und probiert es allen recht zu machen. Probleme gibt es für ihn nicht, nur Lösungen. Seine positive, ausgeglichene und geduldige Art wird sehr geschätzt.',
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Motorrad, Motorboot, Anhänger',
     area: 'Zürich und Zürcher Oberland',
@@ -424,7 +424,7 @@ const team = [
   {
     name: 'Skender',
     role: 'Fahrlehrer',
-    bio: 'Keni ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Kenis grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
+    bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Kenis grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
     languages: 'Deutsch, Albanisch',
     categories: 'Auto Automat, Taxi, Anhänger',
     area: 'Zürich bis Wettingen',
