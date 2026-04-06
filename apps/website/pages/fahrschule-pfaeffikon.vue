@@ -212,14 +212,6 @@ const jsonLdScripts = [
       { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "17:00" }
     ],
     "priceRange": "CHF 95.-–200.-",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "368",
-      "ratingCount": "368",
-      "bestRating": "5",
-      "worstRating": "1"
-    },
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
       "name": "Fahrausbildung Pfäffikon SZ",
@@ -232,6 +224,7 @@ const jsonLdScripts = [
     },
     "sameAs": ["https://drivingteam.ch"]
   }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "LocalBusiness", "name": "Driving Team Fahrschule Pfäffikon SZ", "url": "https://drivingteam.ch/fahrschule-pfaeffikon/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 368, "reviewCount": 368 }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
