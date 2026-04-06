@@ -54,7 +54,7 @@
           class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-primary-200 transition flex flex-col"
         >
           <div class="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-4 shrink-0 overflow-hidden">
-            <img v-if="member.photo" :src="member.photo" :alt="member.name" class="w-full h-full object-cover" />
+            <img v-if="member.photo" :src="member.photo" :alt="member.name" class="w-full h-full object-cover" loading="lazy" width="80" height="80" />
             <span v-else class="text-2xl font-bold text-primary-600">{{ member.name[0] }}</span>
           </div>
           <h3 class="font-bold text-lg text-center mb-1">{{ member.name }}</h3>
@@ -65,8 +65,60 @@
             <p v-if="member.categories"><span class="font-semibold text-gray-700">Kategorie:</span> {{ member.categories }}</p>
             <p v-if="member.area"><span class="font-semibold text-gray-700">Gebiet:</span> {{ member.area }}</p>
           </div>
+          <!-- Diplom-Badges -->
+          <div v-if="getDiplomas(member.name).length" class="border-t border-amber-100 pt-3 mt-3">
+            <p class="text-xs text-amber-700 font-semibold mb-2">🎓 Eidg. Diplome</p>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="diploma in getDiplomas(member.name)"
+                :key="diploma.category"
+                class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded-full text-xs font-medium transition"
+                :class="diploma.image ? 'hover:bg-amber-100 hover:border-amber-400 cursor-pointer' : 'cursor-default'"
+                :title="diploma.title"
+                @click="diploma.image ? openLightbox(diploma, member.name) : null"
+              >
+                📜 Kat. {{ diploma.category }}
+                <span v-if="diploma.image" class="text-amber-500">↗</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Lightbox -->
+      <Teleport to="body">
+        <Transition
+          enter-active-class="transition-opacity duration-200"
+          enter-from-class="opacity-0"
+          enter-to-class="opacity-100"
+          leave-active-class="transition-opacity duration-150"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <div
+            v-if="lightboxDiploma"
+            class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            @click.self="lightboxDiploma = null"
+          >
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+              <button
+                @click="lightboxDiploma = null"
+                class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
+              >✕</button>
+              <div class="text-center mb-4">
+                <p class="font-bold text-gray-900 text-sm">{{ lightboxInstructorName }}</p>
+                <p class="text-gray-700">{{ lightboxDiploma.title }}</p>
+                <p v-if="lightboxDiploma.year" class="text-sm text-gray-500">{{ lightboxDiploma.year }}</p>
+              </div>
+              <img
+                :src="lightboxDiploma.image"
+                :alt="lightboxDiploma.title"
+                class="w-full rounded-xl border border-gray-200 shadow"
+              />
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
     </section>
 
     <!-- Geschichte -->
@@ -313,6 +365,34 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import { getAllInstructors } from '~/instructor-data'
+import type { Diploma } from '~/instructor-data'
+
+const lightboxDiploma = ref<Diploma | null>(null)
+const lightboxInstructorName = ref('')
+
+const openLightbox = (diploma: Diploma, instructorName: string) => {
+  lightboxDiploma.value = diploma
+  lightboxInstructorName.value = instructorName
+}
+
+// Map first name → unique diplomas (deduplicated across locations)
+const diplomasByFirstName = computed(() => {
+  const map = new Map<string, Diploma[]>()
+  for (const instructor of getAllInstructors()) {
+    const firstName = instructor.name.split(' ')[0]
+    if (!map.has(firstName) && instructor.diplomas?.length) {
+      map.set(firstName, instructor.diplomas)
+    }
+  }
+  return map
+})
+
+const getDiplomas = (name: string): Diploma[] => {
+  return diplomasByFirstName.value.get(name) ?? []
+}
+
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AboutPage", "name": "Team Driving Team Fahrschule", "url": "https://drivingteam.ch/team/", "mainEntity": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "employee": [{ "@type": "Person", "name": "Marc" }, { "@type": "Person", "name": "Nicole" }, { "@type": "Person", "name": "Pascal" }] } }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Team", "item": "https://drivingteam.ch/team/" }] }) },
