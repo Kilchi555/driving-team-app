@@ -174,7 +174,7 @@
       >
           <div
             v-if="lightboxDiploma"
-            class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            class="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4"
             @click.self="closeLightbox"
           >
             <div
