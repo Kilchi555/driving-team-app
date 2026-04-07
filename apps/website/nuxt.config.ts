@@ -234,8 +234,10 @@ export default defineNuxtConfig({
     '/wegweiser-lastwagen/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
 
     // Standortspezifische Auto-Fahrschule
-    '/auto-fahrschule-aargau': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
-    '/auto-fahrschule-aargau/': { redirect: { to: '/fahrschule-aargau/', statusCode: 301 } },
+    '/auto-fahrschule-aargau': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
+    '/auto-fahrschule-aargau/': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
+    '/fahrschule-aargau': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
+    '/fahrschule-aargau/': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
     // '/auto-fahrschule-zürich' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/en/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/en/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },

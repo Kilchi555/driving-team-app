@@ -168,8 +168,92 @@ export const LOCATION_LACHEN: Location = {
   ],
 }
 
+// ── Standort: Spreitenbach (GBP: "Fahrschule Aargau – Driving Team") ──
+export const LOCATION_SPREITENBACH: Location = {
+  id: 'spreitenbach',
+  gbpName: 'Fahrschule Aargau - Driving Team - Auto - Anhänger',
+  placeId: 'ChIJ_V8A6ycNkEcRz6hXDJMr6ls',
+
+  address: {
+    street: 'Haldenstrasse 13',
+    city: 'Spreitenbach',
+    zip: '8957',
+    canton: 'AG',
+    country: 'CH',
+  },
+  geo: { lat: 47.4188, lng: 8.3610 },
+
+  phone: '+41444310033',
+  phoneFormatted: '044 431 00 33',
+
+  hours: {
+    weekdays: { open: '08:00', close: '18:00' },
+    saturday: { open: '08:00', close: '14:00' },
+    sunday: null,
+  },
+  hoursDisplay: 'Mo–Fr 08:00–18:00 · Sa 08:00–14:00',
+
+  priceRange: 'CHF 95–170',
+
+  rating: { value: 4.9, count: 25, max: 5 },
+
+  gbpCategories: {
+    primary: 'Fahrschule',
+    secondary: ['Anhänger Fahrschule'],
+  },
+
+  services: [
+    { name: 'Auto Fahrschule Spreitenbach', url: 'https://drivingteam.ch/fahrschule-spreitenbach/' },
+    { name: 'Anhänger Fahrschule Zürich', url: 'https://drivingteam.ch/anhaenger-fahrschule-zuerich/' },
+    { name: 'VKU Kurs Zürich', url: 'https://drivingteam.ch/vku-kurs-zuerich/' },
+    { name: 'Nothelferkurs Zürich', url: 'https://drivingteam.ch/nothelferkurs-zuerich/' },
+  ],
+}
+
+// ── Standort: Uster ──────────────────────────────────────────
+export const LOCATION_USTER: Location = {
+  id: 'uster',
+  gbpName: 'Driving Team Fahrschule Uster',
+  // TODO: Place ID vom User eintragen
+  placeId: '',
+
+  address: {
+    street: '',
+    city: 'Uster',
+    zip: '8610',
+    canton: 'ZH',
+    country: 'CH',
+  },
+  geo: { lat: 47.3469, lng: 8.7178 },
+
+  phone: '+41444310033',
+  phoneFormatted: '044 431 00 33',
+
+  hours: {
+    weekdays: { open: '08:00', close: '18:00' },
+    saturday: { open: '08:00', close: '14:00' },
+    sunday: null,
+  },
+  hoursDisplay: 'Mo–Fr 08:00–18:00 · Sa 08:00–14:00',
+
+  priceRange: 'CHF 95–170',
+
+  rating: { value: 4.9, count: 20, max: 5 },
+
+  gbpCategories: {
+    primary: 'Fahrschule',
+    secondary: [],
+  },
+
+  services: [
+    { name: 'Auto Fahrschule Uster', url: 'https://drivingteam.ch/fahrschule-uster/' },
+    { name: 'VKU Kurs Zürich', url: 'https://drivingteam.ch/vku-kurs-zuerich/' },
+    { name: 'Nothelferkurs Zürich', url: 'https://drivingteam.ch/nothelferkurs-zuerich/' },
+  ],
+}
+
 // ── Alle Standorte als Array (für Loops) ─────────────────────
-export const ALL_LOCATIONS = [LOCATION_ZUERICH, LOCATION_LACHEN] as const
+export const ALL_LOCATIONS = [LOCATION_ZUERICH, LOCATION_LACHEN, LOCATION_SPREITENBACH, LOCATION_USTER] as const
 
 // ── Rückwärtskompatibilität: BUSINESS zeigt auf Hauptstandort ─
 // (wird in index.vue und default.vue verwendet)
