@@ -213,12 +213,11 @@ export const LOCATION_SPREITENBACH: Location = {
 // ── Standort: Uster ──────────────────────────────────────────
 export const LOCATION_USTER: Location = {
   id: 'uster',
-  gbpName: 'Driving Team Fahrschule Uster',
-  // TODO: Place ID vom User eintragen
-  placeId: '',
+  gbpName: 'Fahrschule Uster - Driving Team - Auto - Motorrad - Motorboot',
+  placeId: 'ChIJtRgKpBClmkcRxXQxbtz0uBA',
 
   address: {
-    street: '',
+    street: 'Weiherweg 2',
     city: 'Uster',
     zip: '8610',
     canton: 'ZH',
@@ -242,11 +241,13 @@ export const LOCATION_USTER: Location = {
 
   gbpCategories: {
     primary: 'Fahrschule',
-    secondary: [],
+    secondary: ['Motorradschule', 'Motorbootfahrschule'],
   },
 
   services: [
     { name: 'Auto Fahrschule Uster', url: 'https://drivingteam.ch/fahrschule-uster/' },
+    { name: 'Motorrad Fahrschule', url: 'https://drivingteam.ch/motorrad-fahrschule/' },
+    { name: 'Motorboot Fahrschule', url: 'https://drivingteam.ch/motorboot-fahrschule/' },
     { name: 'VKU Kurs Zürich', url: 'https://drivingteam.ch/vku-kurs-zuerich/' },
     { name: 'Nothelferkurs Zürich', url: 'https://drivingteam.ch/nothelferkurs-zuerich/' },
   ],
