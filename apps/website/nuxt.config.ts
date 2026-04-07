@@ -109,6 +109,8 @@ export default defineNuxtConfig({
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN',
         'X-XSS-Protection': '1; mode=block',
+        // HTML-Seiten nie cachen – Browser/CDN soll immer die aktuelle Version mit korrekten Asset-Hashes holen
+        'Cache-Control': 'public, max-age=0, must-revalidate',
       },
     },
     '/images/**': {
