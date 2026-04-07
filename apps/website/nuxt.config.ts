@@ -2,6 +2,16 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-03-24',
   modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image'],
 
+  runtimeConfig: {
+    // Server-only (nicht im Browser sichtbar)
+    googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY ?? '',
+    public: {
+      // Place IDs sind öffentlich – kein Sicherheitsrisiko
+      placesIdZuerich: process.env.GOOGLE_PLACE_ID_ZUERICH ?? '',
+      placesIdLachen: process.env.GOOGLE_PLACE_ID_LACHEN ?? '',
+    },
+  },
+
   image: {
     provider: 'vercel',
     quality: 80,
