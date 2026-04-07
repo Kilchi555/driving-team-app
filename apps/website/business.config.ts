@@ -244,7 +244,7 @@ export const LOCATION_SPREITENBACH: Location = {
 
   priceRange: 'CHF 95–170',
 
-  rating: { value: 4.9, count: 25, max: 5 },
+  rating: { value: 5.0, count: 9, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
@@ -286,7 +286,7 @@ export const LOCATION_USTER: Location = {
 
   priceRange: 'CHF 95–170',
 
-  rating: { value: 4.9, count: 20, max: 5 },
+  rating: { value: 5.0, count: 25, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
