@@ -397,12 +397,12 @@
             <h2 class="font-bold text-lg mb-5">Kontakt</h2>
             <ul class="space-y-3 text-sm text-gray-300">
               <li>
-                <a href="tel:0444310033" class="hover:text-white transition">044 431 00 33</a>
+                <a :href="`tel:${BUSINESS.phone}`" class="hover:text-white transition">{{ BUSINESS.phoneFormatted }}</a>
               </li>
               <li>
-                <a href="mailto:info@drivingteam.ch" class="hover:text-white transition">info@drivingteam.ch</a>
+                <a :href="`mailto:${BUSINESS.email}`" class="hover:text-white transition">{{ BUSINESS.email }}</a>
               </li>
-              <li class="text-gray-400">Montag bis Freitag : 08:00 - 12:00 / 13:00 - 17:00</li>
+              <li class="text-gray-400">{{ BUSINESS.hoursDisplay }}</li>
             </ul>
           </div>
 
@@ -513,6 +513,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { BUSINESS } from '~/business.config'
 
 const showDesktopMenu = ref(false)
 const openSection = ref('')
