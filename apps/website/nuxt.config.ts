@@ -4,7 +4,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     // Server-only (nicht im Browser sichtbar)
-    googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY ?? '',
+    // Nutzt den bestehenden VITE_GOOGLE_MAPS_API_KEY – Places API muss aktiviert sein
+    googlePlacesApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_PLACES_API_KEY ?? '',
     public: {
       // Place IDs sind öffentlich – kein Sicherheitsrisiko
       placesIdZuerich: process.env.GOOGLE_PLACE_ID_ZUERICH ?? '',
