@@ -371,6 +371,9 @@
           <a href="/anhaenger-fahrschule-zuerich/" class="inline-block border-2 border-orange-600 text-orange-600 px-6 py-2 rounded hover:bg-orange-50 transition" aria-label="Anhänger Fahrschule Zürich – Kategorie BE Zürich">
             📍 Anhänger Fahrschule Zürich
           </a>
+          <a href="/anhaenger-pruefung/" class="inline-block border-2 border-blue-600 text-blue-600 px-6 py-2 rounded hover:bg-blue-50 transition" aria-label="Anhängerprüfung Schweiz – Alles zur Kategorie BE Prüfung">
+            📋 Zur Anhängerprüfung
+          </a>
         </div>
       </div>
     </section>

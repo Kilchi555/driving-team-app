@@ -429,6 +429,9 @@
           <a href="/motorrad-grundkurs/" class="inline-block border-2 border-gray-400 text-gray-700 px-6 py-2 rounded hover:bg-gray-50 transition" aria-label="Motorrad Grundkurs – Alle Standorte">
             🏍️ Motorrad Grundkurse
           </a>
+          <a href="/motorrad-a1/" class="inline-block border-2 border-blue-600 text-blue-600 px-6 py-2 rounded hover:bg-blue-50 transition" aria-label="Motorrad A1 Führerschein – 125cc ab 16 Jahren">
+            🏍️ Motorrad A1 (125cc)
+          </a>
         </div>
       </div>
     </section>

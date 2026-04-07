@@ -22,6 +22,24 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/schleuderkurs/</loc>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/anhaenger-pruefung/</loc>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/motorrad-a1/</loc>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/fahrstunden-zuerich/</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
