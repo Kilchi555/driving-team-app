@@ -107,7 +107,7 @@ export const LOCATION_ZUERICH: Location = {
 
   priceRange: 'CHF 95–170',
 
-  rating: { value: 4.9, count: 366, max: 5 },
+  rating: { value: 4.9, count: 368, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
@@ -155,7 +155,7 @@ export const LOCATION_LACHEN: Location = {
 
   priceRange: 'CHF 95–170',
 
-  rating: { value: 4.8, count: 87, max: 5 },
+  rating: { value: 5.0, count: 256, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
