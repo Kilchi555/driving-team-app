@@ -168,6 +168,50 @@ export const LOCATION_LACHEN: Location = {
   ],
 }
 
+// ── Standort: Pfäffikon SZ ───────────────────────────────────
+export const LOCATION_PFAEFFIKON: Location = {
+  id: 'pfaeffikon',
+  gbpName: 'Fahrschule Pfäffikon SZ - Driving Team',
+  // Place ID nach GBP-Erstellung eintragen
+  placeId: '',
+
+  address: {
+    street: 'Hofacker 2',
+    city: 'Pfäffikon',
+    zip: '8808',
+    canton: 'SZ',
+    country: 'CH',
+  },
+  geo: { lat: 47.2068, lng: 8.7774 },
+
+  phone: '+41444310033',
+  phoneFormatted: '044 431 00 33',
+
+  hours: {
+    weekdays: { open: '07:00', close: '20:00' },
+    saturday: { open: '08:00', close: '17:00' },
+    sunday: null,
+  },
+  hoursDisplay: 'Mo–Fr 07:00–20:00 · Sa 08:00–17:00',
+
+  priceRange: 'CHF 95–170',
+
+  rating: { value: 4.9, count: 30, max: 5 },
+
+  gbpCategories: {
+    primary: 'Fahrschule',
+    secondary: ['Motorradschule'],
+  },
+
+  services: [
+    { name: 'Auto Fahrschule Pfäffikon SZ', url: 'https://drivingteam.ch/fahrschule-pfaeffikon/' },
+    { name: 'Motorrad Fahrschule', url: 'https://drivingteam.ch/motorrad-fahrschule/' },
+    { name: 'Anhänger Fahrschule', url: 'https://drivingteam.ch/anhaenger-fahrschule/' },
+    { name: 'WAB Kurse', url: 'https://drivingteam.ch/wab-kurse-zuerich/' },
+    { name: 'Nothelferkurs', url: 'https://drivingteam.ch/nothelferkurs/' },
+  ],
+}
+
 // ── Standort: Spreitenbach (GBP: "Fahrschule Aargau – Driving Team") ──
 export const LOCATION_SPREITENBACH: Location = {
   id: 'spreitenbach',
@@ -254,7 +298,7 @@ export const LOCATION_USTER: Location = {
 }
 
 // ── Alle Standorte als Array (für Loops) ─────────────────────
-export const ALL_LOCATIONS = [LOCATION_ZUERICH, LOCATION_LACHEN, LOCATION_SPREITENBACH, LOCATION_USTER] as const
+export const ALL_LOCATIONS = [LOCATION_ZUERICH, LOCATION_LACHEN, LOCATION_SPREITENBACH, LOCATION_USTER, LOCATION_PFAEFFIKON] as const
 
 // ── Rückwärtskompatibilität: BUSINESS zeigt auf Hauptstandort ─
 // (wird in index.vue und default.vue verwendet)

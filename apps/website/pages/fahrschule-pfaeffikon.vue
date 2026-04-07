@@ -185,74 +185,39 @@
 </template>
 
 <script setup lang="ts">
-const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": ["DrivingSchool", "LocalBusiness"],
-    "@id": "https://drivingteam.ch/fahrschule-pfaeffikon/#driving-school",
-    "name": "Driving Team Fahrschule Pfäffikon SZ",
-    "description": "Professionelle Fahrausbildung in Pfäffikon SZ für alle Fahrzeugkategorien. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 95.-/Lektion, flexible Treffpunkte.",
-    "url": "https://drivingteam.ch/fahrschule-pfaeffikon/",
-    "telephone": "+41444310033",
-    "image": "https://drivingteam.ch/images/locations/pfaeffikon-hero.webp",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Pfäffikon",
-      "postalCode": "8808",
-      "addressRegion": "SZ",
-      "addressCountry": "CH"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 47.2068,
-      "longitude": 8.7774
-    },
-    "openingHoursSpecification": [
-      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "20:00" },
-      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "17:00" }
-    ],
-    "priceRange": "CHF 95.-–200.-",
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Fahrausbildung Pfäffikon SZ",
-      "itemListElement": [
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Auto Fahrstunden Pfäffikon", "description": "Fahrstunden Kategorie B in Pfäffikon SZ" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Motorrad Fahrstunden Pfäffikon", "description": "Motorrad Fahrstunden A1/A35kW/A in Pfäffikon SZ" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Anhänger Fahrstunden Pfäffikon", "description": "Fahrstunden Kategorie BE in Pfäffikon SZ" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "WAB Kurse Zürich Oberland", "description": "WAB-Kurse für Lastwagen/Bus in Pfäffikon SZ" } }
-      ]
-    },
-    "sameAs": ["https://drivingteam.ch"]
-  }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "LocalBusiness", "name": "Driving Team Fahrschule Pfäffikon SZ", "url": "https://drivingteam.ch/fahrschule-pfaeffikon/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 368, "reviewCount": 368 }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
-      { "@type": "ListItem", "position": 2, "name": "Fahrschule Pfäffikon SZ", "item": "https://drivingteam.ch/fahrschule-pfaeffikon/" }
-    ]
-  }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      { "@type": "Question", "name": "Wie viele Fahrstunden benötige ich in Pfäffikon?", "acceptedAnswer": { "@type": "Answer", "text": "Das hängt von deiner Vorerfahrung und deinem Lerntempo ab. Bei regelmässigem Üben (2-4 Mal pro Woche inkl. privaten Lernfahrten) erreichst du dein Ziel am schnellsten." } },
-      { "@type": "Question", "name": "Wo bietet Driving Team Pfäffikon Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Treffpunkte sind flexibel – wir holen euch wenn möglich zu Hause oder bei der Arbeit ab." } },
-      { "@type": "Question", "name": "Was kosten Fahrstunden in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Fahrstunden starten ab CHF 95.-/45min. Hinzu kommt eine einmalige Admin- und Versicherungspauschale für die gesamte Fahrausbildung." } },
-      { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Pfäffikon/SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Die häufigsten Prüfungsrouten ab Pfäffikon/SZ führen nach Altendorf/Lachen, Feusisberg/Schindellegi, Wollerau/Samstagern, Freienbach/Richterswil und Rapperswil/Jona." } },
-      { "@type": "Question", "name": "Was sind die Voraussetzungen für private Lernfahrten?", "acceptedAnswer": { "@type": "Answer", "text": "Die Begleitperson muss einen gültigen Führerausweis haben, nüchtern sein (0,0 Promille), mindestens 23 Jahre alt sein und die Prüfung vor mindestens 3 Jahren bestanden haben." } },
-      { "@type": "Question", "name": "Was ist die Admin- und Versicherungspauschale?", "acceptedAnswer": { "@type": "Answer", "text": "Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet die Aufwände ausserhalb der Fahrlektionen (z.B. Anmeldung zur Führerprüfung) sowie die spezielle Vollkaskoversicherung." } },
-      { "@type": "Question", "name": "Wie hoch sind die ungefähren Gesamtkosten in Pfäffikon?", "acceptedAnswer": { "@type": "Answer", "text": "Die Gesamtkosten hängen von der Anzahl Fahrstunden ab. Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–." } },
-      { "@type": "Question", "name": "Ab welchem Alter kann ich mit der Fahrausbildung starten?", "acceptedAnswer": { "@type": "Answer", "text": "Für 50ccm Motorräder ab 15 Jahren, für 125ccm ab 16 Jahren. Lernfahrten fürs Auto sind ab dem 17. Geburtstag erlaubt." } },
-      { "@type": "Question", "name": "Bietet Driving Team Pfäffikon auch WAB-Kurse an?", "acceptedAnswer": { "@type": "Answer", "text": "Ja! WAB-Kurse (Weiterbildung für Berufschauffeure) werden in Pfäffikon im Zürich Oberland angeboten. Mehr Infos unter /wab-kurse-zuerich/." } }
-    ]
-  }) }
-]
-useHead({ script: jsonLdScripts })
-
+import { buildLocationSchema, LOCATION_PFAEFFIKON } from '~/business.config'
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
 
 const instructors = getInstructorsByLocation('pfaeffikon')
+
+const jsonLdScripts = [
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify(buildLocationSchema(LOCATION_PFAEFFIKON)),
+  },
+  {
+    type: 'application/ld+json', innerHTML: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://drivingteam.ch/' },
+        { '@type': 'ListItem', position: 2, name: 'Fahrschule Pfäffikon SZ', item: 'https://drivingteam.ch/fahrschule-pfaeffikon/' },
+      ],
+    }),
+  },
+  {
+    type: 'application/ld+json', innerHTML: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        { '@type': 'Question', name: 'Wie viele Fahrstunden benötige ich in Pfäffikon?', acceptedAnswer: { '@type': 'Answer', text: 'Das hängt von deiner Vorerfahrung ab. Bei regelmässigem Üben (2–4 Mal pro Woche inkl. privaten Lernfahrten) erreichst du dein Ziel am schnellsten.' } },
+        { '@type': 'Question', name: 'Wo bietet Driving Team Pfäffikon Fahrstunden an?', acceptedAnswer: { '@type': 'Answer', text: 'Das Tätigkeitsgebiet erstreckt sich von Hinwil bis Schwyz und von Horgen bis Ziegelbrücke. Treffpunkte sind flexibel.' } },
+        { '@type': 'Question', name: 'Welches sind die häufigsten Prüfungsrouten ab Pfäffikon/SZ?', acceptedAnswer: { '@type': 'Answer', text: 'Die häufigsten Prüfungsrouten führen nach Altendorf/Lachen, Feusisberg/Schindellegi, Wollerau/Samstagern, Freienbach/Richterswil und Rapperswil/Jona.' } },
+        { '@type': 'Question', name: 'Wie hoch sind die ungefähren Gesamtkosten?', acceptedAnswer: { '@type': 'Answer', text: 'Mit 15 Lektionen ca. CHF 2\'250.–, mit 30 Lektionen ca. CHF 3\'530.– inkl. aller Kurse und Gebühren.' } },
+      ],
+    }),
+  },
+]
+useHead({ script: jsonLdScripts })
 </script>
