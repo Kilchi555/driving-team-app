@@ -50,8 +50,8 @@ export default defineEventHandler(async (event): Promise<PlacesRatingResult> => 
     fetchedAt: new Date().toISOString(),
   }
 
-  // Cache for 1 hour (3600 seconds)
-  await storage.setItem(cacheKey, result, { ttl: 3600 })
+  // Cache for 24 hours (86400 seconds) – ratings don't change that fast
+  await storage.setItem(cacheKey, result, { ttl: 86400 })
 
   return result
 })
