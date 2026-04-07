@@ -238,6 +238,8 @@ export default defineNuxtConfig({
     '/auto-fahrschule-aargau/': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
     '/fahrschule-aargau': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
     '/fahrschule-aargau/': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
+    '/fahrschule-pfaeffikon': { redirect: { to: '/fahrschule-pfaeffikon-sz/', statusCode: 301 } },
+    '/fahrschule-pfaeffikon/': { redirect: { to: '/fahrschule-pfaeffikon-sz/', statusCode: 301 } },
     // '/auto-fahrschule-zürich' removed - conflicts with ASCII variant on Vercel (symlink EEXIST)
     '/en/auto-fahrschule-st.gallen': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },
     '/en/auto-fahrschule-st.gallen/': { redirect: { to: '/fahrschule-stgallen/', statusCode: 301 } },

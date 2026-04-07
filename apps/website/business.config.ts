@@ -50,6 +50,7 @@ interface Location {
    */
   placeId: string
   address: {
+  address: {
     street: string
     city: string
     district?: string
@@ -74,6 +75,8 @@ interface Location {
   gbpCategories: { primary: string; secondary: string[] }
   /** Hauptdienstleistungen dieses Standorts mit URL */
   services: Array<{ name: string; url: string }>
+  /** Einzugsgebiet für Schema areaServed */
+  areaServed?: string[]
 }
 
 // ── Standort: Zürich ─────────────────────────────────────────
@@ -182,7 +185,7 @@ export const LOCATION_PFAEFFIKON: Location = {
     canton: 'SZ',
     country: 'CH',
   },
-  geo: { lat: 47.2068, lng: 8.7774 },
+  geo: { lat: 47.2091, lng: 8.7823 },
 
   phone: '+41444310033',
   phoneFormatted: '044 431 00 33',
@@ -204,12 +207,14 @@ export const LOCATION_PFAEFFIKON: Location = {
   },
 
   services: [
-    { name: 'Auto Fahrschule Pfäffikon SZ', url: 'https://drivingteam.ch/fahrschule-pfaeffikon/' },
+    { name: 'Auto Fahrschule Pfäffikon SZ', url: 'https://drivingteam.ch/fahrschule-pfaeffikon-sz/' },
     { name: 'Motorrad Fahrschule', url: 'https://drivingteam.ch/motorrad-fahrschule/' },
     { name: 'Anhänger Fahrschule', url: 'https://drivingteam.ch/anhaenger-fahrschule/' },
     { name: 'WAB Kurse', url: 'https://drivingteam.ch/wab-kurse-zuerich/' },
     { name: 'Nothelferkurs', url: 'https://drivingteam.ch/nothelferkurs/' },
   ],
+
+  areaServed: ['Pfäffikon SZ', 'Freienbach', 'Wollerau', 'Feusisberg', 'Schindellegi', 'Altendorf', 'Lachen', 'Wädenswil', 'Rapperswil-Jona', 'Bezirk Höfe', 'Ausserschwyz'],
 }
 
 // ── Standort: Spreitenbach (GBP: "Fahrschule Aargau – Driving Team") ──
@@ -414,6 +419,9 @@ export function buildLocationSchema(loc: Location) {
         itemOffered: { '@type': 'Service', name: s.name, url: s.url },
       })),
     },
+    ...(loc.areaServed && {
+      areaServed: loc.areaServed.map(name => ({ '@type': 'City', name })),
+    }),
     aggregateRating: buildRating(loc),
     sameAs: Object.values(BRAND.social),
   }
