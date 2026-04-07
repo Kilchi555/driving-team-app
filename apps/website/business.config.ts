@@ -80,8 +80,7 @@ interface Location {
 export const LOCATION_ZUERICH: Location = {
   id: 'zuerich',
   gbpName: 'Driving Team Fahrschule Zürich',
-  // TODO: Place ID eintragen → maps.google.com → Business suchen → Share-Link kopieren
-  placeId: '',
+  placeId: 'ChIJU29cFMgLkEcRzMfDub2bh9s',
 
   address: {
     street: 'Baslerstrasse 145',
@@ -130,11 +129,10 @@ export const LOCATION_ZUERICH: Location = {
 export const LOCATION_LACHEN: Location = {
   id: 'lachen',
   gbpName: 'Driving Team Fahrschule Lachen',
-  // TODO: Place ID eintragen → maps.google.com → Business suchen → Share-Link kopieren
-  placeId: '',
+  placeId: 'ChIJqdlnJXTJmkcRAgI05nvPXFU',
 
   address: {
-    street: 'Bahnhofstrasse 19',
+    street: 'Herrengasse 17',
     city: 'Lachen',
     zip: '8853',
     canton: 'SZ',
