@@ -5,6 +5,7 @@ const lessonsFrom = (baseYear: number, baseLessons: number) => baseLessons + (cu
 export interface Diploma {
   title: string       // e.g. "Eidg. dipl. Fahrlehrer Kat. B"
   category: string    // e.g. "B", "A", "BE", "C", "D", "Boot"
+  label?: string      // Override für Badge-Text, z.B. "Mental Coach" statt "Kat. Mental"
   year?: number       // Jahr des Diploms
   image?: string      // Pfad zum Diplom-Scan, z.B. '/images/diplome/pascal-kat-b.webp'
   landscape?: boolean // true für Querformat-Diplome
@@ -41,7 +42,9 @@ export const instructorData: Record<string, Instructor[]> = {
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
         { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/pascal-fachausweis-b.png' },
-        { title: 'Eidg. dipl. Fahrlehrer Kat. A', category: 'A', image: '' },
+        { title: 'SFV Zusatzqualifikation Motorradfahrlehrer (Modulabschluss A)', category: 'A-Moto', year: 2019, image: '/images/diplome/pascal-sfv-motorrad.png' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2022, image: '/images/diplome/pascal-sveb-kursleiter.png' },
+        { title: 'Dipl. Mentaltrainer – MyMentalCoach Schweiz', category: 'Mental', label: 'Mental Coach', year: 2025, image: '/images/diplome/pascal-mentaltrainer.png', landscape: true },
       ]
     },
     {
@@ -57,7 +60,7 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 84,
       languages: ['Deutsch', 'Albanisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
       ]
     },
@@ -74,7 +77,7 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 83,
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', image: '' },
       ]
     }
   ],
@@ -93,9 +96,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 86,
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2016, image: '/images/diplome/marc-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
         { title: 'Bootsführerausweis Kat. A', category: 'Boot', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/marc-sveb-kursleiter.png' },
       ]
     },
     {
@@ -111,9 +115,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 87,
       languages: ['Deutsch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
-        { title: 'Eidg. dipl. Fahrlehrer Kat. C', category: 'C', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2021, image: '/images/diplome/peter-fachausweis-b.png' },
+        { title: 'L-drive Zusatzqualifikation Lastwagenfahrlehrer (Modulabschluss C)', category: 'C', year: 2023, image: '/images/diplome/peter-ldrive-lastwagen-c.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. D', category: 'D', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/peter-sveb-kursleiter.png' },
       ]
     },
     {
@@ -149,7 +154,9 @@ export const instructorData: Record<string, Instructor[]> = {
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
         { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/pascal-fachausweis-b.png' },
-        { title: 'Eidg. dipl. Fahrlehrer Kat. A', category: 'A', image: '' },
+        { title: 'SFV Zusatzqualifikation Motorradfahrlehrer (Modulabschluss A)', category: 'A-Moto', year: 2019, image: '/images/diplome/pascal-sfv-motorrad.png' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2022, image: '/images/diplome/pascal-sveb-kursleiter.png' },
+        { title: 'Dipl. Mentaltrainer – MyMentalCoach Schweiz', category: 'Mental', label: 'Mental Coach', year: 2025, image: '/images/diplome/pascal-mentaltrainer.png', landscape: true },
       ]
     },
   ],
@@ -168,9 +175,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 86,
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2016, image: '/images/diplome/marc-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
         { title: 'Bootsführerausweis Kat. A', category: 'Boot', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/marc-sveb-kursleiter.png' },
       ]
     },
     {
@@ -186,9 +194,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 87,
       languages: ['Deutsch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
-        { title: 'Eidg. dipl. Fahrlehrer Kat. C', category: 'C', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2021, image: '/images/diplome/peter-fachausweis-b.png' },
+        { title: 'L-drive Zusatzqualifikation Lastwagenfahrlehrer (Modulabschluss C)', category: 'C', year: 2023, image: '/images/diplome/peter-ldrive-lastwagen-c.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. D', category: 'D', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/peter-sveb-kursleiter.png' },
       ]
     }
   ],
@@ -207,7 +216,7 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 84,
       languages: ['Deutsch', 'Albanisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
       ]
     }
@@ -227,7 +236,7 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 84,
       languages: ['Deutsch', 'Albanisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
       ]
     }
@@ -247,9 +256,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 86,
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2016, image: '/images/diplome/marc-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
         { title: 'Bootsführerausweis Kat. A', category: 'Boot', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/marc-sveb-kursleiter.png' },
       ]
     },
     {
@@ -265,9 +275,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 87,
       languages: ['Deutsch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
-        { title: 'Eidg. dipl. Fahrlehrer Kat. C', category: 'C', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2021, image: '/images/diplome/peter-fachausweis-b.png' },
+        { title: 'L-drive Zusatzqualifikation Lastwagenfahrlehrer (Modulabschluss C)', category: 'C', year: 2023, image: '/images/diplome/peter-ldrive-lastwagen-c.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. D', category: 'D', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/peter-sveb-kursleiter.png' },
       ]
     }
   ],
@@ -286,9 +297,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 86,
       languages: ['Deutsch', 'Englisch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2016, image: '/images/diplome/marc-fachausweis-b.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
         { title: 'Bootsführerausweis Kat. A', category: 'Boot', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/marc-sveb-kursleiter.png' },
       ]
     },
     {
@@ -304,9 +316,10 @@ export const instructorData: Record<string, Instructor[]> = {
       successRate: 87,
       languages: ['Deutsch'],
       diplomas: [
-        { title: 'Eidg. dipl. Fahrlehrer Kat. B', category: 'B', image: '' },
-        { title: 'Eidg. dipl. Fahrlehrer Kat. C', category: 'C', image: '' },
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2021, image: '/images/diplome/peter-fachausweis-b.png' },
+        { title: 'L-drive Zusatzqualifikation Lastwagenfahrlehrer (Modulabschluss C)', category: 'C', year: 2023, image: '/images/diplome/peter-ldrive-lastwagen-c.png' },
         { title: 'Eidg. dipl. Fahrlehrer Kat. D', category: 'D', image: '' },
+        { title: 'SVEB Zertifikat Kursleiter/in – Ada FA-M1', category: 'SVEB', year: 2023, image: '/images/diplome/peter-sveb-kursleiter.png' },
       ]
     },
     {

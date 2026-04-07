@@ -46,7 +46,7 @@
                     class="bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-amber-100 transition"
                     :title="diploma.title"
                     @click.stop="diploma.image ? openLightbox(diploma) : null"
-                  >🎓 Kat. {{ diploma.category }}</span>
+                  >🎓 {{ diploma.label ?? 'Kat. ' + diploma.category }}</span>
                 </div>
                 <p class="text-sm text-primary-600 font-semibold">{{ instructor.title }}</p>
               </div>
@@ -130,7 +130,7 @@
                         📜
                       </div>
                       <div>
-                        <p class="text-xs font-bold text-amber-800">Kat. {{ diploma.category }}</p>
+                        <p class="text-xs font-bold text-amber-800">{{ diploma.label ?? 'Kat. ' + diploma.category }}</p>
                         <p class="text-xs text-gray-600 leading-tight max-w-32">{{ diploma.title }}</p>
                         <p v-if="diploma.year" class="text-xs text-gray-400">{{ diploma.year }}</p>
                         <p v-if="diploma.image" class="text-xs text-amber-600 mt-0.5">↗ vergrössern</p>
@@ -178,12 +178,12 @@
             @click.self="closeLightbox"
           >
             <div
-              class="relative bg-white rounded-2xl shadow-2xl p-6 w-full"
+              class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-h-[90vh] overflow-y-auto"
               :class="lightboxDiploma.landscape ? 'max-w-2xl' : 'max-w-lg'"
             >
               <button
                 @click="closeLightbox"
-                class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
+                class="sticky top-0 float-right w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
               >✕</button>
               <div class="text-center mb-4">
                 <p class="font-bold text-gray-900">{{ lightboxDiploma.title }}</p>
