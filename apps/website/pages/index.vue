@@ -565,103 +565,10 @@
 </template>
 
 <script setup lang="ts">
+import { BUSINESS, buildHomepageSchema } from '~/business.config'
+
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": ["DrivingSchool", "LocalBusiness"],
-    "@id": "https://drivingteam.ch/#drivingschool",
-    "name": "Driving Team Fahrschule",
-    "alternateName": "Driving Team",
-    "url": "https://drivingteam.ch",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://drivingteam.ch/logo.webp",
-      "width": 200,
-      "height": 60
-    },
-    "image": "https://drivingteam.ch/images/og-image.webp",
-    "description": "Professionelle Fahrschule in Zürich-Altstetten & Lachen SZ – Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger und Motorboot. Eidgenössisch diplomierte Fahrlehrer seit 1994. 85% Erfolgsquote.",
-    "foundingDate": "1994",
-    "telephone": "+41444310033",
-    "email": "info@drivingteam.ch",
-    "priceRange": "CHF 95–170",
-    "currenciesAccepted": "CHF",
-    "paymentAccepted": "Überweisung, Bar, Twint",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "Baslerstrasse 145",
-      "addressLocality": "Zürich",
-      "addressRegion": "ZH",
-      "postalCode": "8048",
-      "addressCountry": "CH"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 47.3914,
-      "longitude": 8.4897
-    },
-    "openingHoursSpecification": [
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
-        "opens": "08:00",
-        "closes": "18:00"
-      },
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": "Saturday",
-        "opens": "08:00",
-        "closes": "14:00"
-      }
-    ],
-    "areaServed": [
-      {"@type": "City", "name": "Zürich"},
-      {"@type": "City", "name": "Lachen"},
-      {"@type": "City", "name": "Uster"},
-      {"@type": "City", "name": "Dietikon"},
-      {"@type": "City", "name": "Schlieren"},
-      {"@type": "AdministrativeArea", "name": "Kanton Zürich"},
-      {"@type": "AdministrativeArea", "name": "Kanton Schwyz"}
-    ],
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Fahrausbildung Driving Team",
-      "itemListElement": [
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Auto Fahrschule Zürich", "url": "https://drivingteam.ch/auto-fahrschule-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Motorrad Fahrschule Zürich", "url": "https://drivingteam.ch/motorrad-fahrschule-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Lastwagen Fahrschule Zürich", "url": "https://drivingteam.ch/lastwagen-fahrschule/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Bus Fahrschule Zürich", "url": "https://drivingteam.ch/bus-fahrschule/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Taxi Fahrschule Zürich", "url": "https://drivingteam.ch/taxi-fahrschule-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Anhänger Fahrschule Zürich", "url": "https://drivingteam.ch/anhaenger-fahrschule-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "VKU Kurs Zürich", "url": "https://drivingteam.ch/vku-kurs-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Nothelferkurs Zürich", "url": "https://drivingteam.ch/nothelferkurs-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "WAB Kurs Zürich", "url": "https://drivingteam.ch/wab-kurse-zuerich/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Motorboot Fahrschule", "url": "https://drivingteam.ch/motorboot-fahrschule/"}}
-      ]
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "bestRating": "5",
-      "worstRating": "1",
-      "reviewCount": "366"
-    },
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "contactType": "Customer Service",
-      "telephone": "+41-44-431-0033",
-      "email": "info@drivingteam.ch",
-      "availableLanguage": ["German", "English"]
-    },
-    "sameAs": [
-      "https://www.instagram.com/fahrschule_driving_team_zurich/",
-      "https://www.instagram.com/fahrschule_drivingteam_lachen",
-      "https://www.facebook.com/drivingteam",
-      "https://www.facebook.com/drivingteamlachen/",
-      "https://www.youtube.com/channel/UC5nqMUHvHym4xW-ro1aX90Q",
-      "https://www.tiktok.com/@drivingteam.ch"
-    ]
-  }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify(buildHomepageSchema()) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
     "@type": "AggregateRating",
