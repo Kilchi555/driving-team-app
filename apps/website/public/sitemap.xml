@@ -115,19 +115,31 @@
   </url>
   <url>
     <loc>https://drivingteam.ch/lastwagen-fahrschule/</loc>
-    <lastmod>2026-03-23</lastmod>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/lastwagen-fahrschule-zuerich/</loc>
+    <lastmod>2026-04-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/taxi-fahrschule/</loc>
-    <lastmod>2026-03-23</lastmod>
+    <lastmod>2026-04-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/bus-fahrschule/</loc>
-    <lastmod>2026-03-23</lastmod>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/bus-fahrschule-zuerich/</loc>
+    <lastmod>2026-04-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -171,7 +183,13 @@
   </url>
   <url>
     <loc>https://drivingteam.ch/nothelferkurs/</loc>
-    <lastmod>2026-03-23</lastmod>
+    <lastmod>2026-04-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/nothelferkurs-lachen/</loc>
+    <lastmod>2026-04-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

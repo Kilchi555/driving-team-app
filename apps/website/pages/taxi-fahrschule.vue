@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Taxi Fahrstunden BPT (121/122) - Zertifizierte Ausbildung | Driving Team</Title>
-      <Meta name="description" content="Taxi Fahrstunden Zürich - BPT zertifizierte Ausbildung (121/122). Theory & Practice, professionelle Trainerführerschein-Vorbereitung. Jetzt anmelden!" />
-      <Meta property="og:title" content="Taxi Fahrschule Kategorie BPT | Driving Team" />
-      <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Weg zur Taxiprüfung in 5 Schritten" />
+      <Title>Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team</Title>
+      <Meta name="description" content="Taxi Fahrschule Zürich ✓ BPT zertifizierte Ausbildung Code 121/122 ✓ Prüfungsvorbereitung StVA Zürich ✓ Kat. B Erweiterung auf Taxi ✓ Flexible Termine. Jetzt anmelden!" />
+      <Meta property="og:title" content="Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team" />
+      <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Ausbildung Code 121/122 in 5 Schritten zur Taxiprüfung" />
       <Meta property="og:url" content="https://drivingteam.ch/taxi-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
       
