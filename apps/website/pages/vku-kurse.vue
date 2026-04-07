@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs | Verkehrskundeunterricht | Driving Team</Title>
-      <Meta name="description" content="VKU Kurs beim Driving Team. Verkehrskundeunterricht in Zürich und Lachen. 8 Stunden in 2 Teilen à 4 Stunden. CHF 190.- inkl. Dokumentation. Jetzt anmelden!" />
-      <Meta property="og:title" content="VKU Kurs – Verkehrskundeunterricht | Driving Team" />
-      <Meta property="og:description" content="Obligatorischer VKU Kurs vor der Fahrprüfung. 8 Stunden, CHF 190.- inkl. Dokumentation. Standorte Zürich & Lachen." />
+      <Title>VKU Kurs Zürich & Lachen | Verkehrskundeunterricht | Driving Team</Title>
+      <Meta name="description" content="VKU Kurs Zürich & Lachen ✓ CHF 190.- inkl. Dokumentation ✓ 8 Stunden (2×4h) ✓ Obligatorisch vor Fahrprüfung ✓ Zürich-Altstetten & Lachen SZ ✓ Flexible Termine. Jetzt anmelden!" />
+      <Meta property="og:title" content="VKU Kurs Zürich & Lachen | Verkehrskundeunterricht | Driving Team" />
+      <Meta property="og:description" content="Obligatorischer VKU Kurs in Zürich & Lachen. 8 Stunden, CHF 190.- inkl. Dokumentation. Standorte Zürich-Altstetten & Lachen SZ." />
       <Meta property="og:url" content="https://drivingteam.ch/vku-kurse/" />
       <Link rel="canonical" href="https://drivingteam.ch/vku-kurse/" />
       

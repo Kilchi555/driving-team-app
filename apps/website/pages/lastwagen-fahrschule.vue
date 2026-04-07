@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagen Fahrschule C1/C/CE – Professionelle Ausbildung</Title>
-      <Meta name="description" content="Lastwagen Fahrstunden Zürich für C1, C & CE. Professionelle LKW-Ausbildung, moderne Fahrzeuge, CZV Grundkurs. Jetzt anmelden!" />
-      <Meta property="og:title" content="LKW Fahrschule Kategorie C1 | C | CE | Driving Team" />
-      <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich und Lachen/SZ – Weg zur Lastwagenprüfung in 5 Schritten" />
+      <Title>Lastwagen Fahrschule Zürich | C1/C/CE Ausbildung | Driving Team</Title>
+      <Meta name="description" content="Lastwagen Fahrschule Zürich ✓ C1, C & CE ✓ Prüfung StVA Regensdorf ✓ CZV Grundkurs ✓ Moderne LKW-Fahrzeuge ✓ ab CHF 160.-/Lektion. Jetzt anmelden!" />
+      <Meta property="og:title" content="Lastwagen Fahrschule Zürich | C1/C/CE | Driving Team" />
+      <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich – C1, C & CE Prüfung am StVA Regensdorf. Weg zur Lastwagenprüfung in 5 Schritten" />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
       
@@ -424,6 +424,16 @@
     <GutscheinSection />
     <PriceSection category="lastwagen" />
     <CtaSection title="Jetzt mit der Lastwagen Fahrschule starten!" :hideCourseButton="true" />
+    <!-- Internal links to city-specific pages -->
+    <section class="bg-gray-50 py-8">
+      <div class="section-container">
+        <div class="flex flex-wrap justify-center gap-3">
+          <a href="/lastwagen-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🚚 Lastwagen Fahrschule Zürich</a>
+          <a href="/bus-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🚌 Bus Fahrschule Zürich</a>
+          <a href="/czv-grundkurs/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">📋 CZV Grundkurs</a>
+        </div>
+      </div>
+    </section>
     <StandorteSection />
     
     <!-- Related/See Also Section -->

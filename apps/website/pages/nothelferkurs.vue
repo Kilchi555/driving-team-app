@@ -223,10 +223,13 @@
 
     <!-- Unsere Gebiete -->
     <section class="section-container">
-      <h3 class="text-xl font-bold mb-4 text-center text-gray-900">Nothelferkurs spezifisch für Zürich</h3>
-      <div class="flex justify-center mb-8">
+      <h3 class="text-xl font-bold mb-4 text-center text-gray-900">Nothelferkurs nach Standort</h3>
+      <div class="flex flex-wrap justify-center gap-4 mb-8">
         <a href="/nothelferkurs-zuerich/" class="inline-flex items-center gap-3 bg-red-600 text-white hover:bg-red-700 font-bold py-3 px-6 rounded-xl transition shadow-lg">
           📍 Nothelferkurs Zürich – Alle Infos & Termine
+        </a>
+        <a href="/nothelferkurs-lachen/" class="inline-flex items-center gap-3 bg-red-700 text-white hover:bg-red-800 font-bold py-3 px-6 rounded-xl transition shadow-lg">
+          📍 Nothelferkurs Lachen SZ – Alle Infos & Termine
         </a>
       </div>
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
