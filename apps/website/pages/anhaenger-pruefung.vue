@@ -52,7 +52,7 @@
       <h2 class="heading-md mb-8 text-center">Was ist die Anhängerprüfung Kategorie BE?</h2>
       <div class="max-w-3xl mx-auto text-gray-700 space-y-4">
         <p>Die Anhängerprüfung (Kategorie BE) erlaubt das Ziehen von Anhängern bis <strong>3'500 kg Gesamtgewicht</strong>. Kein Nothelferkurs, keine Theorieprüfung – nur die praktische Prüfung beim Strassenverkehrsamt.</p>
-        <p>Mit wenigen Fahrstunden zum Ziel: Durchschnittlich 2–4 Lektionen genügen, um zur Prüfung bereit zu sein.</p>
+        <p>Mit wenigen Fahrstunden zum Ziel: Durchschnittlich <strong>5–8 Lektionen</strong> genügen, um zur Prüfung bereit zu sein.</p>
       </div>
     </section>
 

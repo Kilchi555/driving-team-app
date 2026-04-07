@@ -39,7 +39,7 @@
       <div class="section-container">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-center">
           <div class="bg-white rounded-xl p-4 border border-primary-100">
-            <p class="text-3xl font-bold text-primary-600">2–4</p>
+            <p class="text-3xl font-bold text-primary-600">5–8</p>
             <p class="text-sm text-gray-600 mt-1">Ø Fahrstunden</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
@@ -102,7 +102,7 @@
           <div class="space-y-3">
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
-              <div><p class="font-semibold text-gray-900">Lernfahrausweis BE beantragen</p><p class="text-sm text-gray-600">Online beim Strassenverkehrsamt Zürich (STVA Albisgütli) – mit gültigem Kat. B Ausweis. Ca. CHF 30–40.</p></div>
+              <div><p class="font-semibold text-gray-900">Lernfahrausweis BE beantragen</p><p class="text-sm text-gray-600">Online beim Strassenverkehrsamt Zürich (STVA Albisgütli) – mit gültigem Kat. B Ausweis. Ca. CHF 80. Ab 17 Jahren möglich (mit Begleitperson).</p></div>
             </div>
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
@@ -133,7 +133,7 @@
             </div>
             <div class="flex items-start gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-sm text-gray-700"><strong>Lernfahrausweis Kat. BE</strong></p>
+              <p class="text-sm text-gray-700"><strong>Lernfahrausweis Kat. BE</strong> (ab 17 J.)</p>
             </div>
             <div class="flex items-start gap-3">
               <span class="text-green-600 font-bold flex-shrink-0">✓</span>
@@ -146,6 +146,7 @@
           </div>
           <div class="mt-6 p-4 bg-primary-50 rounded-xl border border-primary-100">
             <p class="text-sm text-primary-800">💡 Wir kümmern uns um die Prüfungsanmeldung beim STVA Zürich. Du musst nichts organisieren.</p>
+            <p class="text-sm text-primary-700 mt-2">⚠️ Unter 18 Jahren ist beim Lernfahren eine Begleitperson Pflicht.</p>
           </div>
         </div>
       </div>
@@ -170,7 +171,7 @@
           </details>
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet die Anhängerprüfung in Zürich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Prüfungsgebühr STVA ca. CHF 100–120. Lernfahrausweis BE ca. CHF 30–40. Dazu Fahrstunden ab CHF 120/Lektion. Gesamtkosten ab ca. CHF 500–700 je nach Stundenzahl.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Prüfungsgebühr STVA ca. CHF 130. Lernfahrausweis BE ca. CHF 80. Dazu Fahrstunden ab CHF 120/Lektion sowie Admin- & Versicherungspauschale CHF 120 (einmalig). Gesamtkosten durchschnittlich CHF 1'200–2'000 je nach Stundenzahl.</p>
           </details>
         </div>
       </div>
@@ -214,7 +215,7 @@ const jsonLdScripts = [
     "mainEntity": [
       { "@type": "Question", "name": "Wo findet die Anhängerprüfung in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "In Regensdorf oder Wettingen (Aargau). Welches Zentrum je nach Wohnort." } },
       { "@type": "Question", "name": "Muss ich ein eigenes Fahrzeug mitbringen?", "acceptedAnswer": { "@type": "Answer", "text": "Nein, Driving Team stellt Anhänger und Zugfahrzeug für Fahrstunden und Prüfung." } },
-      { "@type": "Question", "name": "Was kostet die Anhängerprüfung in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Prüfungsgebühr ca. CHF 100–120, Lernfahrausweis ca. CHF 30–40, Fahrstunden ab CHF 120/Lektion. Gesamtkosten ab ca. CHF 500–700." } }
+      { "@type": "Question", "name": "Was kostet die Anhängerprüfung in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Prüfungsgebühr STVA ca. CHF 130, Lernfahrausweis ca. CHF 80, Fahrstunden ab CHF 120/Lektion, Admin-/Versicherungspauschale CHF 120. Gesamtkosten durchschnittlich CHF 1'200–2'000." } }
     ]
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
