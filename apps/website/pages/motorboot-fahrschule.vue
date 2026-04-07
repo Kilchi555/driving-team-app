@@ -225,25 +225,25 @@
       <h2 class="heading-md mb-8 text-center">Zuhause Theorie lernen</h2>
       <p class="text-center text-gray-600 mb-10">Mit diesen Lehrmitteln kannst du ganz bequem von Zuhause auf die Theorieprüfung lernen.</p>
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-        <a href="https://www.boatdriver.ch/e-learning-praxis-motorboot" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
+        <a href="https://www.boatdriver.ch/e-learning-praxis-motorboot" target="_blank" rel="nofollow noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">💻</p>
           <h3 class="font-bold text-gray-800 mb-2">BoatDriver Online</h3>
           <p class="text-sm text-gray-600">Alle offiziellen Prüfungsfragen. Von Bootsfahrschulen empfohlen. Über 100'000 zufriedene Kunden.</p>
           <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
         </a>
-        <a href="https://www.boatdriver.ch/boatdriver-praxisbuch-motorboot-kat-a-d-10226" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
+        <a href="https://www.boatdriver.ch/boatdriver-praxisbuch-motorboot-kat-a-d-10226" target="_blank" rel="nofollow noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">📚</p>
           <h3 class="font-bold text-gray-800 mb-2">BoatDriver Praxis (Buch)</h3>
           <p class="text-sm text-gray-600">Praxis-Handbuch für eine sichere Vorbereitung zur Schweizerischen Motorbootprüfung.</p>
           <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
         </a>
-        <a href="https://boatdriver.ch/" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
+        <a href="https://boatdriver.ch/" target="_blank" rel="nofollow noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">⚓</p>
           <h3 class="font-bold text-gray-800 mb-2">Yacht-Bordbuch</h3>
           <p class="text-sm text-gray-600">Handbuch fürs Cockpit.</p>
           <p class="text-sm text-primary-600 mt-2 font-semibold">→ Jetzt bestellen</p>
         </a>
-        <a href="https://www.boatdriver.ch/boatdriver-map-2" target="_blank" rel="noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
+        <a href="https://www.boatdriver.ch/boatdriver-map-2" target="_blank" rel="nofollow noopener noreferrer" class="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition block">
           <p class="text-3xl mb-3">🗺️</p>
           <h3 class="font-bold text-gray-800 mb-2">BoatDriver Map Zürichsee</h3>
           <p class="text-sm text-gray-600">Wasserfeste Seekarte mit Tiefenangaben und Hafenplänen – Zürichsee, Walensee, Linthkanal.</p>
