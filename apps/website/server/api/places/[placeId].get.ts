@@ -29,22 +29,24 @@ export default defineEventHandler(async (event): Promise<PlacesRatingResult> => 
   const cached = await storage.getItem<PlacesRatingResult>(cacheKey)
   if (cached) return cached
 
-  // Basic-tier fields only (rating, user_ratings_total) = free
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=name,rating,user_ratings_total&key=${apiKey}`
+  // Places API (New) – v1 endpoint, Basic-tier fields = free
+  const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?fields=displayName,rating,userRatingCount&key=${apiKey}`
 
   const response = await $fetch<{
-    status: string
-    result?: { name: string; rating: number; user_ratings_total: number }
+    displayName?: { text: string }
+    rating?: number
+    userRatingCount?: number
+    error?: { message: string }
   }>(url)
 
-  if (response.status !== 'OK' || !response.result) {
-    throw createError({ statusCode: 502, message: `Google Places API error: ${response.status}` })
+  if (response.error || response.rating === undefined) {
+    throw createError({ statusCode: 502, message: `Google Places API error: ${response.error?.message ?? 'no rating returned'}` })
   }
 
   const result: PlacesRatingResult = {
-    name: response.result.name,
-    rating: response.result.rating,
-    reviewCount: response.result.user_ratings_total,
+    name: response.displayName?.text ?? '',
+    rating: response.rating,
+    reviewCount: response.userRatingCount ?? 0,
     fetchedAt: new Date().toISOString(),
   }
 
