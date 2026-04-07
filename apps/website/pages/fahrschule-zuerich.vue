@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich-Altstetten | Auto, Anhänger & Lastwagen</Title>
-      <Meta name="description" content="Fahrschule in Zürich-Altstetten ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 85% Erfolgsquote ✓ Flexible Termine ✓ Professionelle Instruktoren. Jetzt online buchen!" />
-      <Meta name="keywords" content="Fahrschule Zürich-Altstetten, Auto Fahrschule Zürich Altstetten, Motorrad Fahrschule Zürich Altstetten, Anhänger Fahrschule Zürich Altstetten, Lastwagen Fahrschule Zürich Altstetten, Taxi Fahrschule Zürich Altstetten, Bus Fahrschule Zürich Altstetten, Motorboot Fahrschule Zürich Altstetten, Fahrschule Altstetten" />
-      <Meta property="og:title" content="Fahrschule Zürich-Altstetten – Auto & Motorrad | Driving Team" />
+      <Title>Fahrschule Zürich – Standort, Kurse & Team | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Driving Team in Zürich ✓ Auto, Motorrad, Anhänger, Lastwagen ✓ Hauptstandort Zürich-Altstetten ✓ 85% Erfolgsquote ✓ ab CHF 95.- ✓ Jetzt buchen!" />
+      <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Driving Team Zürich, Fahrschule Zürich-Altstetten" />
+      <Meta property="og:title" content="Fahrschule Zürich – Standort & Kurse | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrschule in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
@@ -24,7 +24,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule in Zürich-Altstetten</h1>
+          <h1 class="heading-lg text-white mb-6">Fahrschule Driving Team – Standort Zürich</h1>
           <p class="hidden xs:block text-xl text-white mb-8">Unser Hauptstandort. Professionelle Fahrschule für Auto, Motorrad und Anhänger. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
@@ -37,7 +37,7 @@
     <section class="py-12 md:py-16 bg-gradient-to-b from-primary-50 to-white">
       <div class="max-w-3xl mx-auto px-4 text-center">
         <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-          Herzlich willkommen in unserem Hauptstandort
+          Unser Hauptstandort in Zürich-Altstetten
         </h2>
         <div class="space-y-4 text-gray-700">
           <p class="text-lg leading-relaxed">
@@ -238,6 +238,9 @@
           </a>
           <a href="/driving-school-zurich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Driving School Zurich – English lessons">
             🌍 Driving School Zurich
+          </a>
+          <a href="/fahrschule-altstetten/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Fahrschule Altstetten – Standort Baslerstrasse">
+            📍 Fahrschule Altstetten
           </a>
         </div>
       </div>
