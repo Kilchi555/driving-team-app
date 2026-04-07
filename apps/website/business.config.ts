@@ -42,6 +42,13 @@ interface Location {
   id: string
   /** GBP-Profilname – muss 1:1 übereinstimmen */
   gbpName: string
+  /**
+   * Google Place ID – wird für die Places API verwendet.
+   * Findest du so: maps.google.com → Dein Business suchen → Share → Link kopieren
+   * Oder: https://developers.google.com/maps/documentation/places/web-service/place-id
+   * Format: "ChIJ..." (beginnt immer mit ChIJ)
+   */
+  placeId: string
   address: {
     street: string
     city: string
@@ -73,6 +80,8 @@ interface Location {
 export const LOCATION_ZUERICH: Location = {
   id: 'zuerich',
   gbpName: 'Driving Team Fahrschule Zürich',
+  // TODO: Place ID eintragen → maps.google.com → Business suchen → Share-Link kopieren
+  placeId: '',
 
   address: {
     street: 'Baslerstrasse 145',
@@ -121,6 +130,8 @@ export const LOCATION_ZUERICH: Location = {
 export const LOCATION_LACHEN: Location = {
   id: 'lachen',
   gbpName: 'Driving Team Fahrschule Lachen',
+  // TODO: Place ID eintragen → maps.google.com → Business suchen → Share-Link kopieren
+  placeId: '',
 
   address: {
     street: 'Bahnhofstrasse 19',
