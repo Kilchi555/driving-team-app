@@ -1,20 +1,5 @@
 <template>
   <div>
-    <Head v-if="article">
-      <Title>{{ article.title }} | Blog | Driving Team Fahrschule</Title>
-      <Meta name="description" :content="article.description" />
-      <Meta name="keywords" :content="article.keywords || ''" />
-      <Link rel="canonical" :href="articleUrl" />
-      <Meta property="og:title" :content="article.title" />
-      <Meta property="og:description" :content="article.description" />
-      <Meta property="og:url" :content="articleUrl" />
-      <Meta property="og:type" content="article" />
-      <Meta property="og:image" :content="`https://drivingteam.ch${article.ogImage || '/images/og-image.webp'}`" />
-      <Meta property="article:published_time" :content="article.date" />
-      <Meta property="article:modified_time" :content="article.dateModified || article.date" />
-      <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-    </Head>
-
     <div v-if="article">
 
       <!-- Reading Progress Bar -->
@@ -226,6 +211,29 @@ const { data: article } = await useAsyncData(`blog-${slug}`, async () => {
   const all = await queryCollection('blog').all()
   // Match by frontmatter slug first, fall back to path suffix for reliability
   return all.find(a => a.slug === slug || a.path === `/blog/${slug}`) ?? null
+})
+
+// SSR-safe SEO meta – runs server-side, visible to crawlers without JS
+useSeoMeta({
+  title: () => article.value ? `${article.value.title} | Blog | Driving Team Fahrschule` : 'Blog | Driving Team Fahrschule',
+  description: () => article.value?.description ?? '',
+  ogTitle: () => article.value?.title ?? '',
+  ogDescription: () => article.value?.description ?? '',
+  ogUrl: () => `https://drivingteam.ch/blog/${article.value?.slug}/`,
+  ogType: 'article',
+  ogImage: () => `https://drivingteam.ch${article.value?.ogImage ?? '/images/og-image.webp'}`,
+  robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+})
+
+useHead({
+  link: [
+    { rel: 'canonical', href: () => `https://drivingteam.ch/blog/${article.value?.slug}/` },
+  ],
+  meta: [
+    { property: 'article:published_time', content: () => article.value?.date ?? '' },
+    { property: 'article:modified_time', content: () => article.value?.dateModified ?? article.value?.date ?? '' },
+    { name: 'keywords', content: () => article.value?.keywords ?? '' },
+  ],
 })
 
 const { data: allArticles } = await useAsyncData('blog-all-for-related', () =>
