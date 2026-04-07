@@ -77,7 +77,7 @@
                 :title="diploma.title"
                 @click="diploma.image ? openLightbox(diploma, member.name) : null"
               >
-                📜 Kat. {{ diploma.category }}
+                📜 {{ diploma.label ?? 'Kat. ' + diploma.category }}
                 <span v-if="diploma.image" class="text-amber-500">↗</span>
               </button>
             </div>
@@ -101,12 +101,12 @@
             @click.self="lightboxDiploma = null"
           >
             <div
-              class="relative bg-white rounded-2xl shadow-2xl p-6 w-full"
+              class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-h-[90vh] overflow-y-auto"
               :class="lightboxDiploma.landscape ? 'max-w-2xl' : 'max-w-lg'"
             >
               <button
                 @click="lightboxDiploma = null"
-                class="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
+                class="sticky top-0 float-right w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"
               >✕</button>
               <div class="text-center mb-4">
                 <p class="font-bold text-gray-900 text-sm">{{ lightboxInstructorName }}</p>
