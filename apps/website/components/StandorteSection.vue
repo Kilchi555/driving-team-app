@@ -29,14 +29,14 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'pfaeffikon'" href="/fahrschule-pfaeffikon/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
+        <a v-if="exclude !== 'pfaeffikon'" href="/fahrschule-pfaeffikon-sz/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-blue-50 to-blue-100 overflow-hidden">
-            <img src="/images/locations/pfaeffikon-hero.webp" alt="Fahrschule Pfäffikon/SZ" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/pfaeffikon-hero.webp" alt="Fahrschule Pfäffikon SZ" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6 bg-gradient-to-br from-blue-50 to-blue-100">
-            <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule Pfäffikon/SZ</h3>
-            <p class="text-sm text-gray-600 mb-4">Pfäffikon/SZ & Umgebung</p>
-            <p class="text-xs text-gray-500">Pfäffikon, Lachen, Altendorf, Galgenen, Wangen, Siebnen</p>
+            <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule Pfäffikon SZ</h3>
+            <p class="text-sm text-gray-600 mb-4">Pfäffikon SZ & Bezirk Höfe</p>
+            <p class="text-xs text-gray-500">Pfäffikon SZ, Freienbach, Wollerau, Altendorf, Lachen</p>
             <span class="text-blue-600 font-semibold text-sm mt-4 inline-block hover:text-blue-800">Mehr erfahren →</span>
           </div>
         </a>
