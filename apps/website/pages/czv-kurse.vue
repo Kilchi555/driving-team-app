@@ -412,7 +412,7 @@
             <p class="text-gray-600 text-sm">Fahrschule Dietikon</p>
             <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>
           </a>
-          <a href="/fahrschule-aargau/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+          <a href="/fahrschule-spreitenbach/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
             <p class="text-2xl mb-2">📍 Aargau</p>
             <p class="text-gray-600 text-sm">Fahrschule Aargau</p>
             <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>

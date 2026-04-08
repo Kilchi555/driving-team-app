@@ -76,12 +76,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://drivingteam.ch/fahrschule-aargau/</loc>
-    <lastmod>2026-03-23</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://drivingteam.ch/fahrschule-reichenburg/</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
@@ -89,12 +83,6 @@
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-stgallen/</loc>
-    <lastmod>2026-03-23</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://drivingteam.ch/fahrschule-pfaeffikon/</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
