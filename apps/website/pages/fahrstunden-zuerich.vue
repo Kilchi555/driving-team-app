@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrstunden Zürich ab CHF 95.- | Auto, Motorrad, Anhänger | Driving Team</Title>
+      <Title>Fahrstunden Zürich ab CHF 95.- | Auto, Motorrad, Anhänger</Title>
       <Meta name="description" content="Fahrstunden Zürich ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger ✓ 85% Erfolgsquote ✓ Flexible Zeiten ✓ Online buchen! Professionelle Instruktoren in Zürich-Altstetten." />
       <Meta name="keywords" content="Fahrstunden Zürich, Fahrstunden Zürich Kosten, Auto Fahrstunden Zürich, Motorrad Fahrstunden Zürich, Anhänger Fahrstunden Zürich, Fahrstunden Zürich buchen, Fahrstunden Zürich Preis" />
       <Meta property="og:title" content="Fahrstunden Zürich ab CHF 95.- | Auto & Motorrad | Driving Team" />
@@ -60,7 +60,7 @@
                 <p class="text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div class="group">
-                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">6/7</p>
+                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">6</p>
                 <p class="text-sm text-white/70">Tage verfügbar</p>
               </div>
               <div class="group">
@@ -99,7 +99,7 @@
             </div>
             <div class="group bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">⭐</p>
-              <p class="font-bold mb-1 text-lg">{{ LOCATION_ZUERICH.rating.value }}/5.0</p>
+              <p class="font-bold mb-1 text-lg">{{ LOCATION_ZUERICH.rating.value }}</p>
               <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
             </div>
           </div>
