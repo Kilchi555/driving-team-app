@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Grundkurs Lachen – A1, A35kW & A | Driving Team</Title>
+      <Title>Motorrad Grundkurs Lachen SZ ✓ CHF 570.- | Max. 5 Pers.</Title>
       <Meta name="description" content="Motorrad Grundkurs Lachen – 3 x 4h praxisorientierter Grundkurs für alle Motorrad-Kategorien. Kompletter Kurs CHF 570.-. Max. 5 Teilnehmer. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Grundkurs Lachen – CHF 570.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Lachen SZ. 3x4h für alle Kategorien, CHF 570.-, max. 5 Teilnehmer." />
