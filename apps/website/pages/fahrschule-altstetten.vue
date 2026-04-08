@@ -45,13 +45,37 @@
             </div>
           </div>
           <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <h3 class="font-bold text-gray-900 mb-4">🚌 Anreise</h3>
-            <ul class="space-y-2 text-sm text-gray-700">
-              <li class="flex items-start gap-2"><span class="text-primary-600 font-bold mt-0.5">S-Bahn</span><span><strong>S3 / S9 / S12</strong> – Bahnhof Altstetten (5 Min. zu Fuss)</span></li>
-              <li class="flex items-start gap-2"><span class="text-primary-600 font-bold mt-0.5">Tram</span><span><strong>Tram 2</strong> – Haltestelle Farbhof (4 Min. zu Fuss)</span></li>
-              <li class="flex items-start gap-2"><span class="text-primary-600 font-bold mt-0.5">Bus</span><span><strong>Bus 80</strong> – Haltestelle Baslerstrasse/Altstetten</span></li>
-              <li class="flex items-start gap-2"><span class="text-primary-600 font-bold mt-0.5">Auto</span><span>Parkplätze direkt vor Ort und in der Umgebung verfügbar</span></li>
-            </ul>
+            <h3 class="font-bold text-gray-900 mb-5">Anreise</h3>
+            <div class="space-y-4">
+              <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+                <span class="text-2xl w-10 text-center">🚆</span>
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">S-Bahn</p>
+                  <p class="text-gray-600 text-sm">S3 / S9 / S12 – Bahnhof Altstetten (2 Min. zu Fuss)</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+                <span class="text-2xl w-10 text-center">🚋</span>
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Tram</p>
+                  <p class="text-gray-600 text-sm">Tram 2 – Haltestelle Lindenplatz (4 Min. zu Fuss)</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+                <span class="text-2xl w-10 text-center">🚌</span>
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Bus</p>
+                  <p class="text-gray-600 text-sm">Bus 80 – Haltestelle Bristenstrasse</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+                <span class="text-2xl w-10 text-center">🚗</span>
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Auto</p>
+                  <p class="text-gray-600 text-sm">Parkplätze direkt vor Ort und in der Umgebung verfügbar</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -86,18 +110,18 @@
               <h3 class="font-bold text-primary-800 mb-3">🗺️ Häufige Prüfungsrouten</h3>
               <ul class="text-sm text-gray-700 space-y-1.5">
                 <li>→ Altstetten – Albisrieden – Wiedikon</li>
-                <li>→ Schlieren – Urdorf – Zürich West</li>
-                <li>→ Hohlstrasse – City – Leimbach</li>
-                <li>→ Badenerstrasse – Sihlcity – Kilchberg</li>
+                <li>→ Uitikon – Birmensdorf – Sihlcity</li>
+                <li>→ Enge – Wollishofen – Kilchberg</li>
+                <li>→ Leimbach – Adliswil – Autobahn Richtung Zürich</li>
               </ul>
             </div>
             <div class="bg-gray-50 rounded-xl p-5 border border-gray-200">
-              <h3 class="font-bold text-gray-900 mb-3">📋 Prüfungszentrum</h3>
+              <h3 class="font-bold text-gray-900 mb-3">📋 Prüfungsort</h3>
               <ul class="text-sm text-gray-700 space-y-1.5">
                 <li>🏛️ Strassenverkehrsamt Zürich</li>
-                <li>📍 Albisgüetlistrasse 35, 8045 Zürich</li>
-                <li>🚌 Tram 13 / Bus 32 ab Altstetten</li>
-                <li>⏱️ ca. 20 Min. ab unserem Standort</li>
+                <li>📍 Üetlibergstrasse 301, 8036 Zürich</li>
+                <li>🚌 Tram 13 / Bus 32 & 89 ab Altstetten</li>
+                <li>⏱️ ca. 15 Min. ab unserem Standort</li>
               </ul>
             </div>
           </div>
@@ -120,15 +144,15 @@
         <div class="faq-masonry">
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo genau befindet sich eure Fahrschule in Altstetten?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unser Hauptstandort ist an der Baslerstrasse 145, 8048 Zürich-Altstetten. Du erreichst uns mit der S-Bahn (Bahnhof Altstetten, 5 Min. zu Fuss), Tram 2 (Farbhof) oder dem Bus 80. Parkplätze sind in der Umgebung verfügbar.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unser Hauptstandort ist an der Baslerstrasse 145, 8048 Zürich-Altstetten. Du erreichst uns mit der S-Bahn (Bahnhof Altstetten, 5 Min. zu Fuss), Tram 2 (Lindenplatz) oder dem Bus 80. Parkplätze sind in der Umgebung verfügbar.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">In welchen Quartieren fahren wir beim Unterricht?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ab Altstetten fahren wir durch Albisrieden, Wiedikon, Schlieren, Urdorf und Zürich-West. Für Autobahnübungen nutzen wir die A1 und A3. Du wirst das Prüfungsgebiet rund um das Strassenverkehrsamt Albisgütli bestens kennen.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ab Altstetten fahren wir durch Albisrieden, Wiedikon, Schlieren, Urdorf und Zürich-West. Für Autobahnübungen nutzen wir die A1 und A3. Du wirst das Prüfungsgebiet rund um das Strassenverkehrsamt Albisgütli bestens kennen lernen.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich den Treffpunkt für die Fahrstunde frei wählen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, wir holen dich auch zuhause oder beim Bahnhof ab – sofern es in unserem Tätigkeitsgebiet liegt (Limmattal, Knonaueramt, Zürich-West). Sprich uns einfach an.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, nach Möglichkeit holen wir dich auch zuhause oder beim Bahnhof  ab – sofern es in unserem Tätigkeitsgebiet liegt (Limmattal, Knonaueramt, Zürich-West). Sprich uns einfach an.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Bietet ihr auch Abendtermine und Wochenendfahrstunden in Altstetten an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -136,7 +160,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Sind Fahrstunden auf Englisch oder Albanisch in Altstetten möglich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, absolut. Unser Team in Altstetten unterrichtet auf Deutsch, Englisch und Albanisch. Weitere Sprachen auf Anfrage.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja, absolut. Unser Team in Altstetten unterrichtet auf Deutsch, Englisch und Albanisch.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet eine Fahrstunde ab Altstetten?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>

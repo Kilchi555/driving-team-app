@@ -107,8 +107,8 @@
             </div>
             <div class="bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition">
               <p class="text-4xl mb-3">⭐</p>
-              <p class="font-bold mb-1">4.9 / 5.0</p>
-              <p class="text-sm text-white/70">368 Bewertungen</p>
+              <p class="font-bold mb-1">{{ LOCATION_ZUERICH.rating.value }} / 5.0</p>
+              <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
             </div>
           </div>
         </div>
@@ -685,6 +685,7 @@
 <script setup lang="ts">
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
+import { LOCATION_ZUERICH } from '~/business.config'
 
 definePageMeta({ layout: 'default' })
 
