@@ -50,7 +50,6 @@ interface Location {
    */
   placeId: string
   address: {
-  address: {
     street: string
     city: string
     district?: string
