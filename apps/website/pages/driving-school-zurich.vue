@@ -60,11 +60,11 @@
             <div class="flex gap-8 mb-10">
               <div>
                 <p class="text-4xl font-black text-yellow-300">85%</p>
-                <p class="text-sm text-white/70">First-time pass rate</p>
+                <p class="text-sm text-white/70">Pass rate</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">4.9★</p>
-                <p class="text-sm text-white/70">368 reviews</p>
+                <p class="text-4xl font-black text-yellow-300">{{ LOCATION_ZUERICH.rating.value }}★</p>
+                <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} reviews</p>
               </div>
               <div>
                 <p class="text-4xl font-black text-yellow-300">CHF 95</p>
@@ -104,7 +104,7 @@
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 text-xl mt-0.5">✓</span>
-                <p>Category B (car), motorcycle, trailer, motorboat & more</p>
+                <p>Category B (car)</p>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 text-xl mt-0.5">✓</span>
@@ -148,13 +148,13 @@
         </div>
         <div class="bg-primary-50 rounded-xl p-6 text-center">
           <div class="text-4xl mb-4">🚗</div>
-          <h3 class="font-bold text-gray-900 mb-2">All Categories</h3>
-          <p class="text-gray-600 text-sm">Car (B), motorcycle (A), trailer (BE), motorboat, taxi (BPT), truck (C), bus (D) — all from one school.</p>
+          <h3 class="font-bold text-gray-900 mb-2">Car Category</h3>
+          <p class="text-gray-600 text-sm">Car (B) in English</p>
         </div>
         <div class="bg-primary-50 rounded-xl p-6 text-center">
           <div class="text-4xl mb-4">⭐</div>
-          <h3 class="font-bold text-gray-900 mb-2">4.9★ on Google</h3>
-          <p class="text-gray-600 text-sm">368 verified Google reviews — consistently rated one of Zurich's best driving schools by our students.</p>
+          <h3 class="font-bold text-gray-900 mb-2">{{ LOCATION_ZUERICH.rating.value }}★ on Google</h3>
+          <p class="text-gray-600 text-sm">{{ LOCATION_ZUERICH.rating.count }} verified Google reviews — consistently rated one of Zurich's best driving schools by our students.</p>
         </div>
       </div>
     </section>
@@ -171,7 +171,7 @@
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="text-3xl mb-3">🚗</div>
-            <h3 class="font-bold text-gray-900 mb-1">Car – Category B</h3>
+            <h3 class="font-bold text-gray-900 mb-1">Car – Category B in English</h3>
             <p class="text-3xl font-black text-primary-600 mb-3">CHF 95<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
             <ul class="text-sm text-gray-600 space-y-1 mb-4">
               <li>✓ Insurance fee: CHF 120 (once)</li>
@@ -183,7 +183,7 @@
 
           <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="text-3xl mb-3">🏍️</div>
-            <h3 class="font-bold text-gray-900 mb-1">Motorcycle – Category A</h3>
+            <h3 class="font-bold text-gray-900 mb-1">Motorcycle – Category A in English</h3>
             <p class="text-3xl font-black text-primary-600 mb-3">CHF 95<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
             <ul class="text-sm text-gray-600 space-y-1 mb-4">
               <li>✓ No insurance fee (private insurance)</li>
@@ -195,7 +195,7 @@
 
           <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="text-3xl mb-3">🚛</div>
-            <h3 class="font-bold text-gray-900 mb-1">Trailer – Category BE</h3>
+            <h3 class="font-bold text-gray-900 mb-1">Trailer – Category BE in German</h3>
             <p class="text-3xl font-black text-primary-600 mb-3">CHF 120<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
             <ul class="text-sm text-gray-600 space-y-1 mb-4">
               <li>✓ Double lessons recommended</li>
@@ -207,7 +207,7 @@
 
           <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="text-3xl mb-3">⛵</div>
-            <h3 class="font-bold text-gray-900 mb-1">Motorboat</h3>
+            <h3 class="font-bold text-gray-900 mb-1">Motorboat in English from Lachen/SZ</h3>
             <p class="text-3xl font-black text-primary-600 mb-3">CHF 95<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
             <ul class="text-sm text-gray-600 space-y-1 mb-4">
               <li>✓ Upper Lake Zurich</li>
@@ -219,7 +219,7 @@
 
           <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="text-3xl mb-3">🚕</div>
-            <h3 class="font-bold text-gray-900 mb-1">Taxi – BPT</h3>
+            <h3 class="font-bold text-gray-900 mb-1">Taxi – BPT in German</h3>
             <p class="text-3xl font-black text-primary-600 mb-3">CHF 100<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
             <ul class="text-sm text-gray-600 space-y-1 mb-4">
               <li>✓ CHF 90 with own vehicle</li>
@@ -438,6 +438,7 @@
 </template>
 
 <script setup lang="ts">
+import { LOCATION_ZUERICH } from '~/business.config'
 definePageMeta({ layout: 'default' })
 
 const faqItems = [

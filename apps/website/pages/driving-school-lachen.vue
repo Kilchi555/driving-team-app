@@ -54,7 +54,7 @@
 
           <div class="flex gap-8 mb-10">
             <div>
-              <p class="text-3xl font-black text-yellow-300">4.9★</p>
+              <p class="text-3xl font-black text-yellow-300">{{ LOCATION_LACHEN.rating.value }}★</p>
               <p class="text-sm text-white/70">Google reviews</p>
             </div>
             <div>
@@ -74,7 +74,7 @@
               rel="noopener noreferrer"
               class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 shadow-lg text-lg"
             >
-              📅 Book a lesson
+              📅 Book online
             </a>
             <a
               href="tel:+41444310033"
@@ -90,21 +90,21 @@
     <!-- Area / Meeting points -->
     <section class="section-container py-16">
       <h2 class="heading-md text-center mb-4">Our Coverage Area in Lachen & Surroundings</h2>
-      <p class="text-center text-gray-600 max-w-2xl mx-auto mb-10">Based at Lachen Bahnhof, we offer flexible meeting points across the entire March & Höfe region — ideal for expats in Rapperswil-Jona, Pfäffikon, Wädenswil, Richterswil and beyond.</p>
+      <p class="text-center text-gray-600 max-w-2xl mx-auto mb-10">Based near Lachen Bahnhof, we offer flexible meeting points across the entire March & Höfe region — ideal for expats in Pfäffikon/SZ, Freienbach, Wollerau, Richterswil and beyond.</p>
 
       <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <!-- Meeting point -->
         <div class="bg-primary-50 rounded-xl p-6">
           <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="text-primary-600">📍</span> Meeting Point Lachen</h3>
-          <p class="text-gray-700 font-medium">Lachen Bahnhof</p>
-          <p class="text-gray-500 text-sm">Bahnhofstrasse 37, 8853 Lachen SZ</p>
-          <a href="https://maps.google.com/?q=Lachen+Bahnhof+SZ" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-primary-600 hover:underline text-sm mt-2">🗺️ Open in Google Maps</a>
+          <p class="text-gray-700 font-medium">Driving Team Lachen</p>
+          <p class="text-gray-500 text-sm">Herrengasse 17, 8853 Lachen SZ</p>
+          <a href="https://maps.google.com/?q=Driving+Team+Lachen" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-primary-600 hover:underline text-sm mt-2">🗺️ Open in Google Maps</a>
         </div>
         <!-- Coverage -->
         <div class="bg-gray-50 rounded-xl p-6">
           <h3 class="font-bold text-gray-900 mb-3">Coverage Area</h3>
           <div class="flex flex-wrap gap-2">
-            <span v-for="area in ['Lachen SZ', 'Rapperswil-Jona', 'Pfäffikon SZ', 'Wädenswil', 'Schindellegi', 'Altendorf', 'Galgenen', 'Siebnen', 'Wangen', 'Richterswil', 'Horgen', 'Ziegelbrücke']" :key="area" class="bg-white border border-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">{{ area }}</span>
+            <span v-for="area in ['Lachen SZ', 'Pfäffikon SZ', 'Schindellegi', 'Altendorf', 'Galgenen', 'Siebnen', 'Wangen', 'Richterswil']" :key="area" class="bg-white border border-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">{{ area }}</span>
           </div>
         </div>
       </div>
@@ -114,7 +114,7 @@
     <section class="bg-gray-50 py-20">
       <div class="section-container">
         <h2 class="heading-md text-center mb-4">Why Choose Driving Team Lachen?</h2>
-        <p class="text-center text-gray-600 max-w-2xl mx-auto mb-14">The only English-instruction driving school serving the March & Höfe and Rapperswil area — with the quality and track record of Driving Team Zurich.</p>
+        <p class="text-center text-gray-600 max-w-2xl mx-auto mb-14">The only English-instruction driving school serving the March & Höfe area — with the quality and track record of Driving Team Lachen.</p>
 
         <div class="grid md:grid-cols-3 gap-6">
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
@@ -125,17 +125,17 @@
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
             <div class="text-4xl mb-4">📍</div>
             <h3 class="font-bold text-gray-900 mb-2">Flexible Pick-up Points</h3>
-            <p class="text-gray-600 text-sm">We pick you up from home, work, or the train station — wherever is most convenient in the Lachen/Rapperswil area.</p>
+            <p class="text-gray-600 text-sm">We pick you up from home, work, or the train station — wherever is most convenient in the Lachen/SZ area.</p>
           </div>
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
             <div class="text-4xl mb-4">🏆</div>
             <h3 class="font-bold text-gray-900 mb-2">Proven Results</h3>
-            <p class="text-gray-600 text-sm">4.9★ on Google. Part of Driving Team — one of the most reviewed driving schools in the Lake Zurich region.</p>
+            <p class="text-gray-600 text-sm">{{ LOCATION_LACHEN.rating.value }}★ on Google. Part of Driving Team — one of the most reviewed driving schools in the Lake Zurich region.</p>
           </div>
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
             <div class="text-4xl mb-4">🚗</div>
-            <h3 class="font-bold text-gray-900 mb-2">All Vehicle Categories</h3>
-            <p class="text-gray-600 text-sm">Car (B), motorcycle (A), trailer (BE), motorboat, truck (C), bus (D) — all from one school, all with English instruction available.</p>
+            <h3 class="font-bold text-gray-900 mb-2">Vehicle Categories</h3>
+            <p class="text-gray-600 text-sm">Car (B), trailer (BE), motorboat — all from one school, all with English instruction available.</p>
           </div>
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
             <div class="text-4xl mb-4">📱</div>
@@ -162,7 +162,7 @@
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
           <div class="text-3xl mb-3">🚗</div>
-          <h3 class="font-bold text-gray-900 mb-1">Car – Category B</h3>
+          <h3 class="font-bold text-gray-900 mb-1">Car – Category B in English</h3>
           <p class="text-3xl font-black text-primary-600 mb-3">CHF 95<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
           <ul class="text-sm text-gray-600 space-y-1 mb-4">
             <li>✓ Insurance fee: CHF 120 (once)</li>
@@ -174,7 +174,7 @@
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
           <div class="text-3xl mb-3">🏍️</div>
-          <h3 class="font-bold text-gray-900 mb-1">Motorcycle – Category A</h3>
+          <h3 class="font-bold text-gray-900 mb-1">Motorcycle – Category A in German</h3>
           <p class="text-3xl font-black text-primary-600 mb-3">CHF 95<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
           <ul class="text-sm text-gray-600 space-y-1 mb-4">
             <li>✓ No insurance fee (private insurance)</li>
@@ -186,7 +186,7 @@
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
           <div class="text-3xl mb-3">🚛</div>
-          <h3 class="font-bold text-gray-900 mb-1">Trailer – Category BE</h3>
+          <h3 class="font-bold text-gray-900 mb-1">Trailer – Category BE in English</h3>
           <p class="text-3xl font-black text-primary-600 mb-3">CHF 120<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
           <ul class="text-sm text-gray-600 space-y-1 mb-4">
             <li>✓ Double lessons recommended</li>
@@ -198,7 +198,7 @@
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
           <div class="text-3xl mb-3">⛵</div>
-          <h3 class="font-bold text-gray-900 mb-1">Motorboat</h3>
+          <h3 class="font-bold text-gray-900 mb-1">Motorboat in English</h3>
           <p class="text-3xl font-black text-primary-600 mb-3">CHF 95<span class="text-base font-normal text-gray-500">/lesson (45 min)</span></p>
           <ul class="text-sm text-gray-600 space-y-1 mb-4">
             <li>✓ Upper Lake Zurich (Hotel Marina, Lachen)</li>
@@ -210,7 +210,7 @@
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
           <div class="text-3xl mb-3">📋</div>
-          <h3 class="font-bold text-gray-900 mb-1">VKU Course Lachen</h3>
+          <h3 class="font-bold text-gray-900 mb-1">VKU Course Lachen in German</h3>
           <p class="text-3xl font-black text-primary-600 mb-3">CHF 250<span class="text-base font-normal text-gray-500">/course</span></p>
           <ul class="text-sm text-gray-600 space-y-1 mb-4">
             <li>✓ 2 × 4 hours (evening or Saturday)</li>
@@ -333,12 +333,12 @@
           <a href="/motorrad-grundkurs-lachen/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
             <div class="text-2xl mb-2">🏍️</div>
             <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Motorcycle Basic Course Lachen</p>
-            <p class="text-xs text-gray-500 mt-1">Grundkurs · CHF 570</p>
+            <p class="text-xs text-gray-500 mt-1">Grundkurs · CHF 570 in German</p>
           </a>
           <a href="/vku-kurs-lachen/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
             <div class="text-2xl mb-2">📚</div>
             <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">VKU Course Lachen</p>
-            <p class="text-xs text-gray-500 mt-1">Traffic theory · CHF 250</p>
+            <p class="text-xs text-gray-500 mt-1">Traffic theory · CHF 250 in German</p>
           </a>
           <a href="/wab-course-english/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
             <div class="text-2xl mb-2">🌍</div>
@@ -348,7 +348,7 @@
           <a href="/driving-school-zurich/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
             <div class="text-2xl mb-2">🚗</div>
             <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Driving School Zurich</p>
-            <p class="text-xs text-gray-500 mt-1">English lessons · from CHF 95</p>
+            <p class="text-xs text-gray-500 mt-1">English lessons · from CHF 95 in English</p>
           </a>
         </div>
       </div>
@@ -363,15 +363,16 @@
 </template>
 
 <script setup lang="ts">
+import { LOCATION_LACHEN } from '~/business.config'
 definePageMeta({ layout: 'default' })
 
 const faqItems = [
-  { q: 'Is there an English driving school near Lachen, Rapperswil or Pfäffikon?', a: 'Yes — Driving Team offers English driving lessons throughout the Lachen/SZ, Rapperswil-Jona and Pfäffikon area. We are one of the only driving schools in this region providing instruction in English.' },
+  { q: 'Is there an English driving school near Lachen, Rapperswil or Pfäffikon?', a: 'Yes — Driving Team offers English driving lessons throughout the Lachen/SZ and Pfäffikon/SZ area. We are one of the only driving schools with these availabilities in this region providing instruction in English.' },
   { q: 'Where does the driving exam take place from Lachen?', a: 'The practical exam takes place at the Strassenverkehrsamt Pfäffikon SZ. Common exam routes include Rapperswil, Richterswil, Wollerau, Feusisberg and Altendorf.' },
   { q: 'How long is my foreign driving licence valid in Switzerland?', a: 'Your foreign driving licence is valid for 12 months from the date you register as a Swiss resident. After that, you must exchange it for a Swiss licence.' },
   { q: 'How much does a driving lesson cost in Lachen?', a: 'A 45-minute category B lesson costs CHF 95. One-off insurance fee: CHF 120. WarmUp including exam ride: CHF 285.' },
-  { q: 'What is the WAB course and can I do it in English?', a: 'The WAB is a mandatory advanced driving training day completed within 12 months of passing the practical exam. We offer this course in English.' },
-  { q: 'Is there a motorcycle basic course (Grundkurs) in Lachen?', a: 'Yes. The full motorcycle basic course costs CHF 570 including course confirmation and is held in Lachen SZ.' },
+  { q: 'What is the WAB course and can I do it in English?', a: 'The WAB is a mandatory advanced driving training day completed within 12 months of passing the practical exam. Our partner school offers this course in English.' },
+  { q: 'Is there a motorcycle basic course (Grundkurs) in Lachen?', a: 'Yes. The full motorcycle basic course costs CHF 570 including course confirmation and is held in German in Lachen SZ.' },
   { q: 'Can I do motorboat lessons in Lachen?', a: 'Yes — motorboat lessons take place on the Upper Lake Zurich from the Hotel Marina in Lachen. Lessons cost CHF 95/45 min.' },
 ]
 

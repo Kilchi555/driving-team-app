@@ -25,8 +25,8 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Kategorie BE · Zürich</p>
           <h1 class="heading-lg text-white mb-6">Anhängerprüfung Zürich</h1>
-          <p class="hidden xs:block text-xl text-white mb-4">Prüfungsort Regensdorf & Wettingen. Wir trainieren dich gezielt auf die Prüfungsrouten – mit unserem Anhänger und Zugfahrzeug, kein eigenes Fahrzeug nötig.</p>
-          <p class="hidden xs:block text-white mb-8">Kein Nothelferkurs, keine Theorieprüfung – nur 2–4 Fahrstunden bis zur Prüfung.</p>
+          <p class="hidden xs:block text-xl text-white mb-4">Prüfungsorte Zürich-Albisgütli, Regensdorf & Wettingen/AG. Wir trainieren dich gezielt auf die Prüfungsrouten – mit unserem Anhänger und Zugfahrzeug, kein eigenes Fahrzeug nötig.</p>
+          <p class="hidden xs:block text-white mb-8">Kein Nothelferkurs, keine Theorieprüfung – nur 4–8 Fahrstunden bis zur Prüfung.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -39,7 +39,7 @@
       <div class="section-container">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-center">
           <div class="bg-white rounded-xl p-4 border border-primary-100">
-            <p class="text-3xl font-bold text-primary-600">5–8</p>
+            <p class="text-3xl font-bold text-primary-600">4–8</p>
             <p class="text-sm text-gray-600 mt-1">Ø Fahrstunden</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
@@ -47,12 +47,12 @@
             <p class="text-sm text-gray-600 mt-1">Theorietests nötig</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
-            <p class="text-3xl font-bold text-primary-600">3'500</p>
+            <p class="text-3xl font-bold text-primary-600">10'500</p>
             <p class="text-sm text-gray-600 mt-1">Max. Anhänger (kg)</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
             <p class="text-3xl font-bold text-primary-600">✓</p>
-            <p class="text-sm text-gray-600 mt-1">Fahrzeug gestellt</p>
+            <p class="text-sm text-gray-600 mt-1">Fahrzeuge gestellt</p>
           </div>
         </div>
       </div>
@@ -62,14 +62,26 @@
     <section class="py-14 bg-white">
       <div class="section-container">
         <div class="max-w-4xl mx-auto">
-          <h2 class="heading-md text-center mb-4">Prüfungszentren Anhänger Zürich</h2>
-          <p class="text-center text-gray-600 mb-10">Die Anhängerprüfung im Kanton Zürich findet an zwei Standorten statt. Wir trainieren gezielt in diesen Gebieten.</p>
-          <div class="grid md:grid-cols-2 gap-6">
+          <h2 class="heading-md text-center mb-4">Prüfungsorte Anhänger Zürich</h2>
+          <p class="text-center text-gray-600 mb-10">Die Anhängerprüfung führen wir an drei Standorten durch. Wir trainieren gezielt in diesen Gebieten.</p>
+          <div class="grid md:grid-cols-3 gap-6">
             <div class="bg-white rounded-2xl p-8 shadow-sm border-2 border-primary-100">
               <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                <span class="text-2xl">📍</span> Prüfungszentrum Regensdorf
+                <span class="text-2xl">📍</span>Zürich-Albisgütli
               </h3>
-              <p class="text-gray-600 text-sm mb-4 leading-relaxed">Das Hauptprüfungszentrum für Anhänger in der Region Zürich. Manöverplatz für An-/Abkuppeln, Rückwärtsfahren, Rangieren. Anschliessend Strassenfahrt durch Regensdorf und Umgebung.</p>
+              <p class="text-gray-600 text-sm mb-4 leading-relaxed">Prüfungsort direkt in der Stadt Zürich. Ideal für Fahrschüler:innen aus dem Stadtgebiet und dem linken Seeufer. Gut erreichbar mit ÖV und Auto.</p>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Mitten in der Stadt Zürich</li>
+                <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> An-/Abkuppeln vor Experte</li>
+                <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Rückwärtsfahren & Rangieren</li>
+                <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Strassenfahrt ca. 30 Min.</li>
+              </ul>
+            </div>
+            <div class="bg-white rounded-2xl p-8 shadow-sm border-2 border-primary-100">
+              <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+                <span class="text-2xl">📍</span>Regensdorf
+              </h3>
+              <p class="text-gray-600 text-sm mb-4 leading-relaxed">Der Prüfungsort für Anhänger in der Region Zürich. Manöverplatz für An-/Abkuppeln, Rückwärtsfahren, Rangieren. Anschliessend Fahrt durch den Strassenverkehr.</p>
               <ul class="space-y-2 text-sm text-gray-700">
                 <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Parkieren rechtwinklig</li>
                 <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Seitwärtsparkieren / Spurversatz</li>
@@ -79,7 +91,7 @@
             </div>
             <div class="bg-white rounded-2xl p-8 shadow-sm border-2 border-primary-100">
               <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                <span class="text-2xl">📍</span> Prüfungszentrum Wettingen (AG)
+                <span class="text-2xl">📍</span>Wettingen/AG
               </h3>
               <p class="text-gray-600 text-sm mb-4 leading-relaxed">Alternative für Schüler:innen im Limmattal und Aargau. Identischer Prüfungsaufbau wie Regensdorf. Ideal für Fahrschüler aus Dietikon, Schlieren, Baden.</p>
               <ul class="space-y-2 text-sm text-gray-700">
@@ -106,11 +118,11 @@
             </div>
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
-              <div><p class="font-semibold text-gray-900">Fahrstunden buchen</p><p class="text-sm text-gray-600">2–4 Lektionen, je nach Vorerfahrung. Wir trainieren direkt in Regensdorf oder Wettingen.</p></div>
+              <div><p class="font-semibold text-gray-900">Fahrstunden buchen</p><p class="text-sm text-gray-600">4–8 Lektionen, je nach Vorerfahrung. Wir trainieren direkt in Zürich, Regensdorf oder Wettingen/AG.</p></div>
             </div>
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
-              <div><p class="font-semibold text-gray-900">Prüfungsanmeldung</p><p class="text-sm text-gray-600">Wir melden dich beim STVA an. Wartezeit ca. 2–4 Wochen.</p></div>
+              <div><p class="font-semibold text-gray-900">Prüfungsanmeldung</p><p class="text-sm text-gray-600">Wir melden dich beim STVA zur Anhängerprüfung an. Wartezeit ca. 2–4 Wochen.</p></div>
             </div>
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold flex-shrink-0">✓</div>
@@ -129,7 +141,7 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="flex items-start gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-sm text-gray-700">Gültiger <strong>Führerausweis Kat. B</strong></p>
+              <p class="text-sm text-gray-700">Gültiger <strong>Lernfahr-/ Führerausweis Kat. B</strong></p>
             </div>
             <div class="flex items-start gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
@@ -137,7 +149,7 @@
             </div>
             <div class="flex items-start gap-3">
               <span class="text-green-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-sm text-gray-700"><strong>Anhänger & Zugfahrzeug</strong> – stellen wir</p>
+              <p class="text-sm text-gray-700"><strong>Anhänger & Zugfahrzeug</strong> – stellen wir zur Verfügung</p>
             </div>
             <div class="flex items-start gap-3">
               <span class="text-green-600 font-bold flex-shrink-0">✓</span>
@@ -159,7 +171,7 @@
         <div class="max-w-3xl mx-auto space-y-4">
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo findet die Anhängerprüfung in Zürich statt?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Die Anhängerprüfung im Kanton Zürich findet in Regensdorf oder Wettingen (Aargau) statt. Welches Zentrum du wählst, besprechen wir gemeinsam – je nach deinem Wohnort.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Die Anhängerprüfung im Kanton Zürich findet in Regensdorf oder Zürich-Albisgütli statt. Welches Strassenverkehrsamt du wählst, besprechen wir gemeinsam – je nach deinem Wohnort.</p>
           </details>
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Muss ich ein eigenes Fahrzeug mitbringen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -171,7 +183,7 @@
           </details>
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet die Anhängerprüfung in Zürich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Prüfungsgebühr STVA ca. CHF 130. Lernfahrausweis BE ca. CHF 80. Dazu Fahrstunden ab CHF 120/Lektion sowie Admin- & Versicherungspauschale CHF 120 (einmalig). Gesamtkosten durchschnittlich CHF 1'200–2'000 je nach Stundenzahl.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Prüfungsgebühr STVA ca. CHF 130. Lernfahrausweis BE ca. CHF 80. Dazu Fahrstunden ab CHF 120/Lektion sowie Admin- & Versicherungspauschale CHF 120 (einmalig). Gesamtkosten durchschnittlich CHF 900–1'600 je nach Stundenzahl.</p>
           </details>
         </div>
       </div>
@@ -196,7 +208,7 @@
     <section class="py-10 bg-white">
       <div class="section-container">
         <div class="flex flex-wrap gap-3 justify-center">
-          <a href="/anhaenger-pruefung-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Prüfung Lachen SZ</a>
+          <a href="/anhaenger-pruefung-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Anhänger Prüfung Lachen SZ</a>
           <a href="/anhaenger-fahrschule/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">🚛 Anhänger Fahrschule</a>
           <a href="/anhaenger-fahrschule-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Anhänger Fahrschule Zürich</a>
         </div>
@@ -213,9 +225,9 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wo findet die Anhängerprüfung in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "In Regensdorf oder Wettingen (Aargau). Welches Zentrum je nach Wohnort." } },
+      { "@type": "Question", "name": "Wo findet die Anhängerprüfung in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "In Regensdorf oder Zürich-Albisgütli. Welches Strassenverkehrsamt je nach Wohnort." } },
       { "@type": "Question", "name": "Muss ich ein eigenes Fahrzeug mitbringen?", "acceptedAnswer": { "@type": "Answer", "text": "Nein, Driving Team stellt Anhänger und Zugfahrzeug für Fahrstunden und Prüfung." } },
-      { "@type": "Question", "name": "Was kostet die Anhängerprüfung in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Prüfungsgebühr STVA ca. CHF 130, Lernfahrausweis ca. CHF 80, Fahrstunden ab CHF 120/Lektion, Admin-/Versicherungspauschale CHF 120. Gesamtkosten durchschnittlich CHF 1'200–2'000." } }
+      { "@type": "Question", "name": "Was kostet die Anhängerprüfung in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Prüfungsgebühr STVA ca. CHF 130, Lernfahrausweis ca. CHF 80, Fahrstunden ab CHF 120/Lektion, Admin-/Versicherungspauschale CHF 120. Gesamtkosten durchschnittlich CHF 900–1'600." } }
     ]
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({

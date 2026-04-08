@@ -99,8 +99,8 @@
             </div>
             <div class="group bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">⭐</p>
-              <p class="font-bold mb-1 text-lg">4.9/5.0</p>
-              <p class="text-sm text-white/70">368 Bewertungen</p>
+              <p class="font-bold mb-1 text-lg">{{ LOCATION_ZUERICH.rating.value }}/5.0</p>
+              <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
             </div>
           </div>
         </div>
@@ -454,6 +454,7 @@
 </template>
 
 <script setup lang="ts">
+import { LOCATION_ZUERICH } from '~/business.config'
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",

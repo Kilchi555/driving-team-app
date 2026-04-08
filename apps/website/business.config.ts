@@ -81,7 +81,7 @@ interface Location {
 // ── Standort: Zürich ─────────────────────────────────────────
 export const LOCATION_ZUERICH: Location = {
   id: 'zuerich',
-  gbpName: 'Driving Team Fahrschule Zürich',
+  gbpName: 'Fahrschule Driving Team Zürich | Auto | Anhänger | Taxi | Motorrad | Lastwagen',
   placeId: 'ChIJU29cFMgLkEcRzMfDub2bh9s',
 
   address: {
@@ -98,13 +98,13 @@ export const LOCATION_ZUERICH: Location = {
   phoneFormatted: '044 431 00 33',
 
   hours: {
-    weekdays: { open: '08:00', close: '18:00' },
-    saturday: { open: '08:00', close: '14:00' },
+    weekdays: { open: '07:00', close: '19:00' },
+    saturday: { open: '07:00', close: '16:00' },
     sunday: null,
   },
-  hoursDisplay: 'Mo–Fr 08:00–18:00 · Sa 08:00–14:00',
+  hoursDisplay: 'Mo–Fr 07:00–17:00 · Sa 07:00–16:00',
 
-  priceRange: 'CHF 95–170',
+  priceRange: 'CHF 95–200',
 
   rating: { value: 4.9, count: 368, max: 5 },
 
@@ -130,7 +130,7 @@ export const LOCATION_ZUERICH: Location = {
 // ── Standort: Lachen ─────────────────────────────────────────
 export const LOCATION_LACHEN: Location = {
   id: 'lachen',
-  gbpName: 'Driving Team Fahrschule Lachen',
+  gbpName: 'Fahrschule Lachen | Driving Team | Auto - Anhänger - Lastwagen - Motorboot',
   placeId: 'ChIJqdlnJXTJmkcRAgI05nvPXFU',
 
   address: {
@@ -146,40 +146,42 @@ export const LOCATION_LACHEN: Location = {
   phoneFormatted: '055 442 00 41',
 
   hours: {
-    weekdays: { open: '08:00', close: '18:00' },
-    saturday: { open: '08:00', close: '12:00' },
+    weekdays: { open: '07:00', close: '19:00' },
+    saturday: { open: '07:00', close: '16:00' },
     sunday: null,
   },
-  hoursDisplay: 'Mo–Fr 08:00–18:00 · Sa 08:00–12:00',
+  hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
 
-  priceRange: 'CHF 95–170',
+  priceRange: 'CHF 95–200',
 
   rating: { value: 5.0, count: 256, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
-    secondary: ['Motorradschule', 'Nothelferkurs'],
+    secondary: ['LKW-Fahrschule', 'Bootslehrer'],
   },
 
   services: [
-    { name: 'Auto Fahrschule Lachen', url: 'https://drivingteam.ch/driving-school-lachen/' },
+    { name: 'Auto Fahrschule Lachen', url: 'https://drivingteam.ch/fahrschule-lachen/' },
+    { name: 'VKU Kurs Lachen', url: 'https://drivingteam.ch/vku-kurs-lachen/' },
     { name: 'Motorrad Grundkurs Lachen', url: 'https://drivingteam.ch/motorrad-grundkurs-lachen/' },
+    { name: 'Bootsfahrschule Lachen', url: 'https://drivingteam.ch/bootsfahrschule/' },
+    { name: 'Anhänger Fahrschule Lachen', url: 'https://drivingteam.ch/anhaenger-pruefung-lachen/' },
     { name: 'Nothelferkurs Lachen', url: 'https://drivingteam.ch/nothelferkurs-lachen/' },
     { name: 'WAB Kurs Schwyz', url: 'https://drivingteam.ch/wab-kurse-schwyz/' },
-    { name: 'Anhänger Fahrschule Lachen', url: 'https://drivingteam.ch/anhaenger-pruefung-lachen/' },
   ],
 }
 
 // ── Standort: Pfäffikon SZ ───────────────────────────────────
 export const LOCATION_PFAEFFIKON: Location = {
   id: 'pfaeffikon',
-  gbpName: 'Fahrschule Pfäffikon SZ - Driving Team',
+  gbpName: 'Fahrschule Pfäffikon/SZ | Driving Team | Auto | Anhänger | Lastwagen',
   // Place ID nach GBP-Erstellung eintragen
   placeId: '',
 
   address: {
     street: 'Hofacker 2',
-    city: 'Pfäffikon',
+    city: 'Pfäffikon SZ',
     zip: '8808',
     canton: 'SZ',
     country: 'CH',
@@ -202,15 +204,19 @@ export const LOCATION_PFAEFFIKON: Location = {
 
   gbpCategories: {
     primary: 'Fahrschule',
-    secondary: ['Motorradschule'],
+    secondary: ['LKW-Fahrschule', 'Bootslehrer'],
   },
 
   services: [
     { name: 'Auto Fahrschule Pfäffikon SZ', url: 'https://drivingteam.ch/fahrschule-pfaeffikon-sz/' },
     { name: 'Motorrad Fahrschule', url: 'https://drivingteam.ch/motorrad-fahrschule/' },
     { name: 'Anhänger Fahrschule', url: 'https://drivingteam.ch/anhaenger-fahrschule/' },
-    { name: 'WAB Kurse', url: 'https://drivingteam.ch/wab-kurse-zuerich/' },
-    { name: 'Nothelferkurs', url: 'https://drivingteam.ch/nothelferkurs/' },
+    { name: 'Bootsfahrschule', url: 'https://drivingteam.ch/motorboot-fahrschule//' },
+    { name: 'Lastwagen Fahrschule', url: 'https://drivingteam.ch/lastwagen-fahrschule/' },
+    { name: 'Bus Fahrschule', url: 'https://drivingteam.ch/bus-fahrschule/' },
+    { name: 'Taxi Fahrschule', url: 'https://drivingteam.ch/taxi-fahrschule/' },
+    { name: 'WAB Kurse Schwyz', url: 'https://drivingteam.ch/wab-kurse-schwyz/' },
+    { name: 'Nothelferkurs Schwyz', url: 'https://drivingteam.ch/nothelferkurs-lachen/' },
   ],
 
   areaServed: ['Pfäffikon SZ', 'Freienbach', 'Wollerau', 'Feusisberg', 'Schindellegi', 'Altendorf', 'Lachen', 'Wädenswil', 'Rapperswil-Jona', 'Bezirk Höfe', 'Ausserschwyz'],
@@ -219,7 +225,7 @@ export const LOCATION_PFAEFFIKON: Location = {
 // ── Standort: Spreitenbach (GBP: "Fahrschule Aargau – Driving Team") ──
 export const LOCATION_SPREITENBACH: Location = {
   id: 'spreitenbach',
-  gbpName: 'Fahrschule Aargau - Driving Team - Auto - Anhänger',
+  gbpName: 'Fahrschule Spreitenbach | Driving Team | Auto | Anhänger',
   placeId: 'ChIJ_V8A6ycNkEcRz6hXDJMr6ls',
 
   address: {
@@ -235,19 +241,19 @@ export const LOCATION_SPREITENBACH: Location = {
   phoneFormatted: '044 431 00 33',
 
   hours: {
-    weekdays: { open: '08:00', close: '18:00' },
-    saturday: { open: '08:00', close: '14:00' },
+    weekdays: { open: '07:00', close: '19:00' },
+    saturday: { open: '07:00', close: '16:00' },
     sunday: null,
   },
-  hoursDisplay: 'Mo–Fr 08:00–18:00 · Sa 08:00–14:00',
+  hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
 
-  priceRange: 'CHF 95–170',
+  priceRange: 'CHF 95–200',
 
   rating: { value: 5.0, count: 9, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
-    secondary: ['Anhänger Fahrschule'],
+    secondary: [],
   },
 
   services: [
@@ -261,7 +267,7 @@ export const LOCATION_SPREITENBACH: Location = {
 // ── Standort: Uster ──────────────────────────────────────────
 export const LOCATION_USTER: Location = {
   id: 'uster',
-  gbpName: 'Fahrschule Uster - Driving Team - Auto - Motorrad - Motorboot',
+  gbpName: 'Fahrschule Uster | Driving Team | Auto - Motorrad ️',
   placeId: 'ChIJtRgKpBClmkcRxXQxbtz0uBA',
 
   address: {
@@ -277,19 +283,19 @@ export const LOCATION_USTER: Location = {
   phoneFormatted: '044 431 00 33',
 
   hours: {
-    weekdays: { open: '08:00', close: '18:00' },
-    saturday: { open: '08:00', close: '14:00' },
+    weekdays: { open: '07:00', close: '19:00' },
+    saturday: { open: '07:00', close: '16:00' },
     sunday: null,
   },
-  hoursDisplay: 'Mo–Fr 08:00–18:00 · Sa 08:00–14:00',
+  hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
 
-  priceRange: 'CHF 95–170',
+  priceRange: 'CHF 95–200',
 
   rating: { value: 5.0, count: 25, max: 5 },
 
   gbpCategories: {
     primary: 'Fahrschule',
-    secondary: ['Motorradschule', 'Motorbootfahrschule'],
+    secondary: ['Motorradschule'],
   },
 
   services: [
@@ -360,6 +366,7 @@ export function buildHomepageSchema() {
       { '@type': 'City', name: 'Zürich' },
       { '@type': 'City', name: 'Lachen' },
       { '@type': 'City', name: 'Uster' },
+      { '@type': 'City', name: 'Pfäffikon SZ' },
       { '@type': 'City', name: 'Dietikon' },
       { '@type': 'City', name: 'Schlieren' },
       { '@type': 'AdministrativeArea', name: 'Kanton Zürich' },
@@ -367,7 +374,7 @@ export function buildHomepageSchema() {
     ],
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'Fahrausbildung Driving Team',
+      name: 'Fahrschule Driving Team',
       itemListElement: loc.services.map(s => ({
         '@type': 'Offer',
         itemOffered: { '@type': 'Service', name: s.name, url: s.url },

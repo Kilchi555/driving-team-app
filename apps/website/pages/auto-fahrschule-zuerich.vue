@@ -61,8 +61,8 @@
                 <p class="text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">4.9★</p>
-                <p class="text-sm text-white/70">368 Bewertungen</p>
+                <p class="text-4xl font-black text-yellow-300">{{ LOCATION_ZUERICH.rating.value }}★</p>
+                <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
               </div>
               <div>
                 <p class="text-4xl font-black text-yellow-300">CHF 95</p>
@@ -123,7 +123,7 @@
         </h2>
         <div class="space-y-4 text-gray-700 text-lg leading-relaxed">
           <p>
-            Bei der <strong>Auto Fahrschule Driving Team</strong> absolvierst du deine Kategorie-B-Ausbildung direkt in Zürich – mit Treffpunkt am Bahnhof Altstetten. Das bedeutet: Du lernst von Anfang an die Strassen, die du bei der Prüfung am <strong>Prüfungszentrum Albisgütli</strong> fahren wirst.
+            Bei der <strong>Auto Fahrschule Driving Team</strong> absolvierst du deine Kategorie-B-Ausbildung direkt in Zürich – mit Treffpunkt am Bahnhof Altstetten. Das bedeutet: Du lernst von Anfang an die Strassen, die du bei der Prüfung am <strong>Strassenverkehrsamt Albisgütli</strong> fahren wirst.
           </p>
           <p>
             <strong>Unser Vorteil:</strong> Unsere Fahrlehrer kennen die häufigsten Prüfungsrouten in- und auswendig – von Wollishofen über Leimbach bis nach Uitikon. So bist du am Prüfungstag nicht überrascht.
@@ -147,10 +147,10 @@
             🗺️ Prüfungsvorbereitung
           </div>
           <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Prüfungszentrum Albisgütli – wir kennen jede Route
+            Strassenverkehrsamt Albisgütli – wir kennen jede Route
           </h2>
           <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-            Die praktische Autoprüfung in Zürich findet am Prüfungszentrum Albisgütli statt. Wir üben genau dort – damit du keine Überraschungen erlebst.
+            Die praktische Autoprüfung in Zürich findet am Strassenverkehrsamt Albisgütli statt. Wir üben genau dort – damit du keine Überraschungen erlebst.
           </p>
         </div>
 
@@ -599,6 +599,7 @@
 <script setup lang="ts">
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
+import { LOCATION_ZUERICH } from '~/business.config'
 
 definePageMeta({ layout: 'default' })
 

@@ -26,7 +26,7 @@
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Kategorie BE · Lachen SZ</p>
           <h1 class="heading-lg text-white mb-6">Anhängerprüfung Lachen SZ</h1>
           <p class="hidden xs:block text-xl text-white mb-4">Prüfungsort Pfäffikon SZ. Wir trainieren dich ab Lachen auf die Prüfungsrouten – mit unserem Anhänger und Zugfahrzeug, kein eigenes Fahrzeug nötig.</p>
-          <p class="hidden xs:block text-white mb-8">Kein Nothelferkurs, keine Theorieprüfung – nur 2–4 Fahrstunden bis zur Prüfung.</p>
+          <p class="hidden xs:block text-white mb-8">Kein Nothelferkurs, keine Theorieprüfung – nur 4–8 Fahrstunden bis zur Prüfung.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -39,7 +39,7 @@
       <div class="section-container">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-center">
           <div class="bg-white rounded-xl p-4 border border-primary-100">
-            <p class="text-3xl font-bold text-primary-600">5–8</p>
+            <p class="text-3xl font-bold text-primary-600">4–8</p>
             <p class="text-sm text-gray-600 mt-1">Ø Fahrstunden</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
@@ -47,12 +47,12 @@
             <p class="text-sm text-gray-600 mt-1">Theorietests nötig</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
-            <p class="text-3xl font-bold text-primary-600">3'500</p>
+            <p class="text-3xl font-bold text-primary-600">10'500</p>
             <p class="text-sm text-gray-600 mt-1">Max. Anhänger (kg)</p>
           </div>
           <div class="bg-white rounded-xl p-4 border border-primary-100">
             <p class="text-3xl font-bold text-primary-600">✓</p>
-            <p class="text-sm text-gray-600 mt-1">Fahrzeug gestellt</p>
+            <p class="text-sm text-gray-600 mt-1">Fahrzeuge gestellt</p>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@
               <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
                 <span class="text-2xl">📍</span> Strassenverkehrsamt Pfäffikon SZ
               </h3>
-              <p class="text-gray-600 text-sm mb-4 leading-relaxed">Das Prüfungszentrum für Anhänger in der Region Lachen und March befindet sich in Pfäffikon SZ. Manöverübungen auf dem Prüfungsplatz, anschliessend Strassenfahrt durch die Region.</p>
+              <p class="text-gray-600 text-sm mb-4 leading-relaxed">Das Prüfungszentrum für Anhänger in der Region Lachen und March befindet sich in Pfäffikon SZ. Manöverübungen in der Industriezone, anschliessend Strassenfahrt durch die Region.</p>
               <ul class="space-y-2 text-sm text-gray-700 mb-4">
                 <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> An-/Abkuppeln des Anhängers vor Experte</li>
                 <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Rückwärtsfahren und Rangieren</li>
@@ -77,7 +77,7 @@
                 <li class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Strassenfahrt ca. 30 Min.</li>
               </ul>
               <div class="p-3 bg-primary-50 rounded-lg">
-                <p class="text-sm text-primary-800">Wir trainieren gezielt auf die Prüfungsrouten ab Pfäffikon SZ. Lachen, Altendorf, Reichenburg – du kennst die Strassen, bevor du zur Prüfung antritts.</p>
+                <p class="text-sm text-primary-800">Wir trainieren gezielt auf die Prüfungsrouten ab Pfäffikon SZ. Lachen, Altendorf, Freienbach – du kennst die Strassen, bevor du zur Prüfung antritts.</p>
               </div>
             </div>
           </div>
@@ -97,7 +97,7 @@
             </div>
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
-              <div><p class="font-semibold text-gray-900">Fahrstunden buchen</p><p class="text-sm text-gray-600">2–4 Lektionen, je nach Vorerfahrung. Wir trainieren direkt in den Prüfungsgebieten rund um Pfäffikon SZ.</p></div>
+              <div><p class="font-semibold text-gray-900">Fahrstunden buchen</p><p class="text-sm text-gray-600">4–8 Lektionen, je nach Vorerfahrung. Wir trainieren direkt in den Prüfungsgebieten rund um Pfäffikon SZ.</p></div>
             </div>
             <div class="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100">
               <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
@@ -120,7 +120,7 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="flex items-start gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-sm text-gray-700">Gültiger <strong>Führerausweis Kat. B</strong></p>
+              <p class="text-sm text-gray-700">Gültiger <strong>Lernfahr-/ Führerausweis Kat. B</strong></p>
             </div>
             <div class="flex items-start gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
@@ -162,7 +162,7 @@
           </details>
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet die Anhängerprüfung in der Region Lachen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Prüfungsgebühr STVA Schwyz ca. CHF 130. Lernfahrausweis BE ca. CHF 80. Fahrstunden ab CHF 120/Lektion sowie Admin- & Versicherungspauschale CHF 120 (einmalig). Gesamtkosten durchschnittlich CHF 1'200–2'000 je nach Stundenzahl.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Prüfungsgebühr STVA Schwyz ca. CHF 130. Lernfahrausweis BE ca. CHF 80. Fahrstunden ab CHF 120/Lektion sowie Admin- & Versicherungspauschale CHF 120 (einmalig). Gesamtkosten durchschnittlich CHF 900–1'600 je nach Stundenzahl.</p>
           </details>
         </div>
       </div>
