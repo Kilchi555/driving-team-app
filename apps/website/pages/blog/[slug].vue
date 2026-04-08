@@ -219,7 +219,7 @@ useSeoMeta({
   description: () => article.value?.description ?? '',
   ogTitle: () => article.value?.title ?? '',
   ogDescription: () => article.value?.description ?? '',
-  ogUrl: () => `https://drivingteam.ch/blog/${article.value?.slug}/`,
+  ogUrl: `https://drivingteam.ch/blog/${slug}/`,
   ogType: 'article',
   ogImage: () => `https://drivingteam.ch${article.value?.ogImage ?? '/images/og-image.webp'}`,
   robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
@@ -227,7 +227,7 @@ useSeoMeta({
 
 useHead({
   link: [
-    { rel: 'canonical', href: () => `https://drivingteam.ch/blog/${article.value?.slug}/` },
+    { rel: 'canonical', href: `https://drivingteam.ch/blog/${slug}/` },
   ],
   meta: [
     { property: 'article:published_time', content: () => article.value?.date ?? '' },
@@ -248,7 +248,7 @@ const relatedArticles = computed(() => {
 })
 
 const articleUrl = computed(() =>
-  `https://drivingteam.ch/blog/${article.value?.slug}/`
+  `https://drivingteam.ch/blog/${slug}/`
 )
 
 function formatDate(dateStr: string): string {
