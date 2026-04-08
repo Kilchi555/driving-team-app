@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagen Fahrschule Zürich | C1/C/CE Prüfung StVA Regensdorf | Driving Team</Title>
-      <Meta name="description" content="Lastwagen Fahrschule Zürich ✓ C1, C & CE ✓ Prüfung StVA Regensdorf ✓ CZV Grundkurs ✓ ab CHF 160.-/Lektion ✓ Treffpunkt Zürich-Altstetten ✓ Erfahrene Fahrlehrer. Jetzt anmelden!" />
+      <Title>Lastwagen Fahrschule Zürich | C1/C/CE Prüfung im Albisgütli | Driving Team</Title>
+      <Meta name="description" content="Lastwagen Fahrschule Zürich ✓ C1, C & CE ✓ Prüfung StVA Albisgütli ✓ CZV Grundkurs ✓ ab CHF 170.-/Lektion ✓ Treffpunkt Wädenswil ✓ Erfahrene Fahrlehrer. Jetzt anmelden!" />
       <Meta name="keywords" content="Lastwagen Fahrschule Zürich, LKW Fahrschule Zürich, Lastwagen Führerschein Zürich, Kategorie C Zürich, C1 Zürich, CE Zürich, StVA Regensdorf LKW Prüfung, LKW Fahrstunden Zürich" />
       <Meta property="og:title" content="Lastwagen Fahrschule Zürich | C1/C/CE | Driving Team" />
-      <Meta property="og:description" content="Professionelle LKW Fahrschule in Zürich-Altstetten. C1, C & CE Prüfung am StVA Regensdorf. CZV Grundkurs inklusive." />
+      <Meta property="og:description" content="Professionelle LKW Fahrschule in Zürich-Altstetten. C1, C & CE Prüfung am Stva Albisgütli. CZV Grundkurs inklusive." />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule-zuerich/" />
@@ -43,7 +43,7 @@
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Zürich</span>
             </h1>
             <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
-              C1, C & CE Ausbildung ab Zürich-Altstetten. Prüfung am Strassenverkehrsamt Regensdorf – wir kennen jede Route. CZV Grundkurs und moderne LKW-Fahrzeuge inklusive.
+              C1, C & CE Ausbildung ab Wädenswil. Prüfung am Strassenverkehrsamt Zürich-Albisgütli – wir kennen jede Route und fahren mit modernen LKW-Fahrzeuge inklusive.
             </p>
             <div class="flex gap-8 mb-10">
               <div>
@@ -51,11 +51,11 @@
                 <p class="text-white/70 text-sm">Erfolgsquote</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 160</p>
+                <p class="text-4xl font-black text-yellow-300">CHF 150</p>
                 <p class="text-white/70 text-sm">ab / Lektion</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">1994</p>
+                <p class="text-4xl font-black text-yellow-300">2011</p>
                 <p class="text-white/70 text-sm">Gegründet</p>
               </div>
             </div>
@@ -76,36 +76,36 @@
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">📍</span>
                 <div>
-                  <p class="font-semibold text-sm">Standort</p>
-                  <p class="text-white/70 text-sm">Zürich-Altstetten · Prüfung StVA Regensdorf</p>
+                  <p class="font-semibold text-sm">Treffpunkt</p>
+                  <p class="text-white/70 text-sm">Parkplatz Neubüel, Wädenswil · Prüfung StVA Zürich-Albisgütli</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🚚</span>
                 <div>
                   <p class="font-semibold text-sm">Kategorien</p>
-                  <p class="text-white/70 text-sm">C1 (bis 7.5t) · C (über 7.5t) · CE (Sattelzug)</p>
+                  <p class="text-white/70 text-sm">C1 (bis 7.5t) · C (über 7.5t) · CE (Anhängerzug)</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">💰</span>
                 <div>
                   <p class="font-semibold text-sm">Preis</p>
-                  <p class="text-white/70 text-sm">ab CHF 160.-/Lektion · WarmUp CHF 649.-</p>
+                  <p class="text-white/70 text-sm">ab CHF 150.-/Lektion · Prüfungsfahrt inklusive WarmUp CHF 649.-</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">📋</span>
                 <div>
                   <p class="font-semibold text-sm">CZV Grundkurs</p>
-                  <p class="text-white/70 text-sm">Obligatorisch · direkt über uns buchbar</p>
+                  <p class="text-white/70 text-sm">Obligatorisch für Berufstätige ab 3.5t · direkt über uns buchbar</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🎓</span>
                 <div>
                   <p class="font-semibold text-sm">Mindestalter</p>
-                  <p class="text-white/70 text-sm">C1: 18 Jahre · C/CE: 21 Jahre (mit CZV: 18)</p>
+                  <p class="text-white/70 text-sm">C1/C/CE: 18 Jahre</p>
                 </div>
               </div>
             </div>
@@ -117,12 +117,12 @@
     <!-- Warum Zürich-spezifisch -->
     <section class="section-container py-16">
       <div class="max-w-4xl mx-auto">
-        <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center">LKW-Prüfung am StVA Regensdorf – Unser Heimvorteil</h2>
+        <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center">LKW-Prüfung am StVA Zürich-Albisgütli – Unser Heimvorteil</h2>
         <div class="grid md:grid-cols-2 gap-8">
           <div class="bg-gray-50 rounded-2xl p-6">
             <p class="text-3xl mb-3">🏛️</p>
-            <h3 class="font-bold text-lg mb-2">Prüfungszentrum Regensdorf</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">Die LKW-Prüfung für Kategorie C und CE findet am Strassenverkehrsamt Regensdorf (Rütistrasse 8, 8105 Regensdorf) statt. Wir absolvieren die gesamte Ausbildung im Prüfungsgebiet – Autobahn A1 Zürich-West, Industriegebiet Schlieren, Zürich-Altstetten. Du kennst jeden Kreisverkehr, bevor du zur Prüfung antritst.</p>
+            <h3 class="font-bold text-lg mb-2">Strassenverkehrsamt Zürich-Albisgütli</h3>
+            <p class="text-gray-600 text-sm leading-relaxed">Die LKW-Prüfung für Kategorie C und CE findet am Strassenverkehrsamt Zürich-Albisgütli (Üetlibergstrasse 301, 8036 Zürich) statt. Wir absolvieren die gesamte Ausbildung im Prüfungsgebiet – Autobahn A1 Zürich-West, Industriegebiet Leimbach, Binz und Zürich-West. Du kennst jeden Kreisverkehr, bevor du zur Prüfung antritst.</p>
           </div>
           <div class="bg-gray-50 rounded-2xl p-6">
             <p class="text-3xl mb-3">🗺️</p>
@@ -131,13 +131,13 @@
           </div>
           <div class="bg-gray-50 rounded-2xl p-6">
             <p class="text-3xl mb-3">🚦</p>
-            <h3 class="font-bold text-lg mb-2">Treffpunkt Zürich-Altstetten</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">Dein Treffpunkt ist Zürich-Altstetten (Baslerstrasse 145, 8048 Zürich), direkt beim Bahnhof Altstetten. Gut erreichbar mit S-Bahn, Tram und Auto. Das Fahrzeug ist vor Ort, du musst nichts mitbringen ausser deinen Lernfahrausweis.</p>
+            <h3 class="font-bold text-lg mb-2">Treffpunkt Parkplatz Neubüel, Wädenswil</h3>
+            <p class="text-gray-600 text-sm leading-relaxed">Dein Treffpunkt ist der Parkplatz Neubüel in Wädenswil. Gut erreichbar über Autobahn A3. Das Fahrzeug ist vor Ort, du musst nichts mitbringen ausser deinen Lernfahrausweis.</p>
           </div>
           <div class="bg-gray-50 rounded-2xl p-6">
             <p class="text-3xl mb-3">📜</p>
             <h3 class="font-bold text-lg mb-2">CZV Grundkurs Pflicht</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">Für die berufliche Nutzung von LKW ab 3.5t ist der CZV Grundkurs (140 Stunden) obligatorisch. Wir koordinieren den Kurs für dich und sorgen für einen reibungslosen Ausbildungsablauf von Theorie bis Prüfung.</p>
+            <p class="text-gray-600 text-sm leading-relaxed">Für die berufliche Nutzung von LKW ab 3.5t ist der CZV Grundkurs obligatorisch. Wir koordinieren den Kurs für dich und sorgen für einen reibungslosen Ausbildungsablauf von Theorie bis Prüfung.</p>
           </div>
         </div>
       </div>
@@ -154,8 +154,8 @@
             <ul class="text-sm text-gray-600 space-y-1.5 mb-4">
               <li>✓ Fahrzeuge bis 7'500 kg</li>
               <li>✓ Mindestalter 18 Jahre</li>
-              <li>✓ Ideal für Lieferwagen, Feuerwehr</li>
-              <li>✓ CHF 160.-/Lektion</li>
+              <li>✓ Ideal für Lieferwagen, Feuerwehr, Wohnmobilfahrer</li>
+              <li>✓ CHF 150.-/Lektion</li>
             </ul>
             <p class="text-xs text-gray-400">WarmUp inkl. Prüfungsfahrt: CHF 649.-</p>
           </div>
@@ -165,9 +165,9 @@
             <p class="text-gray-500 text-sm mb-4">Schwere Lastwagen über 7.5 Tonnen</p>
             <ul class="text-sm text-gray-600 space-y-1.5 mb-4">
               <li>✓ Fahrzeuge über 7'500 kg</li>
-              <li>✓ Mindestalter 21 J. (18 J. mit CZV)</li>
+              <li>✓ Mindestalter 18 Jahre.</li>
               <li>✓ Berechtigt für alle LKW</li>
-              <li>✓ CHF 160.-/Lektion</li>
+              <li>✓ CHF 170.-/Lektion</li>
             </ul>
             <p class="text-xs text-gray-400">WarmUp inkl. Prüfungsfahrt: CHF 737.-</p>
           </div>
@@ -178,7 +178,7 @@
               <li>✓ Sattelzug & grosse Züge</li>
               <li>✓ Voraussetzung: Kat. C</li>
               <li>✓ Höchste LKW-Berechtigung</li>
-              <li>✓ CHF 170.-/Lektion</li>
+              <li>✓ CHF 200.-/Lektion</li>
             </ul>
             <p class="text-xs text-gray-400">WarmUp inkl. Prüfungsfahrt: CHF 866.-</p>
           </div>
@@ -197,28 +197,28 @@
               Wo findet die LKW-Prüfung in Zürich statt?
               <span class="text-primary-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Die LKW-Prüfung (Kategorie C/CE) findet am Strassenverkehrsamt Regensdorf statt (Rütistrasse 8, 8105 Regensdorf). Driving Team übt im gesamten Prüfungsgebiet Zürich-West – damit du alle typischen Prüfungsrouten kennst.</p>
+            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Die LKW-Prüfung (Kategorie C/CE) findet am Strassenverkehrsamt Zürich-Albisgütli statt (Üetlibergstrasse 301, 8036 Zürich). Driving Team übt im gesamten Prüfungsgebiet Zürich-West – damit du alle typischen Prüfungsrouten kennst.</p>
           </details>
           <details class="bg-gray-50 rounded-xl p-5 group">
             <summary class="font-semibold cursor-pointer list-none flex justify-between items-center">
               Muss ich den CZV Grundkurs machen?
               <span class="text-primary-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Ja, für die berufliche Nutzung von Fahrzeugen über 3.5t ist der CZV Grundkurs (Berufliche Grundqualifikation, 140 Stunden) obligatorisch. Er muss vor oder gleichzeitig mit der praktischen Ausbildung absolviert werden. Wir helfen dir bei der Koordination.</p>
+            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Für die berufliche Nutzung von Fahrzeugen über 3.5t ist der CZV Grundkurs (Berufliche Grundqualifikation) obligatorisch. Er muss spätestens innerhalb von 12 Monaten nach Erstellung der Ausbildungsbestätigung absolviert werden. Wir helfen dir bei der Koordination.</p>
           </details>
           <details class="bg-gray-50 rounded-xl p-5 group">
             <summary class="font-semibold cursor-pointer list-none flex justify-between items-center">
               Wie viele Fahrstunden brauche ich für den LKW-Führerschein?
               <span class="text-primary-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Durchschnittlich 20–30 Fahrlektionen à 45 Minuten für Kategorie C. Je nach Vorkenntnissen (z.B. bestehende Kat. CE-Erfahrung im Ausland) kann es weniger sein. Wir stellen dir nach den ersten Fahrstunden eine individuelle Einschätzung.</p>
+            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Durchschnittlich 20–30 Fahrlektionen à 45 Minuten für Kategorie C. Je nach Vorkenntnissen kann es weniger sein. Wir stellen dir nach den ersten Fahrstunden eine individuelle Einschätzung.</p>
           </details>
           <details class="bg-gray-50 rounded-xl p-5 group">
             <summary class="font-semibold cursor-pointer list-none flex justify-between items-center">
               Was kostet der LKW-Führerschein in Zürich insgesamt?
               <span class="text-primary-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Gesamtkosten liegen bei CHF 4'000–6'000 für Kategorie C: Nothelferkurs (CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden 20–30 à CHF 160, WarmUp + Prüfungsfahrt (CHF 737), Versicherungspauschale (CHF 160–250).</p>
+            <p class="text-gray-600 text-sm mt-3 leading-relaxed">Gesamtkosten liegen bei CHF 4'500–6'000 für Kategorie C: Gesundheitscheck (CHF 150), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden 20–30 à CHF 170, WarmUp + Prüfungsfahrt (CHF 737), Versicherungspauschale (CHF 200).</p>
           </details>
         </div>
       </div>
@@ -239,7 +239,7 @@
       </div>
     </section>
 
-    <LazyStandortMapSection standort="zuerich" />
+    <LazyStandortMapSection location-key="zuerich" />
     <CtaSection title="LKW Fahrschule Zürich – Jetzt anmelden!" />
   </div>
 </template>
@@ -254,7 +254,7 @@ const jsonLdScripts = [
       "@context": "https://schema.org",
       "@type": ["DrivingSchool", "LocalBusiness"],
       "name": "Driving Team – Lastwagen Fahrschule Zürich",
-      "description": "Professionelle LKW Fahrschule in Zürich-Altstetten. Kategorien C1, C und CE. Prüfung am StVA Regensdorf. CZV Grundkurs. ab CHF 160.-/Lektion.",
+      "description": "Professionelle LKW Fahrschule in Zürich-Altstetten. Kategorien C1, C und CE. Prüfung am StVA Zürich-Albisgütli. Fahrlektionen ab CHF 150.-/Lektion.",
       "url": "https://drivingteam.ch/lastwagen-fahrschule-zuerich/",
       "telephone": "+41444310033",
       "address": {
@@ -274,7 +274,7 @@ const jsonLdScripts = [
         {"@type": "City", "name": "Zürich"},
         {"@type": "City", "name": "Schlieren"},
         {"@type": "City", "name": "Dietikon"},
-        {"@type": "City", "name": "Regensdorf"}
+        {"@type": "City", "name": "Horgen"}
       ],
       "priceRange": "CHF 160–170",
       "openingHoursSpecification": [
