@@ -160,7 +160,7 @@
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
               <p><span class="font-semibold">Kategorien:</span> Auto, Anhänger, Taxi</p>
             </div>
-            <a href="/fahrschule-aargau/" class="block w-full text-center bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zu Fahrschule Aargau">
+            <a href="/fahrschule-spreitenbach/" class="block w-full text-center bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zu Fahrschule Aargau">
               Mehr erfahren
             </a>
           </div>

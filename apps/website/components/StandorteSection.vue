@@ -77,7 +77,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'aargau'" href="/fahrschule-aargau/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
+        <a v-if="exclude !== 'aargau'" href="/fahrschule-spreitenbach/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-orange-50 to-orange-100 overflow-hidden">
             <img src="/images/locations/aargau-hero.webp" alt="Fahrschule Aargau" loading="lazy" class="w-full h-full object-cover" />
           </div>
