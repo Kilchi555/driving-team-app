@@ -238,8 +238,13 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   const priceCalculationCache = _sharedPriceCache
 
   // ===== CACHE HELPERS =====
-  const generatePriceKey = (categoryCode: string, durationMinutes: number, userId?: string): string => {
-    return `${categoryCode}-${durationMinutes}${userId ? `-${userId}` : '-guest'}`
+  /** Inkl. Terminfolge: sonst liefert Cache nach Lektion 2 weiter „mit Admin-Fee“, obwohl Lektion 3 schon bezahlt ist. */
+  const generatePriceKey = (categoryCode: string, durationMinutes: number, userId?: string, appointmentSeq?: number): string => {
+    if (!userId) {
+      return `${categoryCode}-${durationMinutes}-guest`
+    }
+    const seq = appointmentSeq ?? 1
+    return `${categoryCode}-${durationMinutes}-${userId}-appt${seq}`
   }
 
   const isCacheValid = (timestamp: number, duration: number): boolean => {
@@ -438,6 +443,16 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         logger.debug(`✅ Found pricing rule with case-insensitive match: "${categoryCode}" → "${rule.category_code}"`)
       }
     }
+
+    // Boot ↔ Motorboot: Termine nutzen oft "Boot", pricing_rules oft nur "Motorboot" (oder umgekehrt)
+    if (!rule && (categoryCode === 'Boot' || categoryCode === 'Motorboot')) {
+      const altCode = categoryCode === 'Boot' ? 'Motorboot' : 'Boot'
+      rule = pricingRules.value.find(r => r.category_code === altCode)
+        || pricingRules.value.find(r => r.category_code.toLowerCase() === altCode.toLowerCase())
+      if (rule) {
+        logger.debug(`✅ Found pricing rule via Boot/Motorboot alias: "${categoryCode}" → "${rule.category_code}"`)
+      }
+    }
     
     if (!rule) {
       logger.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
@@ -547,7 +562,7 @@ const roundToNearestFranken = (rappen: number): number => {
     }
       
   // ✅ NEUE VALIDIERUNG: Theorielektionen und Fahrkategorien behandeln
-  const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'BPT']
+  const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'Boot', 'BPT']
   
   // ✅ Theorielektionen: Immer 85.- CHF, unabhängig von der Kategorie
   if (appointmentType === 'theory') {
@@ -622,8 +637,15 @@ const roundToNearestFranken = (rappen: number): number => {
   
   // ✅ NEU: Stelle sicher, dass durationMinutes eine Zahl ist
   const durationValue = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
-  const cacheKey = generatePriceKey(categoryCode, durationValue, userId)
-    
+
+    // Termin-Nummer *vor* Cache-Lookup (Schlüssel muss sich ändern, wenn 2. → 3. Lektion)
+    let appointmentNumber = 1
+    if (userId) {
+      appointmentNumber = await getAppointmentCount(userId, categoryCode)
+    }
+
+    const cacheKey = generatePriceKey(categoryCode, durationValue, userId, appointmentNumber)
+
     // ✅ WICHTIG: Cache NICHT verwenden im Edit-Mode (wenn appointmentId vorhanden)
     // weil sich originalDuration ändern kann und dann falscher Preis berechnet wird
     const cachedPrice = priceCalculationCache.value.get(cacheKey)
@@ -631,7 +653,7 @@ const roundToNearestFranken = (rappen: number): number => {
       logger.debug('📦 Using cached price calculation:', cachedPrice.data.total_chf)
       return cachedPrice.data
     }
-    
+
     if (appointmentId) {
       logger.debug('🔄 Skipping cache in Edit-Mode to ensure fresh calculation')
     }
@@ -667,12 +689,6 @@ const roundToNearestFranken = (rappen: number): number => {
         duration_minutes: durationMinutes,
         appointment_number: 1
       }
-    }
-
-    // ✅ Appointment count ermitteln (für Admin-Fee Berechnung)
-    let appointmentNumber = 1
-    if (userId) {
-      appointmentNumber = await getAppointmentCount(userId, categoryCode)
     }
 
     // ✅ Grundpreis berechnen

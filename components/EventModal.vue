@@ -2573,21 +2573,26 @@ const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) =
     const appointmentCount = await eventModalApi.countStudentAppointments(studentId, categoryCode)
     logger.debug('📊 Existing appointments count via API:', appointmentCount)
 
-    // 2. Admin-Fee ab dem 2. Termin (also wenn bereits >= 1 Termine existieren)
+    // 2. Admin-Fee ab dem 2. Termin — aber nur einmal pro Kategorie (wie usePricing.shouldApplyAdminFee)
     if (appointmentCount >= 1) {
-      // 3. Admin-Fee via secure API holen
-      const pricingRule = await eventModalApi.getPricingRuleByCategory(categoryCode)
+      const adminFeeAlreadyPaid = await eventModalApi.checkAdminFeePaid(studentId, categoryCode)
+      if (adminFeeAlreadyPaid) {
+        calculatedAdminFee.value = 0
+        logger.debug('ℹ️ No admin fee: already charged once for this category', { categoryCode, appointmentCount })
+      } else {
+        const pricingRule = await eventModalApi.getPricingRuleByCategory(categoryCode)
 
-      const adminFeeRappen = pricingRule?.admin_fee_rappen || 500 // Fallback 500 rappen = CHF 5.00
-      const adminFeeChf = adminFeeRappen / 100
+        const adminFeeRappen = pricingRule?.admin_fee_rappen || 500 // Fallback 500 rappen = CHF 5.00
+        const adminFeeChf = adminFeeRappen / 100
 
-      calculatedAdminFee.value = adminFeeChf
-      logger.debug('✅ Admin fee calculated via API:', {
-        appointmentCount,
-        adminFeeRappen,
-        adminFeeChf,
-        appliesFrom: pricingRule?.admin_fee_applies_from
-      })
+        calculatedAdminFee.value = adminFeeChf
+        logger.debug('✅ Admin fee calculated via API:', {
+          appointmentCount,
+          adminFeeRappen,
+          adminFeeChf,
+          appliesFrom: pricingRule?.admin_fee_applies_from
+        })
+      }
     } else {
       calculatedAdminFee.value = 0
       logger.debug('ℹ️ No admin fee: First appointment')
@@ -3310,6 +3315,7 @@ const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, ap
     'CE': { pricePerLesson: 200, adminFee: 250, adminFrom: 2 },
     'D': { pricePerLesson: 200, adminFee: 300, adminFrom: 2 },
     'Motorboot': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
+    'Boot': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
     'BPT': { pricePerLesson: 100, adminFee: 120, adminFrom: 2 }
   }
   
@@ -3378,68 +3384,9 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
         logger.debug('⏱️ Added custom duration to available options:', availableDurations.value)
       }
       
-      // ✅ 5. SOFORTIGE Preisberechnung (online + offline)
+      // ✅ 5. Zentrale Preisberechnung (gleicher Pfad wie Watcher — vermeidet Race: .then überschreibt Admin-Fee mit 0)
       if (formData.value.type && isLessonType(formData.value.eventType)) {
-        const appointmentNum = appointmentNumber?.value || 1
-        
-        try {
-          // ✅ Versuche zuerst online Preisberechnung
-          if (navigator.onLine) {
-            const { calculatePrice } = usePricing()
-            
-            calculatePrice(
-              formData.value.type, 
-              newDurationMinutes, 
-              formData.value.user_id || undefined,
-              formData.value.appointment_type || 'lesson', // ✅ Default to 'lesson'
-              props.mode === 'edit', // ✅ Edit-Mode flag
-              props.eventData?.id || undefined // ✅ Appointment ID (undefined if not edit mode)
-            )
-              .then(priceResult => {
-                logger.debug('✅ Online price calculated:', priceResult.total_chf)
-                
-                // ✅ In Edit-Mode: Berechne pricePerMinute basierend auf ORIGINAL-Duration
-                const durationForPricePerMinute = priceResult.original_duration_minutes || newDurationMinutes
-                const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
-                
-                logger.debug('💰 Price per minute calculation (calculateEndTime):', {
-                  base_price_rappen: priceResult.base_price_rappen,
-                  original_duration: priceResult.original_duration_minutes,
-                  current_duration: newDurationMinutes,
-                  using_duration: durationForPricePerMinute,
-                  pricePerMinute: calculatedPricePerMinute
-                })
-                
-                // Update dynamic pricing mit online Daten
-                dynamicPricing.value = {
-                  pricePerMinute: calculatedPricePerMinute,
-                  adminFeeChf: parseFloat(priceResult.admin_fee_chf),
-                  adminFeeRappen: priceResult.admin_fee_rappen || 0, // ✅ NEU: Admin-Fee in Rappen
-                  adminFeeAppliesFrom: 2, // ✅ Standard: Admin-Fee ab 2. Termin
-                  appointmentNumber: priceResult.appointment_number,
-                  hasAdminFee: priceResult.admin_fee_rappen > 0,
-                  totalPriceChf: priceResult.total_chf,
-                  category: formData.value.type || '',
-                  duration: newDurationMinutes,
-                  isLoading: false,
-                  error: ''
-                }
-                
-                // Preis wird jetzt aus der Datenbank berechnet
-              })
-              .catch(error => {
-                logger.debug('🔄 Online pricing failed, using offline calculation:', error)
-                calculateOfflinePrice(formData.value.type || '', newDurationMinutes, appointmentNum)
-              })
-          } else {
-            // ✅ Offline: Direkte Offline-Berechnung
-            logger.debug('📱 Offline mode detected, using offline calculation')
-            calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
-          }
-        } catch (error) {
-          logger.debug('🔄 Error in price calculation, using offline fallback:', error)
-          calculateOfflinePrice(formData.value.type, newDurationMinutes, appointmentNum)
-        }
+        void calculatePriceForCurrentData()
       }
     }
   }

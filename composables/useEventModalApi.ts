@@ -274,6 +274,14 @@ export const useEventModalApi = () => {
     return result?.count || 0
   }
 
+  /** Ob Admin-Fee für diese Kategorie bereits mit einer Zahlung erfasst wurde (1× pro Kategorie). */
+  const checkAdminFeePaid = async (userId: string, categoryCode: string): Promise<boolean> => {
+    const result = await apiCall<{ hasPaid: boolean }>('/api/staff/check-admin-fee-paid', {
+      query: { userId, categoryCode }
+    })
+    return result?.hasPaid === true
+  }
+
   /**
    * Get last appointment for a student (for pre-filling category)
    */
@@ -433,6 +441,7 @@ export const useEventModalApi = () => {
     checkAppointmentConflicts,
     deleteAppointment,
     countStudentAppointments,
+    checkAdminFeePaid,
     getLastStudentAppointment,
     updateAppointment,
 

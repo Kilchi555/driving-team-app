@@ -86,15 +86,24 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 4: Count active appointments
     // ✅ KORRIGIERT: Nur aktive Termine zählen (keine stornierten/abgebrochenen)
-    const { count, error } = await supabaseAdmin
+    // Boot / Motorboot: gleiche Ausbildung, Termine können type "Boot" oder UI "Motorboot" haben
+    const bootMotorbootTypes = ['Boot', 'Motorboot']
+    let countQuery = supabaseAdmin
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('type', categoryCode)
       .eq('tenant_id', tenantId)
       .is('deleted_at', null) // ✅ Soft Delete Filter
       .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
       .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
+
+    if (bootMotorbootTypes.includes(categoryCode)) {
+      countQuery = countQuery.in('type', bootMotorbootTypes)
+    } else {
+      countQuery = countQuery.eq('type', categoryCode)
+    }
+
+    const { count, error } = await countQuery
 
     if (error) {
       logger.error('❌ Error counting appointments for category:', error)

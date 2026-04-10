@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
-import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 
@@ -14,14 +14,15 @@ import logger from '~/utils/logger'
  *   - category_code (required): Category code (e.g., 'B', 'A1')
  * 
  * Security Layers:
- *   1. Bearer Token Authentication
+ *   1. Authentication (HTTP-Only Cookie / Bearer) — gleiche Session wie get-appointment-count
  *   2. Tenant Isolation
+ *   3. Nur Staff/Admin
  */
 
 export default defineEventHandler(async (event) => {
   try {
     // ✅ LAYER 1: AUTHENTICATION
-    const authUser = await getAuthUserFromRequest(event)
+    const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
       throw createError({
         statusCode: 401,
@@ -51,6 +52,13 @@ export default defineEventHandler(async (event) => {
 
     const tenantId = userProfile.tenant_id
 
+    if (!['staff', 'admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Insufficient permissions'
+      })
+    }
+
     // ✅ LAYER 3: INPUT VALIDATION
     const query = getQuery(event)
     const studentId = query.student_id as string | undefined
@@ -73,14 +81,24 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation
-    const { data: appointments, error } = await supabaseAdmin
+    const bootMotorbootTypes = ['Boot', 'Motorboot']
+    let apptQuery = supabaseAdmin
       .from('appointments')
       .select('id')
       .eq('user_id', studentId)
-      .eq('type', categoryCode)
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .neq('status', 'cancelled')
       .neq('status', 'deleted')
+      .not('status', 'eq', 'aborted')
+
+    if (bootMotorbootTypes.includes(categoryCode)) {
+      apptQuery = apptQuery.in('type', bootMotorbootTypes)
+    } else {
+      apptQuery = apptQuery.eq('type', categoryCode)
+    }
+
+    const { data: appointments, error } = await apptQuery
 
     if (error) {
       logger.error('❌ Error counting appointments:', error)
