@@ -270,6 +270,7 @@ const currentStartTime = ref('08:00')
 const remainingSpots = ref<Record<string, number>>({
   'Donnerstag, 28. Mai 2026': 9,
   'Donnerstag, 2. Juli 2026': 1,
+  'Dienstag, 18. August 2026': 12,
 })
 
 function isSoldOut(date: string) {
@@ -297,7 +298,7 @@ const courseInfo: Record<string, { dates: string[], location: string, start_time
     start_time: '08:00',
   },
   'Lastwagen Fahrlehrerweiterbildung': {
-    dates: [],
+    dates: ['Dienstag, 18. August 2026'],
     location: 'Verkehrszentrum Tuggen/SZ',
     start_time: '08:00',
   },
@@ -335,7 +336,9 @@ const pickerCourses = computed<CourseOption[]>(() => [
     description: 'Verkehrszentrum Tuggen/SZ · CHF 490.–',
     icon: '🚛',
     courseType: 'fahrlehrer_weiterbildung',
-    dates: [],
+    dates: courseInfo['Lastwagen Fahrlehrerweiterbildung'].dates,
+    soldOutDates: courseInfo['Lastwagen Fahrlehrerweiterbildung'].dates.filter(d => isSoldOut(d)),
+    spotsPerDate: remainingSpots.value,
     location: 'Verkehrszentrum Tuggen/SZ',
     start_time: '08:00',
     showFaberBirthdate: true,
