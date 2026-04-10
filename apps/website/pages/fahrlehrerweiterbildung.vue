@@ -19,7 +19,7 @@
       <div class="section-container">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrlehrer-Weiterbildung</h1>
-          <p class="text-xl text-white mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für aktuelle Kursangebote und Termine.</p>
+          <p class="text-xl text-white mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Bei uns findest Kurse die Spass machen.</p>
           <button @click="showPicker = true" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Anmelden
           </button>
@@ -45,7 +45,7 @@
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
                 <h3 class="font-bold text-white text-lg">Anhänger Kategorie BE</h3>
-                <p class="text-sm text-white/80 mt-1">Für Fahrlehrer:innen der Kategorie B</p>
+                <p class="text-sm text-white mt-1">Für Fahrlehrer:innen der Kategorie B</p>
               </div>
             </div>
           </div>
@@ -56,7 +56,7 @@
               <p class="text-xs text-gray-600 mt-1">inkl. Kaffee & Gipfeli, Mittagessen, Kursbestätigung</p>
             </div>
             <ul class="space-y-2 text-sm text-gray-700">
-              <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Fahrzeug: Eigener Anhängerzug BE</span></li>
+              <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Fahrzeug: Eigener Anhängerzug BE von Vorteil (nicht zwingend)</span></li>
               <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Ort: Verkehrszentrum Tuggen/SZ</span></li>
               <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Max. 12 Teilnehmende</span></li>
               <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Garantierte Durchführung</span></li>
@@ -75,7 +75,7 @@
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
                 <h3 class="font-bold text-white text-lg">Motorboot Fahrlehrerweiterbildung</h3>
-                <p class="text-sm text-white/80 mt-1">Für Fahrlehrer:innen der Kategorie B</p>
+                <p class="text-sm text-white mt-1">Für Fahrlehrer:innen der Kategorie B</p>
               </div>
             </div>
           </div>
@@ -105,7 +105,7 @@
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
                 <h3 class="font-bold text-white text-lg">Lastwagen Fahrlehrerweiterbildung</h3>
-                <p class="text-sm text-white/80 mt-1">Für Fahrlehrer:innen der Kategorie B</p>
+                <p class="text-sm text-white mt-1">Für Fahrlehrer:innen der Kategorie B</p>
               </div>
             </div>
           </div>
