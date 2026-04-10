@@ -9,13 +9,20 @@
 
     <!-- Form Card -->
     <div class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-6">
-      <form @submit.prevent="handleSubmit" class="space-y-6">
+      <form
+        @submit.prevent="handleSubmit"
+        method="post"
+        autocomplete="on"
+        name="course-registration"
+        class="space-y-6"
+      >
         <!-- First Name -->
         <div class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-given-name" class="block text-sm font-semibold text-gray-900">
             Vorname <span class="text-red-500">*</span>
           </label>
           <input
+            id="course-reg-given-name"
             v-model="form.first_name"
             type="text"
             name="firstName"
@@ -30,10 +37,11 @@
 
         <!-- Last Name -->
         <div class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-family-name" class="block text-sm font-semibold text-gray-900">
             Nachname <span class="text-red-500">*</span>
           </label>
           <input
+            id="course-reg-family-name"
             v-model="form.last_name"
             type="text"
             name="lastName"
@@ -48,10 +56,11 @@
 
         <!-- Company (optional) -->
         <div class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-organization" class="block text-sm font-semibold text-gray-900">
             Firma (optional)
           </label>
           <input
+            id="course-reg-organization"
             v-model="form.company"
             type="text"
             name="company"
@@ -64,10 +73,11 @@
 
         <!-- Email -->
         <div class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-email" class="block text-sm font-semibold text-gray-900">
             E-Mail <span class="text-red-500">*</span>
           </label>
           <input
+            id="course-reg-email"
             v-model="form.email"
             type="email"
             name="email"
@@ -82,10 +92,11 @@
 
         <!-- Phone -->
         <div class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-tel" class="block text-sm font-semibold text-gray-900">
             Telefon <span class="text-red-500">*</span>
           </label>
           <input
+            id="course-reg-tel"
             v-model="form.phone"
             type="tel"
             name="tel"
@@ -100,13 +111,15 @@
 
         <!-- Birthdate -->
         <div v-if="props.show_faber_birthdate !== false" class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-bday" class="block text-sm font-semibold text-gray-900">
             Geburtsdatum <span class="text-red-500">*</span>
           </label>
           <input
+            id="course-reg-bday"
             v-model="form.birthdate"
             type="date"
             name="birthdate"
+            autocomplete="bday"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
             :style="{ '--tw-ring-color': getBrandPrimary() }"
             required
@@ -116,13 +129,15 @@
 
         <!-- FaBer ID (Führerausweis Nummer) -->
         <div v-if="props.show_faber_birthdate !== false" class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-faberid" class="block text-sm font-semibold text-gray-900">
             Führerausweis-Nummer <span class="text-red-500">*</span>
           </label>
           <input
+            id="course-reg-faberid"
             v-model="form.faberid"
             type="text"
             name="faberid"
+            autocomplete="off"
             placeholder="z.B. 1234567890"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
             :style="{ '--tw-ring-color': getBrandPrimary() }"
@@ -135,14 +150,15 @@
         <!-- Address -->
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-3">
-            <label class="block text-sm font-semibold text-gray-900">
+            <label for="course-reg-address-line1" class="block text-sm font-semibold text-gray-900">
               Strasse <span class="text-red-500">*</span>
             </label>
             <input
+              id="course-reg-address-line1"
               v-model="form.street"
               type="text"
               name="street"
-              autocomplete="street-address"
+              autocomplete="address-line1"
               placeholder="z.B. Musterstrasse"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
               :style="{ '--tw-ring-color': getBrandPrimary() }"
@@ -150,13 +166,15 @@
             />
           </div>
           <div class="space-y-3">
-            <label class="block text-sm font-semibold text-gray-900">
+            <label for="course-reg-address-line2" class="block text-sm font-semibold text-gray-900">
               Nr. <span class="text-red-500">*</span>
             </label>
             <input
+              id="course-reg-address-line2"
               v-model="form.street_nr"
               type="text"
               name="streetNumber"
+              autocomplete="address-line2"
               placeholder="z.B. 42"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
               :style="{ '--tw-ring-color': getBrandPrimary() }"
@@ -167,10 +185,11 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-3">
-            <label class="block text-sm font-semibold text-gray-900">
+            <label for="course-reg-postal-code" class="block text-sm font-semibold text-gray-900">
               PLZ <span class="text-red-500">*</span>
             </label>
             <input
+              id="course-reg-postal-code"
               v-model="form.zip"
               type="text"
               name="zip"
@@ -182,10 +201,11 @@
             />
           </div>
           <div class="space-y-3">
-            <label class="block text-sm font-semibold text-gray-900">
+            <label for="course-reg-city" class="block text-sm font-semibold text-gray-900">
               Ort <span class="text-red-500">*</span>
             </label>
             <input
+              id="course-reg-city"
               v-model="form.city"
               type="text"
               name="city"
@@ -242,11 +262,14 @@
 
         <!-- Notes -->
         <div class="space-y-3">
-          <label class="block text-sm font-semibold text-gray-900">
+          <label for="course-reg-notes" class="block text-sm font-semibold text-gray-900">
             Zusätzliche Bemerkungen (optional)
           </label>
           <textarea
+            id="course-reg-notes"
             v-model="form.notes"
+            name="notes"
+            autocomplete="off"
             placeholder="z.B. spezielle Anforderungen oder Fragen..."
             rows="3"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm"
