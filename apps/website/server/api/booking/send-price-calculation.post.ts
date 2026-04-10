@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { formatResendFrom } from '~/server/utils/format-resend-from'
 
 const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 const TEAM_EMAIL = 'info@drivingteam.ch'
@@ -75,12 +76,13 @@ export default defineEventHandler(async (event) => {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+      const fromWithName = formatResendFrom(tenantName, fromEmail)
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
       // Email to customer
       await resend.emails.send({
-        from: fromEmail,
+        from: fromWithName,
         to: body.email.trim(),
         subject: `Deine Kostenschätzung – ${tenantName}`,
         html: buildCustomerEmail(body, primaryColor, tenantName, teamEmail),
@@ -90,7 +92,7 @@ export default defineEventHandler(async (event) => {
 
       // Notification to team
       await resend.emails.send({
-        from: fromEmail,
+        from: fromWithName,
         to: teamEmail,
         subject: `💰 Neue Preiskalkulation: ${body.category}${body.firstName ? ` – ${body.firstName}` : ''} (${body.email})`,
         html: buildTeamEmail(body, primaryColor, tenantName),

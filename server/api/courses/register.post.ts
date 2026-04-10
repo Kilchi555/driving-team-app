@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { formatResendFrom } from '~/server/utils/format-resend-from'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -106,6 +107,7 @@ export default defineEventHandler(async (event) => {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+      const fromWithName = formatResendFrom(tenantName, fromEmail)
       const teamEmail = 'info@drivingteam.ch'
       const courseLabel = COURSE_TYPE_LABELS[body.course_type] || body.course_type
       const isDefinitiveRegistration = !!(body.course_dates && body.course_dates.length > 0)
@@ -114,7 +116,7 @@ export default defineEventHandler(async (event) => {
 
       // Team notification
       await resend.emails.send({
-        from: fromEmail,
+        from: fromWithName,
         to: teamEmail,
         subject: isDefinitiveRegistration
           ? `Neue Anmeldung: ${body.course_title || courseLabel} – ${body.first_name} ${body.last_name}`
@@ -127,7 +129,7 @@ export default defineEventHandler(async (event) => {
       // Customer confirmation (only if email provided)
       if (body.email) {
         await resend.emails.send({
-          from: fromEmail,
+          from: fromWithName,
           to: body.email,
           subject: isDefinitiveRegistration
             ? `Anmeldebestätigung: ${courseLabel}`
