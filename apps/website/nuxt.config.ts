@@ -6,6 +6,9 @@ export default defineNuxtConfig({
     // Server-only (nicht im Browser sichtbar)
     // Nutzt den bestehenden VITE_GOOGLE_MAPS_API_KEY – Places API muss aktiviert sein
     googlePlacesApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_PLACES_API_KEY ?? '',
+    /** Öffentliche Website-APIs (Kurse, Tracking, Kontakt). Alternativ: NUXT_SUPABASE_URL / NUXT_SUPABASE_SERVICE_ROLE_KEY */
+    supabaseUrl: process.env.SUPABASE_URL ?? '',
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     public: {
       // Place IDs sind öffentlich – kein Sicherheitsrisiko
       placesIdZuerich: process.env.GOOGLE_PLACE_ID_ZUERICH ?? '',
@@ -16,7 +19,7 @@ export default defineNuxtConfig({
   image: {
     provider: 'vercel',
     quality: 80,
-    formats: ['webp', 'avif'],
+    format: ['webp', 'avif'],
     screens: {
       xs: 320,
       sm: 640,
@@ -24,6 +27,13 @@ export default defineNuxtConfig({
       lg: 1024,
       xl: 1280,
       xxl: 1920,
+      // Häufige NuxtImg-Breiten (Logo, Kategorie-Karten) – vermeidet Defaulting-Warnungen
+      340: 340,
+      360: 360,
+      480: 480,
+      680: 680,
+      720: 720,
+      960: 960,
     },
   },
   ssr: true,
@@ -593,12 +603,6 @@ export default defineNuxtConfig({
     '/fahrschule': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
     '/vku': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
 
-    // Mehrsprachige Seiten - alte Locations (Frauenfeld, Winterthur, Wil)
-    '/it/fahrschule-winterthur': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
-    '/it/fahrschule-winterthur/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
-    '/it/fahrschule-frauenfeld': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
-    '/it/fahrschule-frauenfeld/': { redirect: { to: '/it/fahrschule-standorte/', statusCode: 301 } },
-
     '/en/fahrschule-wil': { redirect: { to: '/', statusCode: 301 } },
     '/en/fahrschule-wil/': { redirect: { to: '/', statusCode: 301 } },
     '/en/fahrschule-kloten': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
@@ -724,8 +728,6 @@ export default defineNuxtConfig({
     '/en/anhaenger-kurs/': { redirect: { to: '/anhaenger-kurs/', statusCode: 301 } },
     '/en/nothelferkurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
     '/en/nothelferkurs/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
-    '/en/wab-course-english': { redirect: { to: '/wab-course-english/', statusCode: 301 } },
-    '/en/wab-course-english/': { redirect: { to: '/wab-course-english/', statusCode: 301 } },
     '/en/fahrlehrer-kloten': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
     '/en/fahrlehrer-kloten/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
     '/en/fahrschule-uster': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },

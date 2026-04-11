@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 interface BookingRedirectPayload {
   category: string
@@ -15,8 +16,7 @@ export default defineEventHandler(async (event) => {
       return { ok: false, error: 'Missing fields' }
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.warn('Supabase not configured for booking redirect')
