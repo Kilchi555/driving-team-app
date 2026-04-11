@@ -182,7 +182,7 @@
         <div class="text-center mt-10">
           <a
             href="#kurse"
-            class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg text-lg"
+            class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg text-lg mb-4"
           >
             Alle Kurse unserer Fahrschule ↓
           </a>
@@ -194,7 +194,7 @@
     <StatsSection />
 
     <!-- Courses Section -->
-    <section id="kurse" class="py-20 bg-white scroll-mt-20">
+    <section class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
         <div class="mb-16">
           <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6">
@@ -229,7 +229,7 @@
         <h2 class="sr-only">Unsere Fahrschule führt folgende Kurse durch</h2>
         
         <!-- Theorie & Grundkurse -->
-        <div class="mb-16">
+        <div  id="kurse" class="mb-16">
           <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span class="text-3xl">📚</span> Theorie & Grundkurse
           </h3>
