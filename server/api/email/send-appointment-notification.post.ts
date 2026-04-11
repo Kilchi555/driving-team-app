@@ -32,7 +32,7 @@ interface AppointmentNotificationBody {
 
 const TEMPLATES = {
   appointment_confirmation: {
-    subject: 'Terminbestätigung erforderlich',
+    subject: 'Terminbestätigung',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       // ✅ SECURITY FIX: Immer zum Login/Dashboard leiten, NIE zu /confirm/[token]
