@@ -194,13 +194,27 @@ const formData = ref({
   city: ''
 })
 
-// Load tenant categories from API - only subcategories to avoid duplicates
+// Load tenant categories: alle Subkategorien (wie bisher), plus Hauptkategorien ohne Kinder
+// (sonst fehlen z. B. „Boot“, wenn nur ein Top-Level-Eintrag existiert und keine Subs)
 async function loadCategories() {
   try {
     loadingCategories.value = true
     const response = await $fetch<{ success: boolean; data: any[] }>('/api/staff/get-categories')
-    // Only show subcategories (those with a parent) to avoid showing duplicates
-    categories.value = (response.data || []).filter((cat: any) => cat.parent_category_id !== null)
+    const all = response.data || []
+
+    const subs = all.filter((cat: any) => cat.parent_category_id != null)
+    const parents = all.filter((cat: any) => cat.parent_category_id == null)
+
+    const parentIdsThatHaveSubs = new Set(
+      subs.map((c: any) => c.parent_category_id).filter(Boolean)
+    )
+    const parentsWithoutSubs = parents.filter((p: any) => !parentIdsThatHaveSubs.has(p.id))
+
+    const merged = [...subs, ...parentsWithoutSubs]
+    merged.sort((a, b) =>
+      String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' })
+    )
+    categories.value = merged
   } catch (error: any) {
     logger.error('❌ Error loading categories:', error)
     categories.value = []
