@@ -11,17 +11,15 @@ export default defineEventHandler(async (event) => {
         channel: 'email',
         stage: 'first',
         language: 'de',
-        subject: 'Terminbestätigung erforderlich - {{appointment_date}}',
+        subject: 'Terminbestätigung - {{appointment_date}}',
         body: `Hallo {{student_name}},
 
-bitte bestätigen Sie Ihren Termin am {{appointment_date}} um {{appointment_time}} Uhr.
+bitte kontrollieren Sie Ihren Termin am {{appointment_date}} um {{appointment_time}} Uhr.
 
 Standort: {{location}}
 Preis: {{price}} CHF
 
-Bitte bestätigen Sie den Termin hier: {{confirmation_link}}
-
-Mit freundlichen Grüßen
+Mit freundlichen Grüssen
 Ihr Driving Team`
       },
       {
@@ -30,7 +28,7 @@ Ihr Driving Team`
         stage: 'first',
         language: 'de',
         subject: null,
-        body: 'Terminbestätigung erforderlich: {{appointment_date}} um {{appointment_time}} Uhr. Bitte bestätigen Sie hier: {{confirmation_link}}'
+        body: 'Terminbestätigung: {{appointment_date}} um {{appointment_time}} Uhr. Bitte kontrollieren Sie Ihren Termin.'
       },
       {
         tenant_id: null,
@@ -45,7 +43,7 @@ Ihr Driving Team`
         channel: 'email',
         stage: 'second',
         language: 'de',
-        subject: 'Erinnerung: Terminbestätigung noch ausstehend',
+        subject: 'Erinnerung: Terminbestätigung',
         body: `Hallo {{student_name}},
 
 dies ist eine freundliche Erinnerung, dass Sie Ihren Termin am {{appointment_date}} um {{appointment_time}} Uhr noch bestätigen müssen.
@@ -124,10 +122,11 @@ Ihr Driving Team`
       message: 'Default templates inserted successfully',
       count: templates.length
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     throw createError({
       statusCode: 500,
-      statusMessage: `Failed to seed templates: ${error.message}`
+      statusMessage: `Failed to seed templates: ${msg}`,
     })
   }
 })

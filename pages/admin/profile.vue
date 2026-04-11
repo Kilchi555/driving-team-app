@@ -921,7 +921,7 @@
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Allgemeine Einstellungen</h2>
             <p class="text-sm text-gray-600 mb-4">
-              Konfigurieren Sie automatische Erinnerungen für Terminbestätigungen.
+              Konfigurieren Sie automatische Erinnerungen.
             </p>
             
             <div class="space-y-4">
@@ -929,7 +929,7 @@
               <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div class="flex-1">
                   <h3 class="text-sm font-medium text-gray-900">Erinnerungen aktiv</h3>
-                  <p class="text-sm text-gray-600">Automatische Erinnerungen für ausstehende Terminbestätigungen</p>
+                  <p class="text-sm text-gray-600">Automatische Erinnerungen</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input
@@ -1146,7 +1146,7 @@
                   v-model="currentTemplate.subject"
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="z.B. Terminbestätigung erforderlich - {{tenant_name}}"
+                  placeholder="z.B. Terminbestätigung - {{tenant_name}}"
                 />
               </div>
 
@@ -1634,6 +1634,7 @@
 import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
 import { logger } from '~/utils/logger'
+import { getSupabase } from '~/utils/supabase'
 import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'
@@ -1903,16 +1904,16 @@ const loadData = async () => {
     
     if (!tenantId) {
       const supabase = getSupabase()
-      const { data: authData } = authStore.user // ✅ MIGRATED
-      
-      if (authData.user) {
+      const authUser = authStore.user
+
+      if (authUser?.email) {
         const { data: userData } = await supabase
           .from('users')
           .select('tenant_id')
-          .eq('email', authData.user.email)
+          .eq('email', authUser.email)
           .eq('is_active', true)
           .single()
-        
+
         tenantId = userData?.tenant_id
       }
     }
@@ -2314,7 +2315,7 @@ const loadSelectedTemplate = () => {
 const getDefaultTemplate = (key: string) => {
   const defaults: Record<string, { subject: string; body: string }> = {
     'first_email': {
-      subject: 'Terminbestätigung erforderlich - {{tenant_name}}',
+      subject: 'Terminbestätigung - {{tenant_name}}',
       body: `Hallo {{student_first_name}},
 
 {{tenant_name}} hat Ihnen einen Termin vorgeschlagen:
@@ -2336,7 +2337,7 @@ Freundliche Grüsse
       body: '{{tenant_name}}: Bitte bestätigen Sie Ihren Termin am {{appointment_date}} um {{appointment_time}} Uhr. {{confirmation_link}}'
     },
     'first_push': {
-      subject: 'Terminbestätigung erforderlich',
+      subject: 'Terminbestätigung',
       body: '{{tenant_name}} bittet dich, deinen Termin am {{appointment_datetime}} zu bestätigen.'
     },
     'second_email': {

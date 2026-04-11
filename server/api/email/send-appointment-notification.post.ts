@@ -51,14 +51,14 @@ const TEMPLATES = {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
           <tr>
             <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung erforderlich</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung</h1>
             </td>
           </tr>
           <tr>
             <td style="padding: 30px;">
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details und bestätige deinen Termin:</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details:</p>
               
               <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
@@ -99,7 +99,7 @@ const TEMPLATES = {
   },
   
   pending_payment: {
-    subject: 'Terminbestätigung erforderlich',
+    subject: 'Terminbestätigung',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug 
@@ -114,14 +114,14 @@ const TEMPLATES = {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
           <tr>
             <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung erforderlich</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung</h1>
             </td>
           </tr>
           <tr>
             <td style="padding: 30px;">
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details und bestätige deinen Termin:</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details:</p>
               
               <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
@@ -130,7 +130,7 @@ const TEMPLATES = {
                 ${data.amount ? `<p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bestätige deinen Termin und bezahle die offene Rechnung in deinem Kundenkonto.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bezahle die offene Zahlung in deinem Kundenkonto.</p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
@@ -362,7 +362,10 @@ export default defineEventHandler(async (event) => {
     logger.debug(`📧 Sending ${type} appointment notification to ${email}`)
     
     const subject = template.subject
-    const html = template.getHtml({ ...body, tenantSlug }, primaryColor)
+    const html = template.getHtml(
+      { ...body, tenantSlug: tenantSlug ?? body.tenantSlug ?? undefined },
+      primaryColor,
+    )
     
     await sendEmail({
       to: email,
