@@ -253,9 +253,9 @@
       <!-- Weitere Sektionen in Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         
-        <!-- Affiliate / Empfehlen Card -->
+        <!-- Affiliate: gleich mit dem Grid sichtbar; ausblenden nur wenn Tenant nach API deaktiviert hat -->
         <div
-          v-if="affiliateEnabled"
+          v-if="!affiliateGateResolved || affiliateEnabled"
           @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
@@ -348,9 +348,9 @@
       <!-- Shop + Lernbereich: halbe Breite, nebeneinander -->
       <div class="grid grid-cols-2 gap-4 mb-4">
 
-        <!-- Shop: nur wenn tenant_settings.features.product_sales_enabled aktiv -->
+        <!-- Shop: tenant_settings product_sales_enabled (nach API; bis dahin Platzhalter wie andere Karten) -->
         <div
-          v-if="appEnv !== 'production' && shopEnabled"
+          v-if="!shopGateResolved || shopEnabled"
           @click="handleClickWithDelay('shop', navigateToShop)"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'shop' }"
@@ -1331,6 +1331,8 @@ const affiliateStats = ref<any>(null)
 const affiliateCopied = ref(false)
 const affiliateGenerating = ref(false)
 const affiliateLoading = ref(false)
+/** Nach erstem /api/affiliate/stats: Karte ausblenden wenn Programm aus */
+const affiliateGateResolved = ref(false)
 const affiliateEnabled = ref(
   import.meta.client ? localStorage.getItem('customer_affiliate_enabled') === 'true' : false
 )
@@ -1373,23 +1375,24 @@ const openAffiliateDetail = (filter: 'all' | 'credited' | 'pending' | 'earnings'
 const shopEnabled = ref(
   import.meta.client ? localStorage.getItem('customer_shop_enabled') === 'true' : false
 )
-
-// Environment check for preview-only features
-const appEnv = useRuntimeConfig().public.appEnv as string | undefined
+/** Nach Feature-Check: Shop-Karte ausblenden wenn Produktverkauf aus */
+const shopGateResolved = ref(false)
 
 async function loadShopFeatureEnabled() {
-  const tenantId = userData.value?.tenant_id
-  if (!tenantId) {
-    shopEnabled.value = false
-    return
-  }
   try {
+    const tenantId = userData.value?.tenant_id
+    if (!tenantId) {
+      shopEnabled.value = false
+      return
+    }
     const res = await checkFeatureFlag(tenantId, 'product_sales_enabled')
     shopEnabled.value = !!res?.enabled
     if (import.meta.client) localStorage.setItem('customer_shop_enabled', String(shopEnabled.value))
   } catch (e) {
     logger.warn('⚠️ loadShopFeatureEnabled failed:', e)
     shopEnabled.value = false
+  } finally {
+    shopGateResolved.value = true
   }
 }
 
@@ -1939,6 +1942,7 @@ async function loadAffiliateStats() {
     affiliateEnabled.value = false
   } finally {
     affiliateLoading.value = false
+    affiliateGateResolved.value = true
   }
 }
 
@@ -2891,9 +2895,8 @@ onMounted(async () => {
       await loadPendingConfirmations()
     }
     
-    // Feature-Flags aus tenant_settings (Kunde darf eigene Tenant-Settings lesen)
-    await loadShopFeatureEnabled()
-    loadAffiliateStats()
+    // Feature-Flags parallel (keine Verzögerung der Affiliate-Karte hinter Shop-Request)
+    await Promise.all([loadShopFeatureEnabled(), loadAffiliateStats()])
     
     // Show payment status toast
     if (paymentSuccess) {

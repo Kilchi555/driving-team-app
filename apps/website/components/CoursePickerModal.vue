@@ -20,6 +20,7 @@
           <!-- Step 1: Course Picker -->
           <div v-if="!selectedCourse" class="p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-2">Kurs auswählen</h2>
+            <p v-if="instancesLoading" class="text-xs text-primary-600 mb-2">Kurstermine werden geladen …</p>
             <p class="text-gray-500 text-sm mb-6">Wähle den Kurs aus, für den du dich anmelden möchtest:</p>
 
             <div class="space-y-3">
@@ -68,12 +69,15 @@
               :course_type="selectedCourse.courseType"
               :custom_title="`Anmeldung: ${selectedCourse.label}`"
               :custom_description="selectedCourse.description"
+              :course_slots="selectedCourse.course_slots"
               :available_dates="selectedCourse.dates || []"
               :sold_out_dates="selectedCourse.soldOutDates || []"
               :spots_per_date="selectedCourse.spotsPerDate || {}"
+              :instances-loading="instancesLoading"
               :location="selectedCourse.location"
               :start_time="selectedCourse.start_time"
               :show_faber_birthdate="selectedCourse.showFaberBirthdate !== false"
+              :initial_contact="initialContact"
               @submitted="onSubmitted"
             />
           </div>
@@ -85,7 +89,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import type { CourseRegistrationContactPrefill } from '~/utils/course-registration-prefill'
+
+export interface CourseSlotOption {
+  id: string
+  label: string
+  spots_remaining?: number
+  sold_out?: boolean
+}
 
 export interface CourseOption {
   id: string
@@ -94,6 +106,8 @@ export interface CourseOption {
   icon: string
   courseType: string
   formType?: 'registration' | 'inquiry'
+  /** Public course instances (courses.id) — preferred over string dates when set */
+  course_slots?: CourseSlotOption[]
   dates?: string[]
   soldOutDates?: string[]
   spotsPerDate?: Record<string, number>
@@ -106,24 +120,35 @@ const props = defineProps<{
   modelValue: boolean
   tenantId: string
   courses: CourseOption[]
+  /** Optional: zeigt Ladehinweis und blockiert Absenden im Formular bis Kurse da sind */
+  instancesLoading?: boolean
+  initialContact?: CourseRegistrationContactPrefill
 }>()
+
+const instancesLoading = computed(() => props.instancesLoading === true)
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'submitted': [selectedDates?: string[]]
 }>()
 
-const selectedCourse = ref<CourseOption | null>(null)
+/** Keep only id so spots/counts stay in sync when parent recomputes `courses` */
+const selectedCourseId = ref<string | null>(null)
+
+const selectedCourse = computed(() => {
+  if (!selectedCourseId.value) return null
+  return props.courses.find(c => c.id === selectedCourseId.value) ?? null
+})
 
 function selectCourse(course: CourseOption) {
-  selectedCourse.value = course
+  selectedCourseId.value = course.id
 }
 
 function close() {
   emit('update:modelValue', false)
   // Reset after transition
   setTimeout(() => {
-    selectedCourse.value = null
+    selectedCourseId.value = null
   }, 300)
 }
 

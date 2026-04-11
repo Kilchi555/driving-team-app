@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -22,12 +23,116 @@ interface CourseRegistrationPayload {
   zip?: string
   city?: string
   course_type: string
+  /** Human-readable dates (legacy / form labels) */
   course_dates?: string[]
+  /** Public courses.id rows — validated server-side; drives capacity */
+  course_ids?: string[]
   notes?: string
   company?: string
   location?: string
   start_time?: string
   course_title?: string
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function formatDateLabelDeCh(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat('de-CH', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/Zurich',
+  }).format(d)
+}
+
+async function incrementCourseParticipantCount(
+  supabase: SupabaseClient,
+  courseId: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: row, error: selErr } = await supabase
+      .from('courses')
+      .select('current_participants, max_participants, status')
+      .eq('id', courseId)
+      .single()
+
+    if (selErr || !row) {
+      throw createError({ statusCode: 500, statusMessage: 'Kurs nicht gefunden' })
+    }
+
+    const cur = row.current_participants ?? 0
+    const max = row.max_participants ?? 0
+    if (cur >= max) {
+      throw createError({ statusCode: 409, statusMessage: 'Kurs ist ausgebucht' })
+    }
+
+    const next = cur + 1
+    const newStatus = next >= max ? 'full' : row.status
+
+    const { data: updated, error: upErr } = await supabase
+      .from('courses')
+      .update({
+        current_participants: next,
+        ...(newStatus !== row.status ? { status: newStatus } : {}),
+      })
+      .eq('id', courseId)
+      .eq('current_participants', cur)
+      .select('id')
+
+    if (upErr) {
+      throw createError({ statusCode: 500, statusMessage: 'Platz konnte nicht reserviert werden' })
+    }
+    if (updated && updated.length > 0) {
+      return
+    }
+  }
+  throw createError({ statusCode: 409, statusMessage: 'Kurs ausgebucht oder stark nachgefragt — bitte erneut versuchen' })
+}
+
+async function deleteCourseRegistrationsByIds(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return
+  await supabase.from('course_registrations').delete().in('id', ids)
+}
+
+async function decrementCourseParticipantCount(
+  supabase: SupabaseClient,
+  courseId: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: row, error: selErr } = await supabase
+      .from('courses')
+      .select('current_participants, max_participants, status')
+      .eq('id', courseId)
+      .single()
+
+    if (selErr || !row) return
+
+    const cur = row.current_participants ?? 0
+    if (cur <= 0) return
+
+    const next = cur - 1
+    const max = row.max_participants ?? 0
+    const newStatus = next >= max ? 'full' : 'active'
+
+    const { data: updated, error: upErr } = await supabase
+      .from('courses')
+      .update({
+        current_participants: next,
+        ...(newStatus !== row.status ? { status: newStatus } : {}),
+      })
+      .eq('id', courseId)
+      .eq('current_participants', cur)
+      .select('id')
+
+    if (upErr) return
+    if (updated && updated.length > 0) return
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -53,22 +158,63 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid phone format' })
     }
 
-    let finalNotes = body.notes || ''
-    if (body.company?.trim()) {
-      finalNotes = `Firma: ${body.company}\n${finalNotes}`.trim()
-    }
-    if (body.course_dates && body.course_dates.length > 0) {
-      finalNotes = `${finalNotes}\nGewünschte Kursdaten: ${body.course_dates.join(', ')}`.trim()
-    }
-
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw createError({ statusCode: 500, statusMessage: 'Database configuration missing' })
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    const rawIds = (body.course_ids || []).filter(id => typeof id === 'string' && UUID_RE.test(id.trim()))
+    const uniqueIds = [...new Set(rawIds.map(id => id.trim()))]
+
+    let resolvedDateLabels: string[] = body.course_dates?.length ? [...body.course_dates] : []
+
+    if (uniqueIds.length > 0) {
+      const { data: courseRows, error: cErr } = await supabase
+        .from('courses')
+        .select('id, tenant_id, is_public, status, max_participants, current_participants, course_start_date')
+        .in('id', uniqueIds)
+
+      if (cErr || !courseRows || courseRows.length !== uniqueIds.length) {
+        throw createError({ statusCode: 400, statusMessage: 'Ungültige Kursauswahl' })
+      }
+
+      for (const row of courseRows) {
+        if (row.tenant_id !== body.tenant_id || !row.is_public) {
+          throw createError({ statusCode: 400, statusMessage: 'Ungültige Kursauswahl' })
+        }
+        if (!['active', 'full'].includes(row.status || '')) {
+          throw createError({ statusCode: 400, statusMessage: 'Kurs nicht buchbar' })
+        }
+        const cur = row.current_participants ?? 0
+        const max = row.max_participants ?? 0
+        if (cur >= max) {
+          throw createError({ statusCode: 409, statusMessage: 'Ein gewählter Kurs ist ausgebucht' })
+        }
+      }
+
+      const byId = new Map(courseRows.map(r => [r.id, r]))
+      resolvedDateLabels = uniqueIds
+        .map((id) => {
+          const r = byId.get(id)
+          if (r?.course_start_date) return formatDateLabelDeCh(r.course_start_date)
+          return ''
+        })
+        .filter(Boolean)
+    }
+
+    let finalNotes = body.notes || ''
+    if (body.company?.trim()) {
+      finalNotes = `Firma: ${body.company}\n${finalNotes}`.trim()
+    }
+    if (resolvedDateLabels.length > 0) {
+      finalNotes = `${finalNotes}\nGewünschte Kursdaten: ${resolvedDateLabels.join(', ')}`.trim()
+    }
+    if (uniqueIds.length > 0) {
+      finalNotes = `${finalNotes}\n(course_ids: ${uniqueIds.join(', ')})`.trim()
+    }
 
     const { data: tenant } = await supabase
       .from('tenants')
@@ -79,31 +225,119 @@ export default defineEventHandler(async (event) => {
     const tenantColor = tenant?.primary_color || PRIMARY_COLOR
     const tenantName = tenant?.name || 'Driving Team'
 
-    const { data, error } = await supabase
-      .from('course_participants')
-      .insert({
-        tenant_id: body.tenant_id,
-        first_name: body.first_name.trim(),
-        last_name: body.last_name.trim(),
-        email: body.email?.trim() || null,
-        phone: body.phone?.trim() || null,
-        faberid: body.faberid?.trim() || null,
-        birthdate: body.birthdate || null,
-        street: body.street?.trim() || null,
-        street_nr: body.street_nr?.trim() || null,
-        zip: body.zip?.trim() || null,
-        city: body.city?.trim() || null,
-        course_type: body.course_type.trim(),
-        notes: finalNotes || null,
-      })
-      .select()
+    const emailBody: CourseRegistrationPayload = {
+      ...body,
+      course_dates: resolvedDateLabels.length > 0 ? resolvedDateLabels : body.course_dates,
+    }
 
-    if (error) {
-      console.error('Database error:', error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to create course registration',
-      })
+    const reservedCourseIds: string[] = []
+    if (uniqueIds.length > 0) {
+      try {
+        for (const id of uniqueIds) {
+          await incrementCourseParticipantCount(supabase, id)
+          reservedCourseIds.push(id)
+        }
+      }
+      catch (reserveErr) {
+        for (const id of [...reservedCourseIds].reverse()) {
+          await decrementCourseParticipantCount(supabase, id)
+        }
+        throw reserveErr
+      }
+    }
+
+    let data: unknown
+
+    if (uniqueIds.length > 0) {
+      /** Wie VKU/PGS/Simy-Flows: eine Zeile pro Kurs in `course_registrations`, Kontaktdaten denormalisiert (kein `course_leads`). */
+      const registrationIds: string[] = []
+      const insertedRows: Record<string, unknown>[] = []
+      const addressLine = [body.street?.trim(), body.street_nr?.trim()].filter(Boolean).join(' ').trim()
+      const regNotes = [
+        finalNotes || '',
+        body.birthdate ? `Geburtsdatum: ${body.birthdate}` : '',
+        addressLine || body.zip || body.city
+          ? `Adresse: ${[addressLine, [body.zip, body.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}`
+          : '',
+        `website_course_type: ${body.course_type.trim()}`,
+      ]
+        .filter(Boolean)
+        .join('\n')
+        .trim() || null
+
+      try {
+        for (const courseId of uniqueIds) {
+          const row = {
+            course_id: courseId,
+            tenant_id: body.tenant_id,
+            user_id: null as string | null,
+            participant_id: null as string | null,
+            first_name: body.first_name.trim(),
+            last_name: body.last_name.trim(),
+            email: body.email?.trim() || null,
+            phone: body.phone?.trim() || null,
+            sari_faberid: body.faberid?.trim() || null,
+            status: 'confirmed',
+            payment_status: 'pending',
+            payment_method: 'invoice',
+            notes: regNotes,
+            registered_at: new Date().toISOString(),
+          }
+
+          const { data: regRow, error: regErr } = await supabase
+            .from('course_registrations')
+            .insert(row)
+            .select()
+            .single()
+
+          if (regErr || !regRow) {
+            console.error('course_registrations insert:', regErr)
+            throw regErr || new Error('insert failed')
+          }
+          insertedRows.push(regRow as Record<string, unknown>)
+          registrationIds.push((regRow as { id: string }).id)
+        }
+        data = insertedRows
+      }
+      catch (regLoopErr) {
+        await deleteCourseRegistrationsByIds(supabase, registrationIds)
+        for (const id of [...reservedCourseIds].reverse()) {
+          await decrementCourseParticipantCount(supabase, id)
+        }
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Anmeldung konnte nicht gespeichert werden',
+        })
+      }
+    }
+    else {
+      const { data: participantRows, error } = await supabase
+        .from('course_leads')
+        .insert({
+          tenant_id: body.tenant_id,
+          first_name: body.first_name.trim(),
+          last_name: body.last_name.trim(),
+          email: body.email?.trim() || null,
+          phone: body.phone?.trim() || null,
+          faberid: body.faberid?.trim() || null,
+          birthdate: body.birthdate || null,
+          street: body.street?.trim() || null,
+          street_nr: body.street_nr?.trim() || null,
+          zip: body.zip?.trim() || null,
+          city: body.city?.trim() || null,
+          course_type: body.course_type.trim(),
+          notes: finalNotes || null,
+        })
+        .select()
+
+      if (error) {
+        console.error('Database error:', error)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to create course registration',
+        })
+      }
+      data = participantRows
     }
 
     try {
@@ -113,7 +347,7 @@ export default defineEventHandler(async (event) => {
       const fromWithName = formatResendFrom(tenantName, fromEmail)
       const teamEmail = 'info@drivingteam.ch'
       const courseLabel = COURSE_TYPE_LABELS[body.course_type] || body.course_type
-      const isDefinitiveRegistration = !!(body.course_dates && body.course_dates.length > 0)
+      const isDefinitiveRegistration = resolvedDateLabels.length > 0
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -123,7 +357,7 @@ export default defineEventHandler(async (event) => {
         subject: isDefinitiveRegistration
           ? `Neue Anmeldung: ${body.course_title || courseLabel} – ${body.first_name} ${body.last_name}`
           : `Interessenanmeldung: ${body.course_title || courseLabel} – ${body.first_name} ${body.last_name}`,
-        html: buildTeamEmail(body, courseLabel, finalNotes, isDefinitiveRegistration, tenantColor, tenantName),
+        html: buildTeamEmail(emailBody, courseLabel, finalNotes, isDefinitiveRegistration, tenantColor, tenantName),
       })
 
       await delay(600)
@@ -135,7 +369,7 @@ export default defineEventHandler(async (event) => {
           subject: isDefinitiveRegistration
             ? `Anmeldebestätigung: ${courseLabel}`
             : `Interessenanmeldung erhalten: ${courseLabel}`,
-          html: buildCustomerEmail(body, courseLabel, isDefinitiveRegistration, tenantColor, tenantName),
+          html: buildCustomerEmail(emailBody, courseLabel, isDefinitiveRegistration, tenantColor, tenantName),
         })
       }
     } catch (emailErr: any) {

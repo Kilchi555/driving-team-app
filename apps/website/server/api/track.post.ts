@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import type { H3Event } from 'h3'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
 
@@ -32,15 +34,14 @@ function getDeviceType(ua: string): string {
   return 'desktop'
 }
 
-async function trackView(data: {
+async function trackView(event: H3Event, data: {
   page: string
   referrer: string
   ua: string
   country: string
   sessionId: string
 }) {
-  const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
   if (!supabaseUrl || !supabaseServiceKey) return
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -79,7 +80,7 @@ export default defineEventHandler(async (event) => {
   if (!ua || BOT_PATTERNS.test(ua)) return { ok: false, reason: 'bot' }
 
   // Fire and forget - never delays response, but log errors
-  trackView({
+  trackView(event, {
     page: body.page,
     referrer: body.referrer || '',
     ua,
