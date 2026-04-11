@@ -1,6 +1,6 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-03-24',
-  modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image', '@vercel/analytics/nuxt'],
 
   runtimeConfig: {
     // Server-only (nicht im Browser sichtbar)
