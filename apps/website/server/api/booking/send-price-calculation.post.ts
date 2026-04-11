@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 const TEAM_EMAIL = 'info@drivingteam.ch'
@@ -31,8 +32,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Missing required fields' })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw createError({ statusCode: 500, statusMessage: 'Database configuration missing' })
