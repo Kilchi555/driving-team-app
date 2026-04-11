@@ -367,6 +367,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { CourseSlotOption } from '~/components/CoursePickerModal.vue'
+import type { CourseRegistrationContactPrefill } from '~/utils/course-registration-prefill'
 
 interface FormData {
   first_name: string
@@ -403,6 +404,8 @@ const props = defineProps<{
   location?: string
   start_time?: string
   show_faber_birthdate?: boolean
+  /** z. B. aus URL-Query — füllt nur noch leere Felder (kein Überschreiben bei Tippfehler-Korrektur) */
+  initial_contact?: CourseRegistrationContactPrefill
 }>()
 
 const emit = defineEmits<{
@@ -440,6 +443,40 @@ watch(
     form.value.selected_course_ids = []
     form.value.selected_dates = []
   },
+)
+
+type ContactFormKey = keyof CourseRegistrationContactPrefill
+
+function mergeInitialContact(src?: CourseRegistrationContactPrefill) {
+  if (!src) return
+  const f = form.value as FormData & Record<string, unknown>
+  const keys: ContactFormKey[] = [
+    'first_name',
+    'last_name',
+    'email',
+    'phone',
+    'birthdate',
+    'faberid',
+    'street',
+    'street_nr',
+    'zip',
+    'city',
+    'company',
+    'notes',
+  ]
+  for (const key of keys) {
+    const v = src[key]
+    if (v == null || String(v).trim() === '') continue
+    const cur = f[key]
+    if (typeof cur === 'string' && cur.trim() !== '') continue
+    f[key] = String(v).trim()
+  }
+}
+
+watch(
+  () => props.initial_contact,
+  c => mergeInitialContact(c),
+  { immediate: true, deep: true },
 )
 
 function slotSoldOut(slot: CourseSlotOption): boolean {
