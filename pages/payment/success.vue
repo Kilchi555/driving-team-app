@@ -129,95 +129,6 @@
               <p class="text-center text-xs text-gray-400 mt-3">
                 📧 Gutschein wurde an deine E-Mail-Adresse gesendet (inkl. PDF)
               </p>
-
-              <!-- Redeem button -->
-              <div class="mt-6 pt-6 border-t border-gray-100">
-                <button
-                  @click="selectedVoucherForRedeem = voucher; showRedeemModal = true"
-                  class="w-full py-3 rounded-xl font-semibold text-sm transition-all text-white"
-                  :style="`background: ${brandPrimary}; opacity: 0.9;`"
-                  @mouseenter="$event.target.style.opacity = '1'"
-                  @mouseleave="$event.target.style.opacity = '0.9'"
-                >
-                  💰 Sofort als Guthaben einlösen
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Redeem Modal -->
-        <div v-if="showRedeemModal && selectedVoucherForRedeem && currentUserId">
-          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-xl max-w-md w-full shadow-2xl">
-              <!-- Header -->
-              <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-green-600">
-                <div class="flex justify-between items-center">
-                  <div class="flex items-center space-x-2">
-                    <span class="text-2xl">💰</span>
-                    <h3 class="text-xl font-semibold text-white">
-                      Gutschein einlösen
-                    </h3>
-                  </div>
-                  <button 
-                    @click="showRedeemModal = false; selectedVoucherForRedeem = null" 
-                    class="text-white hover:text-gray-200 text-2xl font-bold"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              <!-- Body -->
-              <div class="px-6 py-6">
-                <div v-if="redeemSuccess" class="text-center py-6">
-                  <div class="text-6xl mb-4 animate-bounce">🎉</div>
-                  <h4 class="text-2xl font-bold text-green-600 mb-2">Erfolgreich eingelöst!</h4>
-                  <p class="text-gray-600 mb-4">{{ redeemMessage }}</p>
-                  <button
-                    @click="showRedeemModal = false; selectedVoucherForRedeem = null; redeemSuccess = false"
-                    class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                  >
-                    Schließen
-                  </button>
-                </div>
-
-                <div v-else>
-                  <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p class="text-sm text-blue-800 font-medium">
-                      ℹ️ Dein Gutschein im Wert von <strong>CHF {{ (selectedVoucherForRedeem.amount_rappen / 100).toFixed(2) }}</strong> wird als Guthaben gutgeschrieben.
-                    </p>
-                  </div>
-
-                  <div v-if="redeemError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p class="text-sm font-medium text-red-800">⚠️ {{ redeemError }}</p>
-                  </div>
-
-                  <div class="flex space-x-3">
-                    <button
-                      @click="showRedeemModal = false; selectedVoucherForRedeem = null"
-                      :disabled="redeemLoading"
-                      class="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-semibold disabled:opacity-50"
-                    >
-                      Abbrechen
-                    </button>
-                    <button
-                      @click="doRedeemVoucher(selectedVoucherForRedeem)"
-                      :disabled="redeemLoading"
-                      class="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center"
-                    >
-                      <span v-if="!redeemLoading">Einlösen</span>
-                      <span v-else class="flex items-center">
-                        <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Wird eingelöst...
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -286,7 +197,6 @@ definePageMeta({
 })
 
 import { getSupabase } from '~/utils/supabase'
-import { useVouchers } from '~/composables/useVouchers'
 import { logger } from '~/utils/logger'
 
 const route = useRoute()
@@ -297,20 +207,10 @@ const paymentDetails = ref<any>(null)
 const countdown = ref(5)
 const vouchers = ref<any[]>([])
 const copiedCode = ref<string | null>(null)
-const downloadingId = ref<string | null>(null)
 const brandPrimary = ref('#1a56db')
-const currentUserId = ref<string | null>(null)
-const showRedeemModal = ref(false)
-const selectedVoucherForRedeem = ref<any>(null)
-const redeemLoading = ref(false)
-const redeemError = ref('')
-const redeemSuccess = ref(false)
-const redeemMessage = ref('')
 
 let countdownInterval: NodeJS.Timeout | null = null
 let statusCheckInterval: NodeJS.Timeout | null = null
-
-const { downloadVoucherPDF: doDownloadPDF } = useVouchers()
 
 const transactionId = (route.query.transactionId || route.query.transaction_id) as string | undefined
 const paymentId = route.query.paymentId as string | undefined
@@ -328,15 +228,6 @@ const copyCode = async (code: string) => {
     copiedCode.value = code
     setTimeout(() => { copiedCode.value = null }, 2000)
   } catch { /* ignore */ }
-}
-
-const downloadVoucherPDF = async (voucherId: string) => {
-  downloadingId.value = voucherId
-  try {
-    await doDownloadPDF(voucherId)
-  } finally {
-    downloadingId.value = null
-  }
 }
 
 // Load tenant branding for voucher card color
@@ -470,60 +361,7 @@ const redirectToDashboard = async () => {
   window.location.href = session ? '/customer-dashboard' : '/shop'
 }
 
-const doRedeemVoucher = async (voucher: any) => {
-  if (!currentUserId.value) {
-    redeemError.value = 'Benutzer-ID nicht gefunden'
-    return
-  }
-
-  redeemLoading.value = true
-  redeemError.value = ''
-
-  try {
-    const response = await $fetch<any>('/api/vouchers/redeem', {
-      method: 'POST',
-      body: {
-        code: voucher.code,
-        user_id: currentUserId.value
-      }
-    })
-
-    if (response.success) {
-      redeemSuccess.value = true
-      redeemMessage.value = response.message || `CHF ${(voucher.amount_rappen / 100).toFixed(2)} wurden deinem Guthaben hinzugefügt.`
-      logger.debug('✅ Voucher redeemed successfully:', voucher.code)
-    }
-  } catch (error: any) {
-    console.error('❌ Error redeeming voucher:', error)
-    const msg = error.data?.statusMessage || error.statusMessage || error.data?.message || error.message
-    redeemError.value = msg || 'Ein Fehler ist beim Einlösen aufgetreten'
-  } finally {
-    redeemLoading.value = false
-  }
-}
-
-onMounted(async () => {
-  // Try to get current user ID (for guest or authenticated)
-  try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (session?.user?.id) {
-      // Authenticated user
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', session.user.id)
-        .single()
-      if (userData?.id) currentUserId.value = userData.id
-    } else if (paymentId) {
-      // Guest user - try to extract from payment data
-      const params = new URLSearchParams({ payment_id: paymentId })
-      const response = await $fetch<{ data: any }>(`/api/shop/get-payment?${params.toString()}`)
-      if (response?.data?.user_id) currentUserId.value = response.data.user_id
-    }
-  } catch { /* ignore */ }
-
+onMounted(() => {
   checkStatus()
   let pollCount = 0
   statusCheckInterval = setInterval(() => {

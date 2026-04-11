@@ -50,12 +50,6 @@ export default defineNuxtConfig({
   typescript: {
     strict: false,
     typeCheck: false,
-    // Auto-import logger globally
-    tsConfig: {
-      compilerOptions: {
-        types: ['@nuxt/types']
-      }
-    }
   },
   
   // --- Auto-imports Configuration ---

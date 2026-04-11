@@ -456,7 +456,7 @@
           <!-- Info Link -->
           <button @click="showAffiliateInfoModal = true" class="w-full flex items-center gap-2 text-sm text-green-700 bg-green-50 hover:bg-green-100 rounded-xl px-4 py-3 transition text-left">
             <span class="w-5 h-5 rounded-full border border-green-500 text-green-600 text-[10px] font-bold flex items-center justify-center shrink-0">i</span>
-            <span>Wie funktioniert das Empfehlungsprogramm? <span class="underline font-medium">Mehr erfahren →</span></span>
+            <span>Wie funktioniert das Empfehlungs- programm? <span class="underline font-medium">Mehr erfahren →</span></span>
           </button>
 
           <!-- Funnel Stats -->
@@ -623,11 +623,6 @@
                   <span class="text-sm font-bold text-green-700">CHF {{ (r.reward_rappen / 100).toFixed(0) }}</span>
                 </div>
               </div>
-              <div v-else-if="(affiliateStats?.fallback_rappen || 0) > 0" class="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                Standardprämie (ohne eigene Kategorien in der DB):
-                <span class="font-bold text-green-700">CHF {{ ((affiliateStats?.fallback_rappen || 0) / 100).toFixed(0) }}</span>
-              </div>
-              <p v-else class="text-xs text-gray-500 italic">Keine kategoriespezifischen Prämien hinterlegt.</p>
             </div>
             <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
           </div>
@@ -903,6 +898,7 @@ import StaffExamStatistics from './StaffExamStatistics.vue'
 import StaffCashBalance from './StaffCashBalance.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
 import { useTenant } from '~/composables/useTenant'
+import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useAuthStore } from '~/stores/auth'
 
@@ -2230,12 +2226,7 @@ const openAffiliateModal = async () => {
   try {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data?.enabled !== false
-    // summary enthält Metriken; category_rewards liegt auf data (nicht in summary) — sonst leer im „Mehr erfahren“-Modal
-    affiliateStats.value = {
-      ...(result.data?.summary ?? {}),
-      category_rewards: result.data?.category_rewards ?? [],
-      fallback_rappen: result.data?.fallback_rappen ?? 0,
-    }
+    affiliateStats.value = result.data?.summary ?? null
     affiliateReferrals.value = result.data?.referrals ?? []
     affiliateRewardTransactions.value = result.data?.reward_transactions ?? []
     affiliateLeads.value = result.data?.leads ?? []
