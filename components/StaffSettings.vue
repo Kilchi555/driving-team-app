@@ -623,6 +623,11 @@
                   <span class="text-sm font-bold text-green-700">CHF {{ (r.reward_rappen / 100).toFixed(0) }}</span>
                 </div>
               </div>
+              <div v-else-if="(affiliateStats?.fallback_rappen || 0) > 0" class="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                Standardprämie (ohne eigene Kategorien in der DB):
+                <span class="font-bold text-green-700">CHF {{ ((affiliateStats?.fallback_rappen || 0) / 100).toFixed(0) }}</span>
+              </div>
+              <p v-else class="text-xs text-gray-500 italic">Keine kategoriespezifischen Prämien hinterlegt.</p>
             </div>
             <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
           </div>
@@ -2225,7 +2230,12 @@ const openAffiliateModal = async () => {
   try {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data?.enabled !== false
-    affiliateStats.value = result.data?.summary ?? null
+    // summary enthält Metriken; category_rewards liegt auf data (nicht in summary) — sonst leer im „Mehr erfahren“-Modal
+    affiliateStats.value = {
+      ...(result.data?.summary ?? {}),
+      category_rewards: result.data?.category_rewards ?? [],
+      fallback_rappen: result.data?.fallback_rappen ?? 0,
+    }
     affiliateReferrals.value = result.data?.referrals ?? []
     affiliateRewardTransactions.value = result.data?.reward_transactions ?? []
     affiliateLeads.value = result.data?.leads ?? []
