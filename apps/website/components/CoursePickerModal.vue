@@ -77,6 +77,7 @@
               :location="selectedCourse.location"
               :start_time="selectedCourse.start_time"
               :show_faber_birthdate="selectedCourse.showFaberBirthdate !== false"
+              :initial_contact="initialContact"
               @submitted="onSubmitted"
             />
           </div>
@@ -89,6 +90,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import type { CourseRegistrationContactPrefill } from '~/utils/course-registration-prefill'
 
 export interface CourseSlotOption {
   id: string
@@ -120,6 +122,7 @@ const props = defineProps<{
   courses: CourseOption[]
   /** Optional: zeigt Ladehinweis und blockiert Absenden im Formular bis Kurse da sind */
   instancesLoading?: boolean
+  initialContact?: CourseRegistrationContactPrefill
 }>()
 
 const instancesLoading = computed(() => props.instancesLoading === true)

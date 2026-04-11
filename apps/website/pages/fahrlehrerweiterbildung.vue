@@ -231,6 +231,7 @@
                 :location="currentLocation"
                 :start_time="currentStartTime"
                 :show_faber_birthdate="true"
+                :initial_contact="courseRegContactPrefill"
                 @submitted="onFormSubmitted"
               />
             </div>
@@ -245,6 +246,7 @@
       :tenant-id="tenantId"
       :courses="pickerCourses"
       :instances-loading="fwCoursesLoading"
+      :initial-contact="courseRegContactPrefill"
       @submitted="onFormSubmitted"
     />
   </div>
@@ -258,8 +260,13 @@ const jsonLdScripts = [
 useHead({ script: jsonLdScripts })
 
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import type { CourseOption, CourseSlotOption } from '~/components/CoursePickerModal.vue'
 import type { PublicFwCourse } from '~/server/api/courses/fahrlehrer-instances.get'
+import { parseCourseRegistrationQuery } from '~/utils/course-registration-prefill'
+
+const route = useRoute()
+const courseRegContactPrefill = computed(() => parseCourseRegistrationQuery(route.query))
 
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
@@ -283,7 +290,11 @@ const fwCourses = ref<PublicFwCourse[]>([])
 /** true bis erste Antwort von /api/courses/fahrlehrer-instances (kein Flackern: Interesse vs. Termine) */
 const fwCoursesLoading = ref(true)
 
+/** Verhindert, dass eine langsame Antwort eine neuere überschreibt (Modal öffnet parallelen Refresh) */
+let fwCoursesFetchId = 0
+
 async function loadFwCourses(opts?: { quiet?: boolean }) {
+  const fetchId = ++fwCoursesFetchId
   if (!opts?.quiet) {
     fwCoursesLoading.value = true
   }
@@ -291,11 +302,15 @@ async function loadFwCourses(opts?: { quiet?: boolean }) {
     const res = await $fetch<{ courses: PublicFwCourse[] }>('/api/courses/fahrlehrer-instances', {
       query: { tenant_id: tenantId },
     })
-    fwCourses.value = res.courses || []
+    if (fetchId === fwCoursesFetchId) {
+      fwCourses.value = res.courses || []
+    }
   }
   catch (e) {
     console.warn('[fahrlehrerweiterbildung] instances fetch failed', e)
-    fwCourses.value = []
+    if (fetchId === fwCoursesFetchId) {
+      fwCourses.value = []
+    }
   }
   finally {
     if (!opts?.quiet) {
