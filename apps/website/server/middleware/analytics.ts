@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import type { H3Event } from 'h3'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 const SKIP_PATHS = ['/_nuxt/', '/api/', '/__nuxt/', '/favicon', '.webp', '.png', '.jpg', '.svg', '.css', '.js', '.xml', '.txt', '/.well-known/', '/assets/', '/wp-content/', '/test-debug', '/track-debug', '/admin', '/administrator', '/login', '/register', '/user/login', '/user/register', '/wp-admin', '/wp-login', '/__nuxt_error']
 
@@ -18,9 +20,8 @@ function getDeviceType(ua: string): string {
   return 'desktop'
 }
 
-async function trackView(page: string, referrer: string, ua: string, country: string) {
-  const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+async function trackView(event: H3Event, page: string, referrer: string, ua: string, country: string) {
+  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
   if (!supabaseUrl || !supabaseServiceKey) return
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -54,5 +55,5 @@ export default defineEventHandler((event) => {
   if (!ua || BOT_PATTERNS.test(ua)) return
 
   // Fire and forget - response is NOT delayed
-  trackView(path, referrer, ua, country).catch(() => {})
+  trackView(event, path, referrer, ua, country).catch(() => {})
 })

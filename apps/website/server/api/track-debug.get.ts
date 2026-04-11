@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
-export default defineEventHandler(async () => {
-  const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+export default defineEventHandler(async (event) => {
+  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
   const vercelEnv = process.env.VERCEL_ENV
 
   console.log('=== Track Debug ===')

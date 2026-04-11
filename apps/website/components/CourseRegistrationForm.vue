@@ -218,8 +218,58 @@
           </div>
         </div>
 
-        <!-- Kursdaten (nur wenn vorhanden) -->
-        <div v-if="props.available_dates && props.available_dates.length > 0" class="space-y-3">
+        <!-- Kursdaten: API-Slots, Legacy-Termine, oder Interessenanmeldung -->
+        <div
+          v-if="instancesLoading"
+          class="rounded-lg bg-gray-50 border border-gray-200 p-4 flex gap-3"
+        >
+          <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-sm text-gray-600">Kurstermine werden geladen …</p>
+        </div>
+
+        <div v-else-if="hasSlotList && bookableSlots.length > 0" class="space-y-3">
+          <label class="block text-sm font-semibold text-gray-900">
+            Kursdaten <span class="text-red-500">*</span>
+          </label>
+          <p class="text-gray-500 text-xs">Wähle einen oder mehrere Termine aus:</p>
+          <div class="space-y-2">
+            <label
+              v-for="slot in props.course_slots"
+              :key="slot.id"
+              class="flex items-center gap-3 p-3 border rounded-lg transition"
+              :class="slotSoldOut(slot)
+                ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                : form.selected_course_ids.includes(slot.id)
+                  ? 'border-primary-400 bg-primary-50 cursor-pointer'
+                  : 'border-gray-200 cursor-pointer hover:bg-gray-50'"
+            >
+              <input
+                type="checkbox"
+                :value="slot.id"
+                v-model="form.selected_course_ids"
+                :disabled="slotSoldOut(slot)"
+                class="w-4 h-4 rounded accent-primary-600"
+              />
+              <span class="text-sm flex-1" :class="slotSoldOut(slot) ? 'text-gray-400 line-through' : 'text-gray-800'">{{ slot.label }}</span>
+              <span v-if="slotSoldOut(slot)" class="text-xs font-semibold text-red-500 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">Ausgebucht</span>
+              <span v-else-if="slot.spots_remaining != null" class="text-xs text-gray-500">noch {{ slot.spots_remaining }} Plätze</span>
+            </label>
+          </div>
+          <p v-if="errors.selected_dates" class="text-red-500 text-xs">{{ errors.selected_dates }}</p>
+        </div>
+
+        <div v-else-if="hasSlotList && bookableSlots.length === 0" class="rounded-lg bg-amber-50 border border-amber-200 p-4 flex gap-3">
+          <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-sm text-amber-900">
+            <strong>Aktuell ausgebucht:</strong> Für diesen Kurs sind alle öffentlichen Termine voll. Du kannst unten eine Interessenanmeldung absenden — wir melden uns bei dir.
+          </p>
+        </div>
+
+        <div v-else-if="hasDateList" class="space-y-3">
           <label class="block text-sm font-semibold text-gray-900">
             Kursdaten <span class="text-red-500">*</span>
           </label>
@@ -277,14 +327,16 @@
           />
         </div>
 
+        <p v-if="errors._submit" class="text-red-600 text-sm">{{ errors._submit }}</p>
+
         <!-- Submit Button -->
         <button
           type="submit"
-          :disabled="isSubmitting"
+          :disabled="isSubmitting || instancesLoading"
           class="w-full py-3 px-4 rounded-lg font-semibold transition text-white"
-          :style="{ backgroundColor: isSubmitting ? '#ccc' : getBrandPrimary() }"
+          :style="{ backgroundColor: (isSubmitting || instancesLoading) ? '#ccc' : getBrandPrimary() }"
         >
-          {{ isSubmitting ? 'Wird versendet...' : 'Anmeldung absenden' }}
+          {{ isSubmitting ? 'Wird versendet...' : instancesLoading ? 'Kurstermine laden …' : 'Anmeldung absenden' }}
         </button>
       </form>
     </div>
@@ -313,7 +365,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import type { CourseSlotOption } from '~/components/CoursePickerModal.vue'
 
 interface FormData {
   first_name: string
@@ -329,6 +382,7 @@ interface FormData {
   company?: string
   notes?: string
   selected_dates: string[]
+  selected_course_ids: string[]
 }
 
 interface FormErrors {
@@ -343,6 +397,9 @@ const props = defineProps<{
   available_dates?: string[]
   sold_out_dates?: string[]
   spots_per_date?: Record<string, number>
+  course_slots?: CourseSlotOption[]
+  /** Wenn true: keine Terminwahl / Absenden bis die Kursliste da ist (z. B. Fahrlehrer-API) */
+  instancesLoading?: boolean
   location?: string
   start_time?: string
   show_faber_birthdate?: boolean
@@ -366,6 +423,7 @@ const form = ref<FormData>({
   company: '',
   notes: '',
   selected_dates: [],
+  selected_course_ids: [],
 })
 
 const errors = ref<FormErrors>({})
@@ -373,6 +431,30 @@ const isSubmitting = ref(false)
 const showSuccess = ref(false)
 
 const formTitle = computed(() => props.custom_title || 'Kursanmeldung')
+
+const instancesLoading = computed(() => props.instancesLoading === true)
+
+watch(
+  () => props.custom_title,
+  () => {
+    form.value.selected_course_ids = []
+    form.value.selected_dates = []
+  },
+)
+
+function slotSoldOut(slot: CourseSlotOption): boolean {
+  if (slot.sold_out) return true
+  if (slot.spots_remaining !== undefined && slot.spots_remaining <= 0) return true
+  return false
+}
+
+const hasSlotList = computed(() => Array.isArray(props.course_slots) && props.course_slots.length > 0)
+
+const bookableSlots = computed(() => (props.course_slots || []).filter(s => !slotSoldOut(s)))
+
+const hasDateList = computed(
+  () => !hasSlotList.value && !!(props.available_dates && props.available_dates.length > 0),
+)
 
 function isSoldOut(date: string): boolean {
   return (props.sold_out_dates || []).includes(date)
@@ -428,7 +510,15 @@ function validateForm(): boolean {
   if (!form.value.city?.trim()) {
     errors.value.city = 'Ort ist erforderlich'
   }
-  if (props.available_dates && props.available_dates.length > 0 && form.value.selected_dates.length === 0) {
+  if (!instancesLoading.value && hasSlotList.value && bookableSlots.value.length > 0) {
+    const picked = form.value.selected_course_ids.filter(id =>
+      bookableSlots.value.some(s => s.id === id),
+    )
+    if (picked.length === 0) {
+      errors.value.selected_dates = 'Bitte wähle mindestens einen Kurstermin aus'
+    }
+  }
+  else if (!instancesLoading.value && hasDateList.value && form.value.selected_dates.length === 0) {
     errors.value.selected_dates = 'Bitte wähle mindestens einen Kurstermin aus'
   }
 
@@ -436,6 +526,9 @@ function validateForm(): boolean {
 }
 
 async function handleSubmit() {
+  if (instancesLoading.value) {
+    return
+  }
   if (!validateForm()) {
     return
   }
@@ -443,6 +536,24 @@ async function handleSubmit() {
   isSubmitting.value = true
 
   try {
+    let course_ids: string[] | undefined
+    let course_dates: string[] | undefined
+
+    if (hasSlotList.value && bookableSlots.value.length > 0) {
+      const ids = form.value.selected_course_ids.filter(id =>
+        bookableSlots.value.some(s => s.id === id),
+      )
+      if (ids.length > 0) {
+        course_ids = ids
+        course_dates = ids
+          .map(id => props.course_slots!.find(s => s.id === id)?.label)
+          .filter(Boolean) as string[]
+      }
+    }
+    else if (hasDateList.value && form.value.selected_dates.length > 0) {
+      course_dates = [...form.value.selected_dates]
+    }
+
     const payload = {
       tenant_id: props.tenant_id,
       first_name: form.value.first_name,
@@ -459,7 +570,8 @@ async function handleSubmit() {
       course_title: props.custom_title?.replace(/^Anmeldung:\s*/i, '').replace(/^Anfrage:\s*/i, '').trim(),
       company: form.value.company,
       notes: form.value.notes,
-      course_dates: form.value.selected_dates.length > 0 ? form.value.selected_dates : undefined,
+      course_ids,
+      course_dates,
       location: props.location,
       start_time: props.start_time,
     }
@@ -472,19 +584,28 @@ async function handleSubmit() {
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
+    const data = await response.json().catch(() => ({}))
 
-    const data = await response.json()
+    if (!response.ok) {
+      const msg = typeof data?.statusMessage === 'string'
+        ? data.statusMessage
+        : typeof data?.message === 'string'
+          ? data.message
+          : `Anfrage fehlgeschlagen (${response.status})`
+      throw new Error(msg)
+    }
 
     if (data.success) {
       showSuccess.value = true
-      emit('submitted', form.value.selected_dates.length > 0 ? [...form.value.selected_dates] : undefined)
+      const submittedLabels = course_dates?.length ? [...course_dates] : undefined
+      emit('submitted', submittedLabels)
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Error submitting form:', err)
-    errors.value._submit = 'Fehler beim Absenden. Bitte versuchen Sie es später erneut.'
+    const msg = err instanceof Error ? err.message : ''
+    errors.value._submit = msg && msg.length < 200
+      ? msg
+      : 'Fehler beim Absenden. Bitte versuchen Sie es später erneut.'
   } finally {
     isSubmitting.value = false
   }

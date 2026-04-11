@@ -20,7 +20,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrlehrer-Weiterbildung</h1>
           <p class="text-xl text-white mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Bei uns findest Kurse die Spass machen.</p>
-          <button @click="showPicker = true" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <button type="button" @click="openPicker" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Anmelden
           </button>
         </div>
@@ -222,10 +222,12 @@
                 :tenant_id="tenantId"
                 :course_type="courseType"
                 :custom_title="`Anmeldung: ${modalTitle}`"
-                :custom_description="`Melden Sie sich für ${modalTitle} an.`"
+                :custom_description="modalFormDescription"
+                :course_slots="currentCourseSlots"
                 :available_dates="currentDates"
-                :sold_out_dates="currentDates.filter(d => isSoldOut(d))"
-                :spots_per_date="remainingSpots"
+                :sold_out_dates="[]"
+                :spots_per_date="{}"
+                :instances-loading="fwCoursesLoading"
                 :location="currentLocation"
                 :start_time="currentStartTime"
                 :show_faber_birthdate="true"
@@ -242,6 +244,7 @@
       v-model="showPicker"
       :tenant-id="tenantId"
       :courses="pickerCourses"
+      :instances-loading="fwCoursesLoading"
       @submitted="onFormSubmitted"
     />
   </div>
@@ -255,104 +258,163 @@ const jsonLdScripts = [
 useHead({ script: jsonLdScripts })
 
 import { ref, computed, onMounted } from 'vue'
-import type { CourseOption } from '~/components/CoursePickerModal.vue'
+import type { CourseOption, CourseSlotOption } from '~/components/CoursePickerModal.vue'
+import type { PublicFwCourse } from '~/server/api/courses/fahrlehrer-instances.get'
 
 const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
 const showModal = ref(false)
 const showPicker = ref(false)
 const modalTitle = ref('')
 const courseType = ref('fahrlehrer_weiterbildung')
-const currentDates = ref<string[]>([])
-const currentLocation = ref('')
-const currentStartTime = ref('08:00')
 
-// Remaining spots per date label – decremented on each successful registration
-const remainingSpots = ref<Record<string, number>>({
-  'Donnerstag, 28. Mai 2026': 9,
-  'Donnerstag, 2. Juli 2026': 1,
-  'Dienstag, 18. August 2026': 12,
-})
-
-function isSoldOut(date: string) {
-  return date in remainingSpots.value && remainingSpots.value[date] <= 0
+const TITLE_TO_VARIANT: Record<string, 'fw_anhaenger' | 'fw_motorboot' | 'fw_lastwagen'> = {
+  'Anhänger Kategorie BE': 'fw_anhaenger',
+  'Motorboot Fahrlehrerweiterbildung': 'fw_motorboot',
+  'Lastwagen Fahrlehrerweiterbildung': 'fw_lastwagen',
 }
 
-function decrementSpots(dates: string[]) {
-  for (const date of dates) {
-    if (date in remainingSpots.value && remainingSpots.value[date] > 0) {
-      remainingSpots.value[date]--
+const VARIANT_FALLBACK: Record<string, { location: string, start_time: string }> = {
+  fw_anhaenger: { location: 'Verkehrszentrum Tuggen/SZ', start_time: '08:00' },
+  fw_motorboot: { location: 'Hotel Marina Lachen/SZ', start_time: '08:00' },
+  fw_lastwagen: { location: 'Verkehrszentrum Tuggen/SZ', start_time: '08:00' },
+}
+
+const fwCourses = ref<PublicFwCourse[]>([])
+/** true bis erste Antwort von /api/courses/fahrlehrer-instances (kein Flackern: Interesse vs. Termine) */
+const fwCoursesLoading = ref(true)
+
+async function loadFwCourses(opts?: { quiet?: boolean }) {
+  if (!opts?.quiet) {
+    fwCoursesLoading.value = true
+  }
+  try {
+    const res = await $fetch<{ courses: PublicFwCourse[] }>('/api/courses/fahrlehrer-instances', {
+      query: { tenant_id: tenantId },
+    })
+    fwCourses.value = res.courses || []
+  }
+  catch (e) {
+    console.warn('[fahrlehrerweiterbildung] instances fetch failed', e)
+    fwCourses.value = []
+  }
+  finally {
+    if (!opts?.quiet) {
+      fwCoursesLoading.value = false
     }
   }
 }
 
-// Predefined course info per course title
-const courseInfo: Record<string, { dates: string[], location: string, start_time: string }> = {
-  'Motorboot Fahrlehrerweiterbildung': {
-    dates: ['Donnerstag, 28. Mai 2026', 'Donnerstag, 2. Juli 2026'],
-    location: 'Hotel Marina Lachen/SZ',
-    start_time: '08:00',
-  },
-  'Anhänger Kategorie BE': {
-    dates: [],
-    location: 'Verkehrszentrum Tuggen/SZ',
-    start_time: '08:00',
-  },
-  'Lastwagen Fahrlehrerweiterbildung': {
-    dates: ['Dienstag, 18. August 2026'],
-    location: 'Verkehrszentrum Tuggen/SZ',
-    start_time: '08:00',
-  },
+onMounted(() => {
+  loadFwCourses()
+})
+
+const modalVariant = computed(() => TITLE_TO_VARIANT[modalTitle.value] ?? null)
+
+/** Reagiert auf frische API-Daten nach loadFwCourses */
+const currentCourseSlots = computed<CourseSlotOption[]>(() =>
+  modalVariant.value ? slotsForVariant(modalVariant.value) : [],
+)
+
+const currentDates = computed(() =>
+  modalVariant.value ? dateLabelsForVariant(modalVariant.value) : [],
+)
+
+const currentLocation = computed(() =>
+  modalVariant.value ? locationForVariant(modalVariant.value) : '',
+)
+
+const currentStartTime = computed(() =>
+  modalVariant.value ? startTimeForVariant(modalVariant.value) : '08:00',
+)
+
+/** Karten-Modal: bei leeren Slots Beschreibung wie Interessenanmeldung */
+const modalFormDescription = computed(() => {
+  const t = modalTitle.value
+  if (currentCourseSlots.value.length > 0) {
+    return `Melden Sie sich für ${t} an.`
+  }
+  return `Für ${t} sind aktuell keine buchbaren Termine in der Online-Anmeldung hinterlegt — mit dem Formular kannst du wie bisher dein Interesse melden. Wir kontaktieren dich, sobald es Neuigkeiten gibt.`
+})
+
+function coursesForVariant(v: string) {
+  return fwCourses.value.filter(c => c.website_variant === v)
 }
 
-// Picker courses – dates filtered to non-sold-out only
-const pickerCourses = computed<CourseOption[]>(() => [
-  {
-    id: 'anhaenger',
-    label: 'Anhänger Kategorie BE',
-    description: 'Für Fahrlehrer:innen der Kategorie B · CHF 420.–',
-    icon: '🚗',
+function slotsForVariant(v: string): CourseSlotOption[] {
+  return coursesForVariant(v).map(c => ({
+    id: c.id,
+    label: c.label,
+    spots_remaining: c.spots_remaining,
+    sold_out: c.status === 'full' || c.spots_remaining <= 0,
+  }))
+}
+
+function locationForVariant(v: string) {
+  const list = coursesForVariant(v)
+  const fromRoom = list.map(c => c.room_label).find(Boolean)
+  return fromRoom || VARIANT_FALLBACK[v]?.location || ''
+}
+
+function startTimeForVariant(v: string) {
+  return VARIANT_FALLBACK[v]?.start_time || '08:00'
+}
+
+function dateLabelsForVariant(v: string) {
+  return coursesForVariant(v).map(c => c.label)
+}
+
+const pickerCourses = computed<CourseOption[]>(() => {
+  const rows: Array<{
+    id: string
+    label: string
+    description: string
+    icon: string
+    variant: 'fw_anhaenger' | 'fw_motorboot' | 'fw_lastwagen'
+  }> = [
+    {
+      id: 'anhaenger',
+      label: 'Anhänger Kategorie BE',
+      description: 'Für Fahrlehrer:innen der Kategorie B · CHF 420.–',
+      icon: '🚗',
+      variant: 'fw_anhaenger',
+    },
+    {
+      id: 'motorboot',
+      label: 'Motorboot Fahrlehrerweiterbildung',
+      description: 'Hotel Marina Lachen/SZ · CHF 499.–',
+      icon: '⛵',
+      variant: 'fw_motorboot',
+    },
+    {
+      id: 'lastwagen',
+      label: 'Lastwagen Fahrlehrerweiterbildung',
+      description: 'Verkehrszentrum Tuggen/SZ · CHF 490.–',
+      icon: '🚛',
+      variant: 'fw_lastwagen',
+    },
+  ]
+
+  return rows.map(r => ({
+    id: r.id,
+    label: r.label,
+    description: r.description,
+    icon: r.icon,
     courseType: 'fahrlehrer_weiterbildung',
-    dates: [],
-    location: 'Verkehrszentrum Tuggen/SZ',
-    start_time: '08:00',
+    course_slots: slotsForVariant(r.variant),
+    dates: dateLabelsForVariant(r.variant),
+    soldOutDates: [] as string[],
+    spotsPerDate: {} as Record<string, number>,
+    location: locationForVariant(r.variant),
+    start_time: startTimeForVariant(r.variant),
     showFaberBirthdate: true,
-  },
-  {
-    id: 'motorboot',
-    label: 'Motorboot Fahrlehrerweiterbildung',
-    description: 'Hotel Marina Lachen/SZ · CHF 499.–',
-    icon: '⛵',
-    courseType: 'fahrlehrer_weiterbildung',
-    dates: courseInfo['Motorboot Fahrlehrerweiterbildung'].dates,
-    soldOutDates: courseInfo['Motorboot Fahrlehrerweiterbildung'].dates.filter(d => isSoldOut(d)),
-    spotsPerDate: remainingSpots.value,
-    location: 'Hotel Marina Lachen/SZ',
-    start_time: '08:00',
-    showFaberBirthdate: true,
-  },
-  {
-    id: 'lastwagen',
-    label: 'Lastwagen Fahrlehrerweiterbildung',
-    description: 'Verkehrszentrum Tuggen/SZ · CHF 490.–',
-    icon: '🚛',
-    courseType: 'fahrlehrer_weiterbildung',
-    dates: courseInfo['Lastwagen Fahrlehrerweiterbildung'].dates,
-    soldOutDates: courseInfo['Lastwagen Fahrlehrerweiterbildung'].dates.filter(d => isSoldOut(d)),
-    spotsPerDate: remainingSpots.value,
-    location: 'Verkehrszentrum Tuggen/SZ',
-    start_time: '08:00',
-    showFaberBirthdate: true,
-  },
-])
+  }))
+})
 
 function openModal(title: string) {
   modalTitle.value = title
-  const info = courseInfo[title]
-  currentDates.value = info?.dates || []
-  currentLocation.value = info?.location || ''
-  currentStartTime.value = info?.start_time || '08:00'
   showModal.value = true
   document.body.style.overflow = 'hidden'
+  loadFwCourses({ quiet: true })
 }
 
 function closeModal() {
@@ -360,13 +422,16 @@ function closeModal() {
   document.body.style.overflow = ''
 }
 
-function onFormSubmitted(selectedDates?: string[]) {
-  if (selectedDates?.length) {
-    decrementSpots(selectedDates)
-  }
+async function onFormSubmitted(_selectedDates?: string[]) {
+  await loadFwCourses({ quiet: true })
   setTimeout(() => {
     closeModal()
   }, 3500)
+}
+
+function openPicker() {
+  showPicker.value = true
+  loadFwCourses({ quiet: true })
 }
 </script>
 
