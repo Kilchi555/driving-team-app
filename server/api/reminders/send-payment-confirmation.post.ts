@@ -147,7 +147,7 @@ export default defineEventHandler(async (event) => {
     // 7. Get location data for appointment details
     const { data: location } = await supabase
       .from('locations')
-      .select('name')
+      .select('name, address, city')
       .eq('id', appointment.location_id)
       .single()
 
@@ -177,6 +177,7 @@ export default defineEventHandler(async (event) => {
           type: 'pending_payment',
           staffName,
           location: location?.name,
+          locationAddress: [location?.address, location?.city].filter(Boolean).join(', ') || undefined,
           tenantName: tenant.name,
           tenantId,
           tenantSlug: tenant.slug,
