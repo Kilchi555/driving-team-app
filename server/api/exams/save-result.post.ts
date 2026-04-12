@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
           appointment.location_id
             ? supabase.from('locations').select('name, google_place_id').eq('id', appointment.location_id).single()
             : Promise.resolve({ data: null }),
-          supabase.from('tenants').select('name, primary_color, logo_wide_url, logo_url').eq('id', tenantId).single()
+          supabase.from('tenants').select('name, primary_color, logo_wide_url, logo_url, google_place_id').eq('id', tenantId).single()
         ])
 
         const customer = customerRes.data
@@ -163,8 +163,8 @@ export default defineEventHandler(async (event) => {
         if (customer?.email) {
           const { sendEmail } = await import('~/server/utils/email')
 
-          const reviewLink = location?.google_place_id
-            ? `https://search.google.com/local/writereview?placeid=${location.google_place_id}`
+          const reviewLink = tenant?.google_place_id
+            ? `https://search.google.com/local/writereview?placeid=${tenant.google_place_id}`
             : null
 
           const primaryColor = tenant?.primary_color || '#2563eb'
