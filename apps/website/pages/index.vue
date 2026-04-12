@@ -614,19 +614,6 @@ const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify(buildHomepageSchema()) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "AggregateRating",
-    "itemReviewed": {
-      "@type": "LocalBusiness",
-      "name": "Driving Team Zürich",
-      "url": "https://drivingteam.ch/"
-    },
-    "ratingValue": 4.9,
-    "bestRating": 5,
-    "worstRating": 1,
-    "reviewCount": 366
-  }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
       {"@type": "Question", "name": "Wieviele Fahrstunden benötige ich?", "acceptedAnswer": {"@type": "Answer", "text": "Durchschnittlich benötigen Auto-Fahrschüler:innen 15-30 Fahrlektionen. Ohne private Übungsmöglichkeiten sind es oft 30-50 Stunden. Seriöses Üben und das Umsetzen der Fahrlehrertipps sind entscheidend."}},
