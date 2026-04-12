@@ -204,20 +204,20 @@
           </div>
         </div>
 
-        <!-- Auszahlung & Guthaben (gleicher Flow wie Kunden-Zahlungen) -->
+        <!-- Auszahlung per Banküberweisung -->
         <div class="rounded-2xl shadow-lg overflow-hidden" :style="{ backgroundColor: brandConfig.surface_color }">
           <div class="px-5 pt-6 pb-2">
             <div class="flex items-center gap-3 mb-1">
-              <span class="text-2xl">💳</span>
-              <h2 class="text-xl font-bold" :style="{ color: brandConfig.text_color }">Auszahlung & Guthaben</h2>
+              <span class="text-2xl">🏦</span>
+              <h2 class="text-xl font-bold" :style="{ color: brandConfig.text_color }">Auszahlung</h2>
             </div>
             <p class="text-sm pb-4" :style="{ color: brandConfig.text_secondary_color }">
-              Verfügbares Guthaben in der Übersicht oben; hier dieselben Aktionen wie unter «Zahlungen»: auszahlen, aufladen, Gutschein einlösen, Verlauf.
+              Zahle dein verdientes Guthaben per Banküberweisung auf dein Konto aus.
             </p>
           </div>
           <div class="px-4 pb-6">
             <CustomerCreditWalletPanel
-              always-show-actions
+              withdrawal-only
               :get-headers="getAuthHeaders"
               @balance-updated="loadStats"
             />
