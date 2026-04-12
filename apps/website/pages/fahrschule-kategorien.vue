@@ -9,9 +9,10 @@
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-kategorien/" />
       
       
-          <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
+          <Meta property="og:image" content="https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
+      <Meta property="og:image:alt" :content="'Alle Führerschein Kategorien – Driving Team Fahrschule'" />
           <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 

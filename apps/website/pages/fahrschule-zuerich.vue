@@ -8,6 +8,9 @@
       <Meta property="og:description" content="Professionelle Fahrschule in unserem Hauptstandort Zürich-Altstetten. Auto, Motorrad, Anhänger. Ab CHF 95.-/Lektion, 85% Erfolgsquote, flexible Zeiten." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-zuerich/" />
+      <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/fahrschule-zuerich/" />
+      <Link rel="alternate" hreflang="en" href="https://drivingteam.ch/driving-school-zurich/" />
+      <Link rel="alternate" hreflang="x-default" href="https://drivingteam.ch/fahrschule-zuerich/" />
       <Link rel="preload" as="image" href="/images/locations/zuerich-hero.webp" fetchpriority="high" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -299,7 +302,7 @@ const jsonLdScripts = [
         "name": "Wo bietet Ihr Fahrstunden an?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Unsere Lokale befinden sich in Zürich-Altstetten und Lachen/SZ. Das Tätigkeitsgebiet erstreckt sich von Baden bis nach Thalwil und von Bülach bis ins Knonaueramt."
+          "text": "Unsere Lokale befinden sich in Zürich-Altstetten und Lachen/SZ. Das Tätigkeitsgebiet erstreckt sich von Baden bis nach Thalwil und von Dübendorf bis ins Knonaueramt."
         }
       },
       {
@@ -307,7 +310,7 @@ const jsonLdScripts = [
         "name": "Soll ich geschaltet oder automatisch fahren lernen?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Das muss jeder für sich entscheiden. Rechtlich ist es egal - nach bestandener Prüfung darfst Du beides fahren."
+          "text": "Das muss jeder für sich entscheiden, ist meistens von den Fahrzeugen im privaten oder geschäftliche Umfeld abhängig. Rechtlich ist es egal - nach bestandener Prüfung darfst Du beides fahren."
         }
       },
       {
@@ -355,7 +358,7 @@ const jsonLdScripts = [
         "name": "Kann ich Fahrstunden flexibel buchen?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Ja, wir bieten flexible Buchungen an. Ob Abend-, Wochenend- oder Feiertagsfahrten – wir versuchen, Deine Vorstellungen umzusetzen."
+          "text": "Ja, wir bieten flexible Buchungen an. Ob Abend- oder Wochenendfahrten – wir versuchen, Deinen Vorstellungen gerne nachzukommen."
         }
       },
       {
@@ -363,7 +366,7 @@ const jsonLdScripts = [
         "name": "Wie lange gültig ist mein Lernfahrausweis?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Du kannst ihn kostenlos bei der Gemeinde verlängern."
+          "text": "Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Du kannst ihn kostenlos bei deinem Strassenverkehrsamt einmalig verlängern."
         }
       },
       {
@@ -371,7 +374,7 @@ const jsonLdScripts = [
         "name": "Kann ich die Fahrstunden auch stornieren?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Ja, Stornierungen sind möglich. Bitte gib uns mindestens 48 Stunden Bescheid. Bei kurzfristigen Absagen behalten wir uns vor, die Fahrstunde in Rechnung zu stellen."
+          "text": "Ja, Stornierungen sind möglich. In der Simy App kannst du den Termin mindestens 24 Stunden vorher stornieren. Bei kurzfristigen Absagen behalten wir uns vor, die Fahrstunde in Rechnung zu stellen."
         }
       },
       {
@@ -379,7 +382,7 @@ const jsonLdScripts = [
         "name": "Sind Fahrstunden in englischer oder albanischer Sprache möglich?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Ja, absolut! Wir bieten Fahrstunden auch in Englisch und Albanisch an. Sprich uns gerne an für andere Sprachen."
+          "text": "Ja, absolut! Wir bieten Fahrstunden auch in Englisch und Albanisch an."
         }
       },
       {
@@ -387,7 +390,7 @@ const jsonLdScripts = [
         "name": "Welche Fahrzeuge verwendet Ihr beim Unterricht?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Wir nutzen moderne, gut gewartete Fahrzeuge mit Doppelbedienung. Bei Bedarf können wir auch Fahrzeuge mit Automatik- oder Schaltgetriebe zur Verfügung stellen."
+          "text": "Wir fahren mit modernsten, stets top gewarteten Fahrzeugen mit Fahrschulpedalen."
         }
       },
       {
@@ -395,7 +398,7 @@ const jsonLdScripts = [
         "name": "Was sollte ich zur ersten Fahrstunde mitbringen?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Bringe Deinen Lernfahrausweis, Ausweisdokumente, bequeme Kleidung, geeignete Schuhe und ggf. eine Brille mit."
+          "text": "Bringe Deinen Lernfahrausweis, bequeme Kleidung, geeignete Schuhe und ggf. eine Brille/Sonnenbrille mit."
         }
       },
       {
@@ -419,7 +422,7 @@ const jsonLdScripts = [
         "name": "Welche Kategorien bietet Ihr in Zürich an?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Wir bieten Fahrstunden für Kategorie B (Auto), A1/A35kW/A (Motorrad), C1/C/CE (Lastwagen), D1/D (Bus) und BE (Anhänger) an."
+          "text": "Wir bieten Fahrstunden für Kategorie B (Auto), A1/A35kW/A (Motorrad), BE (Anhänger), A (Motorboot ab Lachen/SZ) und C1/C/CE (Lastwagen ab Wädenswil/ZH) an."
         }
       }
     ]

@@ -9,7 +9,7 @@
       <Meta property="og:url" content="https://drivingteam.ch/bus-fahrschule-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule-zuerich/" />
-      <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/categories/bus-fahrschule-hero.webp" />
       <Meta property="og:locale" content="de_CH" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>

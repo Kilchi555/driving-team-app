@@ -10,6 +10,9 @@
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="en_CH" />
       <Link rel="canonical" href="https://drivingteam.ch/driving-school-zurich/" />
+      <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/fahrschule-zuerich/" />
+      <Link rel="alternate" hreflang="en" href="https://drivingteam.ch/driving-school-zurich/" />
+      <Link rel="alternate" hreflang="x-default" href="https://drivingteam.ch/fahrschule-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
