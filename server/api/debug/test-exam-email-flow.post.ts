@@ -151,7 +151,7 @@ export default defineEventHandler(async (event) => {
                 Mit unserem Empfehlungsprogramm erhältst du für jede Person, die du zu uns schickst, eine Gutschrift auf dein Konto – die du jederzeit auszahlen lassen kannst.
               </p>
               <a href="${affiliateUrl}" style="display:inline-block;background:${primaryColor};color:#ffffff;padding:11px 24px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none">
-                Mehr erfahren →
+                Empfehlungs-Dashboard →
               </a>
             </div>
           <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;text-align:center">Alles Gute auf deinen weiteren Fahrten! 🚗</p>
@@ -191,12 +191,12 @@ export default defineEventHandler(async (event) => {
             <tr><td style="height:8px"></td></tr>
             <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
               <p style="margin:0;font-size:14px;color:#374151;font-weight:600">② Freund bucht</p>
-              <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bucht, wird dein Konto gutgeschrieben.</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund die erste Fahrstunde bezahlt, wird der Betrag auf deinem Guthaben-Konto gutgeschrieben.</p>
             </td></tr>
             <tr><td style="height:8px"></td></tr>
             <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
               <p style="margin:0;font-size:14px;color:#374151;font-weight:600">③ Geld auszahlen</p>
-              <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Du kannst dein Guthaben jederzeit per Banküberweisung auszahlen lassen.</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Du kannst die Auszahlung deines Guthabens jederzeit per Banküberweisung beantragen.</p>
             </td></tr>
           </table>
           <table width="100%" cellpadding="0" cellspacing="0">
