@@ -1,6 +1,7 @@
 import { defineEventHandler, getHeader, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getEffectiveCreditBalanceRappen } from '~/server/utils/effective-credit-balance'
 
 /**
  * GET /api/affiliate/stats
@@ -119,13 +120,11 @@ export default defineEventHandler(async (event) => {
     ? Math.round((totalActive / totalRegistrations) * 100)
     : 0
 
-  // Load current credit balance
-  const { data: credits } = await supabaseAdmin
-    .from('student_credits')
-    .select('balance_rappen')
-    .eq('user_id', userProfile.id)
-    .eq('tenant_id', userProfile.tenant_id)
-    .maybeSingle()
+  const currentBalanceRappen = await getEffectiveCreditBalanceRappen(
+    supabaseAdmin,
+    userProfile.id,
+    userProfile.tenant_id
+  )
 
   // Load payout requests
   const { data: payoutRequests } = await supabaseAdmin
@@ -197,7 +196,7 @@ export default defineEventHandler(async (event) => {
       summary: {
         total_referrals: affiliateCode?.total_referrals ?? 0,
         total_credited_rappen: affiliateCode?.total_credited_rappen ?? 0,
-        current_balance_rappen: credits?.balance_rappen ?? 0,
+        current_balance_rappen: currentBalanceRappen,
         registrations: totalRegistrations,
         active: totalActive,
         pending: totalPending,

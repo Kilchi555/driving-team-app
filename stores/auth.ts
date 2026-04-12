@@ -6,6 +6,7 @@ import type { Ref } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 // Types
 interface UserProfile {
@@ -61,29 +62,46 @@ const isAdmin = computed(() => {
   const initializeAuthStore = async () => {
     logger.debug('🔥 Initializing Auth Store')
 
-    // SECURITY: Session is stored in HTTP-Only cookies
-    // We need to ask the server if we have a valid session
+    const affiliatePath =
+      process.client &&
+      typeof window !== 'undefined' &&
+      pathnameIncludesAffiliateDashboard(window.location.pathname)
+
+    // SECURITY: Session is stored in HTTP-Only cookies (tenant/customer).
+    // Affiliate magic-link uses Supabase storage + Bearer APIs only.
     if (process.client) {
       try {
-        // Check if we have a valid session via HTTP-Only cookies
-        const response = await $fetch('/api/auth/current-user') as any
-        
-        if (response?.user && !user.value) {
-          logger.debug('🔄 Restoring session from HTTP-Only cookie for:', response.user.email)
-          user.value = response.user
-          
-          // If profile was returned, use it directly
-          if (response.profile) {
-            userProfile.value = response.profile
-            userRole.value = response.profile.role || ''
-            logger.debug('✅ Profile restored:', response.profile.email)
-          } else {
-            // Fallback: fetch profile separately
-            await fetchUserProfile(response.user.id)
+        if (affiliatePath) {
+          const supabase = getSupabase()
+          if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user && !user.value) {
+              user.value = session.user as any
+              await fetchUserProfile(session.user.id)
+            }
+          }
+        } else {
+          const response = await $fetch('/api/auth/current-user') as any
+
+          if (response?.user && !user.value) {
+            logger.debug('🔄 Restoring session from HTTP-Only cookie for:', response.user.email)
+            user.value = response.user
+
+            if (response.profile) {
+              userProfile.value = response.profile
+              userRole.value = response.profile.role || ''
+              logger.debug('✅ Profile restored:', response.profile.email)
+            } else {
+              await fetchUserProfile(response.user.id)
+            }
           }
         }
       } catch (error) {
-        console.error('❌ Error restoring session from cookies:', error)
+        if (affiliatePath) {
+          logger.debug('⚠️ Affiliate auth init ohne Cookie-Session:', (error as any)?.message)
+        } else {
+          console.error('❌ Error restoring session from cookies:', error)
+        }
       }
     }
 
@@ -378,29 +396,74 @@ const isAdmin = computed(() => {
   }
 
   const fetchUserProfile = async (userId: string) => {
+    errorMessage.value = null
+    const applyProfile = (p: UserProfile) => {
+      userProfile.value = p
+      userRole.value = p.role || ''
+      logger.debug('✅ User profile loaded:', {
+        role: p.role,
+        tenant_id: p.tenant_id,
+        email: p.email,
+        user_id: p.id,
+      })
+    }
+
+    const affiliateBrowser =
+      process.client &&
+      typeof window !== 'undefined' &&
+      pathnameIncludesAffiliateDashboard(window.location.pathname)
+
+    if (!affiliateBrowser) {
+      try {
+        logger.debug('👤 Fetching user profile via API for:', userId)
+
+        const response = await $fetch('/api/auth/current-user') as any
+
+        if (response?.profile) {
+          applyProfile(response.profile as UserProfile)
+          return
+        }
+      } catch (err: any) {
+        logger.debug('⚠️ current-user nicht verfügbar (z. B. nur Supabase-Session), versuche Bearer …', err?.message)
+      }
+    }
+
+    // Affiliate / Magic-Link: Supabase-Access-Token, kein httpOnly-Cookie
     try {
-      logger.debug('👤 Fetching user profile via API for:', userId)
-      
-      // Use API endpoint instead of direct Supabase (tokens are in HTTP-Only cookies)
-      const response = await $fetch('/api/auth/current-user') as any
-      
-      if (response?.profile) {
-        userProfile.value = response.profile
-        userRole.value = response.profile.role || ''
-        
-        logger.debug('✅ User profile loaded via API:', {
-          role: response.profile.role,
-          tenant_id: response.profile.tenant_id,
-          email: response.profile.email,
-          user_id: response.profile.id
-        })
-      } else {
-        logger.debug('📝 No user profile found via API')
+      const supabase = getSupabase()
+      if (!supabase) throw new Error('No supabase client')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
         userProfile.value = null
         userRole.value = ''
+        return
       }
+
+      const res = await $fetch<{ success?: boolean; data?: Record<string, unknown> }>('/api/users/current', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+
+      const d = res?.data
+      if (!d || typeof d.id !== 'string') {
+        logger.debug('📝 No user profile from /api/users/current')
+        userProfile.value = null
+        userRole.value = ''
+        return
+      }
+
+      applyProfile({
+        id: d.id,
+        email: String(d.email || ''),
+        role: String(d.role || ''),
+        first_name: (d.first_name as string | null) ?? null,
+        last_name: (d.last_name as string | null) ?? null,
+        phone: (d.phone as string | null) ?? null,
+        tenant_id: (d.tenant_id as string | null) ?? null,
+        is_active: true,
+        preferred_payment_method: null,
+      })
     } catch (err: any) {
-      console.error('❌ Error fetching user profile:', err.message)
+      console.error('❌ Error fetching user profile:', err?.message)
       errorMessage.value = 'Konnte Benutzerprofil nicht laden.'
       userProfile.value = null
       userRole.value = ''

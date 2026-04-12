@@ -1,9 +1,16 @@
 // plugins/tenant-restore.client.ts
 import { getSupabase } from '~/utils/supabase'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+import { logger } from '~/utils/logger'
 
 export default defineNuxtPlugin(async () => {
   // Nur auf Client-Seite ausführen
   if (process.server) return
+
+  if (typeof window !== 'undefined' && pathnameIncludesAffiliateDashboard(window.location.pathname)) {
+    logger.debug('🔄 Tenant restore: übersprungen auf Affiliate-Dashboard (Profil über Supabase-Session)')
+    return
+  }
 
   logger.debug('🔄 Tenant restore plugin starting...')
 

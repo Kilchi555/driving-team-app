@@ -147,6 +147,8 @@ import { ref } from 'vue'
 interface Props {
   currentBalance: number
   studentId?: string
+  /** Optional (e.g. affiliate magic-link session): merge into redeem request */
+  getFetchHeaders?: () => Promise<Record<string, string>>
 }
 
 const props = defineProps<Props>()
@@ -193,9 +195,11 @@ const redeemVoucher = async () => {
       body.user_id = shopCheckout.currentUserId.value
     }
 
+    const extraHeaders = props.getFetchHeaders ? await props.getFetchHeaders() : {}
     const response = await $fetch<any>('/api/vouchers/redeem', {
       method: 'POST',
-      body
+      body,
+      headers: { ...extraHeaders }
     })
 
     // Fix: API returns credit.new_balance_chf (string) or newBalance (rappen)

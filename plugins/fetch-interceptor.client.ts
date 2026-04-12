@@ -7,6 +7,7 @@
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useRoute } from '#app'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 // Prevent multiple redirects happening at once
 let isRedirecting = false
@@ -25,18 +26,24 @@ export default defineNuxtPlugin((nuxtApp) => {
       // request can be a string (URL) or a Request object — normalize to string
       const url = (typeof request === 'string' ? request : (request as any)?.url || '').toLowerCase()
 
-      // 🚨 CRITICAL: Don't redirect for ANY /api/auth/* endpoints - these are ALWAYS credential errors
-      // This includes: login, logout, register, refresh, current-user
-      const isAnyAuthEndpoint = url.includes('/api/auth/') || (request as any)?.headers?.['X-Auth-Request'] === 'true'
-      
-      if (status === 401 && isAnyAuthEndpoint) {
+      const route = useRoute()
+      const browserPath = typeof window !== 'undefined' ? window.location.pathname : ''
+      const onAffiliateDashboard =
+        pathnameIncludesAffiliateDashboard(browserPath) ||
+        pathnameIncludesAffiliateDashboard(route.path)
+
+      // Credential probes: wrong/missing cookie or Bearer — never SPA-redirect to tenant login
+      const isCredentialProbeEndpoint =
+        url.includes('/api/auth/') ||
+        url.includes('/api/users/current') ||
+        (request as any)?.headers?.['X-Auth-Request'] === 'true'
+
+      if (status === 401 && isCredentialProbeEndpoint) {
         console.debug('ℹ️ Auth endpoint returned 401 - credential error, let component handle it')
         const d = (response as any)?._data
         throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
 
-      // Check if this is a booking flow request (should show modal instead of redirecting)
-      const route = useRoute()
       const currentPath = route.path
 
       // 🚨 CRITICAL: Don't redirect if we're already on a login page (/:slug or /login)
@@ -68,7 +75,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
       // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
       // DON'T redirect for booking flow - let component show modal
-      if (status === 401 && !isRedirecting && !isBookingFlow && !isAnyAuthEndpoint) {
+      if (status === 401 && !isRedirecting && !isBookingFlow && !onAffiliateDashboard) {
         isRedirecting = true
         console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { url })
 

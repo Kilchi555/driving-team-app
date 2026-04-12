@@ -35,7 +35,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       '/learning',
       '/users',
       '/customers',
-      '/upgrade'
+      '/upgrade',
+      '/affiliate-dashboard',
     ]
     
     if (currentRoute?.path && nonTenantPaths.includes(currentRoute.path)) {

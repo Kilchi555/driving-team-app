@@ -19,7 +19,7 @@
         <p v-else class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">
           {{ sessionExpired ? 'Deine Sitzung ist abgelaufen. Bitte fordere einen neuen Zugangslink an.' : 'Bitte melde dich an oder fordere einen neuen Zugangslink an.' }}
         </p>
-        <NuxtLink :to="tenantSlug ? `/partner/${tenantSlug}` : '/partner'" class="block rounded-lg px-5 py-2.5 font-semibold text-sm text-white transition hover:opacity-90" :style="{ backgroundColor: brandConfig.primary_color }">
+        <NuxtLink :to="partnerPortalSlug ? `/partner/${partnerPortalSlug}` : '/partner'" class="block rounded-lg px-5 py-2.5 font-semibold text-sm text-white transition hover:opacity-90" :style="{ backgroundColor: brandConfig.primary_color }">
           Neuen Link anfordern
         </NuxtLink>
       </div>
@@ -75,8 +75,8 @@
           <span>Wie funktioniert das Empfehlungs- programm? <span class="underline font-medium">Mehr erfahren →</span></span>
         </button>
 
-        <!-- Hero Stats Section -->
-        <div class="rounded-2xl shadow-lg p-5" :style="{ backgroundColor: brandConfig.surface_color }">
+        <!-- Hero Stats Section (isolate + hoher z-index: nichts darf Klicks zum Guthaben-Button abfangen) -->
+        <div class="relative z-20 isolate pointer-events-auto rounded-2xl shadow-lg p-5" :style="{ backgroundColor: brandConfig.surface_color }">
           <div class="grid grid-cols-2 gap-3 text-center mb-3">
             <div class="relative bg-gray-50 rounded-xl p-3 cursor-pointer hover:bg-gray-100 transition" @click="openDetail('leads')">
               <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
@@ -89,20 +89,29 @@
               <div class="text-xs text-gray-500 mt-0.5">Registrierungen</div>
             </div>
           </div>
-          <div class="relative bg-green-50 rounded-xl p-3 text-center mb-3 cursor-pointer hover:bg-green-100 transition" @click="openDetail('credited')">
-            <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
-            <div class="text-xl font-bold text-green-700">{{ stats?.referrals?.filter((r: any) => r.status === 'credited')?.length ?? 0 }}</div>
-            <div class="text-xs text-gray-500 mt-0.5">1. Fahrstunde bezahlt</div>
+          <div class="relative z-0 overflow-hidden rounded-xl bg-green-50 p-3 text-center transition-colors hover:bg-green-100/90 cursor-pointer" role="button" tabindex="0" @click="openDetail('credited')" @keydown.enter.prevent="openDetail('credited')" @keydown.space.prevent="openDetail('credited')">
+            <span class="pointer-events-none absolute top-1.5 left-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-green-300 text-[9px] font-bold leading-none text-green-400">i</span>
+            <div class="pointer-events-none text-xl font-bold text-green-700">{{ stats?.referrals?.filter((r: any) => r.status === 'credited')?.length ?? 0 }}</div>
+            <div class="pointer-events-none mt-0.5 text-xs text-gray-500">1. Fahrstunde bezahlt</div>
           </div>
-          <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-            <div class="flex items-center gap-2">
-              <svg class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+          <button
+            type="button"
+            class="mt-4 w-full flex items-center justify-between rounded-lg border border-green-400 bg-white px-4 py-3 text-left cursor-pointer hover:bg-green-50 active:scale-95 transition-all"
+            title="Guthaben anzeigen"
+            @click="openWalletTransactionHistory"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <svg class="h-5 w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span class="text-sm font-semibold text-green-800">Dein Guthaben</span>
+              <div class="min-w-0">
+                <span class="block text-sm font-semibold text-green-900">Dein Guthaben</span>
+                <span class="text-xs text-green-700">Tippen für Verlauf ({{ stats ? '✓' : '⏳' }})</span>
+              </div>
             </div>
-            <span class="text-lg font-bold text-green-700">CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</span>
-          </div>
+            <span class="text-lg font-bold text-green-800 flex-shrink-0">CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</span>
+          </button>
         </div>
         <div class="rounded-2xl shadow-lg p-8" :style="{ backgroundColor: brandConfig.surface_color }">
           <div class="flex items-center gap-3 mb-2">
@@ -157,122 +166,23 @@
           </div>
         </div>
 
-        <!-- Payout Section -->
-        <div class="rounded-2xl shadow-lg p-8" :style="{ backgroundColor: brandConfig.surface_color }">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="text-2xl">💳</span>
-            <h2 class="text-2xl font-bold" :style="{ color: brandConfig.text_color }">Auszahlung</h2>
+        <!-- Auszahlung & Guthaben (gleicher Flow wie Kunden-Zahlungen) -->
+        <div class="rounded-2xl shadow-lg overflow-hidden" :style="{ backgroundColor: brandConfig.surface_color }">
+          <div class="px-5 pt-6 pb-2">
+            <div class="flex items-center gap-3 mb-1">
+              <span class="text-2xl">💳</span>
+              <h2 class="text-xl font-bold" :style="{ color: brandConfig.text_color }">Auszahlung & Guthaben</h2>
+            </div>
+            <p class="text-sm pb-4" :style="{ color: brandConfig.text_secondary_color }">
+              Verfügbares Guthaben in der Übersicht oben; hier dieselben Aktionen wie unter «Zahlungen»: auszahlen, aufladen, Gutschein einlösen, Verlauf.
+            </p>
           </div>
-          <p class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">Dein verfügbares Guthaben: <span class="font-bold" :style="{ color: brandConfig.primary_color }">{{ formatChf(stats?.summary.current_balance_rappen ?? 0) }}</span></p>
-
-          <div v-if="!showPayoutForm" class="grid grid-cols-2 gap-3">
-            <button
-              @click="() => { payoutType = 'bank'; showPayoutForm = true }"
-              :disabled="(stats?.summary.current_balance_rappen ?? 0) < 100"
-              class="rounded-xl py-3 text-sm font-semibold text-white transition hover:scale-105 active:scale-95 disabled:opacity-40"
-              :style="{ backgroundColor: brandConfig.primary_color }"
-            >
-              🏦 Banküberweisung
-            </button>
-            <button
-              @click="() => { payoutType = 'credit'; showPayoutForm = true }"
-              class="rounded-xl py-3 text-sm font-semibold transition hover:scale-105 active:scale-95"
-              :style="{ color: brandConfig.primary_color, backgroundColor: `${brandConfig.primary_color}15` }"
-            >
-              📚 Fahrstunden-Guthaben
-            </button>
-          </div>
-
-          <!-- Step 2: SMS OTP confirmation -->
-          <div v-else-if="payoutType === 'bank' && pendingPayoutId" class="space-y-4">
-            <div class="text-center">
-              <div class="text-3xl mb-3">📱</div>
-              <h4 class="font-semibold mb-1" :style="{ color: brandConfig.text_color }">SMS-Bestätigung erforderlich</h4>
-              <p class="text-sm" :style="{ color: brandConfig.text_secondary_color }">
-                Wir haben dir einen 6-stelligen Code per SMS gesendet. Bitte gib ihn ein um die Auszahlung zu bestätigen.
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2" :style="{ color: brandConfig.text_color }">Bestätigungscode</label>
-              <input
-                v-model="payoutOtp"
-                type="text"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="000000"
-                autofocus
-                class="w-full rounded-lg px-4 py-3 text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2 transition border"
-                :style="{ borderColor: `${brandConfig.primary_color}50`, backgroundColor: `${brandConfig.primary_color}08`, color: brandConfig.text_color }"
-              />
-            </div>
-            <p v-if="payoutError" class="text-sm p-4 rounded-lg" :style="{ backgroundColor: '#ef444415', color: '#ef4444' }">{{ payoutError }}</p>
-            <div class="flex gap-3">
-              <button type="button" @click="cancelPayout" class="flex-1 rounded-lg py-3 text-sm font-semibold transition hover:scale-105"
-                :style="{ color: brandConfig.text_color, backgroundColor: `${brandConfig.primary_color}15` }">
-                Abbrechen
-              </button>
-              <button type="button" :disabled="payoutLoading || payoutOtp.length !== 6" @click="confirmPayout"
-                class="flex-1 rounded-lg py-3 text-sm font-semibold text-white transition hover:scale-105 disabled:opacity-50"
-                :style="{ backgroundColor: brandConfig.primary_color }">
-                {{ payoutLoading ? '⏳ Wird geprüft…' : '✓ Bestätigen' }}
-              </button>
-            </div>
-          </div>
-
-          <form v-else-if="payoutType === 'bank'" @submit.prevent="submitPayout" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-2" :style="{ color: brandConfig.text_color }">Betrag (CHF)</label>
-              <input
-                v-model.number="payoutForm.amountChf"
-                type="number"
-                min="1"
-                :max="Math.floor((stats?.summary.current_balance_rappen ?? 0) / 100)"
-                step="1"
-                required
-                class="w-full rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 transition border"
-                :style="{ borderColor: `${brandConfig.primary_color}30`, backgroundColor: `${brandConfig.primary_color}08`, color: brandConfig.text_color }"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2" :style="{ color: brandConfig.text_color }">IBAN</label>
-              <input
-                v-model="payoutForm.iban"
-                type="text"
-                placeholder="CH00 0000 0000 0000 0000 0"
-                required
-                class="w-full rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 transition border"
-                :style="{ borderColor: `${brandConfig.primary_color}30`, backgroundColor: `${brandConfig.primary_color}08`, color: brandConfig.text_color }"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2" :style="{ color: brandConfig.text_color }">Kontoinhaber</label>
-              <input
-                v-model="payoutForm.accountHolder"
-                type="text"
-                required
-                class="w-full rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 transition border"
-                :style="{ borderColor: `${brandConfig.primary_color}30`, backgroundColor: `${brandConfig.primary_color}08`, color: brandConfig.text_color }"
-              />
-            </div>
-            <p v-if="payoutError" class="text-sm p-4 rounded-lg" :style="{ backgroundColor: '#ef444415', color: '#ef4444' }">{{ payoutError }}</p>
-            <div class="flex gap-3">
-              <button type="button" @click="showPayoutForm = false" class="flex-1 rounded-lg py-3 text-sm font-semibold transition hover:scale-105"
-                :style="{ color: brandConfig.text_color, backgroundColor: `${brandConfig.primary_color}15` }">
-                Abbrechen
-              </button>
-              <button type="submit" :disabled="payoutLoading" class="flex-1 rounded-lg py-3 text-sm font-semibold text-white transition hover:scale-105 disabled:opacity-50"
-                :style="{ backgroundColor: brandConfig.primary_color }">
-                {{ payoutLoading ? '⏳ Wird gesendet…' : '✓ Antrag senden' }}
-              </button>
-            </div>
-          </form>
-
-          <div v-else class="text-center py-6">
-            <p class="text-sm mb-4" :style="{ color: brandConfig.text_secondary_color }">Dein Guthaben bleibt als Fahrstunden-Guthaben gespeichert und kann direkt für Lektionen eingelöst werden.</p>
-            <button @click="showPayoutForm = false" class="rounded-lg px-6 py-2 text-sm font-semibold transition hover:scale-105"
-              :style="{ color: brandConfig.primary_color, backgroundColor: `${brandConfig.primary_color}15` }">
-              ✓ Verstanden
-            </button>
+          <div class="px-4 pb-6">
+            <CustomerCreditWalletPanel
+              always-show-actions
+              :get-headers="getAuthHeaders"
+              @balance-updated="loadStats"
+            />
           </div>
         </div>
 
@@ -386,10 +296,69 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- Guthaben-Verlauf (Hero) — eigenes Modal auf Seitenebene, unabhängig vom Wallet-Panel unten -->
+  <Teleport to="body">
+    <div
+      v-if="showAffiliateCreditHistory"
+      class="fixed inset-0 z-[450] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="affiliate-credit-history-title"
+    >
+      <div class="absolute inset-0 bg-black/50" @click="showAffiliateCreditHistory = false" />
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[80vh] flex flex-col">
+        <button
+          type="button"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          aria-label="Schließen"
+          @click="showAffiliateCreditHistory = false"
+        >
+          <span class="text-2xl leading-none font-bold">×</span>
+        </button>
+        <h2 id="affiliate-credit-history-title" class="text-lg font-bold text-gray-900 mb-1">Guthaben-Verlauf</h2>
+        <p class="text-sm text-gray-500 mb-4">Alle Transaktionen deines Guthabens</p>
+        <div class="overflow-y-auto flex-1 min-h-0">
+          <div v-if="affiliateCreditTxLoading" class="flex justify-center py-8">
+            <div class="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div v-else-if="affiliateCreditTx.length === 0" class="text-center py-8 text-gray-400 text-sm">
+            Noch keine Transaktionen vorhanden.
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="tx in affiliateCreditTx"
+              :key="tx.id"
+              class="flex items-start justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50"
+            >
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-block w-2 h-2 rounded-full shrink-0"
+                    :class="tx.amount_rappen >= 0 ? 'bg-green-500' : 'bg-red-400'"
+                  />
+                  <span class="text-sm font-medium text-gray-800">{{ affiliateCreditTxLabel(tx) }}</span>
+                </div>
+                <div v-if="tx.notes" class="text-xs text-gray-400 mt-0.5 ml-4">{{ tx.notes }}</div>
+                <div class="text-xs text-gray-400 mt-0.5 ml-4">{{ formatAffiliateCreditTxDate(tx.created_at) }}</div>
+              </div>
+              <div class="text-right ml-4 shrink-0">
+                <span class="text-sm font-semibold" :class="tx.amount_rappen >= 0 ? 'text-green-600' : 'text-red-500'">
+                  {{ tx.amount_rappen >= 0 ? '+' : '' }}CHF {{ (Math.abs(tx.amount_rappen) / 100).toFixed(2) }}
+                </span>
+                <div class="text-xs text-gray-400">Saldo: CHF {{ (tx.balance_after_rappen / 100).toFixed(2) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import CustomerCreditWalletPanel from '~/components/customer/CustomerCreditWalletPanel.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useFavicon } from '~/composables/useFavicon'
@@ -400,7 +369,128 @@ const authStore = useAuthStore()
 const supabase = getSupabase()
 const { setFavicon } = useFavicon()
 
-const tenantSlug = computed(() => route.query.tenant as string | undefined)
+/** Partner-Seite für «Neuen Link» — Query, dann zuletzt bekannte Session/Tenant (localStorage). */
+const AFFILIATE_PARTNER_SLUG_KEY = 'affiliate_dashboard_partner_slug'
+
+function readStoredPartnerSlug(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  try {
+    const own = localStorage.getItem(AFFILIATE_PARTNER_SLUG_KEY)?.trim()
+    if (own) return own
+    return localStorage.getItem('last_tenant_slug')?.trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function writeStoredPartnerSlug(slug: string) {
+  if (typeof window === 'undefined' || !slug?.trim()) return
+  const s = slug.trim()
+  try {
+    localStorage.setItem(AFFILIATE_PARTNER_SLUG_KEY, s)
+    localStorage.setItem('last_tenant_slug', s)
+    persistedPartnerSlug.value = s
+  } catch {
+    /* ignore */
+  }
+}
+
+const persistedPartnerSlug = ref<string | undefined>(readStoredPartnerSlug())
+
+function queryTenantRaw(): string | undefined {
+  const q = route.query.tenant
+  if (typeof q === 'string' && q.trim()) return q.trim()
+  if (Array.isArray(q) && q[0] && String(q[0]).trim()) return String(q[0]).trim()
+  return undefined
+}
+
+const partnerPortalSlug = computed(
+  () => queryTenantRaw() || persistedPartnerSlug.value || readStoredPartnerSlug()
+)
+
+watch(
+  () => route.query.tenant,
+  () => {
+    const t = queryTenantRaw()
+    if (t) writeStoredPartnerSlug(t)
+  },
+  { immediate: true }
+)
+
+async function persistAffiliatePartnerSlugFromProfile() {
+  const fromQuery = queryTenantRaw()
+  if (fromQuery) {
+    writeStoredPartnerSlug(fromQuery)
+    return
+  }
+  const tid = authStore.userProfile?.tenant_id
+  if (!tid) return
+  try {
+    const res = (await $fetch(`/api/tenants/get-slug?id=${tid}`)) as any
+    const slug = res?.data?.slug ?? res?.slug
+    if (slug && typeof slug === 'string') writeStoredPartnerSlug(slug)
+  } catch {
+    /* noop */
+  }
+}
+
+function tryPersistSlugFromShareUrl(url: string | undefined | null) {
+  if (!url) return
+  if (queryTenantRaw() || persistedPartnerSlug.value) return
+  const m = String(url).match(/\/ref\/([^/?#]+)/)
+  if (m?.[1]) writeStoredPartnerSlug(m[1])
+}
+
+const showAffiliateCreditHistory = ref(false)
+const affiliateCreditTx = ref<any[]>([])
+const affiliateCreditTxLoading = ref(false)
+
+function affiliateCreditTxLabel(tx: any): string {
+  const typeMap: Record<string, string> = {
+    deposit: 'Bareinzahlung',
+    refund: 'Rückerstattung',
+    topup: 'Guthaben aufgeladen',
+    credit_topup: 'Guthaben aufgeladen',
+    voucher: 'Gutschein eingelöst',
+    manual: 'Manuelle Buchung',
+    cash_deposit: 'Bar-Einzahlung',
+    cancellation: 'Stornierung',
+    cancellation_credit_refund: 'Stornierung (Rückerstattung)',
+    duration_reduction_credit: 'Fahrstunde verkürzt (Rückerstattung)',
+    payment: 'Fahrstunde bezahlt',
+    appointment: 'Fahrstunde bezahlt',
+    appointment_payment: 'Fahrstunde bezahlt',
+    withdrawal: 'Auszahlung',
+    withdrawal_pending: 'Auszahlung (ausstehend)',
+    withdrawal_completed: 'Auszahlung abgeschlossen',
+  }
+  return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
+}
+
+function formatAffiliateCreditTxDate(dateStr: string) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+async function openWalletTransactionHistory() {
+  console.log('🔵 openWalletTransactionHistory called')
+  showAffiliateCreditHistory.value = true
+  affiliateCreditTxLoading.value = true
+  affiliateCreditTx.value = []
+  try {
+    const headers = await getAuthHeaders()
+    console.log('📍 Fetching credit transactions with headers:', Object.keys(headers))
+    const data = await $fetch<any[]>('/api/customer/get-credit-transactions', { method: 'GET', headers })
+    console.log('✅ Credit transactions loaded:', data?.length)
+    affiliateCreditTx.value = data || []
+  } catch (e: any) {
+    console.error('❌ Error loading credit transactions:', e)
+    affiliateCreditTx.value = []
+  } finally {
+    affiliateCreditTxLoading.value = false
+  }
+}
 
 const authLoading = ref(true)
 const isAuthenticated = ref(false)
@@ -483,14 +573,6 @@ function openDetail(filter: 'leads' | 'pending' | 'credited') {
   showDetailModal.value = true
 }
 
-const showPayoutForm = ref(false)
-const payoutType = ref<'bank' | 'credit'>('bank')
-const payoutForm = ref({ amountChf: 0, iban: '', accountHolder: '' })
-const payoutLoading = ref(false)
-const payoutError = ref('')
-const pendingPayoutId = ref<string | null>(null)
-const payoutOtp = ref('')
-
 const brandConfig = ref<any>({
   name: 'Driving Team',
   primary_color: '#1f2937',
@@ -531,11 +613,13 @@ onMounted(async () => {
           accessToken.value = signInData.session.access_token ?? null
           authStore.user = supaUser as any
           await authStore.fetchUserProfile(supaUser.id)
+          await persistAffiliatePartnerSlugFromProfile()
           isAuthenticated.value = true
           sessionExpired.value = false
           setupAuthListener()
           userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || supaUser.email || 'Partner'
-          await router.replace({ path: '/affiliate-dashboard', query: tenantSlug.value ? { tenant: tenantSlug.value } : {} })
+          const slug = partnerPortalSlug.value
+          await router.replace({ path: '/affiliate-dashboard', query: slug ? { tenant: slug } : {} })
           await loadBranding()
           await loadStats()
         } else {
@@ -560,6 +644,7 @@ onMounted(async () => {
       if (!authStore.userProfile) {
         await authStore.fetchUserProfile(session.user.id)
       }
+      await persistAffiliatePartnerSlugFromProfile()
     }
   }
 
@@ -568,6 +653,7 @@ onMounted(async () => {
     sessionExpired.value = false
     setupAuthListener()
     userName.value = `${authStore.userProfile?.first_name ?? ''} ${authStore.userProfile?.last_name ?? ''}`.trim() || (user as any).email || 'Partner'
+    await persistAffiliatePartnerSlugFromProfile()
     await loadBranding()
     await loadStats()
   }
@@ -607,6 +693,7 @@ async function loadStats() {
     stats.value = result.data
     affiliateCode.value = result.data.affiliate_code?.code ?? null
     shareLink.value = result.data.share_link ?? ''
+    tryPersistSlugFromShareUrl(shareLink.value)
   } catch (err) {
     console.error('Failed to load affiliate stats', err)
   }
@@ -622,6 +709,7 @@ async function generateCode() {
     })
     affiliateCode.value = result.data.code
     shareLink.value = result.data.link
+    tryPersistSlugFromShareUrl(shareLink.value)
   } catch (err: any) {
     console.error('Failed to generate code', err)
   } finally {
@@ -637,66 +725,6 @@ async function copyLink() {
   } catch {
     // Clipboard not available
   }
-}
-
-async function submitPayout() {
-  payoutError.value = ''
-  payoutLoading.value = true
-  try {
-    const headers = await getAuthHeaders()
-    const result = await $fetch<any>('/api/affiliate/request-payout', {
-      method: 'POST',
-      headers,
-      body: {
-        type: 'bank',
-        amount_rappen: payoutForm.value.amountChf * 100,
-        iban: payoutForm.value.iban,
-        account_holder: payoutForm.value.accountHolder,
-      },
-    })
-    if (result?.requiresSmsConfirmation) {
-      pendingPayoutId.value = result.data.payout_request_id
-      payoutOtp.value = ''
-    } else {
-      showPayoutForm.value = false
-      await loadStats()
-    }
-  } catch (err: any) {
-    payoutError.value = err?.data?.message || 'Fehler beim Einreichen des Antrags.'
-  } finally {
-    payoutLoading.value = false
-  }
-}
-
-async function confirmPayout() {
-  payoutError.value = ''
-  payoutLoading.value = true
-  try {
-    const headers = await getAuthHeaders()
-    await $fetch('/api/affiliate/confirm-payout', {
-      method: 'POST',
-      headers,
-      body: {
-        payoutRequestId: pendingPayoutId.value,
-        otp: payoutOtp.value,
-      },
-    })
-    pendingPayoutId.value = null
-    payoutOtp.value = ''
-    showPayoutForm.value = false
-    await loadStats()
-  } catch (err: any) {
-    payoutError.value = err?.data?.message || 'Ungültiger Code. Bitte versuche es erneut.'
-  } finally {
-    payoutLoading.value = false
-  }
-}
-
-function cancelPayout() {
-  pendingPayoutId.value = null
-  payoutOtp.value = ''
-  payoutError.value = ''
-  showPayoutForm.value = false
 }
 
 function generateWhatsAppMessage() {
@@ -721,14 +749,6 @@ ${firstName}`
 
 function goBack() {
   router.back()
-}
-
-function formatChf(rappen: number) {
-  return `CHF ${(rappen / 100).toFixed(2)}`
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 </script>
 

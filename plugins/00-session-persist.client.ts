@@ -4,6 +4,7 @@ import { defineNuxtPlugin } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import { SESSION_STORAGE_KEY, type PersistentSession } from '~/utils/session-persistence'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Only run in browser
@@ -50,40 +51,49 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // Try to restore from cache first
   const restoredFromCache = restoreFromLocalStorage()
 
+  const affiliatePath =
+    typeof window !== 'undefined' && pathnameIncludesAffiliateDashboard(window.location.pathname)
+
   if (!restoredFromCache) {
-    // If not in cache, fetch from API (HTTP-Only cookies)
-    try {
-      logger.debug('🔄 Checking session via API...')
-      const response = await $fetch('/api/auth/current-user') as any
+    // Affiliate magic-link: no httpOnly cookie — skip noisy current-user 401
+    if (affiliatePath) {
+      logger.debug('🔄 Affiliate-Dashboard: Session-Persist überspringt Cookie-/current-user')
+      authStore.isInitialized = true
+    } else {
+      // If not in cache, fetch from API (HTTP-Only cookies)
+      try {
+        logger.debug('🔄 Checking session via API...')
+        const response = await $fetch('/api/auth/current-user') as any
 
-      if (response?.user && response?.profile) {
-        logger.debug('✅ Session found for:', response.user.email)
+        if (response?.user && response?.profile) {
+          logger.debug('✅ Session found for:', response.user.email)
 
-        // Store in auth store
-        authStore.user = response.user
-        authStore.userProfile = response.profile
-        authStore.userRole = response.profile.role || ''
+          // Store in auth store
+          authStore.user = response.user
+          authStore.userProfile = response.profile
+          authStore.userRole = response.profile.role || ''
 
-        // Save to localStorage for HMR recovery
-        const session: PersistentSession = {
-          user: response.user,
-          profile: response.profile,
-          timestamp: Date.now(),
-          expiresIn: 24 * 60 * 60 * 1000 // 24 hours
+          // Save to localStorage for HMR recovery
+          const session: PersistentSession = {
+            user: response.user,
+            profile: response.profile,
+            timestamp: Date.now(),
+            expiresIn: 24 * 60 * 60 * 1000 // 24 hours
+          }
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+          logger.debug('💾 Session saved to localStorage for HMR recovery')
+        } else {
+          logger.debug('🔄 No valid session cookie found')
+          localStorage.removeItem(SESSION_STORAGE_KEY)
         }
-        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
-        logger.debug('💾 Session saved to localStorage for HMR recovery')
-      } else {
-        logger.debug('🔄 No valid session cookie found')
+      } catch (err: any) {
+        logger.debug('⚠️ Session restore error:', err.message)
         localStorage.removeItem(SESSION_STORAGE_KEY)
       }
-    } catch (err: any) {
-      logger.debug('⚠️ Session restore error:', err.message)
-      localStorage.removeItem(SESSION_STORAGE_KEY)
-    }
 
-    // Set isInitialized to true even if no session was found
-    authStore.isInitialized = true
+      // Set isInitialized to true even if no session was found
+      authStore.isInitialized = true
+    }
   }
 
   logger.debug('✅ Session persist plugin initialized')

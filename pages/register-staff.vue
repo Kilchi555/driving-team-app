@@ -373,6 +373,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ name: 'register-staff-legacy' })
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
