@@ -15,6 +15,7 @@ interface AppointmentNotificationBody {
   oldTime?: string
   staffName?: string
   location?: string
+  locationAddress?: string
   tenantName?: string
   tenantId?: string
   tenantSlug?: string
@@ -63,21 +64,15 @@ const TEMPLATES = {
               <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
                 ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
                 ${data.amount ? `<p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bestätige deinen Termin und überprüfe die Zahlungsdetails in deinem Kundenkonto.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Überprüfe die Zahlungsdetails in deinem Kundenkonto.</p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-                  Termin bestätigen
-                </a>
-              </div>
-              
-              <div style="text-align: center; margin: 10px 0;">
-                <a href="${dashboardUrl}" style="color: ${primaryColor}; text-decoration: none; font-size: 14px;">
-                  Oder zum Kundenkonto
+                  Jetzt bezahlen
                 </a>
               </div>
               
@@ -126,7 +121,7 @@ const TEMPLATES = {
               <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
                 ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
                 ${data.amount ? `<p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
               </div>
               
@@ -260,7 +255,7 @@ const TEMPLATES = {
               <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0 10px 0; border-radius: 4px;">
                 <p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>❌ Alter Termin:</strong> ${data.oldTime}</p>
                 ${data.staffName ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px">${data.locationAddress}</span>` : ''}</p>` : ''}
               </div>
               ` : ''}
               
@@ -274,7 +269,7 @@ const TEMPLATES = {
               <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 10px 0 20px 0; border-radius: 4px;">
                 <p style="margin: 5px 0; color: #065f46; font-size: 18px;"><strong>✅ Neuer Termin:</strong> ${data.newTime}</p>
                 ${data.staffName ? `<p style="margin: 5px 0; color: #065f46;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #065f46;"><strong>Ort:</strong> ${data.location}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #065f46;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#047857">${data.locationAddress}</span>` : ''}</p>` : ''}
               </div>
               ` : ''}
               

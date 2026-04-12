@@ -161,9 +161,11 @@ export default defineEventHandler(async (event) => {
       const daysAgo = Math.round((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
       return `
         <tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151">${dateStr}, ${timeStr}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#9ca3af">${daysAgo} Tage überfällig</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;font-weight:600;color:#dc2626">CHF ${amtCHF}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6">
+            <span style="font-size:14px;color:#374151">${dateStr}, ${timeStr}</span><br>
+            <span style="font-size:12px;color:#9ca3af">${daysAgo} Tage überfällig</span>
+          </td>
+          <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;font-weight:600;color:#dc2626;white-space:nowrap">CHF ${amtCHF}</td>
         </tr>`
     }).join('')
 
@@ -195,7 +197,6 @@ export default defineEventHandler(async (event) => {
               <thead>
                 <tr style="background:#fef2f2">
                   <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Termin</th>
-                  <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Überfällig</th>
                   <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Betrag</th>
                 </tr>
               </thead>
