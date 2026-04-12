@@ -9,16 +9,41 @@
     </div>
 
     <!-- Not authenticated -->
-    <div v-else-if="!isAuthenticated" class="flex items-center justify-center min-h-screen p-4">
+    <div v-else-if="!isAuthenticated" class="flex items-center justify-center min-h-screen p-4" :style="{ backgroundColor: brandConfig.background_color || '#f9fafb' }">
       <div class="rounded-2xl shadow-lg p-8 max-w-sm w-full text-center" :style="{ backgroundColor: brandConfig.surface_color }">
-        <div class="text-4xl mb-4">{{ sessionExpired ? '⏰' : '🔒' }}</div>
+        <!-- Logo -->
+        <div class="mb-6 flex justify-center">
+          <div v-if="brandConfig.logo_square_url" class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-md border border-gray-200 bg-white flex items-center justify-center">
+            <img 
+              :src="brandConfig.logo_square_url"
+              :alt="brandConfig.name"
+              class="w-full h-full object-contain"
+              @error="() => { logoLoadError = true }"
+            />
+          </div>
+          <div v-else class="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: `${brandConfig.primary_color}20` }">
+            <span class="text-3xl">🤝</span>
+          </div>
+        </div>
+        
+        <!-- Tenant name -->
+        <p v-if="brandConfig.name" class="text-sm font-semibold mb-3" :style="{ color: brandConfig.text_secondary_color }">
+          {{ brandConfig.name }}
+        </p>
+        
+        <!-- Icon & Title -->
+        <div class="text-4xl mb-3">{{ sessionExpired ? '⏰' : '🔒' }}</div>
         <h2 class="text-xl font-bold mb-2" :style="{ color: brandConfig.text_color }">
           {{ sessionExpired ? 'Sitzung abgelaufen' : 'Zugang erforderlich' }}
         </h2>
+        
+        <!-- Error or message -->
         <p v-if="tokenError" class="text-sm mb-4 p-3 rounded-lg bg-red-50 text-red-600">{{ tokenError }}</p>
         <p v-else class="text-sm mb-6" :style="{ color: brandConfig.text_secondary_color }">
           {{ sessionExpired ? 'Deine Sitzung ist abgelaufen. Bitte fordere einen neuen Zugangslink an.' : 'Bitte melde dich an oder fordere einen neuen Zugangslink an.' }}
         </p>
+        
+        <!-- Button -->
         <NuxtLink :to="partnerPortalSlug ? `/partner/${partnerPortalSlug}` : '/partner'" class="block rounded-lg px-5 py-2.5 font-semibold text-sm text-white transition hover:opacity-90" :style="{ backgroundColor: brandConfig.primary_color }">
           Neuen Link anfordern
         </NuxtLink>
@@ -97,20 +122,33 @@
 
           <button
             type="button"
-            class="mt-4 w-full flex items-center justify-between rounded-lg border border-green-400 bg-white px-4 py-3 text-left cursor-pointer hover:bg-green-50 active:scale-95 transition-all"
+            class="group mt-4 w-full flex items-center justify-between gap-3 rounded-xl px-5 py-4 text-left transition-all duration-300 relative overflow-hidden"
+            :style="{
+              backgroundColor: brandConfig.primary_color,
+              border: `2px solid ${brandConfig.primary_color}`
+            }"
             title="Guthaben anzeigen"
             @click="openWalletTransactionHistory"
           >
-            <div class="flex items-center gap-2 min-w-0">
-              <svg class="h-5 w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            <div class="relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300" :style="{ backgroundColor: `${brandConfig.primary_color}40`, color: brandConfig.primary_color }">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div class="min-w-0">
-                <span class="block text-sm font-semibold text-green-900">Dein Guthaben</span>
-                <span class="text-xs text-green-700">Tippen für Verlauf ({{ stats ? '✓' : '⏳' }})</span>
-              </div>
             </div>
-            <span class="text-lg font-bold text-green-800 flex-shrink-0">CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}</span>
+            <div class="relative z-10 min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-white transition-colors duration-300">Dein Guthaben</span>
+              <span class="text-xs transition-colors duration-300" :style="{ color: `${brandConfig.primary_color}dd` }}>Tippen für Verlauf</span>
+            </div>
+            <span class="relative z-10 flex-shrink-0 text-xl font-bold text-white tabular-nums transition-transform duration-300 group-hover:scale-110">
+              CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}
+            </span>
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1">
+              <svg class="h-5 w-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
           </button>
         </div>
         <div class="rounded-2xl shadow-lg p-8" :style="{ backgroundColor: brandConfig.surface_color }">
