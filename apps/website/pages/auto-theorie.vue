@@ -168,7 +168,7 @@
             Wie rechtfertigen sich eure Preise?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Unser stetiges Bestreben nach Professionalität setzen wir in unserer ganzen Fahrschule um. Unsere Fahrlehrer:innen können langfristig nur eine seriöse Arbeit abliefern, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge haben. Dank diesen optimalen Voraussetzungen erreichen wir das Wichtigste: zufriedene Kunden, die eine umfangreiche, speditive und praxisorientierte Ausbildung geniessen.</p>
+          <p class="text-gray-600 mt-4">Unser stetiges Bestreben nach Professionalität setzen wir in unserer ganzen Fahrschule um. Unsere Fahrlehrer:innen können langfristig nur eine seriöse Arbeit abliefern, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge haben. Das Ergebnis: Fahrlehrer:innen, die gerne kommen — und Schüler:innen, die die Prüfung bestehen.</p>
         </details>
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">

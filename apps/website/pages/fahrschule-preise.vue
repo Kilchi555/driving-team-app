@@ -583,7 +583,7 @@
             Wie rechtfertigen sich eure Preise?
             <span class="transition group-open:rotate-180">▼</span>
           </summary>
-          <p class="mt-4 text-gray-700">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke unserer Fahrschule umsetzen. Dies beginnt bei den Fahrlehrer:innen, die nur langfristig eine seriöse und kundengerechte Arbeit abliefern können, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge auf sicher haben. Eine weitere wichtige Voraussetzung ist eine moderne Infrastruktur mit top gewarteten Fahrzeugen und modernen Unterrichtslokalen. Dank diesen optimalen Voraussetzungen erreichen wir das Wichtigste: zufriedene Kunden mit einer umfangreichen, speditivien und praxisorientierten Ausbildung.</p>
+          <p class="mt-4 text-gray-700">Unser stetiges Bestreben nach Professionalität möchten wir bis in die hinterste Ecke unserer Fahrschule umsetzen. Dies beginnt bei den Fahrlehrer:innen, die nur langfristig eine seriöse und kundengerechte Arbeit abliefern können, wenn sie am Ende des Monats eine anständige Entlöhnung erhalten, gegen Krankheit und Unfall vollumfänglich versichert sind und eine solide Altersvorsorge auf sicher haben. Eine weitere wichtige Voraussetzung ist eine moderne Infrastruktur mit top gewarteten Fahrzeugen und modernen Unterrichtslokalen. Das Ergebnis: Fahrlehrer:innen, die gerne kommen — und Schüler:innen, die die Prüfung bestehen.</p>
         </details>
 
         <details class="group bg-white border border-gray-200 rounded-lg p-6">
