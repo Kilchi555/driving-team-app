@@ -139,7 +139,7 @@
             </div>
             <div class="relative z-10 min-w-0 flex-1">
               <span class="block text-sm font-semibold text-white transition-colors duration-300">Dein Guthaben</span>
-              <span class="text-xs transition-colors duration-300" :style="{ color: `${brandConfig.primary_color}dd` }}>Tippen für Verlauf</span>
+              <span class="text-xs transition-colors duration-300" :style="{ color: `${brandConfig.primary_color}dd` }">Tippen für Verlauf</span>
             </div>
             <span class="relative z-10 flex-shrink-0 text-xl font-bold text-white tabular-nums transition-transform duration-300 group-hover:scale-110">
               CHF {{ ((stats?.summary?.current_balance_rappen ?? 0) / 100).toFixed(0) }}
