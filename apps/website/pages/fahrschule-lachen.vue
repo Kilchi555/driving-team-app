@@ -10,6 +10,9 @@
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-lachen/" />
+      <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/fahrschule-lachen/" />
+      <Link rel="alternate" hreflang="en" href="https://drivingteam.ch/driving-school-lachen/" />
+      <Link rel="alternate" hreflang="x-default" href="https://drivingteam.ch/fahrschule-lachen/" />
       <Link rel="preload" as="image" href="/images/locations/lachen-hero.webp" fetchpriority="high" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/lachen-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -218,7 +221,7 @@ const jsonLdScripts = [
       { "@type": "Question", "name": "Was sind die Voraussetzungen für private Lernfahrten?", "acceptedAnswer": { "@type": "Answer", "text": "Die Begleitperson muss einen gültigen Führerausweis haben, nüchtern sein (0,0 Promille), mindestens 23 Jahre alt sein und die Prüfung vor mindestens 3 Jahren bestanden haben." } },
       { "@type": "Question", "name": "Was ist die Admin- und Versicherungspauschale?", "acceptedAnswer": { "@type": "Answer", "text": "Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet die Aufwände ausserhalb der Fahrlektionen (z.B. Anmeldung zur Führerprüfung) sowie die spezielle Vollkaskoversicherung." } },
       { "@type": "Question", "name": "Wie hoch sind die ungefähren Gesamtkosten?", "acceptedAnswer": { "@type": "Answer", "text": "Die Gesamtkosten hängen von der Anzahl Fahrstunden ab. Mit 15 Lektionen kommt man inkl. allen Kursen und Gebühren auf ca. CHF 2'250.–, mit 30 Lektionen auf ca. CHF 3'530.–." } },
-      { "@type": "Question", "name": "Ab welchem Alter kann ich mit der Fahrausbildung starten?", "acceptedAnswer": { "@type": "Answer", "text": "Für 50ccm Motorräder ab 15 Jahren, für 125ccm ab 16 Jahren. Lernfahrten fürs Auto sind ab dem 17. Geburtstag erlaubt." } }
+      { "@type": "Question", "name": "Ab welchem Alter kann ich mit der Fahrausbildung starten?", "acceptedAnswer": { "@type": "Answer", "text": "Für 50ccm Motorräder ab 15 Jahren, für 125ccm ab 16 Jahren. Lernfahrten fürs Auto sind ab dem 17. Geburtstag erlaubt. Motorräder bis 35kW fahren ist ab dem 18. Geburtstag erlaubt." } }
     ]
   }) }
 ]
