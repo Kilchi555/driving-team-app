@@ -256,7 +256,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Zürich", "description": "Professionelle Fahrausbildung in Zürich-Altstetten für alle Fahrzeugkategorien.", "url": "https://drivingteam.ch/fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Baslerstrasse 145", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" }, "geo": { "@type": "GeoCoordinates", "latitude": 47.3905, "longitude": 8.4877 }, "openingHours": "Mo-Fr 08:00-19:00", "image": "https://drivingteam.ch/images/locations/zuerich-hero.webp", "priceRange": "CHF 100-200", "sameAs": ["https://drivingteam.ch"] }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify(buildLocationSchema(LOCATION_ZUERICH)) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrstunden Zürich Altstetten", "item": "https://drivingteam.ch/fahrschule-zuerich/" }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
@@ -429,6 +429,7 @@ useHead({ script: jsonLdScripts })
 
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
+import { buildLocationSchema, LOCATION_ZUERICH } from '~/business.config'
 
 definePageMeta({
   layout: 'default'

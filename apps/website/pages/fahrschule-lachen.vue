@@ -197,50 +197,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": ["DrivingSchool", "LocalBusiness"],
-    "@id": "https://drivingteam.ch/fahrschule-lachen/#driving-school",
-    "name": "Driving Team Fahrschule Lachen",
-    "description": "Professionelle Fahrausbildung in Lachen SZ für alle Fahrzeugkategorien. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 95.-/Lektion, flexible Treffpunkte.",
-    "url": "https://drivingteam.ch/fahrschule-lachen/",
-    "telephone": "+41444310033",
-    "image": "https://drivingteam.ch/images/locations/lachen-hero.webp",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Lachen",
-      "postalCode": "8853",
-      "addressRegion": "SZ",
-      "addressCountry": "CH"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 47.1967,
-      "longitude": 8.8540
-    },
-    "openingHoursSpecification": [
-      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "20:00" },
-      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "17:00" }
-    ],
-    "priceRange": "CHF 95.-–200.-",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "368",
-      "bestRating": "5"
-    },
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Fahrausbildung Lachen SZ",
-      "itemListElement": [
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Auto Fahrstunden Lachen", "description": "Fahrstunden Kategorie B in Lachen SZ" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Motorrad Fahrstunden Lachen", "description": "Motorrad Fahrstunden A1/A35kW/A in Lachen SZ" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Anhänger Fahrstunden Lachen", "description": "Fahrstunden Kategorie BE in Lachen SZ" } },
-        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "VKU Kurs Lachen", "description": "Verkehrskundeunterricht in Lachen SZ" } }
-      ]
-    },
-    "sameAs": ["https://drivingteam.ch"]
-  }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify(buildLocationSchema(LOCATION_LACHEN)) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -269,6 +226,7 @@ useHead({ script: jsonLdScripts })
 
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
+import { buildLocationSchema, LOCATION_LACHEN } from '~/business.config'
 
 const instructors = getInstructorsByLocation('lachen')
 </script>
