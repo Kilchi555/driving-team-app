@@ -878,6 +878,73 @@ export default defineNuxtConfig({
     // 404-Fixes aus GSC (April 2026) – allgemeine fehlende Redirects
     '/category/uncategorized/feed': { redirect: { to: '/blog/', statusCode: 301 } },
     '/category/uncategorized/feed/': { redirect: { to: '/blog/', statusCode: 301 } },
+
+    // 404-Fixes aus GSC (April 2026) – "Gecrawlt nicht indexiert" Batch
+    // Alte WordPress-Pfade
+    '/auto/verkehrskunde-vku': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/auto/verkehrskunde-vku/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/it/fahrschueler-respekt-geduld': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+    '/it/fahrschueler-respekt-geduld/': { redirect: { to: '/blog/fahrschueler-respekt-strasse/', statusCode: 301 } },
+
+    // Fehlende Sprach-Varianten EN
+    '/en/taxi-fahrschule': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/en/taxi-fahrschule/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/en/auto-theorie': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/en/auto-theorie/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/en/bustheorie': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/en/bustheorie/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/en/weiterbildung': { redirect: { to: '/weiterbildungen/', statusCode: 301 } },
+    '/en/weiterbildung/': { redirect: { to: '/weiterbildungen/', statusCode: 301 } },
+    '/en/kategorie-d': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/en/kategorie-d/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/en/danke-anhaenger-kurs': { redirect: { to: '/', statusCode: 301 } },
+    '/en/danke-anhaenger-kurs/': { redirect: { to: '/', statusCode: 301 } },
+    '/en/danke-auto-fs-zh': { redirect: { to: '/', statusCode: 301 } },
+    '/en/danke-auto-fs-zh/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Fehlende Sprach-Varianten IT
+    '/it/datenschutz': { redirect: { to: '/datenschutz/', statusCode: 301 } },
+    '/it/datenschutz/': { redirect: { to: '/datenschutz/', statusCode: 301 } },
+    '/it/kategorie-d': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/it/kategorie-d/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
+    '/it/wab-kurse-zuerich': { redirect: { to: '/wab-kurse-zuerich/', statusCode: 301 } },
+    '/it/wab-kurse-zuerich/': { redirect: { to: '/wab-kurse-zuerich/', statusCode: 301 } },
+    '/it/wab-kurse-schwyz': { redirect: { to: '/wab-kurse-schwyz/', statusCode: 301 } },
+    '/it/wab-kurse-schwyz/': { redirect: { to: '/wab-kurse-schwyz/', statusCode: 301 } },
+    '/it/fahrstunden-aktion': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/it/fahrstunden-aktion/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    '/it/taxi-fahrschule-aargau': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/it/taxi-fahrschule-aargau/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/it/fahrschule-reichenburg': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/it/fahrschule-reichenburg/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/it/auto-theoriepruefung': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/it/auto-theoriepruefung/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
+    '/it/fahrschule-uster': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },
+    '/it/fahrschule-uster/': { redirect: { to: '/fahrschule-uster/', statusCode: 301 } },
+    '/it/blog': { redirect: { to: '/blog/', statusCode: 301 } },
+    '/it/blog/': { redirect: { to: '/blog/', statusCode: 301 } },
+
+    // Fehlende Sprach-Varianten SQ
+    '/sq/taxi-fahrschule': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/sq/taxi-fahrschule/': { redirect: { to: '/taxi-fahrschule/', statusCode: 301 } },
+    '/sq/taxi-theorie': { redirect: { to: '/taxi-theorie/', statusCode: 301 } },
+    '/sq/taxi-theorie/': { redirect: { to: '/taxi-theorie/', statusCode: 301 } },
+    '/sq/vku-kurse': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/sq/vku-kurse/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    '/sq/fahrschule-aargau': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
+    '/sq/fahrschule-aargau/': { redirect: { to: '/fahrschule-spreitenbach/', statusCode: 301 } },
+    '/sq/kategorie-be': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/sq/kategorie-be/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
+    '/sq/Fahrschule': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/sq/Fahrschule/': { redirect: { to: '/fahrschule-standorte/', statusCode: 301 } },
+    '/sq/datenschutz': { redirect: { to: '/datenschutz/', statusCode: 301 } },
+    '/sq/datenschutz/': { redirect: { to: '/datenschutz/', statusCode: 301 } },
+    '/sq/danke-taxi-theorie-lektionen': { redirect: { to: '/', statusCode: 301 } },
+    '/sq/danke-taxi-theorie-lektionen/': { redirect: { to: '/', statusCode: 301 } },
+
+    // Neue WordPress PDF-Redirects
+    '/wp-content/uploads/2024/04/20240222-FL-WB-Kursprogramm-Sei-eine-Lastwagenfahrschuelerin-Kopie.pdf': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
+    '/wp-content/uploads/2023/05/Lernfahrgesuch-Motorboot-ZH.pdf': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
   },
   // Sitemap wird als static file serviert: /public/sitemap.xml
 })
