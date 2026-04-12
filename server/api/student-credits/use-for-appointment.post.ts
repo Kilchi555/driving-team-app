@@ -61,8 +61,22 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Calculate available credit
-  const availableCredit = Math.min(currentCredit.balance_rappen, amount_rappen)
+  // Calculate available credit (respect any pending withdrawal that is frozen)
+  const frozenRappen = currentCredit.pending_withdrawal_rappen || 0
+  const freeBalance = Math.max(0, currentCredit.balance_rappen - frozenRappen)
+  if (freeBalance <= 0) {
+    return {
+      success: false,
+      data: {
+        success: false,
+        amountUsed: 0,
+        remainingBalance: currentCredit.balance_rappen,
+        remainingCost: amount_rappen,
+        creditTransactionId: undefined
+      }
+    }
+  }
+  const availableCredit = Math.min(freeBalance, amount_rappen)
   const newBalance = currentCredit.balance_rappen - availableCredit
   const remainingCost = amount_rappen - availableCredit
 
