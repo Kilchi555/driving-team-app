@@ -125,6 +125,8 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    '/fahrschule-reichenburg': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
+    '/fahrschule-reichenburg/': { redirect: { to: '/fahrschule-lachen/', statusCode: 301 } },
     '/**': {
       headers: {
         'X-Content-Type-Options': 'nosniff',

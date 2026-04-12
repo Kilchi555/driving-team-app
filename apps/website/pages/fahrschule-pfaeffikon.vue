@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Pfäffikon SZ | ab CHF 95.- | Auto, Motorrad, Lastwagen | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Pfäffikon SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ Flexible Zeiten & Treffpunkte ✓ Kanton Schwyz ✓ Prüfung Pfäffikon. Jetzt anmelden!" />
+      <Title>Fahrschule Pfäffikon SZ – Direkt am Prüfungsort | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Pfäffikon/SZ ✓ Prüfung direkt vor Ort ✓ Routen Feusisberg, Schindellegi, Freienbach, Rapperswil ✓ Auto, Motorrad, Anhänger ✓ Flexible Treffpunkte. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Pfäffikon, Fahrschule Pfäffikon SZ, Fahrstunden Pfäffikon, Führerschein Pfäffikon, Auto Fahrschule Pfäffikon, Motorrad Fahrschule Pfäffikon, Fahrlehrer Pfäffikon SZ" />
-      <Meta property="og:title" content="Fahrschule Pfäffikon SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Pfäffikon SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte. Prüfung am Prüfungszentrum Pfäffikon." />
+      <Meta property="og:title" content="Fahrschule Pfäffikon SZ – Direkt am Prüfungsort | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Pfäffikon/SZ ✓ Prüfung direkt vor Ort ✓ Routen Feusisberg, Schindellegi, Freienbach, Rapperswil ✓ Auto, Motorrad, Anhänger ✓ Flexible Treff" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-pfaeffikon/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -31,7 +31,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule Pfäffikon/SZ</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Deine moderne Fahrschule in Pfäffikon/SZ. Melde Dich an und starte deine Fahrausbildung mit erfahrenen Fahrlehrern.</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Deine Fahrschule direkt am Prüfungsort: Die Fahrprüfung findet am Strassenverkehrsamt Pfäffikon/SZ statt – wir trainieren dort, wo du auch die Prüfung ablegen wirst.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -66,6 +66,28 @@
     <PriceSection />
 
 
+
+    <!-- Prüfungsgebiet Pfäffikon SZ -->
+    <section class="section-container py-12">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="heading-md mb-4">Prüfungsgebiet & Übungsrouten Pfäffikon/SZ</h2>
+        <p class="text-gray-700 mb-4">Pfäffikon/SZ hat einen entscheidenden Vorteil: Die Fahrprüfung findet direkt hier am <strong>Strassenverkehrsamt Pfäffikon/SZ</strong> statt. Wir fahren in der Ausbildung die echten Prüfungsrouten – nach der Ausbildung kennst du sie auswendig.</p>
+        <p class="text-gray-700 mb-6">Das Gebiet bietet eine perfekte Mischung aus Seestrassen, Dorfrouten und Schnellstrassen. Treffpunkt ist der <strong>Bahnhof Pfäffikon/SZ</strong> oder flexibel nach Absprache.</p>
+        <h3 class="font-bold text-gray-900 mb-3">Typische Prüfungsrouten ab Pfäffikon/SZ</h3>
+        <ul class="space-y-2 text-gray-700 mb-6">
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Feusisberg / Schindellegi</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Freienbach / Richterswil</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Altendorf / Lachen</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Rapperswil/SG</li>
+        </ul>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Pfäffikon, Freienbach, Feusisberg</span>
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Altendorf, Lachen, Rapperswil/SG</span>
+          <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">🗣️ Deutsch & Englisch</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -89,7 +111,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Pfäffikon/SZ erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind flexibel, das heisst wir holen euch, wenn möglich, zu Hause oder bei der Arbeit ab.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Pfäffikon/SZ erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind flexibel – Bahnhof Pfäffikon/SZ oder nach Absprache direkt bei dir. Ein entscheidender Vorteil: Die Fahrprüfung findet direkt am Strassenverkehrsamt Pfäffikon/SZ statt. Die Routen, die wir in der Ausbildung fahren, sind die echten Prüfungsrouten.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
