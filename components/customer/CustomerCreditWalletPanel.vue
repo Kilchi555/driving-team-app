@@ -28,7 +28,19 @@
             </p>
           </button>
           <div class="flex items-center gap-3 relative shrink-0">
-          <div v-if="alwaysShowActions || appEnv !== 'production'" class="relative">
+          <!-- Withdrawal-only mode (e.g. affiliate dashboard) -->
+          <button
+            v-if="withdrawalOnly"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            :disabled="availableBalance <= 0"
+            @click="showWithdrawalModal = true"
+          >
+            Auszahlen
+          </button>
+
+          <!-- Full actions dropdown -->
+          <div v-else-if="alwaysShowActions || appEnv !== 'production'" class="relative">
             <button
               type="button"
               class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
@@ -414,6 +426,8 @@ const props = withDefaults(
   defineProps<{
     /** Wenn true: Aktionen-Dropdown immer anzeigen (z. B. Affiliate-Dashboard in Production) */
     alwaysShowActions?: boolean
+    /** Wenn true: Nur der Auszahlen-Button wird angezeigt (z. B. Affiliate-Dashboard) */
+    withdrawalOnly?: boolean
     /** Z. B. Affiliate-Session: Bearer für Kunden-APIs */
     getHeaders?: () => Promise<Record<string, string>>
     /**
@@ -421,7 +435,7 @@ const props = withDefaults(
      */
     requestCreditHistoryAt?: number
   }>(),
-  { alwaysShowActions: false, requestCreditHistoryAt: 0 }
+  { alwaysShowActions: false, withdrawalOnly: false, requestCreditHistoryAt: 0 }
 )
 
 const emit = defineEmits<{ balanceUpdated: [] }>()
