@@ -79,10 +79,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ 3. VERIFY APPOINTMENT BELONGS TO TENANT
+    // ✅ 3. VERIFY APPOINTMENT BELONGS TO TENANT + load customer & location for email
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select('id, tenant_id')
+      .select('id, tenant_id, user_id, location_id')
       .eq('id', appointment_id)
       .eq('tenant_id', tenantId)
       .single()
@@ -140,6 +140,111 @@ export default defineEventHandler(async (event) => {
       appointmentId: appointment_id,
       examResultId: examResult.id
     })
+
+    // ✅ 6. SEND CONGRATULATIONS EMAIL (only if passed)
+    if (passed) {
+      try {
+        const [customerRes, locationRes, tenantRes] = await Promise.all([
+          supabase
+            .from('users')
+            .select('first_name, last_name, email')
+            .eq('id', appointment.user_id)
+            .single(),
+          appointment.location_id
+            ? supabase.from('locations').select('name, google_place_id').eq('id', appointment.location_id).single()
+            : Promise.resolve({ data: null }),
+          supabase.from('tenants').select('name, primary_color, logo_wide_url, logo_url').eq('id', tenantId).single()
+        ])
+
+        const customer = customerRes.data
+        const location = locationRes.data
+        const tenant = tenantRes.data
+
+        if (customer?.email) {
+          const { sendEmail } = await import('~/server/utils/email')
+
+          const reviewLink = location?.google_place_id
+            ? `https://search.google.com/local/writereview?placeid=${location.google_place_id}`
+            : null
+
+          const primaryColor = tenant?.primary_color || '#2563eb'
+          const tenantName   = tenant?.name || 'Driving Team'
+          const firstName    = customer.first_name || customer.first_name
+          const logoHtml     = tenant?.logo_wide_url || tenant?.logo_url
+            ? `<img src="${tenant?.logo_wide_url || tenant?.logo_url}" alt="${tenantName}" style="height:40px;max-width:180px;object-fit:contain;display:block;margin:0 auto 24px">`
+            : `<div style="display:inline-block;width:44px;height:44px;border-radius:10px;background:${primaryColor};color:white;font-size:22px;font-weight:700;line-height:44px;text-align:center;margin:0 auto 24px">${tenantName.charAt(0).toUpperCase()}</div>`
+
+          const reviewSection = reviewLink ? `
+            <div style="margin:28px 0;text-align:center">
+              <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6">
+                Du hast die Prüfung mit Bravour bestanden! 🎉<br>
+                Wir würden uns sehr freuen, wenn du dir kurz Zeit nimmst und uns eine Google-Bewertung hinterlässt – das hilft anderen Fahrschüler:innen, uns zu finden.
+              </p>
+              <a href="${reviewLink}"
+                 style="display:inline-block;background:${primaryColor};color:#ffffff;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.01em">
+                ⭐ Jetzt Bewertung schreiben
+              </a>
+              <p style="margin:12px 0 0;font-size:12px;color:#9ca3af">Dauert nur 1 Minute – wir sind dankbar für jedes Feedback!</p>
+            </div>` : `
+            <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6">
+              Du hast die Prüfung mit Bravour bestanden! 🎉<br>
+              Herzlichen Glückwunsch – wir freuen uns mit dir!
+            </p>`
+
+          const html = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
+        <tr><td style="text-align:center;padding-bottom:8px">${logoHtml}</td></tr>
+        <tr><td style="background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
+
+          <!-- Header -->
+          <div style="background:${primaryColor};padding:32px 32px 24px;text-align:center">
+            <div style="font-size:48px;margin-bottom:8px">🏆</div>
+            <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff">Herzlichen Glückwunsch!</h1>
+            <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${tenantName}</p>
+          </div>
+
+          <!-- Body -->
+          <div style="padding:28px 32px">
+            <p style="margin:0 0 20px;font-size:16px;color:#374151;line-height:1.6">
+              Hallo ${firstName},
+            </p>
+            <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6">
+              du hast deine Führerprüfung <strong style="color:${primaryColor}">bestanden</strong>! 🎉<br>
+              Das ganze Team von ${tenantName} gratuliert dir herzlich – du hast es verdient!
+            </p>
+            ${reviewSection}
+          </div>
+
+          <!-- Footer -->
+          <div style="background:#f9fafb;padding:20px 32px;border-top:1px solid #e5e7eb;text-align:center">
+            <p style="margin:0;font-size:12px;color:#9ca3af">${tenantName} · Powered by <a href="https://simy.ch" style="color:#9ca3af">Simy.ch</a></p>
+          </div>
+
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+
+          await sendEmail({
+            to: customer.email,
+            subject: `🏆 Herzlichen Glückwunsch – Prüfung bestanden!`,
+            html,
+            senderName: tenantName
+          })
+
+          logger.debug('✅ Congratulations email sent to:', customer.email)
+        }
+      } catch (emailError: any) {
+        logger.warn('⚠️ Could not send congratulations email (non-critical):', emailError.message)
+      }
+    }
 
     return {
       success: true,
