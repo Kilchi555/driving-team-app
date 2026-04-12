@@ -127,7 +127,8 @@ export default defineEventHandler(async (event) => {
       await sendEmail({
         to: user.email,
         subject: `Termin storniert - ${tenant.name}`,
-        html: emailHtml
+        html: emailHtml,
+        senderName: tenant.name
       })
 
       logger.debug(`✅ Customer deletion email sent to ${user.email}`)
@@ -201,7 +202,8 @@ export default defineEventHandler(async (event) => {
       await sendEmail({
         to: staff.email,
         subject: `Termin automatisch storniert - ${tenant.name}`,
-        html: emailHtml
+        html: emailHtml,
+        senderName: tenant.name
       })
 
       logger.debug(`✅ Staff deletion email sent to ${staff.email}`)

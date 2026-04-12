@@ -256,7 +256,7 @@ async function sendConfirmationEmail(
       to: emailTo,
       subject: emailData.subject,
       html: emailData.html,
-      from: `noreply@${tenant?.slug || 'drivingteam'}.ch`
+      senderName: tenant?.name || undefined
     })
 
     console.log('✅ Enrollment confirmation email sent to:', emailTo)

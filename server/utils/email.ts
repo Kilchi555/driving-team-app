@@ -28,15 +28,18 @@ interface SendEmailOptions {
   subject: string
   html: string
   from?: string
+  senderName?: string
   attachments?: Attachment[]
 }
 
-export async function sendEmail({ to, subject, html, from, attachments }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, from, senderName, attachments }: SendEmailOptions) {
   try {
     const resend = getResendClient()
-    
+    const baseFrom = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+    const resolvedFrom = from || (senderName ? `${senderName} <${baseFrom}>` : baseFrom)
+
     const emailParams: any = {
-      from: from || process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch',
+      from: resolvedFrom,
       to,
       subject,
       html
@@ -97,7 +100,7 @@ export function generatePaymentReminderEmail(data: PaymentReminderEmailData): st
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terminbestätigung erforderlich</title>
+  <title>Terminbestätigung</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; margin-bottom: 20px;">
@@ -105,7 +108,7 @@ export function generatePaymentReminderEmail(data: PaymentReminderEmailData): st
     
     <p>Hallo ${data.customerName},</p>
     
-    <p>Sie haben einen Termin bei <strong>${data.tenantName}</strong> gebucht, der noch nicht bestätigt wurde.</p>
+    <p>Sie haben einen Termin bei <strong>${data.tenantName}</strong> gebucht.</p>
     
     <div style="background-color: white; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 5px;">
       <h3 style="margin-top: 0; color: ${primaryColor};">Termin-Details</h3>

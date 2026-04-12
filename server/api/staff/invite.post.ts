@@ -331,7 +331,8 @@ ${tenantName}`
         const emailResult = await sendEmail({
           to: email,
           subject,
-          html: bodyHtml
+          html: bodyHtml,
+          senderName: tenantName
         })
 
         logger.debug('✅ Email sent via Resend:', emailResult)
