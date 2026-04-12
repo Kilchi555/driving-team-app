@@ -197,18 +197,30 @@
     <!-- Warum Driving Team -->
     <WarumSection category="auto" />
 
+    <!-- Zur Auto Fahrschule -->
+    <section class="section-container pb-12">
+      <div class="max-w-2xl mx-auto bg-primary-50 rounded-xl p-8 text-center">
+        <p class="text-2xl mb-3">🚗</p>
+        <h2 class="text-xl font-bold text-gray-900 mb-3">Bereit für die praktische Ausbildung?</h2>
+        <p class="text-gray-600 mb-6 text-sm">Nach der Theorieprüfung startest du mit den Fahrstunden. Unsere Fahrlehrer begleiten dich von der Lernfahrt bis zur Prüfung.</p>
+        <a href="/auto-fahrschule/" class="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition font-semibold">
+          Zur Auto Fahrschule — Praktische Ausbildung Kategorie B →
+        </a>
+      </div>
+    </section>
+
     <!-- Unsere Gebiete -->
     <section class="section-container">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
-        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
-        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+        <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
         <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
-        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
-        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
-        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
-        <a href="/fahrschule-pfaeffikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon/SZ</a>
+        <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-pfaeffikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon/SZ</a>
 
       </div>
     </section>

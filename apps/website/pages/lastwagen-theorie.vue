@@ -185,7 +185,7 @@
             <textarea placeholder="Deine Nachricht" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
             <div class="flex items-center gap-3">
               <input type="checkbox" id="agb" class="w-4 h-4" required />
-              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-primary-600 hover:underline">AGB's</a></label>
+              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb/" class="text-primary-600 hover:underline">AGB's</a></label>
             </div>
             <button type="submit" class="btn-primary w-full text-lg">
               Kurs anmelden
@@ -200,7 +200,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Warum die Lkw Fahrschule Driving Team?</h2>
         <p class="text-white max-w-2xl mx-auto mb-8">Unsere Fahrschule wurde gegründet, um das traditionelle Bild des Fahrschulunterrichts zu verändern. Lernen am besten mit Begeisterung!</p>
-        <a href="/lastwagen-fahrschule" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="/lastwagen-fahrschule/" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Mehr zur Lastwagen Fahrschule
         </a>
       </div>

@@ -46,7 +46,7 @@
             <li class="flex gap-2"><span class="text-primary-600">✓</span> <span>6-12 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/auto-fahrschule/" class="inline-block bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition" aria-label="Mehr zur Auto Fahrschule erfahren">
-            Mehr erfahren →
+            Auto Fahrschule — Kategorie B
           </a>
         </div>
 
@@ -61,7 +61,7 @@
             <li class="flex gap-2"><span class="text-red-600">✓</span> <span>6-18 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/motorrad-fahrschule/" class="inline-block bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition" aria-label="Mehr zur Motorrad Fahrschule erfahren">
-            Mehr erfahren →
+            Motorrad Fahrschule — Kategorie A / A1
           </a>
         </div>
 
@@ -76,7 +76,7 @@
             <li class="flex gap-2"><span class="text-yellow-600">✓</span> <span>3-6 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/lastwagen-fahrschule/" class="inline-block bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition" aria-label="Mehr zur Lastwagen Fahrschule erfahren">
-            Mehr erfahren →
+            Lastwagen Fahrschule — Kategorie C / CE
           </a>
         </div>
 
@@ -91,7 +91,7 @@
             <li class="flex gap-2"><span class="text-green-600">✓</span> <span>3-12 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/bus-fahrschule/" class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition" aria-label="Mehr zur Bus Fahrschule erfahren">
-            Mehr erfahren →
+            Bus Fahrschule — Kategorie D
           </a>
         </div>
 
@@ -106,7 +106,7 @@
             <li class="flex gap-2"><span class="text-purple-600">✓</span> <span>3-12 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/taxi-fahrschule/" class="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition" aria-label="Mehr zur Taxi Fahrschule erfahren">
-            Mehr erfahren →
+            Taxi Fahrschule — Kategorie BPT
           </a>
         </div>
 
@@ -121,7 +121,7 @@
             <li class="flex gap-2"><span class="text-orange-600">✓</span> <span>1-3 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/anhaenger-fahrschule/" class="inline-block bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zur Anhänger Fahrschule erfahren">
-            Mehr erfahren →
+            Anhänger Fahrschule — Kategorie BE
           </a>
         </div>
 
@@ -136,7 +136,7 @@
             <li class="flex gap-2"><span class="text-cyan-600">✓</span> <span>2-6 Monate Ausbildungsdauer</span></li>
           </ul>
           <a href="/motorboot-fahrschule/" class="inline-block bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zur Motorboot Fahrschule erfahren">
-            Mehr erfahren →
+            Motorboot Fahrschule — Kategorie A
           </a>
         </div>
       </div>

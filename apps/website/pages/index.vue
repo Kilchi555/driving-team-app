@@ -561,6 +561,49 @@
         </div>
       </div>
     </section>
+
+    <!-- Quick Links: Preise, Kontakt, Team, Blog -->
+    <section class="bg-gray-50 py-10">
+      <div class="section-container">
+        <div class="max-w-4xl mx-auto">
+          <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-6 text-center">Alles auf einen Blick</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <a href="/fahrschule-preise/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">💰</span>
+              <span class="text-sm font-semibold text-gray-800">Alle Preise & Pakete</span>
+            </a>
+            <a href="/kostenrechner/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">🧮</span>
+              <span class="text-sm font-semibold text-gray-800">Führerscheinkosten berechnen</span>
+            </a>
+            <a href="/blog/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">📖</span>
+              <span class="text-sm font-semibold text-gray-800">Ratgeber & Tipps</span>
+            </a>
+            <a href="/weiterbildungen/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">🎓</span>
+              <span class="text-sm font-semibold text-gray-800">Weiterbildungen</span>
+            </a>
+            <a href="/faq/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">❓</span>
+              <span class="text-sm font-semibold text-gray-800">Häufige Fragen (FAQ)</span>
+            </a>
+            <a href="/kontakt/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">✉️</span>
+              <span class="text-sm font-semibold text-gray-800">Beratungstermin buchen</span>
+            </a>
+            <a href="/team/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">👥</span>
+              <span class="text-sm font-semibold text-gray-800">Unsere Fahrlehrer</span>
+            </a>
+            <a href="/fahrschule-standorte/" class="flex flex-col items-center gap-2 bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
+              <span class="text-2xl">📍</span>
+              <span class="text-sm font-semibold text-gray-800">Alle Standorte</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 

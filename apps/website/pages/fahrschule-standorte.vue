@@ -47,7 +47,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Taxi</p>
             </div>
             <a href="/fahrschule-zuerich/" class="block w-full text-center bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition" aria-label="Mehr zu Fahrschule Zürich">
-              Mehr erfahren
+              Fahrschule Zürich-Altstetten
             </a>
           </div>
         </div>
@@ -66,7 +66,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
             <a href="/fahrschule-lachen/" class="block w-full text-center bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition" aria-label="Mehr zu Fahrschule Lachen">
-              Mehr erfahren
+              Fahrschule Lachen SZ
             </a>
           </div>
         </div>
@@ -85,7 +85,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
             <a href="/fahrschule-pfaeffikon/" class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition" aria-label="Mehr zu Fahrschule Pfäffikon/SZ">
-              Mehr erfahren
+              Fahrschule Pfäffikon/SZ
             </a>
           </div>
         </div>
@@ -104,7 +104,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
             </div>
             <a href="/fahrschule-uster/" class="block w-full text-center bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition" aria-label="Mehr zu Fahrschule Uster">
-              Mehr erfahren
+              Fahrschule Uster
             </a>
           </div>
         </div>
@@ -123,7 +123,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
             <a href="/fahrschule-stgallen/" class="block w-full text-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition" aria-label="Mehr zu Fahrschule St. Gallen">
-              Mehr erfahren
+              Fahrschule St. Gallen
             </a>
           </div>
         </div>
@@ -142,7 +142,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Anhänger, Taxi</p>
             </div>
             <a href="/fahrschule-dietikon/" class="block w-full text-center bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition" aria-label="Mehr zu Fahrschule Dietikon">
-              Mehr erfahren
+              Fahrschule Dietikon
             </a>
           </div>
         </div>
@@ -161,7 +161,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Anhänger, Taxi</p>
             </div>
             <a href="/fahrschule-spreitenbach/" class="block w-full text-center bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zu Fahrschule Aargau">
-              Mehr erfahren
+              Fahrschule Spreitenbach / Aargau
             </a>
           </div>
         </div>
@@ -180,7 +180,7 @@
               <p><span class="font-semibold">Kategorien:</span> Auto, Taxi</p>
             </div>
             <a href="/fahrschule-reichenburg/" class="block w-full text-center bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zu Fahrschule Reichenburg">
-              Mehr erfahren
+              Fahrschule Reichenburg
             </a>
           </div>
         </div>
@@ -197,6 +197,14 @@
         <a href="/fahrschule-kategorien/" class="inline-block bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition font-semibold" aria-label="Zu Fahrschule Kategorien Vergleich">
           🔍 Kategorien vergleichen
         </a>
+      </div>
+    </section>
+
+    <!-- Standorte Aargau & Pfäffikon SZ -->
+    <section class="section-container pb-8">
+      <div class="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+        <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-pfaeffikon-sz/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon SZ</a>
       </div>
     </section>
 

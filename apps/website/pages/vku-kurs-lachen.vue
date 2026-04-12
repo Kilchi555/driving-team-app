@@ -114,7 +114,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-4">Brauchst Du noch Fahrstunden?</h2>
         <p class="text-gray-600 mb-6">Dann melde Dich hier an…</p>
-        <a href="/fahrschule-lachen" class="btn-primary text-lg">
+        <a href="/fahrschule-lachen/" class="btn-primary text-lg">
           ✨ Auto Fahrstunden anmelden
         </a>
       </div>
@@ -231,13 +231,13 @@
     <section class="section-container py-12">
       <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
       <div class="flex flex-wrap justify-center gap-3 mb-8">
-        <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
-        <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
-        <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+        <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+        <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+        <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
         <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
-        <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
-        <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
-        <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
+        <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+        <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
       <div class="max-w-2xl mx-auto bg-cyan-50 border border-cyan-200 rounded-xl p-5 text-center">
         <p class="text-gray-700 mb-3 text-sm">VKU Kurs auch in <strong>Zürich</strong> verfügbar:</p>

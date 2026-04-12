@@ -163,6 +163,33 @@
     <!-- Warum Section -->
     <WarumSection category="motorrad" />
 
+    <!-- Weitere Angebote -->
+    <section class="section-container py-12">
+      <h2 class="text-xl font-bold text-center mb-8 text-gray-900">Weitere Angebote in Zürich & Umgebung</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <a href="/motorrad-fahrschule/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+          <div class="text-2xl mb-2">🏍️</div>
+          <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Motorrad Fahrschule</p>
+          <p class="text-xs text-gray-500 mt-1">Alle Infos Kat. A / A1</p>
+        </a>
+        <a href="/motorrad-grundkurs-lachen/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+          <div class="text-2xl mb-2">📍</div>
+          <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Motorrad Grundkurs Lachen SZ</p>
+          <p class="text-xs text-gray-500 mt-1">CHF 570.- Komplettpreis</p>
+        </a>
+        <a href="/nothelferkurs/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+          <div class="text-2xl mb-2">❤️</div>
+          <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Nothelferkurs</p>
+          <p class="text-xs text-gray-500 mt-1">Pflichtbestandteil · CHF 99</p>
+        </a>
+        <a href="/fahrschule-preise/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+          <div class="text-2xl mb-2">💰</div>
+          <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Alle Preise ansehen</p>
+          <p class="text-xs text-gray-500 mt-1">Transparente Übersicht</p>
+        </a>
+      </div>
+    </section>
+
     <!-- Standort & Map -->
     <LazyStandortMapSection location-key="zuerich" />
 
