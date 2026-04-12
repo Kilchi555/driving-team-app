@@ -376,7 +376,7 @@ function buildCustomerEmail(
                   <p style="margin:0 0 16px 0;font-size:16px;color:#111827;">Hallo ${body.first_name},</p>
                   <p style="margin:0 0 22px 0;font-size:15px;color:#374151;">
                     ${isDefinitive
-                      ? `vielen Dank für deine Anmeldung zum <strong>${body.course_title || courseLabel} Kurs</strong>. Wir freuen uns auf deine Teilnahme!`
+                      ? `vielen Dank für deine Anmeldung zur <strong>${body.course_title || courseLabel}</strong>. Wir freuen uns auf deine Teilnahme!`
                       : `vielen Dank für dein Interesse am <strong>${body.course_title || courseLabel} Kurs</strong>. Wir haben deine Anmeldung erhalten und melden uns, sobald die Kursdaten feststehen.`
                     }
                   </p>
