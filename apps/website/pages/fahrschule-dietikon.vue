@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Dietikon | In 6 Schritten zur Fahrprüfung</Title>
-      <Meta name="description" content="Fahrschule Dietikon - Auto, Motorrad, Lastwagen Fahrstunden im Limmattal. Deutsch & Albanisch, 85% Erfolgsquote, ab CHF 100/Lektion. Jetzt Termin buchen!" />
-      <Meta property="og:title" content="Fahrschule Dietikon – Auto & Motorrad im Limmattal | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Dietikon im Limmattal. Deutsch & Albanisch, 85% Erfolgsquote, ab CHF 100/Lektion." />
+      <Title>Fahrschule Dietikon – Skender | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Dietikon ✓ Fahrlehrer Skender ✓ Treffpunkt Bahnhof Dietikon ✓ Prüfung Albisgütli / Regensdorf ✓ Deutsch, Englisch & Albanisch ✓ Ab CHF 95.-/Lektion. Jetzt anmelden!" />
+      <Meta property="og:title" content="Fahrschule Dietikon – Skender | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Dietikon ✓ Fahrlehrer Skender ✓ Treffpunkt Bahnhof Dietikon ✓ Prüfung Albisgütli / Regensdorf ✓ Deutsch, Englisch & Albanisch ✓ Ab CHF 95.-" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-dietikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-dietikon/" />
       <Link rel="preload" as="image" href="/images/locations/dietikon-hero.webp" fetchpriority="high" />
@@ -24,7 +24,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule Dietikon</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Melde Dich in unserer Fahrschule Dietikon an – individuelle Ausbildung, flexible Treffpunkte und professionelle Fahrlehrer.</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Skender gibt Fahrstunden in Dietikon und dem Limmattal – ab Bahnhof Dietikon oder flexibel nach Absprache. Auf Deutsch, Englisch und Albanisch.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -59,6 +59,28 @@
     <PriceSection />
 
 
+
+    <!-- Prüfungsgebiet Dietikon -->
+    <section class="section-container py-12">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="heading-md mb-4">Prüfungsgebiet & Übungsrouten Dietikon</h2>
+        <p class="text-gray-700 mb-4">Dietikon ist ein ausgezeichnetes Übungsgebiet: vielfältiger Stadtverkehr mit zahlreichen Lichtsignalen, abwechslungsreiche Quartiere mit Parkmöglichkeiten und ein breites Strassennetz für jede Ausbildungsphase.</p>
+        <p class="text-gray-700 mb-6">Die Fahrprüfung findet je nach Wohnkanton am Strassenverkehrsamt <strong>Zürich-Albisgütli</strong>, <strong>Regensdorf</strong> oder <strong>Wettingen</strong> statt. Dein Fahrlehrer <strong>Skender</strong> kennt alle Routen auswendig und bereitet dich gezielt vor.</p>
+        <h3 class="font-bold text-gray-900 mb-3">Typische Prüfungsrouten</h3>
+        <ul class="space-y-2 text-gray-700 mb-6">
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Birmensdorf / Urdorf / Üetlibergtunnel</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Regensdorf / Otelfingen / Hüttikon / Weiningen</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Boppelsen / Regensberg</li>
+        </ul>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Dietikon, Schlieren, Urdorf</span>
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Spreitenbach, Geroldswil, Weiningen</span>
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Bergdietikon, Wettingen</span>
+          <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">🗣️ Deutsch, Englisch & Albanisch</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -82,7 +104,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Dietikon erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/Bonstetten im Knonaueramt. Bei der Anhänger- und Motorradausbildung beschränkt sich der Treffpunkt auf Zürich-Altstetten.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet in Dietikon umfasst Dietikon selbst sowie Schlieren, Urdorf, Spreitenbach, Geroldswil, Weiningen, Bergdietikon und Wettingen. Treffpunkt ist der Bahnhof Dietikon oder – nach Möglichkeit – flexibel bei dir zu Hause oder bei der Arbeit. Die Fahrprüfung findet je nach Wohnkanton am Strassenverkehrsamt Zürich-Albisgütli, Regensdorf oder Wettingen statt.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>

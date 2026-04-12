@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule St.Gallen | Auto Fahrstunden | Driving Team</Title>
-      <Meta name="description" content="Fahrschule St.Gallen - Auto, Motorrad, Lastwagen & Kurse. 85% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten. Professionelle Fahrausbildung. Jetzt buchen!" />
-      <Meta property="og:title" content="Fahrschule St. Gallen – Auto & Motorrad | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in St. Gallen. Auto, Motorrad, Lastwagen & Kurse. 85% Erfolgsquote, ab CHF 100/Lektion." />
+      <Title>Fahrschule Kaltbrunn / Uznach SG – Marc & Peter | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Kaltbrunn / Uznach SG ✓ 8+ Jahre Erfahrung ✓ Fahrlehrer Marc & Peter ✓ Prüfung Strassenverkehrsamt Kaltbrunn ✓ Uznaberg, Uznach, Ricken ✓ Deutsch & Englisch." />
+      <Meta property="og:title" content="Fahrschule Kaltbrunn / Uznach SG – Marc & Peter | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Kaltbrunn / Uznach SG ✓ 8+ Jahre Erfahrung ✓ Fahrlehrer Marc & Peter ✓ Prüfung Strassenverkehrsamt Kaltbrunn ✓ Uznaberg, Uznach, Ricken ✓ D" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-stgallen/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-stgallen/" />
       <Link rel="preload" as="image" href="/images/locations/stgallen-hero.webp" fetchpriority="high" />
@@ -23,8 +23,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule St.Gallen</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Deine Fahrschule in St.Gallen. Melde Dich an und starte deine Fahrausbildung mit dem Driving Team.</p>
+          <h1 class="heading-lg text-white mb-6">Fahrschule Kaltbrunn / Uznach SG</h1>
+          <p class="hidden xs:block text-xl text-white mb-8">Marc und Peter geben seit über 8 Jahren Fahrstunden in der Region Kaltbrunn und Uznach – Prüfungsort ist das Strassenverkehrsamt Kaltbrunn/SG.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -58,6 +58,33 @@
     <PriceSection />
 
 
+
+    <!-- Prüfungsgebiet Kaltbrunn / Uznach -->
+    <section class="section-container py-12">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="heading-md mb-4">Prüfungsgebiet & Übungsrouten Kaltbrunn / Uznach</h2>
+        <p class="text-gray-700 mb-4">Das Driving Team ist seit über <strong>8 Jahren</strong> in der Region Kaltbrunn/SG aktiv. Fahrlehrer <strong>Marc</strong> und <strong>Peter</strong> kennen jede Kurve im Gebiet – von der engen Uznabergstrasse bis zu den kurvenreichen Ricken-Pässen.</p>
+        <p class="text-gray-700 mb-6">Die Fahrprüfung findet am <strong>Strassenverkehrsamt Kaltbrunn/SG</strong> statt. Treffpunkt ist der Bahnhof Uznach oder flexibel nach Absprache.</p>
+        <h3 class="font-bold text-gray-900 mb-3">Typische Prüfungsrouten ab Kaltbrunn</h3>
+        <ul class="space-y-2 text-gray-700 mb-4">
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Uznach / Eschenbach</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Ziegelbrücke / Autobahn Reichenburg</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Uznaberg / Eschenbach / Kappelen</li>
+        </ul>
+        <h3 class="font-bold text-gray-900 mb-3 mt-4">Besonderheiten des Übungsgebiets</h3>
+        <ul class="space-y-2 text-gray-700 mb-6">
+          <li class="flex gap-2"><span class="text-primary-600">✓</span> <span><strong>Uznaberg:</strong> Enge Kurven und Gefälle – ideal für fortgeschrittene Fahrübungen</span></li>
+          <li class="flex gap-2"><span class="text-primary-600">✓</span> <span><strong>Uznach:</strong> Spezielle Strassenverzweigung, die Prüfungsexperten gut kennen</span></li>
+          <li class="flex gap-2"><span class="text-primary-600">✓</span> <span><strong>Rickengebiet:</strong> Kurvenreiche Landstrassen für abwechslungsreiche Übungseinheiten</span></li>
+        </ul>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Kaltbrunn, Uznach, Eschenbach</span>
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Ziegelbrücke, Reichenburg</span>
+          <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">🗣️ Deutsch & Englisch</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -81,7 +108,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unsere Lokale befinden sich in Zürich-Altstetten und in Lachen/SZ. Das Tätigkeitsgebiet des Driving Team Lachen erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke, inkl. Kaltbrunn/SG.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Fahrlehrer Marc und Peter sind seit über 8 Jahren in der Region Kaltbrunn/SG aktiv und kennen jede Kurve im Gebiet. Treffpunkt ist der Bahnhof Uznach oder – nach Absprache – flexibel je nach Wohnort. Die Fahrprüfung findet am Strassenverkehrsamt Kaltbrunn/SG statt.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>

@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Uster | 6 Schritte zur Autofahrprüfung | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Uster - Auto, Motorrad, Lastwagen Fahrstunden im Zürcher Oberland. 85% Erfolgsquote, erfahrene Fahrlehrer, flexible Zeiten. Jetzt Termin buchen!" />
-      <Meta property="og:title" content="Fahrschule Uster – Auto & Motorrad im Zürcher Oberland | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Uster ZH. 85% Erfolgsquote, ab CHF 100/Lektion, flexible Zeiten." />
+      <Title>Fahrschule Uster – Pascal | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Uster ✓ Fahrlehrer Pascal ✓ Zürcher Oberland ✓ Prüfung Hinwil oder Bassersdorf ✓ Auto & Motorrad ✓ Deutsch & Englisch ✓ Ab CHF 95.-/Lektion. Jetzt anmelden!" />
+      <Meta property="og:title" content="Fahrschule Uster – Pascal | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Uster ✓ Fahrlehrer Pascal ✓ Zürcher Oberland ✓ Prüfung Hinwil oder Bassersdorf ✓ Auto & Motorrad ✓ Deutsch & Englisch ✓ Ab CHF 95.-/Lektion" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-uster/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-uster/" />
       <Link rel="preload" as="image" href="/images/locations/uster-hero.webp" fetchpriority="high" />
@@ -25,7 +25,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule Uster</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Deine moderne Fahrschule in Uster und dem Zürcher Oberland. Erfahrene Fahrlehrer, flexible Zeiten und individuelle Ausbildung.</p>
+          <p class="hidden xs:block text-xl text-white mb-8">Pascal gibt Fahrstunden in Uster und dem Zürcher Oberland – ab Bahnhof Uster oder flexibel nach Absprache. Auf Deutsch und Englisch.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -60,6 +60,28 @@
     <PriceSection />
 
 
+
+    <!-- Prüfungsgebiet Uster -->
+    <section class="section-container py-12">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="heading-md mb-4">Prüfungsgebiet & Übungsrouten Uster</h2>
+        <p class="text-gray-700 mb-4">Das Zürcher Oberland ist ein ideales Übungsgebiet: weitläufige Dörfer mit Rechtsvortritten (Volketswil, Mönchaltdorf, Gossau, Wetzikon), zahlreiche Parkmöglichkeiten und die Autobahn Uster Richtung Volketswil mit vielen Ein- und Ausfahrten – perfekt zum Üben der Autobahnfahrt.</p>
+        <p class="text-gray-700 mb-6">Die Fahrprüfung findet je nach Wohnkanton am Strassenverkehrsamt <strong>Hinwil</strong> oder <strong>Bassersdorf</strong> statt. Dein Fahrlehrer <strong>Pascal</strong> kennt alle Routen auswendig.</p>
+        <h3 class="font-bold text-gray-900 mb-3">Typische Prüfungsrouten</h3>
+        <ul class="space-y-2 text-gray-700 mb-6">
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Nürensdorf / Brütten (ab Bassersdorf)</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Kloten / Autobahn Wallisellen</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Dietlikon / Brüttisellen</li>
+        </ul>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Uster, Volketswil, Mönchaltdorf</span>
+          <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Gossau, Wetzikon, Hinwil</span>
+          <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">🗣️ Deutsch & Englisch</span>
+          <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full">🏍️ Auto & Motorrad</span>
+        </div>
+      </div>
+    </section>
+
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
@@ -83,7 +105,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unsere Lokale befinden sich in Zürich-Altstetten und in Lachen/SZ. Das Tätigkeitsgebiet erstreckt sich von Baden (Limmattal) bis nach Thalwil und von Bülach bis nach Wettswil/Bonstetten. Seit ein paar Jahren geben wir auch im Zürcher Oberland rundum Uster Auto- und Motorradfahrstunden.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Fahrlehrer Pascal ist im Zürcher Oberland zu Hause und kennt jede Kreuzung rund um Uster. Treffpunkt ist der Bahnhof Uster oder – nach Absprache – flexibel je nach deinem Wohnort. Die Fahrprüfung findet je nach Wohnkanton am Strassenverkehrsamt Hinwil oder Bassersdorf statt.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
