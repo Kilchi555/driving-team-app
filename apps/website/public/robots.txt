@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
+
+# WordPress-Artefakte blockieren (keine Nuxt-Seiten)
+Disallow: /wp-json/
+Disallow: /wp-login.php
+Disallow: /wp-includes/
+Disallow: /wp-admin/
 Disallow: /node_modules/
 Disallow: /api/
 Disallow: /admin/
