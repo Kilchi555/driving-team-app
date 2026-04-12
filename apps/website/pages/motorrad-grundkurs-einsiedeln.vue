@@ -122,7 +122,7 @@
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Wie viel kostet der Motorrad-Grundkurs in Einsiedeln?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-          <p class="text-gray-600 mt-4 text-sm">Beim Driving Team in Einsiedeln beträgt die Gebühr für jeden Kursteil des Motorrad-Grundkurses CHF 200.-. Nach deiner Anmeldung erhältst du eine Rechnung, die innerhalb von 14 Tagen beglichen werden muss.</p>
+          <p class="text-gray-600 mt-4 text-sm">Beim Driving Team in Einsiedeln beträgt die Gebühr für jeden Kursteil des Motorrad-Grundkurses CHF 200.-. Die Bezahlung erfolgt bequem vor Ort in bar.</p>
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es eine Rückerstattungspolitik, falls ich nicht am Kurs teilnehmen kann?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>

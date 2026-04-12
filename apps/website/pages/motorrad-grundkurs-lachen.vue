@@ -112,7 +112,7 @@
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Zahlungsmethoden werden akzeptiert?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-          <p class="text-gray-600 mt-4 text-sm">Nach deiner Anmeldung zum Motorrad-Grundkurs bei Driving Team in Lachen erhältst du eine Rechnung, die innerhalb von 14 Tagen beglichen werden muss. Bitte beachte, dass die Zahlung fristgerecht erfolgen sollte, um deinen Platz im Kurs zu sichern.</p>
+          <p class="text-gray-600 mt-4 text-sm">Nach deiner Anmeldung zum Motorrad-Grundkurs bei Driving Team in Lachen bezahlst du bequem direkt in der Simy App – per Twint, Debit- oder Kreditkarte. So ist dein Platz im Kurs gesichert.</p>
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es eine Rückerstattungspolitik, falls ich nicht am Kurs teilnehmen kann?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
