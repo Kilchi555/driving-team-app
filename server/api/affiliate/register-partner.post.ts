@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
   // Lookup tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, domain, slug, is_active')
+    .select('id, name, domain, slug, is_active')
     .eq('slug', normalizedTenantSlug)
     .maybeSingle()
 
@@ -241,7 +241,8 @@ export default defineEventHandler(async (event) => {
   try {
     await sendEmail({
       to: emailLower,
-      subject: 'Dein Affiliate-Zugang – Driving Team',
+      subject: `Dein Affiliate-Zugang – ${tenant.name || 'Driving Team'}`,
+      senderName: tenant.name || undefined,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
           <h2 style="color:#111;font-size:22px;margin-bottom:8px">Willkommen, ${firstName.trim()}!</h2>

@@ -146,7 +146,8 @@ export default defineEventHandler(async (event) => {
     await sendEmail({
       to: email,
       subject: `Willkommen bei ${tenantName} - Registrierung abschließen`,
-      html: emailHtml
+      html: emailHtml,
+      senderName: tenantName
     })
 
     logger.debug('✅ Onboarding email sent successfully to:', email)

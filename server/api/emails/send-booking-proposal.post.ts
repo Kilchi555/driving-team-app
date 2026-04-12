@@ -96,6 +96,7 @@ export default defineEventHandler(async (event) => {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
+      const fromWithName = tenant?.name ? `${tenant.name} <${fromEmail}>` : fromEmail
 
       // Helper function to delay execution
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -103,7 +104,7 @@ export default defineEventHandler(async (event) => {
       // Send to customer
       try {
         await resend.emails.send({
-          from: fromEmail,
+          from: fromWithName,
           ...customerEmail
         })
         logger.info('✅ Email sent to customer:', proposal.email)
@@ -118,7 +119,7 @@ export default defineEventHandler(async (event) => {
       if (staffEmail) {
         try {
           await resend.emails.send({
-            from: fromEmail,
+            from: fromWithName,
             ...staffEmail
           })
           logger.info('✅ Email sent to staff:', staff?.email)
@@ -132,7 +133,7 @@ export default defineEventHandler(async (event) => {
       if (tenant?.contact_email) {
         try {
           await resend.emails.send({
-            from: fromEmail,
+            from: fromWithName,
             ...tenantEmail
           })
           logger.info('✅ Booking proposal notification email sent to tenant:', tenant.contact_email)

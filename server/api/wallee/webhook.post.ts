@@ -1382,6 +1382,7 @@ async function processVouchersAndCredits(payments: any[]) {
               to: customerEmail,
               subject: emailContent.subject,
               html: emailContent.html,
+              senderName: branding.tenantName,
               ...(pdfAttachment ? { attachments: [pdfAttachment] } : {})
             })
 

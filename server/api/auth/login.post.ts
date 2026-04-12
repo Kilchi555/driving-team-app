@@ -669,6 +669,7 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
           to: userEmail,
           subject: `${tenantName} - Anmeldung von neuem Gerät`,
           html: emailHtml,
+          senderName: tenantName,
           text: emailText
         })
 

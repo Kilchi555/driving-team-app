@@ -129,6 +129,7 @@ export default defineEventHandler(async (event): Promise<SendEmailResponse> => {
       to: emailTo,
       subject: emailContent.subject,
       html: emailContent.html,
+      senderName: branding.tenantName,
       ...(pdfAttachment ? { attachments: [pdfAttachment] } : {})
     })
 

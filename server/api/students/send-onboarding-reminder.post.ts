@@ -229,7 +229,8 @@ export default defineEventHandler(async (event) => {
         await sendEmail({
           to: email,
           subject: `Registrierungserinnerung von ${tenantName}`,
-          html: emailHtml
+          html: emailHtml,
+          senderName: tenantName
         })
 
         logger.debug('✅ Email sent successfully')

@@ -370,7 +370,8 @@ export default defineEventHandler(async (event) => {
     await sendEmail({
       to: email,
       subject,
-      html
+      html,
+      senderName: body.tenantName || undefined
     })
     
     logger.debug(`✅ ${type} email sent successfully to ${email}`)
