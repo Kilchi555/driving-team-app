@@ -249,7 +249,7 @@
           <div class="flex-shrink-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-lg">1</div>
           <div>
             <h3 class="font-bold text-gray-900 mb-1">First Aid Course (Nothelferkurs)</h3>
-            <p class="text-gray-600 text-sm">Mandatory for all new applicants aged 14+. Duration: 10 hours. Cost: CHF 99. Certificate is valid for 6 years. You can <a href="/nothelferkurse/" class="text-primary-600 hover:underline">book directly with us</a>.</p>
+            <p class="text-gray-600 text-sm">Mandatory for all new applicants aged 14+. Duration: 10 hours. Cost: CHF 99. Certificate is valid for 6 years. You can <a href="/nothelferkurs/" class="text-primary-600 hover:underline">book directly with us</a>.</p>
           </div>
         </div>
         <div class="bg-white border border-gray-100 rounded-xl p-6 shadow-sm flex gap-5">
@@ -396,7 +396,7 @@
           <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Motorcycle School Zurich</p>
           <p class="text-xs text-gray-500 mt-1">Category A · from CHF 95</p>
         </a>
-        <a href="/nothelferkurse/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+        <a href="/nothelferkurs/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
           <div class="text-2xl mb-2">❤️</div>
           <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">First Aid Course Zurich</p>
           <p class="text-xs text-gray-500 mt-1">Nothelferkurs · CHF 99</p>

@@ -137,7 +137,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Noch Fragen? Kontaktiere uns!</h2>
-        <a href="/kontakt" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="/kontakt/" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Zum Kontakt
         </a>
       </div>

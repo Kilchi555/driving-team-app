@@ -109,7 +109,7 @@
             <textarea placeholder="Weitere Angaben, bevorzugte Zeitfenster & Treffpunkte, etc." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-600"></textarea>
             <div class="flex items-center gap-3">
               <input type="checkbox" id="agb" class="w-4 h-4" required />
-              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb" class="text-primary-600 hover:underline">AGB's</a></label>
+              <label for="agb" class="text-gray-700 text-sm">Ich akzeptiere die <a href="/agb/" class="text-primary-600 hover:underline">AGB's</a></label>
             </div>
             <button type="submit" class="btn-primary w-full text-lg">
               Termin anfragen

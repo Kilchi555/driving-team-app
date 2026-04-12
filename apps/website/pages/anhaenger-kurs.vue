@@ -85,7 +85,7 @@
     <section class="bg-gray-50 py-12">
       <div class="section-container text-center">
         <p class="text-gray-700 mb-4">Interessiert an Einzelfahrstunden? Schau dir unsere vollständige Anhänger-Ausbildung an.</p>
-        <a href="/anhaenger-fahrschule" class="btn-primary">Zur Anhänger Fahrschule →</a>
+        <a href="/anhaenger-fahrschule/" class="btn-primary">Zur Anhänger Fahrschule →</a>
       </div>
     </section>
 

@@ -374,7 +374,7 @@
               Welche CZV Weiterbildungen bietet ihr an?
               <span class="group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 text-sm mt-3">Wir bieten spezialisierte CZV Weiterbildungskurse an, darunter: Prävention & Unfallverhalten, Traffic Health, ARV1 & Rundumkontrolle, Radwechsel & Brandbekämpfung und Umweltbewusste Fahrweise. Jeder Kurs zählt als Weiterbildungstag. <a href="/czv-weiterbildung" class="text-primary-600 hover:underline font-medium">Mehr zur CZV Weiterbildung →</a></p>
+            <p class="text-gray-600 text-sm mt-3">Wir bieten spezialisierte CZV Weiterbildungskurse an, darunter: Prävention & Unfallverhalten, Traffic Health, ARV1 & Rundumkontrolle, Radwechsel & Brandbekämpfung und Umweltbewusste Fahrweise. Jeder Kurs zählt als Weiterbildungstag. <a href="/czv-weiterbildung/" class="text-primary-600 hover:underline font-medium">Mehr zur CZV Weiterbildung →</a></p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">

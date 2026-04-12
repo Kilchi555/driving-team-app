@@ -137,7 +137,7 @@
       <h2 class="heading-md mb-8 text-center">Infos zur Motorbootprüfung</h2>
       <div class="max-w-3xl mx-auto bg-gray-50 rounded-lg p-8">
         <p class="text-gray-700 mb-4">Für den Motorboot-Führerschein (Kategorie A) in der Schweiz musst du sowohl eine Theorie- als auch eine praktische Prüfung bestehen. Die Theorieprüfung wird beim Schifffahrtsamt des jeweiligen Kantons abgelegt.</p>
-        <p class="text-gray-700">Möchtest du mehr über den gesamten Ablauf erfahren? Besuche unsere <a href="/motorboot" class="text-primary-600 hover:underline">Motorboot Fahrschule</a> Seite für alle Details.</p>
+        <p class="text-gray-700">Möchtest du mehr über den gesamten Ablauf erfahren? Besuche unsere <a href="/motorboot-fahrschule/" class="text-primary-600 hover:underline">Motorboot Fahrschule</a> Seite für alle Details.</p>
       </div>
     </section>
 
@@ -146,13 +146,13 @@
       <div class="section-container">
         <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
-          <a href="/fahrschule-lachen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
-          <a href="/fahrschule-uster" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
+          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
+          <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
           <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
-          <a href="/fahrschule-reichenburg" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
-          <a href="/fahrschule-stgallen" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
-          <a href="/fahrschule-dietikon" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
+          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+          <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
+          <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
         </div>
       </div>
     </section>
