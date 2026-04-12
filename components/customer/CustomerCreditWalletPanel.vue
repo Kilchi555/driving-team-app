@@ -39,7 +39,7 @@
             <Transition name="fade">
               <div
                 v-if="showActionsDropdown"
-                class="absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-20"
+                class="absolute right-0 bottom-full mb-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-20"
               >
                 <button
                   type="button"
