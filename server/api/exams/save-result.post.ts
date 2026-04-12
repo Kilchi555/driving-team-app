@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
           appointment.location_id
             ? supabase.from('locations').select('name, google_place_id').eq('id', appointment.location_id).single()
             : Promise.resolve({ data: null }),
-          supabase.from('tenants').select('name, primary_color, logo_wide_url, logo_url, google_place_id').eq('id', tenantId).single()
+          supabase.from('tenants').select('name, primary_color, logo_wide_url, logo_url, google_review_places').eq('id', tenantId).single()
         ])
 
         const customer = customerRes.data
@@ -163,31 +163,34 @@ export default defineEventHandler(async (event) => {
         if (customer?.email) {
           const { sendEmail } = await import('~/server/utils/email')
 
-          const reviewLink = tenant?.google_place_id
-            ? `https://search.google.com/local/writereview?placeid=${tenant.google_place_id}`
-            : null
+          const reviewPlaces: Array<{ name: string; place_id: string }> =
+            Array.isArray((tenant as any)?.google_review_places) && (tenant as any).google_review_places.length > 0
+              ? (tenant as any).google_review_places
+              : []
 
           const primaryColor = tenant?.primary_color || '#2563eb'
           const tenantName   = tenant?.name || 'Driving Team'
-          const firstName    = customer.first_name || customer.first_name
+          const firstName    = customer.first_name
           const logoHtml     = tenant?.logo_wide_url || tenant?.logo_url
             ? `<img src="${tenant?.logo_wide_url || tenant?.logo_url}" alt="${tenantName}" style="height:40px;max-width:180px;object-fit:contain;display:block;margin:0 auto 24px">`
             : `<div style="display:inline-block;width:44px;height:44px;border-radius:10px;background:${primaryColor};color:white;font-size:22px;font-weight:700;line-height:44px;text-align:center;margin:0 auto 24px">${tenantName.charAt(0).toUpperCase()}</div>`
 
-          const reviewSection = reviewLink ? `
-            <div style="margin:28px 0;text-align:center">
-              <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6">
-                Du hast die Prüfung mit Bravour bestanden! 🎉<br>
-                Wir würden uns sehr freuen, wenn du dir kurz Zeit nimmst und uns eine Google-Bewertung hinterlässt – das hilft anderen Fahrschüler:innen, uns zu finden.
+          const reviewSection = reviewPlaces.length > 0 ? `
+            <div style="margin:28px 0">
+              <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;text-align:center">
+                Wir würden uns sehr freuen, wenn du dir kurz Zeit nimmst und uns eine Google-Bewertung hinterlässt –<br>das hilft anderen Fahrschüler:innen, uns zu finden. 🙏
               </p>
-              <a href="${reviewLink}"
-                 style="display:inline-block;background:${primaryColor};color:#ffffff;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.01em">
-                ⭐ Jetzt Bewertung schreiben
-              </a>
-              <p style="margin:12px 0 0;font-size:12px;color:#9ca3af">Dauert nur 1 Minute – wir sind dankbar für jedes Feedback!</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                ${reviewPlaces.map(p => `<tr><td style="padding:5px 0;text-align:center">
+                  <a href="https://search.google.com/local/writereview?placeid=${p.place_id}"
+                     style="display:inline-block;background:${primaryColor};color:#ffffff;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;min-width:200px;text-align:center">
+                    ⭐ Bewertung schreiben – ${p.name}
+                  </a>
+                </td></tr>`).join('\n')}
+              </table>
+              <p style="margin:14px 0 0;font-size:12px;color:#9ca3af;text-align:center">Dauert nur 1 Minute – wir sind dankbar für jedes Feedback!</p>
             </div>` : `
             <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6">
-              Du hast die Prüfung mit Bravour bestanden! 🎉<br>
               Herzlichen Glückwunsch – wir freuen uns mit dir!
             </p>`
 
