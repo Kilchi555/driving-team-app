@@ -115,7 +115,7 @@ export default defineEventHandler(async (event) => {
       ${reviewPlaces.map(p => `<tr><td style="padding:5px 0;text-align:center">
         <a href="https://search.google.com/local/writereview?placeid=${p.place_id}"
            style="display:inline-block;background:${primaryColor};color:#ffffff;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;min-width:200px;text-align:center">
-          ⭐ Jetzt Bewertung schreiben – ${p.name}
+          ⭐ Bewertung – ${p.name}
         </a>
       </td></tr>`).join('\n')}
     </table>` : ''
@@ -139,16 +139,21 @@ export default defineEventHandler(async (event) => {
           <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6">
             Wenn du zufrieden warst und uns weiterempfehlen möchtest, würden wir uns über eine kurze Google-Bewertung sehr freuen. Das hilft anderen, uns zu finden und gibt uns wichtiges Feedback.
           </p>
-          ${followUpReviewSection}
-          <div style="margin:28px 0;background:#f9fafb;border-radius:10px;padding:20px 24px">
-            <p style="margin:0 0 10px;font-size:15px;font-weight:700;color:#374151">💸 Freunde empfehlen &amp; Geld verdienen</p>
-            <p style="margin:0 0 14px;font-size:14px;color:#6b7280;line-height:1.6">
-              Wusstest du, dass du mit unserem Empfehlungsprogramm Geld verdienen kannst? Für jede Person, die du zu uns schickst, erhältst du eine Gutschrift auf dein Konto.
+            ${followUpReviewSection}
+            <p style="margin:16px 0 24px;font-size:14px;color:#6b7280;line-height:1.6;text-align:center">
+              Falls du bereits eine Bewertung hinterlassen hast – vielen herzlichen Dank! 🙏<br>
+              Das bedeutet uns sehr viel und hilft anderen, den richtigen Weg zu uns zu finden.
             </p>
-            <a href="${affiliateUrl}" style="display:inline-block;background:${primaryColor};color:#ffffff;padding:11px 24px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none">
-              Zum Empfehlungs-Dashboard →
-            </a>
-          </div>
+            <div style="margin:0 0 28px;background:#f9fafb;border-radius:10px;padding:20px 24px;border-top:3px solid ${primaryColor}">
+              <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Übrigens</p>
+              <p style="margin:0 0 10px;font-size:15px;font-weight:700;color:#374151">Wusstest du schon, dass du bares Geld mit Weiterempfehlung verdienen kannst? 💸</p>
+              <p style="margin:0 0 14px;font-size:14px;color:#6b7280;line-height:1.6">
+                Mit unserem Empfehlungsprogramm erhältst du für jede Person, die du zu uns schickst, eine Gutschrift auf dein Konto – die du jederzeit auszahlen lassen kannst.
+              </p>
+              <a href="${affiliateUrl}" style="display:inline-block;background:${primaryColor};color:#ffffff;padding:11px 24px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none">
+                Mehr erfahren →
+              </a>
+            </div>
           <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;text-align:center">Alles Gute auf deinen weiteren Fahrten! 🚗</p>
         </div>
         <div style="padding:16px 32px 24px;text-align:center;border-top:1px solid #f3f4f6">
