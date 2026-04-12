@@ -442,18 +442,6 @@
 
   <!-- Additional Pages -->
   <url>
-    <loc>https://drivingteam.ch/fahrschule-pfaeffikon/</loc>
-    <lastmod>2026-04-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://drivingteam.ch/fahrschule-aargau/</loc>
-    <lastmod>2026-04-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://drivingteam.ch/driving-school-zurich/</loc>
     <lastmod>2026-04-12</lastmod>
     <changefreq>monthly</changefreq>
