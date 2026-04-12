@@ -14,6 +14,7 @@
 
 import { defineNuxtPlugin } from '#app'
 import { logger } from '~/utils/logger'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 const SUPABASE_SESSION_KEY = 'supabase-session-cache'
 
@@ -135,7 +136,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             // For staff/clients, use the cookie-based /api/auth/refresh endpoint.
             const { useRoute } = await import('#app')
             const route = useRoute()
-            const isAffiliateDashboard = route.path.startsWith('/affiliate-dashboard')
+            const isAffiliateDashboard =
+              pathnameIncludesAffiliateDashboard(route.path) ||
+              (typeof window !== 'undefined' && pathnameIncludesAffiliateDashboard(window.location.pathname))
 
             let newAccessToken: string | null = null
             let newRefreshToken: string | null = null
@@ -191,10 +194,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             const { useRoute } = await import('#app')
             const route = useRoute()
             const isShopPage = route.path.startsWith('/shop')
-            const isAffiliateDashboard = route.path.startsWith('/affiliate-dashboard')
-            
+            const isAffiliateDashboardCatch =
+              pathnameIncludesAffiliateDashboard(route.path) ||
+              (typeof window !== 'undefined' && pathnameIncludesAffiliateDashboard(window.location.pathname))
+
             // If refresh fails due to invalid/expired refresh token, redirect to tenant login
-            if ((err?.response?.status === 401 || err?.statusCode === 401) && !isShopPage && !isAffiliateDashboard) {
+            if ((err?.response?.status === 401 || err?.statusCode === 401) && !isShopPage && !isAffiliateDashboardCatch) {
               logger.warn('🚪 Refresh token invalid/expired, redirecting to tenant login')
               
               try {

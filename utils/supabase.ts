@@ -3,6 +3,17 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 
 let supabaseInstance: SupabaseClient | null = null
+/** Filled by plugins/000-supabase-nuxt-bridge.client.ts — cannot use #app here (Nitro server bundle). */
+let nuxtModuleBrowserClient: SupabaseClient | null = null
+
+/**
+ * Use the same Supabase client as @nuxtjs/supabase (single GoTrue instance).
+ * Only call from client plugins after the supabase module has run.
+ */
+export function registerNuxtModuleSupabaseClient(client: SupabaseClient | null) {
+  nuxtModuleBrowserClient = client
+}
+
 let supabaseAdminInstance: SupabaseClient | null = null
 let storageAdapter: any | null = null
 
@@ -41,6 +52,11 @@ function getSecureSessionStorage() {
 }
 
 export const getSupabase = (): SupabaseClient => {
+  // Prefer the @nuxtjs/supabase browser client (registered by 000-supabase-nuxt-bridge.client.ts).
+  if (process.client && nuxtModuleBrowserClient) {
+    return nuxtModuleBrowserClient
+  }
+
   if (!supabaseInstance) {
     // Handle both client and server environments
     let supabaseUrl: string

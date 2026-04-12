@@ -3,6 +3,7 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 export const useCurrentUser = () => {
   const currentUser = ref<any>(null)
@@ -13,6 +14,10 @@ export const useCurrentUser = () => {
   const fetchCurrentUser = async () => {
     // Skip on login page
     if (process.client && window.location.pathname === '/') {
+      return
+    }
+    // Affiliate-Dashboard: Session nur über Supabase/Magic-Link, kein httpOnly current-user
+    if (process.client && pathnameIncludesAffiliateDashboard(window.location.pathname)) {
       return
     }
 

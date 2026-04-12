@@ -3,6 +3,12 @@
 import { defineNuxtPlugin } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+
+function isAffiliateDashboardPath(): boolean {
+  if (typeof window === 'undefined') return false
+  return pathnameIncludesAffiliateDashboard(window.location.pathname)
+}
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Only run in browser
@@ -27,21 +33,15 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       if (userData?.user && !userError) {
         logger.debug('✅ Supabase session is valid for:', userData.user.email)
         
-        // Update auth store if needed
         if (!authStore.user) {
           authStore.user = userData.user as any
-          
-          // Fetch profile if needed
-          if (!authStore.userProfile) {
-            try {
-              const response = await $fetch('/api/auth/current-user') as any
-              if (response?.profile) {
-                authStore.userProfile = response.profile
-                authStore.userRole = response.profile.role || ''
-              }
-            } catch (err) {
-              logger.debug('⚠️ Could not fetch profile:', err)
-            }
+        }
+
+        if (!authStore.userProfile) {
+          try {
+            await authStore.fetchUserProfile(userData.user.id)
+          } catch (err) {
+            logger.debug('⚠️ Could not fetch profile (cookie/Bearer):', err)
           }
         }
         
@@ -54,20 +54,24 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     
     // No valid Supabase session - check if we have a user in auth store (from session-persist)
     if (!authStore.user) {
-      logger.debug('🔄 No user in store, checking via API...')
-      
-      // Check session via API (tokens are in HTTP-Only cookies)
-      const response = await $fetch('/api/auth/current-user') as any
-      
-      if (response?.user && response?.profile) {
-        logger.debug('🔄 Session found for:', response.user.email)
-        
-        // Set user and profile from API response
-        authStore.user = response.user
-        authStore.userProfile = response.profile
-        authStore.userRole = response.profile.role || ''
+      if (isAffiliateDashboardPath()) {
+        logger.debug('🔄 Affiliate-Dashboard: kein Cookie-/current-user Restore ohne Supabase-Session')
       } else {
-        logger.debug('🔄 No valid session cookie found')
+        logger.debug('🔄 No user in store, checking via API...')
+        
+        // Check session via API (tokens are in HTTP-Only cookies)
+        const response = await $fetch('/api/auth/current-user') as any
+        
+        if (response?.user && response?.profile) {
+          logger.debug('🔄 Session found for:', response.user.email)
+          
+          // Set user and profile from API response
+          authStore.user = response.user
+          authStore.userProfile = response.profile
+          authStore.userRole = response.profile.role || ''
+        } else {
+          logger.debug('🔄 No valid session cookie found')
+        }
       }
     }
     
@@ -80,7 +84,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     }
     
   } catch (err: any) {
-    console.error('❌ Auth restore error:', err)
+    if (isAffiliateDashboardPath()) {
+      logger.debug('Auth restore: affiliate / keine Cookie-Session', err?.message)
+    } else {
+      console.error('❌ Auth restore error:', err)
+    }
   } finally {
     // Always set isInitialized to true
     const authStore = useAuthStore()

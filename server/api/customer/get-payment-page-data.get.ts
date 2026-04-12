@@ -4,6 +4,7 @@ import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getEffectiveCreditBalanceRappen } from '~/server/utils/effective-credit-balance'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -86,21 +87,24 @@ export default defineEventHandler(async (event) => {
     tenantId = requestingUser.tenant_id
     auditDetails.tenant_id = tenantId
 
-    // Only customers (role: 'client') can use this endpoint
-    if (requestingUser.role !== 'client') {
+    // Kunden-Fahrstundenkonto + Affiliate-Partner (Guthaben/Auszahlung im gleichen Panel)
+    const allowedRoles = ['client', 'affiliate'] as const
+    if (!allowedRoles.includes(requestingUser.role as (typeof allowedRoles)[number])) {
       logger.warn(`Unauthorized role attempting payment page data: ${requestingUser.role}`)
       await logAudit({
         user_id: authenticatedUserId,
         action: 'customer_get_payment_page_data',
         status: 'failed',
-        error_message: 'Insufficient permissions - only customers allowed',
+        error_message: 'Insufficient permissions - only client or affiliate allowed',
         ip_address: ipAddress,
         details: auditDetails
       })
-      throw createError({ statusCode: 403, statusMessage: 'Forbidden: Only customers can access this endpoint' })
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden: Only customers or affiliates can access this endpoint' })
     }
 
-    logger.debug(`📄 Loading payment page data for customer`, {
+    const isAffiliateWalletOnly = requestingUser.role === 'affiliate'
+
+    logger.debug(`📄 Loading payment page data`, {
       user_id: requestingUser.id,
       auth_user_id: authenticatedUserId,
       tenant_id: tenantId,
@@ -112,24 +116,19 @@ export default defineEventHandler(async (event) => {
     // Fetch user's preferred payment method (already have it from user profile)
     const preferredPaymentMethod = requestingUser.preferred_payment_method || 'wallee'
 
-    // ============ FETCH 1: Student Credit Balance ============
-    const { data: creditData, error: creditError } = await supabaseAdmin
-      .from('student_credits')
-      .select('balance_rappen')
-      .eq('user_id', requestingUser.id)
-      .single()
+    // ============ FETCH 1: Student Credit Balance (inkl. Legacy-/Journal-Fallback) ============
+    const studentBalance = await getEffectiveCreditBalanceRappen(
+      supabaseAdmin,
+      requestingUser.id,
+      tenantId
+    )
 
-    if (creditError && creditError.code !== 'PGRST116') {
-      logger.error('Error fetching student credit:', creditError)
-      // Don't fail - credit is optional
-    }
-
-    const studentBalance = creditData?.balance_rappen || 0
-
-    // ============ FETCH 2: Payments with all related data ============
-    const { data: paymentsData, error: paymentsError } = await supabaseAdmin
-      .from('payments')
-      .select(`
+    // ============ FETCH 2: Payments (nur Fahrschüler-Kontext; Affiliates: leer) ============
+    let paymentsData: any[] | null = []
+    if (!isAffiliateWalletOnly) {
+      const res = await supabaseAdmin
+        .from('payments')
+        .select(`
         id,
         created_at,
         updated_at,
@@ -178,23 +177,25 @@ export default defineEventHandler(async (event) => {
           )
         )
       `)
-      .eq('tenant_id', tenantId)
-      .eq('user_id', requestingUser.id)  // ✅ CRITICAL: Only customer's own payments!
-      .order('created_at', { ascending: false })
+        .eq('tenant_id', tenantId)
+        .eq('user_id', requestingUser.id)  // ✅ CRITICAL: Only customer's own payments!
+        .order('created_at', { ascending: false })
 
-    if (paymentsError) {
-      logger.error('Error fetching payments:', paymentsError)
-      await logAudit({
-        user_id: requestingUser.id,  // Use users.id, not auth.uid()
-        auth_user_id: authenticatedUserId,
-        action: 'customer_get_payment_page_data',
-        status: 'failed',
-        error_message: `Failed to fetch payments: ${paymentsError.message}`,
-        ip_address: ipAddress,
-        tenant_id: tenantId,
-        details: auditDetails
-      })
-      throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
+      if (res.error) {
+        logger.error('Error fetching payments:', res.error)
+        await logAudit({
+          user_id: requestingUser.id,
+          auth_user_id: authenticatedUserId,
+          action: 'customer_get_payment_page_data',
+          status: 'failed',
+          error_message: `Failed to fetch payments: ${res.error.message}`,
+          ip_address: ipAddress,
+          tenant_id: tenantId,
+          details: auditDetails
+        })
+        throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
+      }
+      paymentsData = res.data
     }
 
     // ============ LAYER 5: AUDIT LOGGING ============
@@ -232,7 +233,7 @@ export default defineEventHandler(async (event) => {
       total_amount_rappen: payments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
     }
 
-    logger.info(`✅ Fetched payment page data for customer ${requestingUser.id}: ${stats.total_payments} payments`)
+    logger.info(`✅ Fetched payment page data for user ${requestingUser.id}: ${stats.total_payments} payments (affiliate_wallet_only=${isAffiliateWalletOnly})`)
 
     return {
       success: true,

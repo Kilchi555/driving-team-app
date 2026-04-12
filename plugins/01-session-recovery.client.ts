@@ -15,6 +15,7 @@
 import { useAuthStore } from '~/stores/auth'
 import { useRouter, useRoute } from '#app'
 import { logger } from '~/utils/logger'
+import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 // Pages that don't require authentication
 const PUBLIC_PAGES = [
@@ -29,16 +30,29 @@ const PUBLIC_PAGES = [
   '/shop',
 ]
 
+/** Magic-Link / Supabase-Session ohne httpOnly-Cookie — Session-Recovery nicht erzwingen */
+const SESSION_OPTIONAL_PREFIXES = ['/affiliate-dashboard']
+
+function clientPathForSessionCheck(routePath: string): string {
+  if (typeof window !== 'undefined' && window.location?.pathname) {
+    return window.location.pathname
+  }
+  return routePath
+}
+
 export default defineNuxtPlugin(async (nuxtApp) => {
   // ✅ Only run on client side
   if (process.server) return
 
   const router = useRouter()
+  await router.isReady()
   const route = useRoute()
+  const path = clientPathForSessionCheck(route.path)
   const authStore = useAuthStore()
 
   logger.debug('🔄 Session Recovery Plugin initializing...', {
-    currentPath: route.path,
+    routePath: route.path,
+    clientPath: path,
     hasUser: !!authStore.user,
   })
 
@@ -48,15 +62,24 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     return
   }
 
-  // Check if current page is public
-  const isPublicPage = PUBLIC_PAGES.some((page) =>
-    route.path.startsWith(page)
-  )
+  // Check if current page is public (use real URL — useRoute() can be "/" before navigation settles)
+  const isPublicPage = PUBLIC_PAGES.some((page) => path.startsWith(page))
+  const isSessionOptionalPage =
+    pathnameIncludesAffiliateDashboard(path) ||
+    SESSION_OPTIONAL_PREFIXES.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+    )
 
   logger.debug('🔍 Session Recovery Check:', {
     isPublicPage,
-    path: route.path,
+    isSessionOptionalPage,
+    path,
   })
+
+  if (isSessionOptionalPage) {
+    logger.debug('✅ Affiliate-Dashboard: keine Cookie-Session nötig, kein Redirect zur Login-Seite')
+    return
+  }
 
   try {
     // Try to get current user (will validate session)
@@ -72,9 +95,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       })
 
       // Update auth store with recovered user
-      authStore.setUser(response.user)
-      authStore.setProfile(response.profile)
-      authStore.setAuthenticated(true)
+      authStore.user = response.user
+      if (response.profile) {
+        authStore.userProfile = response.profile
+        authStore.userRole = response.profile.role || ''
+      }
 
       // Refresh page data to ensure everything is up to date
       logger.debug('🔄 Refreshing page data after session recovery...')
@@ -90,19 +115,19 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     logger.debug('⚠️ Session recovery failed:', {
       status: error.status,
       message: error.message,
-      path: route.path,
+      path,
     })
 
     // If session is invalid and user is on protected page, redirect to login
-    if (!isPublicPage) {
+    if (!isPublicPage && !isSessionOptionalPage) {
       logger.warn('🔐 No valid session on protected page, redirecting to login...', {
-        fromPage: route.path,
+        fromPage: path,
       })
 
       // Redirect to login
       await router.push({
         path: '/login',
-        query: route.path !== '/' ? { redirect: route.path } : {},
+        query: path !== '/' ? { redirect: path } : {},
       })
       return
     }
