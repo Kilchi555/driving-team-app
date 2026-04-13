@@ -59,12 +59,13 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     // 2. Für alle anderen Seiten: Verwende Tenant-ID des eingeloggten Users
     if (process.client) {
       try {
-        const { currentUser } = useCurrentUser()
-        await nextTick() // Warte bis User geladen ist
-        
-        if (currentUser.value?.tenant_id) {
-          logger.debug('🎨 Using tenant_id from current user:', currentUser.value.tenant_id)
-          return { type: 'id', value: currentUser.value.tenant_id }
+        // useCurrentUser() creates a new ref(null) instance each time and requires
+        // fetchCurrentUser() to be called explicitly — use the auth store directly instead
+        const authStore = useAuthStore()
+        const tenantId = authStore.userProfile?.tenant_id
+        if (tenantId) {
+          logger.debug('🎨 Using tenant_id from auth store:', tenantId)
+          return { type: 'id', value: tenantId }
         }
       } catch (error) {
         logger.debug('⚠️ Could not get user tenant_id:', error)
