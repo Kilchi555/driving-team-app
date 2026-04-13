@@ -104,7 +104,7 @@
             <img src="/images/categories/lastwagen-fahrschule-hero.webp" alt="Lastwagen Fahrlehrerweiterbildung – Professionelle Schulung für Instruktor:innen" class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-black/30 flex items-end p-5">
               <div>
-                <h3 class="font-bold text-white text-lg">Lastwagen Fahrlehrerweiterbildung</h3>
+                <h3 class="font-bold text-white text-lg">Lastwagen Fahrlehrerweiterbildung Kategorie B</h3>
                 <p class="text-sm text-white mt-1">Für Fahrlehrer:innen der Kategorie B</p>
               </div>
             </div>
@@ -122,7 +122,7 @@
               <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Praktisches Fahren auf Gelände</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Faszination des Lastwagenfahrens, stelle dich in die Rolle der Schüler:innen und transferiere die Erkenntnisse in deinen Schulalltag.</p>
-            <button @click="openModal('Lastwagen Fahrlehrerweiterbildung')" class="w-full mt-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+            <button @click="openModal('Lastwagen Fahrlehrerweiterbildung Kategorie B')" class="w-full mt-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
               Anmelden
             </button>
           </div>
@@ -277,7 +277,7 @@ const courseType = ref('fahrlehrer_weiterbildung')
 const TITLE_TO_VARIANT: Record<string, 'fw_anhaenger' | 'fw_motorboot' | 'fw_lastwagen'> = {
   'Anhänger Kategorie BE': 'fw_anhaenger',
   'Motorboot Fahrlehrerweiterbildung': 'fw_motorboot',
-  'Lastwagen Fahrlehrerweiterbildung': 'fw_lastwagen',
+  'Lastwagen Fahrlehrerweiterbildung Kategorie B': 'fw_lastwagen',
 }
 
 const VARIANT_FALLBACK: Record<string, { location: string, start_time: string }> = {
@@ -402,7 +402,7 @@ const pickerCourses = computed<CourseOption[]>(() => {
     },
     {
       id: 'lastwagen',
-      label: 'Lastwagen Fahrlehrerweiterbildung',
+      label: 'Lastwagen Fahrlehrerweiterbildung Kategorie B',
       description: 'Verkehrszentrum Tuggen/SZ · CHF 490.–',
       icon: '🚛',
       variant: 'fw_lastwagen',

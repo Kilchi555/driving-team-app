@@ -1253,6 +1253,15 @@ onMounted(async () => {
         return
       }
       
+      // If the cached session belongs to a different tenant, clear it so the
+      // real user can log in fresh instead of being auto-redirected into the
+      // wrong tenant's dashboard.
+      if (currentTenantBranding.value?.id && user.tenant_id !== currentTenantBranding.value.id) {
+        logger.debug('⚠️ Cached session belongs to a different tenant, clearing and requiring re-login')
+        await logout()
+        return
+      }
+
       logger.debug('✅ User profile found, redirecting...')
       if (user?.role === 'admin' || user?.role === 'tenant_admin') {
         router.push('/admin')
