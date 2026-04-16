@@ -16,7 +16,8 @@ export interface SwissQRParams {
   debtor_city: string
   amount_rappen: number
   currency?: string
-  reference?: string
+  reference?: string       // Pre-computed SCOR reference (RF…) or leave empty to auto-generate
+  invoice_number?: string  // Used to auto-generate SCOR if reference is not provided
   additional_info?: string
 }
 
@@ -29,16 +30,45 @@ function cleanIban(iban: string) {
   return (iban || '').replace(/\s+/g, '')
 }
 
+/**
+ * Generates an ISO 11649 Creditor Reference (SCOR) from any string, e.g. invoice number.
+ * Format: RF<2 check digits><alphanumeric reference>
+ * Banking apps display it grouped in 4s: RF18 RE20 2600 05
+ */
+export function generateSCOR(invoiceNumber: string): string {
+  const cleaned = invoiceNumber.replace(/[^A-Z0-9]/gi, '').toUpperCase()
+  if (!cleaned) return ''
+
+  // Convert letters to digits (A=10 … Z=35), then compute mod 97
+  const numeric = (cleaned + 'RF00').split('').map(c => {
+    const code = c.charCodeAt(0)
+    return code >= 65 && code <= 90 ? (code - 55).toString() : c
+  }).join('')
+
+  let remainder = 0
+  for (const ch of numeric) {
+    remainder = (remainder * 10 + parseInt(ch, 10)) % 97
+  }
+
+  const checkDigits = String(98 - remainder).padStart(2, '0')
+  return 'RF' + checkDigits + cleaned
+}
+
 export function buildSwissQRData(p: SwissQRParams): string {
   const amount = (p.amount_rappen / 100).toFixed(2)
   const currency = p.currency || 'CHF'
 
-  // NON = unstructured reference (no 27-digit QRR needed)
-  const ref = pad(p.reference || '')
-  const refType = 'NON'
+  // Use provided SCOR reference, auto-generate from invoice_number, or fall back to NON
+  let ref = pad(p.reference || '')
+  let refType = 'NON'
+  if (!ref && p.invoice_number) {
+    ref = generateSCOR(p.invoice_number)
+  }
+  if (ref.startsWith('RF')) {
+    refType = 'SCOR'
+  }
 
   // Both creditor and debtor use type 'K' (combined address) for robustness.
-  // K: line1 = street + number, line2 = zip + city, zip and city fields MUST be empty.
   const creditorAddrLine1 = [pad(p.creditor_street), pad(p.creditor_street_nr)].filter(Boolean).join(' ')
   const creditorAddrLine2 = [pad(p.creditor_zip), pad(p.creditor_city)].filter(Boolean).join(' ')
 
