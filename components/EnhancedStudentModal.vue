@@ -1,4 +1,18 @@
 <template>
+  <!-- Invoice Preview Modal – Neue Rechnung erstellen -->
+  <InvoicePreviewModal
+    v-model="showInvoicePreview"
+    :draft="invoiceDraft"
+    @sent="onInvoiceSentFromModal"
+  />
+  <!-- Invoice View Modal – Bestehende Rechnung anzeigen -->
+  <InvoicePreviewModal
+    v-model="showInvoiceView"
+    :draft="null"
+    mode="view"
+    :view-invoice="viewInvoiceData"
+  />
+
   <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
     <div class="bg-white rounded-lg max-w-5xl w-full max-h-[calc(100vh-24px)] overflow-hidden flex flex-col">
       <!-- Header -->
@@ -552,23 +566,28 @@
           <div v-else class="space-y-4">
             
             <!-- Payment Summary Box (nur wenn Zahlungen ausgewählt sind) -->
-            <div v-if="selectedPayments.length > 0" class="rounded-lg p-4 shadow-sm border-l-4 space-y-3" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' }">
-              <!-- Row 1: Text and Price -->
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">{{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} ausgewählt</p>
-                </div>
-                <p class="text-2xl font-bold" :style="{ color: primaryColor }">{{ formatCurrency(totalSelectedAmount) }}</p>
+            <div v-if="selectedPayments.length > 0" class="rounded-lg px-4 py-3 shadow-sm border-l-4 space-y-2" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' }">
+              <!-- Zeile 1: Anzahl + Betrag -->
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">{{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} ausgewählt</p>
+                <p class="text-sm font-bold" :style="{ color: primaryColor }">{{ formatCurrency(totalSelectedAmount) }}</p>
               </div>
-              
-              <!-- Row 2: Buttons -->
+              <!-- Zeile 2: Buttons -->
               <div class="flex gap-2">
-                <button 
-                  class="flex-1 px-4 py-2.5 rounded-lg font-semibold text-white transition-all hover:shadow-md"
+                <button
+                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkPayment('cash')"
                 >
                   Bar bezahlen
+                </button>
+                <button
+                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && p?.payment_method !== 'invoice' })"
+                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
+                  :style="{ background: primaryGradient }"
+                  @click="handleBulkInvoice"
+                >
+                  Rechnung erstellen
                 </button>
               </div>
             </div>
@@ -585,17 +604,19 @@
                     ? 'border-l-orange-300 bg-orange-50 cursor-pointer hover:shadow-md'
                     : payment.payment_status === 'completed'
                     ? 'border-l-green-300 bg-gray-50 opacity-60 cursor-not-allowed'
+                    : (payment.payment_method === 'invoice' && payment.payment_status !== 'completed')
+                    ? 'border-l-blue-400 bg-blue-50'
                     : 'hover:shadow-md cursor-pointer',
-                  selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed'
+                  selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' && payment.payment_status !== 'invoiced' && !(payment.payment_method === 'invoice' && payment.payment_status !== 'completed')
                     ? 'ring-2 ring-offset-0'
                     : ''
                 ]"
                 :style="{
-                  ...(payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' ? { 
+                  ...(payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' && payment.payment_status !== 'invoiced' && !(payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? { 
                     borderLeftColor: primaryColor,
                     backgroundColor: selectedPayments.includes(payment.id) ? primaryColor + '20' : primaryColor + '08'
                   } : {}),
-                  ...(selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' ? {
+                  ...(selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' && payment.payment_status !== 'invoiced' && !(payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? {
                     '--tw-ring-color': primaryColor
                   } : {})
                 }"
@@ -638,6 +659,8 @@
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
+                        payment.payment_status === 'invoiced' ? 'bg-blue-100 text-blue-700' :
+                        (payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? 'bg-blue-100 text-blue-700' :
                         payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                         payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
                         payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
@@ -649,6 +672,8 @@
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt · Unbezahlt' :
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt · Fehlgeschlagen' :
                              payment.payment_status === 'completed' ? 'Bezahlt' :
+                             payment.payment_status === 'invoiced' ? 'Verrechnet' :
+                             (payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? 'Verrechnet' :
                              payment.payment_status === 'pending' ? 'Unbezahlt' :
                              payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
                              payment.payment_status === 'refunded' ? 'Rückvergütet' :
@@ -795,17 +820,48 @@
                 </div>
                 
                 <!-- Payment Method -->
-                <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
-                  <span class="text-gray-600">Zahlungsmethode:</span>
-                  <span class="ml-1 font-medium text-gray-900">
-                    {{ payment.payment_method === 'cash' ? 'Bar' :
-                       payment.payment_method === 'invoice' ? 'Rechnung' :
-                       payment.payment_method === 'wallee' ? 'Online' :
-                       payment.payment_method === 'credit' ? 'Guthaben' :
-                       payment.payment_method }}
-                  </span>
+                <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm flex items-center justify-between gap-2">
+                  <div>
+                    <span class="text-gray-600">Zahlungsmethode:</span>
+                    <span class="ml-1 font-medium text-gray-900">
+                      {{ payment.payment_method === 'cash' ? 'Bar' :
+                         payment.payment_method === 'invoice' ? 'Rechnung' :
+                         payment.payment_method === 'wallee' ? 'Online' :
+                         payment.payment_method === 'credit' ? 'Guthaben' :
+                         payment.payment_method }}
+                    </span>
+                  </div>
+                  <!-- Action-Buttons für verrechnete Zahlungen -->
+                  <div v-if="payment.payment_method === 'invoice' && payment.payment_status !== 'completed'" class="flex items-center gap-2 mt-1" @click.stop>
+                    <button
+                      v-if="payment.invoice_id"
+                      @click.stop="handleViewInvoice(payment)"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer"
+                      :style="{ color: primaryColor, borderColor: primaryColor + '40' }"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
+                      Anzeigen
+                    </button>
+                    <button
+                      @click.stop="handleMarkAsPaid(payment)"
+                      :disabled="payment._markingAsPaid"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <svg v-if="payment._markingAsPaid" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                      </svg>
+                      Bar bezahlt
+                    </button>
+                  </div>
                 </div>
-                
+
+
               </div>
             </div>
           </div>
@@ -1294,6 +1350,19 @@ const { selectedStudent } = toRefs(props)
 
 // Tenant Branding
 const { primaryColor, secondaryColor } = useTenantBranding()
+
+function adjustBrightness(hex: string, amount: number): string {
+  const clean = hex.replace('#', '')
+  const num = parseInt(clean.padEnd(6, '0'), 16)
+  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + amount))
+  const b = Math.max(0, Math.min(255, (num & 0xff) + amount))
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')
+}
+const primaryGradient = computed(() => {
+  const base = primaryColor.value || '#1E40AF'
+  return `linear-gradient(135deg, ${base} 0%, ${adjustBrightness(base, 40)} 100%)`
+})
 const { invalidate: invalidateCache } = useCalendarCache()
 
 // Reactive state
@@ -1848,11 +1917,10 @@ const paymentsCount = computed(() => payments.value.length)
 const totalSelectedAmount = computed(() => {
   return selectedPayments.value.reduce((total, paymentId) => {
     const payment = payments.value.find(p => p.id === paymentId)
-    // Only count non-cancelled payments
-    if (payment?.appointments?.status === 'cancelled') {
+    if (payment?.appointment?.status === 'cancelled') {
       return total
     }
-    return total + (payment?.total_amount_rappen || 0)
+    return total + (payment?.total_amount_rappen || 0) - (payment?.credit_used_rappen || 0)
   }, 0)
 })
 
@@ -1881,6 +1949,10 @@ const handlePaymentCardClick = (payment: any) => {
   // If completed, ignore click
   else if (payment.payment_status === 'completed') {
     logger.debug('🔒 Payment is completed, cannot select')
+  }
+  // If invoiced, ignore click (use action buttons instead)
+  else if (payment.payment_method === 'invoice' && payment.payment_status !== 'completed') {
+    logger.debug('🔒 Payment is invoiced, use action buttons')
   }
   // Otherwise, toggle selection
   else {
@@ -2915,6 +2987,115 @@ function cleanTxNote(note: string): string {
   // Remove voucher code from "Gutschein eingelöst: CODE" or "Gutschein eingelöst: CODE - Description"
   cleaned = cleaned.replace(/^Gutschein eingelöst:\s*[A-Z0-9_-]+\s*(-\s*)?/i, '').trim()
   return cleaned
+}
+
+// ── Invoice Flow ───────────────────────────────────────────
+const showInvoicePreview = ref(false)
+const invoiceDraft = ref<any>(null)
+
+async function loadInvoiceDraft(studentUserId: string) {
+  const result = await $fetch<{ hasOpenItems: boolean; draft: any }>('/api/invoices/auto-draft', {
+    method: 'POST',
+    body: { student_user_id: studentUserId },
+  })
+  return result
+}
+
+async function switchPaymentToInvoice(payment: any) {
+  payment._switchingToInvoice = true
+  try {
+    await $fetch('/api/payments/manage', {
+      method: 'POST',
+      body: { action: 'switch-to-invoice', paymentId: payment.id },
+    })
+    payment.payment_method = 'invoice'
+    payment.invoice_id = null
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    payment._switchingToInvoice = false
+  }
+}
+
+async function openInvoicePreviewForPayment(payment: any) {
+  if (!props.selectedStudent?.id) return
+  payment._loadingInvoice = true
+  try {
+    const result = await loadInvoiceDraft(props.selectedStudent.id)
+    if (result.hasOpenItems && result.draft) {
+      invoiceDraft.value = result.draft
+      showInvoicePreview.value = true
+    } else {
+      alert('Keine offenen Rechnungsposten gefunden.')
+    }
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    payment._loadingInvoice = false
+  }
+}
+
+async function handleBulkInvoice() {
+  if (!props.selectedStudent?.id || selectedPayments.value.length === 0) return
+  // Alle ausgewählten Zahlungen auf 'invoice' umbuchen (egal welche Methode sie aktuell haben)
+  const toSwitch = payments.value.filter(
+    p => selectedPayments.value.includes(p.id) && p.payment_method !== 'invoice' && p.payment_status === 'pending'
+  )
+  for (const p of toSwitch) {
+    await switchPaymentToInvoice(p)
+  }
+  // Jetzt Invoice-Draft laden (inkl. gerade umgebuchter + bereits vorhandener invoice-Zahlungen)
+  try {
+    const result = await loadInvoiceDraft(props.selectedStudent.id)
+    if (result.hasOpenItems && result.draft) {
+      invoiceDraft.value = result.draft
+      showInvoicePreview.value = true
+      selectedPayments.value = []
+    } else {
+      alert('Keine offenen Rechnungsposten gefunden.')
+    }
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
+  }
+}
+
+function onInvoiceSentFromModal(result: { invoice_id: string; invoice_number: string; total_amount_rappen: number }) {
+  // Payments neu laden damit invoice_id und status aktualisiert sind
+  loadPayments()
+  selectedPayments.value = []
+}
+
+// ── Invoice View (für bereits verrechnete Zahlungen) ────────
+const showInvoiceView = ref(false)
+const viewInvoiceData = ref<any>(null)
+
+async function handleViewInvoice(payment: any) {
+  try {
+    const res = await $fetch<{ invoice: any }>('/api/invoices/by-payment', {
+      method: 'POST',
+      body: { payment_id: payment.id },
+    })
+    viewInvoiceData.value = res.invoice
+    showInvoiceView.value = true
+  } catch (err: any) {
+    alert(`Rechnung konnte nicht geladen werden: ${err?.data?.statusMessage || err.message}`)
+  }
+}
+
+async function handleMarkAsPaid(payment: any) {
+  if (!confirm('Zahlung als bar bezahlt markieren?')) return
+  payment._markingAsPaid = true
+  try {
+    await $fetch('/api/invoices/mark-paid', {
+      method: 'POST',
+      body: { payment_id: payment.id },
+    })
+    await loadPayments()
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    payment._markingAsPaid = false
+  }
 }
 
 // ── Receipts Download ─────────────────────────────────────

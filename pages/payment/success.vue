@@ -2,8 +2,30 @@
   <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%);">
     <div class="w-full max-w-lg">
 
+      <!-- ── STRIPE SUBSCRIPTION SUCCESS ── -->
+      <div v-if="isStripeSuccess" class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-10 text-center text-white">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl font-bold mb-1">Abonnement aktiviert!</h1>
+          <p class="text-blue-100 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
+        </div>
+        <div class="px-8 py-6 text-center">
+          <p class="text-sm text-gray-400 mb-5">Weiterleitung in {{ stripeCountdown }} Sekunden…</p>
+          <button
+            @click="redirectToAdminDashboard"
+            class="w-full py-3 rounded-2xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            Zum Dashboard
+          </button>
+        </div>
+      </div>
+
       <!-- Loading -->
-      <div v-if="isLoading" class="bg-white rounded-3xl shadow-2xl p-12 text-center">
+      <div v-else-if="isLoading" class="bg-white rounded-3xl shadow-2xl p-12 text-center">
         <div class="inline-block w-14 h-14 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-6"></div>
         <h2 class="text-xl font-semibold text-gray-800 mb-2">Zahlung wird verarbeitet…</h2>
         <p class="text-gray-500 text-sm">Bitte einen Moment warten.</p>
@@ -214,6 +236,25 @@ let statusCheckInterval: NodeJS.Timeout | null = null
 
 const transactionId = (route.query.transactionId || route.query.transaction_id) as string | undefined
 const paymentId = route.query.paymentId as string | undefined
+const stripeSessionId = route.query.session_id as string | undefined
+
+// ── Stripe subscription success ────────────────────────────────────────────
+const isStripeSuccess = computed(() => !!stripeSessionId)
+const stripeCountdown = ref(5)
+
+const redirectToAdminDashboard = () => {
+  window.location.href = '/admin'
+}
+
+if (process.client && stripeSessionId) {
+  let t = setInterval(() => {
+    stripeCountdown.value--
+    if (stripeCountdown.value <= 0) {
+      clearInterval(t)
+      redirectToAdminDashboard()
+    }
+  }, 1000)
+}
 
 const hasVouchers = computed(() => vouchers.value.length > 0)
 

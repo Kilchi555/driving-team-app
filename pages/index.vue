@@ -1,310 +1,470 @@
 <template>
-  <div>
-    <div class="edge-fade top" aria-hidden="true"></div>
-    
-    <header class="hero">
-      <div class="container">
-        <!-- Für KMU Label mit Logo -->
-        <div class="kmu-label">
-          <span class="pill">Für Lehrer, Coaches und Therapeuten</span>
-          <img src="/simy-logo.png" alt="Simy Logo" class="kmu-logo">
-        </div>
-        
-        <h1 class="title" style="margin-top:30px">Simy – Die smarte Business‑Plattform für Coaches</h1>
-        <p class="lead">Termine, Zahlungen, Kundenverwaltung und Branding – alles in einer Plattform. Schnell startklar, flexibel erweiterbar.</p>
-        <div class="cta">
-          <a class="btn btn-primary" href="mailto:info@simy.ch?subject=Interesse%20an%20Simy&body=Hallo%20Simy%2C%0Aich%20interessiere%20mich%20f%C3%BCr%20eure%20Plattform.%20Bitte%20kontaktiert%20mich.%0A%0AName%3A%20%0AFirma%3A%20%0ATelefon%3A%20">Kontakt aufnehmen</a>
-          <a class="btn btn-secondary" href="mailto:info@simy.ch?subject=Demo%20anfragen">Demo anfragen</a>
-        </div>
-      </div>
-      <!-- Animated floating icons -->
-      <div class="hero-icons" aria-hidden="true">
-        <div class="icon i1">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a2 2 0 012-2h6a2 2 0 012 2v2h4a2 2 0 012 2v3h-2V9h-4v2a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm0 10a2 2 0 012-2h6a2 2 0 012 2v4H9l-2 2-2-2H3v-4z"/></svg>
-        </div>
-        <div class="icon i2">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4V6zm0 10h16v2H4v-2zm0-5h16v2H4v-2z"/></svg>
-        </div>
-        <div class="icon i3">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 4.5v9L12 21 3 16.5v-9L12 3zm0 2.18L5 8.1v7.8l7 3.92 7-3.92V8.1l-7-2.92z"/></svg>
-        </div>
-        <div class="icon i4">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l18-9-9 18-2-7-7-2z"/></svg>
-        </div>
-        <div class="icon i5">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 14l-4-4 1.414-1.414L11 12.172l4.586-4.586L17 9l-6 7z"/></svg>
-        </div>
-      </div>
-    </header>
+  <div class="min-h-screen bg-white font-sans">
 
-    <main>
-      <section class="features">
-        <div class="container">
-          <div class="grid">
-            <div class="card c1">
-              <h3>
-                <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2a1 1 0 00-1 1v1H5a3 3 0 00-3 3v2h20V7a3 3 0 00-3-3h-1V3a1 1 0 10-2 0v1H8V3a1 1 0 00-1-1zM22 10H2v9a3 3 0 003 3h14a3 3 0 003-3v-9zM6 14h4v4H6v-4z"/></svg>
-                Kalender & Verfügbarkeit
-              </h3>
-              <p>Intelligente Terminplanung, Auslastung optimieren und automatische Erinnerungen.</p>
-              <div class="mini">
-                <span class="chip">Mehrere Standorte</span>
-                <span class="chip">Ressourcen</span>
-                <span class="chip pulse">Live‑Sync</span>
-              </div>
+    <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-purple-100">
+      <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <img src="/simy-logo.png" alt="Simy" class="h-8" />
+        <div class="flex items-center gap-4">
+          <a href="#preise" class="hidden sm:block text-sm font-medium text-gray-500 hover:text-purple-700 transition-colors">Preise</a>
+          <a href="/login" class="text-sm font-medium text-purple-700 hover:text-purple-900 transition-colors">Einloggen</a>
+          <a href="/tenant-register"
+            class="text-sm font-bold px-4 py-2 rounded-xl text-white transition-all hover:opacity-90"
+            style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+            Kostenlos starten →
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+    <section class="relative overflow-hidden pt-24 pb-20 px-6">
+      <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-10 pointer-events-none"
+        style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+      <div class="absolute -bottom-20 -left-20 w-[500px] h-[500px] rounded-full opacity-8 pointer-events-none"
+        style="background: radial-gradient(circle, #BEA3FF, transparent)"></div>
+
+      <div class="relative max-w-4xl mx-auto text-center">
+        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-8 border"
+          style="background: #F3EBFF; color: #6000BD; border-color: #DDD0FF;">
+          <span class="w-2 h-2 rounded-full animate-pulse" style="background: #6000BD;"></span>
+          60 Tage kostenlos – keine Kreditkarte nötig
+        </div>
+
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight">
+          Deine Fahrschule.<br>
+          <span style="background: linear-gradient(135deg, #6000BD, #BEA3FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Auf Autopilot.
+          </span>
+        </h1>
+
+        <p class="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto mb-4 leading-relaxed">
+          Simy übernimmt Verwaltung, Abrechnung und Kommunikation –
+          damit du wieder Zeit für das hast, was wirklich zählt: <strong class="text-gray-700">Unterrichten.</strong>
+        </p>
+        <p class="text-sm text-gray-400 mb-10">Monatlich kündbar · 1 Monat Kündigungsfrist · Keine versteckten Kosten</p>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/tenant-register"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-105"
+            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 30px rgba(96,0,189,0.35);">
+            60 Tage gratis testen
+            <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+          </a>
+          <a href="#features"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 border-purple-200 text-purple-700 hover:bg-purple-50 transition-all">
+            Alle Features
+          </a>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="flex flex-wrap items-center justify-center gap-6 mt-12 text-sm text-gray-400">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            DSGVO-konform
+          </div>
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            Schweizer Server
+          </div>
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            PostFinance & TWINT
+          </div>
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            Keine IT-Kenntnisse nötig
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Pain → Solution ──────────────────────────────────────────────────── -->
+    <section class="py-20 px-6" style="background: linear-gradient(180deg, #F8F4FF 0%, #FFFFFF 100%);">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-14">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD;">Das Problem</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Wie viel Zeit verlierst du täglich?</h2>
+          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Fahrlehrer verbringen durchschnittlich <strong>2-3 Stunden täglich</strong> mit Administration – Zeit, die du mit Unterrichten verdienen könntest.</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6 mb-14">
+          <div v-for="pain in pains" :key="pain.title"
+            class="rounded-2xl p-6 border border-red-100 bg-red-50">
+            <div class="text-3xl mb-3">{{ pain.icon }}</div>
+            <h3 class="font-bold text-gray-900 mb-1">{{ pain.title }}</h3>
+            <p class="text-sm text-gray-500">{{ pain.text }}</p>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <div class="inline-flex items-center gap-3 text-2xl font-black" style="color: #6000BD;">
+            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            Simy automatisiert das alles für dich.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Features ──────────────────────────────────────────────────────────── -->
+    <section id="features" class="py-20 px-6 bg-white">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-14">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD;">Features</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was deine Fahrschule braucht</h2>
+          <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Lektionsbuchung bis zur Abrechnung – in einer einzigen Plattform.</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div v-for="feat in features" :key="feat.title"
+            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-xl"
+              :style="`background: ${feat.bg}`">
+              {{ feat.icon }}
             </div>
-            <div class="card c2">
-              <h3>
-                <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a2 2 0 012-2h14a2 2 0 012 2v2H3V5zm19 4v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9h20zM6 14h5v2H6v-2z"/></svg>
-                Online‑Zahlungen
-              </h3>
-              <p>Sichere Zahlungen mit Wallee. Diverse Zahlungsmethoden.</p>
-              <div class="mini">
-                <span class="chip">Checkout</span>
-                <span class="chip">Einfache Integration</span>
-                <span class="chip">Flexible Zahlungslösung</span>
-              </div>
+            <h3 class="font-bold text-gray-900 mb-1">{{ feat.title }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ feat.desc }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Automations ────────────────────────────────────────────────────────── -->
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD 0%, #8B2FE8 100%);">
+      <div class="max-w-5xl mx-auto text-center">
+        <p class="text-xs font-bold uppercase tracking-widest mb-3 text-purple-200">Automatisierung</p>
+        <h2 class="text-4xl font-extrabold text-white mb-4">Simy arbeitet. Du unterrichtest.</h2>
+        <p class="text-purple-200 text-lg max-w-2xl mx-auto mb-14">Diese Aufgaben erledigt Simy <strong class="text-white">jeden Tag automatisch</strong> für dich – ohne dass du einen Finger rühren musst.</p>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div v-for="auto in automations" :key="auto.label"
+            class="rounded-2xl p-5 border text-left"
+            style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-lg"
+              style="background: rgba(190,163,255,0.2);">
+              {{ auto.icon }}
             </div>
-            <div class="card c3">
-              <h3>
-                <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm-7 9a7 7 0 0114 0v1H5v-1z"/></svg>
-                Kunden-Management
-              </h3>
-              <p>Alle Kundendaten, Fortschritte und Dokumente zentral organisiert.</p>
-              <div class="mini">
-                <span class="chip">Customer Relations</span>
-                <span class="chip">Notizen</span>
-                <span class="chip">Dokumente</span>
-              </div>
+            <p class="text-white font-bold text-sm mb-1">{{ auto.label }}</p>
+            <p class="text-purple-200 text-xs leading-relaxed">{{ auto.desc }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Personas ───────────────────────────────────────────────────────────── -->
+    <section class="py-20 px-6 bg-white">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-14">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD;">Für alle</p>
+          <h2 class="text-4xl font-extrabold text-gray-900">Vorteile für jeden in deiner Fahrschule</h2>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+          <div v-for="persona in personas" :key="persona.title"
+            class="rounded-3xl p-8 border-2"
+            :style="`background: ${persona.bg}; border-color: ${persona.border};`">
+            <div class="text-4xl mb-4">{{ persona.icon }}</div>
+            <h3 class="text-xl font-extrabold mb-1" :style="`color: ${persona.color}`">{{ persona.title }}</h3>
+            <p class="text-sm text-gray-500 mb-5">{{ persona.subtitle }}</p>
+            <ul class="space-y-2">
+              <li v-for="benefit in persona.benefits" :key="benefit"
+                class="flex items-start gap-2 text-sm text-gray-700">
+                <svg class="w-4 h-4 mt-0.5 flex-shrink-0" :style="`color: ${persona.color}`" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                {{ benefit }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ROI Calculator ─────────────────────────────────────────────────────── -->
+    <section class="py-20 px-6" style="background: linear-gradient(180deg, #F8F4FF 0%, #FFFFFF 100%);">
+      <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-10">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD;">Dein ROI</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-3">Was ist deine Zeit wert?</h2>
+          <p class="text-gray-500">Rechne aus, wie viel du mit Simy verdienen kannst – allein durch die Zeit, die du zurückgewinnst.</p>
+        </div>
+
+        <div class="rounded-3xl border-2 p-8 md:p-10" style="border-color: #DDD0FF; background: white;">
+          <div class="grid sm:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">Stundenlohn (CHF)</label>
+              <input v-model.number="roi.hourlyRate" type="range" min="60" max="200" step="10"
+                class="w-full accent-purple-600" />
+              <div class="text-2xl font-black mt-2" style="color: #6000BD;">CHF {{ roi.hourlyRate }}.–</div>
             </div>
-            <div class="card c4">
-              <h3>
-                <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4V4zm0 6h10v4H4v-4zm0 6h16v4H4v-4z"/></svg>
-                Kurse & Kategorien
-              </h3>
-              <p>Flexible Kursverwaltung und klare Auswertungen.</p>
-              <div class="mini">
-                <span class="chip">Templates</span>
-                <span class="chip">Analytics</span>
-                <span class="chip">Online-Payment</span>
-              </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">Admin-Zeit pro Tag (h)</label>
+              <input v-model.number="roi.hoursPerDay" type="range" min="0.5" max="4" step="0.5"
+                class="w-full accent-purple-600" />
+              <div class="text-2xl font-black mt-2" style="color: #6000BD;">{{ roi.hoursPerDay }} h/Tag</div>
             </div>
-            <div class="card c5">
-              <h3>
-                <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 4v6c0 5-4 9-9 10C7 21 3 17 3 12V6l9-4zm0 4.18L6 8v4c0 3.31 2.69 6.23 6 6.92 3.31-.69 6-3.61 6-6.92V8l-6-1.82z"/></svg>
-                Branding
-              </h3>
-              <p>Eigenes Logo, Farben und Domain – professioneller Auftritt.</p>
-              <div class="mini">
-                <span class="chip">Eigene Domain</span>
-                <span class="chip">Themes</span>
-                <span class="chip">Flexibel Anpassbar</span>
-              </div>
+          </div>
+
+          <div class="rounded-2xl p-6 text-center" style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+            <p class="text-purple-200 text-sm mb-1">Dein monatliches Einsparungspotenzial</p>
+            <div class="text-5xl font-black text-white">CHF {{ roiSaving }}.–</div>
+            <p class="text-purple-200 text-sm mt-2">{{ roiHours }} Stunden × CHF {{ roi.hourlyRate }} × 22 Arbeitstage</p>
+          </div>
+
+          <p class="text-center text-xs text-gray-400 mt-4">
+            Simy Starter ab CHF 69.– / Monat — Amortisation am ersten Tag.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Pricing Teaser ─────────────────────────────────────────────────────── -->
+    <section id="preise" class="py-20 px-6 bg-white">
+      <div class="max-w-4xl mx-auto text-center">
+        <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD;">Preise</p>
+        <h2 class="text-4xl font-extrabold text-gray-900 mb-3">Transparent. Flexibel. Fair.</h2>
+        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 60 Tagen kostenlos.</p>
+
+        <div class="grid md:grid-cols-3 gap-5 mb-10">
+          <div v-for="plan in pricingPlans" :key="plan.name"
+            class="rounded-3xl p-7 border-2 flex flex-col relative"
+            :style="plan.highlighted
+              ? 'background: linear-gradient(145deg, #6000BD, #8B2FE8); border-color: transparent; box-shadow: 0 25px 50px rgba(96,0,189,0.3);'
+              : 'border-color: #EEE8FF; background: white;'">
+            <div v-if="plan.highlighted"
+              class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide"
+              style="background: #BEA3FF; color: #3D007A;">
+              ✦ Am beliebtesten
             </div>
-            <div class="card c6">
-              <h3>
-                <svg class="icon-inline" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h4v8H3v-8zm7-6h4v14h-4V7zm7 3h4v11h-4V10z"/></svg>
-                Analytics
-              </h3>
-              <p>Wichtige Kennzahlen auf einen Blick: Auslastung, Umsatz, Conversion, No-Shows uvm..</p>
-              <div class="mini">
-                <span class="chip">Dashboards</span>
-                <span class="chip">Exports</span>
-              </div>
+            <h3 class="font-extrabold text-xl mb-1" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">{{ plan.name }}</h3>
+            <p class="text-sm mb-4" :class="plan.highlighted ? 'text-purple-200' : 'text-gray-400'">{{ plan.tagline }}</p>
+            <div class="flex items-baseline gap-1 mb-5">
+              <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">CHF {{ plan.price }}</span>
+              <span class="text-sm" :class="plan.highlighted ? 'text-purple-200' : 'text-gray-400'">/Monat</span>
+            </div>
+            <ul class="space-y-2 mb-6 flex-1">
+              <li v-for="f in plan.featureList" :key="f" class="flex items-center gap-2 text-sm"
+                :class="plan.highlighted ? 'text-purple-100' : 'text-gray-600'">
+                <svg class="w-4 h-4 flex-shrink-0" :class="plan.highlighted ? 'text-purple-300' : 'text-purple-500'" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                {{ f }}
+              </li>
+            </ul>
+            <a href="/tenant-register"
+              class="block text-center py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+              :style="plan.highlighted
+                ? 'background: #BEA3FF; color: #3D007A;'
+                : 'background: linear-gradient(135deg, #6000BD, #8B2FE8); color: white;'">
+              60 Tage gratis starten
+            </a>
+          </div>
+        </div>
+
+        <a href="/upgrade" class="text-sm font-medium transition-colors" style="color: #6000BD;">
+          Alle Features & Preise vergleichen →
+        </a>
+      </div>
+    </section>
+
+    <!-- ── FAQ ───────────────────────────────────────────────────────────────── -->
+    <section class="py-20 px-6" style="background: #F8F4FF;">
+      <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-12">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD;">FAQ</p>
+          <h2 class="text-4xl font-extrabold text-gray-900">Häufige Fragen</h2>
+        </div>
+        <div class="space-y-3">
+          <div v-for="faq in faqs" :key="faq.q"
+            class="rounded-2xl border bg-white overflow-hidden"
+            style="border-color: #EEE8FF;">
+            <button @click="faq.open = !faq.open"
+              class="w-full text-left px-6 py-4 flex items-center justify-between font-bold text-gray-900 hover:bg-purple-50 transition-colors">
+              {{ faq.q }}
+              <svg class="w-5 h-5 text-purple-400 flex-shrink-0 transition-transform duration-200"
+                :class="faq.open ? 'rotate-45' : ''"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <div v-if="faq.open" class="px-6 pb-5 text-sm text-gray-500 leading-relaxed border-t" style="border-color: #EEE8FF;">
+              {{ faq.a }}
             </div>
           </div>
         </div>
-      </section>
-    </main>
-
-    <div class="edge-fade bottom" aria-hidden="true"></div>
-    
-    <footer class="footer">
-      <div class="container">
-        <div>© {{ currentYear }} Simy – Alle Rechte vorbehalten</div>
-        <div class="footline">
-          <span style="white-space:nowrap">simy.ch</span>
-          <span class="dot">•</span>
-          <span style="white-space:nowrap">Weiherweg 2</span>
-          <span class="dot">•</span>
-          <span style="white-space:nowrap">8610 Uster</span><br>
-        </div>
-        <div class="footline">
-          <a href="tel:+41797157027">079 715 70 27</a>
-          <span class="dot">•</span>
-          <a href="mailto:info@simy.ch">info@simy.ch</a>
-          <span class="dot">•</span>
-          <a href="/login">Login</a>
-          <span class="dot">•</span>
-          <a href="/tenant-register">Registrieren</a>
-        </div>
       </div>
-      <!-- Footer decorative icons -->
-      <div class="footer-icons" aria-hidden="true">
-        <div class="fi1">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4V6zm0 10h16v2H4v-2zm0-5h16v2H4v-2z"/></svg>
+    </section>
+
+    <!-- ── Final CTA ──────────────────────────────────────────────────────────── -->
+    <section class="py-24 px-6" style="background: linear-gradient(135deg, #6000BD 0%, #8B2FE8 100%);">
+      <div class="max-w-3xl mx-auto text-center">
+        <div class="absolute -z-0 inset-0 opacity-10" style="background: radial-gradient(circle at 30% 50%, white, transparent)"></div>
+        <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
+          Bereit, deine Fahrschule<br>auf Autopilot zu schalten?
+        </h2>
+        <p class="text-purple-200 text-lg mb-10">Starte heute mit 60 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/tenant-register"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-purple-900 font-black text-lg shadow-xl hover:scale-105 transition-all"
+            style="background: #BEA3FF;">
+            Jetzt kostenlos starten →
+          </a>
+          <a href="mailto:info@simy.ch"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg border-2 border-white/30 hover:bg-white/10 transition-all">
+            Demo anfragen
+          </a>
         </div>
-        <div class="fi2">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l9 4v6c0 5-4 9-9 10C7 21 3 17 3 12V6l9-4zm0 4.18L6 8v4c0 3.31 2.69 6.23 6 6.92 3.31-.69 6-3.61 6-6.92V8l-6-1.82z"/></svg>
+        <p class="text-purple-300 text-xs mt-6">Fragen? <a href="mailto:info@simy.ch" class="underline hover:text-white">info@simy.ch</a> · <a href="tel:+41797157027" class="underline hover:text-white">079 715 70 27</a></p>
+      </div>
+    </section>
+
+    <!-- ── Footer ──────────────────────────────────────────────────────────────── -->
+    <footer class="py-10 px-6 border-t border-gray-100">
+      <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
+        <div class="flex items-center gap-3">
+          <img src="/simy-logo.png" alt="Simy" class="h-7 opacity-60" />
+          <span>© {{ currentYear }} Simy · Weiherweg 2, 8610 Uster</span>
         </div>
-        <div class="fi3">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h4v8H3v-8zm7-6h4v14h-4V7zm7 3h4v11h-4V10z"/></svg>
-        </div>
-        <div class="fi4">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm-7 9a7 7 0 0114 0v1H5v-1z"/></svg>
+        <div class="flex items-center gap-4">
+          <a href="/login" class="hover:text-gray-700 transition-colors">Login</a>
+          <a href="/upgrade" class="hover:text-gray-700 transition-colors">Preise</a>
+          <a href="mailto:info@simy.ch" class="hover:text-gray-700 transition-colors">Kontakt</a>
+          <a href="/tenant-register" class="font-bold hover:text-purple-700 transition-colors" style="color: #6000BD;">Registrieren</a>
         </div>
       </div>
     </footer>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { definePageMeta, useHead } from '#imports'
 
-definePageMeta({
-  layout: false
+definePageMeta({ layout: false })
+
+useHead({
+  title: 'Simy – Die smarte Fahrschul-Software der Schweiz',
+  meta: [
+    { name: 'description', content: 'Simy automatisiert Verwaltung, Abrechnung und Kommunikation für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte nötig.' }
+  ],
 })
 
 const currentYear = computed(() => new Date().getFullYear())
 
-useHead({
-  title: 'Simy – Die smarte Business-Plattform für Coaches',
-  meta: [
-    { name: 'description', content: 'Simy hilft KMU wie Fahrschulen, Coaches, Studios und Therapeuten bei Terminplanung, Zahlungen und Kundenverwaltung – alles in einer Plattform.' }
-  ],
-  link: [
-    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap' }
-  ]
-})
+const roi = reactive({ hourlyRate: 90, hoursPerDay: 2 })
+const roiHours = computed(() => roi.hoursPerDay)
+const roiSaving = computed(() => Math.round(roi.hourlyRate * roi.hoursPerDay * 22 / 10) * 10)
+
+const pains = [
+  { icon: '⏰', title: 'Manuelle Terminverwaltung', text: 'Stundenlanges Planen von Lektionen, Prüfungen und Ressourcen – alles per Hand oder mit Excel.' },
+  { icon: '💸', title: 'Vergessene Rechnungen', text: 'Offene Posten, die durch die Lappen gehen. Mahnungen manuell schreiben. Zahlungen mühsam nachverfolgen.' },
+  { icon: '📱', title: 'Chaotische Kommunikation', text: 'WhatsApp, SMS, E-Mail – Schüler fragen überall an, Erinnerungen verpasst, No-Shows häufen sich.' },
+]
+
+const features = [
+  { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Intelligente Lektionsplanung mit Ressourcen-Management, Live-Sync und automatischen Erinnerungen.', bg: '#E0E7FF' },
+  { icon: '💳', title: 'Zahlungen & Rechnungen', desc: 'Automatische Rechnungen, Online-Zahlung mit TWINT & PostFinance, Mahnungen und Gutschriften.', bg: '#D1FAE5' },
+  { icon: '👥', title: 'Schülerverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', bg: '#FEE2E2' },
+  { icon: '📊', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Schüler – alle KPIs auf einen Blick.', bg: '#EDE9FE' },
+  { icon: '🎓', title: 'Prüfungsverwaltung', desc: 'Prüfungsdaten erfassen, Experten zuweisen, Ergebnisse tracken. Alles dokumentiert.', bg: '#FEF3C7' },
+  { icon: '🚗', title: 'Fahrzeug-Management', desc: 'Fahrzeuge verwalten, Revisionsdaten tracken, Fahrtenbuch führen – automatisch und übersichtlich.', bg: '#ECFEFF' },
+  { icon: '📣', title: 'Affiliate-System', desc: 'Schüler empfehlen Freunde und erhalten Rabatte. Du gewinnst neue Kunden ohne Marketingaufwand.', bg: '#FFE4E6' },
+  { icon: '🏫', title: 'Kursbuchungsseite', desc: 'Deine Schüler buchen Kurse online – mit eigenem Link, Branding und integrierter Zahlung.', bg: '#F0FDF4' },
+  { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'Lektionserinnerungen, Zahlungsfristen, Prüfungserinnerungen – Simy erinnert statt du.', bg: '#FFF7ED' },
+]
+
+const automations = [
+  { icon: '📧', label: 'Lektionserinnerungen', desc: 'Automatisch per SMS oder E-Mail 24h vor der Lektion.' },
+  { icon: '🧾', label: 'Rechnungsversand', desc: 'Nach jeder Lektion wird automatisch eine Rechnung erstellt und versendet.' },
+  { icon: '🔁', label: 'Mahnungen', desc: 'Offene Rechnungen werden automatisch gemahnt – du erfährst es nur wenn nötig.' },
+  { icon: '📈', label: 'Wochenbericht', desc: 'Jeden Montag dein persönlicher Bericht mit Umsatz, Lektionen und Auslastung.' },
+  { icon: '🎯', label: 'Zieltracking', desc: 'Fortschrittsziele für Schüler werden automatisch aktualisiert und gemeldet.' },
+  { icon: '🗓️', label: 'Verfügbarkeit', desc: 'Schüler sehen nur freie Slots und buchen direkt online.' },
+  { icon: '💬', label: 'Willkommensnachrichten', desc: 'Neue Schüler erhalten sofort alle Infos – ohne dein Zutun.' },
+  { icon: '🏆', label: 'Prüfungsbestaetigung', desc: 'Bestandene Prüfungen automatisch dokumentiert und dem Schüler gemeldet.' },
+]
+
+const personas = [
+  {
+    icon: '🧑‍💼',
+    title: 'Admin / Inhaber',
+    subtitle: 'Du behältst den Überblick',
+    color: '#6000BD',
+    bg: '#F3EBFF',
+    border: '#DDD0FF',
+    benefits: [
+      'Umsatz & Auslastung in Echtzeit',
+      'Alle Fahrlehrer im Überblick',
+      'Automatische Rechnungen & Mahnungen',
+      'DSGVO-konforme Datenverwaltung',
+      'Zahlungseingänge auf einen Blick',
+      'Eigenes Branding & Domain',
+    ],
+  },
+  {
+    icon: '👨‍🏫',
+    title: 'Fahrlehrer / Staff',
+    subtitle: 'Du fokussierst dich aufs Unterrichten',
+    color: '#059669',
+    bg: '#F0FDF4',
+    border: '#BBF7D0',
+    benefits: [
+      'Stundenplan immer aktuell',
+      'Schülerinfos jederzeit verfügbar',
+      'Automatische Erinnerungen an Schüler',
+      'Notizen & Fortschritts-Tracking',
+      'Einfache Stundenverwaltung',
+      'Mobile-optimiert für unterwegs',
+    ],
+  },
+  {
+    icon: '🧑‍🎓',
+    title: 'Schüler',
+    subtitle: 'Deine Schüler lieben die Einfachheit',
+    color: '#0284C7',
+    bg: '#F0F9FF',
+    border: '#BAE6FD',
+    benefits: [
+      'Online buchen rund um die Uhr',
+      'Automatische Lektionserinnerungen',
+      'Bezahlen per TWINT & PostFinance',
+      'Lernfortschritt immer im Blick',
+      'Prüfungsinfos sofort sichtbar',
+      'Kein App-Download nötig',
+    ],
+  },
+]
+
+const pricingPlans = [
+  {
+    name: 'Starter',
+    tagline: 'Für Einzelfahrlehrer',
+    price: '69',
+    highlighted: true,
+    featureList: ['1 Fahrlehrer', 'Alle Kernfeatures', 'Zahlungen & Rechnungen', 'Auswertungen', 'Prüfungsverwaltung', 'Support per E-Mail'],
+  },
+  {
+    name: 'Professional',
+    tagline: 'Für kleine Teams',
+    price: '129',
+    highlighted: false,
+    featureList: ['Bis 3 Fahrlehrer', 'Alle Starter-Features', 'Multi-Staff Kalender', 'Erweiterte Auswertungen', 'Prioritäts-Support'],
+  },
+  {
+    name: 'Enterprise',
+    tagline: 'Für grosse Fahrschulen',
+    price: '249',
+    highlighted: false,
+    featureList: ['Unbegrenzte Fahrlehrer', 'Alle Professional-Features', 'Dediziertes Onboarding', 'API-Zugang', 'SLA-Garantie'],
+  },
+]
+
+const faqs = reactive([
+  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 60-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
+  { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
+  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup.', open: false },
+  { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
+  { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
+])
 </script>
-
-<style scoped>
-* { box-sizing:border-box }
-.container { max-width:1120px; margin:0 auto; padding:0 16px; }
-.hero { padding:96px 0; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); position:relative; overflow:hidden }
-.title { font-size:40px; line-height:1.1; font-weight:800; letter-spacing:-0.02em; color:#0f172a; }
-.lead { margin-top:12px; font-size:18px; color:#475569; }
-.cta { margin-top:24px; display:flex; gap:12px; flex-wrap:wrap }
-.btn { display:inline-flex; align-items:center; justify-content:center; padding:12px 20px; border-radius:10px; font-weight:600; text-decoration:none }
-.btn-primary { background:#7C3AED; color:#fff }
-.btn-secondary { border:1px solid #e2e8f0; color:#7C3AED; background:#fff }
-.pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#ede9fe; color:#6d28d9; font-weight:600; font-size:12px }
-.hero-icons { position:absolute; inset:0; pointer-events:none }
-.icon { position:absolute; opacity:.18; filter:blur(.2px) }
-.icon svg { width:48px; height:48px }
-.i1{ top:10%; left:6%; color:#7C3AED; animation:floatA 16s ease-in-out infinite }
-.i2{ top:22%; right:8%; color:#7C3AED; animation:floatB 15s ease-in-out infinite }
-.i3{ bottom:18%; left:12%; color:#10b981; animation:floatC 18s ease-in-out infinite }
-.i4{ bottom:10%; right:10%; color:#06b6d4; animation:floatB 14.5s ease-in-out infinite reverse }
-.i5{ top:46%; left:44%; color:#f59e0b; animation:floatA 19s ease-in-out infinite alternate }
-@keyframes floatA {
-  0%   { transform:translate(0,0) rotate(0deg) }
-  25%  { transform:translate(48px,-44px) rotate(6deg) }
-  50%  { transform:translate(-42px,-72px) rotate(-5deg) }
-  75%  { transform:translate(36px,36px) rotate(3deg) }
-  100% { transform:translate(0,0) rotate(0deg) }
-}
-@keyframes floatB {
-  0%   { transform:translate(0,0) }
-  20%  { transform:translate(-54px,-22px) }
-  40%  { transform:translate(42px,-68px) }
-  60%  { transform:translate(26px,32px) }
-  80%  { transform:translate(-36px,18px) }
-  100% { transform:translate(0,0) }
-}
-@keyframes floatC {
-  0%   { transform:translate(0,0) }
-  15%  { transform:translate(52px,24px) }
-  35%  { transform:translate(28px,-58px) }
-  55%  { transform:translate(-46px,-32px) }
-  75%  { transform:translate(-22px,44px) }
-  100% { transform:translate(0,0) }
-}
-
-.features { background:#ffffff; padding:56px 0 }
-.grid { display:grid; gap:16px }
-@media (min-width:640px){ .grid { grid-template-columns:repeat(2,1fr) } }
-@media (min-width:1024px){ .grid { grid-template-columns:repeat(3,1fr) } }
-.card { margin-bottom:60px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; transition:transform .25s ease, box-shadow .25s ease; display:flex; flex-direction:column; gap:14px }
-.card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(15,23,42,0.08) }
-.card h3 { margin:0 0 6px 0; font-size:18px }
-.card p { margin:2px 0 0 0; color:#475569 }
-.icon-inline { width:26px; height:26px; margin-right:10px; vertical-align:-5px; color:inherit }
-.card .mini { margin-top:12px; display:flex; gap:10px; flex-wrap:wrap }
-.chip { padding:4px 8px; border-radius:999px; background:#f1f5f9; color:#0f172a; font-size:12px; font-weight:600 }
-.pulse { position:relative; display:inline-flex; align-items:center; gap:6px }
-.pulse::before { content:""; width:8px; height:8px; border-radius:999px; background:#10b981; box-shadow:0 0 0 0 rgba(16,185,129,0.6); animation:pulse 2s infinite }
-@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.6)} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
-/* chip theme per card */
-.c1 .chip { background:#e0e7ff; color:#1d4ed8 }
-.c2 .chip { background:#dcfce7; color:#047857 }
-.c3 .chip { background:#fee2e2; color:#b91c1c }
-.c4 .chip { background:#ede9fe; color:#6d28d9 }
-.c5 .chip { background:#ffedd5; color:#c2410c }
-.c6 .chip { background:#e0f2fe; color:#0369a1 }
-/* per-card light themes */
-.c1 { background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%); border-color:#dbeafe }
-.c1 h3 { color:#1d4ed8 }
-.c2 { background:linear-gradient(180deg,#ffffff 0%,#f7fffb 100%); border-color:#bbf7d0 }
-.c2 h3 { color:#059669 }
-.c3 { background:linear-gradient(180deg,#ffffff 0%,#fff7f7 100%); border-color:#fecaca }
-.c3 h3 { color:#dc2626 }
-.c4 { background:linear-gradient(180deg,#ffffff 0%,#f9f7ff 100%); border-color:#ddd6fe }
-.c4 h3 { color:#7c3aed }
-.c5 { background:linear-gradient(180deg,#ffffff 0%,#fff7ed 100%); border-color:#fed7aa }
-.c5 h3 { color:#c2410c }
-.c6 { background:linear-gradient(180deg,#ffffff 0%,#f0f9ff 100%); border-color:#bae6fd }
-.c6 h3 { color:#0284c7 }
-
-.gallery { background:#f8fafc; padding:56px 0 }
-.gallery-grid { display:grid; gap:16px }
-@media (min-width:768px){ .gallery-grid { grid-template-columns:2fr 1fr 1fr } }
-.imgcard { position:relative; border-radius:14px; overflow:hidden; border:1px solid #e2e8f0; background:#fff }
-.imgcard img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .6s ease }
-.imgcard:hover img { transform:scale(1.04) }
-.badge { position:absolute; top:12px; left:12px; background:#111827; color:#fff; font-size:12px; padding:6px 10px; border-radius:999px; opacity:.9 }
-.footer { padding:150px 0px; text-align:center; color:#64748b; font-size:14px; position:relative; overflow:hidden }
-.footline { margin-top:6px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center }
-.footline .dot { opacity:.6 }
-.footer a { color:inherit; text-decoration:none }
-.footer a:hover { text-decoration:underline }
-.footer-icons { position:absolute; inset:0; pointer-events:none }
-.fi1 { position:absolute; bottom:16%; left:8%; opacity:.18; color:#0ea5e9; animation:floatC 16s ease-in-out infinite }
-.fi2 { position:absolute; bottom:10%; right:12%; opacity:.18; color:#22c55e; animation:floatA 15s ease-in-out infinite reverse }
-.fi3 { position:absolute; top:12%; right:20%; opacity:.15; color:#8b5cf6; animation:floatB 18s ease-in-out infinite }
-.fi4 { position:absolute; top:22%; left:20%; opacity:.16; color:#f87171; animation:floatA 17s ease-in-out infinite alternate }
-.footer-icons svg { width:44px; height:44px; filter:blur(.2px) }
-
-/* Screen edge fade (top/bottom) */
-.edge-fade { position:fixed; left:0; right:0; height:140px; pointer-events:none; z-index:5 }
-.edge-fade.top { top:0; background:linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.9) 40%, rgba(255,255,255,0) 100%) }
-.edge-fade.bottom { bottom:0; background:linear-gradient(0deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.9) 40%, rgba(255,255,255,0) 100%) }
-@media (max-width: 640px){ .edge-fade{ height:120px } }
-/* Responsive typography */
-@media (max-width: 480px){ .title { font-size:30px } }
-@media (max-width: 360px){ .title { font-size:26px } }
-
-/* KMU Label with Logo */
-.kmu-label { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:24px; width:100% }
-.pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#ede9fe; color:#6d28d9; font-weight:600; font-size:12px }
-.kmu-logo { height:40px; width:auto; filter:drop-shadow(0 2px 4px rgba(124,58,237,0.2)); flex-shrink:0 }
-@media (max-width: 768px){ 
-  .kmu-logo { height:36px }
-}
-@media (max-width: 640px){ 
-  .kmu-label { margin-bottom:20px; gap:8px }
-  .kmu-logo { height:32px }
-  .pill { font-size:11px; padding:6px 10px }
-}
-@media (max-width: 550px){ 
-  .kmu-label { flex-direction:column-reverse; align-items:flex-start; margin-bottom:20px }
-  .kmu-logo { height:36px; align-self:flex-start; margin-bottom:8px }
-}
-@media (max-width: 480px){ 
-  .kmu-logo { height:32px }
-  .pill { font-size:10px; padding:5px 8px }
-}
-</style>

@@ -28,7 +28,17 @@ export default defineEventHandler(async (event) => {
       zip,
       city,
       password,
-      selectedCategories
+      selectedCategories,
+      // New fields
+      lernfahrausweis_nr,
+      instructor_since_year,
+      language,
+      acceptedTerms,
+      // Working hours: [{ day_of_week: 1, start_time: '07:00', end_time: '18:00' }, ...]
+      workingHours,
+      // Location assignments: array of location IDs
+      selectedLocationIds,
+      selectedExamLocationIds
     } = body
 
     logger.debug('📝 Staff registration request:', { email, firstName, lastName, ipAddress })
@@ -201,7 +211,11 @@ export default defineEventHandler(async (event) => {
         street: sanitizedStreet,
         street_nr: sanitizedStreetNr,
         zip: zip || null,
-        city: sanitizedCity
+        city: sanitizedCity,
+        lernfahrausweis_nr: lernfahrausweis_nr ? sanitizeString(lernfahrausweis_nr, 50) : null,
+        instructor_since_year: instructor_since_year ? parseInt(instructor_since_year) || null : null,
+        language: language || 'de',
+        accepted_terms_at: acceptedTerms ? new Date().toISOString() : null
       })
       .select('id')
       .single()
@@ -237,7 +251,72 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 5. Mark invitation as accepted
+    // 5. Setup working hours (service role)
+    if (Array.isArray(workingHours) && workingHours.length > 0) {
+      try {
+        const whInserts = workingHours
+          .filter((wh: any) => wh.day_of_week && wh.start_time && wh.end_time)
+          .map((wh: any) => ({
+            staff_id: newUser.id,
+            tenant_id: invitation.tenant_id,
+            day_of_week: parseInt(wh.day_of_week),
+            start_time: wh.start_time,
+            end_time: wh.end_time,
+            is_active: true,
+            timezone: 'Europe/Zurich'
+          }))
+        if (whInserts.length > 0) {
+          await serviceSupabase.from('staff_working_hours').insert(whInserts)
+          logger.debug('✅ Working hours stored:', whInserts.length)
+        }
+      } catch (whErr) {
+        console.warn('⚠️ Working hours storage failed (non-fatal):', whErr)
+      }
+    }
+
+    // 6. Assign standard locations (Treffpunkte)
+    if (Array.isArray(selectedLocationIds) && selectedLocationIds.length > 0) {
+      for (const locId of selectedLocationIds) {
+        try {
+          const { data: loc } = await serviceSupabase
+            .from('locations').select('staff_ids').eq('id', locId).single()
+          if (loc) {
+            const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
+            if (!current.includes(newUser.id)) {
+              await serviceSupabase.from('locations')
+                .update({ staff_ids: [...current, newUser.id] })
+                .eq('id', locId)
+            }
+          }
+        } catch (locErr) {
+          console.warn('⚠️ Location assignment failed (non-fatal):', locErr)
+        }
+      }
+      logger.debug('✅ Standard locations assigned:', selectedLocationIds.length)
+    }
+
+    // 7. Assign exam locations (Prüfungsorte)
+    if (Array.isArray(selectedExamLocationIds) && selectedExamLocationIds.length > 0) {
+      for (const locId of selectedExamLocationIds) {
+        try {
+          const { data: loc } = await serviceSupabase
+            .from('locations').select('staff_ids').eq('id', locId).single()
+          if (loc) {
+            const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
+            if (!current.includes(newUser.id)) {
+              await serviceSupabase.from('locations')
+                .update({ staff_ids: [...current, newUser.id] })
+                .eq('id', locId)
+            }
+          }
+        } catch (locErr) {
+          console.warn('⚠️ Exam location assignment failed (non-fatal):', locErr)
+        }
+      }
+      logger.debug('✅ Exam locations assigned:', selectedExamLocationIds.length)
+    }
+
+    // 8. Mark invitation as accepted
     await serviceSupabase
       .from('staff_invitations')
       .update({
@@ -266,9 +345,14 @@ export default defineEventHandler(async (event) => {
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
+    // Get tenant slug for redirect
+    const { data: tenantData } = await serviceSupabase
+      .from('tenants').select('slug').eq('id', invitation.tenant_id).single()
+
     return {
       success: true,
       userId: newUser.id,
+      tenantSlug: tenantData?.slug || null,
       message: 'Registrierung erfolgreich'
     }
 
