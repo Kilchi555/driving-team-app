@@ -248,14 +248,6 @@
                     </div>
                     <div v-else-if="qrDataUrl" class="border border-gray-200 rounded-lg p-1.5 bg-white">
                       <img :src="qrDataUrl" alt="Swiss QR Code" class="w-24 h-24" />
-                      <!-- Swiss cross overlay -->
-                      <div class="flex justify-center mt-1">
-                        <svg width="20" height="20" viewBox="0 0 20 20">
-                          <rect x="0" y="0" width="20" height="20" rx="3" fill="#FF0000"/>
-                          <rect x="8" y="3" width="4" height="14" fill="white"/>
-                          <rect x="3" y="8" width="14" height="4" fill="white"/>
-                        </svg>
-                      </div>
                     </div>
                     <div v-else class="w-24 h-24 bg-gray-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center">
                       <span class="text-xs text-gray-400 text-center px-2">QR wird geladen…</span>
