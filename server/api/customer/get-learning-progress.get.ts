@@ -121,12 +121,12 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       }
     }
 
-    // 2. Load appointments for this user
+    // 2. Load appointments for this user (incl. older rows that may have tenant_id = null)
     const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
       .select('id, type')
       .eq('user_id', userId)
-      .eq('tenant_id', tenantId)
+      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
 
     if (appointmentsError) {
       logger.error('❌ Error fetching appointments:', appointmentsError)
@@ -164,10 +164,10 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
     if (appointmentIds.length > 0) {
       const { data: notesData, error: notesError } = await supabaseAdmin
         .from('notes')
-        .select('evaluation_criteria_id, criteria_rating, appointment_id')
+        .select('evaluation_criteria_id, criteria_rating, criteria_note, appointment_id')
         .in('appointment_id', appointmentIds)
         .not('evaluation_criteria_id', 'is', null)
-        .not('criteria_rating', 'is', null)
+        .or('criteria_rating.not.is.null,criteria_note.not.is.null')
 
       if (notesError) {
         logger.error('❌ Error fetching notes:', notesError)
@@ -176,11 +176,11 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       notes = notesData || []
     }
 
-    // 5. Load ALL evaluation_categories for this tenant
+    // 5. Load ALL evaluation_categories for this tenant (incl. global ones with tenant_id = null)
     const { data: categories, error: categoriesError } = await supabaseAdmin
       .from('evaluation_categories')
       .select('id, name, display_order, color, is_theory')
-      .eq('tenant_id', tenantId)
+      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
       .eq('is_active', true)
       .order('display_order')
 
@@ -189,7 +189,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       throw categoriesError
     }
 
-    // 6. Load ALL criteria for this tenant (with educational content)
+    // 6. Load ALL criteria for this tenant (incl. global categories with tenant_id = null)
     const { data: criteria, error: criteriaError } = await supabaseAdmin
       .from('evaluation_criteria')
       .select(`
@@ -202,7 +202,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
         always_visible,
         evaluation_categories!inner(id, name, display_order, color, tenant_id)
       `)
-      .eq('evaluation_categories.tenant_id', tenantId)
+      .or(`evaluation_categories.tenant_id.eq.${tenantId},evaluation_categories.tenant_id.is.null`)
       .eq('is_active', true)
       .order('display_order')
 

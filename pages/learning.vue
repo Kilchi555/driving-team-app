@@ -301,7 +301,8 @@ onMounted(async () => {
     allCriteria?.forEach((criterion: any) => {
       const categoryId = criterion.evaluation_categories?.id
       if (!categoryId) return
-      const matchesCategory = !criterion.driving_categories?.length ||
+      const matchesCategory = !studentCategoryCodes.length ||
+        !criterion.driving_categories?.length ||
         criterion.driving_categories.some((dc: string) => studentCategoryCodes.includes(dc))
       if (!matchesCategory) return
       const progress = categoryProgressMap.get(categoryId)
@@ -316,6 +317,7 @@ onMounted(async () => {
 
     // Build evaluated items — include criteria that are evaluated OR always_visible
     const criteriaForStudent = (allCriteria || []).filter((c: any) =>
+      !studentCategoryCodes.length ||
       !c.driving_categories?.length ||
       c.driving_categories.some((dc: string) => studentCategoryCodes.includes(dc))
     )
