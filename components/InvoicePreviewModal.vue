@@ -121,18 +121,19 @@
                 <!-- Edit mode (only in edit mode) -->
                 <div v-else class="space-y-2">
                   <div class="grid grid-cols-2 gap-2">
-                    <input v-model="localBilling.first_name" placeholder="Vorname" class="input-field" />
-                    <input v-model="localBilling.last_name" placeholder="Nachname" class="input-field" />
+                    <input v-model="localBilling.first_name" placeholder="Vorname *" required class="input-field" :class="{ 'border-red-400': billingErrors.first_name }" />
+                    <input v-model="localBilling.last_name" placeholder="Nachname *" required class="input-field" :class="{ 'border-red-400': billingErrors.last_name }" />
                   </div>
                   <div class="grid grid-cols-3 gap-2">
-                    <input v-model="localBilling.street" placeholder="Strasse" class="input-field col-span-2" />
+                    <input v-model="localBilling.street" placeholder="Strasse *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.street }" />
                     <input v-model="localBilling.street_nr" placeholder="Nr." class="input-field" />
                   </div>
                   <div class="grid grid-cols-3 gap-2">
-                    <input v-model="localBilling.zip" placeholder="PLZ" class="input-field" />
-                    <input v-model="localBilling.city" placeholder="Ort" class="input-field col-span-2" />
+                    <input v-model="localBilling.zip" placeholder="PLZ *" required class="input-field" :class="{ 'border-red-400': billingErrors.zip }" />
+                    <input v-model="localBilling.city" placeholder="Ort *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.city }" />
                   </div>
-                  <input v-model="localBilling.email" placeholder="E-Mail" type="email" class="input-field w-full" />
+                  <input v-model="localBilling.email" placeholder="E-Mail *" type="email" required class="input-field w-full" :class="{ 'border-red-400': billingErrors.email }" />
+                  <p v-if="Object.values(billingErrors).some(Boolean)" class="text-xs text-red-500">Bitte alle Pflichtfelder ausfüllen.</p>
                 </div>
               </div>
             </div>
@@ -463,6 +464,15 @@ const localBilling = ref({
   email: '',
 })
 
+const billingErrors = ref({
+  first_name: false,
+  last_name: false,
+  street: false,
+  zip: false,
+  city: false,
+  email: false,
+})
+
 watch(() => props.draft, (d) => {
   if (d) {
     localDueDate.value = d.due_date
@@ -548,6 +558,22 @@ function close() {
 
 async function sendInvoice() {
   if (!props.draft || isSending.value) return
+
+  // Validate required billing fields
+  billingErrors.value = {
+    first_name: !localBilling.value.first_name.trim(),
+    last_name: !localBilling.value.last_name.trim(),
+    street: !localBilling.value.street.trim(),
+    zip: !localBilling.value.zip.trim(),
+    city: !localBilling.value.city.trim(),
+    email: !localBilling.value.email.trim(),
+  }
+  if (Object.values(billingErrors.value).some(Boolean)) {
+    // Open billing edit section if not already open
+    editingBilling.value = true
+    return
+  }
+
   isSending.value = true
   error.value = null
 
