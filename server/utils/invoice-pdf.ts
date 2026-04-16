@@ -229,19 +229,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
         // QR code box
         const qrSize = 95
-        doc.rect(margin, rowY, qrSize + 16, qrSize + 24).fill('white').strokeColor('#e2e8f0').lineWidth(1).stroke()
+        doc.rect(margin, rowY, qrSize + 16, qrSize + 16).fill('white').strokeColor('#e2e8f0').lineWidth(1).stroke()
         doc.image(qrBuffer, margin + 8, rowY + 8, { width: qrSize, height: qrSize })
-
-        // Swiss cross (centered below QR)
-        const crossX = margin + 8 + (qrSize - 22) / 2
-        doc.rect(crossX, rowY + 8 + (qrSize - 22) / 2, 22, 22).fill('white')
-        doc.rect(crossX + 1, rowY + 8 + (qrSize - 22) / 2 + 1, 20, 20).fill('#FF0000')
-        doc.rect(crossX + 8, rowY + 8 + (qrSize - 22) / 2 + 3, 4, 14).fill('white')
-        doc.rect(crossX + 3, rowY + 8 + (qrSize - 22) / 2 + 8, 14, 4).fill('white')
-
-        // Swiss cross label
-        doc.fontSize(6.5).fillColor('#64748b').font('Helvetica')
-          .text('Swiss Cross', margin, rowY + qrSize + 10, { width: qrSize + 16, align: 'center' })
 
         // QR details
         const qrTextX = margin + qrSize + 30
