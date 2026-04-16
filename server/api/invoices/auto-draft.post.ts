@@ -23,55 +23,66 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { student_user_id } = body
+  const { student_user_id, payment_ids: explicitPaymentIds } = body
 
   if (!student_user_id) {
     throw createError({ statusCode: 400, statusMessage: 'student_user_id is required' })
   }
 
-  // Alle offenen Zahlungen mit payment_method = 'invoice' für diesen Schüler,
-  // die noch keiner Rechnung zugeordnet sind und nicht bereits bezahlt wurden.
-  // Try with invoice_id filter first (requires migration); fall back without it
   let openPayments: any[] | null = null
   let paymentsError: any = null
 
-  const baseQuery = () => supabase
-    .from('payments')
-    .select(`
+  const paymentSelect = `
+    id,
+    total_amount_rappen,
+    lesson_price_rappen,
+    admin_fee_rappen,
+    products_price_rappen,
+    discount_amount_rappen,
+    credit_used_rappen,
+    voucher_discount_rappen,
+    appointment_id,
+    payment_method,
+    payment_status,
+    appointments (
       id,
-      total_amount_rappen,
-      lesson_price_rappen,
-      admin_fee_rappen,
-      products_price_rappen,
-      discount_amount_rappen,
-      credit_used_rappen,
-      voucher_discount_rappen,
-      appointment_id,
-      payment_method,
-      payment_status,
-      appointments (
-        id,
-        title,
-        start_time,
-        duration_minutes,
-        type,
-        event_type_code
-      )
-    `)
-    .eq('user_id', student_user_id)
-    .eq('payment_method', 'invoice')
-    .in('payment_status', ['pending', 'open'])
-    .order('created_at', { ascending: true })
+      title,
+      start_time,
+      duration_minutes,
+      type,
+      event_type_code
+    )
+  `
 
-  const withFilter = await baseQuery().is('invoice_id', null)
-  if (withFilter.error && withFilter.error.message?.includes('invoice_id')) {
-    // Column doesn't exist yet – query without the filter
-    const withoutFilter = await baseQuery()
-    openPayments = withoutFilter.data
-    paymentsError = withoutFilter.error
+  if (explicitPaymentIds?.length > 0) {
+    // Build preview from explicitly selected payment IDs — no DB write needed
+    const { data, error } = await supabase
+      .from('payments')
+      .select(paymentSelect)
+      .in('id', explicitPaymentIds)
+      .eq('user_id', student_user_id)
+      .order('created_at', { ascending: true })
+    openPayments = data
+    paymentsError = error
   } else {
-    openPayments = withFilter.data
-    paymentsError = withFilter.error
+    // Fallback: fetch all uninvoiced 'invoice'-method payments for this student
+    const baseQuery = () => supabase
+      .from('payments')
+      .select(paymentSelect)
+      .eq('user_id', student_user_id)
+      .eq('payment_method', 'invoice')
+      .in('payment_status', ['pending', 'open'])
+      .order('created_at', { ascending: true })
+
+    const withFilter = await baseQuery().is('invoice_id', null)
+    if (withFilter.error && withFilter.error.message?.includes('invoice_id')) {
+      const withoutFilter = await baseQuery()
+      openPayments = withoutFilter.data
+      paymentsError = withoutFilter.error
+    } else {
+      openPayments = withFilter.data
+      paymentsError = withFilter.error
+    }
   }
 
   if (paymentsError) {
