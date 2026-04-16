@@ -566,7 +566,7 @@
           <div v-else class="space-y-4">
             
             <!-- Payment Summary Box (nur wenn Zahlungen ausgewählt sind) -->
-            <div v-if="selectedPayments.length > 0" class="rounded-lg px-4 py-3 shadow-sm border-l-4 space-y-2" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08' }">
+            <div v-if="selectedPayments.length > 0" class="sticky top-0 z-10 rounded-lg px-4 py-3 shadow-sm border-l-4 space-y-2" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08', backdropFilter: 'blur(8px)' }">
               <!-- Zeile 1: Anzahl + Betrag -->
               <div class="flex items-center justify-between gap-2">
                 <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">{{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} ausgewählt</p>
