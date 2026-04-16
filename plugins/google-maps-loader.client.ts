@@ -21,7 +21,7 @@ export default defineNuxtPlugin(() => {
 
   // Create script element with proper async loading
   const script = document.createElement('script')
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=de&region=CH&loading=async`
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=de&region=CH`
   script.async = true
   script.defer = true
 
